@@ -1,0 +1,20 @@
+{
+  "resources/css/app.css": {
+    "file": "assets/app-f9ffd100.css",
+    "isEntry": true,
+    "src": "resources/css/app.css"
+  },
+  "resources/fonts/CanelaDeckFamily/CanelaDeck-Regular-Trial.otf": {
+    "file": "assets/CanelaDeck-Regular-Trial-bfd4525f.otf",
+    "src": "resources/fonts/CanelaDeckFamily/CanelaDeck-Regular-Trial.otf"
+  },
+  "resources/fonts/trad-ghothic.ttf": {
+    "file": "assets/trad-ghothic-f069cc1a.ttf",
+    "src": "resources/fonts/trad-ghothic.ttf"
+  },
+  "resources/js/app.js": {
+    "file": "assets/app-4cfb0647.js",
+    "isEntry": true,
+    "src": "resources/js/app.js"
+  }
+}

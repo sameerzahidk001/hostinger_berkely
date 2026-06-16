@@ -1,0 +1,43 @@
+.env
+.env.*
+
+# Laravel / PHP
+/vendor/
+/node_modules/
+/public/hot
+/public/storage
+/storage/*.key
+/storage/app/public/
+/storage/app/private/
+/storage/debugbar/
+/storage/framework/cache/
+/storage/framework/sessions/
+/storage/framework/testing/
+/storage/framework/views/
+/storage/logs/
+/bootstrap/cache/*.php
+!/bootstrap/cache/.gitignore
+
+# IDE / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Build artifacts
+*.log
+*.tmp
+*.bak
+php_errorlog
+tmp-*
+tmp*.txt
+tmp*.css
+tmp*.html
+tmp*.json
+user-behavior/
+
+# Database dumps / exports
+*.sql
+*.sqlite
+*.sqlite3
+

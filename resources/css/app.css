@@ -1,0 +1,596 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@font-face {
+  font-family: "canela";
+  src: url("../fonts/CanelaDeckFamily/CanelaDeck-Regular-Trial.otf") format("opentype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Canela";
+  src: url("../fonts/CanelaDeckFamily/CanelaDeck-Regular-Trial.otf") format("opentype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "trade-ghothic";
+  src: url("../fonts/Trade_Gothic/Trade-Gothic.woff2") format("woff2"),
+       url("../fonts/Trade_Gothic/Trade-Gothic-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "trade-ghothic";
+  src: url("../fonts/Trade_Gothic/Trade-Gothic-Bold.woff2") format("woff2"),
+       url("../fonts/Trade_Gothic/Trade-Gothic-Bold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "trade-ghtic";
+  src: url("../fonts/Trade_Gothic/Trade-Gothic.woff2") format("woff2"),
+       url("../fonts/Trade_Gothic/Trade-Gothic-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "trade-ghtic";
+  src: url("../fonts/Trade_Gothic/Trade-Gothic-Bold.woff2") format("woff2"),
+       url("../fonts/Trade_Gothic/Trade-Gothic-Bold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+.font-canela {
+  font-family: canela, sans-serif;
+}
+
+.font-ghothic {
+  font-family: trade-ghothic, sans-serif;
+}
+.shadow-scroll {
+  box-shadow: rgba(14, 63, 126, 0.04) 0px 0px 0px 1px, rgba(42, 51, 69, 0.04) 0px 1px 1px -0.5px, rgba(42, 51, 70, 0.04) 0px 3px 3px -1.5px, rgba(42, 51, 70, 0.04) 0px 6px 6px -3px, rgba(14, 63, 126, 0.04) 0px 12px 12px -6px, rgba(14, 63, 126, 0.04) 0px 24px 24px -12px;
+}
+.iti{
+  width: 100%;
+}
+.video {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: -1;
+}
+@media (min-aspect-ratio: 16/9) {
+  .video {
+    width: 100%;
+    height: auto;
+  }
+}
+@media (max-aspect-ratio: 16/9) {
+  .video {
+    width: auto;
+    height: 100%;
+  }
+}
+
+.shadow-card {
+  box-shadow: 5px 6px 0px -1px rgba(207, 207, 207, 0.75);
+  -webkit-box-shadow: 3px 3px 0px -1px rgba(207, 207, 207, 0.75);
+  -moz-box-shadow: 5px 6px 0px -1px rgba(207, 207, 207, 0.75);
+}
+.card-hidden {
+  opacity: 0;
+  filter: blur(2px);
+  transition: all 0.5s ease-in;
+  transform: translateY(20px);
+}
+.show {
+  filter: blur(0);
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefer-reduced-motion) {
+  .card-hidden {
+    transition: none;
+  }
+}
+
+/* Accordian start */
+.accordion button {
+  color: #ffffff;
+  cursor: pointer;
+  
+  width: 100%;
+  text-align: left;
+  border: none;
+  outline: none;
+  transition: background-color 0.6s ease;
+  font-size: 18px;
+}
+
+.accordion-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.2s ease-out;
+}
+
+.accordion button:after {
+  content: "\002B"; /* Unicode character for "+" sign */
+  color: #ffffff;
+  float: right;
+  margin-left: 5px;
+}
+
+.accordion [aria-expanded="true"]:after {
+  content: "\2212"; /* Unicode character for "-" sign */
+  color: #ffffff;
+  float: right;
+  margin-left: 5px;
+}
+/* Dropdown Start */
+.dropbtn {
+  background-color: transparent;
+  color: rgb(0, 0, 0);
+  min-width: 300px;
+  font-size: 13px;
+  border: 1px solid #808080;
+  text-align: start;
+  padding-inline: 6px;
+  border-radius: 4px;
+}
+
+.dropdown {
+  position: relative;
+  min-width: 300px;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: #000000;
+  min-width: 300px;
+  box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+  z-index: 1;
+}
+
+.dropdown-content a {
+  font-size: 13px;
+  padding-block: 4px;
+  padding-inline: 4px;
+  text-decoration: none;
+  display: block;
+  min-width: 300px;
+}
+
+.dropdown:hover .dropdown-content {
+  display: flex;
+  flex-direction: column;
+  min-width: 300px;
+}
+
+.dropdown:hover .dropbtn {
+  font-size: 13px;
+  background-color: transparent;
+  border: 1px solid gray;
+}
+/* Dropdown End */
+
+/* CSS Background Animation Start */
+.link-background {
+  z-index: 1;
+}
+
+.link-background::after {
+  content: "";
+  z-index: -1;
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  transform: translateX(-100%);
+  transition: transform 600ms cubic-bezier(0, 0.7, 0.6, 1);
+}
+
+.link-background:hover::after {
+  transform: translateX(0);
+}
+/* CSS Background Animation End */
+
+/* Input search */
+.hidden-toggle {
+  display: none;
+}
+#toggleDiv {
+  transition: all 0.5s ease-in-out;
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+}
+
+#toggleDiv.show {
+  opacity: 1;
+  max-height: 1000px; /* Set to a value large enough to show the content */
+}
+.gradient-back {
+  background: rgb(216, 231, 32);
+  background: rgb(55, 60, 196);
+  background: linear-gradient(
+    90deg,
+    rgba(55, 60, 196, 0.9780287114845938) 15%,
+    rgba(173, 64, 95, 1) 51%,
+    rgba(80, 85, 226, 1) 93%
+  );
+}
+.border-background {
+  background: rgb(131, 58, 180);
+  background: linear-gradient(
+    16deg,
+    rgba(131, 58, 180, 1) 0%,
+    rgba(253, 29, 29, 1) 50%,
+    rgba(252, 176, 69, 1) 100%
+  );
+}
+
+/* Infine scroll-linear start */
+
+.scroll > div {
+  animation: animate 8s linear infinite;
+}
+
+.scroll:hover > div {
+  animation-play-state: paused;
+}
+
+@keyframes animate {
+  0% {
+    transform: translateY(100%);
+  }
+  100% {
+    transform: translateY(-100%);
+  }
+}
+
+.no-scrollbar ::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Ifinite scroll End */
+
+/* Mega Menu start */
+.mega-menu {
+  display: none;
+  left: 0;
+  width: 100%;
+  position: absolute;
+  text-align: left;
+  width: 100%;
+}
+
+/* #hoverable Class Styles
+  –––––––––––––––––––––––––––––––––––––––––––––––––– */
+.hoverable {
+  position: static;
+}
+
+.hoverable > a:after {
+  content: "\25BC";
+  font-size: 10px;
+  padding-left: 6px;
+  position: relative;
+  top: -1px;
+}
+
+.hoverable:hover .mega-menu {
+  display: block;
+}
+
+/* #toggle Class Styles
+  –––––––––––––––––––––––––––––––––––––––––––––––––– */
+
+.toggleable > label:after {
+  content: "\25BC";
+  font-size: 10px;
+  padding-left: 6px;
+  position: relative;
+  top: -1px;
+}
+
+.toggle-input {
+  display: none;
+}
+.toggle-input:not(checked) ~ .mega-menu {
+  display: none;
+}
+
+.toggle-input:checked ~ .mega-menu {
+  display: block;
+}
+
+.toggle-input:checked + label {
+  color: white;
+  background: #2c5282; /*@apply bg-blue-800 */
+}
+
+.toggle-input:checked ~ label:after {
+  content: "\25B2";
+  font-size: 10px;
+  padding-left: 6px;
+  position: relative;
+  top: -1px;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+.active-link {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.lg\:mb-0 {
+  margin-bottom: 0;
+}
+/* Mega Menu end */
+
+/* Accordian New */
+
+.tab-content {
+  max-height: 0;
+  -webkit-transition: max-height 0.35s;
+  -o-transition: max-height 0.35s;
+  transition: max-height 0.35s;
+}
+/* :checked - resize to full height */
+.tab input:checked ~ .tab-content {
+  max-height: 100vh;
+}
+/* Label formatting when open */
+
+/* Icon */
+.tab label::after {
+  float: right;
+  right: 0;
+  top: 0;
+  display: block;
+  width: 1.5em;
+  height: 1.5em;
+  line-height: 1.2;
+  font-size: 1rem;
+  text-align: center;
+  -webkit-transition: all 0.35s;
+  -o-transition: all 0.35s;
+  transition: all 0.35s;
+}
+/* Icon formatting - closed */
+.tab input[type="checkbox"] + label::after {
+  content: "+";
+  border-radius: 9999px;
+}
+.tab input[type="radio"] + label::after {
+  /* Use a CSS triangle instead of a unicode glyph to avoid garbled symbols on some fonts/encodings */
+  content: "";
+  width: 0;
+  height: 0;
+  margin-top: 0.45em;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 8px solid currentColor;
+  border-radius: 0;
+}
+/* Icon formatting - open */
+.tab input[type="checkbox"]:checked + label::after {
+  transform: rotate(360deg);
+  background-color: #1e1e1e;
+  color: #f8fafc;
+}
+.tab input[type="radio"]:checked + label::after {
+  transform: rotate(180deg);
+  background-color: transparent;
+}
+
+/* Accordian End */
+
+/* Courses page tab caret: use inline SVG, not pseudo-element (avoids garbled glyphs) */
+.course-tab-label::after {
+  content: none !important;
+}
+.tab input[type="radio"]:checked + .course-tab-label .course-tab-caret {
+  transform: rotate(180deg);
+}
+.course-tab-caret {
+  transition: transform 0.2s ease;
+}
+
+/* Make tables horizontally scrollable on mobile */
+@media (max-width: 768px) {
+  table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  table th,
+  table td {
+    white-space: nowrap;
+  }
+}
+
+/* Logos Animation start */
+
+.scroll-linear > ul {
+  animation: animate-linear 17s linear infinite;
+}
+
+.scroll-linear:hover > ul {
+  animation-play-state: paused;
+}
+
+@keyframes animate-linear {
+  0% {
+    transform: translateX(50%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+/* Row Two Start */
+.scroll-linear-two > ul {
+  animation: animate-linear-two 15s linear infinite;
+}
+
+.scroll-linear-two:hover > ul {
+  animation-play-state: paused;
+}
+
+@keyframes animate-linear-two {
+  0% {
+    transform: translateX(75%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+/* Row Two End */
+
+.no-scrollbar ::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes zoomIn {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.2);
+  }
+}
+
+.zoom-in {
+  animation: zoomIn 10s ease-in-out forwards;
+}
+/* Captcha start */
+
+/* Captcha End */
+
+/* Custom select option start */
+
+.tt-select {
+  position: relative;
+  height: auto;
+  padding: 0px;
+
+  text-align: left;
+}
+.tt-select select {
+  display: none;
+}
+.select-selected {
+  background-color: #fff;
+  color: rgba(0, 0, 0, 0.8) !important;
+}
+.select-selected:after {
+  position: absolute;
+  content: "";
+  top: 14px;
+  right: 10px;
+  width: 0;
+  height: 0;
+  border: 6px solid transparent;
+}
+.select-selected:before {
+  position: absolute;
+  content: "";
+  top: 18px;
+  right: 10px;
+  width: 0;
+  height: 0;
+  border: 6px solid transparent;
+  border-color: transparent transparent #000000 transparent;
+  transform: rotate(180deg);
+}
+.select-selected.select-arrow-active:before {
+  border: none;
+}
+.select-selected.select-arrow-active:after {
+  border-color: transparent transparent #000000 transparent;
+  top: 10px;
+}
+.select-items div,
+.select-selected {
+  color: black;
+  padding: 12px 16px;
+  border: 1px solid white;
+  cursor: pointer;
+}
+.select-items {
+  position: absolute;
+  background-color: white;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 9999999999999999;
+  max-height: 200px;
+  overflow-y: scroll;
+}
+.select-hide {
+  display: none;
+}
+.select-items div:hover,
+.same-as-selected {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Custom select option End */
+#card-container {
+  scroll-snap-type: x mandatory;
+  display: flex;
+  overflow-x: scroll;
+  overflow-y: hidden; /* Prevent vertical scrolling */
+  scroll-behavior: smooth;
+}
+.card {
+  flex: none;
+  width: 100%; /* Adjust width as needed */
+}
+.card img {
+  width: 100%;
+  object-cover: cover;
+}
+
+/* mobile menu dropdown icon */
+.arrow {
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  display: inline-block;
+  padding: 3px;
+  margin-bottom: 4px;
+}
+
+.down {
+  transform: rotate(45deg);
+  -webkit-transform: rotate(45deg);
+}

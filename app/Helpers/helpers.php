@@ -1,0 +1,356 @@
+<?php
+
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use App\Models\Category;
+use App\Models\Page;
+
+if (!function_exists('get_page_faqs')) {
+    function get_page_faqs(Request $request)
+    {
+        $currentUrl = $request->path();
+        $page = Page::where('url', $currentUrl)->with('faqs')->first();
+        return $page ? $page : collect();
+    }
+}
+
+if (!function_exists('getFooterCategories')) {
+    function getFooterCategories()
+    {
+        return Category::where('footer', 1)->get();
+    }
+}
+
+function getYouTubeVideoID($url) {
+    preg_match("/(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:[^\/\n\s]+\/\S+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^\"\n\s]+)/", $url, $matches);
+    return $matches[1] ?? null;
+}
+
+if (!function_exists('media_url')) {
+    function media_url(mixed $path): ?string
+    {
+        if (is_array($path)) {
+            $path = $path['path'] ?? $path['url'] ?? $path['image'] ?? ($path[0] ?? null);
+        }
+
+        if (!is_string($path) || $path === '' || $path === 'null') {
+            return null;
+        }
+
+        $path = str_replace(
+            [
+                'https://eduberkeley.com/public/',
+                'http://eduberkeley.com/public/',
+                'https://eduberkeley.com/',
+                'http://eduberkeley.com/',
+            ],
+            '',
+            $path
+        );
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+
+        $path = ltrim($path, '/');
+
+        if (str_starts_with($path, 'admin/')) {
+            return asset($path);
+        }
+
+        if (str_starts_with($path, 'images/') || str_starts_with($path, 'frontend/')) {
+            return asset($path);
+        }
+
+        return asset('images/library/' . $path);
+    }
+}
+
+function generateFileName($file, $prefix = '')
+{
+    $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+    $extension = $file->getClientOriginalExtension();
+    $slug = Str::slug($originalName);
+    $unique = uniqid();
+    return ($prefix ? $prefix . '_' : '') . $slug . '-' . $unique . '.' . $extension;
+}
+
+if (!function_exists('panel_role_name')) {
+    function panel_role_name(): ?string
+    {
+        if (Auth::guard('admin')->check()) {
+            return 'admin';
+        }
+
+        return Auth::user()?->roles()->value('name');
+    }
+}
+
+if (!function_exists('role_display_name')) {
+    function role_display_name(?string $role): string
+    {
+        return match ($role) {
+            'librarian' => 'Content Writer',
+            'accountant' => 'Accountant',
+            default => ucfirst($role ?? ''),
+        };
+    }
+}
+
+if (!function_exists('admin_can_delete')) {
+    function admin_can_delete(): bool
+    {
+        return !in_array(panel_role_name(), ['librarian', 'accountant'], true);
+    }
+}
+
+if (!function_exists('admin_menu_allowed')) {
+    function admin_menu_allowed(string $menu): bool
+    {
+        $role = panel_role_name();
+
+        if ($role === null || $role === 'admin') {
+            return true;
+        }
+
+        $contentWriterMenus = [
+            'dashboard', 'courses', 'training-calendar', 'school', 'categories',
+            'pages', 'seo', 'faq', 'clients', 'profile', 'logout',
+        ];
+
+        $accountantMenus = [
+            'dashboard', 'courses', 'currency-rate-setup', 'currencies',
+            'payments', 'profile', 'logout',
+        ];
+
+        if ($role === 'librarian') {
+            return in_array($menu, $contentWriterMenus, true);
+        }
+
+        if ($role === 'accountant') {
+            return in_array($menu, $accountantMenus, true);
+        }
+
+        return true;
+    }
+}
+
+if (!function_exists('audit_user_id')) {
+    function audit_user_id(): ?int
+    {
+        if (Auth::guard('admin')->check()) {
+            return Auth::guard('admin')->id();
+        }
+
+        return Auth::id();
+    }
+}
+
+if (!function_exists('audit_user_name')) {
+    function audit_user_name($model, $fallbackId = null): string
+    {
+        if ($model) {
+            return $model->name ?? $model->username ?? $model->email ?? '-';
+        }
+
+        if ($fallbackId) {
+            $admin = \App\Models\Admin::find($fallbackId);
+            if ($admin) {
+                return $admin->name ?? $admin->email ?? '-';
+            }
+
+            $user = \App\Models\User::find($fallbackId);
+            if ($user) {
+                return $user->name ?? $user->email ?? '-';
+            }
+        }
+
+        return '-';
+    }
+}
+
+if (!function_exists('cart_item_count')) {
+    function cart_item_count(): int
+    {
+        if (!Auth::check()) {
+            return 0;
+        }
+
+        return (int) \App\Models\CartItem::where('user_id', Auth::id())
+            ->whereHas('courseFee')
+            ->sum('quantity');
+    }
+}
+
+if (!function_exists('currency_rates_to_aed')) {
+    function currency_rates_to_aed(): array
+    {
+        static $rates = null;
+
+        if ($rates === null) {
+            $rates = ['AED' => 1.0];
+
+            try {
+                $rows = \App\Models\CurrencyRate::query()
+                    ->join('currencies', 'currencies.id', '=', 'currency_rates.currency_id')
+                    ->pluck('currency_rates.rate_to_aed', 'currencies.code');
+
+                foreach ($rows as $code => $rate) {
+                    $rates[strtoupper((string) $code)] = (float) $rate;
+                }
+            } catch (\Throwable $e) {
+                // Keep AED fallback when rates are unavailable.
+            }
+        }
+
+        return $rates;
+    }
+}
+
+if (!function_exists('convert_to_aed')) {
+    function convert_to_aed($amount, ?string $currency = 'AED'): float
+    {
+        $amount = (float) $amount;
+        $currency = strtoupper(trim($currency ?: 'AED'));
+
+        if ($currency === 'AED') {
+            return round($amount, 2);
+        }
+
+        $rate = currency_rates_to_aed()[$currency] ?? null;
+
+        if (!$rate) {
+            return round($amount, 2);
+        }
+
+        return round($amount * $rate, 2);
+    }
+}
+
+if (!function_exists('format_aed_price')) {
+    function format_aed_price($amount, ?string $currency = 'AED'): string
+    {
+        return 'AED ' . number_format(convert_to_aed($amount, $currency), 2);
+    }
+}
+
+if (!function_exists('package_currency_code')) {
+    function package_currency_code(?string $currency): string
+    {
+        return strtoupper(trim($currency ?: 'AED'));
+    }
+}
+
+if (!function_exists('package_settling_amount')) {
+    function package_settling_amount($amount, ?string $currency): float
+    {
+        return convert_to_aed($amount, package_currency_code($currency));
+    }
+}
+
+if (!function_exists('format_package_price')) {
+    function format_package_price($amount, ?string $currency, int $quantity = 1): array
+    {
+        $currency = package_currency_code($currency);
+        $amount = (float) $amount * $quantity;
+
+        if ($currency === 'AED') {
+            return [
+                'display' => 'AED ' . number_format($amount, 2),
+                'settling_aed' => round($amount, 2),
+                'currency' => 'AED',
+                'show_settling_note' => false,
+            ];
+        }
+
+        $settling = convert_to_aed($amount, $currency);
+
+        return [
+            'display' => $currency . ' ' . number_format($amount, 2),
+            'settling_aed' => $settling,
+            'currency' => $currency,
+            'show_settling_note' => true,
+            'settling_note' => 'Settling amount: AED ' . number_format($settling, 2),
+        ];
+    }
+}
+
+if (!function_exists('format_payment_amount')) {
+    function format_payment_amount($payment): array
+    {
+        $fee = $payment->courseFee ?? null;
+        $displayCurrency = package_currency_code($payment->currency ?? ($fee->currency ?? 'AED'));
+        $settlingAed = (float) ($payment->price ?? 0);
+
+        if ($displayCurrency === 'AED') {
+            return [
+                'display' => 'AED ' . number_format($settlingAed, 2),
+                'settling_aed' => $settlingAed,
+                'currency' => 'AED',
+                'show_settling_note' => false,
+            ];
+        }
+
+        $displayAmount = $fee ? (float) $fee->price : $settlingAed;
+
+        return [
+            'display' => 'USD ' . number_format($displayAmount, 2),
+            'settling_aed' => $settlingAed,
+            'currency' => 'USD',
+            'show_settling_note' => true,
+            'settling_note' => 'Settling amount: AED ' . number_format($settlingAed, 2),
+        ];
+    }
+}
+
+if (!function_exists('analytics_channel')) {
+    function analytics_channel(?string $referrer, ?string $url = null): string
+    {
+        if (empty($referrer)) {
+            return 'Direct';
+        }
+
+        $ref = strtolower($referrer);
+        $host = parse_url($ref, PHP_URL_HOST) ?? '';
+        $appHost = strtolower(parse_url(config('app.url'), PHP_URL_HOST) ?? '');
+
+        if ($host === '' || ($appHost && str_contains($host, $appHost))) {
+            return 'Direct';
+        }
+
+        if (preg_match('/google\.|bing\.|yahoo\.|duckduckgo\.|baidu\./', $host)) {
+            return 'Organic Search';
+        }
+
+        if (preg_match('/facebook\.|fb\.|twitter\.|t\.co|instagram\.|linkedin\.|tiktok\.|youtube\.|pinterest\./', $host)) {
+            return 'Organic Social';
+        }
+
+        return 'Referral';
+    }
+}
+
+if (!function_exists('getUserLocation')) {
+    function getUserLocation($ip = null)
+    {
+        $ip = $ip ?? request()->ip();
+
+        if ($ip === '127.0.0.1' || $ip === '::1') {
+            $ip = '8.8.8.8';
+        }
+
+        try {
+            $response = Http::get("https://ipinfo.io/{$ip}/json");
+
+            if ($response->successful()) {
+                return $response->json();
+            }
+        } catch (\Exception $e) {
+            return ['error' => 'Unable to fetch location.'];
+        }
+
+        return ['error' => 'Failed to get location.'];
+    }
+}

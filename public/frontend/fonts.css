@@ -1,0 +1,46 @@
+@font-face {
+  font-family: "canela";
+  src: url("fonts/CanelaDeckFamily/CanelaDeck-Regular-Trial.otf") format("opentype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Canela";
+  src: url("fonts/CanelaDeckFamily/CanelaDeck-Regular-Trial.otf") format("opentype");
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "trade-ghothic";
+  src: url("fonts/Trade_Gothic/Trade-Gothic.woff2") format("woff2"),
+       url("fonts/Trade_Gothic/Trade-Gothic-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "trade-ghothic";
+  src: url("fonts/Trade_Gothic/Trade-Gothic-Bold.woff2") format("woff2"),
+       url("fonts/Trade_Gothic/Trade-Gothic-Bold.otf") format("opentype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "trade-ghtic";
+  src: url("fonts/Trade_Gothic/Trade-Gothic.woff2") format("woff2"),
+       url("fonts/Trade_Gothic/Trade-Gothic-Regular.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+.font-canela {
+  font-family: canela, sans-serif !important;
+}
+
+.font-ghothic {
+  font-family: trade-ghothic, sans-serif !important;
+}
