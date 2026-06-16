@@ -30,6 +30,10 @@ php artisan config:clear
 php artisan cache:clear
 php artisan view:clear
 
+if [ -f database/fix-test-urls.sql ]; then
+  echo "==> Tip: run database/fix-test-urls.sql in phpMyAdmin to replace eduberkeley.com menu links"
+fi
+
 php artisan migrate --path=database/migrations/2026_06_15_000001_create_currency_rates_table.php --force
 php artisan migrate --path=database/migrations/2026_06_15_000002_add_audit_columns_to_content_tables.php --force
 php artisan migrate --path=database/migrations/2026_06_16_000001_add_referrer_to_page_views_table.php --force

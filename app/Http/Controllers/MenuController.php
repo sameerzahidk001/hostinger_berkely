@@ -39,7 +39,7 @@ class MenuController extends Controller
     } elseif ($request->filled('page_id')) {
         $page = Page::find($request->input('page_id'));
         $name = $request->input('page_name');
-        $link = 'https://eduberkeley.com/' . $request->input('page_link');
+        $link = url('/' . ltrim($request->input('page_link'), '/'));
     } else {
         return redirect()->back()->withErrors('You must select a page or provide a custom menu.');
     }
@@ -90,7 +90,7 @@ public function update(Request $request, Menu $menu)
     } elseif ($request->filled('page_id')) {
         $page = Page::find($request->input('page_id'));
         $name = $request->input('page_name');
-        $link = 'https://eduberkeley.com/' . $request->input('page_link');
+        $link = url('/' . ltrim($request->input('page_link'), '/'));
     } else {
         return redirect()->back()->withErrors('You must select a page or provide a custom menu.');
     }

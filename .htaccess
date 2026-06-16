@@ -9,6 +9,9 @@
 
     RewriteEngine On
 
+    # Redirect mistaken /public/admin/ URL to Laravel admin login
+    RewriteRule ^public/admin/?$ admin/login [R=302,L]
+
     # Serve static files from /public when web root is the Laravel project root (Hostinger)
     RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f
     RewriteRule ^(.*)$ public/$1 [L]

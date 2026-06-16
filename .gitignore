@@ -45,6 +45,7 @@ user-behavior/
 
 # Database dumps / exports
 *.sql
+!database/*.sql
 *.sqlite
 *.sqlite3
 
