@@ -23,6 +23,7 @@
 Thumbs.db
 .idea/
 .vscode/
+.sucuriquarantine/
 
 # Build artifacts
 *.log
