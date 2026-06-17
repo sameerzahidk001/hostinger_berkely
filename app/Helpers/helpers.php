@@ -437,13 +437,23 @@ if (!function_exists('invoice_footer_settings')) {
             return $defaults;
         }
 
+        $field = static function (string $column, string $defaultKey) use ($row, $defaults) {
+            if (! is_object($row) || ! property_exists($row, $column)) {
+                return $defaults[$defaultKey];
+            }
+
+            $value = $row->{$column};
+
+            return ($value !== null && $value !== '') ? $value : $defaults[$defaultKey];
+        };
+
         return [
-            'usa' => $row->invoice_footer_usa ?: $defaults['usa'],
-            'uk' => $row->invoice_footer_uk ?: $defaults['uk'],
-            'middle_east' => $row->invoice_footer_middle_east ?: $defaults['middle_east'],
-            'email' => $row->invoice_footer_email ?: $defaults['email'],
-            'website' => $row->invoice_footer_website ?: $defaults['website'],
-            'presence' => $row->invoice_footer_presence ?: $defaults['presence'],
+            'usa' => $field('invoice_footer_usa', 'usa'),
+            'uk' => $field('invoice_footer_uk', 'uk'),
+            'middle_east' => $field('invoice_footer_middle_east', 'middle_east'),
+            'email' => $field('invoice_footer_email', 'email'),
+            'website' => $field('invoice_footer_website', 'website'),
+            'presence' => $field('invoice_footer_presence', 'presence'),
         ];
     }
 }
