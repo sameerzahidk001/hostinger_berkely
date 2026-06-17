@@ -100,6 +100,7 @@
                                                                         <span aria-hidden="true">×</span>
                                                                     </button>
                                                                     <div class="modal-body">
+                                                                        <div id="payment-amount-display-{{ $installment->id }}" class="text-center mb-3" style="font-size: 18px; font-weight: 600;"></div>
                                                                         <div id="hco-embedded-{{ $installment->id }}"></div>
                                                                     </div>
                                                                 </div>
@@ -210,16 +211,23 @@
             var modalId = $(this).attr('id');
             var installmentId = modalId.replace('paymentModal', '');
             var embeddedDivId = '#hco-embedded-' + installmentId;
+            var amountDisplayId = '#payment-amount-display-' + installmentId;
 
-            // Step 1: Request session from Laravel
+            $(amountDisplayId).empty();
+            $(embeddedDivId).empty();
+
             $.ajax({
                 url: '{{ route("user.generate.rakBankPaySession") }}',
                 method: 'POST',
-                data: { amount: currentAmount },
+                data: { installment_id: installmentId },
                 headers: {
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                 },
                 success: function (res) {
+                    if (res.displayAmount) {
+                        $(amountDisplayId).text(res.displayAmount);
+                    }
+
                     if (res.session && res.session.id) {
                         try {
                             Checkout.configure({
