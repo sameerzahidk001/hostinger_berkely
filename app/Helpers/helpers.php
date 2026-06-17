@@ -266,6 +266,13 @@ if (!function_exists('payment_display_amount_from_aed')) {
             return round($aedAmount, 2);
         }
 
+        $settlingTotal = (float) ($payment->price ?? 0);
+        $packagePrice = (float) (optional($payment->courseFee)->price ?? 0);
+
+        if ($settlingTotal > 0 && $packagePrice > 0) {
+            return round(($aedAmount / $settlingTotal) * $packagePrice, 2);
+        }
+
         return convert_from_aed($aedAmount, $currency);
     }
 }
@@ -277,6 +284,32 @@ if (!function_exists('format_payment_aed_amount')) {
         $amount = payment_display_amount_from_aed($payment, $aedAmount);
 
         return $currency . ' ' . number_format($amount, 2);
+    }
+}
+
+if (!function_exists('format_payment_amount_admin')) {
+    function format_payment_amount_admin($payment): string
+    {
+        $info = format_payment_amount($payment);
+
+        if ($info['currency'] === 'AED') {
+            return e($info['display']);
+        }
+
+        return e($info['display']) . ' <span class="text-muted">(AED ' . number_format($info['settling_aed'], 2) . ')</span>';
+    }
+}
+
+if (!function_exists('format_payment_aed_amount_admin')) {
+    function format_payment_aed_amount_admin($payment, float $aedAmount): string
+    {
+        $display = format_payment_aed_amount($payment, $aedAmount);
+
+        if (payment_display_currency($payment) === 'AED') {
+            return $display;
+        }
+
+        return $display . ' <span class="text-muted">(AED ' . number_format($aedAmount, 2) . ')</span>';
     }
 }
 
@@ -317,12 +350,14 @@ if (!function_exists('format_package_price')) {
         }
 
         $settling = convert_to_aed($amount, $currency);
+        $display = $currency . ' ' . number_format($amount, 2);
 
         return [
-            'display' => 'AED ' . number_format($settling, 2),
+            'display' => $display,
             'settling_aed' => $settling,
-            'currency' => 'AED',
+            'currency' => $currency,
             'show_settling_note' => false,
+            'admin_display' => $display . ' <span class="text-muted">(AED ' . number_format($settling, 2) . ')</span>',
         ];
     }
 }

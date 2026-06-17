@@ -134,7 +134,6 @@
                                 } elseif ($totalPaid > 0) {
                                 $paymentStatus = 'Partial';
                                 }
-                                $amountInfo = format_payment_amount($payment);
                                 @endphp
                                 <tr>
                                     <td>INV-{{ str_pad($payment->id, 6, '0', STR_PAD_LEFT) }}</td>
@@ -153,10 +152,10 @@
                                         </a>
                                     </td>
                                     <td>
-                                        {{ $amountInfo['display'] }}
+                                        {!! format_payment_amount_admin($payment) !!}
                                     </td>
                                     <td>{{ $paidInstallmentsCount }}/{{ $payment->installments->count() ?? 0 }}</td>
-                                    <td>AED {{ number_format($paidAmountSum, 2) }}</td>
+                                    <td>{!! format_payment_aed_amount_admin($payment, (float) $paidAmountSum) !!}</td>
                                     <td>
                                         <span class="badge badge-{{ $paymentStatus == 'Paid' ? 'primary' : ($paymentStatus == 'Partial' ? 'warning' : 'success') }}">
                                             {{ $paymentStatus }}
@@ -409,6 +408,25 @@
 <script>
     let reopenInstallmentsAfterBankTransfer = false;
 
+    function formatAdminPaymentAmount(payment, aedAmount) {
+        const currency = String(payment.currency || payment.course_fee?.currency || payment.courseFee?.currency || 'AED').toUpperCase();
+        const aed = parseFloat(aedAmount) || 0;
+
+        if (currency === 'AED') {
+            return 'AED ' + aed.toFixed(2);
+        }
+
+        const settlingTotal = parseFloat(payment.price) || 0;
+        const packagePrice = parseFloat(payment.course_fee?.price || payment.courseFee?.price || 0);
+        let display = aed;
+
+        if (settlingTotal > 0 && packagePrice > 0) {
+            display = (aed / settlingTotal) * packagePrice;
+        }
+
+        return currency + ' ' + display.toFixed(2) + ' <span class="text-muted">(AED ' + aed.toFixed(2) + ')</span>';
+    }
+
     $(document).on('click', '.open-bank-transfer-modal', function() {
         const installmentId = $(this).data('id');
         const amount = $(this).data('amount');
@@ -484,12 +502,12 @@
                 <tr>
                     <td>INV-${paddedId}</td>
                     <td>${formattedDate}</td>
-                    <td>AED ${installments.price}</td>
+                    <td>${formatAdminPaymentAmount(installments, installments.price)}</td>
                     <td>${installment.installment_number}/${installments.total_installment}</td>
                     <td>${installment.due_date ?? 'N/A'}</td>
-                    <td>AED ${parseInt(installment.paid_amount) + parseInt(installment.remaining_amount)}</td>
+                    <td>${formatAdminPaymentAmount(installments, parseFloat(installment.paid_amount) + parseFloat(installment.remaining_amount))}</td>
                     <td>${installment.status === 'paid' ? 'RC-' + receipt : 'N/A'}</td>
-                    <td>AED ${installment.paid_amount ?? 'N/A'}</td>
+                    <td>${installment.paid_amount ? formatAdminPaymentAmount(installments, installment.paid_amount) : 'N/A'}</td>
                     <td>${installment.paid_date ?? 'N/A'}</td>
                     <td>${installment.status.charAt(0).toUpperCase() + installment.status.slice(1)}</td>
                     <td>

@@ -106,7 +106,7 @@
 
                     <div class="row" style="margin-bottom: 30px;">
                         <div class="col-xs-3 text-left">
-                            <p><strong>Paid Amount:</strong><br>AED {{ $installment->paid_amount }}</p>
+                            <p><strong>Paid Amount:</strong><br>{!! format_payment_aed_amount_admin($installment->payment, (float) $installment->paid_amount) !!}</p>
                         </div>
                         <div class="col-xs-3 text-center">
                             <p><strong>Due Date:</strong><br>{{ $installment->due_date ?? 'N/A' }}</p>
@@ -115,7 +115,7 @@
                             <p><strong>Paid Date:</strong><br>{{ $installment->paid_date ?? 'N/A' }}</p>
                         </div>
                         <div class="col-xs-3 text-right">
-                            <p><strong>Balance Due:</strong><br>AED {{ $installment->remaining_amount }}</p>
+                            <p><strong>Balance Due:</strong><br>{!! format_payment_aed_amount_admin($installment->payment, (float) $installment->remaining_amount) !!}</p>
                         </div>
                     </div>
                     <div class="receipt-section">
