@@ -88,7 +88,6 @@
                                                         @if ($installment->status == 'pending')
                                                             <button type="button" class="btn btn-primary btn-sm payNowBtn"
                                                                 style="margin-right: 5px; margin-bottom: 5px;"
-                                                                data-amount="{{ $installment->remaining_amount }}"
                                                                 data-installment-id="{{ $installment->id }}">
                                                                 <i class="fa fa-credit-card"></i> Pay Now
                                                             </button>
@@ -157,16 +156,7 @@
 
         <script>
             let currentInstallmentId = null;
-            let currentAmount = null;
             let checkoutScriptLoaded = false;
-
-            function formatPayAmount(amount) {
-                const value = parseFloat(amount) || 0;
-                return '(AED ' + value.toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                }) + ')';
-            }
 
             function loadCheckoutScript(callback) {
                 if (typeof Checkout !== 'undefined') {
@@ -244,20 +234,19 @@
 
             $(document).on('click', '.payNowBtn', function () {
                 currentInstallmentId = $(this).data('installment-id');
-                currentAmount = $(this).data('amount');
                 $('#paymentModal').modal('show');
             });
 
             $('#paymentModal').on('shown.bs.modal', function () {
                 var embeddedDivId = '#hco-embedded';
                 $(embeddedDivId).empty();
-                $('#payment-amount-display').text(formatPayAmount(currentAmount));
+                $('#payment-amount-display').empty();
                 $('#payment-loading').show();
 
                 $.ajax({
                     url: '{{ route("user.generate.rakBankPaySession") }}',
                     method: 'POST',
-                    data: { amount: currentAmount },
+                    data: { installment_id: currentInstallmentId },
                     headers: {
                         'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                     },
