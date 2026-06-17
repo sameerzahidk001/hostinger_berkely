@@ -81,10 +81,11 @@ class TestimonialController extends Controller
         }
 
         $data['user_id'] = Auth::id();
+        $data['status'] = 'hide';
 
         $testimonial = CourseTestimonial::create($data);
         if ($testimonial) {
-            return redirect()->back()->with('success', 'Testimonial submitted successfully.');
+            return redirect()->back()->with('success', 'Testimonial submitted successfully. It will appear on the website after admin approval.');
         } else {
             return redirect()->back()->with('failed', 'Failed to insert Record!');
         }
@@ -102,62 +103,16 @@ class TestimonialController extends Controller
 
     public function edit(string $id)
     {
-        $data['testimonial'] = CourseTestimonial::with('course:id,title,slug')
-            ->withTrashed()
-            ->findOrFail($id);
-        return view('user.testimonials.edit')->with($data);
+        abort(403, 'Only administrators can edit testimonials.');
     }
 
     public function update(Request $request, string $id)
     {
-        $validator = Validator::make($request->all(), [
-            'name'         => 'required|string|max:255',
-            'city'         => 'required|string|max:255',
-            'country'      => 'required|string|max:255',
-            'date'         => 'nullable|date',
-            'text'         => 'required|string',
-            'asset_path'   => 'nullable|url',
-            'linkedin_url' => 'required|url',
-            'rating'       => 'required|string',
-            'course_id'    => 'required|integer|exists:courses,id',
-        ]);
-
-        if ($validator->fails()) {
-            return redirect()->back()->withErrors($validator)->withInput();
-        }
-
-        $testimonial = CourseTestimonial::withTrashed()->findOrFail($id);
-
-        $data = $request->except('_token', '_method');
-
-        if ($request->hasFile('image')) {
-            $file = $request->file('image');
-            $fileName = $file->getClientOriginalName();
-            $destinationPath = public_path('student/courses/testimonial/');
-            $file->move($destinationPath, $fileName);
-            $data['image'] = '/student/courses/testimonial/' . $fileName;
-        }
-
-        $testimonial_updated = $testimonial->update($data);
-
-        if ($testimonial_updated) {
-            return redirect()->back()->with('success', 'Testimonial updated successfully!');
-        } else {
-            return redirect()->back()->with('failed', 'Failed to update Record!');
-        }
+        abort(403, 'Only administrators can edit testimonials.');
     }
 
     public function destroy(Request $request, string $id)
     {
-        $testimonial = CourseTestimonial::withTrashed()->findOrFail($id);
-        $result = $testimonial->forceDelete();
-
-        if ($result) {
-            session()->flash('success', 'Record deleted successfully!');
-        } else {
-            session()->flash('failed', 'Failed to delete Record');
-        }
-
-        return redirect()->route('user.testimonial.show', ['testimonial' => $request->course_id]);
+        abort(403, 'Only administrators can delete testimonials.');
     }
 }

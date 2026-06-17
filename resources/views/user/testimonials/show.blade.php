@@ -344,22 +344,6 @@
                         <td>
                             {!! $testimonial->text !!}
                         </td>
-                        <td>
-                            <div class="btn-group">
-                                <a href="{{ route('user.testimonial.edit', $testimonial->id) }}" class="btn-primary btn btn-xs">
-                                    <i class="fa fa-pencil"></i> Edit
-                                </a>
-
-                                <form action="{{ route('user.testimonial.destroy', $testimonial->id) }}" method="POST" style="display:inline;">
-                                    @csrf
-                                    @method('DELETE')
-                                    <input type="hidden" name="course_id" value="{{ $course_test->id }}">
-                                    <button type="submit" class="btn-danger btn btn-xs">
-                                        <i class="fa fa-trash"></i> Delete
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
                     </tr>
                 @endforeach
                 </tbody>

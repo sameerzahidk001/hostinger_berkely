@@ -307,9 +307,6 @@
             <p><strong>Sub Total:</strong> {{ $money($summarySubtotal) }}</p>
             <p><strong>Tax ({{ number_format($taxPercentage, 2) }}%):</strong> {{ $money($taxAmount) }}</p>
             <p><strong>Total:</strong> {{ $money($summaryTotal) }}</p>
-            @if($displayCurrency !== 'AED')
-                <p><strong>Settling Amount (AED):</strong> AED {{ number_format($settlingAed, 2) }}</p>
-            @endif
         </div>
 
         @if($words)
