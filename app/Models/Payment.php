@@ -3,6 +3,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 
 class Payment extends Model
 {
@@ -48,6 +49,12 @@ class Payment extends Model
 
     protected static function booted()
     {
+        static::saving(function ($payment) {
+            if (! Schema::hasColumn($payment->getTable(), 'source')) {
+                unset($payment->source);
+            }
+        });
+
         static::creating(function ($payment) {
             // If terms_conditions is missing or empty
             if (empty($payment->terms_conditions)) {

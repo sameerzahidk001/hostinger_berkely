@@ -30,10 +30,16 @@
                min-width: 720px;
             }
          }
+         /* Prevent invisible overlays from blocking admin clicks */
+         body:not(.modal-open) .modal-backdrop,
+         body:not(.modal-open) .sweet-overlay {
+            display: none !important;
+            pointer-events: none !important;
+         }
       </style>
       @stack('style')
    </head>
-   <body>
+   <body class="no-skin-config">
       <div id="wrapper">
          <nav class="navbar-default navbar-static-side" role="navigation" style="position: fixed;">
             <div class="sidebar-collapse">
@@ -264,20 +270,37 @@
       @include('admin.layout.partials.flash_messages')
       <script>
          function confirmDelete(id) {
-            Swal.fire({
+            swal({
                 title: "Are you sure?",
                 text: "You won't be able to revert this!",
-                icon: "warning",
+                type: "warning",
                 showCancelButton: true,
                 confirmButtonColor: "#d33",
                 cancelButtonColor: "#3085d6",
-                confirmButtonText: "Yes, delete it!"
-            }).then((result) => {
-                if (result.isConfirmed) {
+                confirmButtonText: "Yes, delete it!",
+                closeOnConfirm: true
+            }, function (isConfirm) {
+                if (isConfirm) {
                     document.getElementById('delete-form-' + id).submit();
                 }
             });
          }
+
+         function clearAdminUiBlockers() {
+            $('.modal-backdrop, .sweet-overlay').remove();
+            $('body').removeClass('modal-open stop-scrolling pace-running mobile-sidebar-open');
+            $('body').addClass('pace-done');
+            $('.modal').removeClass('in').attr('aria-hidden', 'true').hide();
+         }
+
+         $(document).ready(function () {
+            clearAdminUiBlockers();
+         });
+
+         $(window).on('load', function () {
+            clearAdminUiBlockers();
+         });
+
          $(document).ready(function() {
             @if(session('success'))
                toastr.success("{{ session('success') }}", "Success");
