@@ -46,7 +46,9 @@ class AnalyticsController extends Controller
 
         $periodViews = $baseQuery()
             ->whereBetween('created_at', [$start, $end])
-            ->get(['referrer', 'country', 'platform', 'browser', 'url', 'view_count']);
+            ->get(['id', 'ip_address', 'referrer', 'country', 'platform', 'browser', 'url', 'view_count']);
+
+        $this->backfillMissingLocations($periodViews);
 
         $channels = $this->aggregateChannels($periodViews);
         $locations = $this->aggregateLocations($periodViews);
@@ -58,6 +60,8 @@ class AnalyticsController extends Controller
             ->orderByDesc('updated_at')
             ->paginate(15)
             ->withQueryString();
+
+        $this->backfillMissingLocations($latestPageViews->getCollection());
 
         return view('admin.analytics.index', compact(
             'days',
@@ -213,5 +217,26 @@ class AnalyticsController extends Controller
         }
 
         return compact('labels', 'values', 'percents', 'sliceColors') + ['total' => $total, 'colors' => $sliceColors];
+    }
+
+    private function backfillMissingLocations($views): void
+    {
+        foreach ($views as $view) {
+            if (! empty($view->country) || empty($view->ip_address)) {
+                continue;
+            }
+
+            $location = resolve_ip_location($view->ip_address);
+            if (empty($location['country'])) {
+                continue;
+            }
+
+            PageView::whereKey($view->id)->update($location);
+            $view->country = $location['country'];
+            $view->city = $location['city'];
+            $view->region = $location['region'];
+            $view->postal = $location['postal'];
+            $view->location = $location['location'];
+        }
     }
 }

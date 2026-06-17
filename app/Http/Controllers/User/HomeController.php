@@ -36,22 +36,23 @@ class HomeController extends Controller
         // $url = "https://test-rakbankpay.mtf.gateway.mastercard.com/api/rest/version/100/merchant/{$merchantId}/session";
         $url = "https://rakbankpay-nam.gateway.mastercard.com/api/rest/version/100/merchant/{$merchantId}/session";
 
-        $amount = $request->amount;
+        $amount = number_format((float) $request->amount, 2, '.', '');
+        $displayAmount = number_format((float) $request->amount, 2);
         $orderId = 'order-' . uniqid();
 
         $response = Http::withBasicAuth($apiUsername, $apiPassword)
             ->post($url, [
                 "apiOperation" => "INITIATE_CHECKOUT",
                 "order" => [
-                    "description" => "Ordered goods",
+                    "description" => "({$displayAmount})",
                     "id" => $orderId,
                     "currency" => 'AED',
-                    "amount" => $amount
+                    "amount" => $amount,
                 ],
                 "interaction" => [
                     "operation" => "PURCHASE",
                     "merchant" => [
-                        "name" => auth()->user()->name,
+                        "name" => "AED ({$displayAmount})",
                         "address" => [
                             "line1" => "200 Sample St",
                             "line2" => "1234 Example Town"
@@ -62,6 +63,7 @@ class HomeController extends Controller
 
         $responseData = $response->json();
         $responseData['orderId'] = $orderId;
+        $responseData['displayAmount'] = "(AED {$displayAmount})";
 
         return response()->json($responseData);
     }

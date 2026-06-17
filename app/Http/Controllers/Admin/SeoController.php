@@ -116,6 +116,15 @@ class SeoController extends Controller
         return view('admin.seo.edit')->with($data);
     }
 
+    public function analyzePreview(Request $request, string $id)
+    {
+        $seo = PagesSEO::with(['page.sections', 'course'])->findOrFail($id);
+
+        $seo->fill($request->only(['title', 'meta_description', 'keywords']));
+
+        return response()->json(app(SeoAnalyzerService::class)->analyze($seo));
+    }
+
     /**
      * Update the specified resource in storage.
      */
