@@ -1037,9 +1037,6 @@
                                     {{ $price['display'] }}
                                 </span>
                             </div>
-                            @if(!empty($price['show_settling_note']))
-                                <div class="text-xs text-gray-500 mb-2">{{ $price['settling_note'] }}</div>
-                            @endif
 
                             <!-- Short Description -->
                             @if ($package->short_description)

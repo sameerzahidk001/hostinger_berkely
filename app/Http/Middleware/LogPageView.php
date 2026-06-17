@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Jenssegers\Agent\Agent;
 
 class LogPageView
@@ -15,32 +16,56 @@ class LogPageView
             return $next($request);
         }
 
-        try {
-            $userIp = $request->ip();
-            $agent = new Agent();
-            $agent->setUserAgent($request->header('User-Agent'));
+        $response = $next($request);
 
-            $pageView = DB::table('page_views')
-                ->where('session_id', $request->session()->getId())
-                ->where('ip_address', $userIp)
-                ->where('url', $request->fullUrl())
-                ->whereDate('created_at', now()->toDateString())
-                ->first();
+        $userIp = $request->ip();
+        $sessionId = $request->session()->getId();
+        $fullUrl = $request->fullUrl();
+        $userAgent = (string) $request->header('User-Agent');
+        $referer = substr((string) $request->headers->get('referer'), 0, 500) ?: null;
+        $today = now()->toDateString();
 
-            if ($pageView) {
-                DB::table('page_views')->where('id', $pageView->id)->increment('view_count');
-                DB::table('page_views')->where('id', $pageView->id)->update(['updated_at' => now()]);
-            } else {
+        app()->terminating(function () use ($userIp, $sessionId, $fullUrl, $userAgent, $referer, $today) {
+            try {
+                $agent = new Agent();
+                $agent->setUserAgent($userAgent);
+
+                $pageView = DB::table('page_views')
+                    ->where('session_id', $sessionId)
+                    ->where('ip_address', $userIp)
+                    ->where('url', $fullUrl)
+                    ->whereDate('created_at', $today)
+                    ->first();
+
+                if ($pageView) {
+                    DB::table('page_views')->where('id', $pageView->id)->increment('view_count');
+
+                    if (empty($pageView->country)) {
+                        $location = resolve_ip_location($userIp);
+                        if (! empty($location['country'])) {
+                            DB::table('page_views')->where('id', $pageView->id)->update(array_merge($location, [
+                                'updated_at' => now(),
+                            ]));
+                        } else {
+                            DB::table('page_views')->where('id', $pageView->id)->update(['updated_at' => now()]);
+                        }
+                    } else {
+                        DB::table('page_views')->where('id', $pageView->id)->update(['updated_at' => now()]);
+                    }
+
+                    return;
+                }
+
                 $row = [
-                    'url' => $request->fullUrl(),
-                    'session_id' => $request->session()->getId(),
+                    'url' => $fullUrl,
+                    'session_id' => $sessionId,
                     'ip_address' => $userIp,
                     'country' => null,
                     'city' => null,
                     'region' => null,
                     'location' => null,
                     'postal' => null,
-                    'user_agent' => $request->header('User-Agent'),
+                    'user_agent' => $userAgent,
                     'browser' => $agent->browser(),
                     'platform' => $agent->platform(),
                     'view_count' => 1,
@@ -48,16 +73,21 @@ class LogPageView
                     'updated_at' => now(),
                 ];
 
-                if (\Illuminate\Support\Facades\Schema::hasColumn('page_views', 'referrer')) {
-                    $row['referrer'] = substr((string) $request->headers->get('referer'), 0, 500) ?: null;
+                if (Schema::hasColumn('page_views', 'referrer')) {
+                    $row['referrer'] = $referer;
                 }
 
-                DB::table('page_views')->insert($row);
-            }
-        } catch (\Throwable $e) {
-            report($e);
-        }
+                $pageViewId = DB::table('page_views')->insertGetId($row);
 
-        return $next($request);
+                $location = resolve_ip_location($userIp);
+                if (! empty($location['country'])) {
+                    DB::table('page_views')->where('id', $pageViewId)->update($location);
+                }
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        });
+
+        return $response;
     }
 }

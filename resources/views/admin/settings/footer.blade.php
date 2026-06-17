@@ -69,7 +69,7 @@
                 <div class="col-md-4">
                     <div class="form-group">
                         <label for="invoice_footer_email">Finance email</label>
-                        <input type="text" class="form-control" id="invoice_footer_email" name="invoice_footer_email" value="{{ old('invoice_footer_email', $settings->invoice_footer_email ?? 'Finance@berkeleyme.com') }}">
+                        <input type="text" class="form-control" id="invoice_footer_email" name="invoice_footer_email" value="{{ old('invoice_footer_email', $settings->invoice_footer_email ?? 'finance@eduberkeley.com') }}">
                     </div>
                 </div>
                 <div class="col-md-4">

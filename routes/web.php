@@ -364,6 +364,7 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
         Route::resource('faq', FaqController::class);
         Route::resource('pages', PagesController::class);
         Route::resource('learner-stories', LearnerStoryController::class);
+        Route::post('pages-seo/{pages_seo}/analyze', [SeoController::class, 'analyzePreview'])->name('pages-seo.analyze');
         Route::resource('pages-seo', SeoController::class);
 
         Route::resource('school', SchoolController::class);

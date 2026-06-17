@@ -95,17 +95,15 @@
                                 <select name="package" id="package" class="form-control">
                                     <option value="">Select Package</option>
                                     @foreach($packages as $package)
-                                    @if($package->currency == 'AED')
                                         <option value="{{ $package->id }}"
                                             data-courseid="{{ $package->course->id }}"
                                             data-price="{{ $package->price }}"
                                             data-currency="{{ $package->currency }}"
                                             data-packagename="{{ $package->package_name }}"
-                                            
+                                            style="display: none;"
                                             {{ $payment->package_id == $package->id ? 'selected' : '' }}>
-                                            {{ $package->package_name }}
+                                            {{ $package->package_name }} ({{ $package->currency }})
                                         </option>
-                                    @endif
                                     @endforeach
                                 </select>
                                 @error('package')
@@ -273,8 +271,12 @@
             });
 
             const preselectedCourse = $('#course').val();
+            const preselectedPackage = '{{ $payment->package_id }}';
             if (preselectedCourse) {
                 $('#course').trigger('change');
+                if (preselectedPackage) {
+                    $('#package').val(preselectedPackage);
+                }
             }
         });
     </script>

@@ -69,9 +69,6 @@
                                                     </td>
                                                     <td>
                                                         {{ $invoiceAmount['display'] }}
-                                                        @if($invoiceAmount['show_settling_note'])
-                                                            <br><small class="text-muted">{{ $invoiceAmount['settling_note'] }}</small>
-                                                        @endif
                                                     </td>
                                                     <td>{{ $installment->installment_number }}/{{ $installment->payment->total_installment }}
                                                     </td>
@@ -142,6 +139,11 @@
                         <span aria-hidden="true">&times;</span>
                     </button>
                     <div class="modal-body">
+                        <div id="payment-amount-display" class="text-center mb-3" style="font-size: 18px; font-weight: 600;"></div>
+                        <div id="payment-loading" class="text-center py-4" style="display: none;">
+                            <i class="fa fa-spinner fa-spin fa-2x"></i>
+                            <p class="mt-2 mb-0">Loading payment form...</p>
+                        </div>
                         <div id="hco-embedded"></div>
                     </div>
                 </div>
@@ -151,17 +153,51 @@
 
 @push('script')
     @if(auth()->user()->hasPermission('installment-list'))
-        {{--
-        <script src="https://test-rakbankpay.mtf.gateway.mastercard.com/static/checkout/checkout.min.js"
-            data-error="errorCallback" data-cancel="cancelCallback" data-complete="completeCallback"></script> --}}
-        <script src="https://rakbankpay-nam.gateway.mastercard.com/static/checkout/checkout.min.js" data-error="errorCallback"
-            data-cancel="cancelCallback" data-complete="completeCallback"></script>
-        <script type="text/javascript" src="https://www.simplify.com/commerce/simplify.pay.js"></script>
         <script src="{{ asset('/admin/js/plugins/dataTables/datatables.min.js') }}"></script>
 
         <script>
             let currentInstallmentId = null;
             let currentAmount = null;
+            let checkoutScriptLoaded = false;
+
+            function formatPayAmount(amount) {
+                const value = parseFloat(amount) || 0;
+                return '(AED ' + value.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }) + ')';
+            }
+
+            function loadCheckoutScript(callback) {
+                if (typeof Checkout !== 'undefined') {
+                    callback();
+                    return;
+                }
+
+                if (checkoutScriptLoaded) {
+                    const waitForCheckout = setInterval(function () {
+                        if (typeof Checkout !== 'undefined') {
+                            clearInterval(waitForCheckout);
+                            callback();
+                        }
+                    }, 50);
+                    return;
+                }
+
+                checkoutScriptLoaded = true;
+                const script = document.createElement('script');
+                script.src = 'https://rakbankpay-nam.gateway.mastercard.com/static/checkout/checkout.min.js';
+                script.setAttribute('data-error', 'errorCallback');
+                script.setAttribute('data-cancel', 'cancelCallback');
+                script.setAttribute('data-complete', 'completeCallback');
+                script.onload = callback;
+                script.onerror = function () {
+                    checkoutScriptLoaded = false;
+                    $('#payment-loading').hide();
+                    console.error('Failed to load payment checkout script.');
+                };
+                document.head.appendChild(script);
+            }
 
             function errorCallback(error) {
                 console.log(JSON.stringify(error));
@@ -215,6 +251,8 @@
             $('#paymentModal').on('shown.bs.modal', function () {
                 var embeddedDivId = '#hco-embedded';
                 $(embeddedDivId).empty();
+                $('#payment-amount-display').text(formatPayAmount(currentAmount));
+                $('#payment-loading').show();
 
                 $.ajax({
                     url: '{{ route("user.generate.rakBankPaySession") }}',
@@ -224,20 +262,30 @@
                         'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                     },
                     success: function (res) {
+                        if (res.displayAmount) {
+                            $('#payment-amount-display').text(res.displayAmount);
+                        }
+
                         if (res.session && res.session.id) {
-                            try {
-                                Checkout.configure({
-                                    session: { id: res.session.id },
-                                });
-                                Checkout.showEmbeddedPage(embeddedDivId);
-                            } catch (error) {
-                                console.error("An error occurred while initializing RakBank Checkout:", error);
-                            }
+                            loadCheckoutScript(function () {
+                                try {
+                                    Checkout.configure({
+                                        session: { id: res.session.id },
+                                    });
+                                    $('#payment-loading').hide();
+                                    Checkout.showEmbeddedPage(embeddedDivId);
+                                } catch (error) {
+                                    $('#payment-loading').hide();
+                                    console.error("An error occurred while initializing RakBank Checkout:", error);
+                                }
+                            });
                         } else {
+                            $('#payment-loading').hide();
                             console.error("Session creation failed", res);
                         }
                     },
                     error: function (err) {
+                        $('#payment-loading').hide();
                         console.error("API error", err.responseText);
                     }
                 });
@@ -246,6 +294,8 @@
             $('#paymentModal').on('hidden.bs.modal', function () {
                 sessionStorage.clear();
                 $('#hco-embedded').empty();
+                $('#payment-amount-display').empty();
+                $('#payment-loading').hide();
             });
         </script>
     @endif

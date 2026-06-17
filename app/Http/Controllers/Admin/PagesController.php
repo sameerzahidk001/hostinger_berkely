@@ -12,6 +12,7 @@ use App\Models\SiteSettings;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use App\Http\Controllers\Controller;
+use App\Services\SeoAnalyzerService;
 use Illuminate\Support\Facades\Validator;
 
 class PagesController extends Controller
@@ -29,7 +30,13 @@ class PagesController extends Controller
         $data['categories'] = Category::orderBy('name', 'asc')->get();
         $data['category_page_id'] = SiteSettings::pluck('categories')->first();
         $data['categories_pages_slug_base'] = SiteSettings::pluck('category_perma')->first();
-        $data['pages'] = Page::with(['parent', 'seo', 'createdBy', 'updatedBy'])->get();
+        $data['pages'] = Page::with(['parent', 'seo.page.sections', 'seo.course', 'faqs', 'createdBy', 'updatedBy'])
+            ->get()
+            ->each(function (Page $page) {
+                if ($page->seo) {
+                    $page->seo_analysis = app(SeoAnalyzerService::class)->analyze($page->seo);
+                }
+            });
 
         return view('admin.pages.index')->with($data);
     }

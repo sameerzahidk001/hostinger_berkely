@@ -342,7 +342,12 @@ if (!function_exists('getUserLocation')) {
         }
 
         try {
-            $response = Http::get("https://ipinfo.io/{$ip}/json");
+            $token = env('IPINFO_TOKEN');
+            $url = $token
+                ? "https://ipinfo.io/{$ip}?token={$token}"
+                : "https://ipinfo.io/{$ip}/json";
+
+            $response = Http::timeout(5)->get($url);
 
             if ($response->successful()) {
                 return $response->json();
@@ -355,6 +360,61 @@ if (!function_exists('getUserLocation')) {
     }
 }
 
+if (!function_exists('resolve_ip_location')) {
+    function resolve_ip_location(?string $ip): array
+    {
+        $empty = [
+            'country' => null,
+            'city' => null,
+            'region' => null,
+            'postal' => null,
+            'location' => null,
+        ];
+
+        if (! $ip) {
+            return $empty;
+        }
+
+        if (in_array($ip, ['127.0.0.1', '::1'], true)) {
+            return $empty;
+        }
+
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+            return $empty;
+        }
+
+        return \Illuminate\Support\Facades\Cache::remember(
+            'ip_location:' . $ip,
+            now()->addDays(7),
+            function () use ($ip, $empty) {
+                $data = getUserLocation($ip);
+
+                if (empty($data) || isset($data['error'])) {
+                    return $empty;
+                }
+
+                $countryCode = $data['country'] ?? null;
+                $countryName = $countryCode;
+
+                if ($countryCode) {
+                    $name = \App\Models\Country::where('iso_code', $countryCode)->value('name');
+                    if ($name) {
+                        $countryName = $name;
+                    }
+                }
+
+                return [
+                    'country' => $countryName ?: $countryCode,
+                    'city' => $data['city'] ?? null,
+                    'region' => $data['region'] ?? null,
+                    'postal' => $data['postal'] ?? null,
+                    'location' => $data['loc'] ?? null,
+                ];
+            }
+        );
+    }
+}
+
 if (!function_exists('invoice_footer_settings')) {
     function invoice_footer_settings(): array
     {
@@ -362,7 +422,7 @@ if (!function_exists('invoice_footer_settings')) {
             'usa' => '<strong>USA &amp; Canada:</strong> 2001 Addison Street, Suite 300, Berkeley, CA, 94704. &nbsp; | &nbsp; <strong>T:</strong> +1 (407) 371 9886',
             'uk' => '<strong>UK &amp; Europe:</strong> 124 City Road, London EC1V 2NX, United Kingdom. &nbsp; | &nbsp; <strong>T:</strong> +44 7 306 279 111',
             'middle_east' => '<strong>Middle East:</strong> Floor 25, Sheikh Rashid Tower, Dubai World Trade Centre, Dubai, UAE. &nbsp; | &nbsp; <strong>T:</strong> +971 585 55 56 57',
-            'email' => 'Finance@berkeleyme.com',
+            'email' => 'finance@eduberkeley.com',
             'website' => 'www.eduberkeley.com',
             'presence' => 'USA &nbsp; | &nbsp; Canada &nbsp; | &nbsp; UK &nbsp; | &nbsp; UAE &nbsp; | &nbsp; KSA &nbsp; | &nbsp; China &nbsp; | &nbsp; Africa',
         ];

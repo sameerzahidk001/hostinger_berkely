@@ -2,6 +2,21 @@
 @section('title', 'Pages')
 @push('style')
     <link href="{{ asset('/admin/css/plugins/dataTables/datatables.min.css') }}" rel="stylesheet">
+    <style>
+        .seo-score-pill {
+            display: inline-block;
+            min-width: 58px;
+            text-align: center;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 4px;
+            color: #fff;
+        }
+        .seo-score-pill.excellent { background: #1ab394; }
+        .seo-score-pill.good { background: #f8ac59; }
+        .seo-score-pill.poor { background: #ed5565; }
+        .seo-details small { display: block; color: #676a6c; line-height: 1.5; }
+    </style>
 @endpush
 @section('content')
 
@@ -117,6 +132,9 @@
                                         <th>URL</th>
                                         <th>FAQ's Count</th>
                                         <th>SEO Status</th>
+                                        <th style="width:90px;">Score</th>
+                                        <th style="width:220px;">SEO Details</th>
+                                        <th>Meta Description</th>
                                         @include('admin.layout.partials.audit-columns-head')
                                         <th style="width:130px;">Action</th>
                                     </tr>
@@ -162,6 +180,10 @@
                                                     {{ $page->seo ? 'Added' : 'Not Added' }}
                                                 </span>
                                             </td>
+                                            @include('admin.seo.partials.list-seo-columns', [
+                                                'seo' => $page->seo,
+                                                'analysis' => $page->seo_analysis ?? null,
+                                            ])
                                             @include('admin.layout.partials.audit-columns-cells', ['model' => $page])
                                             <td style="vertical-align: middle;" class="center">
 
@@ -193,6 +215,9 @@
                                         <th>URL</th>
                                         <th>FAQ's Count</th>
                                         <th>SEO Status</th>
+                                        <th>Score</th>
+                                        <th>SEO Details</th>
+                                        <th>Meta Description</th>
                                         <th>Created</th>
                                         <th>Created By</th>
                                         <th>Last Modified</th>
@@ -218,6 +243,7 @@
         $(document).ready(function () {
             $('.dataTables-example').DataTable({
                 pageLength: 10,
+                lengthMenu: [10, 20, 50, 100],
                 searching: true,
                 lengthChange: true,
                 paging: true,
