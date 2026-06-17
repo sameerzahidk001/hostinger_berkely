@@ -1020,7 +1020,8 @@
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full max-w-[1400px]">
 
                 @foreach ($course->courseFeePackages as $index => $package)
-                    @if ($package->showonwebsite == 1 && $package->currency == 'AED')
+                    @if ($package->showonwebsite == 1)
+                        @php($price = format_package_price($package->price, $package->currency))
                         <div
                             class="relative group bg-white flex flex-col p-6 text-center rounded-2xl shadow-lg border border-gray-100 
                         hover:shadow-2xl hover:border-yellow transition duration-300 ease-in-out w-full max-w-sm mx-auto">
@@ -1033,9 +1034,12 @@
                             <!-- Price -->
                             <div class="flex justify-center items-baseline mb-2">
                                 <span class="text-4xl sm:text-5xl font-extrabold text-[#000435] leading-tight">
-                                    AED {{ $package->price }}
+                                    {{ $price['display'] }}
                                 </span>
                             </div>
+                            @if(!empty($price['show_settling_note']))
+                                <div class="text-xs text-gray-500 mb-2">{{ $price['settling_note'] }}</div>
+                            @endif
 
                             <!-- Short Description -->
                             @if ($package->short_description)
