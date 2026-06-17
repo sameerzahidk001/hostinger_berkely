@@ -113,6 +113,29 @@
         }
     </style>
 
+    @php
+        $displayCurrency = payment_display_currency($payments);
+        $settlingAed = (float) ($payments->price ?? 0);
+        $displayAmount = $displayCurrency === 'AED'
+            ? $settlingAed
+            : (float) ($coursefee->price ?? convert_from_aed($settlingAed, $displayCurrency));
+        $taxPercentage = (float) ($coursefee->tax_percentage ?? 0);
+
+        if ($displayCurrency === 'AED') {
+            $taxAmount = ($settlingAed * $taxPercentage) / 100;
+            $summarySubtotal = $settlingAed;
+            $summaryTotal = $summarySubtotal + $taxAmount;
+        } else {
+            $taxAmount = ($displayAmount * $taxPercentage) / 100;
+            $summarySubtotal = $displayAmount;
+            $summaryTotal = $summarySubtotal + $taxAmount;
+        }
+
+        $balanceDueAed = (float) $installments->sum('remaining_amount');
+        $balanceDue = payment_display_amount_from_aed($payments, $balanceDueAed);
+        $money = fn($n) => $displayCurrency . ' ' . number_format((float) $n, 2);
+    @endphp
+
     <div class="wrapper wrapper-content animated fadeInRight">
         <div class="print-btn text-center" style="margin-top: 20px;">
             <button class="btn btn-primary" onclick="window.print();">
@@ -143,7 +166,7 @@
                     <div class="row" style="margin-bottom: 15px;">
                         <div class="col-xs-4 pull-right text-right">
                             <p><strong>Balance
-                                    Due:</strong><br>AED {{ $installments->sum('remaining_amount') }}
+                                    Due:</strong><br>{{ $money($balanceDue) }}
                             </p>
                         </div>
                     </div>
@@ -180,10 +203,6 @@
                             @php
                                 $installment = $installments->first();
                                 $paymentType = $installment->payment_method ?? '';
-                                $price = $payments->price;
-                                $taxPercentage = $coursefee->tax_percentage ?? 0;
-                                $taxAmount = ($price * $taxPercentage) / 100;
-                                $totalAmount = $price + $taxAmount;
                             @endphp
                             <tr>
                                 <td>1</td>
@@ -209,23 +228,23 @@
                                 </td>
                                 <td>1.00</td>
                                 <td>{{ number_format($taxPercentage, 2) }}%</td>
-                                <td>AED {{ $payments->price }}</td>
+                                <td>{{ $money($displayAmount) }}</td>
                             </tr>
                         </tbody>
                     </table>
 
                     <div class="summary">
-                        <p><strong>Sub Total:</strong> AED {{ number_format($price, 2) }}</p>
+                        <p><strong>Sub Total:</strong> {{ $money($summarySubtotal) }}</p>
                         <p><strong>Tax ({{ number_format($taxPercentage, 2) }}%):</strong>
-                            AED {{ number_format($taxAmount, 2) }}</p>
-                        <p><strong>Total:</strong> AED {{ number_format($totalAmount, 2) }}</p>
+                            {{ $money($taxAmount) }}</p>
+                        <p><strong>Total:</strong> {{ $money($summaryTotal) }}</p>
                     </div>
 
                     @php
                         $words = null;
                         if (class_exists('NumberFormatter')) {
                             $formatter = new \NumberFormatter('en', \NumberFormatter::SPELLOUT);
-                            $words = ucfirst($formatter->format($totalAmount));
+                            $words = ucfirst($formatter->format($displayCurrency === 'AED' ? $summaryTotal : $displayAmount));
                         }
                     @endphp
 
@@ -251,7 +270,7 @@
                                         <tr>
                                             <td>{{ $index + 1 }}</td>
                                             <td>{{ \Carbon\Carbon::parse($installment->due_date)->format('d M Y') }}</td>
-                                            <td>AED {{ number_format($installment->remaining_amount + $installment->paid_amount, 2) }}</td>
+                                            <td>{{ format_payment_aed_amount($payments, (float) ($installment->remaining_amount + $installment->paid_amount)) }}</td>
                                             <td>{{ $installment->paid_date ?? 'N/A' }}</td>
                                             <td>{{ ucfirst($installment->status) }}</td>
                                         </tr>
@@ -260,7 +279,7 @@
                                 <tr>
                                     <td colspan="2" class="text-right"><strong>Total Paid</strong></td>
                                     <td colspan="1">
-                                        <strong>AED {{ number_format($installments->sum('paid_amount'), 2) }}</strong>
+                                        <strong>{{ format_payment_aed_amount($payments, (float) $installments->sum('paid_amount')) }}</strong>
                                     </td>
                                 </tr>
                             </tbody>

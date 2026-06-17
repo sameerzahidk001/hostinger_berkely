@@ -193,7 +193,10 @@
             $summaryTotal = $summarySubtotal + $taxAmount;
         }
         $totalAmount = $summaryTotal;
-        $balanceDue = (float) $installments->sum('remaining_amount');
+        $balanceDueAed = (float) $installments->sum('remaining_amount');
+        $balanceDue = $displayCurrency === 'AED'
+            ? $balanceDueAed
+            : convert_from_aed($balanceDueAed, $displayCurrency);
 
         $money = $displayCurrency === 'AED'
             ? fn($n) => 'AED ' . number_format((float) $n, 2)
@@ -236,11 +239,7 @@
             <div class="col"></div>
             <div class="col text-right">
                 <strong>Balance Due:</strong><br>
-                @if($displayCurrency === 'AED')
-                    {{ $money($balanceDue) }}
-                @else
-                    AED {{ number_format($balanceDue, 2) }}
-                @endif
+                {{ $money($balanceDue) }}
             </div>
         </div>
 
@@ -329,7 +328,10 @@
                     @foreach ($installments as $index => $inst)
                         @if($inst->user)
                             @php
-                                $dueAmt = (float) ($inst->remaining_amount + $inst->paid_amount);
+                                $dueAmtAed = (float) ($inst->remaining_amount + $inst->paid_amount);
+                                $dueAmt = $displayCurrency === 'AED'
+                                    ? $dueAmtAed
+                                    : convert_from_aed($dueAmtAed, $displayCurrency);
                                 $dueDateRow = $inst->due_date ? \Carbon\Carbon::parse($inst->due_date)->format('d M Y') : 'N/A';
                                 $paidDateRow = $inst->paid_date ?: 'N/A';
                             @endphp
@@ -344,7 +346,7 @@
                     @endforeach
                     <tr>
                         <td colspan="2" class="text-right"><strong>Total Paid</strong></td>
-                        <td colspan="3"><strong>{{ $money($installments->sum('paid_amount')) }}</strong></td>
+                        <td colspan="3"><strong>{{ $money($displayCurrency === 'AED' ? $installments->sum('paid_amount') : convert_from_aed((float) $installments->sum('paid_amount'), $displayCurrency)) }}</strong></td>
                     </tr>
                 </tbody>
             </table>

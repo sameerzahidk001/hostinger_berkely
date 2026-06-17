@@ -229,6 +229,57 @@ if (!function_exists('convert_to_aed')) {
     }
 }
 
+if (!function_exists('convert_from_aed')) {
+    function convert_from_aed(float $aedAmount, ?string $currency = 'AED'): float
+    {
+        $currency = strtoupper(trim($currency ?: 'AED'));
+
+        if ($currency === 'AED') {
+            return round($aedAmount, 2);
+        }
+
+        $rate = currency_rates_to_aed()[$currency] ?? null;
+
+        if (!$rate) {
+            return round($aedAmount, 2);
+        }
+
+        return round($aedAmount / $rate, 2);
+    }
+}
+
+if (!function_exists('payment_display_currency')) {
+    function payment_display_currency($payment): string
+    {
+        return package_currency_code(
+            $payment->currency ?? optional($payment->courseFee)->currency ?? 'AED'
+        );
+    }
+}
+
+if (!function_exists('payment_display_amount_from_aed')) {
+    function payment_display_amount_from_aed($payment, float $aedAmount): float
+    {
+        $currency = payment_display_currency($payment);
+
+        if ($currency === 'AED') {
+            return round($aedAmount, 2);
+        }
+
+        return convert_from_aed($aedAmount, $currency);
+    }
+}
+
+if (!function_exists('format_payment_aed_amount')) {
+    function format_payment_aed_amount($payment, float $aedAmount): string
+    {
+        $currency = payment_display_currency($payment);
+        $amount = payment_display_amount_from_aed($payment, $aedAmount);
+
+        return $currency . ' ' . number_format($amount, 2);
+    }
+}
+
 if (!function_exists('format_aed_price')) {
     function format_aed_price($amount, ?string $currency = 'AED'): string
     {
@@ -279,12 +330,24 @@ if (!function_exists('format_package_price')) {
 if (!function_exists('format_payment_amount')) {
     function format_payment_amount($payment): array
     {
+        $currency = payment_display_currency($payment);
         $settlingAed = (float) ($payment->price ?? 0);
 
+        if ($currency === 'AED') {
+            return [
+                'display' => 'AED ' . number_format($settlingAed, 2),
+                'settling_aed' => $settlingAed,
+                'currency' => 'AED',
+                'show_settling_note' => false,
+            ];
+        }
+
+        $displayAmount = (float) (optional($payment->courseFee)->price ?? convert_from_aed($settlingAed, $currency));
+
         return [
-            'display' => 'AED ' . number_format($settlingAed, 2),
+            'display' => $currency . ' ' . number_format($displayAmount, 2),
             'settling_aed' => $settlingAed,
-            'currency' => 'AED',
+            'currency' => $currency,
             'show_settling_note' => false,
         ];
     }

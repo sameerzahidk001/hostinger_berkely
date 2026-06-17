@@ -64,11 +64,11 @@
                                                     @endif
                                                 </td>
                                                 <td>{{ \Carbon\Carbon::parse($installment->created_at)->format('d-M-Y') ?? 'N/A' }}</td>
-                                                <td>AED {{ $installment->payment->price }}</td>
+                                                <td>{{ format_payment_amount($installment->payment)['display'] }}</td>
                                                 <td>{{ $installment->installment_number }}/{{ $installment->payment->total_installment }}</td>
                                                 <td>{{ $installment->due_date ?? 'N/A' }}</td>
-                                                <td>AED {{ $installment->paid_amount + $installment->remaining_amount }}</td>
-                                                <td>AED {{ $installment->paid_amount ?? 'N/A' }}</td>
+                                                <td>{{ format_payment_aed_amount($installment->payment, (float) ($installment->paid_amount + $installment->remaining_amount)) }}</td>
+                                                <td>{{ $installment->paid_amount ? format_payment_aed_amount($installment->payment, (float) $installment->paid_amount) : 'N/A' }}</td>
                                                 <td>{{ $installment->paid_date ?? 'N/A' }}</td>
                                                 <td>{{ $installment->payment->course->title ?? 'N/A' }}</td>
                                                 <td>{{ $installment->payment->courseFee->package_name ?? 'N/A' }}</td>
