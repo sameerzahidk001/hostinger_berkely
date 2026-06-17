@@ -12,7 +12,7 @@ return new class extends Migration
         'course_agendas',
         'categories',
         'faqs',
-        'pages_seo',
+        'pages_s_e_o_s',
         'clients',
     ];
 
