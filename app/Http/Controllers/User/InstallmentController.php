@@ -10,6 +10,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\PaymentGateway;
 use Illuminate\Http\Request;
 use App\Models\Installment;
+use App\Models\Payment;
 use App\Models\Country;
 use App\Mail\UserMail;
 use App\Models\Email;
@@ -67,31 +68,57 @@ class InstallmentController extends Controller
         return view('user.installments.receipt', compact('installment'));
     }
 
+    public function viewInvoice($paymentId)
+    {
+        $payment = Payment::whereKey($paymentId)
+            ->where('user_id', Auth::id())
+            ->where('status', 'Active')
+            ->firstOrFail();
+
+        return $this->renderInvoice($payment);
+    }
+
     public function generateInvoice(Request $request)
     {
-        $course_id = $request->course_id;
-        $installments = Installment::with(['payment.course', 'payment.courseFee'])
-            ->where('user_id', $request->user_id)
-            ->where('payment_id', $request->payment_id)
-            ->whereHas('payment', function ($query) use ($course_id) {
-                $query->where('course_id', $course_id);
-            })
+        $payment = Payment::whereKey($request->payment_id)
+            ->where('user_id', Auth::id())
+            ->where('status', 'Active')
+            ->firstOrFail();
+
+        if ((int) $request->course_id !== (int) $payment->course_id) {
+            abort(404);
+        }
+
+        return $this->renderInvoice($payment);
+    }
+
+    protected function renderInvoice(Payment $payment)
+    {
+        $installments = Installment::with(['payment.course', 'payment.courseFee', 'user'])
+            ->where('user_id', Auth::id())
+            ->where('payment_id', $payment->id)
             ->orderBy('installment_number')
             ->get();
 
         if ($installments->isEmpty()) {
-            abort(404, 'No installments found for this course, user, and payment.');
+            abort(404, 'No installments found for this payment.');
         }
 
         $user = $installments->first()->user;
-        $course = $installments->first()->payment->course;
-        $coursefee = $installments->first()->payment->courseFee;
-        $payments = $installments->first()->payment;
-
-        // Sum Paid Amount and Remaining Amount
+        $course = $payment->course;
+        $coursefee = $payment->courseFee;
+        $payments = $payment;
         $totalPaidAmount = $installments->sum('paid_amount');
         $totalRemainingAmount = $installments->sum('remaining_amount');
 
-        return view('user.installments.invoice', compact('installments', 'user', 'course', 'coursefee', 'totalPaidAmount', 'totalRemainingAmount', 'payments'));
+        return view('user.installments.invoice', compact(
+            'installments',
+            'user',
+            'course',
+            'coursefee',
+            'totalPaidAmount',
+            'totalRemainingAmount',
+            'payments'
+        ));
     }
 }
