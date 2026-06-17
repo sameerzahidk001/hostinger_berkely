@@ -108,7 +108,7 @@
                                 <div class="col-lg-6 mb">
                                     <label for="date">Date</label>
                                     <input id="date" class="form-control @error('date') is-invalid @enderror" type="date"
-                                        name="date" value="{{ old('date', $testimonial->date) }}" required>
+                                        name="date" value="{{ old('date', $testimonial->date) }}">
                                     @error('date') <span class="text-danger">{{ $message }}</span> @enderror
                                 </div>
 
@@ -146,7 +146,7 @@
                                         <input id="linkedin_url" type="url"
                                             class="form-control @error('linkedin_url') is-invalid @enderror"
                                             name="linkedin_url"
-                                            value="{{ old('linkedin_url', $testimonial->linkedin_url ?? '') }}">
+                                            value="{{ old('linkedin_url', $testimonial->linkedin_url ?? '') }}" required>
                                         @if(!empty($testimonial->linkedin_url))
                                             <small class="help-block" style="display:block; margin-top:6px;">
                                                 <a href="{{ $testimonial->linkedin_url }}" target="_blank" rel="noopener">View

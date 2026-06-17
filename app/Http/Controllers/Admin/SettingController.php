@@ -241,20 +241,41 @@ class SettingController extends Controller
     }
     public function updateFooterSetting(Request $request)
     {
-        // Example validation based on expected columns
         $request->validate([
-            'footer' => 'nullable',
-            // add other fields as needed
+            'footer' => 'nullable|string',
+            'invoice_footer_usa' => 'nullable|string',
+            'invoice_footer_uk' => 'nullable|string',
+            'invoice_footer_middle_east' => 'nullable|string',
+            'invoice_footer_email' => 'nullable|string|max:255',
+            'invoice_footer_website' => 'nullable|string|max:255',
+            'invoice_footer_presence' => 'nullable|string|max:500',
         ]);
-            // dd($request->all()); // <--- shows all fields from form
-            // exit;
 
-        DB::table('site_settings')->update([
+        $payload = [
             'footer_settings' => $request->footer,
-            // map other fields here
-            'updated_at' => now()
-        ]);
+            'updated_at' => now(),
+        ];
 
+        foreach ([
+            'invoice_footer_usa',
+            'invoice_footer_uk',
+            'invoice_footer_middle_east',
+            'invoice_footer_email',
+            'invoice_footer_website',
+            'invoice_footer_presence',
+        ] as $field) {
+            if (\Illuminate\Support\Facades\Schema::hasColumn('site_settings', $field)) {
+                $payload[$field] = $request->input($field);
+            }
+        }
+
+        $row = DB::table('site_settings')->select('id')->first();
+        if ($row && isset($row->id)) {
+            DB::table('site_settings')->where('id', $row->id)->update($payload);
+        } else {
+            $payload['created_at'] = now();
+            DB::table('site_settings')->insert($payload);
+        }
 
         return redirect()->back()->with('success', 'Settings updated successfully!');
     }

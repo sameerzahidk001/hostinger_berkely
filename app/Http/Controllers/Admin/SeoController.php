@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Models\Page;
 use App\Models\PagesSEO;
+use App\Services\SeoAnalyzerService;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -16,7 +17,7 @@ class SeoController extends Controller
     public function index(Request $request)
     {
         // Initialize the query builder
-        $query = PagesSEO::with(['page', 'createdBy', 'updatedBy']);
+        $query = PagesSEO::with(['page', 'course', 'createdBy', 'updatedBy']);
 
         // Filter by title/name if provided
         if ($request->has('name') && !empty($request->name)) {
@@ -32,8 +33,19 @@ class SeoController extends Controller
             }
         }
 
-        // Execute the query and get results
-        $data['pages_seo'] = $query->get();
+        $analyzer = app(SeoAnalyzerService::class);
+        $perPage = (int) ($request->input('per_page', 20));
+        $perPage = in_array($perPage, [10, 20, 50, 100], true) ? $perPage : 20;
+
+        $paginator = $query->orderByDesc('id')->paginate($perPage)->withQueryString();
+
+        $paginator->getCollection()->transform(function (PagesSEO $seo) use ($analyzer) {
+            $seo->analysis = $analyzer->analyze($seo);
+            return $seo;
+        });
+
+        $data['pages_seo'] = $paginator;
+        $data['per_page'] = $perPage;
 
         // Return the view with filtered data
         return view('admin.seo.index')->with($data);
@@ -99,7 +111,8 @@ class SeoController extends Controller
      */
     public function edit(string $id)
     {
-        $data['page_seo'] = PagesSEO::findOrFail($id);
+        $data['page_seo'] = PagesSEO::with(['page.sections', 'course'])->findOrFail($id);
+        $data['seo_analysis'] = app(SeoAnalyzerService::class)->analyze($data['page_seo']);
         return view('admin.seo.edit')->with($data);
     }
 
