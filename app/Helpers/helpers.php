@@ -354,3 +354,67 @@ if (!function_exists('getUserLocation')) {
         return ['error' => 'Failed to get location.'];
     }
 }
+
+if (!function_exists('invoice_footer_settings')) {
+    function invoice_footer_settings(): array
+    {
+        $defaults = [
+            'usa' => '<strong>USA &amp; Canada:</strong> 2001 Addison Street, Suite 300, Berkeley, CA, 94704. &nbsp; | &nbsp; <strong>T:</strong> +1 (407) 371 9886',
+            'uk' => '<strong>UK &amp; Europe:</strong> 124 City Road, London EC1V 2NX, United Kingdom. &nbsp; | &nbsp; <strong>T:</strong> +44 7 306 279 111',
+            'middle_east' => '<strong>Middle East:</strong> Floor 25, Sheikh Rashid Tower, Dubai World Trade Centre, Dubai, UAE. &nbsp; | &nbsp; <strong>T:</strong> +971 585 55 56 57',
+            'email' => 'Finance@berkeleyme.com',
+            'website' => 'www.eduberkeley.com',
+            'presence' => 'USA &nbsp; | &nbsp; Canada &nbsp; | &nbsp; UK &nbsp; | &nbsp; UAE &nbsp; | &nbsp; KSA &nbsp; | &nbsp; China &nbsp; | &nbsp; Africa',
+        ];
+
+        try {
+            $row = \Illuminate\Support\Facades\DB::table('site_settings')->first();
+        } catch (\Throwable $e) {
+            $row = null;
+        }
+
+        if (! $row) {
+            return $defaults;
+        }
+
+        return [
+            'usa' => $row->invoice_footer_usa ?: $defaults['usa'],
+            'uk' => $row->invoice_footer_uk ?: $defaults['uk'],
+            'middle_east' => $row->invoice_footer_middle_east ?: $defaults['middle_east'],
+            'email' => $row->invoice_footer_email ?: $defaults['email'],
+            'website' => $row->invoice_footer_website ?: $defaults['website'],
+            'presence' => $row->invoice_footer_presence ?: $defaults['presence'],
+        ];
+    }
+}
+
+if (!function_exists('invoice_header_email')) {
+    function invoice_header_email(): string
+    {
+        $default = 'training@eduberkeley.com';
+
+        try {
+            $row = \Illuminate\Support\Facades\DB::table('site_settings')->first();
+        } catch (\Throwable $e) {
+            $row = null;
+        }
+
+        if ($row && !empty($row->invoice_header_email)) {
+            return $row->invoice_header_email;
+        }
+
+        return $default;
+    }
+}
+
+if (!function_exists('payment_type_options')) {
+    function payment_type_options(): array
+    {
+        return [
+            'bank' => 'Bank',
+            'cash' => 'Cash',
+            'card' => 'Card',
+            'cheque' => 'Cheque',
+        ];
+    }
+}
