@@ -98,7 +98,7 @@
                                 <div class="col-lg-6 mb">
                                     <label for="">Date</label>
                                     <input class="form-control @error('date') is-invalid @enderror" type="date" name="date"
-                                        value="{{ old('date', \Carbon\Carbon::now()->format('Y-m-d')) }}" required>
+                                        value="{{ old('date') }}">
                                     @error('date')
                                         <span class="text-danger">{{ $message }}</span>
                                     @enderror
@@ -148,7 +148,7 @@
                                     <label class="mb-1">Youtube Video URL</label>
                                     <input type="url" name="asset_path"
                                         class="form-control @error('asset_path') is-invalid @enderror"
-                                        value="{{ old('asset_path') }}" required>
+                                        value="{{ old('asset_path') }}">
                                     @error('asset_path')
                                         <span class="text-danger">{{ $message }}</span>
                                     @enderror
