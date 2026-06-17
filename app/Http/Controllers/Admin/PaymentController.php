@@ -317,7 +317,7 @@ class PaymentController extends Controller
             'installment_id' => 'required|exists:installments,id',
             'amount' => 'required|numeric|min:0.01',
             'paid_date' => 'nullable|date',
-            'payment_type' => 'nullable|string|max:50',
+            'payment_type' => 'nullable|string|in:bank,cash,card,cheque',
             'notes' => 'nullable|string',
             'is_edit' => 'nullable|boolean',
         ]);
@@ -450,9 +450,20 @@ class PaymentController extends Controller
     {
         $payment = Payment::findOrFail($id);
 
-        app(InvoiceService::class)->activateAndSend($payment);
+        if ($payment->status === 'Active') {
+            return redirect()->back()->with('warning', 'This invoice is already active.');
+        }
 
-        return redirect()->back()->with('success', 'Invoice sent successfully.');
+        $sent = app(InvoiceService::class)->activateAndSend($payment);
+
+        if (!$sent) {
+            return redirect()->back()->with(
+                'fail',
+                'Invoice could not be emailed. Check Admin → Emails for a "Send Invoice" template and verify mail settings in .env.'
+            );
+        }
+
+        return redirect()->back()->with('success', 'Invoice emailed to the student and activated.');
     }
 
     public function sendReceipt($id)

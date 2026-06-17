@@ -163,7 +163,7 @@
                     <div class="mb-0">Berkeley School of Business, Arts & Sciences</div>
                     <div class="mb-0">Berkeley Square, Mayfair, London, W1J, UK</div>
                     <div class="mb-0">Mob: +44 7306 279111</div>
-                    <div class="mb-0">Email: training@berkeleyme.com</div>
+                    <div class="mb-0">Email: {{ invoice_header_email() }}</div>
                 </div>
             </div>
             <div class="right">
@@ -217,16 +217,7 @@
         </div>
 
         {{-- Footer --}}
-        <div class="footer">
-            <div><strong>Liaison Office in Middle East:</strong> Berkeley Middle East Holding, Floor #25, Sheikh Rashid
-                Tower, Dubai World Trade Centre, Dubai, UAE.</div>
-            <div><strong>T:</strong> +971 (0) 58 555 5657 / +971 (0) 58 570 0006 &nbsp; | &nbsp;
-                <strong>E:</strong> Finance@berkeleyme.com &nbsp; | &nbsp;
-                <strong>W:</strong> www.eduberkeley.com
-            </div>
-            <div><strong>Presence:</strong> USA &nbsp; | &nbsp; Canada &nbsp; | &nbsp; UK &nbsp; | &nbsp; UAE &nbsp; |
-                &nbsp; KSA &nbsp; | &nbsp; China &nbsp; | &nbsp; Africa</div>
-        </div>
+        @include('partials.invoice-document-footer-pdf')
 
     </div>
 </body>
