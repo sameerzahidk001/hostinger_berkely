@@ -124,12 +124,12 @@
                                     <td>INV-{{ str_pad($installment->payment_id, 6, '0', STR_PAD_LEFT) }}</td>
                                     <td>{{ \Carbon\Carbon::parse($installment->created_at)->format('Y/m/d') }}</td>
                                     <td>{{ $installment->payment->user->name ?? 'N/A' }}</td>
-                                    <td>AED {{ number_format($installment->payment->price, 2) }}</td>
+                                    <td>{!! format_payment_aed_amount_admin($installment->payment, (float) $installment->payment->price) !!}</td>
                                     <td>{{ $installment->installment_number }}/{{ $installment->payment->total_installment }}</td>
                                     <td>{{ \Carbon\Carbon::parse($installment->due_date)->format('Y/m/d') }}</td>
-                                    <td>AED {{ number_format(($installment->paid_amount + $installment->remaining_amount), 2) }}</td>
+                                    <td>{!! format_payment_aed_amount_admin($installment->payment, (float) ($installment->paid_amount + $installment->remaining_amount)) !!}</td>
                                     <td>RC-{{ str_pad($installment->id, 6, '0', STR_PAD_LEFT) }}</td>
-                                    <td>AED {{ number_format($installment->paid_amount, 2) }}</td>
+                                    <td>{!! format_payment_aed_amount_admin($installment->payment, (float) $installment->paid_amount) !!}</td>
                                     <td>
                                         @if($installment->paid_date)
                                         {{ \Carbon\Carbon::parse($installment->paid_date)->format('Y/m/d') }}
