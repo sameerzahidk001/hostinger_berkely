@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\PageView;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class AnalyticsController extends Controller
 {
@@ -46,7 +47,7 @@ class AnalyticsController extends Controller
 
         $periodViews = $baseQuery()
             ->whereBetween('created_at', [$start, $end])
-            ->get(['id', 'ip_address', 'referrer', 'country', 'platform', 'browser', 'url', 'view_count']);
+            ->get($this->pageViewSelectColumns());
 
         $this->backfillMissingLocations($periodViews);
 
@@ -238,5 +239,16 @@ class AnalyticsController extends Controller
             $view->postal = $location['postal'];
             $view->location = $location['location'];
         }
+    }
+
+    private function pageViewSelectColumns(): array
+    {
+        $columns = ['id', 'ip_address', 'country', 'platform', 'browser', 'url', 'view_count'];
+
+        if (Schema::hasColumn('page_views', 'referrer')) {
+            array_splice($columns, 2, 0, ['referrer']);
+        }
+
+        return $columns;
     }
 }
