@@ -72,7 +72,7 @@
                                                     </td>
                                                     <td>{{ $installment->installment_number }}/{{ $installment->payment->total_installment }}
                                                     </td>
-                                                    <td>{{ $installment->due_date ?? 'N/A' }}</td>
+                                                    <td>{{ $installment->due_date ? \Carbon\Carbon::parse($installment->due_date)->format('d-M-Y') : 'N/A' }}</td>
                                                     <td>AED {{ $installment->paid_amount + $installment->remaining_amount }}</td>
                                                     <td>AED {{ $installment->paid_amount ?? 'N/A' }}</td>
                                                     <td>{{ $installment->paid_date ?? 'N/A' }}</td>

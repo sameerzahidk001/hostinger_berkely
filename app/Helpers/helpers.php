@@ -268,11 +268,10 @@ if (!function_exists('format_package_price')) {
         $settling = convert_to_aed($amount, $currency);
 
         return [
-            'display' => $currency . ' ' . number_format($amount, 2),
+            'display' => 'AED ' . number_format($settling, 2),
             'settling_aed' => $settling,
-            'currency' => $currency,
-            'show_settling_note' => true,
-            'settling_note' => 'Settling amount: AED ' . number_format($settling, 2),
+            'currency' => 'AED',
+            'show_settling_note' => false,
         ];
     }
 }
@@ -280,27 +279,13 @@ if (!function_exists('format_package_price')) {
 if (!function_exists('format_payment_amount')) {
     function format_payment_amount($payment): array
     {
-        $fee = $payment->courseFee ?? null;
-        $displayCurrency = package_currency_code($payment->currency ?? ($fee->currency ?? 'AED'));
         $settlingAed = (float) ($payment->price ?? 0);
 
-        if ($displayCurrency === 'AED') {
-            return [
-                'display' => 'AED ' . number_format($settlingAed, 2),
-                'settling_aed' => $settlingAed,
-                'currency' => 'AED',
-                'show_settling_note' => false,
-            ];
-        }
-
-        $displayAmount = $fee ? (float) $fee->price : $settlingAed;
-
         return [
-            'display' => 'USD ' . number_format($displayAmount, 2),
+            'display' => 'AED ' . number_format($settlingAed, 2),
             'settling_aed' => $settlingAed,
-            'currency' => 'USD',
-            'show_settling_note' => true,
-            'settling_note' => 'Settling amount: AED ' . number_format($settlingAed, 2),
+            'currency' => 'AED',
+            'show_settling_note' => false,
         ];
     }
 }

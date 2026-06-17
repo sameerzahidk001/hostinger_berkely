@@ -70,7 +70,6 @@
                                     <th style="width: 160px;">Category</th>
                                     <th style="width: 120px;">Status</th>
                                     <th>Date</th>
-                                    <th style="width: 120px;">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -124,28 +123,12 @@
                                         </td>
 
                                         <td>
-                                            <span class="badge {{ $data->status == 'show' ? 'bg-primary' : 'bg-danger' }}">{{ $data->status == 'show' ? 'Active' : 'Disabled' }}</span>
+                                            <span class="badge {{ $data->status === 'show' ? 'bg-primary' : 'bg-warning' }}">
+                                                {{ $data->status === 'show' ? 'Active' : 'Pending Review' }}
+                                            </span>
                                         </td>
                                         <td>
-                                            {{ date('Y-m-d', strtotime($data->date)) }}
-                                        </td>
-                                        <td>
-                                            @if(auth()->user()->hasPermission('testimonial-update'))
-                                                <a href="{{ route('user.testimonial.edit', $data->id) }}"
-                                                    class="btn btn-primary btn-xs" target="_blank">Edit</a>
-                                            @endif
-                                            @if(auth()->user()->hasPermission('testimonial-delete'))
-                                                <form id="delete-form-{{ $data->id }}"
-                                                    action="{{ route('user.testimonial.destroy', $data->id) }}" method="POST"
-                                                    style="display:inline;">
-                                                    @csrf
-                                                    @method('DELETE')
-                                                    <button type="button" class="btn-danger btn btn-xs"
-                                                        onclick="confirmDelete({{ $data->id }})">
-                                                        <i class="fa fa-trash"></i> Delete
-                                                    </button>
-                                                </form>
-                                            @endif
+                                            {{ $data->date ? date('Y-m-d', strtotime($data->date)) : '—' }}
                                         </td>
                                     </tr>
                                 @empty

@@ -134,9 +134,13 @@
             </div>
             <form method="GET" class="form-inline">
                 <select name="days" class="form-control date-range-select" onchange="this.form.submit()">
-                    <option value="7" @selected($days === 7)>Last 7 days</option>
-                    <option value="28" @selected($days === 28)>Last 28 days</option>
-                    <option value="90" @selected($days === 90)>Last 90 days</option>
+                    <option value="today" @selected($period === 'today')>Today</option>
+                    <option value="7" @selected($period === '7')>Last 7 days</option>
+                    <option value="28" @selected($period === '28')>Last 28 days</option>
+                    <option value="90" @selected($period === '90')>Last 90 days</option>
+                    <option value="180" @selected($period === '180')>Last 180 days</option>
+                    <option value="365" @selected($period === '365')>Last 365 days</option>
+                    <option value="lifetime" @selected($period === 'lifetime')>Lifetime</option>
                 </select>
             </form>
         </div>
@@ -164,7 +168,7 @@
                         $growthSign = $growth > 0 ? '+' : '';
                     @endphp
                     <div class="site-kit-growth {{ $growthClass }}">
-                        {{ $growthSign }}{{ $growth }}% compared to the previous {{ $days }} days
+                        {{ $growthSign }}{{ $growth }}% compared to {{ $comparisonLabel }}
                     </div>
                     <div class="site-kit-chart-wrap m-t-md">
                         <canvas id="trafficLineChart"></canvas>
@@ -255,7 +259,7 @@
     <div id="panel-content" class="tab-panel">
         <div class="site-kit-card">
             <h4 style="margin-top:0;font-weight:500;">Find out how your content is performing</h4>
-            <p class="text-muted">Top pages by views in the last {{ $days }} days.</p>
+            <p class="text-muted">Top pages by views for the selected period.</p>
             @forelse($topPages as $page => $count)
                 <div class="top-page-row">
                     <span>{{ $page }}</span>

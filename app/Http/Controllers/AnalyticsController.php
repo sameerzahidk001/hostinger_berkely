@@ -9,15 +9,22 @@ use Illuminate\Support\Facades\Schema;
 
 class AnalyticsController extends Controller
 {
+    private const PERIODS = ['today', '7', '28', '90', '180', '365', 'lifetime'];
+
     public function index(Request $request)
     {
-        $days = (int) $request->query('days', 28);
-        $days = in_array($days, [7, 28, 90], true) ? $days : 28;
+        $period = (string) $request->query('days', '28');
+        if (! in_array($period, self::PERIODS, true)) {
+            $period = '28';
+        }
 
-        $end = Carbon::today()->endOfDay();
-        $start = Carbon::today()->subDays($days - 1)->startOfDay();
-        $prevEnd = $start->copy()->subDay()->endOfDay();
-        $prevStart = $prevEnd->copy()->subDays($days - 1)->startOfDay();
+        $range = $this->resolvePeriodRange($period);
+        $start = $range['start'];
+        $end = $range['end'];
+        $prevStart = $range['prevStart'];
+        $prevEnd = $range['prevEnd'];
+        $periodLabel = $range['label'];
+        $comparisonLabel = $range['comparisonLabel'];
 
         $baseQuery = fn () => PageView::query()
             ->where('url', 'not like', '%/user-behavior%')
@@ -35,15 +42,7 @@ class AnalyticsController extends Controller
             ? round((($currentVisitors - $previousVisitors) / $previousVisitors) * 100, 1)
             : ($currentVisitors > 0 ? 100 : 0);
 
-        $dailyLabels = [];
-        $dailyValues = [];
-        for ($i = 0; $i < $days; $i++) {
-            $date = $start->copy()->addDays($i);
-            $dailyLabels[] = $date->format('M j');
-            $dailyValues[] = (int) $baseQuery()
-                ->whereDate('created_at', $date->toDateString())
-                ->sum('view_count');
-        }
+        [$dailyLabels, $dailyValues] = $this->buildChartSeries($baseQuery, $start, $end);
 
         $periodViews = $baseQuery()
             ->whereBetween('created_at', [$start, $end])
@@ -65,7 +64,9 @@ class AnalyticsController extends Controller
         $this->backfillMissingLocations($latestPageViews->getCollection());
 
         return view('admin.analytics.index', compact(
-            'days',
+            'period',
+            'periodLabel',
+            'comparisonLabel',
             'currentVisitors',
             'previousVisitors',
             'growth',
@@ -79,6 +80,118 @@ class AnalyticsController extends Controller
             'start',
             'end'
         ));
+    }
+
+    private function resolvePeriodRange(string $period): array
+    {
+        $end = Carbon::today()->endOfDay();
+
+        if ($period === 'today') {
+            $start = Carbon::today()->startOfDay();
+
+            return [
+                'start' => $start,
+                'end' => $end,
+                'prevStart' => Carbon::yesterday()->startOfDay(),
+                'prevEnd' => Carbon::yesterday()->endOfDay(),
+                'label' => 'today',
+                'comparisonLabel' => 'yesterday',
+            ];
+        }
+
+        if ($period === 'lifetime') {
+            $first = PageView::query()->min('created_at');
+            $start = $first ? Carbon::parse($first)->startOfDay() : Carbon::today()->startOfDay();
+            $spanDays = max(1, $start->copy()->startOfDay()->diffInDays($end->copy()->startOfDay()) + 1);
+            $prevEnd = $start->copy()->subDay()->endOfDay();
+            $prevStart = $prevEnd->copy()->subDays($spanDays - 1)->startOfDay();
+
+            return [
+                'start' => $start,
+                'end' => $end,
+                'prevStart' => $prevStart,
+                'prevEnd' => $prevEnd,
+                'label' => 'lifetime',
+                'comparisonLabel' => 'the previous ' . $spanDays . ' days',
+            ];
+        }
+
+        $days = (int) $period;
+        $start = Carbon::today()->subDays($days - 1)->startOfDay();
+        $prevEnd = $start->copy()->subDay()->endOfDay();
+        $prevStart = $prevEnd->copy()->subDays($days - 1)->startOfDay();
+
+        return [
+            'start' => $start,
+            'end' => $end,
+            'prevStart' => $prevStart,
+            'prevEnd' => $prevEnd,
+            'label' => (string) $days,
+            'comparisonLabel' => 'the previous ' . $days . ' days',
+        ];
+    }
+
+    private function buildChartSeries(callable $baseQuery, Carbon $start, Carbon $end): array
+    {
+        $spanDays = max(1, $start->copy()->startOfDay()->diffInDays($end->copy()->startOfDay()) + 1);
+        $labels = [];
+        $values = [];
+
+        if ($spanDays > 180) {
+            $cursor = $start->copy()->startOfMonth();
+            while ($cursor <= $end) {
+                $monthStart = $cursor->copy()->startOfMonth();
+                $monthEnd = $cursor->copy()->endOfMonth();
+                if ($monthEnd > $end) {
+                    $monthEnd = $end->copy();
+                }
+                if ($monthStart < $start) {
+                    $monthStart = $start->copy();
+                }
+
+                $labels[] = $cursor->format('M Y');
+                $values[] = (int) $baseQuery()
+                    ->whereBetween('created_at', [$monthStart, $monthEnd])
+                    ->sum('view_count');
+
+                $cursor->addMonth();
+            }
+
+            return [$labels, $values];
+        }
+
+        if ($spanDays > 60) {
+            $cursor = $start->copy()->startOfWeek();
+            while ($cursor <= $end) {
+                $weekStart = $cursor->copy()->startOfDay();
+                $weekEnd = $cursor->copy()->endOfWeek()->endOfDay();
+                if ($weekEnd > $end) {
+                    $weekEnd = $end->copy();
+                }
+                if ($weekStart < $start) {
+                    $weekStart = $start->copy();
+                }
+
+                $labels[] = 'Wk ' . $weekStart->format('M j');
+                $values[] = (int) $baseQuery()
+                    ->whereBetween('created_at', [$weekStart, $weekEnd])
+                    ->sum('view_count');
+
+                $cursor->addWeek();
+            }
+
+            return [$labels, $values];
+        }
+
+        for ($i = 0; $i < $spanDays; $i++) {
+            $date = $start->copy()->addDays($i);
+            $labels[] = $date->format('M j');
+            $values[] = (int) $baseQuery()
+                ->whereDate('created_at', $date->toDateString())
+                ->sum('view_count');
+        }
+
+        return [$labels, $values];
     }
 
     private function aggregateChannels($views): array
@@ -177,7 +290,7 @@ class AnalyticsController extends Controller
 
     private function shortUrl(?string $url): string
     {
-        if (!$url) {
+        if (! $url) {
             return '/';
         }
 

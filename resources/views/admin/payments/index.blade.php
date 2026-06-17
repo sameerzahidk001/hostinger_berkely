@@ -154,9 +154,6 @@
                                     </td>
                                     <td>
                                         {{ $amountInfo['display'] }}
-                                        @if($amountInfo['show_settling_note'])
-                                            <br><span class="text-muted">{{ $amountInfo['settling_note'] }}</span>
-                                        @endif
                                     </td>
                                     <td>{{ $paidInstallmentsCount }}/{{ $payment->installments->count() ?? 0 }}</td>
                                     <td>AED {{ number_format($paidAmountSum, 2) }}</td>
