@@ -235,28 +235,43 @@ class SettingController extends Controller
     }
     public function footerSetting()
     {
-        $settings = DB::table('site_settings')->first(); // Get the only row
+        $settings = DB::table('site_settings')->first();
 
         return view('admin.settings.footer', compact('settings'));
     }
     public function updateFooterSetting(Request $request)
     {
-        // Example validation based on expected columns
         $request->validate([
-            'footer' => 'nullable',
-            // add other fields as needed
+            'footer' => 'nullable|string',
+            'invoice_footer_usa' => 'nullable|string',
+            'invoice_footer_uk' => 'nullable|string',
+            'invoice_footer_middle_east' => 'nullable|string',
+            'invoice_footer_email' => 'nullable|string|max:255',
+            'invoice_footer_website' => 'nullable|string|max:255',
+            'invoice_footer_presence' => 'nullable|string|max:500',
         ]);
-            // dd($request->all()); // <--- shows all fields from form
-            // exit;
 
-        DB::table('site_settings')->update([
+        $payload = [
             'footer_settings' => $request->footer,
-            // map other fields here
-            'updated_at' => now()
-        ]);
+            'updated_at' => now(),
+        ];
 
+        foreach ([
+            'invoice_footer_usa',
+            'invoice_footer_uk',
+            'invoice_footer_middle_east',
+            'invoice_footer_email',
+            'invoice_footer_website',
+            'invoice_footer_presence',
+        ] as $field) {
+            if (\Illuminate\Support\Facades\Schema::hasColumn('site_settings', $field)) {
+                $payload[$field] = $request->input($field);
+            }
+        }
 
-        return redirect()->back()->with('success', 'Settings updated successfully!');
+        DB::table('site_settings')->update($payload);
+
+        return redirect()->back()->with('success', 'Footer settings updated successfully!');
     }
 
     public function widget(){

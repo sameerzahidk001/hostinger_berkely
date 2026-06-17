@@ -89,33 +89,12 @@
                                                     </td>
                                                     <td>
                                                         @if ($installment->status == 'pending')
-                                                            <!-- Trigger button -->
                                                             <button type="button" class="btn btn-primary btn-sm payNowBtn"
-                                                                style="margin-right: 5px; margin-bottom: 5px;" data-toggle="modal"
-                                                                data-target="#paymentModal{{ $installment->id }}"
+                                                                style="margin-right: 5px; margin-bottom: 5px;"
                                                                 data-amount="{{ $installment->remaining_amount }}"
                                                                 data-installment-id="{{ $installment->id }}">
                                                                 <i class="fa fa-credit-card"></i> Pay Now
                                                             </button>
-
-                                                            <!-- Modal -->
-                                                            <div class="modal fade" id="paymentModal{{ $installment->id }}" tabindex="-1"
-                                                                role="dialog" aria-labelledby="paymentModalLabel{{ $installment->id }}"
-                                                                aria-hidden="true">
-                                                                <div class="modal-dialog" role="document">
-                                                                    <div class="modal-content">
-                                                                        <button type="button" id="closeModal"
-                                                                            class="close close-white position-absolute top-0 right-0"
-                                                                            style="margin-top: -25px;" data-dismiss="modal"
-                                                                            aria-label="Close">
-                                                                            <span aria-hidden="true">×</span>
-                                                                        </button>
-                                                                        <div class="modal-body">
-                                                                            <div id="hco-embedded-{{ $installment->id }}"></div>
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
                                                         @endif
 
                                                         @if ($installment->status == 'paid')
@@ -128,22 +107,14 @@
 
                                                         @php
                                                             $paymentId = $installment->payment_id ?? null;
-                                                            $courseId = $installment->payment->course->id ?? null;
-                                                            $userId = $installment->user->id ?? null;
                                                         @endphp
 
                                                         @if ($paymentId && !in_array($paymentId, $shownPaymentIds))
-                                                            <form action="{{ route('user.installments.invoice.pdf') }}" method="POST"
-                                                                target="_blank"
+                                                            <a href="{{ route('user.installments.invoice', $paymentId) }}"
+                                                                target="_blank" class="btn btn-success btn-sm"
                                                                 style="display:inline-block; margin-right:5px; margin-bottom: 5px;">
-                                                                @csrf
-                                                                <input type="hidden" name="course_id" value="{{ $courseId }}">
-                                                                <input type="hidden" name="user_id" value="{{ $userId }}">
-                                                                <input type="hidden" name="payment_id" value="{{ $paymentId }}">
-                                                                <button type="submit" class="btn btn-success btn-sm">
-                                                                    <i class="fa fa-file-pdf-o"></i> Invoice
-                                                                </button>
-                                                            </form>
+                                                                <i class="fa fa-file-pdf-o"></i> Invoice
+                                                            </a>
                                                             @php
                                                                 $shownPaymentIds[] = $paymentId;
                                                             @endphp
@@ -156,6 +127,20 @@
                                 </table>
                             </div>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="paymentModal" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <button type="button" class="close close-white position-absolute top-0 right-0"
+                        style="margin-top: -25px; margin-right: 10px;" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                    <div class="modal-body">
+                        <div id="hco-embedded"></div>
                     </div>
                 </div>
             </div>
@@ -220,17 +205,16 @@
                 });
             }
 
-            $('.payNowBtn').on('click', function () {
+            $(document).on('click', '.payNowBtn', function () {
                 currentInstallmentId = $(this).data('installment-id');
                 currentAmount = $(this).data('amount');
+                $('#paymentModal').modal('show');
             });
 
-            $('[id^="paymentModal"]').on('shown.bs.modal', function () {
-                var modalId = $(this).attr('id');
-                var installmentId = modalId.replace('paymentModal', '');
-                var embeddedDivId = '#hco-embedded-' + installmentId;
+            $('#paymentModal').on('shown.bs.modal', function () {
+                var embeddedDivId = '#hco-embedded';
+                $(embeddedDivId).empty();
 
-                // Step 1: Request session from Laravel
                 $.ajax({
                     url: '{{ route("user.generate.rakBankPaySession") }}',
                     method: 'POST',
@@ -244,9 +228,7 @@
                                 Checkout.configure({
                                     session: { id: res.session.id },
                                 });
-                                Checkout.showEmbeddedPage(embeddedDivId, () => {
-                                    $('#' + modalId).modal();
-                                });
+                                Checkout.showEmbeddedPage(embeddedDivId);
                             } catch (error) {
                                 console.error("An error occurred while initializing RakBank Checkout:", error);
                             }
@@ -260,10 +242,9 @@
                 });
             });
 
-            $('[id^="paymentModal"]').on('hide.bs.modal', function () {
+            $('#paymentModal').on('hidden.bs.modal', function () {
                 sessionStorage.clear();
-
-                $(this).find('[id^="hco-embedded"]').empty();
+                $('#hco-embedded').empty();
             });
         </script>
     @endif

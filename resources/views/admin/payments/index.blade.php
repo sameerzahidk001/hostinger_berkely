@@ -242,8 +242,9 @@
                         <label for="payment_type">Payment Type</label>
                         <select class="form-control" name="payment_type" id="payment_type" required>
                             <option value="">- Select Payment Type -</option>
-                            <option value="bank">Bank</option>
-                            <option value="cash">Cash</option>
+                            @foreach(payment_type_options() as $value => $label)
+                                <option value="{{ $value }}">{{ $label }}</option>
+                            @endforeach
                         </select>
                     </div>
                     <div class="form-group">

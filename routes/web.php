@@ -448,6 +448,7 @@ Route::prefix('user')->middleware(['auth', 'approved'])->group(function () {
     // Route::get('/installments', [UserInstallmentController::class, 'index'])->name('user.installments.index')->middleware('hasPermission:installment-list');
     Route::post('/rakBankPay/success', [UserInstallmentController::class, 'updateInstallment'])->name('user.update.installment');
     Route::get('/installments/receipt/{id}', [UserInstallmentController::class, 'receipt'])->name('user.installments.receipt');
+    Route::get('/installments/invoice/{payment}', [UserInstallmentController::class, 'viewInvoice'])->name('user.installments.invoice');
     Route::post('/installments/invoice/pdf', [UserInstallmentController::class, 'generateInvoice'])->name('user.installments.invoice.pdf');
 
     // Testimonials
