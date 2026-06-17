@@ -73,8 +73,8 @@
                                                     <td>{{ $installment->installment_number }}/{{ $installment->payment->total_installment }}
                                                     </td>
                                                     <td>{{ $installment->due_date ? \Carbon\Carbon::parse($installment->due_date)->format('d-M-Y') : 'N/A' }}</td>
-                                                    <td>AED {{ $installment->paid_amount + $installment->remaining_amount }}</td>
-                                                    <td>AED {{ $installment->paid_amount ?? 'N/A' }}</td>
+                                                    <td>{{ format_payment_aed_amount($installment->payment, (float) ($installment->paid_amount + $installment->remaining_amount)) }}</td>
+                                                    <td>{{ format_payment_aed_amount($installment->payment, (float) ($installment->paid_amount ?? 0)) }}</td>
                                                     <td>{{ $installment->paid_date ?? 'N/A' }}</td>
                                                     <td>{{ $installment->payment->course->title ?? 'N/A' }}</td>
                                                     <td>{{ $installment->payment->courseFee->package_name ?? 'N/A' }}</td>

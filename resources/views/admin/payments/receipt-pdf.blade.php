@@ -141,11 +141,15 @@
         $paidDate = $installment->paid_date ? Carbon::parse($installment->paid_date)->format('d M Y') : 'N/A';
 
         // Amounts
-        $paidAmount = (float) ($installment->paid_amount ?? 0);
-        $balanceDue = (float) ($installment->remaining_amount ?? 0);
+        $paidAmountAed = (float) ($installment->paid_amount ?? 0);
+        $balanceDueAed = (float) ($installment->remaining_amount ?? 0);
+        $payment = $installment->payment;
+        $displayCurrency = payment_display_currency($payment);
+        $paidAmount = payment_display_amount_from_aed($payment, $paidAmountAed);
+        $balanceDue = payment_display_amount_from_aed($payment, $balanceDueAed);
 
         // Helpers
-        $money = fn($n) => 'AED ' . number_format((float) $n, 2);
+        $money = fn($n) => $displayCurrency . ' ' . number_format((float) $n, 2);
 
         // Logo path (local path for Dompdf)
         $logoPath = public_path('frontend/images/pngs/logo-color.png');
