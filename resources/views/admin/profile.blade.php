@@ -65,11 +65,11 @@
                         <div class="row">
                             <div class="col-lg-12 mb">
                                 <label for="">User Name</label>
-                                <input class="form-control" type="text" name="username" value="{{ old('username', auth('admin')->user()->username ) }}">
+                                <input class="form-control" type="text" name="username" value="{{ old('username', panel_profile_name()) }}">
                             </div>
                             <div class="col-lg-12 mb">
                                 <label class="mb-1">Email</label>
-                                <input class="form-control" type="text" name="email" value="{{ old('email', auth('admin')->user()->email ) }}">
+                                <input class="form-control" type="text" name="email" value="{{ old('email', panel_profile_user()?->email) }}">
                             </div>
                             <div class="col-lg-12 mb">
                                 <label class="mb-1">Password</label>

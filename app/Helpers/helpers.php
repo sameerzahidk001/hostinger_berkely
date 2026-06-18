@@ -88,6 +88,30 @@ if (!function_exists('panel_role_name')) {
     }
 }
 
+if (!function_exists('panel_profile_user')) {
+    function panel_profile_user()
+    {
+        if (Auth::guard('admin')->check()) {
+            return Auth::guard('admin')->user();
+        }
+
+        return Auth::user();
+    }
+}
+
+if (!function_exists('panel_profile_name')) {
+    function panel_profile_name($user = null): string
+    {
+        $user = $user ?? panel_profile_user();
+
+        if (!$user) {
+            return '';
+        }
+
+        return $user->username ?? $user->name ?? '';
+    }
+}
+
 if (!function_exists('normalize_panel_role')) {
     function normalize_panel_role(?string $role): ?string
     {

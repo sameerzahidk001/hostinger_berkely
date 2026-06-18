@@ -144,26 +144,56 @@ class AdminController extends Controller
 
     public function profile()
     {
+        if (!panel_profile_user()) {
+            return redirect()->route('admin.login');
+        }
+
         return view('admin.profile');
     }
-     public function profile_update(Request $request)
+
+    public function profile_update(Request $request)
     {
-        $admin = Auth::guard('admin')->user();
+        if (Auth::guard('admin')->check()) {
+            $admin = Auth::guard('admin')->user();
+
+            $request->validate([
+                'username' => 'required|string|max:255|unique:admins,username,' . $admin->id,
+                'email' => 'required|email|max:255|unique:admins,email,' . $admin->id,
+                'password' => 'nullable|string|min:8',
+            ]);
+
+            $admin->username = $request->username;
+            $admin->email = $request->email;
+
+            if ($request->filled('password')) {
+                $admin->password = bcrypt($request->password);
+            }
+
+            $admin->save();
+
+            return redirect()->back()->with('success', 'Profile updated successfully!');
+        }
+
+        $user = Auth::user();
+
+        if (!$user) {
+            return redirect()->route('admin.login');
+        }
 
         $request->validate([
-            'username' => 'required|string|max:255|unique:admins,username,' . $admin->id,
-            'email' => 'required|email|max:255|unique:admins,email,' . $admin->id,
+            'username' => 'required|string|max:255',
+            'email' => 'required|email|max:255|unique:users,email,' . $user->id,
             'password' => 'nullable|string|min:8',
         ]);
 
-        $admin->username = $request->username;
-        $admin->email = $request->email;
+        $user->name = $request->username;
+        $user->email = $request->email;
 
         if ($request->filled('password')) {
-$admin->password = bcrypt($request->password);
+            $user->password = bcrypt($request->password);
         }
 
-        $admin->save();
+        $user->save();
 
         return redirect()->back()->with('success', 'Profile updated successfully!');
     }
