@@ -103,7 +103,7 @@
                                 <tbody>
                                     @forelse($courses as $index => $data)
                                         <tr>
-                                            <td>{{ $index + 1 }}</td>
+                                            <td data-order="{{ $data->created_at ? \Carbon\Carbon::parse($data->created_at)->timestamp : 0 }}">{{ $index + 1 }}</td>
                                             <td style="vertical-align: middle;">
                                                 <a href="{{ route('course.details', ['course' => $data->slug]) }}"
                                                     target="blank" target="blank">
@@ -300,7 +300,8 @@
                 info: false,
                 ordering: true,
                 responsive: true,
-                dom: 'lftip'
+                dom: 'lftip',
+                order: [[0, 'desc']]
             });
         });
 

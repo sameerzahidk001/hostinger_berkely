@@ -25,15 +25,11 @@ class UserController extends Controller
     {
         try {
             $type = $request->query('type', Role::first()?->name);
+            $roleNames = user_list_role_names($type);
 
-            $role = Role::where('name', $type)->first();
-
-            $users = $role
-                ? $role->users()->orderBy('created_at', 'desc')->get()
-                : collect();
-
-            // Debugging
-            // dd($users->toArray());
+            $users = User::whereHas('roles', function ($query) use ($roleNames) {
+                $query->whereIn('name', $roleNames);
+            })->orderByDesc('created_at')->get();
 
             return view('admin.user.index', [
                 'type' => $type,

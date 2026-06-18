@@ -68,7 +68,7 @@
                                                             N/A
                                                         @endif
                                                     </td>
-                                                    <td>{{ \Carbon\Carbon::parse($installment->created_at)->format('d-M-Y') ?? 'N/A' }}
+                                                    <td data-order="{{ \Carbon\Carbon::parse($installment->created_at)->timestamp }}">{{ \Carbon\Carbon::parse($installment->created_at)->format('d-M-Y') ?? 'N/A' }}
                                                     </td>
                                                     <td>
                                                         {{ $invoiceAmount['display'] }}
@@ -162,6 +162,29 @@
             let currentInstallmentId = null;
             let currentSettlingAmount = null;
             let checkoutScriptLoaded = false;
+
+            function normalizeEmbeddedPayButtons(containerSelector) {
+                const root = document.querySelector(containerSelector);
+                if (!root) {
+                    return;
+                }
+
+                const scrub = function () {
+                    root.querySelectorAll('button').forEach(function (btn) {
+                        const text = (btn.textContent || '').trim();
+                        if (/^pay\b/i.test(text) && /[\d,.]/.test(text)) {
+                            btn.textContent = 'Pay';
+                        }
+                    });
+                };
+
+                scrub();
+                const observer = new MutationObserver(scrub);
+                observer.observe(root, { childList: true, subtree: true, characterData: true });
+                setTimeout(function () {
+                    observer.disconnect();
+                }, 20000);
+            }
 
             function loadCheckoutScript(callback) {
                 if (typeof Checkout !== 'undefined') {
@@ -271,6 +294,7 @@
                                     });
                                     $('#payment-loading').hide();
                                     Checkout.showEmbeddedPage(embeddedDivId);
+                                    normalizeEmbeddedPayButtons(embeddedDivId);
                                 } catch (error) {
                                     $('#payment-loading').hide();
                                     $('#payment-error').text('Unable to load payment form. Please try again.').show();
@@ -312,7 +336,8 @@
                 info: false,
                 ordering: true,
                 responsive: true,
-                dom: 'lftip'
+                dom: 'lftip',
+                order: [[2, 'desc']]
             });
         });
     </script>

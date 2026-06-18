@@ -74,12 +74,10 @@
                   @endif
                   @if(admin_menu_allowed('courses'))
                   <li class="{{ request()->is('admin/course') || request()->is('admin/course/*') ? 'active' : '' }} }}">
-                     <a href="{{ route('admin.courses') }}"><i class="fa fa-files-o"></i> <span class="nav-label">Courses</span> <span class="fa arrow"></span></a>
+                     <a href="javascript:void(0)"><i class="fa fa-files-o"></i> <span class="nav-label">Courses</span> <span class="fa arrow"></span></a>
                      <ul class="nav nav-second-level">
-                        
-                        <li><a href="{{ route('admin.courses') }}">Courses List</a></li>
+                        <li><a href="{{ route('admin.courses') }}">All Courses List</a></li>
                         <li><a href="{{ route('course.create') }}">Add Course</a></li>
-                       
                      </ul>
                   </li>
                   @endif
@@ -101,8 +99,11 @@
                   </li>
                   @endif
                   @if(admin_menu_allowed('pages'))
-                  <li>
-                     <a href="{{ route('pages.index') }}"><i class="fa fa-sitemap"></i> <span class="nav-label">Pages</span></a>
+                  <li class="{{ request()->is('admin/pages*') ? 'active' : '' }}">
+                     <a href="javascript:void(0)"><i class="fa fa-sitemap"></i> <span class="nav-label">Pages</span> <span class="fa arrow"></span></a>
+                     <ul class="nav nav-second-level">
+                        <li><a href="{{ route('pages.index') }}">Pages List</a></li>
+                     </ul>
                   </li>
                   @endif
                   @if(admin_menu_allowed('seo'))
@@ -127,14 +128,13 @@
                   @endif
                   
                   @if(admin_menu_allowed('users'))
-                  <li class="{{ request()->is('admin/user') ? 'active show' : '' }}">
-                     <a href="{{ route('users') }}"><i class="fa fa-address-card"></i> <span class="nav-label">Users</span> <span class="fa arrow"></span></a>
+                  <li class="{{ request()->is('admin/user*') ? 'active show' : '' }}">
+                     <a href="javascript:void(0)"><i class="fa fa-address-card"></i> <span class="nav-label">Users</span> <span class="fa arrow"></span></a>
                      <ul class="nav nav-second-level">
-                        <!-- <li><a href="{{ route('users',['type' => 'admin']) }}">Admins</a></li> -->
+                        <li><a href="{{ route('users', ['type' => 'student']) }}">Student List</a></li>
                         <li><a href="{{ route('users', ['type' => 'instructor']) }}">Instructors</a></li>
-                        <li><a href="{{ route('users', ['type' => 'student']) }}">Students</a></li>
                         <li><a href="{{ route('users', ['type' => 'accountant']) }}">Accountant</a></li>
-                        <li><a href="{{ route('users', ['type' => 'librarian']) }}">Content Writer</a></li>
+                        <li><a href="{{ route('users', ['type' => 'content-writer']) }}">Content Writer</a></li>
                         <li><a href="{{ route('users.create') }}">Add User</a></li>
                      </ul>
                   </li>
@@ -183,10 +183,11 @@
               </li>
               @endif
               @if(admin_menu_allowed('payments'))
-              <li class="{{ request()->is('admin/payments') ? 'active show' : '' }}">
+              <li class="{{ request()->is('admin/payments*') ? 'active show' : '' }}">
                   <a href="javascript:void(0)"><i class="fa fa-address-card"></i> <span class="nav-label">Payments</span> <span class="fa arrow"></span></a>
                   <ul class="nav nav-second-level">
-                     <li><a href="{{ route('admin.payments.index') }}">Invoices</a></li>
+                     <li><a href="{{ route('admin.payments.index') }}">Invoice List</a></li>
+                     <li><a href="{{ route('admin.payments.create') }}">Create Invoice</a></li>
                      <li><a href="{{ route('admin.payments.receipts') }}">Receipts</a></li>
                   </ul>
                </li>

@@ -250,7 +250,8 @@
                 info: false,
                 ordering: true,
                 responsive: true,
-                dom: 'lftip'
+                dom: 'lftip',
+                order: [[8, 'desc']]
             });
 
             $('#categorySelect').change(function() {

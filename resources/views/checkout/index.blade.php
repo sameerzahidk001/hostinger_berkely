@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="bg-gray-50 pt-28 pb-12 px-4 sm:px-6 lg:px-8">
         <div class="max-w-5xl mx-auto">
             <div class="text-center mb-10">
                 <h1 class="text-3xl font-bold text-gray-900">Complete Your Order</h1>
@@ -83,16 +83,12 @@
                             <h2 class="text-xl font-semibold text-gray-900 mb-6">Order Summary</h2>
 
                             <div class="space-y-4 mb-6">
-                                @php $checkoutHasUsd = false; @endphp
                                 @foreach($carts as $item)
                                     @if(!$item->courseFee)
                                         @continue
                                     @endif
                                     @php
                                         $linePrice = format_package_price($item->courseFee->price, $item->courseFee->currency ?? 'AED', $item->quantity);
-                                        if ($linePrice['currency'] !== 'AED') {
-                                            $checkoutHasUsd = true;
-                                        }
                                     @endphp
                                     <div class="flex justify-between items-start pb-4 border-b border-gray-200">
                                         <div>
@@ -102,9 +98,6 @@
                                         </div>
                                         <div class="text-right">
                                             <p class="text-sm font-medium text-gray-900 whitespace-nowrap">{{ $linePrice['display'] }}</p>
-                                            @if($linePrice['show_settling_note'])
-                                                <p class="text-xs text-gray-500 mt-1">{{ $linePrice['settling_note'] }}</p>
-                                            @endif
                                         </div>
                                     </div>
                                 @endforeach
@@ -114,12 +107,12 @@
                                 <div class="flex justify-between items-center">
                                     <span class="text-base font-bold text-gray-900">Total</span>
                                     <div class="text-right">
-                                        @if($checkoutHasUsd)
-                                            <span class="text-lg font-bold text-gray-900">AED {{ number_format($total, 2) }}</span>
-                                            <p class="text-xs text-gray-500 mt-1">Settling amount in AED</p>
-                                        @else
-                                            <span class="text-lg font-bold text-gray-900">AED {{ number_format($total, 2) }}</span>
-                                        @endif
+                                        @foreach($displayTotals as $currency => $amount)
+                                            <span class="text-lg font-bold text-gray-900">{{ $currency }} {{ number_format($amount, 2) }}</span>
+                                            @if(!$loop->last)
+                                                <br>
+                                            @endif
+                                        @endforeach
                                     </div>
                                 </div>
                             </div>

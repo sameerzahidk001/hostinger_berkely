@@ -20,13 +20,13 @@
 @section('content')
     <div class="row wrapper border-bottom white-bg page-heading">
         <div class="col">
-            <h2>{{ $type === 'librarian' ? 'Content Writers' : ucfirst(Str::plural($type)) }}</h2>
+            <h2>{{ user_list_label($type) }}</h2>
             <ol class="breadcrumb">
                 <li>
                     <a href="{{ route('admin.home') }}">Home</a>
                 </li>
                 <li class="active">
-                    <a>{{ ucfirst(Str::plural($type)) }}</a>
+                    <a>{{ user_list_label($type) }}</a>
                 </li>
             </ol>
         </div>
@@ -37,7 +37,7 @@
             <div class="col-lg-12">
                 <div class="ibox float-e-margins" style="margin-bottom: 0;">
                     <div class="ibox-title">
-                        <h5>{{ ucfirst(Str::plural($type)) }}</h5>
+                        <h5>{{ user_list_label($type) }}</h5>
                     </div>
                     <div class="ibox-content">
 
@@ -70,7 +70,7 @@
                                             <td>{{ $data->mobile_number }}</td>
                                             <td>{{ $data->country }}</td>
                                             <td>{{ $data->ip_address }}</td>
-                                            <td style="white-space: nowrap;">
+                                            <td data-order="{{ \Carbon\Carbon::parse($data->created_at)->timestamp }}" style="white-space: nowrap;">
                                                 {{ \Carbon\Carbon::parse($data->created_at)->format('d M Y') }} <br>
                                                 {{ \Carbon\Carbon::parse($data->created_at)->format('h:i A') }}
                                             </td>
@@ -217,7 +217,7 @@
                 ordering: true,
                 responsive: true,
                 dom: 'lftip',
-                order: []
+                order: [[7, 'desc']]
             });
         });
 

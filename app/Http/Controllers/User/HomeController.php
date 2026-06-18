@@ -23,6 +23,7 @@ class HomeController extends Controller
                 ->whereHas('payment', function ($query) {
                     $query->where('status', 'Active');
                 })
+                ->orderByDesc('created_at')
                 ->get();
         }
         

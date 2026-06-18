@@ -107,7 +107,7 @@
                             </thead>
                             <tbody>
                                 @forelse($all_testimonial as $key => $data)
-                                    <tr>
+                                    <tr data-status="{{ $data->status === 'hide' ? 'disabled' : 'active' }}">
                                         <td>
                                             <select name="testimonial_priority" class="form-control"
                                                 id="testimonial_priority_{{ $data->id }}"
@@ -193,6 +193,21 @@
     <!-- Page-Level Scripts -->
     <script>
         $(document).ready(function () {
+            var statusFilterValue = 'all';
+
+            $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
+                if (statusFilterValue === 'all') {
+                    return true;
+                }
+
+                var row = settings.aoData[dataIndex]?.nTr;
+                if (!row) {
+                    return true;
+                }
+
+                return $(row).data('status') === statusFilterValue;
+            });
+
             var table = $('.dataTables-example').DataTable({
                 pageLength: 10,
                 searching: true,
@@ -213,18 +228,15 @@
             });
 
             $('#statusFilter').on('change', function () {
-                const selected = this.value;
-                if (selected === 'all') {
-                    table.column(5).search('').draw();
-                } else {
-                    table.column(5).search(selected).draw();
-                }
+                statusFilterValue = this.value;
+                table.draw();
             });
 
             $('#resetFilter').click(function () {
                 $('#courseFilter').val('');
                 $('#categoryFilter').val('');
                 $('#statusFilter').val('all');
+                statusFilterValue = 'all';
                 table.columns().search('').draw();
             });
         });
