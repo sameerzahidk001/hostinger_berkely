@@ -26,16 +26,19 @@ class CheckoutController extends Controller
             return redirect()->route('cart.index')->with('warning', 'Your cart is empty!');
         }
 
-        $total = $carts->sum(function ($item) {
+        $displayTotals = [];
+        foreach ($carts as $item) {
             $fee = $item->courseFee;
             if (!$fee) {
-                return 0;
+                continue;
             }
 
-            return format_package_price($fee->price, $fee->currency ?? 'AED', $item->quantity)['settling_aed'];
-        });
+            $linePrice = format_package_price($fee->price, $fee->currency ?? 'AED', $item->quantity);
+            $currency = $linePrice['currency'];
+            $displayTotals[$currency] = ($displayTotals[$currency] ?? 0) + ((float) $fee->price * $item->quantity);
+        }
 
-        return view('checkout.index', compact('user', 'carts', 'total'));
+        return view('checkout.index', compact('user', 'carts', 'displayTotals'));
     }
 
     public function store(Request $request){

@@ -41,8 +41,8 @@ class PaymentController extends Controller
     {
         $users = User::with('roles')->whereHas('roles', function ($query) {
             $query->where('name', 'student');
-        })->get();
-        $courses = Course::orderBy('title', 'asc')->get();
+        })->orderByDesc('created_at')->get();
+        $courses = Course::orderByDesc('created_at')->get();
         $packages = CourseFee::whereHas('course', function ($query) {
             $query->where('status', 1);
         })->get();

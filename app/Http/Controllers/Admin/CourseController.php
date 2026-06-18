@@ -41,7 +41,7 @@ class CourseController extends Controller
 
         // Get the filtered or default list of courses
         $analyzer = app(SeoAnalyzerService::class);
-        $data['courses'] = $query->orderBy('title', 'asc')->get()->each(function (Course $course) use ($analyzer) {
+        $data['courses'] = $query->orderByDesc('created_at')->get()->each(function (Course $course) use ($analyzer) {
             if ($course->seo) {
                 $course->seo->loadMissing(['page.sections', 'course']);
                 $course->seo_analysis = $analyzer->analyze($course->seo);
@@ -82,7 +82,7 @@ class CourseController extends Controller
             'testimonials'
         ]);
 
-        $data['courses'] = $query->orderBy('title', 'asc')->get();
+        $data['courses'] = $query->orderByDesc('created_at')->get();
 
         return view('admin.course.disabled-courses')->with($data);
     }

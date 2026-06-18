@@ -31,6 +31,7 @@ class PagesController extends Controller
         $data['category_page_id'] = SiteSettings::pluck('categories')->first();
         $data['categories_pages_slug_base'] = SiteSettings::pluck('category_perma')->first();
         $data['pages'] = Page::with(['parent', 'seo.page.sections', 'seo.course', 'faqs', 'createdBy', 'updatedBy'])
+            ->orderByDesc('created_at')
             ->get()
             ->each(function (Page $page) {
                 if ($page->seo) {

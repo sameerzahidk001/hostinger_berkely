@@ -137,7 +137,7 @@
                                 @endphp
                                 <tr>
                                     <td>INV-{{ str_pad($payment->id, 6, '0', STR_PAD_LEFT) }}</td>
-                                    <td>{{ \Carbon\Carbon::parse($payment->created_at)->format('Y/m/d') }}</td>
+                                    <td data-order="{{ \Carbon\Carbon::parse($payment->created_at)->timestamp }}">{{ \Carbon\Carbon::parse($payment->created_at)->format('Y/m/d') }}</td>
                                     <td>{{ $payment->course->title ?? 'N/A' }}<br><span class="text-muted">{{ $payment->courseFee->package_name ?? 'N/A' }}</span></td>
                                     <td>{{ $payment->user->name ?? 'N/A' }}</td>
                                     {{-- <td>{{ $payment->installment_request->installments_requested ?? 'Direct' }}</td> --}}
@@ -377,7 +377,7 @@
             ordering: true,
             responsive: true,
             dom: 'lftip',
-            order: []
+            order: [[1, 'desc']]
         });
 
         $('.status-toggle').change(function() {

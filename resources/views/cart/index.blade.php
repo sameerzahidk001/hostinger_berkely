@@ -71,7 +71,7 @@
                             </tr>
                         </thead>
                         <tbody class="{{ $isPanel ? '' : 'divide-y divide-gray-200' }}">
-                            @php $total = 0; @endphp
+                            @php $displayTotals = []; @endphp
                             @foreach($carts as $item)
                                 @php
                                     $package = $item->courseFee;
@@ -82,8 +82,7 @@
                                 @php
                                     $unitPriceAed = format_package_price($package->price, $package->currency ?? 'AED');
                                     $linePrice = format_package_price($package->price, $package->currency ?? 'AED', $item->quantity);
-                                    $subtotal = $linePrice['settling_aed'];
-                                    $total += $subtotal;
+                                    $displayTotals[$linePrice['currency']] = ($displayTotals[$linePrice['currency']] ?? 0) + ((float) $package->price * $item->quantity);
                                 @endphp
                                 <tr class="{{ $isPanel ? '' : 'hover:bg-gray-50 transition' }}">
                                     <td>
@@ -131,9 +130,6 @@
                                     </td>
                                     <td class="{{ $isPanel ? 'text-center' : 'p-4 text-center font-medium' }}">
                                         {{ $unitPriceAed['display'] }}
-                                        @if($unitPriceAed['show_settling_note'])
-                                            <div class="text-muted" style="font-size:12px;margin-top:4px;">{{ $unitPriceAed['settling_note'] }}</div>
-                                        @endif
                                     </td>
                                     <td class="{{ $isPanel ? 'text-center' : 'p-4 text-center' }}">
                                             <form action="{{ route('cart.update', $item->id) }}" method="POST"
@@ -150,9 +146,6 @@
                                     </td>
                                     <td class="{{ $isPanel ? 'text-center' : 'p-4 text-center font-medium' }}">
                                         {{ $linePrice['display'] }}
-                                        @if($linePrice['show_settling_note'])
-                                            <div class="text-muted" style="font-size:12px;margin-top:4px;">{{ $linePrice['settling_note'] }}</div>
-                                        @endif
                                     </td>
                                     <td class="{{ $isPanel ? 'text-center' : 'p-4 text-center' }}">
                                         <form action="{{ route('cart.destroy', $item->id) }}" method="POST">
@@ -179,7 +172,11 @@
                         <div class="col-md-6">
                             <div class="well well-sm" style="margin-bottom: 0;">
                                 <strong>Total Items:</strong> {{ $carts->sum('quantity') }}
-                                <span style="margin-left: 12px;"><strong>Grand Total:</strong> AED {{ number_format($total, 2) }}</span>
+                                <span style="margin-left: 12px;"><strong>Grand Total:</strong>
+                                    @foreach($displayTotals as $currency => $amount)
+                                        {{ $currency }} {{ number_format($amount, 2) }}@if(!$loop->last), @endif
+                                    @endforeach
+                                </span>
                             </div>
                         </div>
                         <div class="col-md-6 text-right">
@@ -197,7 +194,11 @@
                     <div class="mt-8 flex flex-col md:flex-row justify-between items-center gap-6">
                         <div class="text-gray-600">
                             <p class="text-lg">Total Items: {{ $carts->sum('quantity') }}</p>
-                            <p class="text-xl font-bold text-gray-800 mt-2">Grand Total: AED {{ number_format($total, 2) }}</p>
+                            <p class="text-xl font-bold text-gray-800 mt-2">Grand Total:
+                                @foreach($displayTotals as $currency => $amount)
+                                    {{ $currency }} {{ number_format($amount, 2) }}@if(!$loop->last), @endif
+                                @endforeach
+                            </p>
                         </div>
                         <div class="flex gap-4">
                             <a href="{{ url('/') }}"
