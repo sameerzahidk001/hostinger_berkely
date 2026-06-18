@@ -134,7 +134,7 @@
                         <li><a href="{{ route('users', ['type' => 'student']) }}">Student List</a></li>
                         <li><a href="{{ route('users', ['type' => 'instructor']) }}">Instructors</a></li>
                         <li><a href="{{ route('users', ['type' => 'accountant']) }}">Accountant</a></li>
-                        <li><a href="{{ route('users', ['type' => 'librarian']) }}">Content Writer</a></li>
+                        <li><a href="{{ route('users', ['type' => 'content-writer']) }}">Content Writer</a></li>
                         <li><a href="{{ route('users.create') }}">Add User</a></li>
                      </ul>
                   </li>

@@ -92,17 +92,43 @@ if (!function_exists('role_display_name')) {
     function role_display_name(?string $role): string
     {
         return match ($role) {
-            'librarian' => 'Content Writer',
+            'librarian', 'content_writer', 'content-writer' => 'Content Writer',
             'accountant' => 'Accountant',
             default => ucfirst($role ?? ''),
         };
     }
 }
 
+if (!function_exists('user_list_role_names')) {
+    function user_list_role_names(string $type): array
+    {
+        $normalized = str_replace(['-', ' '], '_', strtolower($type));
+
+        if (in_array($normalized, ['librarian', 'content_writer'], true)) {
+            return ['librarian', 'content_writer', 'content-writer'];
+        }
+
+        return [$type];
+    }
+}
+
+if (!function_exists('user_list_label')) {
+    function user_list_label(string $type): string
+    {
+        $normalized = str_replace(['-', ' '], '_', strtolower($type));
+
+        if (in_array($normalized, ['librarian', 'content_writer'], true)) {
+            return 'Content Writers';
+        }
+
+        return ucfirst(Str::plural($type));
+    }
+}
+
 if (!function_exists('admin_can_delete')) {
     function admin_can_delete(): bool
     {
-        return !in_array(panel_role_name(), ['librarian', 'accountant'], true);
+        return !in_array(panel_role_name(), ['librarian', 'content_writer', 'content-writer', 'accountant'], true);
     }
 }
 
@@ -125,7 +151,7 @@ if (!function_exists('admin_menu_allowed')) {
             'payments', 'profile', 'logout',
         ];
 
-        if ($role === 'librarian') {
+        if ($role === 'librarian' || $role === 'content_writer' || $role === 'content-writer') {
             return in_array($menu, $contentWriterMenus, true);
         }
 

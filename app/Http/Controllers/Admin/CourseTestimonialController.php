@@ -20,7 +20,7 @@ class CourseTestimonialController extends Controller
     {
         $courseId = $request->input('course_id');
         $categoryId = $request->input('category_id');
-        $status = $request->input('status', 'active');
+        $status = $request->input('status', 'all');
 
         $query = CourseTestimonial::with('course:id,title,short_name,slug', 'course.categories')->withTrashed();
 
@@ -35,9 +35,16 @@ class CourseTestimonialController extends Controller
         }
 
         if ($status === 'active') {
-            $query->whereNull('deleted_at');
+            $query->whereNull('deleted_at')->where(function ($q) {
+                $q->where('status', 'show')->orWhereNull('status');
+            });
         } elseif ($status === 'disabled') {
-            $query->whereNotNull('deleted_at');
+            $query->where(function ($q) {
+                $q->where('status', 'hide')
+                    ->orWhereNotNull('deleted_at');
+            });
+        } else {
+            $query->whereNull('deleted_at');
         }
 
         $data['all_testimonial'] = $query->latest()->get();
