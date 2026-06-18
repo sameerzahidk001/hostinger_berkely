@@ -142,8 +142,8 @@
                                         @if ($installment->payment_method)
                                         <button class="btn btn-success btn-sm edit-bank-transfer-modal" style="margin-right: 4px; margin-bottom: 4px;"
                                             data-id="{{ $installment->id }}"
-                                            data-paid_amount="{{ $installment->paid_amount }}"
-                                            data-amount="{{ $installment->remaining_amount }}"
+                                            data-display-paid="{{ payment_display_amount_from_aed($installment->payment, (float) $installment->paid_amount) }}"
+                                            data-currency="{{ payment_display_currency($installment->payment) }}"
                                             data-payment_type="{{ $installment->payment_method }}"
                                             data-notes="{{ $installment->notes }}"
                                             data-paid_date="{{ $installment->paid_date }}">
@@ -186,8 +186,11 @@
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
-                        <label for="amount">Amount Received</label>
-                        <input type="number" name="amount" id="amount" class="form-control" step="0.01" required>
+                        <label for="amount" id="amount_received_label">Amount Received</label>
+                        <div class="input-group">
+                            <span class="input-group-addon" id="manual_pay_currency_addon">AED</span>
+                            <input type="number" name="amount" id="amount" class="form-control" step="0.01" required>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="payment_type">Payment Type</label>
@@ -241,7 +244,8 @@
 
     $(document).on('click', '.edit-bank-transfer-modal', function() {
         const installmentId = $(this).data('id');
-        const paidAmount = $(this).data('paid_amount');
+        const displayPaid = $(this).data('display-paid');
+        const currency = $(this).data('currency') || 'AED';
         const paymentType = $(this).data('payment_type');
         const notes = $(this).data('notes');
         const paidDate = $(this).data('paid_date');
@@ -249,7 +253,9 @@
         $('#bankTransferForm')[0].reset();
 
         $('#installment_id').val(installmentId);
-        $('#amount').val(paidAmount || '');
+        $('#manual_pay_currency_addon').text(currency);
+        $('#amount_received_label').text('Amount Received (' + currency + ')');
+        $('#amount').val(displayPaid || '');
         $('#payment_type').val(paymentType || '');
         $('#notes').val(notes || '');
         $('#paid_date').val(paidDate || '');

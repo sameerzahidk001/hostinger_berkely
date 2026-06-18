@@ -159,6 +159,29 @@
         let currentInstallmentId = null;
         let currentAmount = null;
 
+        function normalizeEmbeddedPayButtons(containerSelector) {
+            const root = document.querySelector(containerSelector);
+            if (!root) {
+                return;
+            }
+
+            const scrub = function () {
+                root.querySelectorAll('button').forEach(function (btn) {
+                    const text = (btn.textContent || '').trim();
+                    if (/^pay\b/i.test(text) && /[\d,.]/.test(text)) {
+                        btn.textContent = 'Pay';
+                    }
+                });
+            };
+
+            scrub();
+            const observer = new MutationObserver(scrub);
+            observer.observe(root, { childList: true, subtree: true, characterData: true });
+            setTimeout(function () {
+                observer.disconnect();
+            }, 20000);
+        }
+
         function errorCallback(error) {
             console.log(JSON.stringify(error));
         }
@@ -236,6 +259,7 @@
                             Checkout.showEmbeddedPage(embeddedDivId, () => {
                                 $('#' + modalId).modal();
                             });
+                            normalizeEmbeddedPayButtons(embeddedDivId);
                         } catch (error) {
                             console.error("An error occurred while initializing RakBank Checkout:", error);
                         }

@@ -277,6 +277,26 @@ if (!function_exists('payment_display_amount_from_aed')) {
     }
 }
 
+if (!function_exists('payment_aed_from_display_amount')) {
+    function payment_aed_from_display_amount($payment, float $displayAmount): float
+    {
+        $currency = payment_display_currency($payment);
+
+        if ($currency === 'AED') {
+            return round($displayAmount, 2);
+        }
+
+        $settlingTotal = (float) ($payment->price ?? 0);
+        $packagePrice = (float) (optional($payment->courseFee)->price ?? 0);
+
+        if ($settlingTotal > 0 && $packagePrice > 0) {
+            return round(($displayAmount / $packagePrice) * $settlingTotal, 2);
+        }
+
+        return convert_to_aed($displayAmount, $currency);
+    }
+}
+
 if (!function_exists('format_payment_aed_amount')) {
     function format_payment_aed_amount($payment, float $aedAmount): string
     {
@@ -385,6 +405,17 @@ if (!function_exists('format_payment_amount')) {
             'currency' => $currency,
             'show_settling_note' => false,
         ];
+    }
+}
+
+if (!function_exists('normalize_payment_email_body')) {
+    function normalize_payment_email_body(string $body): string
+    {
+        return preg_replace(
+            '/Amount Paid:\s*AED\s+(?=(USD|GBP|AED)\s)/i',
+            'Amount Paid: ',
+            $body
+        );
     }
 }
 

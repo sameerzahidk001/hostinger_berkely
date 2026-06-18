@@ -231,8 +231,11 @@
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
-                        <label for="amount">Amount Received</label>
-                        <input type="number" name="amount" id="amount" class="form-control" step="0.01" required>
+                        <label for="amount" id="amount_received_label">Amount Received</label>
+                        <div class="input-group">
+                            <span class="input-group-addon" id="manual_pay_currency_addon">AED</span>
+                            <input type="number" name="amount" id="amount" class="form-control" step="0.01" required>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="payment_type">Payment Type</label>
@@ -408,6 +411,33 @@
 <script>
     let reopenInstallmentsAfterBankTransfer = false;
 
+    function paymentCurrency(payment) {
+        return String(payment.currency || payment.course_fee?.currency || payment.courseFee?.currency || 'AED').toUpperCase();
+    }
+
+    function adminDisplayAmountNumber(payment, aedAmount) {
+        const currency = paymentCurrency(payment);
+        const aed = parseFloat(aedAmount) || 0;
+
+        if (currency === 'AED') {
+            return aed;
+        }
+
+        const settlingTotal = parseFloat(payment.price) || 0;
+        const packagePrice = parseFloat(payment.course_fee?.price || payment.courseFee?.price || 0);
+
+        if (settlingTotal > 0 && packagePrice > 0) {
+            return Math.round(((aed / settlingTotal) * packagePrice) * 100) / 100;
+        }
+
+        return aed;
+    }
+
+    function setManualPayCurrency(currency) {
+        $('#manual_pay_currency_addon').text(currency);
+        $('#amount_received_label').text('Amount Received (' + currency + ')');
+    }
+
     function formatAdminPaymentAmount(payment, aedAmount) {
         const currency = String(payment.currency || payment.course_fee?.currency || payment.courseFee?.currency || 'AED').toUpperCase();
         const aed = parseFloat(aedAmount) || 0;
@@ -429,12 +459,14 @@
 
     $(document).on('click', '.open-bank-transfer-modal', function() {
         const installmentId = $(this).data('id');
-        const amount = $(this).data('amount');
+        const displayAmount = $(this).data('display-amount');
+        const currency = $(this).data('currency') || 'AED';
 
         $('#bankTransferForm')[0].reset();
 
         $('#installment_id').val(installmentId);
-        $('#amount').val(amount || '');
+        setManualPayCurrency(currency);
+        $('#amount').val(displayAmount || '');
         $('#payment_type').val('');
         $('#notes').val('');
         $('#paid_date').val('');
@@ -451,7 +483,8 @@
 
     $(document).on('click', '.edit-bank-transfer-modal', function() {
         const installmentId = $(this).data('id');
-        const paidAmount = $(this).data('paid_amount');
+        const displayPaid = $(this).data('display-paid');
+        const currency = $(this).data('currency') || 'AED';
         const paymentType = $(this).data('payment_type');
         const notes = $(this).data('notes');
         const paidDate = $(this).data('paid_date');
@@ -459,7 +492,8 @@
         $('#bankTransferForm')[0].reset();
 
         $('#installment_id').val(installmentId);
-        $('#amount').val(paidAmount || '');
+        setManualPayCurrency(currency);
+        $('#amount').val(displayPaid || '');
         $('#payment_type').val(paymentType || '');
         $('#notes').val(notes || '');
         $('#paid_date').val(paidDate || '');
@@ -516,7 +550,8 @@
                             ? `
                                 <button class="btn btn-success btn-sm open-bank-transfer-modal" 
                                     data-id="${installment.id}" 
-                                    data-amount="${installment.remaining_amount}">
+                                    data-display-amount="${adminDisplayAmountNumber(installments, installment.remaining_amount)}"
+                                    data-currency="${paymentCurrency(installments)}">
                                     <i class="fa fa-bank"></i> Pay (Manual)
                                 </button>
                             `
@@ -525,8 +560,8 @@
                                 ? `
                                     <button class="btn btn-success btn-sm edit-bank-transfer-modal" style="margin-right: 4px; margin-bottom: 4px;"
                                         data-id="${installment.id}" 
-                                        data-paid_amount="${installment.paid_amount}"
-                                        data-amount="${installment.remaining_amount}" 
+                                        data-display-paid="${adminDisplayAmountNumber(installments, installment.paid_amount)}"
+                                        data-currency="${paymentCurrency(installments)}"
                                         data-payment_type="${installment.payment_method}" 
                                         data-notes="${installment.notes ?? ''}"
                                         data-paid_date="${installment.paid_date ?? ''}">

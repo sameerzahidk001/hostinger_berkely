@@ -2,7 +2,9 @@
 @section('title', 'Dashboard')
 @push('scripts')
     <style>
-
+        #hco-embedded button {
+            position: relative;
+        }
     </style>
 @endpush
 
@@ -158,6 +160,29 @@
             let currentInstallmentId = null;
             let checkoutScriptLoaded = false;
 
+            function normalizeEmbeddedPayButtons(containerSelector) {
+                const root = document.querySelector(containerSelector);
+                if (!root) {
+                    return;
+                }
+
+                const scrub = function () {
+                    root.querySelectorAll('button').forEach(function (btn) {
+                        const text = (btn.textContent || '').trim();
+                        if (/^pay\b/i.test(text) && /[\d,.]/.test(text)) {
+                            btn.textContent = 'Pay';
+                        }
+                    });
+                };
+
+                scrub();
+                const observer = new MutationObserver(scrub);
+                observer.observe(root, { childList: true, subtree: true, characterData: true });
+                setTimeout(function () {
+                    observer.disconnect();
+                }, 20000);
+            }
+
             function loadCheckoutScript(callback) {
                 if (typeof Checkout !== 'undefined') {
                     callback();
@@ -263,6 +288,7 @@
                                     });
                                     $('#payment-loading').hide();
                                     Checkout.showEmbeddedPage(embeddedDivId);
+                                    normalizeEmbeddedPayButtons(embeddedDivId);
                                 } catch (error) {
                                     $('#payment-loading').hide();
                                     console.error("An error occurred while initializing RakBank Checkout:", error);

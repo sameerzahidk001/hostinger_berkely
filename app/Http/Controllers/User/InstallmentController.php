@@ -29,7 +29,7 @@ class InstallmentController extends Controller
 
     public function updateInstallment(Request $request)
     {
-        $installment = Installment::findOrFail($request->installment_id);
+        $installment = Installment::with(['payment.courseFee'])->findOrFail($request->installment_id);
 
         $installment->update([
             'paid_amount' => $request->amount,
@@ -42,10 +42,11 @@ class InstallmentController extends Controller
         $emailTemplate = Email::where('name', 'fees-paid')->first();
 
         if ($emailTemplate) {
-            // Replace placeholders in the email body
+            $paidDisplay = format_payment_aed_amount($installment->payment, (float) $request->amount);
+
             $emailBody = str_replace(
                 ['{name}', '{email}', '{fees-paid}', '{fees-installment}'],
-                [$user->name, $user->email, $request->amount, $installment->installment_number],
+                [$user->name, $user->email, $paidDisplay, $installment->installment_number],
                 $emailTemplate->body
             );
 
@@ -55,7 +56,7 @@ class InstallmentController extends Controller
             Mail::to($user->email)
                 ->cc($ccEmails)
                 ->bcc($bccEmails)
-                ->send(new UserMail($user, $emailTemplate->subject, $emailBody));
+                ->send(new UserMail($user, $emailTemplate->subject, normalize_payment_email_body($emailBody)));
         }
 
         return response()->json(["success" => true, "message" => "Installment updated and email sent successfully."]);
