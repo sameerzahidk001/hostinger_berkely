@@ -410,6 +410,7 @@
 </script>
 <script>
     let reopenInstallmentsAfterBankTransfer = false;
+    const currencyRatesToAed = @json(currency_rates_to_aed());
 
     function paymentCurrency(payment) {
         return String(payment.currency || payment.course_fee?.currency || payment.courseFee?.currency || 'AED').toUpperCase();
@@ -438,23 +439,30 @@
         $('#amount_received_label').text('Amount Received (' + currency + ')');
     }
 
+    function adminBracketAed(currency, displayAmount) {
+        if (currency === 'AED') {
+            return (parseFloat(displayAmount) || 0).toFixed(2);
+        }
+
+        const rate = parseFloat(currencyRatesToAed[currency] || 0);
+        if (rate > 0) {
+            return (parseFloat(displayAmount) * rate).toFixed(2);
+        }
+
+        return (parseFloat(displayAmount) || 0).toFixed(2);
+    }
+
     function formatAdminPaymentAmount(payment, aedAmount) {
-        const currency = String(payment.currency || payment.course_fee?.currency || payment.courseFee?.currency || 'AED').toUpperCase();
-        const aed = parseFloat(aedAmount) || 0;
+        const currency = paymentCurrency(payment);
+        const display = adminDisplayAmountNumber(payment, aedAmount);
 
         if (currency === 'AED') {
-            return 'AED ' + aed.toFixed(2);
+            return 'AED ' + display.toFixed(2);
         }
 
-        const settlingTotal = parseFloat(payment.price) || 0;
-        const packagePrice = parseFloat(payment.course_fee?.price || payment.courseFee?.price || 0);
-        let display = aed;
+        const bracket = adminBracketAed(currency, display);
 
-        if (settlingTotal > 0 && packagePrice > 0) {
-            display = (aed / settlingTotal) * packagePrice;
-        }
-
-        return currency + ' ' + display.toFixed(2) + ' <span class="text-muted">(AED ' + aed.toFixed(2) + ')</span>';
+        return currency + ' ' + display.toFixed(2) + ' <span class="text-muted">(AED ' + bracket + ')</span>';
     }
 
     $(document).on('click', '.open-bank-transfer-modal', function() {
