@@ -22,7 +22,7 @@ class AdminMiddleware
 
         if (Auth::check()) {
             $role = Auth::user()->roles()->value('name');
-            if (in_array($role, ['librarian', 'accountant'], true)) {
+            if (is_restricted_panel_role($role)) {
                 return $next($request);
             }
         }

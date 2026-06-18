@@ -110,6 +110,7 @@
                                                     <a href="{{ route('users.edit', $data->id) }}"
                                                         class="btn-primary btn btn-xs editFaqs">
                                                         <i class="fa fa-edit"></i>Edit</a>
+                                                    @if(admin_can_delete())
                                                     <form id="delete-form-{{ $data->id }}"
                                                         action="{{ route('users.destroy', $data->id) }}" method="POST"
                                                         style="display:inline;">
@@ -120,6 +121,12 @@
                                                             <i class="fa fa-trash"></i> Delete
                                                         </button>
                                                     </form>
+                                                    @else
+                                                    <button type="button" class="btn-danger btn btn-xs" disabled
+                                                        title="Delete is disabled for your role">
+                                                        <i class="fa fa-trash"></i> Delete
+                                                    </button>
+                                                    @endif
                                                 </div>
                                             </td>
                                         </tr>
