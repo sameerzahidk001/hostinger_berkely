@@ -29,23 +29,25 @@ class UserController extends Controller
             }
 
             $type = $request->query('type', Role::first()?->name);
-            $roleNames = user_list_role_names($type);
-            $normalizedType = str_replace(['-', ' '], '_', strtolower($type));
+            $roleIds = role_ids_for_list_type((string) $type);
 
-            $users = User::whereHas('roles', function ($query) use ($roleNames, $normalizedType) {
-                if (in_array($normalizedType, ['librarian', 'content_writer'], true)) {
-                    $query->where(function ($roleQuery) use ($roleNames) {
-                        $roleQuery->whereIn('name', $roleNames)
-                            ->orWhere('description', 'like', '%Content Writer%');
-                    });
-                } else {
-                    $query->whereIn('name', $roleNames);
-                }
-            })->orderByDesc('created_at')->get();
+            $usersQuery = User::query()->with('roles')->orderByDesc('created_at');
+
+            if (! empty($roleIds)) {
+                $usersQuery->whereHas('roles', function ($query) use ($roleIds) {
+                    $query->whereIn('roles.id', $roleIds);
+                });
+            } else {
+                $usersQuery->whereHas('roles', function ($query) use ($type) {
+                    $query->where('name', $type);
+                });
+            }
+
+            $normalizedType = normalize_role_key($type);
 
             return view('admin.user.index', [
-                'type' => in_array($normalizedType, ['librarian', 'content_writer'], true) ? 'content-writer' : $type,
-                'users' => $users,
+                'type' => is_content_writer_role_key($type) ? 'content-writer' : $type,
+                'users' => $usersQuery->get(),
             ]);
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'Something went wrong: ' . $e->getMessage());
@@ -55,12 +57,13 @@ class UserController extends Controller
     public function create()
     {
         try {
-            $roles = Role::all()->reject(function ($role) {
-                if ($role->name !== 'librarian') {
+            $contentWriterIds = content_writer_role_ids();
+            $roles = Role::all()->reject(function ($role) use ($contentWriterIds) {
+                if (! is_content_writer_role_key($role->name)) {
                     return false;
                 }
 
-                return Role::where('name', 'content_writer')->exists();
+                return count($contentWriterIds) > 1 && $role->id !== ($contentWriterIds[0] ?? $role->id);
             })->values();
             $countries = Country::all();
             return view('admin.user.create', compact('roles', 'countries'));
@@ -101,14 +104,8 @@ class UserController extends Controller
 
         $data = $validator->validated();
         $role = Role::find($data['role']);
-
-        if ($role && $role->name === 'librarian') {
-            $contentWriterRole = Role::where('name', 'content_writer')->first();
-            if ($contentWriterRole) {
-                $data['role'] = $contentWriterRole->id;
-                $role = $contentWriterRole;
-            }
-        }
+        $data['role'] = resolve_content_writer_role_id((int) $data['role']) ?? $data['role'];
+        $role = Role::find($data['role']);
 
         if ($request->hasFile('local_file_input')) {
             $file = $request->file('local_file_input');
@@ -284,7 +281,7 @@ class UserController extends Controller
             $successMessage .= ' However, there was an issue sending the email: ' . $mailError;
 
         $roleName = optional($user->roles()->first())->name ?? 'user';
-        return redirect()->route('users', ['type' => $roleName])->with('success', $successMessage);
+        return redirect()->route('users', ['type' => user_list_type_param($roleName)])->with('success', $successMessage);
     }
 
     public function destroy($id)
