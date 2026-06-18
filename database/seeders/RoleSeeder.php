@@ -13,7 +13,6 @@ class RoleSeeder extends Seeder
         $roles = [
             ['name' => 'student', 'description' => 'Lorem Ipsum is simply dummy text of the printing and typesetting industry.'],
             ['name' => 'instructor', 'description' => 'Lorem Ipsum is simply dummy text of the printing and typesetting industry.'],
-            ['name' => 'librarian', 'description' => 'Content Writer — limited admin access for content management.'],
             ['name' => 'content_writer', 'description' => 'Content Writer — limited admin access for content management.'],
             ['name' => 'accountant', 'description' => 'Lorem Ipsum is simply dummy text of the printing and typesetting industry.'],
             // ['name' => 'admin', 'description' => 'Lorem Ipsum is simply dummy text of the printing and typesetting industry.'],

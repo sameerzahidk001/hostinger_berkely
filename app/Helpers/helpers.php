@@ -88,6 +88,48 @@ if (!function_exists('panel_role_name')) {
     }
 }
 
+if (!function_exists('normalize_panel_role')) {
+    function normalize_panel_role(?string $role): ?string
+    {
+        if ($role === null) {
+            return null;
+        }
+
+        $normalized = str_replace(['-', ' '], '_', strtolower($role));
+
+        if (in_array($normalized, ['librarian', 'content_writer'], true)) {
+            return 'content_writer';
+        }
+
+        return $role;
+    }
+}
+
+if (!function_exists('is_content_writer_role')) {
+    function is_content_writer_role(?string $role): bool
+    {
+        return normalize_panel_role($role) === 'content_writer';
+    }
+}
+
+if (!function_exists('is_restricted_panel_role')) {
+    function is_restricted_panel_role(?string $role): bool
+    {
+        return in_array(normalize_panel_role($role), ['content_writer', 'accountant'], true);
+    }
+}
+
+if (!function_exists('user_list_type_param')) {
+    function user_list_type_param(?string $roleName): string
+    {
+        if (is_content_writer_role($roleName)) {
+            return 'content-writer';
+        }
+
+        return $roleName ?? 'student';
+    }
+}
+
 if (!function_exists('role_display_name')) {
     function role_display_name(?string $role): string
     {
@@ -105,7 +147,7 @@ if (!function_exists('user_list_role_names')) {
         $normalized = str_replace(['-', ' '], '_', strtolower($type));
 
         if (in_array($normalized, ['librarian', 'content_writer'], true)) {
-            return ['librarian', 'content_writer', 'content-writer'];
+            return ['content_writer', 'librarian', 'content-writer'];
         }
 
         return [$type];
@@ -128,14 +170,14 @@ if (!function_exists('user_list_label')) {
 if (!function_exists('admin_can_delete')) {
     function admin_can_delete(): bool
     {
-        return !in_array(panel_role_name(), ['librarian', 'content_writer', 'content-writer', 'accountant'], true);
+        return !is_restricted_panel_role(panel_role_name());
     }
 }
 
 if (!function_exists('admin_menu_allowed')) {
     function admin_menu_allowed(string $menu): bool
     {
-        $role = panel_role_name();
+        $role = normalize_panel_role(panel_role_name());
 
         if ($role === null || $role === 'admin') {
             return true;
@@ -151,7 +193,7 @@ if (!function_exists('admin_menu_allowed')) {
             'payments', 'profile', 'logout',
         ];
 
-        if ($role === 'librarian' || $role === 'content_writer' || $role === 'content-writer') {
+        if ($role === 'content_writer') {
             return in_array($menu, $contentWriterMenus, true);
         }
 

@@ -24,16 +24,28 @@ class UserController extends Controller
     public function index(Request $request)
     {
         try {
+            if ($request->query('type') === 'librarian') {
+                return redirect()->route('users', ['type' => 'content-writer']);
+            }
+
             $type = $request->query('type', Role::first()?->name);
             $roleNames = user_list_role_names($type);
+            $normalizedType = str_replace(['-', ' '], '_', strtolower($type));
 
-            $users = User::whereHas('roles', function ($query) use ($roleNames) {
-                $query->whereIn('name', $roleNames);
+            $users = User::whereHas('roles', function ($query) use ($roleNames, $normalizedType) {
+                if (in_array($normalizedType, ['librarian', 'content_writer'], true)) {
+                    $query->where(function ($roleQuery) use ($roleNames) {
+                        $roleQuery->whereIn('name', $roleNames)
+                            ->orWhere('description', 'like', '%Content Writer%');
+                    });
+                } else {
+                    $query->whereIn('name', $roleNames);
+                }
             })->orderByDesc('created_at')->get();
 
             return view('admin.user.index', [
-                'type' => $type,
-                'users' => $users
+                'type' => in_array($normalizedType, ['librarian', 'content_writer'], true) ? 'content-writer' : $type,
+                'users' => $users,
             ]);
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'Something went wrong: ' . $e->getMessage());
@@ -43,7 +55,13 @@ class UserController extends Controller
     public function create()
     {
         try {
-            $roles = Role::all();
+            $roles = Role::all()->reject(function ($role) {
+                if ($role->name !== 'librarian') {
+                    return false;
+                }
+
+                return Role::where('name', 'content_writer')->exists();
+            })->values();
             $countries = Country::all();
             return view('admin.user.create', compact('roles', 'countries'));
         } catch (Exception $e) {
@@ -83,6 +101,14 @@ class UserController extends Controller
 
         $data = $validator->validated();
         $role = Role::find($data['role']);
+
+        if ($role && $role->name === 'librarian') {
+            $contentWriterRole = Role::where('name', 'content_writer')->first();
+            if ($contentWriterRole) {
+                $data['role'] = $contentWriterRole->id;
+                $role = $contentWriterRole;
+            }
+        }
 
         if ($request->hasFile('local_file_input')) {
             $file = $request->file('local_file_input');
@@ -128,7 +154,7 @@ class UserController extends Controller
             try {
                 $emailBody = str_replace(
                     ['{name}', '{email}', '{password}', '{role}'],
-                    [$user->name, $user->email, $request->password, ucfirst($role->name)],
+                    [$user->name, $user->email, $request->password, role_display_name($role->name)],
                     $emailTemplate->body
                 );
 
@@ -149,7 +175,7 @@ class UserController extends Controller
             $successMessage .= ' But failed to send email: ' . $mailError;
         }
 
-        return redirect()->route('users', ['type' => $role->name])->with('success', $successMessage);
+        return redirect()->route('users', ['type' => user_list_type_param($role->name)])->with('success', $successMessage);
     }
 
 
