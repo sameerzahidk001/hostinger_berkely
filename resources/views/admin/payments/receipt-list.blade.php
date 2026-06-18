@@ -150,7 +150,9 @@
                                             <i class="fa fa-edit"></i> Edit
                                         </button>
                                         <a href="{{ route('admin.installments.manual.pay.delete', ['id' => $installment->id]) }}" style="margin-right: 4px; margin-bottom: 4px;"
-                                            class="btn btn-danger btn-sm"><i class="fa fa-trash"></i> Delete
+                                            class="btn btn-danger btn-sm"
+                                            onclick="return confirmDeleteLink(event, this.href, 'this receipt');">
+                                            <i class="fa fa-trash"></i> Delete
                                         </a>
                                         @endif
                                         <a href="{{ route('admin.installments.receipt', $installment->id) }}"

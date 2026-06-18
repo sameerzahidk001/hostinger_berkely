@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-f9ffd100.css",
+    "file": "assets/app-5f3611fa.css",
     "isEntry": true,
     "src": "resources/css/app.css"
   },
@@ -8,12 +8,24 @@
     "file": "assets/CanelaDeck-Regular-Trial-bfd4525f.otf",
     "src": "resources/fonts/CanelaDeckFamily/CanelaDeck-Regular-Trial.otf"
   },
-  "resources/fonts/trad-ghothic.ttf": {
-    "file": "assets/trad-ghothic-f069cc1a.ttf",
-    "src": "resources/fonts/trad-ghothic.ttf"
+  "resources/fonts/Trade_Gothic/Trade-Gothic-Bold.otf": {
+    "file": "assets/Trade-Gothic-Bold-e5e99323.otf",
+    "src": "resources/fonts/Trade_Gothic/Trade-Gothic-Bold.otf"
+  },
+  "resources/fonts/Trade_Gothic/Trade-Gothic-Bold.woff2": {
+    "file": "assets/Trade-Gothic-Bold-3df46198.woff2",
+    "src": "resources/fonts/Trade_Gothic/Trade-Gothic-Bold.woff2"
+  },
+  "resources/fonts/Trade_Gothic/Trade-Gothic-Regular.otf": {
+    "file": "assets/Trade-Gothic-Regular-63329340.otf",
+    "src": "resources/fonts/Trade_Gothic/Trade-Gothic-Regular.otf"
+  },
+  "resources/fonts/Trade_Gothic/Trade-Gothic.woff2": {
+    "file": "assets/Trade-Gothic-c3d82543.woff2",
+    "src": "resources/fonts/Trade_Gothic/Trade-Gothic.woff2"
   },
   "resources/js/app.js": {
-    "file": "assets/app-4cfb0647.js",
+    "file": "assets/app-90a1f502.js",
     "isEntry": true,
     "src": "resources/js/app.js"
   }

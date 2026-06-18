@@ -75,14 +75,25 @@ class CourseController extends Controller
             'categories' => function ($query) {
                 $query->orderBy('name', 'asc');
             },
+            'schools',
             'seo',
             'courseFeePackages',
             'courseStructures',
+            'courseStructuresFirst',
+            'courseFaq',
             'relatedCourses:id,title,slug',
-            'testimonials'
+            'testimonials',
+            'createdBy',
+            'updatedBy',
         ]);
 
-        $data['courses'] = $query->orderByDesc('created_at')->get();
+        $analyzer = app(SeoAnalyzerService::class);
+        $data['courses'] = $query->orderByDesc('created_at')->get()->each(function (Course $course) use ($analyzer) {
+            if ($course->seo) {
+                $course->seo->loadMissing(['page.sections', 'course']);
+                $course->seo_analysis = $analyzer->analyze($course->seo);
+            }
+        });
 
         return view('admin.course.disabled-courses')->with($data);
     }

@@ -287,7 +287,6 @@
 @endsection
 
 @push('script')
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="{{ asset('/admin/js/plugins/dataTables/datatables.min.js') }}"></script>
     <script>
         $(document).ready(function () {
@@ -304,22 +303,6 @@
                 order: [[0, 'desc']]
             });
         });
-
-        function confirmDelete(id) {
-            Swal.fire({
-                title: 'Are you sure?',
-                text: "You won't be able to revert this!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'Yes, delete it!'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    document.getElementById('delete-form-' + id).submit();
-                }
-            });
-        }
 
         function updateCourseStatus(status, courseId) {
             // AJAX call to update course status

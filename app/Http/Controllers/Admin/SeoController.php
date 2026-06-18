@@ -65,11 +65,7 @@ class SeoController extends Controller
      */
     public function store(Request $request)
     {
-        //return $request;
-        $request->validate([
-            'title' => 'required',
-            // other validation rules
-        ]);
+        $request->validate(seo_validation_rules());
 
         $data = $request->except('_token');
         if ($request->has('course_id')) {
@@ -130,12 +126,8 @@ class SeoController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //return $request;
-        // $request->validate([
-        //     'page_url' => 'required',
-        //     // other validation rules
-        // ]);
-        //$page_seo = PagesSEO::findOrFail($id);
+        $request->validate(seo_validation_rules());
+
         if ($request->has('course_id')) {
             $page_seo = PagesSEO::where('course_id', $request->course_id)->first();
         } elseif ($request->has('page_id')) {

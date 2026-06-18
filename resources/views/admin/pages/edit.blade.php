@@ -2832,10 +2832,12 @@
                         <div class="ibox-content">
                             <div class="row">
                                 <div class="col-lg-6 mb">
-                                    <label for="meta_title">Title <small>( Less or 60 characters )</small></label>
+                                    <label for="meta_title">Title <small>( Max {{ seo_field_limits()['title_max'] }} characters )</small></label>
                                     <input type="text" class="form-control" name="meta_title"
                                         placeholder="Add SEO Meta title"
-                                        value="{{ old('meta_title', $meta->title ?? '') }}">
+                                        value="{{ old('meta_title', $meta->title ?? '') }}"
+                                        data-maxlength="{{ seo_field_limits()['title_max'] }}"
+                                        maxlength="{{ seo_field_limits()['title_max'] }}">
                                     @error('meta_title')
                                         <p class="text-danger text-xs italic">{{ $message }}</p>
                                     @enderror
@@ -2917,16 +2919,17 @@
                                     </div>
                                 </div>
                                 <div class="col-lg-12 mb">
-                                    <label for="meta_description">Meta Description <small>( Max 160 characters
-                                            )</small></label>
+                                    <label for="meta_description">Meta Description <small>( Max {{ seo_field_limits()['meta_description_max'] }} characters )</small></label>
                                     <textarea class="form-control editor" name="meta_description"
-                                        placeholder="Add SEO Meta description">{{ old('meta_description', $meta->meta_description ?? '') }}</textarea>
+                                        placeholder="Add SEO Meta description"
+                                        data-maxlength="{{ seo_field_limits()['meta_description_max'] }}"
+                                        maxlength="{{ seo_field_limits()['meta_description_max'] }}">{{ old('meta_description', $meta->meta_description ?? '') }}</textarea>
                                     @error('meta_description')
                                         <p class="text-danger text-xs italic">{{ $message }}</p>
                                     @enderror
                                 </div>
                                 <div class="col-lg-6" style="margin-bottom: 15px;">
-                                    <label for="meta_keywords">Priority Keywords</label>
+                                    <label for="meta_keywords">Priority Keywords <small>( Max {{ seo_field_limits()['priority_keywords_max_tags'] }} keywords )</small></label>
                                     <input name="meta_keywords" id="meta_keywords"
                                         value="{{ old('meta_keywords', $meta->keywords ?? '') }}" class="form-control" />
                                     @error('meta_keywords')
@@ -2935,7 +2938,7 @@
                                 </div>
 
                                 <div class="col-lg-6" style="margin-bottom: 15px;">
-                                    <label for="meta_additional_keywords">Additional Keywords</label>
+                                    <label for="meta_additional_keywords">Additional Keywords <small>( Max {{ seo_field_limits()['additional_keywords_max_tags'] }} keywords )</small></label>
                                     <input name="meta_additional_keywords" id="meta_additional_keywords"
                                         value="{{ old('meta_additional_keywords', $meta->additional_keywords ?? '') }}" class="form-control" />
                                     @error('meta_additional_keywords')
@@ -3022,17 +3025,8 @@
             }
         });
     </script>
+    @include('admin.seo.partials.tags-limits-script')
     <script>
-        $('#meta_keywords').tagsInput({
-            'defaultText': 'Add Meta Keywords',
-            'unique': true,
-        });
-
-        $('#meta_additional_keywords').tagsInput({
-            'defaultText': 'Add Additional Keywords',
-            'unique': true,
-        });
-
         $(document).ready(function () {
             // Handle collapse toggle
             $("#builder-container").on("click", ".collapse-link", function (e) {

@@ -4545,3 +4545,14 @@ video {
     background-color: rgb(30 30 30 / var(--tw-bg-opacity));
   }
 }
+
+/* Courses page Programs dropdown caret */
+.course-tab-label::after {
+  content: none !important;
+}
+.tab input[type="radio"]:checked + .course-tab-label .course-tab-caret {
+  transform: rotate(180deg);
+}
+.course-tab-caret {
+  transition: transform 0.2s ease;
+}
