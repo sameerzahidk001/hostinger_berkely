@@ -142,8 +142,8 @@
                                         @if ($installment->payment_method)
                                         <button class="btn btn-success btn-sm edit-bank-transfer-modal" style="margin-right: 4px; margin-bottom: 4px;"
                                             data-id="{{ $installment->id }}"
-                                            data-paid_amount="{{ $installment->paid_amount }}"
-                                            data-amount="{{ $installment->remaining_amount }}"
+                                            data-display-paid="{{ payment_display_amount_from_aed($installment->payment, (float) $installment->paid_amount) }}"
+                                            data-currency="{{ payment_display_currency($installment->payment) }}"
                                             data-payment_type="{{ $installment->payment_method }}"
                                             data-notes="{{ $installment->notes }}"
                                             data-paid_date="{{ $installment->paid_date }}">
@@ -186,8 +186,11 @@
                 </div>
                 <div class="modal-body">
                     <div class="form-group">
-                        <label for="amount">Amount Received</label>
-                        <input type="number" name="amount" id="amount" class="form-control" step="0.01" required>
+                        <label for="amount" id="amount_received_label">Amount Received</label>
+                        <div class="input-group">
+                            <span class="input-group-addon" id="manual_pay_currency_addon">AED</span>
+                            <input type="number" name="amount" id="amount" class="form-control" step="0.01" required>
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="payment_type">Payment Type</label>
@@ -326,11 +329,4 @@
                 $btn.data('original-text', $btn.html());
             }
             $btn.prop('disabled', true)
-                .html('<i class="fa fa-spinner fa-spin"></i> ' + loadingText);
-        } else {
-            $btn.prop('disabled', false)
-                .html($btn.data('original-text') || 'Submit');
-        }
-    }
-</script>
-@endpush
+                .html('<

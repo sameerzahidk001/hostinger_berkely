@@ -336,14 +336,18 @@ class PaymentController extends Controller
         try {
             $installment = DB::transaction(function () use ($data, $isEdit) {
 
-                $installment = Installment::whereKey($data['installment_id'])
+                $installment = Installment::with(['payment.courseFee'])
+                    ->whereKey($data['installment_id'])
                     ->lockForUpdate()
                     ->firstOrFail();
 
-                $amount = round((float) $data['amount'], 2);
+                $payment = $installment->payment;
+                $displayAmount = round((float) $data['amount'], 2);
+                $amount = payment_aed_from_display_amount($payment, $displayAmount);
                 $paid = round((float) $installment->paid_amount, 2);
                 $remaining = round((float) $installment->remaining_amount, 2);
                 $total = round($paid + $remaining, 2);
+                $currency = payment_display_currency($payment);
 
                 if ($total <= 0) {
                     throw ValidationException::withMessages([
@@ -352,18 +356,22 @@ class PaymentController extends Controller
                 }
 
                 if ($isEdit) {
-                    if ($amount > $total) {
+                    $totalDisplay = payment_display_amount_from_aed($payment, $total);
+
+                    if ($displayAmount > $totalDisplay) {
                         throw ValidationException::withMessages([
-                            'amount' => 'You cannot set paid amount more than the total installment amount (' . $total . ').',
+                            'amount' => 'You cannot set paid amount more than the total installment amount (' . $currency . ' ' . number_format($totalDisplay, 2) . ').',
                         ]);
                     }
 
                     $installment->paid_amount = $amount;
                     $installment->remaining_amount = round($total - $amount, 2);
                 } else {
-                    if ($amount > $remaining) {
+                    $remainingDisplay = payment_display_amount_from_aed($payment, $remaining);
+
+                    if ($displayAmount > $remainingDisplay) {
                         throw ValidationException::withMessages([
-                            'amount' => 'You cannot pay more than the remaining amount (' . $remaining . ').',
+                            'amount' => 'You cannot pay more than the remaining amount (' . $currency . ' ' . number_format($remainingDisplay, 2) . ').',
                         ]);
                     }
 
@@ -399,7 +407,7 @@ class PaymentController extends Controller
         $emailTemplate = Email::where('name', 'fees-paid')->first();
         if ($emailTemplate) {
             $installment->loadMissing('payment.courseFee');
-            $paidDisplay = format_payment_aed_amount($installment->payment, (float) $data['amount']);
+            $paidDisplay = format_payment_aed_amount($installment->payment, (float) $installment->paid_amount);
 
             $emailBody = str_replace(
                 ['{name}', '{email}', '{fees-paid}', '{fees-installment}'],
