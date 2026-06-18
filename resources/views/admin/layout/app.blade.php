@@ -287,6 +287,29 @@
             });
          }
 
+         function confirmDeleteLink(event, url, label) {
+            if (event) {
+                event.preventDefault();
+            }
+
+            swal({
+                title: "Are you sure?",
+                text: "You won't be able to revert " + (label || "this item") + "!",
+                type: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#d33",
+                cancelButtonColor: "#3085d6",
+                confirmButtonText: "Yes, delete it!",
+                closeOnConfirm: true
+            }, function (isConfirm) {
+                if (isConfirm) {
+                    window.location.href = url;
+                }
+            });
+
+            return false;
+         }
+
          function clearAdminUiBlockers() {
             $('.modal-backdrop, .sweet-overlay').remove();
             $('body').removeClass('modal-open stop-scrolling pace-running mobile-sidebar-open');

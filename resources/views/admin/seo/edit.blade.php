@@ -121,12 +121,12 @@
                                         placeholder="Add meta description" data-maxlength="160" maxlength="160">{{ old('meta_description', $page_seo->meta_description) }}</textarea>
                                 </div>
                                 <div class="col-lg-12 mb">
-                                    <label for="">Priority Keywords</label>
+                                    <label for="">Priority Keywords <small>( Max {{ seo_field_limits()['priority_keywords_max_tags'] }} keywords, {{ seo_field_limits()['keyword_tag_max_length'] }} chars each )</small></label>
                                     <input class="form-control" name="keywords" id="keywords"
                                         placeholder="Add keywords with comma separated" value="{{ old('keywords', $page_seo->keywords) }}">
                                 </div>
                                 <div class="col-lg-12 mb">
-                                    <label for="">Additional Keywords</label>
+                                    <label for="">Additional Keywords <small>( Max {{ seo_field_limits()['additional_keywords_max_tags'] }} keywords, {{ seo_field_limits()['keyword_tag_max_length'] }} chars each )</small></label>
                                     <input class="form-control" name="additional_keywords" id="additional_keywords"
                                         placeholder="Add keywords with comma separated" value="{{ old('additional_keywords', $page_seo->additional_keywords) }}">
                                 </div>
@@ -230,21 +230,12 @@
 
 @push('script')
     <script src="https://cdn.jsdelivr.net/npm/jquery-tags-input@1.3.5/dist/jquery.tagsinput.min.js"></script>
+    @include('admin.seo.partials.tags-limits-script')
     <script>
         $(document).ready(function () {
-            $('#keywords').tagsInput({
-                'defaultText': 'Add Meta Keywords',
-                'unique': true,
-            });
-
-            $('#additional_keywords').tagsInput({
-                'defaultText': 'Add Additional Keywords',
-                'unique': true,
-            });
-
             // Prevent form submit on Enter except inside tagsinput field
             $('form').on('keydown', function (e) {
-                if (e.key === 'Enter' && e.target.id !== 'keywords_tag') {
+                if (e.key === 'Enter' && !$(e.target).closest('#keywords_tagsinput, #additional_keywords_tagsinput').length) {
                     e.preventDefault();
                     return false;
                 }

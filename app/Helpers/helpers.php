@@ -88,6 +88,30 @@ if (!function_exists('panel_role_name')) {
     }
 }
 
+if (!function_exists('panel_profile_user')) {
+    function panel_profile_user()
+    {
+        if (Auth::guard('admin')->check()) {
+            return Auth::guard('admin')->user();
+        }
+
+        return Auth::user();
+    }
+}
+
+if (!function_exists('panel_profile_name')) {
+    function panel_profile_name($user = null): string
+    {
+        $user = $user ?? panel_profile_user();
+
+        if (!$user) {
+            return '';
+        }
+
+        return $user->username ?? $user->name ?? '';
+    }
+}
+
 if (!function_exists('normalize_panel_role')) {
     function normalize_panel_role(?string $role): ?string
     {
@@ -102,6 +126,35 @@ if (!function_exists('normalize_panel_role')) {
         }
 
         return $role;
+    }
+}
+
+if (!function_exists('seo_field_limits')) {
+    function seo_field_limits(): array
+    {
+        return [
+            'title_max' => 60,
+            'meta_description_max' => 160,
+            'priority_keywords_max_tags' => 10,
+            'additional_keywords_max_tags' => 15,
+            'keyword_tag_max_length' => 60,
+            'priority_keywords_max_total' => 400,
+            'additional_keywords_max_total' => 400,
+        ];
+    }
+}
+
+if (!function_exists('seo_validation_rules')) {
+    function seo_validation_rules(bool $titleRequired = true): array
+    {
+        $limits = seo_field_limits();
+
+        return [
+            'title' => ($titleRequired ? 'required' : 'nullable') . '|string|max:' . $limits['title_max'],
+            'meta_description' => 'nullable|string|max:' . $limits['meta_description_max'],
+            'keywords' => 'nullable|string|max:' . $limits['priority_keywords_max_total'],
+            'additional_keywords' => 'nullable|string|max:' . $limits['additional_keywords_max_total'],
+        ];
     }
 }
 
