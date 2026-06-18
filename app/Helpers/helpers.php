@@ -388,6 +388,17 @@ if (!function_exists('format_payment_amount')) {
     }
 }
 
+if (!function_exists('normalize_payment_email_body')) {
+    function normalize_payment_email_body(string $body): string
+    {
+        return preg_replace(
+            '/Amount Paid:\s*AED\s+(?=(USD|GBP|AED)\s)/i',
+            'Amount Paid: ',
+            $body
+        );
+    }
+}
+
 if (!function_exists('analytics_channel')) {
     function analytics_channel(?string $referrer, ?string $url = null): string
     {

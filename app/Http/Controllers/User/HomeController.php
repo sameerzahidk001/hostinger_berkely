@@ -59,6 +59,9 @@ class HomeController extends Controller
                 ],
                 "interaction" => [
                     "operation" => "PURCHASE",
+                    "displayControl" => [
+                        "orderSummary" => "HIDE",
+                    ],
                     "merchant" => [
                         "name" => "Berkeley School of Business",
                         "address" => [

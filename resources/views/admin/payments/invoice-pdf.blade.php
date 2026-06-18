@@ -175,11 +175,11 @@
         $dueDate = ($lastInstallment && $lastInstallment->due_date) ? \Carbon\Carbon::parse($lastInstallment->due_date)->format('d M Y') : 'N/A';
 
         // Money
-        $displayCurrency = package_currency_code($payments->currency ?? ($coursefee->currency ?? 'AED'));
+        $displayCurrency = payment_display_currency($payments);
         $settlingAed = (float) ($payments->price ?? 0);
         $displayAmount = $displayCurrency === 'AED'
             ? $settlingAed
-            : (float) ($coursefee->price ?? $settlingAed);
+            : (float) (optional($coursefee)->price ?? payment_display_amount_from_aed($payments, $settlingAed));
 
         $price = $settlingAed;
         $taxPercentage = (float) ($coursefee->tax_percentage ?? 0);
@@ -194,13 +194,9 @@
         }
         $totalAmount = $summaryTotal;
         $balanceDueAed = (float) $installments->sum('remaining_amount');
-        $balanceDue = $displayCurrency === 'AED'
-            ? $balanceDueAed
-            : convert_from_aed($balanceDueAed, $displayCurrency);
+        $balanceDue = payment_display_amount_from_aed($payments, $balanceDueAed);
 
-        $money = $displayCurrency === 'AED'
-            ? fn($n) => 'AED ' . number_format((float) $n, 2)
-            : fn($n) => 'USD ' . number_format((float) $n, 2);
+        $money = fn($n) => $displayCurrency . ' ' . number_format((float) $n, 2);
 
         $lineAmount = $displayCurrency === 'AED' ? $settlingAed : $displayAmount;
 
@@ -329,9 +325,7 @@
                         @if($inst->user)
                             @php
                                 $dueAmtAed = (float) ($inst->remaining_amount + $inst->paid_amount);
-                                $dueAmt = $displayCurrency === 'AED'
-                                    ? $dueAmtAed
-                                    : convert_from_aed($dueAmtAed, $displayCurrency);
+                                $dueAmt = payment_display_amount_from_aed($payments, $dueAmtAed);
                                 $dueDateRow = $inst->due_date ? \Carbon\Carbon::parse($inst->due_date)->format('d M Y') : 'N/A';
                                 $paidDateRow = $inst->paid_date ?: 'N/A';
                             @endphp
@@ -346,7 +340,7 @@
                     @endforeach
                     <tr>
                         <td colspan="2" class="text-right"><strong>Total Paid</strong></td>
-                        <td colspan="3"><strong>{{ $money($displayCurrency === 'AED' ? $installments->sum('paid_amount') : convert_from_aed((float) $installments->sum('paid_amount'), $displayCurrency)) }}</strong></td>
+                        <td colspan="3"><strong>{{ $money(payment_display_amount_from_aed($payments, (float) $installments->sum('paid_amount'))) }}</strong></td>
                     </tr>
                 </tbody>
             </table>

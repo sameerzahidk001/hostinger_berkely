@@ -398,12 +398,15 @@ class PaymentController extends Controller
 
         $emailTemplate = Email::where('name', 'fees-paid')->first();
         if ($emailTemplate) {
+            $installment->loadMissing('payment.courseFee');
+            $paidDisplay = format_payment_aed_amount($installment->payment, (float) $data['amount']);
+
             $emailBody = str_replace(
                 ['{name}', '{email}', '{fees-paid}', '{fees-installment}'],
                 [
                     $installment->user->name,
                     $installment->user->email,
-                    number_format($data['amount'], 2),
+                    $paidDisplay,
                     $installment->installment_number
                 ],
                 $emailTemplate->body
@@ -416,7 +419,13 @@ class PaymentController extends Controller
             Mail::to($installment->user->email)
                 ->cc($ccEmails)
                 ->bcc($bccEmails)
-                ->send(new UserMail($installment->user, $emailTemplate->subject, $emailBody));
+                ->send(
+                    new UserMail(
+                        $installment->user,
+                        $emailTemplate->subject,
+                        normalize_payment_email_body($emailBody)
+                    )
+                );
         }
 
         return response()->json([
