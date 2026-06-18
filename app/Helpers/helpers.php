@@ -297,6 +297,19 @@ if (!function_exists('payment_aed_from_display_amount')) {
     }
 }
 
+if (!function_exists('payment_bracket_aed_from_display')) {
+    function payment_bracket_aed_from_display($payment, float $displayAmount): float
+    {
+        $currency = payment_display_currency($payment);
+
+        if ($currency === 'AED') {
+            return round($displayAmount, 2);
+        }
+
+        return convert_to_aed($displayAmount, $currency);
+    }
+}
+
 if (!function_exists('format_payment_aed_amount')) {
     function format_payment_aed_amount($payment, float $aedAmount): string
     {
@@ -323,13 +336,17 @@ if (!function_exists('format_payment_amount_admin')) {
 if (!function_exists('format_payment_aed_amount_admin')) {
     function format_payment_aed_amount_admin($payment, float $aedAmount): string
     {
-        $display = format_payment_aed_amount($payment, $aedAmount);
+        $currency = payment_display_currency($payment);
+        $displayAmount = payment_display_amount_from_aed($payment, $aedAmount);
+        $display = $currency . ' ' . number_format($displayAmount, 2);
 
-        if (payment_display_currency($payment) === 'AED') {
+        if ($currency === 'AED') {
             return $display;
         }
 
-        return $display . ' <span class="text-muted">(AED ' . number_format($aedAmount, 2) . ')</span>';
+        $bracketAed = payment_bracket_aed_from_display($payment, $displayAmount);
+
+        return $display . ' <span class="text-muted">(AED ' . number_format($bracketAed, 2) . ')</span>';
     }
 }
 
@@ -401,7 +418,7 @@ if (!function_exists('format_payment_amount')) {
 
         return [
             'display' => $currency . ' ' . number_format($displayAmount, 2),
-            'settling_aed' => $settlingAed,
+            'settling_aed' => payment_bracket_aed_from_display($payment, $displayAmount),
             'currency' => $currency,
             'show_settling_note' => false,
         ];
