@@ -2,8 +2,9 @@
 @section('title', 'Dashboard')
 @push('scripts')
     <style>
-        #hco-embedded button {
-            position: relative;
+        #hco-embedded iframe {
+            width: 100% !important;
+            min-height: 360px;
         }
     </style>
 @endpush
@@ -133,19 +134,20 @@
         </div>
     @endif
         <div class="modal fade" id="paymentModal" tabindex="-1" role="dialog" aria-hidden="true">
-            <div class="modal-dialog" role="document">
+            <div class="modal-dialog modal-lg" role="document" style="max-width: 560px;">
                 <div class="modal-content">
                     <button type="button" class="close close-white position-absolute top-0 right-0"
                         style="margin-top: -25px; margin-right: 10px;" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
-                    <div class="modal-body">
+                    <div class="modal-body" style="min-height: 420px; padding: 24px;">
                         <div id="payment-amount-display" class="text-center mb-3" style="font-size: 18px; font-weight: 600;"></div>
                         <div id="payment-loading" class="text-center py-4" style="display: none;">
                             <i class="fa fa-spinner fa-spin fa-2x"></i>
                             <p class="mt-2 mb-0">Loading payment form...</p>
                         </div>
-                        <div id="hco-embedded"></div>
+                        <div id="payment-error" class="alert alert-danger text-center" style="display: none;"></div>
+                        <div id="hco-embedded" style="min-height: 360px;"></div>
                     </div>
                 </div>
             </div>
@@ -158,30 +160,8 @@
 
         <script>
             let currentInstallmentId = null;
+            let currentSettlingAmount = null;
             let checkoutScriptLoaded = false;
-
-            function normalizeEmbeddedPayButtons(containerSelector) {
-                const root = document.querySelector(containerSelector);
-                if (!root) {
-                    return;
-                }
-
-                const scrub = function () {
-                    root.querySelectorAll('button').forEach(function (btn) {
-                        const text = (btn.textContent || '').trim();
-                        if (/^pay\b/i.test(text) && /[\d,.]/.test(text)) {
-                            btn.textContent = 'Pay';
-                        }
-                    });
-                };
-
-                scrub();
-                const observer = new MutationObserver(scrub);
-                observer.observe(root, { childList: true, subtree: true, characterData: true });
-                setTimeout(function () {
-                    observer.disconnect();
-                }, 20000);
-            }
 
             function loadCheckoutScript(callback) {
                 if (typeof Checkout !== 'undefined') {
@@ -223,7 +203,7 @@
             }
 
             function completeCallback(response) {
-                if (!currentInstallmentId || !currentAmount) {
+                if (!currentInstallmentId || !currentSettlingAmount) {
                     console.error("Installment or amount missing.");
                     return;
                 }
@@ -232,7 +212,7 @@
                     url: '{{ route("user.update.installment") }}',
                     method: 'POST',
                     data: {
-                        amount: currentAmount,
+                        amount: currentSettlingAmount,
                         installment_id: currentInstallmentId
                     },
                     headers: {
@@ -266,6 +246,7 @@
                 var embeddedDivId = '#hco-embedded';
                 $(embeddedDivId).empty();
                 $('#payment-amount-display').empty();
+                $('#payment-error').hide().empty();
                 $('#payment-loading').show();
 
                 $.ajax({
@@ -280,6 +261,8 @@
                             $('#payment-amount-display').text(res.displayAmount);
                         }
 
+                        currentSettlingAmount = res.settlingAmount || null;
+
                         if (res.session && res.session.id) {
                             loadCheckoutScript(function () {
                                 try {
@@ -288,19 +271,21 @@
                                     });
                                     $('#payment-loading').hide();
                                     Checkout.showEmbeddedPage(embeddedDivId);
-                                    normalizeEmbeddedPayButtons(embeddedDivId);
                                 } catch (error) {
                                     $('#payment-loading').hide();
+                                    $('#payment-error').text('Unable to load payment form. Please try again.').show();
                                     console.error("An error occurred while initializing RakBank Checkout:", error);
                                 }
                             });
                         } else {
                             $('#payment-loading').hide();
+                            $('#payment-error').text('Payment session could not be started. Please try again.').show();
                             console.error("Session creation failed", res);
                         }
                     },
                     error: function (err) {
                         $('#payment-loading').hide();
+                        $('#payment-error').text('Payment session could not be started. Please try again.').show();
                         console.error("API error", err.responseText);
                     }
                 });
@@ -310,7 +295,9 @@
                 sessionStorage.clear();
                 $('#hco-embedded').empty();
                 $('#payment-amount-display').empty();
+                $('#payment-error').hide().empty();
                 $('#payment-loading').hide();
+                currentSettlingAmount = null;
             });
         </script>
     @endif
