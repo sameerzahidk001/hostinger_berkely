@@ -14,7 +14,7 @@ class RoleSeeder extends Seeder
             ['name' => 'student', 'description' => 'Lorem Ipsum is simply dummy text of the printing and typesetting industry.'],
             ['name' => 'instructor', 'description' => 'Lorem Ipsum is simply dummy text of the printing and typesetting industry.'],
             ['name' => 'content_writer', 'description' => 'Content Writer — limited admin access for content management.'],
-            ['name' => 'accountant', 'description' => 'Lorem Ipsum is simply dummy text of the printing and typesetting industry.'],
+            ['name' => 'accountant', 'description' => 'Accountant — payments and currency access only.'],
             // ['name' => 'admin', 'description' => 'Lorem Ipsum is simply dummy text of the printing and typesetting industry.'],
         ];
 
