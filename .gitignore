@@ -46,6 +46,8 @@ user-behavior/
 # Database dumps / exports
 *.sql
 !database/*.sql
+!database/sql/*.sql
+database/live-to-sublive-content-sync.sql
 *.sqlite
 *.sqlite3
 
