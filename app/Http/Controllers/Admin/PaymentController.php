@@ -146,6 +146,11 @@ class PaymentController extends Controller
         return view('admin.payments.edit', compact('payment', 'users', 'courses', 'packages'));
     }
 
+    public function show($id)
+    {
+        return redirect()->route('admin.payments.edit', $id);
+    }
+
     public function update(Request $request, $id)
     {
         $validator = Validator::make($request->all(), [
