@@ -59,9 +59,6 @@ class HomeController extends Controller
                 ],
                 "interaction" => [
                     "operation" => "PURCHASE",
-                    "displayControl" => [
-                        "orderSummary" => "HIDE",
-                    ],
                     "merchant" => [
                         "name" => "Berkeley School of Business",
                         "address" => [
@@ -75,6 +72,7 @@ class HomeController extends Controller
         $responseData = $response->json();
         $responseData['orderId'] = $orderId;
         $responseData['displayAmount'] = $studentAmountLabel;
+        $responseData['settlingAmount'] = $amount;
 
         return response()->json($responseData);
     }
