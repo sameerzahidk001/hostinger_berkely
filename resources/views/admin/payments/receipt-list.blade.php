@@ -244,7 +244,8 @@
 
     $(document).on('click', '.edit-bank-transfer-modal', function() {
         const installmentId = $(this).data('id');
-        const paidAmount = $(this).data('paid_amount');
+        const displayPaid = $(this).data('display-paid');
+        const currency = $(this).data('currency') || 'AED';
         const paymentType = $(this).data('payment_type');
         const notes = $(this).data('notes');
         const paidDate = $(this).data('paid_date');
@@ -252,7 +253,9 @@
         $('#bankTransferForm')[0].reset();
 
         $('#installment_id').val(installmentId);
-        $('#amount').val(paidAmount || '');
+        $('#manual_pay_currency_addon').text(currency);
+        $('#amount_received_label').text('Amount Received (' + currency + ')');
+        $('#amount').val(displayPaid || '');
         $('#payment_type').val(paymentType || '');
         $('#notes').val(notes || '');
         $('#paid_date').val(paidDate || '');
@@ -329,4 +332,11 @@
                 $btn.data('original-text', $btn.html());
             }
             $btn.prop('disabled', true)
-                .html('<
+                .html('<i class="fa fa-spinner fa-spin"></i> ' + loadingText);
+        } else {
+            $btn.prop('disabled', false)
+                .html($btn.data('original-text') || 'Submit');
+        }
+    }
+</script>
+@endpush
