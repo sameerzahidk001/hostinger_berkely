@@ -4,32 +4,6 @@
 
 @push('style')
     <link href="{{ asset('/admin/css/plugins/dataTables/datatables.min.css') }}" rel="stylesheet">
-    <style>
-        .payment-embed-wrap {
-            position: relative;
-            min-height: 320px;
-        }
-
-        .payment-embed-pay-overlay {
-            position: absolute;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            height: 54px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            background: #dcdcdc;
-            color: #6f6f6f;
-            font-size: 16px;
-            font-weight: 500;
-            pointer-events: none;
-            z-index: 2;
-            border-radius: 0 0 4px 4px;
-            display: none;
-        }
-    </style>
 @endpush
 
 @section('content')
@@ -129,12 +103,7 @@
                                                                         <div id="payment-amount-display-{{ $installment->id }}" class="text-center mb-3" style="font-size: 18px; font-weight: 600;"></div>
                                                                         <div id="payment-error-{{ $installment->id }}" class="alert alert-danger" style="display:none;"></div>
                                                                         <div id="payment-loading-{{ $installment->id }}" class="text-center text-muted" style="display:none;">Loading payment form...</div>
-                                                                        <div class="payment-embed-wrap">
-                                                                            <div id="hco-embedded-{{ $installment->id }}"></div>
-                                                                            <div class="payment-embed-pay-overlay" aria-hidden="true">
-                                                                                <i class="fa fa-lock"></i> Pay
-                                                                            </div>
-                                                                        </div>
+                                                                        <div id="hco-embedded-{{ $installment->id }}"></div>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -192,44 +161,6 @@
         let currentInstallmentId = null;
         let currentAmount = null;
 
-        function showPayButtonOverlay(containerSelector) {
-            const wrap = document.querySelector(containerSelector)?.closest('.payment-embed-wrap');
-            const overlay = wrap?.querySelector('.payment-embed-pay-overlay');
-            if (overlay) {
-                overlay.style.display = 'flex';
-            }
-        }
-
-        function normalizeEmbeddedPayButtons(containerSelector) {
-            const root = document.querySelector(containerSelector);
-            if (!root) {
-                return;
-            }
-
-            const scrub = function () {
-                root.querySelectorAll('button, [role="button"], input[type="submit"], a[class*="pay"], a[class*="Pay"]').forEach(function (btn) {
-                    const text = (btn.textContent || btn.value || '').trim();
-                    if (/^pay\b/i.test(text)) {
-                        if (btn.tagName === 'INPUT') {
-                            btn.value = 'Pay';
-                        } else {
-                            btn.textContent = 'Pay';
-                        }
-                        btn.setAttribute('aria-label', 'Pay');
-                    }
-                });
-            };
-
-            scrub();
-            const observer = new MutationObserver(scrub);
-            observer.observe(root, { childList: true, subtree: true, characterData: true });
-            const scrubInterval = setInterval(scrub, 400);
-            setTimeout(function () {
-                observer.disconnect();
-                clearInterval(scrubInterval);
-            }, 60000);
-        }
-
         function showPaymentAmount(targetSelector, displayAmount) {
             if (!displayAmount) {
                 return;
@@ -237,7 +168,8 @@
 
             $(targetSelector).html(
                 '<div style="font-size:13px;font-weight:500;color:#666;margin-bottom:4px;">Amount to pay</div>' +
-                '<div style="font-size:22px;font-weight:700;">' + displayAmount + '</div>'
+                '<div style="font-size:22px;font-weight:700;">' + displayAmount + '</div>' +
+                '<div style="font-size:12px;color:#999;margin-top:6px;">Use the Pay button below to complete payment.</div>'
             );
         }
 
@@ -325,10 +257,6 @@
                             });
                             $(loadingDisplayId).hide();
                             Checkout.showEmbeddedPage(embeddedDivId);
-                            normalizeEmbeddedPayButtons(embeddedDivId);
-                            setTimeout(function () {
-                                showPayButtonOverlay(embeddedDivId);
-                            }, 600);
                         } catch (error) {
                             $(loadingDisplayId).hide();
                             $(errorDisplayId).text('Unable to load payment form. Please try again.').show();
