@@ -6,6 +6,32 @@
             width: 100% !important;
             min-height: 360px;
         }
+
+        .payment-embed-wrap {
+            position: relative;
+            min-height: 360px;
+        }
+
+        /* RakBank embeds Pay + amount inside a cross-origin iframe; overlay hides the amount. */
+        .payment-embed-pay-overlay {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 54px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: #dcdcdc;
+            color: #6f6f6f;
+            font-size: 16px;
+            font-weight: 500;
+            pointer-events: none;
+            z-index: 2;
+            border-radius: 0 0 4px 4px;
+            display: none;
+        }
     </style>
 @endpush
 
@@ -147,7 +173,12 @@
                             <p class="mt-2 mb-0">Loading payment form...</p>
                         </div>
                         <div id="payment-error" class="alert alert-danger text-center" style="display: none;"></div>
-                        <div id="hco-embedded" style="min-height: 360px;"></div>
+                        <div class="payment-embed-wrap">
+                            <div id="hco-embedded"></div>
+                            <div class="payment-embed-pay-overlay" aria-hidden="true">
+                                <i class="fa fa-lock"></i> Pay
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -163,6 +194,14 @@
             let currentSettlingAmount = null;
             let checkoutScriptLoaded = false;
 
+            function showPayButtonOverlay(containerSelector) {
+                const wrap = document.querySelector(containerSelector)?.closest('.payment-embed-wrap');
+                const overlay = wrap?.querySelector('.payment-embed-pay-overlay');
+                if (overlay) {
+                    overlay.style.display = 'flex';
+                }
+            }
+
             function normalizeEmbeddedPayButtons(containerSelector) {
                 const root = document.querySelector(containerSelector);
                 if (!root) {
@@ -170,7 +209,7 @@
                 }
 
                 const scrub = function () {
-                    root.querySelectorAll('button, [role="button"], input[type="submit"]').forEach(function (btn) {
+                    root.querySelectorAll('button, [role="button"], input[type="submit"], a[class*="pay"], a[class*="Pay"]').forEach(function (btn) {
                         const text = (btn.textContent || btn.value || '').trim();
                         if (/^pay\b/i.test(text)) {
                             if (btn.tagName === 'INPUT') {
@@ -313,6 +352,9 @@
                                     $('#payment-loading').hide();
                                     Checkout.showEmbeddedPage(embeddedDivId);
                                     normalizeEmbeddedPayButtons(embeddedDivId);
+                                    setTimeout(function () {
+                                        showPayButtonOverlay(embeddedDivId);
+                                    }, 600);
                                 } catch (error) {
                                     $('#payment-loading').hide();
                                     $('#payment-error').text('Unable to load payment form. Please try again.').show();
@@ -343,6 +385,7 @@
             $('#paymentModal').on('hidden.bs.modal', function () {
                 sessionStorage.clear();
                 $('#hco-embedded').empty();
+                $('.payment-embed-pay-overlay').hide();
                 $('#payment-amount-display').empty();
                 $('#payment-error').hide().empty();
                 $('#payment-loading').hide();
