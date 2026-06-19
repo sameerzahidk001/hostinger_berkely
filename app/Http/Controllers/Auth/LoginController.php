@@ -98,6 +98,11 @@ class LoginController extends Controller
     protected function redirectTo()
     {
         $user = Auth::user();
+        $role = $user?->roles()->value('name');
+
+        if (is_restricted_panel_role($role)) {
+            return route('admin.home');
+        }
 
         if ($user && $user->hasPermission('dashboard-read')) {
             return route('user.home');

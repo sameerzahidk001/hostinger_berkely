@@ -63,7 +63,7 @@ Route::post('/installments/pay/{id}', [InstallmentController::class, 'payInstall
 Route::get('/installments/payment-success/{id}', [InstallmentController::class, 'paymentSuccess'])->name('installments.payment-success');
 
 // Cart Routes
-Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+Route::get('/cart', [CartController::class, 'index'])->name('cart.index')->middleware('redirect.panel.from.student');
 Route::post('/cart/create', [CartController::class, 'create'])->name('cart.create');
 Route::patch('/cart/{id}', [CartController::class, 'update'])->name('cart.update')->middleware(['auth', 'verified', 'approved']);
 Route::delete('/cart/{id}', [CartController::class, 'destroy'])->name('cart.destroy')->middleware(['auth', 'verified', 'approved']);
@@ -430,7 +430,7 @@ Route::get('/delete-temp-files', function (Illuminate\Http\Request $request) {
 
 Auth::routes(['verify' => true]);
 
-Route::prefix('user')->middleware(['auth', 'approved'])->group(function () {
+Route::prefix('user')->middleware(['auth', 'approved', 'redirect.panel.from.student'])->group(function () {
 
     // Dashboard
     Route::get('/', [UserHomeController::class, 'index'])->name('user.home')->middleware('hasPermission:dashboard-read');
