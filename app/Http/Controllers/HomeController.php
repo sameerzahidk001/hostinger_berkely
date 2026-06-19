@@ -37,7 +37,10 @@ class HomeController extends Controller
 
     public function logout()
     {
+        $request = request();
+        $sessionId = $request->hasSession() ? $request->session()->getId() : null;
         $user = Auth::user();
+
         if ($user) {
             record_user_activity(
                 'User Logout',
@@ -46,7 +49,8 @@ class HomeController extends Controller
                 activity_audience_for_user($user),
                 $user->id,
                 null,
-                request()
+                $request,
+                $sessionId
             );
         }
 

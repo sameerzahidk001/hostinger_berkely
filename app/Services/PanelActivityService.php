@@ -32,6 +32,50 @@ class PanelActivityService
             'courses_created' => $this->countCoursesCreated($userId, $from, $to),
             'pages_created' => $this->countPagesCreated($userId, $from, $to),
             'payments_recorded' => $includePayments ? $this->countPayments($from, $to) : 0,
+        ] + ($includePayments ? $this->invoiceSummary() : [
+            'invoice_total' => 0,
+            'invoice_paid' => 0,
+            'invoice_partial' => 0,
+            'invoice_unpaid' => 0,
+        ]);
+    }
+
+    public function invoiceSummary(): array
+    {
+        if (! Schema::hasTable('payments')) {
+            return [
+                'invoice_total' => 0,
+                'invoice_paid' => 0,
+                'invoice_partial' => 0,
+                'invoice_unpaid' => 0,
+            ];
+        }
+
+        $paid = 0;
+        $partial = 0;
+        $unpaid = 0;
+
+        Payment::query()
+            ->with('installments')
+            ->get()
+            ->each(function (Payment $payment) use (&$paid, &$partial, &$unpaid) {
+                $totalPaid = (float) $payment->installments->sum('paid_amount');
+                $price = (float) $payment->price;
+
+                if ($totalPaid >= $price && $price > 0) {
+                    $paid++;
+                } elseif ($totalPaid > 0) {
+                    $partial++;
+                } else {
+                    $unpaid++;
+                }
+            });
+
+        return [
+            'invoice_total' => $paid + $partial + $unpaid,
+            'invoice_paid' => $paid,
+            'invoice_partial' => $partial,
+            'invoice_unpaid' => $unpaid,
         ];
     }
 
@@ -392,6 +436,7 @@ class PanelActivityService
             'action' => $action,
             'item' => $item,
             'url' => $url,
+            'session_id' => null,
             'actor_id' => $actorId ? (int) $actorId : null,
             'user_name' => audit_user_name(null, $actorId),
             'occurred_at' => Carbon::parse($occurredAt),

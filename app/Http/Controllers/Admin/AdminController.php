@@ -78,7 +78,7 @@ class AdminController extends Controller
                 'showMyStats' => true,
                 'showSiteStats' => true,
                 'includePayments' => false,
-                'showUserColumn' => false,
+                'showUserColumn' => true,
                 'showUserFilter' => false,
                 'showSessionColumn' => true,
                 'logAudience' => 'staff',
@@ -91,7 +91,8 @@ class AdminController extends Controller
                 'userId' => null,
                 'roleFilter' => null,
                 'showMyStats' => false,
-                'showSiteStats' => true,
+                'showSiteStats' => false,
+                'showInvoiceStats' => true,
                 'includePayments' => true,
                 'showUserColumn' => true,
                 'showUserFilter' => false,
@@ -106,6 +107,7 @@ class AdminController extends Controller
             'roleFilter' => $request->query('role'),
             'showMyStats' => false,
             'showSiteStats' => true,
+            'showInvoiceStats' => true,
             'includePayments' => true,
             'showUserColumn' => true,
             'showUserFilter' => true,
@@ -198,6 +200,7 @@ class AdminController extends Controller
             'includePayments' => $includePayments,
             'showMyStats' => (bool) ($options['showMyStats'] ?? false),
             'showSiteStats' => (bool) ($options['showSiteStats'] ?? false),
+            'showInvoiceStats' => (bool) ($options['showInvoiceStats'] ?? false),
             'showUserColumn' => (bool) ($options['showUserColumn'] ?? false),
             'showUserFilter' => (bool) ($options['showUserFilter'] ?? false),
             'showStudentTable' => $showStudentTable,
@@ -265,7 +268,9 @@ class AdminController extends Controller
         return redirect()->back()->with('success', 'Profile updated successfully!');
     }
 
-    public function logout(){
+    public function logout(Request $request){
+        $sessionId = $request->hasSession() ? $request->session()->getId() : null;
+
         if (Auth::guard('admin')->check()) {
             $admin = Auth::guard('admin')->user();
             record_user_activity(
@@ -275,7 +280,8 @@ class AdminController extends Controller
                 'staff',
                 null,
                 $admin?->id,
-                request()
+                $request,
+                $sessionId
             );
         }
 
@@ -291,12 +297,15 @@ class AdminController extends Controller
                 activity_audience_for_user($user),
                 $user->id,
                 null,
-                request()
+                $request,
+                $sessionId
             );
         }
 
         Auth::guard('admin')->logout();
         Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return $wasPanelUser
             ? redirect()->to(public_login_url())

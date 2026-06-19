@@ -516,9 +516,14 @@ if (!function_exists('record_user_activity')) {
         ?string $audience = null,
         ?int $userId = null,
         ?int $adminId = null,
-        ?\Illuminate\Http\Request $request = null
+        ?\Illuminate\Http\Request $request = null,
+        ?string $sessionId = null
     ): void {
         $request = $request ?? request();
+
+        if ($sessionId === null && $request?->hasSession()) {
+            $sessionId = $request->session()->getId();
+        }
 
         app(\App\Services\UserActivityLogService::class)->log(
             $action,
@@ -528,7 +533,7 @@ if (!function_exists('record_user_activity')) {
             $userId,
             $adminId,
             $request?->ip(),
-            $request?->session()?->getId(),
+            $sessionId,
         );
     }
 }

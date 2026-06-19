@@ -121,7 +121,9 @@ class LoginController extends Controller
      */
     public function logout(Request $request)
     {
+        $sessionId = $request->hasSession() ? $request->session()->getId() : null;
         $user = Auth::user();
+
         if ($user) {
             record_user_activity(
                 'User Logout',
@@ -130,7 +132,8 @@ class LoginController extends Controller
                 activity_audience_for_user($user),
                 $user->id,
                 null,
-                $request
+                $request,
+                $sessionId
             );
         }
 

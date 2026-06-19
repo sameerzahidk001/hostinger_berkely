@@ -88,6 +88,61 @@
         </div>
         @endif
         @endif
+
+        @if($showInvoiceStats ?? false)
+        <div class="col-lg-3 col-md-6">
+            <a href="{{ route('admin.payments.index') }}" class="widget style1 red-bg" style="display:block;color:#fff;">
+                <div class="row">
+                    <div class="col-xs-4">
+                        <i class="fa fa-file-text-o fa-3x"></i>
+                    </div>
+                    <div class="col-xs-8 text-right">
+                        <span>Unpaid Invoices</span>
+                        <h2 class="font-bold">{{ $summary['invoice_unpaid'] }}</h2>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <a href="{{ route('admin.payments.index') }}" class="widget style1 yellow-bg" style="display:block;color:#fff;">
+                <div class="row">
+                    <div class="col-xs-4">
+                        <i class="fa fa-adjust fa-3x"></i>
+                    </div>
+                    <div class="col-xs-8 text-right">
+                        <span>Partially Paid</span>
+                        <h2 class="font-bold">{{ $summary['invoice_partial'] }}</h2>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <a href="{{ route('admin.payments.index') }}" class="widget style1 navy-bg" style="display:block;color:#fff;">
+                <div class="row">
+                    <div class="col-xs-4">
+                        <i class="fa fa-check-circle fa-3x"></i>
+                    </div>
+                    <div class="col-xs-8 text-right">
+                        <span>Paid Invoices</span>
+                        <h2 class="font-bold">{{ $summary['invoice_paid'] }}</h2>
+                    </div>
+                </div>
+            </a>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <a href="{{ route('admin.payments.index') }}" class="widget style1 lazur-bg" style="display:block;color:#fff;">
+                <div class="row">
+                    <div class="col-xs-4">
+                        <i class="fa fa-list-alt fa-3x"></i>
+                    </div>
+                    <div class="col-xs-8 text-right">
+                        <span>All Invoices</span>
+                        <h2 class="font-bold">{{ $summary['invoice_total'] }}</h2>
+                    </div>
+                </div>
+            </a>
+        </div>
+        @endif
     </div>
 </div>
 
@@ -176,11 +231,11 @@
                         <thead>
                             <tr>
                                 <th style="width: 170px;">Date &amp; Time</th>
+                                @if($showUserColumn)
+                                    <th style="width: 180px;">Name</th>
+                                @endif
                                 <th style="width: 160px;">Activity</th>
                                 <th>Item</th>
-                                @if($showUserColumn)
-                                    <th style="width: 180px;">User</th>
-                                @endif
                                 @if($showSessionColumn ?? false)
                                     <th style="width: 140px;">Session</th>
                                 @endif
@@ -191,15 +246,15 @@
                             @forelse($activities as $activity)
                                 <tr>
                                     <td>{{ $activity['occurred_at']->format('M j, Y g:i A') }}</td>
+                                    @if($showUserColumn)
+                                        <td>{{ $activity['user_name'] ?? '—' }}</td>
+                                    @endif
                                     <td>{{ $activity['action'] }}</td>
                                     <td>{{ $activity['item'] }}</td>
-                                    @if($showUserColumn)
-                                        <td>{{ $activity['user_name'] }}</td>
-                                    @endif
                                     @if($showSessionColumn ?? false)
                                         <td>
                                             @if(!empty($activity['session_id']))
-                                                <code title="{{ $activity['session_id'] }}">{{ \Illuminate\Support\Str::limit($activity['session_id'], 12) }}</code>
+                                                <span class="text-muted small" title="{{ $activity['session_id'] }}">{{ \Illuminate\Support\Str::limit($activity['session_id'], 12) }}</span>
                                             @else
                                                 <span class="text-muted">—</span>
                                             @endif
@@ -247,9 +302,9 @@
                         <thead>
                             <tr>
                                 <th style="width: 170px;">Date &amp; Time</th>
+                                <th style="width: 180px;">Name</th>
                                 <th style="width: 160px;">Activity</th>
                                 <th>Item</th>
-                                <th style="width: 180px;">Student</th>
                                 @if($showSessionColumn ?? false)
                                     <th style="width: 140px;">Session</th>
                                 @endif
@@ -260,13 +315,13 @@
                             @forelse($studentActivities ?? [] as $activity)
                                 <tr>
                                     <td>{{ $activity['occurred_at']->format('M j, Y g:i A') }}</td>
+                                    <td>{{ $activity['user_name'] ?? '—' }}</td>
                                     <td>{{ $activity['action'] }}</td>
                                     <td>{{ $activity['item'] }}</td>
-                                    <td>{{ $activity['user_name'] }}</td>
                                     @if($showSessionColumn ?? false)
                                         <td>
                                             @if(!empty($activity['session_id']))
-                                                <code title="{{ $activity['session_id'] }}">{{ \Illuminate\Support\Str::limit($activity['session_id'], 12) }}</code>
+                                                <span class="text-muted small" title="{{ $activity['session_id'] }}">{{ \Illuminate\Support\Str::limit($activity['session_id'], 12) }}</span>
                                             @else
                                                 <span class="text-muted">—</span>
                                             @endif

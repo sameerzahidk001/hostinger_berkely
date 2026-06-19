@@ -92,7 +92,10 @@ class UserActivityLogService
             ->orderByDesc('created_at');
 
         if ($userId) {
-            $query->where('user_id', $userId);
+            $query->where(function ($q) use ($userId) {
+                $q->where('user_id', $userId)
+                    ->orWhere('admin_id', $userId);
+            });
         }
 
         if ($from) {
