@@ -72,5 +72,6 @@ class Kernel extends HttpKernel
         'hasPermission' => \App\Http\Middleware\CheckPermission::class,
         'long.running' => \App\Http\Middleware\IncreaseExecutionTime::class,
         'restrict.delete' => \App\Http\Middleware\RestrictRoleDelete::class,
+        'redirect.panel.from.student' => \App\Http\Middleware\RedirectPanelRolesFromStudentPortal::class,
     ];
 }

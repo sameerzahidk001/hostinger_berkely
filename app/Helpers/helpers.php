@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use App\Models\Category;
 use App\Models\Page;
+use App\Models\Role;
 
 if (!function_exists('get_page_faqs')) {
     function get_page_faqs(Request $request)
@@ -126,6 +127,76 @@ if (!function_exists('normalize_panel_role')) {
         }
 
         return $role;
+    }
+}
+
+if (!function_exists('normalize_role_key')) {
+    function normalize_role_key(?string $role): string
+    {
+        return str_replace(['-', ' '], '_', strtolower(trim((string) $role)));
+    }
+}
+
+if (!function_exists('is_content_writer_role_key')) {
+    function is_content_writer_role_key(?string $role): bool
+    {
+        return in_array(normalize_role_key($role), ['librarian', 'content_writer'], true);
+    }
+}
+
+if (!function_exists('content_writer_role_ids')) {
+    function content_writer_role_ids(): array
+    {
+        return Role::query()
+            ->get()
+            ->filter(function (Role $role) {
+                if (is_content_writer_role_key($role->name)) {
+                    return true;
+                }
+
+                return str_contains(strtolower((string) $role->description), 'content writer');
+            })
+            ->pluck('id')
+            ->unique()
+            ->values()
+            ->all();
+    }
+}
+
+if (!function_exists('role_ids_for_list_type')) {
+    function role_ids_for_list_type(string $type): array
+    {
+        if (is_content_writer_role_key($type)) {
+            return content_writer_role_ids();
+        }
+
+        $target = normalize_role_key($type);
+
+        return Role::query()
+            ->get()
+            ->filter(fn (Role $role) => normalize_role_key($role->name) === $target)
+            ->pluck('id')
+            ->unique()
+            ->values()
+            ->all();
+    }
+}
+
+if (!function_exists('resolve_content_writer_role_id')) {
+    function resolve_content_writer_role_id(?int $roleId): ?int
+    {
+        if (! $roleId) {
+            return null;
+        }
+
+        $role = Role::find($roleId);
+        if (! $role || ! is_content_writer_role_key($role->name)) {
+            return $roleId;
+        }
+
+        $ids = content_writer_role_ids();
+
+        return $ids[0] ?? $roleId;
     }
 }
 

@@ -132,24 +132,10 @@
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td class="text-center" colspan="5">No Record Found!</td>
+                                            <td class="text-center" colspan="12">No Record Found!</td>
                                         </tr>
                                     @endforelse
                                 </tbody>
-                                <tfoot>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Name</th>
-                                        <th>Email</th>
-                                        <th>Mobile</th>
-                                        <th>Country</th>
-                                        <th>IP Address</th>
-                                        <th>Created On</th>
-                                        <th>Verified On</th>
-                                        <th style="width:130px;">Status</th>
-                                        <th style="width:130px;">Action</th>
-                                    </tr>
-                                </tfoot>
                             </table>
                         </div>
 
@@ -163,7 +149,6 @@
 @endsection
 
 @push('script')
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="{{ asset('/admin/js/plugins/dataTables/datatables.min.js') }}"></script>
     <!-- Page-Level Scripts -->
     <script>
@@ -227,21 +212,5 @@
                 order: [[7, 'desc']]
             });
         });
-
-        function confirmDelete(id) {
-            Swal.fire({
-                title: 'Are you sure?',
-                text: "You won't be able to revert this!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#3085d6',
-                cancelButtonColor: '#d33',
-                confirmButtonText: 'Yes, delete it!'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    document.getElementById('delete-form-' + id).submit();
-                }
-            });
-        }
     </script>
 @endpush
