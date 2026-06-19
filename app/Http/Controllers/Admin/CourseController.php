@@ -352,7 +352,7 @@ class CourseController extends Controller
 
             $course_overview_updated = $course->update($updatedData);
 
-            if ($request->has('image_alts')) {
+            if ($request->has('image_alts') && \Illuminate\Support\Facades\Schema::hasColumn('courses', 'image_alts')) {
                 $course->update([
                     'image_alts' => merge_image_alts($course->image_alts, $request->input('image_alts', [])),
                 ]);
@@ -2065,7 +2065,7 @@ class CourseController extends Controller
 
     private function withLabelImageAlts(array $createLabels, Request $request, $dynamicLabel): array
     {
-        if ($request->has('label.image_alts')) {
+        if ($request->has('label.image_alts') && \Illuminate\Support\Facades\Schema::hasColumn('course_dynamic_labels', 'image_alts')) {
             $createLabels['image_alts'] = merge_image_alts(
                 $dynamicLabel?->image_alts,
                 $request->input('label.image_alts', [])

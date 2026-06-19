@@ -439,8 +439,22 @@ if (!function_exists('merge_image_alts')) {
     }
 }
 
+if (!function_exists('assign_column_if_exists')) {
+    function assign_column_if_exists($model, string $column, mixed $value): void
+    {
+        if (! $model) {
+            return;
+        }
+
+        $table = $model->getTable();
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn($table, $column)) {
+            $model->setAttribute($column, $value);
+        }
+    }
+}
+
 if (!function_exists('stored_image_alt')) {
-    function stored_image_alt($model, string $key, ?string $fallback = null): string
     {
         if (! $model) {
             return image_alt(null, $fallback);

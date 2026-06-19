@@ -48,7 +48,7 @@ class ClientController extends Controller
         $client->open_new_tab = $request->open_new_tab;
         $client->no_follow = $request->no_follow;
         $client->description = $request->input('description');
-        $client->image_alt = $request->input('image_alt');
+        assign_column_if_exists($client, 'image_alt', $request->input('image_alt'));
         $client->active = 1;
         $client->save();
 
@@ -94,7 +94,7 @@ class ClientController extends Controller
         $client->open_new_tab = $request->open_new_tab;
         $client->no_follow = $request->no_follow;
         $client->description = $request->input('description');
-        $client->image_alt = $request->input('image_alt');
+        assign_column_if_exists($client, 'image_alt', $request->input('image_alt'));
         $client->active = $request->active;
         $client->save();
 
