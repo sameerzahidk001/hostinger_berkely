@@ -40,14 +40,18 @@ class HomeController extends Controller
             ->where('user_id', Auth::id())
             ->findOrFail($request->installment_id);
 
+        $payment = $installment->payment;
+        $currency = payment_display_currency($payment);
+        $settlingAed = (float) $installment->remaining_amount;
+        $chargeAmount = payment_display_amount_from_aed($payment, $settlingAed);
+        $amount = number_format($chargeAmount, 2, '.', '');
+        $studentAmountLabel = format_payment_aed_amount($payment, $settlingAed);
+        $orderId = 'order-' . uniqid();
+
         $merchantId = env('RAKBANK_MERCHANT_ID');
         $apiPassword = env('RAKBANK_API_PASSWORD');
         $apiUsername = "merchant.$merchantId";
         $url = "https://rakbankpay-nam.gateway.mastercard.com/api/rest/version/100/merchant/{$merchantId}/session";
-
-        $amount = number_format((float) $installment->remaining_amount, 2, '.', '');
-        $studentAmountLabel = format_payment_aed_amount($installment->payment, (float) $installment->remaining_amount);
-        $orderId = 'order-' . uniqid();
 
         $response = Http::withBasicAuth($apiUsername, $apiPassword)
             ->post($url, [
@@ -55,7 +59,7 @@ class HomeController extends Controller
                 "order" => [
                     "description" => "Course installment payment",
                     "id" => $orderId,
-                    "currency" => 'AED',
+                    "currency" => $currency,
                     "amount" => $amount,
                 ],
                 "interaction" => [
@@ -73,7 +77,7 @@ class HomeController extends Controller
         $responseData = $response->json();
         $responseData['orderId'] = $orderId;
         $responseData['displayAmount'] = $studentAmountLabel;
-        $responseData['settlingAmount'] = $amount;
+        $responseData['settlingAmount'] = number_format($settlingAed, 2, '.', '');
 
         return response()->json($responseData);
     }

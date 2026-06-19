@@ -32,6 +32,7 @@ class PanelActivityService
             'courses_created' => $this->countCoursesCreated($userId, $from, $to),
             'pages_created' => $this->countPagesCreated($userId, $from, $to),
             'payments_recorded' => $includePayments ? $this->countPayments($from, $to) : 0,
+            'invoices_recorded' => $includePayments ? $this->countPayments($from, $to) : 0,
         ] + ($includePayments ? $this->invoiceSummary() : [
             'invoice_total' => 0,
             'invoice_paid' => 0,
@@ -181,7 +182,7 @@ class PanelActivityService
         $feed = $this->courseActivities($userId, $from, $to)
             ->merge($this->pageActivities($userId, $from, $to));
 
-        if ($includePayments && empty($restrictToUserIds)) {
+        if ($includePayments && ! $userId && $restrictToUserIds === null) {
             $feed = $feed->merge($this->paymentActivities($from, $to));
         }
 
@@ -351,7 +352,7 @@ class PanelActivityService
                 $course = $payment->course?->title ?? 'Course #' . $payment->course_id;
 
                 return $this->activityRow(
-                    'Payment Recorded',
+                    'Invoice Recorded',
                     $course . ' — ' . $student,
                     route('admin.payments.index'),
                     null,

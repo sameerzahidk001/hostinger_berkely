@@ -72,7 +72,7 @@
                 </div>
             </div>
         </div>
-        @if($includePayments ?? false)
+        @if(($includePayments ?? false) && !($showInvoiceStats ?? false))
         <div class="col-lg-3 col-md-6">
             <div class="widget style1 red-bg">
                 <div class="row">
@@ -80,7 +80,7 @@
                         <i class="fa fa-money fa-3x"></i>
                     </div>
                     <div class="col-xs-8 text-right">
-                        <span>Total Payments</span>
+                        <span>Total Invoices</span>
                         <h2 class="font-bold">{{ $summary['total_payments_site'] }}</h2>
                     </div>
                 </div>
@@ -208,7 +208,7 @@
                     <span class="label label-primary m-r-xs">Courses created: {{ $summary['courses_created'] }}</span>
                     <span class="label label-info m-r-xs">Pages created: {{ $summary['pages_created'] }}</span>
                     @if($includePayments)
-                        <span class="label label-success m-r-xs">Payments recorded: {{ $summary['payments_recorded'] }}</span>
+                        <span class="label label-success m-r-xs">Invoices recorded: {{ $summary['invoices_recorded'] ?? $summary['payments_recorded'] }}</span>
                     @endif
                     @if(request()->hasAny(['date_from', 'date_to', 'user_id', 'role', 'student_user_id']))
                         <small class="text-muted m-l-sm">Counts above match the selected filters.</small>
