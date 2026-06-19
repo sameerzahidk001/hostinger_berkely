@@ -97,6 +97,18 @@ class RegisterController extends Controller
     {
         $this->validator($request->all())->validate();
         $user = $this->create($request);
+
+        $roleName = $user->roles()->value('name');
+        record_user_activity(
+            'Registration',
+            'New account registered as ' . ucfirst($roleName ?? 'user'),
+            route('register'),
+            activity_audience_for_role($roleName),
+            $user->id,
+            null,
+            $request
+        );
+
         Auth::login($user);
 
         if (session()->has('intended_package_id')) {

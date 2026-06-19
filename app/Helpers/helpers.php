@@ -400,6 +400,59 @@ if (!function_exists('audit_user_name')) {
     }
 }
 
+if (!function_exists('activity_audience_for_role')) {
+    function activity_audience_for_role(?string $role): string
+    {
+        $normalized = normalize_panel_role($role);
+
+        if (in_array($normalized, ['content_writer', 'accountant'], true)) {
+            return 'staff';
+        }
+
+        if ($normalized === 'instructor') {
+            return 'staff';
+        }
+
+        return 'student';
+    }
+}
+
+if (!function_exists('activity_audience_for_user')) {
+    function activity_audience_for_user(?\App\Models\User $user): string
+    {
+        if (! $user) {
+            return 'staff';
+        }
+
+        return activity_audience_for_role($user->roles()->value('name'));
+    }
+}
+
+if (!function_exists('record_user_activity')) {
+    function record_user_activity(
+        string $action,
+        ?string $item = null,
+        ?string $url = null,
+        ?string $audience = null,
+        ?int $userId = null,
+        ?int $adminId = null,
+        ?\Illuminate\Http\Request $request = null
+    ): void {
+        $request = $request ?? request();
+
+        app(\App\Services\UserActivityLogService::class)->log(
+            $action,
+            $audience ?? 'staff',
+            $item,
+            $url,
+            $userId,
+            $adminId,
+            $request?->ip(),
+            $request?->session()?->getId(),
+        );
+    }
+}
+
 if (!function_exists('cart_item_count')) {
     function cart_item_count(): int
     {

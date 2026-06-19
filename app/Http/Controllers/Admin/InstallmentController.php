@@ -128,6 +128,8 @@ class InstallmentController extends Controller
                 $installment->status = 'paid';
                 $installment->save();
 
+                $this->logStudentInstallmentPayment($installment, $request);
+
                 return response()->json(['success' => true, 'message' => 'Payment successfully completed.']);
             } else {
                 $error = $response->json()['error']['message'] ?? 'Unknown error occurred.';
@@ -146,7 +148,28 @@ class InstallmentController extends Controller
         $installment->status = 'paid';
         $installment->save();
 
+        $this->logStudentInstallmentPayment($installment, request());
+
         return redirect()->route('student.installments');
+    }
+
+    private function logStudentInstallmentPayment(Installment $installment, Request $request): void
+    {
+        $installment->loadMissing(['payment.course']);
+
+        $payment = $installment->payment;
+        $courseName = $payment?->course?->title ?? 'Installment #' . $installment->installment_number;
+        $paidAmount = (float) $installment->paid_amount;
+
+        record_user_activity(
+            'Payment',
+            'Paid ' . ($payment ? format_payment_aed_amount($payment, $paidAmount) : number_format($paidAmount, 2)) . ' for ' . $courseName,
+            route('user.home'),
+            'student',
+            $installment->user_id,
+            null,
+            $request
+        );
     }
 
     public function receipt($id)

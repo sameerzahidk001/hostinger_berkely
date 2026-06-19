@@ -67,6 +67,54 @@ class PanelActivityService
         );
     }
 
+    public function paginatedFeedWithLogs(
+        ?int $userId,
+        ?string $dateFrom,
+        ?string $dateTo,
+        bool $includePayments,
+        string $logAudience,
+        int $perPage = 15,
+        int $page = 1,
+        string $path = '',
+        array $query = [],
+        ?array $restrictToUserIds = null,
+        bool $paymentsOnly = false
+    ): LengthAwarePaginator {
+        $activities = $this->buildFeed(
+            $userId,
+            $dateFrom,
+            $dateTo,
+            $includePayments,
+            $restrictToUserIds,
+            $paymentsOnly
+        );
+
+        $logs = app(UserActivityLogService::class)->buildFeed($logAudience, $userId, $dateFrom, $dateTo);
+
+        if ($restrictToUserIds !== null) {
+            $logs = $logs->filter(function (array $row) use ($restrictToUserIds) {
+                return ! empty($row['actor_id'])
+                    && in_array((int) $row['actor_id'], $restrictToUserIds, true);
+            });
+        }
+
+        $merged = $activities
+            ->merge($logs)
+            ->sortByDesc(fn (array $row) => $row['occurred_at']->timestamp)
+            ->values();
+
+        $total = $merged->count();
+        $items = $merged->slice(($page - 1) * $perPage, $perPage)->values();
+
+        return new LengthAwarePaginator(
+            $items,
+            $total,
+            $perPage,
+            $page,
+            ['path' => $path, 'query' => $query]
+        );
+    }
+
     public function buildFeed(
         ?int $userId,
         ?string $dateFrom,

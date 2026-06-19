@@ -110,6 +110,19 @@
                         </select>
                     </div>
                     @endif
+                    @if($showStudentTable ?? false)
+                    <div class="form-group m-r-sm m-b-sm">
+                        <label for="student_user_id" class="m-r-xs">Student</label>
+                        <select id="student_user_id" name="student_user_id" class="form-control" style="min-width: 220px;">
+                            <option value="">All students</option>
+                            @foreach($studentFilterUsers ?? [] as $studentUser)
+                                <option value="{{ $studentUser->id }}" @selected((string) request('student_user_id') === (string) $studentUser->id)>
+                                    {{ $studentUser->name }} ({{ $studentUser->email }})
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    @endif
                     <div class="form-group m-r-sm m-b-sm">
                         <label for="date_from" class="m-r-xs">From</label>
                         <input type="date" id="date_from" name="date_from" class="form-control"
@@ -130,7 +143,7 @@
                     @if($includePayments)
                         <span class="label label-success m-r-xs">Payments recorded: {{ $summary['payments_recorded'] }}</span>
                     @endif
-                    @if(request()->hasAny(['date_from', 'date_to', 'user_id', 'role']))
+                    @if(request()->hasAny(['date_from', 'date_to', 'user_id', 'role', 'student_user_id']))
                         <small class="text-muted m-l-sm">Counts above match the selected filters.</small>
                     @endif
                 </div>
@@ -156,6 +169,9 @@
                                 @if($showUserColumn)
                                     <th style="width: 180px;">User</th>
                                 @endif
+                                @if($showSessionColumn ?? false)
+                                    <th style="width: 140px;">Session</th>
+                                @endif
                                 <th style="width: 90px;">Link</th>
                             </tr>
                         </thead>
@@ -168,13 +184,31 @@
                                     @if($showUserColumn)
                                         <td>{{ $activity['user_name'] }}</td>
                                     @endif
+                                    @if($showSessionColumn ?? false)
+                                        <td>
+                                            @if(!empty($activity['session_id']))
+                                                <code title="{{ $activity['session_id'] }}">{{ \Illuminate\Support\Str::limit($activity['session_id'], 12) }}</code>
+                                            @else
+                                                <span class="text-muted">—</span>
+                                            @endif
+                                        </td>
+                                    @endif
                                     <td>
-                                        <a href="{{ $activity['url'] }}" target="_blank" rel="noopener">Open</a>
+                                        @if(!empty($activity['url']))
+                                            <a href="{{ $activity['url'] }}" target="_blank" rel="noopener">Open</a>
+                                        @else
+                                            <span class="text-muted">—</span>
+                                        @endif
                                     </td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="{{ $showUserColumn ? 5 : 4 }}" class="text-center text-muted">
+                                    @php
+                                        $staffColspan = 4
+                                            + ($showUserColumn ? 1 : 0)
+                                            + (($showSessionColumn ?? false) ? 1 : 0);
+                                    @endphp
+                                    <td colspan="{{ $staffColspan }}" class="text-center text-muted">
                                         No activity found for the selected filters.
                                     </td>
                                 </tr>
@@ -187,6 +221,71 @@
         </div>
     </div>
 </div>
+
+@if($showStudentTable ?? false)
+<div class="row" style="padding: 0 10px 12px;">
+    <div class="col-lg-12">
+        <div class="ibox float-e-margins" style="margin-bottom: 16px;">
+            <div class="ibox-title">
+                <h5>{{ $studentActivityTitle ?? 'Student activity history' }}</h5>
+            </div>
+            <div class="ibox-content">
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered table-hover">
+                        <thead>
+                            <tr>
+                                <th style="width: 170px;">Date &amp; Time</th>
+                                <th style="width: 160px;">Activity</th>
+                                <th>Item</th>
+                                <th style="width: 180px;">Student</th>
+                                @if($showSessionColumn ?? false)
+                                    <th style="width: 140px;">Session</th>
+                                @endif
+                                <th style="width: 90px;">Link</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($studentActivities ?? [] as $activity)
+                                <tr>
+                                    <td>{{ $activity['occurred_at']->format('M j, Y g:i A') }}</td>
+                                    <td>{{ $activity['action'] }}</td>
+                                    <td>{{ $activity['item'] }}</td>
+                                    <td>{{ $activity['user_name'] }}</td>
+                                    @if($showSessionColumn ?? false)
+                                        <td>
+                                            @if(!empty($activity['session_id']))
+                                                <code title="{{ $activity['session_id'] }}">{{ \Illuminate\Support\Str::limit($activity['session_id'], 12) }}</code>
+                                            @else
+                                                <span class="text-muted">—</span>
+                                            @endif
+                                        </td>
+                                    @endif
+                                    <td>
+                                        @if(!empty($activity['url']))
+                                            <a href="{{ $activity['url'] }}" target="_blank" rel="noopener">Open</a>
+                                        @else
+                                            <span class="text-muted">—</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="{{ ($showSessionColumn ?? false) ? 6 : 5 }}" class="text-center text-muted">
+                                        No student activity found for the selected filters.
+                                    </td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                    @if($studentActivities)
+                        {!! $studentActivities->links() !!}
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@endif
 @endsection
 
 @push('script')
