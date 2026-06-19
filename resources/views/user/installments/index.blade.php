@@ -101,6 +101,8 @@
                                                                     </button>
                                                                     <div class="modal-body">
                                                                         <div id="payment-amount-display-{{ $installment->id }}" class="text-center mb-3" style="font-size: 18px; font-weight: 600;"></div>
+                                                                        <div id="payment-error-{{ $installment->id }}" class="alert alert-danger" style="display:none;"></div>
+                                                                        <div id="payment-loading-{{ $installment->id }}" class="text-center text-muted" style="display:none;">Loading payment form...</div>
                                                                         <div id="hco-embedded-{{ $installment->id }}"></div>
                                                                     </div>
                                                                 </div>
@@ -253,9 +255,13 @@
             var installmentId = modalId.replace('paymentModal', '');
             var embeddedDivId = '#hco-embedded-' + installmentId;
             var amountDisplayId = '#payment-amount-display-' + installmentId;
+            var errorDisplayId = '#payment-error-' + installmentId;
+            var loadingDisplayId = '#payment-loading-' + installmentId;
 
             $(amountDisplayId).empty();
             $(embeddedDivId).empty();
+            $(errorDisplayId).hide().empty();
+            $(loadingDisplayId).show();
 
             $.ajax({
                 url: '{{ route("user.generate.rakBankPaySession") }}',
@@ -269,23 +275,39 @@
                         showPaymentAmount(amountDisplayId, res.displayAmount);
                     }
 
-                    if (res.session && res.session.id) {
+                    if (res.settlingAmount) {
+                        currentAmount = res.settlingAmount;
+                    }
+
+                    if (res.success !== false && res.session && res.session.id) {
                         try {
                             Checkout.configure({
                                 session: { id: res.session.id },
                             });
-                            Checkout.showEmbeddedPage(embeddedDivId, () => {
-                                $('#' + modalId).modal();
-                            });
+                            $(loadingDisplayId).hide();
+                            Checkout.showEmbeddedPage(embeddedDivId);
                             normalizeEmbeddedPayButtons(embeddedDivId);
                         } catch (error) {
+                            $(loadingDisplayId).hide();
+                            $(errorDisplayId).text('Unable to load payment form. Please try again.').show();
                             console.error("An error occurred while initializing RakBank Checkout:", error);
                         }
                     } else {
+                        $(loadingDisplayId).hide();
+                        $(errorDisplayId).text(res.error || 'Payment session could not be started. Please try again.').show();
                         console.error("Session creation failed", res);
                     }
                 },
                 error: function (err) {
+                    $(loadingDisplayId).hide();
+                    var message = 'Payment session could not be started. Please try again.';
+                    try {
+                        var body = JSON.parse(err.responseText);
+                        if (body.error) {
+                            message = body.error;
+                        }
+                    } catch (e) {}
+                    $(errorDisplayId).text(message).show();
                     console.error("API error", err.responseText);
                 }
             });

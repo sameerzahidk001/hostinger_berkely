@@ -304,7 +304,7 @@
 
                         currentSettlingAmount = res.settlingAmount || null;
 
-                        if (res.session && res.session.id) {
+                        if (res.success !== false && res.session && res.session.id) {
                             loadCheckoutScript(function () {
                                 try {
                                     Checkout.configure({
@@ -321,13 +321,20 @@
                             });
                         } else {
                             $('#payment-loading').hide();
-                            $('#payment-error').text('Payment session could not be started. Please try again.').show();
+                            $('#payment-error').text(res.error || 'Payment session could not be started. Please try again.').show();
                             console.error("Session creation failed", res);
                         }
                     },
                     error: function (err) {
                         $('#payment-loading').hide();
-                        $('#payment-error').text('Payment session could not be started. Please try again.').show();
+                        var message = 'Payment session could not be started. Please try again.';
+                        try {
+                            var body = JSON.parse(err.responseText);
+                            if (body.error) {
+                                message = body.error;
+                            }
+                        } catch (e) {}
+                        $('#payment-error').text(message).show();
                         console.error("API error", err.responseText);
                     }
                 });
