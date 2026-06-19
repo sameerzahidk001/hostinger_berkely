@@ -10,6 +10,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use App\Models\{Subject,Course,User,Admin,Instructor};
+use App\Services\PanelActivityService;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Hash;
@@ -79,8 +80,56 @@ class AdminController extends Controller
         return back();
     }
 
-    public function dashboard()
-    {   
+    public function dashboard(Request $request)
+    {
+        $role = normalize_panel_role(panel_role_name());
+
+        if ($role === 'content_writer') {
+            return $this->panelDashboard($request, 'content_writer');
+        }
+
+        if ($role === 'accountant') {
+            return $this->panelDashboard($request, 'accountant');
+        }
+
+        return $this->adminDashboard();
+    }
+
+    private function panelDashboard(Request $request, string $role)
+    {
+        $service = app(PanelActivityService::class);
+        $userId = $role === 'content_writer' ? audit_user_id() : null;
+        $includePayments = $role === 'accountant';
+        $dateFrom = $request->query('date_from');
+        $dateTo = $request->query('date_to');
+
+        $summary = $service->summary($userId, $dateFrom, $dateTo, $includePayments);
+        $activities = $service->paginatedFeed(
+            $userId,
+            $dateFrom,
+            $dateTo,
+            $includePayments,
+            15,
+            (int) $request->query('page', 1),
+            $request->url(),
+            $request->query()
+        );
+
+        return view('admin.dashboard.panel', [
+            'summary' => $summary,
+            'activities' => $activities,
+            'includePayments' => $includePayments,
+            'showUserColumn' => $role === 'accountant',
+            'showTotals' => $role === 'content_writer',
+            'scopeLabel' => $role === 'content_writer' ? 'My' : 'All',
+            'activityTitle' => $role === 'content_writer'
+                ? 'My activity history'
+                : 'All users activity history',
+        ]);
+    }
+
+    private function adminDashboard()
+    {
         $data['courses_count'] = Course::count();
         $data['student_count'] = User::count();
         $data['instructor_count'] = Instructor::count();

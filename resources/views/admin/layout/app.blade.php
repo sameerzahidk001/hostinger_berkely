@@ -219,7 +219,7 @@
                   </div>
                   <ul class="nav navbar-top-links navbar-right">
                      <li>
-                        <span class="m-r-sm text-muted welcome-message">Welcome to Admin Dashboard.</span>
+                        <span class="m-r-sm text-muted welcome-message">Welcome, {{ panel_profile_name() ?: 'User' }}.</span>
                      </li>
                      <li>
                         <a href="{{ route('admin.logout') }}">
