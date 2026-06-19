@@ -309,7 +309,7 @@ if (!function_exists('admin_menu_allowed')) {
 
         $contentWriterMenus = [
             'dashboard', 'courses', 'training-calendar', 'school', 'categories',
-            'pages', 'seo', 'faq', 'clients', 'profile', 'logout',
+            'pages', 'seo', 'faq', 'analytics', 'clients', 'profile', 'logout',
         ];
 
         $accountantMenus = [
@@ -318,7 +318,23 @@ if (!function_exists('admin_menu_allowed')) {
         ];
 
         if ($role === 'content_writer') {
-            return in_array($menu, $contentWriterMenus, true);
+            if (in_array($menu, $contentWriterMenus, true)) {
+                return true;
+            }
+
+            $permissionMenus = [
+                'analytics' => 'analytic-list',
+            ];
+
+            if (isset($permissionMenus[$menu])) {
+                $user = panel_profile_user();
+
+                return $user
+                    && method_exists($user, 'hasPermission')
+                    && $user->hasPermission($permissionMenus[$menu]);
+            }
+
+            return false;
         }
 
         if ($role === 'accountant') {
