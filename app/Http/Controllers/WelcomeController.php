@@ -49,10 +49,6 @@ class WelcomeController extends Controller
                 abort(404);
             }
 
-            if ($page->category_id) {
-                return redirect()->to(url($category_perma . '/' . $page->url), 301);
-            }
-
             $breadcrumb[] = ['title' => $page->page_name, 'url' => url($page->full_url)];
         }
 
