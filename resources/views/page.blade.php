@@ -5,6 +5,7 @@
     @foreach ($page->sections as $section)
         @if ($section->section_type === 'hero-banner')
             <x-hero-banner background="{{ asset('images/library/' . $section->data['image']) }}"
+                :altText="image_alt($section->data['image_alt'] ?? null, $section->data['title'] ?? 'Hero banner')"
                 title="{{ $section->data['title'] ?? 'Default Title' }}"
                 subtitle="{{ $section->data['subtitle'] ?? 'Default Subtitle' }}" video="{{$section->data['video'] ?? '' }}" />
 
@@ -15,7 +16,8 @@
                 :subtitle="$section->data['subtitle'] ?? ''"
                 :description="$section->data['description'] ?? ''"
                 :backgroundColor="$section->data['background_color'] ?? ''"
-                :image="$section->data['image'] ?? ''"
+                :image="!empty($section->data['image']) ? asset('images/library/' . $section->data['image']) : ''"
+                :altText="image_alt($section->data['image_alt'] ?? null, $section->data['title'] ?? 'Banner')"
                 :color="$section->data['color'] ?? ''"
                 :solidButtonUrl="$section->data['solid_button_url'] ?? ''"
                 :solidButtonText="$section->data['solid_button_text'] ?? ''"
@@ -32,6 +34,8 @@
                     return [
                         'image' => 'images/library/' . $school->image,
                         'icon' => 'images/library/' . $school->icon,
+                        'image_alt' => image_alt($school->image_alt, $school->name),
+                        'icon_alt' => image_alt($school->icon_alt, $school->name . ' icon'),
                         'title' => $school->name,
                         'description' => $school->short_description,
                         'url' => url('school/' . $school->slug) ?? '#',
@@ -39,7 +43,6 @@
                     ];
                 })->toArray();
             @endphp
-            {{-- @dd($locations) --}}
             <x-schools title="{{ $section->data['title'] }}" description="{{ $section->data['description'] }}"
                 url="{{ $section->data['url'] ?? '#' }}" urltext="{{ $section->data['url_text'] }}" :locations="$locations" />
         @elseif($section->section_type === 'categories')
@@ -55,21 +58,35 @@
             <x-categories :background="$section->data['background'] ?? 'none'" :color="$section->data['color'] ?? 'inherit'" :title="$section->data['title']"
                 :description="$section->data['description']" :categories="$categories" />
         @elseif ($section->section_type === 'grid-cards')
-            {{-- @dd($section->toArray()) --}}
+            @php
+                $gridCards = collect($section->data['cards'] ?? [])->map(function ($card) {
+                    return [
+                        'image' => !empty($card['image']) ? asset('images/library/' . $card['image']) : null,
+                        'title' => $card['title'] ?? '',
+                        'description' => $card['description'] ?? '',
+                        'url' => $card['url'] ?? null,
+                        'url_text' => $card['url_text'] ?? null,
+                        'url_target' => $card['url_target'] ?? null,
+                        'background' => $card['background'] ?? null,
+                        'color' => $card['color'] ?? null,
+                        'image_alt' => image_alt($card['image_alt'] ?? null, $card['title'] ?? 'Card image'),
+                    ];
+                })->toArray();
+            @endphp
             <x-grid-cards 
                 :title="$section->data['title'] ?? ''" 
                 :subtitle="$section->data['subtitle'] ?? ''"
                 :description="$section->data['description'] ?? ''"
                 :backgroundColor="$section->data['background'] ?? ''"
-                :backgroundImage="$section->data['image'] ?? ''"
+                :backgroundImage="!empty($section->data['image']) ? asset('images/library/' . $section->data['image']) : ''"
+                :backgroundImageAlt="image_alt($section->data['image_alt'] ?? null, $section->data['title'] ?? 'Section background')"
                 :color="$section->data['color'] ?? ''"
                 :cardColor="$section->data['card_color'] ?? ''"
                 :layout="$section->data['layout'] ?? ''"
                 :columns="$section->data['columns'] ?? 3"
-                :cards="$section->data['cards'] ?? []"
+                :cards="$gridCards"
             />
         @elseif ($section->section_type === 'title-section')
-            {{-- @dd($section->toArray()) --}}
             <x-title-section 
                 :background="$section->data['background'] ?? 'transparent'" 
                 :color="$section->data['color'] ?? '#000000'" 
@@ -82,6 +99,7 @@
             />
         @elseif ($section->section_type === 'media-section')
             <x-media-section :alignment="$section->data['alignment'] ?? 'left'" :direction="$section->data['image_placement']" :image="asset('images/library/' . $section->data['image'])" :icon="$section->data['icon'] ?? null" :title="$section->data['title']" :description="$section->data['description']"
+                :altText="image_alt($section->data['image_alt'] ?? null, $section->data['title'] ?? 'Media image')"
                 :link="$section->data['url']" :buttonText="$section->data['url_text']" />
         @elseif ($section->section_type === 'overlay-cards')
             @php
@@ -91,7 +109,8 @@
                         'title' => $card['title'] ?? '',
                         'description' => $card['description'] ?? '',
                         'url' => $card['url'] ?? '#',
-                        'buttonText' => $card['url_text'] ?? 'Learn More'
+                        'buttonText' => $card['url_text'] ?? 'Learn More',
+                        'image_alt' => image_alt($card['image_alt'] ?? null, $card['title'] ?? 'Card image'),
                     ];
                 })->toArray();
             @endphp
@@ -101,16 +120,20 @@
             @php
                 $cards = collect($section->data['cards'] ?? [])->map(function ($card) {
                     return [
-                        'image' => $card['image'] ?? '',
-                        'icon' => $card['icon'] ?? '',
+                        'image' => !empty($card['image']) ? asset('images/library/' . $card['image']) : '',
+                        'icon' => !empty($card['icon']) ? asset('images/library/' . $card['icon']) : '',
                         'title' => $card['title'] ?? '',
                         'description' => $card['description'] ?? '',
                         'url' => $card['url'] ?? null,
-                        'buttonText' => $card['url_text'] ?? null
+                        'buttonText' => $card['url_text'] ?? null,
+                        'url_target' => $card['url_target'] ?? null,
+                        'image_alt' => image_alt($card['image_alt'] ?? null, $card['title'] ?? 'Card image'),
+                        'icon_alt' => image_alt($card['icon_alt'] ?? null, ($card['title'] ?? 'Card') . ' icon'),
                     ];
                 })->toArray();
             @endphp
-            <x-cards :columns="$section->data['columns'] ?? '3'" :layout="$section->data['layout'] ?? 'layout-1'" :backgroundColor="$section->data['background'] ?? 'transparent'" :backgroundImage="$section->data['image'] ?? 'none'"
+            <x-cards :columns="$section->data['columns'] ?? '3'" :layout="$section->data['layout'] ?? 'layout-1'" :backgroundColor="$section->data['background'] ?? 'transparent'" :backgroundImage="!empty($section->data['image']) ? asset('images/library/' . $section->data['image']) : 'none'"
+                :backgroundImageAlt="image_alt($section->data['image_alt'] ?? null, $section->data['title'] ?? 'Section background')"
                 :color="$section->data['color'] ?? '#000000'" :alignment="$section->data['alignment'] ?? 'left'" :cards="$cards" />
         @elseif ($section->section_type === 'clients')
             @php
@@ -120,6 +143,7 @@
                         'url' => $client->url ?? '#',
                         'target' => $client->open_new_tab ?? '',
                         'no_follow' => $client->no_follow ?? '',
+                        'alt' => image_alt($client->image_alt, $client->title ?? 'Client logo'),
                     ];
                 })->toArray();
             @endphp

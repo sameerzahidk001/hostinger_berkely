@@ -98,7 +98,7 @@
 
                                 <!-- Image + Name + City + Course -->
                                 <div class="flex items-start gap-4 mb-2">
-                                    <img src="{{ asset($testimonials->image) }}" alt=""
+                                    <img src="{{ asset($testimonials->image) }}" alt="{{ image_alt($testimonials->image_alt ?? null, $testimonials->name ?? 'Testimonial') }}"
                                         class="w-20 h-20 shrink-0 object-cover self-center rounded-full">
 
 
@@ -221,7 +221,7 @@
                             style="background-color: {{ $cardBackground }}; border: 2px solid {{ $cardBorderColor }};">
                             <div class="flex items-start gap-4">
                                 <div class="flex-shrink-0 w-20 h-20"> <!-- Specific width for image div -->
-                                    <img src="{{ asset($testimonial->image) }}" alt=""
+                                    <img src="{{ asset($testimonial->image) }}" alt="{{ image_alt($testimonial->image_alt ?? null, $testimonial->name ?? 'Testimonial') }}"
                                         class="w-full h-full object-cover rounded-full">
                                     <!-- Ensure the image covers the div -->
                                 </div>
@@ -274,7 +274,7 @@
                             style="background-color: {{ $cardBackground }}; border: 2px solid {{ $cardBorderColor }};">
                             <div class="p-2">
                                 <div class="flex items-start gap-4 mb-2">
-                                    <img src="{{ asset($testimonials->image) }}" alt=""
+                                    <img src="{{ asset($testimonials->image) }}" alt="{{ image_alt($testimonials->image_alt ?? null, $testimonials->name ?? 'Testimonial') }}"
                                         class="w-20 h-20 shrink-0 object-cover self-center rounded-full">
                                     <div class="flex flex-col gap-0">
                                         <h3 class="text-[20px] font-semibold leading-[20px]" style="color: {{ $cardColor }};">
@@ -345,7 +345,7 @@
                             style="background-color: {{ $cardBackground }}; border: 2px solid {{ $cardBorderColor }};">
                             <div class="p-2"> <!-- Set a fixed height for the card -->
                                 <div class="flex items-start gap-4 mb-2">
-                                    <img src="{{ asset($testimonials->image) }}" alt=""
+                                    <img src="{{ asset($testimonials->image) }}" alt="{{ image_alt($testimonials->image_alt ?? null, $testimonials->name ?? 'Testimonial') }}"
                                         class="w-20 h-20 shrink-0 object-cover self-center rounded-full">
                                     <div class="flex flex-col gap-0">
                                         <h3 class="text-[20px] font-semibold leading-[20px]" style="color: {{ $cardColor }};">

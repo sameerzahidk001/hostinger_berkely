@@ -352,6 +352,12 @@ class CourseController extends Controller
 
             $course_overview_updated = $course->update($updatedData);
 
+            if ($request->has('image_alts')) {
+                $course->update([
+                    'image_alts' => merge_image_alts($course->image_alts, $request->input('image_alts', [])),
+                ]);
+            }
+
             if ($request->has('categories') && !empty($request->categories)) {
                 $course->categories()->sync($request->categories);
             } else {
@@ -380,6 +386,7 @@ class CourseController extends Controller
                 ];
 
                 $dynamicLabel = $course->dynamicLabel()->first();
+                $createLabels = $this->withLabelImageAlts($createLabels, $request, $dynamicLabel);
                 if ($dynamicLabel) {
                     $dynamicLabel->update($createLabels);
                 } else {
@@ -437,6 +444,7 @@ class CourseController extends Controller
                 }
 
                 $dynamicLabel = $course->dynamicLabel()->first();
+                $createLabels = $this->withLabelImageAlts($createLabels, $request, $dynamicLabel);
                 if ($dynamicLabel) {
                     $dynamicLabel->update($createLabels);
                 } else {
@@ -488,6 +496,7 @@ class CourseController extends Controller
                 }
 
                 $dynamicLabel = $course->dynamicLabel()->first();
+                $createLabels = $this->withLabelImageAlts($createLabels, $request, $dynamicLabel);
                 if ($dynamicLabel) {
                     $dynamicLabel->update($createLabels);
                 } else {
@@ -542,6 +551,7 @@ class CourseController extends Controller
                 }
 
                 $dynamicLabel = $course->dynamicLabel()->first();
+                $createLabels = $this->withLabelImageAlts($createLabels, $request, $dynamicLabel);
                 if ($dynamicLabel) {
                     $dynamicLabel->update($createLabels);
                 } else {
@@ -582,6 +592,7 @@ class CourseController extends Controller
                 ];
 
                 $dynamicLabel = $course->dynamicLabel()->first();
+                $createLabels = $this->withLabelImageAlts($createLabels, $request, $dynamicLabel);
                 if ($dynamicLabel) {
                     $dynamicLabel->update($createLabels);
                 } else {
@@ -667,6 +678,7 @@ class CourseController extends Controller
                 }
 
                 $dynamicLabel = $course->dynamicLabel()->first();
+                $createLabels = $this->withLabelImageAlts($createLabels, $request, $dynamicLabel);
                 if ($dynamicLabel) {
                     $dynamicLabel->update($createLabels);
                 } else {
@@ -740,6 +752,7 @@ class CourseController extends Controller
                 }
 
                 $dynamicLabel = $course->dynamicLabel()->first();
+                $createLabels = $this->withLabelImageAlts($createLabels, $request, $dynamicLabel);
                 if ($dynamicLabel) {
                     $dynamicLabel->update($createLabels);
                 } else {
@@ -809,6 +822,7 @@ class CourseController extends Controller
                 }
 
                 $dynamicLabel = $course->dynamicLabel()->first();
+                $createLabels = $this->withLabelImageAlts($createLabels, $request, $dynamicLabel);
                 if ($dynamicLabel) {
                     $dynamicLabel->update($createLabels);
                 } else {
@@ -867,6 +881,7 @@ class CourseController extends Controller
                 }
 
                 $dynamicLabel = $course->dynamicLabel()->first();
+                $createLabels = $this->withLabelImageAlts($createLabels, $request, $dynamicLabel);
                 if ($dynamicLabel) {
                     $dynamicLabel->update($createLabels);
                 } else {
@@ -929,6 +944,7 @@ class CourseController extends Controller
                 ];
 
                 $dynamicLabel = $course->dynamicLabel()->first();
+                $createLabels = $this->withLabelImageAlts($createLabels, $request, $dynamicLabel);
                 if ($dynamicLabel) {
                     $dynamicLabel->update($createLabels);
                 } else {
@@ -989,6 +1005,7 @@ class CourseController extends Controller
                 ];
 
                 $dynamicLabel = $course->dynamicLabel()->first();
+                $createLabels = $this->withLabelImageAlts($createLabels, $request, $dynamicLabel);
                 if ($dynamicLabel) {
                     $dynamicLabel->update($createLabels);
                 } else {
@@ -1482,6 +1499,7 @@ class CourseController extends Controller
                 'fee_strucutre' => $labelData['fee_strucutre'] ?? null,
             ];
             $dynamicLabel = $course->dynamicLabel()->first();
+            $createLabels = $this->withLabelImageAlts($createLabels, $request, $dynamicLabel);
             if ($dynamicLabel) {
                 $dynamicLabel->update($createLabels);
             } else {
@@ -1923,6 +1941,7 @@ class CourseController extends Controller
                 'lecture_plan' => $labelData['lecture_plan'] ?? null,
             ];
             $dynamicLabel = $course->dynamicLabel()->first();
+            $createLabels = $this->withLabelImageAlts($createLabels, $request, $dynamicLabel);
             if ($dynamicLabel) {
                 $dynamicLabel->update($createLabels);
             } else {
@@ -1985,6 +2004,7 @@ class CourseController extends Controller
             ];
 
             $dynamicLabel = $course->dynamicLabel()->first();
+            $createLabels = $this->withLabelImageAlts($createLabels, $request, $dynamicLabel);
             if ($dynamicLabel) {
                 $dynamicLabel->update($createLabels);
             } else {
@@ -2026,6 +2046,7 @@ class CourseController extends Controller
             ];
 
             $dynamicLabel = $course->dynamicLabel()->first();
+            $createLabels = $this->withLabelImageAlts($createLabels, $request, $dynamicLabel);
             if ($dynamicLabel) {
                 $dynamicLabel->update($createLabels);
             } else {
@@ -2042,5 +2063,15 @@ class CourseController extends Controller
         return redirect()->route('course.show-faqs', ['id' => $id]);
     }
 
+    private function withLabelImageAlts(array $createLabels, Request $request, $dynamicLabel): array
+    {
+        if ($request->has('label.image_alts')) {
+            $createLabels['image_alts'] = merge_image_alts(
+                $dynamicLabel?->image_alts,
+                $request->input('label.image_alts', [])
+            );
+        }
 
+        return $createLabels;
+    }
 }

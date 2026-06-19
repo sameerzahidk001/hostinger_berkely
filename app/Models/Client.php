@@ -11,5 +11,5 @@ class Client extends Model
     use HasFactory, TracksAudit;
 
     // Define fillable fields
-    protected $fillable = ['title', 'url', 'open_new_tab', 'nofollow', 'description', 'image', 'active']; 
+    protected $fillable = ['title', 'url', 'open_new_tab', 'nofollow', 'description', 'image', 'image_alt', 'active']; 
 }

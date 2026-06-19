@@ -7,7 +7,7 @@
                     frameborder="0" allowfullscreen>
                 </iframe>
             @else
-                <img src="{{ media_url($background) }}" class="min-h-screen max-h-screen object-cover w-full zoom-in" alt="Hero Banner Image">
+                <img src="{{ media_url($background) }}" class="min-h-screen max-h-screen object-cover w-full zoom-in" alt="{{ image_alt($altText ?? null, $title ?? 'Hero banner') }}">
             @endif
         </div>
     @endif

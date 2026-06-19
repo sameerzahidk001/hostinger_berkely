@@ -79,7 +79,7 @@
 
             </div>
             <div class=" flex xl:px-0 md:top-0 md:absolute md:right-0 z-40 md:w-[50%] m-0 flex-1 flex-col gap-4 md:h-full">
-                <img src="{{ asset($course->dynamicLabel->banner_image) }}" alt=""
+                <img src="{{ asset($course->dynamicLabel->banner_image) }}" alt="{{ course_image_alt($course, 'banner_image', $course->dynamicLabel?->banner_title ?? $course->title) }}"
                     class="object-cover h-full md:max-h-full md:w-full md:h-full">
             </div>
         </section>
@@ -174,10 +174,10 @@
                                 <p>Invalid YouTube URL</p>
                             @endif
                         @elseif($course->overview_img)
-                            <img src="{{ asset($course->overview_img) }}" alt=""
+                            <img src="{{ asset($course->overview_img) }}" alt="{{ course_image_alt($course, 'overview_img') }}"
                                 class="w-full min-h-[300px] xl:min-h-[500px] xl:min-w-[500px] object-cover">
                         @else
-                            <img src="{{ asset('admin/courses/course.png') }}" alt=""
+                            <img src="{{ asset('admin/courses/course.png') }}" alt="{{ course_image_alt($course, 'overview_img', $course->title . ' overview') }}"
                                 class="w-full min-h-[300px] xl:min-h-[500px] xl:min-w-[500px] object-cover">
                         @endif
                         <!-- <img src="{{ asset($course->overview_img ? $course->overview_img : 'admin/courses/course.png') }}" alt=""
@@ -306,7 +306,7 @@
             <div class="card flex flex-col lg:flex-row items-center py-6 gap-x-16 gap-y-10">
                 <div class="flex-1">
                     <img src="{{ isset($course->dynamicLabel) && $course->dynamicLabel->who_can_do_img ? asset($course->dynamicLabel->who_can_do_img) : asset('/admin/courses/cma2.jpeg') }}"
-                        alt="" class="w-full object-cover min-h-[300px] xl:min-h-[400px]">
+                        alt="{{ course_image_alt($course, 'who_can_do_img', $course->dynamicLabel?->who_can_do ?? $course->title) }}" class="w-full object-cover min-h-[300px] xl:min-h-[400px]">
                 </div>
                 <div class="flex-1 text-white">
 
@@ -437,7 +437,7 @@
                                                             <a href="{{ $subHeadingsUnit->unit_video }}" target="_blank">
                                                                 <img src="{{ asset($subHeadingsUnit->thumbnail) }}"
                                                                     class="min-w-8 max-w-8 min-h-8 max-h-8"
-                                                                    alt="">
+                                                                    alt="{{ image_alt(null, ($subHeadingsUnit->name ?? 'Unit') . ' thumbnail') }}">
                                                             </a>
                                                         @endif
                                                         <a href="{{ $subHeadingsUnit->unit_video }}" target="_blank"
@@ -608,7 +608,7 @@
                                 ]))))
                     <img src="{{ asset($course->dynamicLabel->lectures_img) }}"
                         class="h-full transition-all delay-300 duration-400 ease-in w-full absolute group-hover:scale-105 object-cover"
-                        alt="Lecture Image">
+                        alt="{{ course_image_alt($course, 'lectures_img', $course->dynamicLabel?->lectures ?? 'Lectures') }}">
                     <div class="absolute p-8 z-50 gap-4 flex flex-col justify-end bg-opacity-45 h-full w-full bottom-0">
                         <span
                             class="text-[20px] sm:text-[24px] text-white md:text-[32px] font-canela">{{ $course->dynamicLabel->lectures }}</span>
@@ -666,7 +666,7 @@
                                 ]))))
                     <img src="{{ asset($course->dynamicLabel->practice_session_img) }}"
                         class="h-full transition-all delay-300 duration-400 ease-in w-full absolute group-hover:scale-105 object-cover"
-                        alt="Lecture Image">
+                        alt="{{ course_image_alt($course, 'practice_session_img', $course->dynamicLabel?->practice_session ?? 'Practice session') }}">
                     <div class="absolute p-8 z-50 gap-4 flex flex-col justify-end bg-opacity-45 h-full w-full bottom-0">
                         <span
                             class="text-[20px] sm:text-[24px] text-white md:text-[32px] font-canela">{{ $course->dynamicLabel->practice_session }}</span>
@@ -722,7 +722,7 @@
                                 ]))))
                     <img src="{{ asset($course->dynamicLabel->mock_examination_img) }}"
                         class="h-full transition-all delay-300 duration-400 ease-in w-full absolute group-hover:scale-105 object-cover"
-                        alt="Lecture Image">
+                        alt="{{ course_image_alt($course, 'mock_examination_img', $course->dynamicLabel?->mock_examination ?? 'Mock examination') }}">
                     <div class="absolute p-8 z-50 gap-4 flex flex-col justify-end bg-opacity-45 h-full w-full bottom-0">
                         <span
                             class="text-[20px] sm:text-[24px] text-white md:text-[32px] font-canela">{{ $course->dynamicLabel->mock_examination }}</span>
@@ -865,10 +865,10 @@
                                 <p>Invalid YouTube URL</p>
                             @endif
                         @elseif(isset($course->dynamicLabel) && $course->dynamicLabel->exam_information_section_img)
-                            <img src="{{ asset($course->dynamicLabel->exam_information_section_img) }}" alt=""
+                            <img src="{{ asset($course->dynamicLabel->exam_information_section_img) }}" alt="{{ course_image_alt($course, 'exam_information_section_img', $course->dynamicLabel?->exam_information_section ?? $course->title) }}"
                                 class="w-full min-h-[300px] xl:min-h-[500px] xl:min-w-[500px] object-cover">
                         @else
-                            <img src="{{ asset('admin/courses/cma1.jpeg') }}" alt=""
+                            <img src="{{ asset('admin/courses/cma1.jpeg') }}" alt="{{ course_image_alt($course, 'exam_information_section_img', $course->title . ' exam information') }}"
                                 class="w-full min-h-[300px] xl:min-h-[500px] xl:min-w-[500px] object-cover">
                         @endif
                         <!-- <img src="{{ isset($course->dynamicLabel) && $course->dynamicLabel->exam_information_section_img ? asset($course->dynamicLabel->exam_information_section_img) : asset('admin/courses/cma1.jpeg') }}" alt=""
@@ -1098,7 +1098,7 @@
                         ? asset($course->dynamicLabel->learner_stories_img)
                         : asset('frontend/images/jpg/sheikh.jpg') }}"
                         class="h-full w-full absolute object-cover transition-all duration-500 ease-in-out group-hover:scale-105"
-                        alt="">
+                        alt="{{ course_image_alt($course, 'learner_stories_img', $course->dynamicLabel?->success_stories ?? 'Learner stories') }}">
 
                     <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black"></div>
 
@@ -1196,7 +1196,7 @@
 
                 <div class="flex-1 w-full basis-full">
                     <img src="{{ isset($course->dynamicLabel) && $course->dynamicLabel->career_path_section_img ? asset($course->dynamicLabel->career_path_section_img) : asset('admin/courses/cma2.jpeg') }}"
-                        alt="" class="w-full h-full object-cover">
+                        alt="{{ course_image_alt($course, 'career_path_section_img', $course->dynamicLabel?->career_path_section ?? 'Career path') }}" class="w-full h-full object-cover">
                 </div>
             </div>
         </section>
@@ -1236,7 +1236,7 @@
                 <div class="flex flex-col lg:flex-row gap-16 pt-6">
                     <div class="flex items-center justify-center md:justify-start">
                         <img src="{{ isset($course->dynamicLabel) && $course->dynamicLabel->what_you_earn_img ? asset($course->dynamicLabel->what_you_earn_img) : asset('frontend/images/jpg/Berkeley-Square-School-of-Arts-Certificate.jpg') }}"
-                            alt=""
+                            alt="{{ course_image_alt($course, 'what_you_earn_img', $course->dynamicLabel?->what_you_earn ?? 'Certificate') }}"
                             class="w-[275px] h-[350px] transition-all hover:scale-110 ease-in duration-200 delay-100">
                     </div>
 

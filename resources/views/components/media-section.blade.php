@@ -9,7 +9,7 @@
     <section id="section-{{$id}}" class="card-hidden px-6 min-[1200px]:px-[72px] my-16 {{ $backgroundColor != 'transparent' ? 'py-16' : '' }} md:px-12" style="background-color: {{ $backgroundColor }}">
         <div class="flex flex-col {{ $direction === 'left' ? 'lg:flex-row' : 'lg:flex-row-reverse' }} items-center gap-x-24 gap-y-10">
             <div class="flex-1">
-                <img src="{{ $image }}" alt="{{ $altText ?? '' }}"
+                <img src="{{ $image }}" alt="{{ image_alt($altText ?? null, $title ?? 'Media image') }}"
                     class="w-full min-h-[300px] xl:min-h-[500px] xl:min-w-[500px] object-cover">
             </div>
             <div class="relative flex-1 flex flex-col gap-1 {{ $contentBackground != 'transparent' ? 'xl:px-8 xl:py-4 min-[1340px]:py-8 my-2' : '' }} content-bg">
@@ -53,7 +53,7 @@
     <section class="lg:px-[48px] my-16 {{ $backgroundColor != 'transparent' ? 'py-16' : '' }}" style="background-color: {{ $backgroundColor }}">
         <div class="flex flex-col gap-10 xl:gap-0 {{ $direction === 'left' ? 'lg:flex-row' : 'lg:flex-row-reverse' }} items-stretch gap-y-10 ">
             <div class="flex-1 w-full basis-full">
-                <img src="{{ $image }}" alt="{{ $altText ?? '' }}"
+                <img src="{{ $image }}" alt="{{ image_alt($altText ?? null, $title ?? 'Media image') }}"
                     class="w-full h-full object-cover">
             </div>
             <div class="relative flex justify-center items-center px-8 lg:px-0 py-4 w-full basis-full ">

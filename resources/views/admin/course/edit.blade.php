@@ -124,6 +124,11 @@
                                         <a href="{{ asset($course->dynamicLabel->banner_image) }}" target="_blank">Current
                                             Image</a>
                                     @endif
+                                    @include('admin.partials.image-alt-input', [
+                                        'id' => 'banner_image_alt',
+                                        'name' => 'label[image_alts][banner_image]',
+                                        'value' => data_get($course->dynamicLabel?->image_alts, 'banner_image'),
+                                    ])
                                 </div>
                                 <div class="col-lg-6 mb">
                                     <label class="mb-1">Breadcrumb</label>
@@ -357,6 +362,11 @@
                                     @if($course->overview_img)
                                         <a class="small" href="{{ asset($course->overview_img) }}" target="_blank">Current</a>
                                     @endif
+                                    @include('admin.partials.image-alt-input', [
+                                        'id' => 'overview_img_alt',
+                                        'name' => 'image_alts[overview_img]',
+                                        'value' => data_get($course->image_alts, 'overview_img'),
+                                    ])
                                 </div>
                                 <div class="col-lg-6 mb">
                                     <label class="mb-1">Overview Video URL</label>
@@ -543,6 +553,11 @@
                                         <a href="{{ asset($course->dynamicLabel->who_can_do_img) }}" target="_blank">Current
                                             Image</a>
                                     @endif
+                                    @include('admin.partials.image-alt-input', [
+                                        'id' => 'who_can_do_img_alt',
+                                        'name' => 'label[image_alts][who_can_do_img]',
+                                        'value' => data_get($course->dynamicLabel?->image_alts, 'who_can_do_img'),
+                                    ])
                                 </div>
 
                                 <div class="col-lg-6" style="margin:0;">
@@ -838,6 +853,11 @@
                                         <a href="{{ asset($course->dynamicLabel->lectures_img) }}" target="_blank">Current
                                             Image</a>
                                     @endif
+                                    @include('admin.partials.image-alt-input', [
+                                        'id' => 'lectures_img_alt',
+                                        'name' => 'label[image_alts][lectures_img]',
+                                        'value' => data_get($course->dynamicLabel?->image_alts, 'lectures_img'),
+                                    ])
                                 </div>
 
                                 <div class="col-lg-12 mb">
@@ -890,6 +910,11 @@
                                             target="_blank">Current
                                             Image</a>
                                     @endif
+                                    @include('admin.partials.image-alt-input', [
+                                        'id' => 'practice_session_img_alt',
+                                        'name' => 'label[image_alts][practice_session_img]',
+                                        'value' => data_get($course->dynamicLabel?->image_alts, 'practice_session_img'),
+                                    ])
                                 </div>
 
                                 <div class="col-lg-12 mb">
@@ -941,6 +966,11 @@
                                             target="_blank">Current
                                             Image</a>
                                     @endif
+                                    @include('admin.partials.image-alt-input', [
+                                        'id' => 'mock_examination_img_alt',
+                                        'name' => 'label[image_alts][mock_examination_img]',
+                                        'value' => data_get($course->dynamicLabel?->image_alts, 'mock_examination_img'),
+                                    ])
                                 </div>
 
                                 <div class="col-lg-12 mb">
@@ -1124,6 +1154,11 @@
                                             target="_blank">Current
                                             Image</a>
                                     @endif
+                                    @include('admin.partials.image-alt-input', [
+                                        'id' => 'career_path_section_img_alt',
+                                        'name' => 'label[image_alts][career_path_section_img]',
+                                        'value' => data_get($course->dynamicLabel?->image_alts, 'career_path_section_img'),
+                                    ])
                                 </div>
 
                             </div>
@@ -1227,6 +1262,11 @@
                                             target="_blank">Current
                                             Image</a>
                                     @endif
+                                    @include('admin.partials.image-alt-input', [
+                                        'id' => 'exam_information_section_img_alt',
+                                        'name' => 'label[image_alts][exam_information_section_img]',
+                                        'value' => data_get($course->dynamicLabel?->image_alts, 'exam_information_section_img'),
+                                    ])
                                 </div>
 
                                 <div class="col-lg-6 mb">
@@ -1446,6 +1486,11 @@
                                             target="_blank">Current
                                             Image</a>
                                     @endif
+                                    @include('admin.partials.image-alt-input', [
+                                        'id' => 'learner_stories_img_alt',
+                                        'name' => 'label[image_alts][learner_stories_img]',
+                                        'value' => data_get($course->dynamicLabel?->image_alts, 'learner_stories_img'),
+                                    ])
                                 </div>
                                 <div class="col-lg-6 mb">
                                     <label for="">Label ( Success Stories )</label>
@@ -1654,6 +1699,11 @@
                                         <a href="{{ asset($course->dynamicLabel->what_you_earn_img) }}" target="_blank">Current
                                             Image</a>
                                     @endif
+                                    @include('admin.partials.image-alt-input', [
+                                        'id' => 'what_you_earn_img_alt',
+                                        'name' => 'label[image_alts][what_you_earn_img]',
+                                        'value' => data_get($course->dynamicLabel?->image_alts, 'what_you_earn_img'),
+                                    ])
                                 </div>
 
                                 <div class="col-lg-12 mb" style="margin:0;text-align: right;">

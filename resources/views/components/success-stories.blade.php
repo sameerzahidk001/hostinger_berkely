@@ -21,7 +21,7 @@
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-10">
         @foreach($testimonials->where('status', 'show') as $testimonial)
             <div class="relative overflow-hidden group h-[500px] bg-primary">
-                <img src="{{ $testimonial['image'] }}" class="h-full w-full absolute object-cover transition-all duration-400 ease-in group-hover:scale-105">
+                <img src="{{ $testimonial['image'] }}" alt="{{ image_alt($testimonial['image_alt'] ?? null, $testimonial['title'] ?? 'Success story') }}" class="h-full w-full absolute object-cover transition-all duration-400 ease-in group-hover:scale-105">
                 <div class="absolute p-8 z-50 gap-4 flex flex-col justify-end h-full w-full">
                     <span class="font-canela text-white text-[24px] md:text-[36px] lg:text-[43px]">{{ $testimonial['title'] }}</span>
                     <p class="hidden font-semibold group-hover:block text-white text-[18px]">

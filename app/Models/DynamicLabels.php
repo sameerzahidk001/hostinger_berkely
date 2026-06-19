@@ -11,6 +11,10 @@ class DynamicLabels extends Model
     protected $table = 'course_dynamic_labels';
     protected $guarded = [];
 
+    protected $casts = [
+        'image_alts' => 'array',
+    ];
+
     public function course()
     {
         return $this->belongsTo(Course::class, 'course_id', 'id');

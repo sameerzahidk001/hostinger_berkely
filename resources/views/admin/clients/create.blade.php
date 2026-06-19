@@ -66,6 +66,11 @@
                                     <!-- Accept only one image -->
                                     <input type="file" name="image" id="image" class="form-control" required>
                                 </div>
+                                @include('admin.partials.image-alt-input', [
+                                    'id' => 'client_create_image_alt',
+                                    'name' => 'image_alt',
+                                    'value' => old('image_alt'),
+                                ])
                                 @error('image')
                                     <p class="text-danger text-xs italic">{{ $message }}</p>
                                 @enderror

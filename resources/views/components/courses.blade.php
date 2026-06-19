@@ -3,6 +3,7 @@
         @foreach ($courses as $course)
             <div class="relative overflow-hidden group h-[500px] bg-primary">
                 <img src="{{ asset($course['image']) }}"
+                    alt="{{ image_alt($course['image_alt'] ?? null, $course['title'] ?? 'Course') }}"
                     class="h-full transition-all delay-300 duration-400 ease-in w-full absolute group-hover:scale-105 object-cover">
                 
                 <div class="absolute px-4 py-8 z-50 gap-4 flex flex-col justify-end bg-opacity-45 h-full w-full bottom-0">

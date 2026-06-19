@@ -334,6 +334,12 @@
                                                         name="sections[{{ $i }}][image]"
                                                         value="{{ $section['image'] ?? '' }}">
 
+                                                    @include('admin.partials.image-alt-input', [
+                                                        'id' => 'sections_' . $i . '_image_alt',
+                                                        'name' => 'sections[' . $i . '][image_alt]',
+                                                        'value' => $section['image_alt'] ?? '',
+                                                    ])
+
                                                     @if (!empty($section['image_source']) && $section['image_source'] !== 'remove')
                                                         <div class="clearfix image-preview-block">
                                                             <small class="pull-left">
@@ -895,6 +901,12 @@
                                                     <input type="hidden" id="sections_{{ $i }}_image_url"
                                                         name="sections[{{ $i }}][image]"
                                                         value="{{ $section['image'] ?? '' }}">
+
+                                                    @include('admin.partials.image-alt-input', [
+                                                        'id' => 'sections_' . $i . '_image_alt',
+                                                        'name' => 'sections[' . $i . '][image_alt]',
+                                                        'value' => $section['image_alt'] ?? '',
+                                                    ])
 
                                                     @if (!empty($section['image_source']) && $section['image_source'] !== 'remove')
                                                         <div class="clearfix image-preview-block">
@@ -1507,6 +1519,12 @@
                                                         name="sections[{{ $i }}][image]"
                                                         value="{{ $section['image'] ?? '' }}">
 
+                                                    @include('admin.partials.image-alt-input', [
+                                                        'id' => 'sections_' . $i . '_image_alt',
+                                                        'name' => 'sections[' . $i . '][image_alt]',
+                                                        'value' => $section['image_alt'] ?? '',
+                                                    ])
+
                                                     @if (!empty($section['image_source']) && $section['image_source'] !== 'remove')
                                                         <div class="clearfix image-preview-block">
                                                             <small class="pull-left">
@@ -1687,6 +1705,12 @@
                                                         name="sections[{{ $i }}][image]"
                                                         value="{{ $section['image'] ?? '' }}">
 
+                                                    @include('admin.partials.image-alt-input', [
+                                                        'id' => 'sections_' . $i . '_image_alt',
+                                                        'name' => 'sections[' . $i . '][image_alt]',
+                                                        'value' => $section['image_alt'] ?? '',
+                                                    ])
+
                                                     @if (!empty($section['image_source']) && $section['image_source'] !== 'remove')
                                                         <div class="clearfix image-preview-block">
                                                             <small class="pull-left">
@@ -1771,6 +1795,12 @@
                                                                     <input type="hidden" id="sections_{{ $i }}_cards_{{ $key }}_image_url"
                                                                         name="sections[{{ $i }}][cards][{{ $key }}][image]"
                                                                         value="{{ ($card['image_source'] ?? '') === 'library' ? ($card['image'] ?? '') : '' }}">
+
+                                                                    @include('admin.partials.image-alt-input', [
+                                                                        'id' => 'sections_' . $i . '_cards_' . $key . '_image_alt',
+                                                                        'name' => 'sections[' . $i . '][cards][' . $key . '][image_alt]',
+                                                                        'value' => $card['image_alt'] ?? '',
+                                                                    ])
 
                                                                     @if (!empty($card['image']) && ($card['image_source'] ?? '') !== 'remove')
                                                                         <div class="clearfix image-preview-block">
@@ -1909,6 +1939,12 @@
                                                     <input type="hidden" id="sections_{{ $i }}_image_url"
                                                         name="sections[{{ $i }}][image]"
                                                         value="{{ $section['image'] ?? '' }}">
+
+                                                    @include('admin.partials.image-alt-input', [
+                                                        'id' => 'sections_' . $i . '_image_alt',
+                                                        'name' => 'sections[' . $i . '][image_alt]',
+                                                        'value' => $section['image_alt'] ?? '',
+                                                    ])
 
                                                     @if (!empty($section['image_source']) && $section['image_source'] !== 'remove')
                                                         <div class="clearfix image-preview-block">
@@ -2050,6 +2086,12 @@
                                                                     <input type="hidden" id="sections_{{ $i }}_cards_{{ $key }}_image_url"
                                                                         name="sections[{{ $i }}][cards][{{ $key }}][image]"
                                                                         value="{{ ($card['image_source'] ?? '') === 'library' ? ($card['image'] ?? '') : '' }}">
+
+                                                                    @include('admin.partials.image-alt-input', [
+                                                                        'id' => 'sections_' . $i . '_cards_' . $key . '_image_alt',
+                                                                        'name' => 'sections[' . $i . '][cards][' . $key . '][image_alt]',
+                                                                        'value' => $card['image_alt'] ?? '',
+                                                                    ])
 
                                                                     @if (!empty($card['image']) && ($card['image_source'] ?? '') !== 'remove')
                                                                         <div class="clearfix image-preview-block">
@@ -2422,6 +2464,12 @@
                                                     <input type="hidden" id="sections_{{ $i }}_image_url"
                                                         name="sections[{{ $i }}][image]"
                                                         value="{{ $section['image'] ?? '' }}">
+
+                                                    @include('admin.partials.image-alt-input', [
+                                                        'id' => 'sections_' . $i . '_image_alt',
+                                                        'name' => 'sections[' . $i . '][image_alt]',
+                                                        'value' => $section['image_alt'] ?? '',
+                                                    ])
 
                                                     @if (!empty($section['image_source']) && $section['image_source'] !== 'remove')
                                                         <div class="clearfix image-preview-block">
@@ -2885,6 +2933,11 @@
                                         </small>
                                     @endif
                                 </div>
+                                @include('admin.partials.image-alt-input', [
+                                    'id' => 'meta_thumbnail_alt',
+                                    'name' => 'meta_thumbnail_alt',
+                                    'value' => old('meta_thumbnail_alt', $meta->thumbnail_alt ?? ''),
+                                ])
 
                                 <!-- Hidden file input -->
                                 <input type="file" id="local_meta_thumbnail_input" name="local_meta_thumbnail_input"

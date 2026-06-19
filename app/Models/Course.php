@@ -24,7 +24,7 @@ class Course extends Model
         'with_subject','exam_information', 'exam_location', 'other_benifits', 'eligibility',
         'offered_by','benifits','vision_and_mission','who_can_do', 'exam_dates', 'exam_reg_deadline','exam_passing_criteria',
         'course_structure_overview_first','course_exam_format_duration_overview','course_structure_overview','exam_location_paragraph', 'salary', 'career_path', 
-        'overview_img', 'overview_video_url', 'reg_iframe',
+        'overview_img', 'overview_video_url', 'reg_iframe', 'image_alts',
         'performance_standard_heading', 'performance_standard_description', 'performance_standard_section',
         'overview_section', 'benefits_section', 'who_can_do_section', 'eligibility_section', 'learning_methodology_section',
         'career_path_section', 'exam_section', 'success_stories','success_stories_link_text','alumni_benefits_description', 'contact_us_section', 'contact_us_text',
@@ -41,7 +41,8 @@ class Course extends Model
         'benifits' => 'array',
         'who_can_do' => 'array',
         'exam_location' => 'array',
-        'custom_videos ' => 'array'
+        'custom_videos ' => 'array',
+        'image_alts' => 'array',
     ];
     
     public function courseObjectivePoints()
