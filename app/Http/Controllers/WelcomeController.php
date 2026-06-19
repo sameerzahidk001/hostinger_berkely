@@ -21,37 +21,8 @@ class WelcomeController extends Controller
         $siteSetting = SiteSettings::first();
         $homepageId = $siteSetting ? $siteSetting->home : null;
 
-        $page = Page::where('id', $homepageId)->first();
-
-        $page->load('sections');
-
-        $page->sections = $page->sections->sortBy('order')->map(function ($section) {
-            $section->data = json_decode($section->data, true);
-
-            if ($section->section_type === 'category' && isset($section->data['category'])) {
-                $orderBy = explode(',', $section->data['orderby']);
-                $orderColumn = $orderBy[0] ?? 'id';
-                $orderDirection = $orderBy[1] ?? 'asc';
-
-                $paginationCount = $section->data['pagination'] == 1
-                    ? 6
-                    : ($section->data['pagination_num'] ?? 10);
-
-                $section->categoryDetails = Category::with([
-                    'courses' => function ($query) use ($orderColumn, $orderDirection) {
-                        $query->select('courses.id', 'courses.title', 'courses.slug', 'courses.thumbnail', 'courses.subject_id')
-                            ->orderBy($orderColumn, $orderDirection);
-                    }
-                ])
-                    ->where('id', $section->data['category'])
-                    ->first();
-            }
-
-            if ($section->section_type === 'clients') {
-                $section->clientDetails = Client::where('active', '1')->orderBy('id', 'asc')->get();
-            }
-            return $section;
-        });
+        $page = Page::where('id', $homepageId)->firstOrFail();
+        $page = $this->hydratePageSections($page);
 
         return view('welcome', compact('page'));
     }
@@ -60,7 +31,7 @@ class WelcomeController extends Controller
     {
         $siteSetting = SiteSettings::first();
         $homepageId = $siteSetting ? $siteSetting->home : null;
-        $category_perma = $siteSetting->category_perma ?? 'category'; // Default value
+        $category_perma = $siteSetting->category_perma ?? 'category';
 
         $breadcrumb = [['title' => 'Home', 'url' => route('welcome')]];
 
@@ -68,20 +39,16 @@ class WelcomeController extends Controller
             if (!$homepageId) {
                 abort(404);
             }
-            $page = Page::find($homepageId);
-            if (!$page) {
-                abort(404);
-            }
+            $page = Page::findOrFail($homepageId);
         } else {
             $slugParts = explode('/', $slug);
-            $pageSlug = end($slugParts); // Get last part of slug
+            $pageSlug = end($slugParts);
 
-            $page = Page::where('url', $pageSlug)->first();
+            $page = $this->resolvePageBySlug($pageSlug);
             if (!$page) {
                 abort(404);
             }
 
-            // Canonical URL for category-linked pages: /{category_perma}/{page-slug}
             if ($page->category_id) {
                 return redirect()->to(url($category_perma . '/' . $page->url), 301);
             }
@@ -89,34 +56,7 @@ class WelcomeController extends Controller
             $breadcrumb[] = ['title' => $page->page_name, 'url' => url($page->full_url)];
         }
 
-        $page->load('sections');
-
-        $page->sections = $page->sections->sortBy('order')->map(function ($section) {
-            $section->data = json_decode($section->data, true);
-
-            // Load category-related sections
-            if ($section->section_type === 'category' && isset($section->data['category'])) {
-                $orderBy = explode(',', $section->data['orderby']);
-                $orderColumn = $orderBy[0] ?? 'id';
-                $orderDirection = $orderBy[1] ?? 'asc';
-
-                $section->categoryDetails = Category::with([
-                    'courses' => function ($query) use ($orderColumn, $orderDirection) {
-                        $query->select('courses.id', 'courses.title', 'courses.slug', 'courses.thumbnail', 'courses.subject_id')
-                            ->orderBy($orderColumn, $orderDirection);
-                    }
-                ])
-                    ->where('id', $section->data['category'])
-                    ->first();
-            }
-
-            // Load client-related sections
-            if ($section->section_type === 'clients') {
-                $section->clientDetails = Client::where('active', '1')->orderBy('id', 'asc')->get();
-            }
-
-            return $section;
-        });
+        $page = $this->hydratePageSections($page);
 
         return view('welcome', compact('page', 'breadcrumb'));
     }
@@ -124,39 +64,57 @@ class WelcomeController extends Controller
     public function categoryDetails($categoryPerma, $slug)
     {
         $siteSetting = SiteSettings::first();
-        $homepageId = $siteSetting ? $siteSetting->home : null;
+        $expectedPerma = $siteSetting->category_perma ?? 'category';
+
+        if ($categoryPerma !== $expectedPerma) {
+            abort(404);
+        }
 
         $breadcrumb = [['title' => 'Home', 'url' => route('welcome')]];
 
-        // Get base category page ID from site settings
-        $base_page_id = $siteSetting->categories ?? null;
-
-        if (!$base_page_id) {
-            abort(404);
+        $basePageId = $siteSetting->categories ?? null;
+        if ($basePageId) {
+            $basePage = Page::find($basePageId);
+            if ($basePage) {
+                $breadcrumb[] = ['title' => $basePage->page_name, 'url' => url($basePage->full_url)];
+            }
         }
 
-        // Find the base category page
-        $page = Page::where('id', $base_page_id)->first();
+        $page = $this->resolvePageBySlug($slug);
         if (!$page) {
-            abort(404);
-        }
-
-        $breadcrumb[] = ['title' => $page->page_name, 'url' => url($page->url)];
-
-        // Find the page by its unique slug (not the category slug)
-        $page = Page::where('url', $slug)->first();
-        if (!$page) {
+            if (Category::where('slug', $slug)->exists()) {
+                return redirect('/subject/' . $slug, 301);
+            }
             abort(404);
         }
 
         $breadcrumb[] = ['title' => $page->page_name, 'url' => url($page->full_url)];
+        $page = $this->hydratePageSections($page);
 
+        return view('welcome', compact('page', 'breadcrumb'));
+    }
+
+    private function resolvePageBySlug(string $slug): ?Page
+    {
+        return Page::where('url', $slug)
+            ->withCount('sections')
+            ->orderByDesc('sections_count')
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    private function hydratePageSections(Page $page): Page
+    {
         $page->load('sections');
 
         $page->sections = $page->sections->sortBy('order')->map(function ($section) {
-            $section->data = json_decode($section->data, true);
+            $decoded = is_string($section->data) ? json_decode($section->data, true) : $section->data;
+            $section->data = is_array($decoded) ? $decoded : [];
 
-            // Load category-related sections
+            if (empty($section->section_type)) {
+                $section->section_type = $section->data['section_type'] ?? null;
+            }
+
             if ($section->section_type === 'category' && isset($section->data['category'])) {
                 $orderBy = explode(',', $section->data['orderby']);
                 $orderColumn = $orderBy[0] ?? 'id';
@@ -172,7 +130,6 @@ class WelcomeController extends Controller
                     ->first();
             }
 
-            // Load client-related sections
             if ($section->section_type === 'clients') {
                 $section->clientDetails = Client::where('active', '1')->orderBy('id', 'asc')->get();
             }
@@ -180,7 +137,7 @@ class WelcomeController extends Controller
             return $section;
         });
 
-        return view('welcome', compact('page', 'breadcrumb'));
+        return $page;
     }
 
     private function getPageIdFromSlug($slug)
