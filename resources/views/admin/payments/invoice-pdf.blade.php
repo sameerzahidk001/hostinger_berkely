@@ -177,9 +177,7 @@
         // Money
         $displayCurrency = payment_display_currency($payments);
         $settlingAed = (float) ($payments->price ?? 0);
-        $displayAmount = $displayCurrency === 'AED'
-            ? $settlingAed
-            : (float) (optional($coursefee)->price ?? payment_display_amount_from_aed($payments, $settlingAed));
+        $displayAmount = payment_display_amount_from_aed($payments, $settlingAed);
 
         $price = $settlingAed;
         $taxPercentage = (float) ($coursefee->tax_percentage ?? 0);
@@ -262,7 +260,6 @@
                 <tr>
                     <th style="width:40px;">#</th>
                     <th>Training Program & Description</th>
-                    <th style="width:60px;">Qty</th>
                     <th style="width:90px;">Tax</th>
                     <th style="width:110px;">Amount</th>
                 </tr>
@@ -291,7 +288,6 @@
                             </ul>
                         @endif
                     </td>
-                    <td>1.00</td>
                     <td>{{ number_format($taxPercentage, 2) }}%</td>
                     <td>{{ $money($lineAmount) }}</td>
                 </tr>

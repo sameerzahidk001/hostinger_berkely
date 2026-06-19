@@ -496,10 +496,11 @@ if (!function_exists('payment_display_amount_from_aed')) {
         }
 
         $settlingTotal = (float) ($payment->price ?? 0);
-        $packagePrice = (float) (optional($payment->courseFee)->price ?? 0);
 
-        if ($settlingTotal > 0 && $packagePrice > 0) {
-            return round(($aedAmount / $settlingTotal) * $packagePrice, 2);
+        if ($settlingTotal > 0) {
+            $fullDisplay = convert_from_aed($settlingTotal, $currency);
+
+            return round(($aedAmount / $settlingTotal) * $fullDisplay, 2);
         }
 
         return convert_from_aed($aedAmount, $currency);
@@ -633,21 +634,11 @@ if (!function_exists('format_payment_amount')) {
     {
         $currency = payment_display_currency($payment);
         $settlingAed = (float) ($payment->price ?? 0);
-
-        if ($currency === 'AED') {
-            return [
-                'display' => 'AED ' . number_format($settlingAed, 2),
-                'settling_aed' => $settlingAed,
-                'currency' => 'AED',
-                'show_settling_note' => false,
-            ];
-        }
-
-        $displayAmount = (float) (optional($payment->courseFee)->price ?? convert_from_aed($settlingAed, $currency));
+        $displayAmount = payment_display_amount_from_aed($payment, $settlingAed);
 
         return [
             'display' => $currency . ' ' . number_format($displayAmount, 2),
-            'settling_aed' => payment_bracket_aed_from_display($payment, $displayAmount),
+            'settling_aed' => $settlingAed,
             'currency' => $currency,
             'show_settling_note' => false,
         ];

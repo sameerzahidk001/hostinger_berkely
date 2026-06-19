@@ -166,10 +166,14 @@
             }
 
             const scrub = function () {
-                root.querySelectorAll('button').forEach(function (btn) {
-                    const text = (btn.textContent || '').trim();
-                    if (/^pay\b/i.test(text) && /[\d,.]/.test(text)) {
-                        btn.textContent = 'Pay';
+                root.querySelectorAll('button, [role="button"], input[type="submit"]').forEach(function (btn) {
+                    const text = (btn.textContent || btn.value || '').trim();
+                    if (/^pay\b/i.test(text)) {
+                        if (btn.tagName === 'INPUT') {
+                            btn.value = 'Pay';
+                        } else {
+                            btn.textContent = 'Pay';
+                        }
                     }
                 });
             };
@@ -179,7 +183,18 @@
             observer.observe(root, { childList: true, subtree: true, characterData: true });
             setTimeout(function () {
                 observer.disconnect();
-            }, 20000);
+            }, 30000);
+        }
+
+        function showPaymentAmount(targetSelector, displayAmount) {
+            if (!displayAmount) {
+                return;
+            }
+
+            $(targetSelector).html(
+                '<div style="font-size:13px;font-weight:500;color:#666;margin-bottom:4px;">Amount to pay</div>' +
+                '<div style="font-size:22px;font-weight:700;">' + displayAmount + '</div>'
+            );
         }
 
         function errorCallback(error) {
@@ -248,7 +263,7 @@
                 },
                 success: function (res) {
                     if (res.displayAmount) {
-                        $(amountDisplayId).text(res.displayAmount);
+                        showPaymentAmount(amountDisplayId, res.displayAmount);
                     }
 
                     if (res.session && res.session.id) {
