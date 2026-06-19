@@ -24,6 +24,8 @@ php artisan migrate --path=database/migrations/2026_06_16_000002_add_profile_fie
 php artisan migrate --path=database/migrations/2026_06_16_000003_add_module_to_permissions_table.php --force
 php artisan migrate --path=database/migrations/2026_06_16_000004_add_audit_columns_to_pages_seo_table.php --force
 php artisan migrate --path=database/migrations/2026_06_16_000005_add_source_to_payments_table.php --force
+php artisan migrate --path=database/migrations/2026_06_19_000001_create_user_activity_logs_table.php --force
+php artisan migrate --path=database/migrations/2026_06_19_000002_add_image_alt_columns.php --force
 
 php artisan config:clear
 php artisan cache:clear
