@@ -6,19 +6,20 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Artesaos\SEOTools\Facades\SEOTools;
-use App\Models\{Page,Course};
+use App\Models\{Page,Course, SiteSettings};
 use Illuminate\Support\Str;
 
 class SetSEO
 {
     public function handle($request, Closure $next)
     {
-        $currentUrl = $request->path();
+        $currentUrl = trim($request->path(), '/');
+
         if (Str::startsWith($currentUrl, 'course/')) {
             $course_slug = Str::after($currentUrl, 'course/');
             $seoData = Course::where('slug', $course_slug)->with('seo')->first();
-        }else{
-            $seoData = Page::where('url', $currentUrl)->with('seo')->first();
+        } else {
+            $seoData = $this->resolvePageSeo($currentUrl);
         }
 
         if (!$seoData) {
@@ -56,5 +57,23 @@ class SetSEO
         }
 
         return $next($request);
+    }
+
+    private function resolvePageSeo(string $path): ?Page
+    {
+        $categoryPerma = SiteSettings::value('category_perma') ?? 'category';
+
+        if (str_contains($path, '/')) {
+            [$prefix, $slug] = explode('/', $path, 2);
+
+            if ($prefix === $categoryPerma && $slug !== '') {
+                $page = Page::where('url', $slug)->with('seo')->first();
+                if ($page) {
+                    return $page;
+                }
+            }
+        }
+
+        return Page::where('url', $path)->with('seo')->first();
     }
 }

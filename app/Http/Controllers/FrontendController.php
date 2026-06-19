@@ -42,12 +42,15 @@ class FrontendController extends Controller
         $data['subject'] = Category::with([
             'courses' => function ($query) {
                 $query->select('courses.id', 'courses.title', 'courses.slug', 'courses.thumbnail', 'courses.subject_id');
-                //  ->where('courses.with_subject', true);
             }
         ])
             ->where('slug', $slug)
-            //->orderBy('priority')
             ->first();
+
+        if (! $data['subject']) {
+            abort(404);
+        }
+
         $data['title'] = $data['subject']->name;
         return view('category_courses')->with($data);
     }

@@ -467,7 +467,13 @@
                 }
             });
         });
-        hidenElement.forEach((el) => obsarver.observe(el));
+        hidenElement.forEach((el) => {
+            obsarver.observe(el);
+            const rect = el.getBoundingClientRect();
+            if (rect.top < window.innerHeight) {
+                el.classList.add('show');
+            }
+        });
 
         const input = document.querySelector("#phone2");
         window.intlTelInput(input, {

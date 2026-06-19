@@ -80,7 +80,7 @@ Route::controller(FrontendController::class)->middleware('set.seo')->group(funct
     // Route::post('/filter-courses-ajax', 'filterCourses')->name('courses.filter');
     Route::get('/course/{course}', 'courseDetails')->name('course.details');
     // Route::get('/courses', 'Courses')->name('courses');
-    Route::get('/category/{name}', 'categoryDetails')->name('subject.details');
+    Route::get('/subject/{name}', 'categoryDetails')->name('subject.details');
 
     Route::get('/study-abroad', 'studyAbroad')->name('study-abroad');
 

@@ -133,6 +133,10 @@
     <form action="{{ route('pages.update', $page->id) }}" method="POST" enctype="multipart/form-data">
         @csrf
         @method('PUT')
+        <input type="hidden" name="sections_submitted" value="1">
+        @if ($page->category_id)
+            <input type="hidden" name="parent_id" value="">
+        @endif
         <div class="wrapper wrapper-content animated fadeInRight" style="padding-bottom:0px;">
             <div class="row">
                 <div class="col-lg-12">
@@ -266,7 +270,14 @@
                     @if (old('sections', $page->sections))
                         @for ($i = 0; $i < count(old('sections', $page->sections)); $i++)
                             @php
-                                $section = old('sections.' . $i, $page->sections[$i]->data ?? []);
+                                $sectionData = $page->sections[$i]->data ?? [];
+                                if (is_string($sectionData)) {
+                                    $sectionData = json_decode($sectionData, true) ?? [];
+                                }
+                                $section = old('sections.' . $i, $sectionData);
+                                if (empty($section['section_type'])) {
+                                    $section['section_type'] = $page->sections[$i]->section_type ?? '';
+                                }
                                 $sectionType = ucwords(str_replace('-', ' ', $section['section_type'] ?? ''));
                             @endphp
 
@@ -321,7 +332,7 @@
 
                                                     <input type="hidden" id="sections_{{ $i }}_image_url"
                                                         name="sections[{{ $i }}][image]"
-                                                        value="{{ ($section['image_source'] ?? '') === 'library' ? ($section['image'] ?? '') : '' }}">
+                                                        value="{{ $section['image'] ?? '' }}">
 
                                                     @if (!empty($section['image_source']) && $section['image_source'] !== 'remove')
                                                         <div class="clearfix image-preview-block">
@@ -883,7 +894,7 @@
 
                                                     <input type="hidden" id="sections_{{ $i }}_image_url"
                                                         name="sections[{{ $i }}][image]"
-                                                        value="{{ ($section['image_source'] ?? '') === 'library' ? ($section['image'] ?? '') : '' }}">
+                                                        value="{{ $section['image'] ?? '' }}">
 
                                                     @if (!empty($section['image_source']) && $section['image_source'] !== 'remove')
                                                         <div class="clearfix image-preview-block">
@@ -1494,7 +1505,7 @@
 
                                                     <input type="hidden" id="sections_{{ $i }}_image_url"
                                                         name="sections[{{ $i }}][image]"
-                                                        value="{{ ($section['image_source'] ?? '') === 'library' ? ($section['image'] ?? '') : '' }}">
+                                                        value="{{ $section['image'] ?? '' }}">
 
                                                     @if (!empty($section['image_source']) && $section['image_source'] !== 'remove')
                                                         <div class="clearfix image-preview-block">
@@ -1674,7 +1685,7 @@
 
                                                     <input type="hidden" id="sections_{{ $i }}_image_url"
                                                         name="sections[{{ $i }}][image]"
-                                                        value="{{ ($section['image_source'] ?? '') === 'library' ? ($section['image'] ?? '') : '' }}">
+                                                        value="{{ $section['image'] ?? '' }}">
 
                                                     @if (!empty($section['image_source']) && $section['image_source'] !== 'remove')
                                                         <div class="clearfix image-preview-block">
@@ -1897,7 +1908,7 @@
 
                                                     <input type="hidden" id="sections_{{ $i }}_image_url"
                                                         name="sections[{{ $i }}][image]"
-                                                        value="{{ ($section['image_source'] ?? '') === 'library' ? ($section['image'] ?? '') : '' }}">
+                                                        value="{{ $section['image'] ?? '' }}">
 
                                                     @if (!empty($section['image_source']) && $section['image_source'] !== 'remove')
                                                         <div class="clearfix image-preview-block">
@@ -2410,7 +2421,7 @@
 
                                                     <input type="hidden" id="sections_{{ $i }}_image_url"
                                                         name="sections[{{ $i }}][image]"
-                                                        value="{{ ($section['image_source'] ?? '') === 'library' ? ($section['image'] ?? '') : '' }}">
+                                                        value="{{ $section['image'] ?? '' }}">
 
                                                     @if (!empty($section['image_source']) && $section['image_source'] !== 'remove')
                                                         <div class="clearfix image-preview-block">
