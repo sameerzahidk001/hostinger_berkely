@@ -1,5 +1,5 @@
-<section  id="section-{{$id}} hero-banner" class="relative overflow-hidden min-h-screen max-h-screen">
-    @if (isset($video) || isset($background))
+<section id="section-{{ $id }}" class="relative overflow-hidden {{ (!empty($video) || !empty($background)) ? 'min-h-screen max-h-screen' : 'py-16 bg-[#000435]' }}">
+    @if (!empty($video) || !empty($background))
         <div class="absolute scroll-smooth bg-black top-0 flex justify-center flex-col z-30 h-full w-full items-center">
             @if(!empty($video))
                 <iframe class="w-full min-h-screen max-h-screen object-cover" 

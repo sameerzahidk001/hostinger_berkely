@@ -120,7 +120,12 @@ class PagesController extends Controller
         $page->sections = $page->sections
             ->sortBy('order')
             ->map(function ($section) {
-                $section->data = json_decode($section->data, true);
+                $section->data = json_decode($section->data, true) ?? [];
+
+                if (empty($section->data['section_type']) && ! empty($section->section_type)) {
+                    $section->data['section_type'] = $section->section_type;
+                }
+
                 return $section;
             });
 
@@ -172,6 +177,9 @@ class PagesController extends Controller
         $page->url = $request->input('url');
         $page->category_id = $request->input('category_id');
         $page->parent_id = $request->input('parent_id');
+        if ($page->category_id) {
+            $page->parent_id = null;
+        }
         $page->save();
 
         $meta->title = $request->input('meta_title');
@@ -194,19 +202,36 @@ class PagesController extends Controller
 
         $meta->save();
 
-        // Get existing sections indexed by ID
+        $page->load('sections');
         $existingSections = $page->sections->keyBy('id');
-
-        // Track new section IDs
         $newSectionIds = [];
 
-        // dd($request->sections);
+        if (! $request->has('sections')) {
+            return redirect()->back()
+                ->with('error', 'Page meta saved, but section data was not received. The form may be too large — try again or ask hosting to increase post_max_size and max_input_vars.')
+                ->withInput();
+        }
 
-        foreach ($request->sections as $order => $section) {
+        $sections = $request->input('sections');
+        if (! is_array($sections)) {
+            return redirect()->back()
+                ->with('error', 'Invalid section data received. Existing sections were kept unchanged.')
+                ->withInput();
+        }
+
+        foreach ($sections as $order => $section) {
+            if (! is_array($section)) {
+                continue;
+            }
 
             // Get the existing section based on ID (if available)
             $existingSection = isset($section['section_id']) ? $existingSections->get($section['section_id']) : null;
-            $oldData = $existingSection ? json_decode($existingSection->data, true) : [];
+            $oldData = $existingSection ? (json_decode($existingSection->data, true) ?? []) : [];
+
+            if (empty($section['section_type'])) {
+                $section['section_type'] = $existingSection->section_type
+                    ?? ($oldData['section_type'] ?? null);
+            }
 
             // 🔹 Preserve old images for cards before updating
             if (isset($section['cards'])) {
@@ -299,6 +324,17 @@ class PagesController extends Controller
                 $section['icon'] = $request->input("sections.$order.icon");
             } elseif ($request->input("sections.$order.icon_source") === 'remove') {
                 $section['icon'] = null;
+            }
+
+            if (empty($section['image']) && ! empty($oldData['image'])) {
+                $section['image'] = $oldData['image'];
+            }
+            if (empty($section['icon']) && ! empty($oldData['icon'])) {
+                $section['icon'] = $oldData['icon'];
+            }
+
+            if (empty($section['section_type'])) {
+                continue;
             }
 
             $sectionId = $section['section_id'] ?? $section['id'] ?? null;
