@@ -74,15 +74,28 @@ class PagesController extends Controller
         }
 
         $data = $request->except('_token');
+
+        if (empty($data['url']) && ! empty($data['page_name'])) {
+            $data['url'] = Page::slugFromName($data['page_name']);
+        }
+
+        $url = $data['url'];
+        $baseUrl = $url;
+        $suffix = 1;
+        while (Page::where('url', $url)->where('parent_id', $data['parent_id'] ?? null)->exists()) {
+            $url = $baseUrl . '-' . $suffix++;
+        }
+        $data['url'] = $url;
+
         $pageCreated = Page::create($data);
 
         if ($pageCreated) {
-            session()->flash('success', 'Record added successfully!');
+            session()->flash('success', 'Page created. Add content sections and save.');
         } else {
             session()->flash('error', 'Failed to insert record!');
         }
 
-        return redirect()->route('pages.index');
+        return redirect()->route('pages.edit', $pageCreated->id);
     }
 
     /**
@@ -288,14 +301,21 @@ class PagesController extends Controller
                 $section['icon'] = null;
             }
 
-            $savedSection = PageSection::updateOrCreate(
-                ['id' => $section['id'] ?? null, 'page_id' => $id],
-                [
-                    'order' => $order,
-                    'section_type' => $section['section_type'],
-                    'data' => json_encode($section, JSON_PRETTY_PRINT),
-                ]
-            );
+            $sectionId = $section['section_id'] ?? $section['id'] ?? null;
+            $sectionPayload = [
+                'order' => $order,
+                'section_type' => $section['section_type'],
+                'data' => json_encode($section, JSON_PRETTY_PRINT),
+            ];
+
+            if ($sectionId) {
+                $savedSection = PageSection::updateOrCreate(
+                    ['id' => $sectionId, 'page_id' => $id],
+                    $sectionPayload
+                );
+            } else {
+                $savedSection = PageSection::create(array_merge(['page_id' => $id], $sectionPayload));
+            }
 
             // Track updated sections
             $newSectionIds[] = $savedSection->id;

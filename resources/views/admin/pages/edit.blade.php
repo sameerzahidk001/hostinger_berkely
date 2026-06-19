@@ -151,7 +151,10 @@
                                 <div class="col-lg-4">
                                     <label class="mb-1">Page URL <small class="italic">(dummy-page)</small></label>
                                     <input class="form-control" placeholder="Add Page URL" type="text" name="url"
-                                        id="page_url" value="{{ old('url', $page->url) }}" {{ $page->category_id ? 'readonly' : '' }}>
+                                        id="page_url" value="{{ old('url', $page->url) }}">
+                                    @if ($page->category_id)
+                                        <small class="text-muted">Category pages use a unique slug. Public URL: {{ (\App\Models\SiteSettings::value('category_perma') ?? 'category') . '/' . $page->url }}</small>
+                                    @endif
                                     @error('url')
                                         <p class="text-danger text-xs italic">{{ $message }}</p>
                                     @enderror
@@ -2980,15 +2983,21 @@
 
     <script>
         $(document).ready(function () {
-            $('#categorySelect').change(function () {
-                let selectedOption = $(this).find('option:selected');
-                let categorySlug = selectedOption.data('url');
+            function slugify(text) {
+                return text.toString().toLowerCase().trim()
+                    .replace(/[^\w\s-]/g, '')
+                    .replace(/[\s_-]+/g, '-')
+                    .replace(/^-+|-+$/g, '');
+            }
 
+            $('#categorySelect').change(function () {
                 if ($(this).val()) {
-                    $('#page_url').prop('readonly', true).val(categorySlug);
                     $('#parent_id').prop('disabled', true).val('');
+                    let pageName = $('input[name="page_name"]').val();
+                    if (!$('#page_url').val() && pageName) {
+                        $('#page_url').val(slugify(pageName));
+                    }
                 } else {
-                    $('#page_url').prop('readonly', false).val('{{ old("url", $page->url) }}');
                     $('#parent_id').prop('disabled', false);
                 }
             });
