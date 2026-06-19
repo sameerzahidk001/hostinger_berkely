@@ -242,7 +242,7 @@ $(document).ready(function() {
         };
         
     }, 1300);
-    toastr.success('Welcome to Admin Dashboard');
+    toastr.success('Welcome, {{ addslashes(panel_profile_name() ?: 'User') }}');
 });
 </script>
 <script>

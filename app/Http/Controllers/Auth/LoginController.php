@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\Admin;
 use App\Models\CartItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
 class LoginController extends Controller
@@ -19,6 +21,14 @@ class LoginController extends Controller
     {
         if (request()->boolean('redirect_to_cart')) {
             session(['redirect_to_cart' => true]);
+        }
+
+        if (Auth::guard('admin')->check()) {
+            return redirect()->route('admin.home');
+        }
+
+        if (Auth::check()) {
+            return redirect()->intended($this->redirectTo());
         }
 
         return view('auth.login');
@@ -42,9 +52,37 @@ class LoginController extends Controller
         $credentials = $request->only('email', 'password');
         $remember = $request->has('remember');
 
+        $admin = Admin::where('email', $credentials['email'])->first();
+        if ($admin && Hash::check($credentials['password'], $admin->password)) {
+            throw ValidationException::withMessages([
+                'email' => 'Admin accounts must sign in at ' . admin_login_url(),
+            ]);
+        }
+
         if (Auth::attempt($credentials, $remember)) {
-            // Regenerate session after login for security
             $request->session()->regenerate();
+
+            $role = Auth::user()->roles()->value('name');
+            if (is_admin_login_role($role)) {
+                Auth::logout();
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+
+                throw ValidationException::withMessages([
+                    'email' => 'Admin accounts must sign in at ' . admin_login_url(),
+                ]);
+            }
+
+            $user = Auth::user();
+            record_user_activity(
+                'User Login',
+                'Session started via ' . public_login_url(),
+                public_login_url(),
+                activity_audience_for_user($user),
+                $user?->id,
+                null,
+                $request
+            );
 
             if (session()->has('intended_package_id')) {
                 $packageId = session()->pull('intended_package_id');
@@ -83,6 +121,19 @@ class LoginController extends Controller
      */
     public function logout(Request $request)
     {
+        $user = Auth::user();
+        if ($user) {
+            record_user_activity(
+                'User Logout',
+                'Session ended',
+                public_login_url(),
+                activity_audience_for_user($user),
+                $user->id,
+                null,
+                $request
+            );
+        }
+
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

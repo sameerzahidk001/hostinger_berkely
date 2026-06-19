@@ -137,6 +137,27 @@ if (!function_exists('normalize_role_key')) {
     }
 }
 
+if (!function_exists('is_admin_login_role')) {
+    function is_admin_login_role(?string $role): bool
+    {
+        return in_array(normalize_role_key($role), ['admin', 'superadmin'], true);
+    }
+}
+
+if (!function_exists('public_login_url')) {
+    function public_login_url(): string
+    {
+        return url('/login');
+    }
+}
+
+if (!function_exists('admin_login_url')) {
+    function admin_login_url(): string
+    {
+        return route('admin.login');
+    }
+}
+
 if (!function_exists('is_content_writer_role_key')) {
     function is_content_writer_role_key(?string $role): bool
     {
@@ -379,6 +400,59 @@ if (!function_exists('audit_user_name')) {
     }
 }
 
+if (!function_exists('activity_audience_for_role')) {
+    function activity_audience_for_role(?string $role): string
+    {
+        $normalized = normalize_panel_role($role);
+
+        if (in_array($normalized, ['content_writer', 'accountant'], true)) {
+            return 'staff';
+        }
+
+        if ($normalized === 'instructor') {
+            return 'staff';
+        }
+
+        return 'student';
+    }
+}
+
+if (!function_exists('activity_audience_for_user')) {
+    function activity_audience_for_user(?\App\Models\User $user): string
+    {
+        if (! $user) {
+            return 'staff';
+        }
+
+        return activity_audience_for_role($user->roles()->value('name'));
+    }
+}
+
+if (!function_exists('record_user_activity')) {
+    function record_user_activity(
+        string $action,
+        ?string $item = null,
+        ?string $url = null,
+        ?string $audience = null,
+        ?int $userId = null,
+        ?int $adminId = null,
+        ?\Illuminate\Http\Request $request = null
+    ): void {
+        $request = $request ?? request();
+
+        app(\App\Services\UserActivityLogService::class)->log(
+            $action,
+            $audience ?? 'staff',
+            $item,
+            $url,
+            $userId,
+            $adminId,
+            $request?->ip(),
+            $request?->session()?->getId(),
+        );
+    }
+}
+
 if (!function_exists('cart_item_count')) {
     function cart_item_count(): int
     {
@@ -475,10 +549,11 @@ if (!function_exists('payment_display_amount_from_aed')) {
         }
 
         $settlingTotal = (float) ($payment->price ?? 0);
-        $packagePrice = (float) (optional($payment->courseFee)->price ?? 0);
 
-        if ($settlingTotal > 0 && $packagePrice > 0) {
-            return round(($aedAmount / $settlingTotal) * $packagePrice, 2);
+        if ($settlingTotal > 0) {
+            $fullDisplay = convert_from_aed($settlingTotal, $currency);
+
+            return round(($aedAmount / $settlingTotal) * $fullDisplay, 2);
         }
 
         return convert_from_aed($aedAmount, $currency);
@@ -612,21 +687,11 @@ if (!function_exists('format_payment_amount')) {
     {
         $currency = payment_display_currency($payment);
         $settlingAed = (float) ($payment->price ?? 0);
-
-        if ($currency === 'AED') {
-            return [
-                'display' => 'AED ' . number_format($settlingAed, 2),
-                'settling_aed' => $settlingAed,
-                'currency' => 'AED',
-                'show_settling_note' => false,
-            ];
-        }
-
-        $displayAmount = (float) (optional($payment->courseFee)->price ?? convert_from_aed($settlingAed, $currency));
+        $displayAmount = payment_display_amount_from_aed($payment, $settlingAed);
 
         return [
             'display' => $currency . ' ' . number_format($displayAmount, 2),
-            'settling_aed' => payment_bracket_aed_from_display($payment, $displayAmount),
+            'settling_aed' => $settlingAed,
             'currency' => $currency,
             'show_settling_note' => false,
         ];

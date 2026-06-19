@@ -94,7 +94,6 @@
                                         <div>
                                             <input type="hidden" name="cart_id[]" value="{{ $item->id }}">
                                             <h4 class="text-sm font-medium text-gray-900">{{ $item->courseFee->package_name }}</h4>
-                                            <p class="text-xs text-gray-500 mt-1">Quantity: {{ $item->quantity }}</p>
                                         </div>
                                         <div class="text-right">
                                             <p class="text-sm font-medium text-gray-900 whitespace-nowrap">{{ $linePrice['display'] }}</p>

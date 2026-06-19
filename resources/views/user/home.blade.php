@@ -141,7 +141,7 @@
                         <span aria-hidden="true">&times;</span>
                     </button>
                     <div class="modal-body" style="min-height: 420px; padding: 24px;">
-                        <div id="payment-amount-display" class="text-center mb-3" style="font-size: 18px; font-weight: 600;"></div>
+                        <div id="payment-amount-display" class="text-center mb-3" style="font-size: 22px; font-weight: 700; letter-spacing: 0.02em;"></div>
                         <div id="payment-loading" class="text-center py-4" style="display: none;">
                             <i class="fa fa-spinner fa-spin fa-2x"></i>
                             <p class="mt-2 mb-0">Loading payment form...</p>
@@ -170,10 +170,14 @@
                 }
 
                 const scrub = function () {
-                    root.querySelectorAll('button').forEach(function (btn) {
-                        const text = (btn.textContent || '').trim();
-                        if (/^pay\b/i.test(text) && /[\d,.]/.test(text)) {
-                            btn.textContent = 'Pay';
+                    root.querySelectorAll('button, [role="button"], input[type="submit"]').forEach(function (btn) {
+                        const text = (btn.textContent || btn.value || '').trim();
+                        if (/^pay\b/i.test(text)) {
+                            if (btn.tagName === 'INPUT') {
+                                btn.value = 'Pay';
+                            } else {
+                                btn.textContent = 'Pay';
+                            }
                         }
                     });
                 };
@@ -183,7 +187,18 @@
                 observer.observe(root, { childList: true, subtree: true, characterData: true });
                 setTimeout(function () {
                     observer.disconnect();
-                }, 20000);
+                }, 30000);
+            }
+
+            function showPaymentAmount(targetSelector, displayAmount) {
+                if (!displayAmount) {
+                    return;
+                }
+
+                $(targetSelector).html(
+                    '<div style="font-size:13px;font-weight:500;color:#666;margin-bottom:4px;">Amount to pay</div>' +
+                    '<div>' + displayAmount + '</div>'
+                );
             }
 
             function loadCheckoutScript(callback) {
@@ -281,7 +296,7 @@
                     },
                     success: function (res) {
                         if (res.displayAmount) {
-                            $('#payment-amount-display').text(res.displayAmount);
+                            showPaymentAmount('#payment-amount-display', res.displayAmount);
                         }
 
                         currentSettlingAmount = res.settlingAmount || null;

@@ -55,7 +55,7 @@ class CheckoutController extends Controller
         $validated = $validator->validated();
 
         foreach ($validated['cart_id'] as $value) {
-            $cart = CartItem::with('courseFee')
+            $cart = CartItem::with(['courseFee.course'])
                 ->where('id', $value)
                 ->where('user_id', Auth::id())
                 ->first();
@@ -94,6 +94,18 @@ class CheckoutController extends Controller
             $installment->save();
 
             app(InvoiceService::class)->sendInvoiceEmail($payment);
+
+            $courseName = $fee->course?->title ?? 'Course #' . $fee->courses_id;
+            $amountLabel = format_payment_amount($payment->price, $payment->currency);
+            record_user_activity(
+                'Checkout',
+                'Created payment for ' . $courseName . ' (' . $amountLabel . ')',
+                route('user.home'),
+                'student',
+                Auth::id(),
+                null,
+                $request
+            );
 
             $cart->delete();
         }

@@ -59,6 +59,17 @@ class InstallmentController extends Controller
                 ->send(new UserMail($user, $emailTemplate->subject, normalize_payment_email_body($emailBody)));
         }
 
+        $courseName = $installment->payment?->course?->title ?? 'Installment #' . $installment->installment_number;
+        record_user_activity(
+            'Payment',
+            'Paid ' . format_payment_aed_amount($installment->payment, (float) $request->amount) . ' for ' . $courseName,
+            route('user.home'),
+            'student',
+            $user->id,
+            null,
+            $request
+        );
+
         return response()->json(["success" => true, "message" => "Installment updated and email sent successfully."]);
     }
 

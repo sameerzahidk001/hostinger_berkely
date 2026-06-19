@@ -116,9 +116,7 @@
     @php
         $displayCurrency = payment_display_currency($payments);
         $settlingAed = (float) ($payments->price ?? 0);
-        $displayAmount = $displayCurrency === 'AED'
-            ? $settlingAed
-            : (float) ($coursefee->price ?? convert_from_aed($settlingAed, $displayCurrency));
+        $displayAmount = payment_display_amount_from_aed($payments, $settlingAed);
         $taxPercentage = (float) ($coursefee->tax_percentage ?? 0);
 
         if ($displayCurrency === 'AED') {
@@ -201,7 +199,6 @@
                             <tr>
                                 <th>#</th>
                                 <th>Training Program & Description</th>
-                                <th>Qty</th>
                                 <th>Tax</th>
                                 <th>Amount</th>
                             </tr>
@@ -233,7 +230,6 @@
                                         @endif
                                     </ul>
                                 </td>
-                                <td>1.00</td>
                                 <td>{{ number_format($taxPercentage, 2) }}%</td>
                                 <td>{!! $moneyAdmin($displayAmount, $settlingAed) !!}</td>
                             </tr>
