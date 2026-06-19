@@ -254,17 +254,30 @@
                 order: [[8, 'desc']]
             });
 
+            function slugify(text) {
+                return text.toString().toLowerCase().trim()
+                    .replace(/[^\w\s-]/g, '')
+                    .replace(/[\s_-]+/g, '-')
+                    .replace(/^-+|-+$/g, '');
+            }
+
             $('#categorySelect').change(function() {
                 let selectedOption = $(this).find('option:selected');
-                let categorySlug = selectedOption.data('url');
-                let categoryParent = selectedOption.data('parent');
 
                 if ($(this).val()) {
-                    $('#page_url').prop('readonly', true).val(categorySlug);
                     $('#parent_id').prop('disabled', true).val('');
+                    let pageName = $('input[name="page_name"]').val();
+                    if (!$('#page_url').val() && pageName) {
+                        $('#page_url').val(slugify(pageName));
+                    }
                 } else {
-                    $('#page_url').prop('readonly', false).val('');
-                    $('#parent_id').prop('disabled', false).val('');
+                    $('#parent_id').prop('disabled', false);
+                }
+            });
+
+            $('input[name="page_name"]').on('blur', function() {
+                if ($('#categorySelect').val() && !$('#page_url').val()) {
+                    $('#page_url').val(slugify($(this).val()));
                 }
             });
         });

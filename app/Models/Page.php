@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Traits\TracksAudit;
+use Illuminate\Support\Str;
 
 class Page extends Model
 {
@@ -33,10 +34,25 @@ class Page extends Model
 
     public function getFullUrlAttribute()
     {
-        if ($this->parent) {
-            return $this->parent->full_url . '/' . $this->url;
+        if ($this->parent_id) {
+            $parent = $this->relationLoaded('parent') ? $this->parent : $this->parent()->first();
+            if ($parent) {
+                return $parent->full_url . '/' . $this->url;
+            }
         }
+
+        if ($this->category_id) {
+            $perma = SiteSettings::value('category_perma') ?? 'category';
+
+            return $perma . '/' . $this->url;
+        }
+
         return $this->url;
+    }
+
+    public static function slugFromName(string $name): string
+    {
+        return Str::slug($name);
     }
 
 }

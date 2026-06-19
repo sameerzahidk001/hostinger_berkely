@@ -81,18 +81,12 @@ class WelcomeController extends Controller
                 abort(404);
             }
 
-            // **Redirect to Category Route if Page Belongs to a Category**
+            // Canonical URL for category-linked pages: /{category_perma}/{page-slug}
             if ($page->category_id) {
-                $category = Category::find($page->category_id);
-                if ($category) {
-                    return redirect()->route('category.details', [
-                        'categoryPerma' => $category_perma,
-                        'slug' => $category->slug
-                    ]);
-                }
+                return redirect()->to(url($category_perma . '/' . $page->url), 301);
             }
 
-            $breadcrumb[] = ['title' => $page->page_name, 'url' => url($page->url)];
+            $breadcrumb[] = ['title' => $page->page_name, 'url' => url($page->full_url)];
         }
 
         $page->load('sections');
@@ -149,13 +143,13 @@ class WelcomeController extends Controller
 
         $breadcrumb[] = ['title' => $page->page_name, 'url' => url($page->url)];
 
-        // Find the category page using the slug
+        // Find the page by its unique slug (not the category slug)
         $page = Page::where('url', $slug)->first();
         if (!$page) {
             abort(404);
         }
 
-        $breadcrumb[] = ['title' => $page->page_name, 'url' => url($page->url)];
+        $breadcrumb[] = ['title' => $page->page_name, 'url' => url($page->full_url)];
 
         $page->load('sections');
 
