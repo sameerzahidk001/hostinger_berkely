@@ -8,9 +8,12 @@
 --   3. Creates ONE Content Writer login IF none exists yet
 --
 -- Default Content Writer login (change password after first login):
---   URL:   https://YOUR-SITE.com/admin/login
+--   URL:   https://YOUR-SITE.com/login
 --   Email: contentwriter@berkeleyme.com
 --   Pass:  password
+--
+-- Admin / Superadmin only:
+--   URL:   https://YOUR-SITE.com/admin/login
 -- =============================================================================
 
 -- 1) Content Writer role
