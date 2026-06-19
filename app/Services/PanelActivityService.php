@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Course;
 use App\Models\Page;
 use App\Models\Payment;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -12,16 +13,25 @@ use Illuminate\Support\Facades\Schema;
 
 class PanelActivityService
 {
-    public function summary(?int $userId, ?string $dateFrom, ?string $dateTo, bool $includePayments = false): array
-    {
+    public function summary(
+        ?int $userId,
+        ?string $dateFrom,
+        ?string $dateTo,
+        bool $includePayments = false
+    ): array {
         [$from, $to] = $this->parseDateRange($dateFrom, $dateTo);
 
         return [
+            'my_courses' => $userId ? $this->countCoursesCreated($userId, null, null) : 0,
+            'my_pages' => $userId ? $this->countPagesCreated($userId, null, null) : 0,
+            'total_courses_site' => (int) Course::count(),
+            'total_pages_site' => (int) Page::count(),
+            'total_payments_site' => $includePayments && Schema::hasTable('payments')
+                ? (int) Payment::count()
+                : 0,
             'courses_created' => $this->countCoursesCreated($userId, $from, $to),
             'pages_created' => $this->countPagesCreated($userId, $from, $to),
             'payments_recorded' => $includePayments ? $this->countPayments($from, $to) : 0,
-            'total_courses' => $this->countCoursesCreated($userId, null, null),
-            'total_pages' => $this->countPagesCreated($userId, null, null),
         ];
     }
 
@@ -33,9 +43,18 @@ class PanelActivityService
         int $perPage = 15,
         int $page = 1,
         string $path = '',
-        array $query = []
+        array $query = [],
+        ?array $restrictToUserIds = null,
+        bool $paymentsOnly = false
     ): LengthAwarePaginator {
-        $activities = $this->buildFeed($userId, $dateFrom, $dateTo, $includePayments);
+        $activities = $this->buildFeed(
+            $userId,
+            $dateFrom,
+            $dateTo,
+            $includePayments,
+            $restrictToUserIds,
+            $paymentsOnly
+        );
         $total = $activities->count();
         $items = $activities->slice(($page - 1) * $perPage, $perPage)->values();
 
@@ -48,15 +67,88 @@ class PanelActivityService
         );
     }
 
-    public function buildFeed(?int $userId, ?string $dateFrom, ?string $dateTo, bool $includePayments = false): Collection
-    {
+    public function buildFeed(
+        ?int $userId,
+        ?string $dateFrom,
+        ?string $dateTo,
+        bool $includePayments = false,
+        ?array $restrictToUserIds = null,
+        bool $paymentsOnly = false
+    ): Collection {
         [$from, $to] = $this->parseDateRange($dateFrom, $dateTo);
 
-        return $this->courseActivities($userId, $from, $to)
-            ->merge($this->pageActivities($userId, $from, $to))
-            ->when($includePayments, fn (Collection $c) => $c->merge($this->paymentActivities($from, $to)))
+        if ($paymentsOnly) {
+            return $this->paymentActivities($from, $to)
+                ->sortByDesc(fn (array $row) => $row['occurred_at']->timestamp)
+                ->values();
+        }
+
+        $feed = $this->courseActivities($userId, $from, $to)
+            ->merge($this->pageActivities($userId, $from, $to));
+
+        if ($includePayments && empty($restrictToUserIds)) {
+            $feed = $feed->merge($this->paymentActivities($from, $to));
+        }
+
+        if ($restrictToUserIds !== null) {
+            $feed = $feed->filter(function (array $row) use ($restrictToUserIds) {
+                if (empty($row['actor_id'])) {
+                    return false;
+                }
+
+                return in_array((int) $row['actor_id'], $restrictToUserIds, true);
+            });
+        }
+
+        return $feed
             ->sortByDesc(fn (array $row) => $row['occurred_at']->timestamp)
             ->values();
+    }
+
+    public function userIdsForRole(?string $role): ?array
+    {
+        if (! $role) {
+            return null;
+        }
+
+        $normalized = normalize_role_key($role);
+
+        if ($normalized === 'content_writer') {
+            $ids = content_writer_role_ids();
+
+            return User::query()
+                ->whereHas('roles', fn ($q) => $q->whereIn('role_id', $ids))
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+        }
+
+        return User::query()
+            ->whereHas('roles', function ($q) use ($normalized) {
+                $q->whereIn('name', match ($normalized) {
+                    'accountant' => ['accountant', 'Accountant'],
+                    'instructor' => ['instructor', 'Instructor'],
+                    default => [$role],
+                });
+            })
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+    }
+
+    public function filterUsers(): Collection
+    {
+        return User::query()
+            ->with('roles')
+            ->whereHas('roles', function ($q) {
+                $q->whereIn('name', [
+                    'content_writer', 'Content Writer', 'librarian', 'content-writer',
+                    'accountant', 'Accountant',
+                    'instructor', 'Instructor',
+                ]);
+            })
+            ->orderBy('name')
+            ->get(['id', 'name', 'email']);
     }
 
     private function courseActivities(?int $userId, ?Carbon $from, ?Carbon $to): Collection
@@ -249,6 +341,7 @@ class PanelActivityService
             'action' => $action,
             'item' => $item,
             'url' => $url,
+            'actor_id' => $actorId ? (int) $actorId : null,
             'user_name' => audit_user_name(null, $actorId),
             'occurred_at' => Carbon::parse($occurredAt),
         ];

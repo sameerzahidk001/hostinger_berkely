@@ -85,50 +85,108 @@ class AdminController extends Controller
         $role = normalize_panel_role(panel_role_name());
 
         if ($role === 'content_writer') {
-            return $this->panelDashboard($request, 'content_writer');
+            return $this->activityDashboard($request, [
+                'userId' => audit_user_id(),
+                'showMyStats' => true,
+                'showSiteStats' => true,
+                'includePayments' => false,
+                'showUserColumn' => false,
+                'showUserFilter' => false,
+                'activityTitle' => 'My activity history',
+            ]);
         }
 
         if ($role === 'accountant') {
-            return $this->panelDashboard($request, 'accountant');
+            return $this->activityDashboard($request, [
+                'userId' => null,
+                'roleFilter' => null,
+                'showMyStats' => false,
+                'showSiteStats' => true,
+                'includePayments' => true,
+                'showUserColumn' => true,
+                'showUserFilter' => false,
+                'activityTitle' => 'Accountant activities',
+            ]);
         }
 
-        return $this->adminDashboard();
+        return $this->activityDashboard($request, [
+            'userId' => $request->filled('user_id') ? (int) $request->query('user_id') : null,
+            'roleFilter' => $request->query('role'),
+            'showMyStats' => false,
+            'showSiteStats' => true,
+            'includePayments' => true,
+            'showUserColumn' => true,
+            'showUserFilter' => true,
+            'activityTitle' => $this->adminActivityTitle($request),
+        ]);
     }
 
-    private function panelDashboard(Request $request, string $role)
+    private function adminActivityTitle(Request $request): string
+    {
+        if ($request->filled('user_id')) {
+            $user = User::find($request->query('user_id'));
+
+            return $user
+                ? 'Activity history — ' . ($user->name ?? $user->email)
+                : 'User activity history';
+        }
+
+        return match ($request->query('role')) {
+            'content_writer' => 'Content writer activities',
+            'accountant' => 'Payment activities',
+            'instructor' => 'Instructor activities',
+            default => 'All users activity history',
+        };
+    }
+
+    private function activityDashboard(Request $request, array $options)
     {
         $service = app(PanelActivityService::class);
-        $userId = $role === 'content_writer' ? audit_user_id() : null;
-        $includePayments = $role === 'accountant';
+        $userId = $options['userId'] ?? null;
+        $roleFilter = $options['roleFilter'] ?? $request->query('role');
+        $includePayments = (bool) ($options['includePayments'] ?? false);
         $dateFrom = $request->query('date_from');
         $dateTo = $request->query('date_to');
+
+        $restrictToUserIds = null;
+        $paymentsOnly = false;
+
+        if ($userId) {
+            $restrictToUserIds = null;
+        } elseif ($roleFilter === 'accountant') {
+            $paymentsOnly = true;
+        } elseif ($roleFilter) {
+            $restrictToUserIds = $service->userIdsForRole($roleFilter);
+        }
 
         $summary = $service->summary($userId, $dateFrom, $dateTo, $includePayments);
         $activities = $service->paginatedFeed(
             $userId,
             $dateFrom,
             $dateTo,
-            $includePayments,
+            $includePayments && ! $paymentsOnly,
             15,
             (int) $request->query('page', 1),
             $request->url(),
-            $request->query()
+            $request->query(),
+            $restrictToUserIds,
+            $paymentsOnly
         );
 
         return view('admin.dashboard.panel', [
             'summary' => $summary,
             'activities' => $activities,
             'includePayments' => $includePayments,
-            'showUserColumn' => $role === 'accountant',
-            'showTotals' => $role === 'content_writer',
-            'scopeLabel' => $role === 'content_writer' ? 'My' : 'All',
-            'activityTitle' => $role === 'content_writer'
-                ? 'My activity history'
-                : 'All users activity history',
+            'showMyStats' => (bool) ($options['showMyStats'] ?? false),
+            'showSiteStats' => (bool) ($options['showSiteStats'] ?? false),
+            'showUserColumn' => (bool) ($options['showUserColumn'] ?? false),
+            'showUserFilter' => (bool) ($options['showUserFilter'] ?? false),
+            'filterUsers' => ($options['showUserFilter'] ?? false) ? $service->filterUsers() : collect(),
+            'activityTitle' => $options['activityTitle'] ?? 'Activity history',
         ]);
     }
 
-    private function adminDashboard()
+    private function adminDashboardLegacy()
     {
         $data['courses_count'] = Course::count();
         $data['student_count'] = User::count();

@@ -4,33 +4,77 @@
 @section('content')
 <div class="wrapper wrapper-content animated fadeInRight" style="padding: 20px 10px 0px;">
     <div class="row">
-        @if($showTotals ?? true)
-        <div class="col-lg-3">
+        @if($showMyStats ?? false)
+        <div class="col-lg-3 col-md-6">
             <div class="widget style1 navy-bg">
                 <div class="row">
                     <div class="col-xs-4">
-                        <i class="fa fa-files-o fa-5x"></i>
+                        <i class="fa fa-files-o fa-3x"></i>
                     </div>
                     <div class="col-xs-8 text-right">
-                        <span>{{ $scopeLabel }} Courses</span>
-                        <h2 class="font-bold">{{ $summary['total_courses'] }}</h2>
+                        <span>My Courses</span>
+                        <h2 class="font-bold">{{ $summary['my_courses'] }}</h2>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-lg-3">
+        <div class="col-lg-3 col-md-6">
             <div class="widget style1 lazur-bg">
                 <div class="row">
                     <div class="col-xs-4">
-                        <i class="fa fa-sitemap fa-5x"></i>
+                        <i class="fa fa-sitemap fa-3x"></i>
                     </div>
                     <div class="col-xs-8 text-right">
-                        <span>{{ $scopeLabel }} Pages</span>
-                        <h2 class="font-bold">{{ $summary['total_pages'] }}</h2>
+                        <span>My Pages</span>
+                        <h2 class="font-bold">{{ $summary['my_pages'] }}</h2>
                     </div>
                 </div>
             </div>
         </div>
+        @endif
+
+        @if($showSiteStats ?? false)
+        <div class="col-lg-3 col-md-6">
+            <div class="widget style1 yellow-bg">
+                <div class="row">
+                    <div class="col-xs-4">
+                        <i class="fa fa-files-o fa-3x"></i>
+                    </div>
+                    <div class="col-xs-8 text-right">
+                        <span>Total Courses</span>
+                        <h2 class="font-bold">{{ $summary['total_courses_site'] }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="widget style1 blue-bg">
+                <div class="row">
+                    <div class="col-xs-4">
+                        <i class="fa fa-sitemap fa-3x"></i>
+                    </div>
+                    <div class="col-xs-8 text-right">
+                        <span>Total Pages</span>
+                        <h2 class="font-bold">{{ $summary['total_pages_site'] }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @if($includePayments ?? false)
+        <div class="col-lg-3 col-md-6">
+            <div class="widget style1 red-bg">
+                <div class="row">
+                    <div class="col-xs-4">
+                        <i class="fa fa-money fa-3x"></i>
+                    </div>
+                    <div class="col-xs-8 text-right">
+                        <span>Total Payments</span>
+                        <h2 class="font-bold">{{ $summary['total_payments_site'] }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
         @endif
     </div>
 </div>
@@ -39,32 +83,55 @@
     <div class="col-lg-12">
         <div class="ibox float-e-margins">
             <div class="ibox-title">
-                <h5>Filter activity by date</h5>
+                <h5>Filter activity</h5>
             </div>
             <div class="ibox-content">
-                <form method="GET" action="{{ route('admin.home') }}" class="form-inline">
-                    <div class="form-group m-r-sm">
+                <form method="GET" action="{{ route('admin.home') }}" class="form-inline" style="flex-wrap: wrap;">
+                    @if($showUserFilter ?? false)
+                    <div class="form-group m-r-sm m-b-sm">
+                        <label for="role" class="m-r-xs">Role</label>
+                        <select id="role" name="role" class="form-control">
+                            <option value="">All roles</option>
+                            <option value="content_writer" @selected(request('role') === 'content_writer')>Content Writers</option>
+                            <option value="accountant" @selected(request('role') === 'accountant')>Accountants</option>
+                            <option value="instructor" @selected(request('role') === 'instructor')>Instructors</option>
+                        </select>
+                    </div>
+                    <div class="form-group m-r-sm m-b-sm">
+                        <label for="user_id" class="m-r-xs">User</label>
+                        <select id="user_id" name="user_id" class="form-control" style="min-width: 220px;">
+                            <option value="">All users</option>
+                            @foreach($filterUsers ?? [] as $filterUser)
+                                @php $roleName = $filterUser->roles->first()?->name; @endphp
+                                <option value="{{ $filterUser->id }}" @selected((string) request('user_id') === (string) $filterUser->id)>
+                                    {{ $filterUser->name }} ({{ role_display_name($roleName) }})
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    @endif
+                    <div class="form-group m-r-sm m-b-sm">
                         <label for="date_from" class="m-r-xs">From</label>
                         <input type="date" id="date_from" name="date_from" class="form-control"
                             value="{{ request('date_from') }}">
                     </div>
-                    <div class="form-group m-r-sm">
+                    <div class="form-group m-r-sm m-b-sm">
                         <label for="date_to" class="m-r-xs">To</label>
                         <input type="date" id="date_to" name="date_to" class="form-control"
                             value="{{ request('date_to') }}">
                     </div>
-                    <button type="submit" class="btn btn-primary m-r-sm">Filter</button>
-                    <a href="{{ route('admin.home') }}" class="btn btn-default">Clear</a>
+                    <button type="submit" class="btn btn-primary m-r-sm m-b-sm">Filter</button>
+                    <a href="{{ route('admin.home') }}" class="btn btn-default m-b-sm">Clear</a>
                 </form>
 
                 <div class="m-t-md">
                     <span class="label label-primary m-r-xs">Courses created: {{ $summary['courses_created'] }}</span>
                     <span class="label label-info m-r-xs">Pages created: {{ $summary['pages_created'] }}</span>
                     @if($includePayments)
-                        <span class="label label-success">Payments recorded: {{ $summary['payments_recorded'] }}</span>
+                        <span class="label label-success m-r-xs">Payments recorded: {{ $summary['payments_recorded'] }}</span>
                     @endif
-                    @if(request('date_from') || request('date_to'))
-                        <small class="text-muted m-l-sm">Counts above are for the selected date range.</small>
+                    @if(request()->hasAny(['date_from', 'date_to', 'user_id', 'role']))
+                        <small class="text-muted m-l-sm">Counts above match the selected filters.</small>
                     @endif
                 </div>
             </div>
