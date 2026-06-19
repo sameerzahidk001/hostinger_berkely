@@ -93,8 +93,11 @@ class PanelActivityService
 
         if ($restrictToUserIds !== null) {
             $logs = $logs->filter(function (array $row) use ($restrictToUserIds) {
-                return ! empty($row['actor_id'])
-                    && in_array((int) $row['actor_id'], $restrictToUserIds, true);
+                if (empty($row['actor_id'])) {
+                    return false;
+                }
+
+                return in_array((int) $row['actor_id'], $restrictToUserIds, true);
             });
         }
 

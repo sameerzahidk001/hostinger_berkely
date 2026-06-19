@@ -39,6 +39,7 @@ class AdminController extends Controller
         ]);
 
         if (Auth::guard('admin')->attempt(['email' => $request->email, 'password' => $request->password])) {
+            $request->session()->regenerate();
             $admin = Auth::guard('admin')->user();
             record_user_activity(
                 'Admin Login',
@@ -193,6 +194,7 @@ class AdminController extends Controller
             'summary' => $summary,
             'activities' => $activities,
             'studentActivities' => $studentActivities,
+            'activityLogsEnabled' => app(UserActivityLogService::class)->tableExists(),
             'includePayments' => $includePayments,
             'showMyStats' => (bool) ($options['showMyStats'] ?? false),
             'showSiteStats' => (bool) ($options['showSiteStats'] ?? false),

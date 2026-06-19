@@ -9,9 +9,15 @@ use Carbon\Carbon;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Log;
 
 class UserActivityLogService
 {
+    public function tableExists(): bool
+    {
+        return Schema::hasTable('user_activity_logs');
+    }
+
     public function log(
         string $action,
         string $audience,
@@ -23,22 +29,26 @@ class UserActivityLogService
         ?string $sessionId = null,
         ?array $meta = null
     ): void {
-        if (! Schema::hasTable('user_activity_logs')) {
+        if (! $this->tableExists()) {
             return;
         }
 
-        UserActivityLog::create([
-            'user_id' => $userId,
-            'admin_id' => $adminId,
-            'audience' => $audience,
-            'action' => $action,
-            'item' => $item,
-            'url' => $url,
-            'ip_address' => $ipAddress,
-            'session_id' => $sessionId,
-            'meta' => $meta,
-            'created_at' => now(),
-        ]);
+        try {
+            UserActivityLog::create([
+                'user_id' => $userId,
+                'admin_id' => $adminId,
+                'audience' => $audience,
+                'action' => $action,
+                'item' => $item,
+                'url' => $url,
+                'ip_address' => $ipAddress,
+                'session_id' => $sessionId,
+                'meta' => $meta,
+                'created_at' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            Log::warning('user_activity_logs insert failed: ' . $e->getMessage());
+        }
     }
 
     public function paginatedFeed(
@@ -70,7 +80,7 @@ class UserActivityLogService
         ?string $dateFrom,
         ?string $dateTo
     ): Collection {
-        if (! Schema::hasTable('user_activity_logs')) {
+        if (! $this->tableExists()) {
             return collect();
         }
 
@@ -99,7 +109,7 @@ class UserActivityLogService
                 'item' => $log->item ?? '',
                 'url' => $log->url,
                 'session_id' => $log->session_id,
-                'actor_id' => $log->user_id,
+                'actor_id' => $log->user_id ?? $log->admin_id,
                 'user_name' => $this->resolveActorName($log),
                 'occurred_at' => Carbon::parse($log->created_at),
             ];
@@ -110,7 +120,7 @@ class UserActivityLogService
     {
         return User::query()
             ->with('roles')
-            ->whereHas('roles', fn ($q) => $q->where('name', 'student'))
+            ->whereHas('roles', fn ($q) => $q->whereRaw('LOWER(name) = ?', ['student']))
             ->orderBy('name')
             ->get(['id', 'name', 'email']);
     }
