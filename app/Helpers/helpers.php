@@ -400,6 +400,85 @@ if (!function_exists('audit_user_name')) {
     }
 }
 
+if (!function_exists('image_alt')) {
+    function image_alt(?string $alt, ?string $fallback = null): string
+    {
+        $alt = trim((string) $alt);
+        if ($alt !== '') {
+            return \Illuminate\Support\Str::limit($alt, 125, '');
+        }
+
+        $fallback = trim((string) $fallback);
+        if ($fallback !== '') {
+            return \Illuminate\Support\Str::limit($fallback, 125, '');
+        }
+
+        return 'Image';
+    }
+}
+
+if (!function_exists('merge_image_alts')) {
+    function merge_image_alts($existing, ?array $incoming): array
+    {
+        $merged = is_array($existing) ? $existing : (json_decode((string) $existing, true) ?: []);
+
+        if (! is_array($incoming)) {
+            return $merged;
+        }
+
+        foreach ($incoming as $key => $value) {
+            $value = trim((string) $value);
+            if ($value !== '') {
+                $merged[$key] = \Illuminate\Support\Str::limit($value, 125, '');
+            } else {
+                unset($merged[$key]);
+            }
+        }
+
+        return $merged;
+    }
+}
+
+if (!function_exists('assign_column_if_exists')) {
+    function assign_column_if_exists($model, string $column, mixed $value): void
+    {
+        if (! $model) {
+            return;
+        }
+
+        $table = $model->getTable();
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn($table, $column)) {
+            $model->setAttribute($column, $value);
+        }
+    }
+}
+
+if (!function_exists('stored_image_alt')) {
+    {
+        if (! $model) {
+            return image_alt(null, $fallback);
+        }
+
+        $alts = $model->image_alts ?? null;
+
+        return image_alt(data_get(is_array($alts) ? $alts : (json_decode((string) $alts, true) ?: []), $key), $fallback);
+    }
+}
+
+if (!function_exists('course_image_alt')) {
+    function course_image_alt($course, string $imageKey, ?string $sectionFallback = null): string
+    {
+        $fallback = $sectionFallback ?? $course?->title ?? 'Course image';
+
+        if ($imageKey === 'overview_img') {
+            return stored_image_alt($course, 'overview_img', $fallback);
+        }
+
+        return stored_image_alt($course?->dynamicLabel, $imageKey, $fallback);
+    }
+}
+
 if (!function_exists('activity_audience_for_role')) {
     function activity_audience_for_role(?string $role): string
     {

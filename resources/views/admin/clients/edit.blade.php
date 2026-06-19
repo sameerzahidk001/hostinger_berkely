@@ -71,6 +71,11 @@
                                         </div>
                                     @endif
                                 </div>
+                                @include('admin.partials.image-alt-input', [
+                                    'id' => 'client_image_alt',
+                                    'name' => 'image_alt',
+                                    'value' => $client->image_alt,
+                                ])
                                 @error('image')
                                     <p class="text-danger text-xs italic">{{ $message }}</p>
                                 @enderror

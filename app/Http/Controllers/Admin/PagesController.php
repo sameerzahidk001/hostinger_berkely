@@ -186,6 +186,7 @@ class PagesController extends Controller
         $meta->meta_description = $request->input('meta_description');
         $meta->keywords = $request->input('meta_keywords');
         $meta->additional_keywords = $request->input('meta_additional_keywords');
+        assign_column_if_exists($meta, 'thumbnail_alt', $request->input('meta_thumbnail_alt'));
 
         if ($request->hasFile('local_meta_thumbnail_input')) {
             $file = $request->file('local_meta_thumbnail_input');

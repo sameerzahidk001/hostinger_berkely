@@ -23,7 +23,7 @@
                                 target="{{ $logo['target'] == '1' ? '_blank' : '_self' }}" 
                                 rel="{{ $logo['no_follow'] == '1' ? 'nofollow' : 'follow' }}"
                             >
-                                <img src="{{ asset($logo['image']) }}" class="min-w-[170px] min-h-[80px] shrink-0 object-contain" alt="Client Logo">
+                                <img src="{{ asset($logo['image']) }}" class="min-w-[170px] min-h-[80px] shrink-0 object-contain" alt="{{ $logo['alt'] ?? 'Client logo' }}">
                             </a>
                         </li>
                     @endforeach

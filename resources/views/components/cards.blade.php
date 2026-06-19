@@ -18,7 +18,7 @@
                 <div class="bg-white border border-gray-300 shadow-md rounded-lg overflow-hidden">
                     @if(isset($card['image']))
                         <div class="overflow-hidden max-h-[300px] sm:max-h-[480px]">
-                            <img src="{{ $card['image'] }}" alt="{{ $card['title'] ?? 'Card Image' }}"
+                            <img src="{{ $card['image'] }}" alt="{{ image_alt($card['image_alt'] ?? null, $card['title'] ?? 'Card image') }}"
                                 class="h-full w-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-105">
                         </div>
                     @endif
@@ -26,7 +26,7 @@
                         @if(isset($card['title']) || (isset($card['icon']) && $card['icon'] != ''))
                             <div class="flex items-center justify-start mt-2 gap-2">
                                 @if(isset($card['icon']) && $card['icon'] != '')
-                                    <img src="{{ $card['icon'] }}" alt="{{ $card['title'] }} Icon" class="w-20 h-20 object-contain mb-2 lg:mb-0">
+                                    <img src="{{ $card['icon'] }}" alt="{{ image_alt($card['icon_alt'] ?? null, ($card['title'] ?? 'Card') . ' icon') }}" class="w-20 h-20 object-contain mb-2 lg:mb-0">
                                 @endif
                                 @if(isset($card['title']))
                                     <h3 class="font-canela text-[28px] leading-[41px] lg:leading-[40px] {{ $card['icon'] == '' ? 'w-full ' . $textAlignment : '' }}">
@@ -53,13 +53,14 @@
                 <div class="relative overflow-hidden group h-[500px]">
                     @if(isset($card['image']))
                         <img src="{{ $card['image'] }}"
+                            alt="{{ image_alt($card['image_alt'] ?? null, $card['title'] ?? 'Card image') }}"
                             class="h-full transition-all delay-300 duration-400 ease-in w-full absolute group-hover:scale-105 object-cover">
                     @endif
                     <div class="absolute px-4 py-8 z-50 gap-4 flex flex-col justify-end bg-opacity-45 h-full w-full bottom-0">
                         @if(isset($card['title']) || (isset($card['icon']) && $card['icon'] != ''))
                             <div class="flex items-center justify-start mt-2 gap-2">
                                 @if(isset($card['icon']) && $card['icon'] != '')
-                                    <img src="{{ $card['icon'] }}" alt="{{ $card['title'] }} Icon" class="w-20 h-20 object-contain mb-2 lg:mb-0">
+                                    <img src="{{ $card['icon'] }}" alt="{{ image_alt($card['icon_alt'] ?? null, ($card['title'] ?? 'Card') . ' icon') }}" class="w-20 h-20 object-contain mb-2 lg:mb-0">
                                 @endif
                                 @if(isset($card['title']))
                                     <h3 class="text-[20px] sm:text-[24px] md:text-[32px] font-canela {{ $card['icon'] == '' ? 'w-full ' . $textAlignment : '' }}" style="color: {{ $color ?? 'inherit' }}">
@@ -90,7 +91,7 @@
                 <div>
                     @if(isset($card['image']))
                         <div class="overflow-hidden h-[500px]">
-                            <img src="{{ $card['image'] }}" class="h-full w-full transition-all delay-300 duration-400 ease-in group-hover:scale-105 object-cover">
+                            <img src="{{ $card['image'] }}" alt="{{ image_alt($card['image_alt'] ?? null, $card['title'] ?? 'Card image') }}" class="h-full w-full transition-all delay-300 duration-400 ease-in group-hover:scale-105 object-cover">
                         </div>
                     @endif
                     @if(isset($card['title']) || isset($card['description']) || isset($card['url']))
@@ -98,7 +99,7 @@
                         @if(isset($card['title']) || (isset($card['icon']) && $card['icon'] != ''))
                             <div class="flex items-center justify-start mt-2 gap-2">
                                 @if(isset($card['icon']) && $card['icon'] != '')
-                                    <img src="{{ $card['icon'] }}" alt="{{ $card['title'] }} Icon" class="w-20 h-20 object-contain mb-2 lg:mb-0">
+                                    <img src="{{ $card['icon'] }}" alt="{{ image_alt($card['icon_alt'] ?? null, ($card['title'] ?? 'Card') . ' icon') }}" class="w-20 h-20 object-contain mb-2 lg:mb-0">
                                 @endif
                                 @if(isset($card['title']))
                                     <h3 class="font-canela text-[32px] leading-[41px] lg:leading-[40px] text-dark  {{ $card['icon'] == '' ? 'w-full ' . $textAlignment : '' }}" style="color: {{ $color ?? 'inherit' }}">
@@ -128,14 +129,14 @@
                 <div class="flex flex-col lg:flex-row items-start gap-6 border border-gray-200 rounded-lg shadow-md bg-white">
                     @if(isset($card['image']))
                         <div class="max-w-[125px] h-full">
-                            <img src="{{ $card['image'] }}" class="h-full w-full object-cover rounded-md">
+                            <img src="{{ $card['image'] }}" alt="{{ image_alt($card['image_alt'] ?? null, $card['title'] ?? 'Card image') }}" class="h-full w-full object-cover rounded-md">
                         </div>
                     @endif
                     <div class="flex-1 py-4 pr-3">
                         @if(isset($card['title']) || (isset($card['icon']) && $card['icon'] != ''))
                             <div class="flex items-center justify-start mt-2 gap-2">
                                 @if(isset($card['icon']) && $card['icon'] != '')
-                                    <img src="{{ $card['icon'] }}" alt="{{ $card['title'] }} Icon" class="w-20 h-20 object-contain mb-2 lg:mb-0">
+                                    <img src="{{ $card['icon'] }}" alt="{{ image_alt($card['icon_alt'] ?? null, ($card['title'] ?? 'Card') . ' icon') }}" class="w-20 h-20 object-contain mb-2 lg:mb-0">
                                 @endif
                                 @if(isset($card['title']))
                                     <h3 class="text-[24px] font-semibold text-dark {{ $card['icon'] == '' ? 'w-full ' . $textAlignment : '' }}" style="color: {{ $color ?? 'inherit' }}">
