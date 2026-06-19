@@ -96,7 +96,7 @@ class CheckoutController extends Controller
             app(InvoiceService::class)->sendInvoiceEmail($payment);
 
             $courseName = $fee->course?->title ?? 'Course #' . $fee->courses_id;
-            $amountLabel = format_payment_amount($payment->price, $payment->currency);
+            $amountLabel = format_payment_amount($payment)['display'];
             record_user_activity(
                 'Checkout',
                 'Created payment for ' . $courseName . ' (' . $amountLabel . ')',
