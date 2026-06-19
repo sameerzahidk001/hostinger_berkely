@@ -9,8 +9,8 @@
 --   4. Activates + verifies panel users
 --
 -- AFTER running this SQL, users MUST log in at:
---   https://eduberkeley.com/admin/login
--- NOT https://eduberkeley.com/login (that is the student portal)
+--   Content Writer / Accountant: https://eduberkeley.com/login
+--   Admin / Superadmin only:    https://eduberkeley.com/admin/login
 --
 -- Default passwords (if reset below): password
 -- Hash: $2y$10$Knz.8dB1.de1coPzu3znI.rUW2XSi7lGVLanS6Unpr7RF.6S4cl.q

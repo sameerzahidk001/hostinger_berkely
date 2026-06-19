@@ -137,6 +137,27 @@ if (!function_exists('normalize_role_key')) {
     }
 }
 
+if (!function_exists('is_admin_login_role')) {
+    function is_admin_login_role(?string $role): bool
+    {
+        return in_array(normalize_role_key($role), ['admin', 'superadmin'], true);
+    }
+}
+
+if (!function_exists('public_login_url')) {
+    function public_login_url(): string
+    {
+        return url('/login');
+    }
+}
+
+if (!function_exists('admin_login_url')) {
+    function admin_login_url(): string
+    {
+        return route('admin.login');
+    }
+}
+
 if (!function_exists('is_content_writer_role_key')) {
     function is_content_writer_role_key(?string $role): bool
     {

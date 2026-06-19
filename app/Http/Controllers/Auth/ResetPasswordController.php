@@ -31,6 +31,10 @@ class ResetPasswordController extends Controller
     {
         $user = Auth::user();
 
+        if ($user && is_restricted_panel_role($user->roles()->value('name'))) {
+            return route('admin.home');
+        }
+
         if ($user && $user->hasPermission('dashboard-read')) {
             return route('user.home');
         }

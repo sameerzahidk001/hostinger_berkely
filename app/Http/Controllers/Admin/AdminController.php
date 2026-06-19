@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Session;
 use App\Models\{Subject,Course,User,Admin,Instructor};
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Hash;
 
 class AdminController extends Controller
 {
@@ -37,12 +38,24 @@ class AdminController extends Controller
     //todo: admin login form
     public function login()
     {
+        if (Auth::guard('admin')->check()) {
+            return redirect()->route('admin.home');
+        }
+
+        if (Auth::check()) {
+            $role = Auth::user()->roles()->value('name');
+
+            if (is_restricted_panel_role($role)) {
+                return redirect()->route('admin.home');
+            }
+
+            return redirect()->to(public_login_url());
+        }
+
         return view('admin.auth.login');
     }
 
-    //todo: admin login functionality
     public function adminAuth(Request $request){
-        //return $request;
         $request->validate([
             'email'=>'required',
             'password'=>'required',
@@ -52,13 +65,14 @@ class AdminController extends Controller
             return redirect()->route('admin.home');
         }
 
-        if (Auth::attempt(['email' => $request->email, 'password' => $request->password])) {
-            $role = Auth::user()->roles()->value('name');
-            if (is_restricted_panel_role($role)) {
-                return redirect()->route('admin.home');
-            }
+        $panelUser = User::where('email', $request->email)->first();
+        if ($panelUser && Hash::check($request->password, $panelUser->password)) {
+            Session::flash(
+                'error-message',
+                'This account must sign in at ' . public_login_url()
+            );
 
-            Auth::logout();
+            return back();
         }
 
         Session::flash('error-message','Invalid Email or Password');
@@ -200,8 +214,14 @@ class AdminController extends Controller
 
     //todo: admin logout functionality
     public function logout(){
+        $wasPanelUser = Auth::check()
+            && is_restricted_panel_role(Auth::user()->roles()->value('name'));
+
         Auth::guard('admin')->logout();
         Auth::logout();
-        return redirect()->route('admin.login');
+
+        return $wasPanelUser
+            ? redirect()->to(public_login_url())
+            : redirect()->route('admin.login');
     }
 }
