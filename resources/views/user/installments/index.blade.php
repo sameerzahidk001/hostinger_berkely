@@ -94,16 +94,25 @@
                                                         <!-- Modal -->
                                                         <div class="modal fade" id="paymentModal{{ $installment->id }}" tabindex="-1" role="dialog"
                                                             aria-labelledby="paymentModalLabel{{ $installment->id }}" aria-hidden="true">
-                                                            <div class="modal-dialog" role="document">
+                                                            <div class="modal-dialog" role="document" style="max-width: 420px;">
                                                                 <div class="modal-content">
                                                                     <button type="button" id="closeModal" class="close close-white position-absolute top-0 right-0" style="margin-top: -25px;" data-dismiss="modal" aria-label="Close">
                                                                         <span aria-hidden="true">×</span>
                                                                     </button>
-                                                                    <div class="modal-body">
-                                                                        <div id="payment-amount-display-{{ $installment->id }}" class="text-center mb-3" style="font-size: 18px; font-weight: 600;"></div>
+                                                                    <div class="modal-body" style="padding: 28px 24px; text-align: center;">
+                                                                        <div id="payment-amount-display-{{ $installment->id }}" class="mb-2"></div>
                                                                         <div id="payment-error-{{ $installment->id }}" class="alert alert-danger" style="display:none;"></div>
-                                                                        <div id="payment-loading-{{ $installment->id }}" class="text-center text-muted" style="display:none;">Loading payment form...</div>
-                                                                        <div id="hco-embedded-{{ $installment->id }}"></div>
+                                                                        <div id="payment-loading-{{ $installment->id }}" class="text-center text-muted py-3" style="display:none;">Preparing secure payment...</div>
+                                                                        <button type="button"
+                                                                            class="btn btn-primary btn-lg payment-start-btn"
+                                                                            data-installment-id="{{ $installment->id }}"
+                                                                            id="payment-start-btn-{{ $installment->id }}"
+                                                                            style="display:none; min-width: 180px; margin-top: 12px;">
+                                                                            <i class="fa fa-lock"></i> Pay
+                                                                        </button>
+                                                                        <p class="payment-secure-note" style="display:none; font-size: 12px; color: #999; margin-top: 14px; margin-bottom: 0;">
+                                                                            Card details are entered on the secure payment screen.
+                                                                        </p>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -160,6 +169,8 @@
     <script>
         let currentInstallmentId = null;
         let currentAmount = null;
+        let currentCheckoutSessionId = null;
+        let checkoutScriptLoaded = false;
 
         function showPaymentAmount(targetSelector, displayAmount) {
             if (!displayAmount) {
@@ -168,9 +179,82 @@
 
             $(targetSelector).html(
                 '<div style="font-size:13px;font-weight:500;color:#666;margin-bottom:4px;">Amount to pay</div>' +
-                '<div style="font-size:22px;font-weight:700;">' + displayAmount + '</div>' +
-                '<div style="font-size:12px;color:#999;margin-top:6px;">Use the Pay button below to complete payment.</div>'
+                '<div style="font-size:22px;font-weight:700;">' + displayAmount + '</div>'
             );
+        }
+
+        function persistPaymentContext() {
+            if (!currentInstallmentId || !currentAmount) {
+                return;
+            }
+
+            sessionStorage.setItem('rakbank_installment_id', String(currentInstallmentId));
+            sessionStorage.setItem('rakbank_settling_amount', String(currentAmount));
+        }
+
+        function restorePaymentContext() {
+            if (!currentInstallmentId) {
+                currentInstallmentId = sessionStorage.getItem('rakbank_installment_id');
+            }
+
+            if (!currentAmount) {
+                currentAmount = sessionStorage.getItem('rakbank_settling_amount');
+            }
+        }
+
+        function clearPaymentContext() {
+            sessionStorage.removeItem('rakbank_installment_id');
+            sessionStorage.removeItem('rakbank_settling_amount');
+        }
+
+        function loadCheckoutScript(callback) {
+            if (typeof Checkout !== 'undefined') {
+                callback();
+                return;
+            }
+
+            if (checkoutScriptLoaded) {
+                const waitForCheckout = setInterval(function () {
+                    if (typeof Checkout !== 'undefined') {
+                        clearInterval(waitForCheckout);
+                        callback();
+                    }
+                }, 50);
+                return;
+            }
+
+            checkoutScriptLoaded = true;
+            const script = document.createElement('script');
+            script.src = 'https://rakbankpay-nam.gateway.mastercard.com/static/checkout/checkout.min.js';
+            script.setAttribute('data-error', 'errorCallback');
+            script.setAttribute('data-cancel', 'cancelCallback');
+            script.setAttribute('data-complete', 'completeCallback');
+            script.onload = callback;
+            document.head.appendChild(script);
+        }
+
+        function launchHostedPayment(modal) {
+            if (!currentCheckoutSessionId) {
+                modal.find('[id^="payment-error-"]').text('Payment session expired. Please close and try again.').show();
+                return;
+            }
+
+            modal.find('.payment-start-btn').prop('disabled', true);
+            persistPaymentContext();
+
+            loadCheckoutScript(function () {
+                try {
+                    Checkout.configure({
+                        session: { id: currentCheckoutSessionId },
+                    });
+                    modal.modal('hide');
+                    Checkout.showPaymentPage();
+                } catch (error) {
+                    modal.find('.payment-start-btn').prop('disabled', false);
+                    modal.find('[id^="payment-error-"]').text('Unable to open secure payment. Please try again.').show();
+                    console.error("RakBank checkout launch failed:", error);
+                }
+            });
         }
 
         function errorCallback(error) {
@@ -182,6 +266,8 @@
         }
 
         function completeCallback(response) {
+            restorePaymentContext();
+
             if (!currentInstallmentId || !currentAmount) {
                 console.error("Installment or amount missing.");
                 return;
@@ -199,10 +285,9 @@
                 },
                 success: function (res) {
                     if (res.success == true) {
-                        // Close the currently open modal
+                        clearPaymentContext();
                         $(".modal.show").modal('hide');
 
-                        // Refresh after short delay
                         setTimeout(function(){
                             window.location.reload();
                         }, 1000);
@@ -219,29 +304,42 @@
         $('.payNowBtn').on('click', function () {
             currentInstallmentId = $(this).data('installment-id');
             currentAmount = $(this).data('amount');
+            currentCheckoutSessionId = null;
+        });
+
+        $(document).on('click', '.payment-start-btn', function () {
+            launchHostedPayment($(this).closest('.modal'));
         });
 
         $('[id^="paymentModal"]').on('shown.bs.modal', function () {
-            var modalId = $(this).attr('id');
+            var modal = $(this);
+            var modalId = modal.attr('id');
             var installmentId = modalId.replace('paymentModal', '');
-            var embeddedDivId = '#hco-embedded-' + installmentId;
             var amountDisplayId = '#payment-amount-display-' + installmentId;
             var errorDisplayId = '#payment-error-' + installmentId;
             var loadingDisplayId = '#payment-loading-' + installmentId;
+            var startBtnId = '#payment-start-btn-' + installmentId;
 
+            currentCheckoutSessionId = null;
             $(amountDisplayId).empty();
-            $(embeddedDivId).empty();
             $(errorDisplayId).hide().empty();
+            $(startBtnId).hide().prop('disabled', false);
+            modal.find('.payment-secure-note').hide();
             $(loadingDisplayId).show();
 
             $.ajax({
                 url: '{{ route("user.generate.rakBankPaySession") }}',
                 method: 'POST',
-                data: { installment_id: installmentId },
+                data: {
+                    installment_id: installmentId,
+                    return_url: window.location.href
+                },
                 headers: {
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                 },
                 success: function (res) {
+                    $(loadingDisplayId).hide();
+
                     if (res.displayAmount) {
                         showPaymentAmount(amountDisplayId, res.displayAmount);
                     }
@@ -251,19 +349,10 @@
                     }
 
                     if (res.success !== false && res.session && res.session.id) {
-                        try {
-                            Checkout.configure({
-                                session: { id: res.session.id },
-                            });
-                            $(loadingDisplayId).hide();
-                            Checkout.showEmbeddedPage(embeddedDivId);
-                        } catch (error) {
-                            $(loadingDisplayId).hide();
-                            $(errorDisplayId).text('Unable to load payment form. Please try again.').show();
-                            console.error("An error occurred while initializing RakBank Checkout:", error);
-                        }
+                        currentCheckoutSessionId = res.session.id;
+                        $(startBtnId).show();
+                        modal.find('.payment-secure-note').show();
                     } else {
-                        $(loadingDisplayId).hide();
                         $(errorDisplayId).text(res.error || 'Payment session could not be started. Please try again.').show();
                         console.error("Session creation failed", res);
                     }
@@ -284,9 +373,11 @@
         });
 
         $('[id^="paymentModal"]').on('hide.bs.modal', function () {
-            sessionStorage.clear();
-            
-            $(this).find('[id^="hco-embedded"]').empty();
+            currentCheckoutSessionId = null;
+        });
+
+        loadCheckoutScript(function () {
+            restorePaymentContext();
         });
 
         $(document).ready(function () {

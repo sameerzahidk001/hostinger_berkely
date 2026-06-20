@@ -32,6 +32,7 @@ class HomeController extends Controller
     {
         $request->validate([
             'installment_id' => 'required|exists:installments,id',
+            'return_url' => 'nullable|url',
         ]);
 
         $installment = Installment::with(['payment.courseFee'])
@@ -64,6 +65,7 @@ class HomeController extends Controller
         $chargeAmount = number_format($settlingAed, 2, '.', '');
         $studentAmountLabel = format_payment_aed_amount($payment, $settlingAed);
         $orderId = 'order-' . uniqid();
+        $returnUrl = $request->input('return_url', url('/user'));
 
         $apiUsername = "merchant.{$merchantId}";
         $url = "https://rakbankpay-nam.gateway.mastercard.com/api/rest/version/100/merchant/{$merchantId}/session";
@@ -81,6 +83,11 @@ class HomeController extends Controller
                     ],
                     'interaction' => [
                         'operation' => 'PURCHASE',
+                        'returnUrl' => $returnUrl,
+                        'cancelUrl' => $returnUrl,
+                        'displayControl' => [
+                            'billingAddress' => 'HIDE',
+                        ],
                         'merchant' => [
                             'name' => 'Berkeley School of Business',
                             'address' => [
