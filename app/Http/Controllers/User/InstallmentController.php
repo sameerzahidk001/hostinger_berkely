@@ -14,68 +14,55 @@ use App\Models\Payment;
 use App\Models\Country;
 use App\Mail\UserMail;
 use App\Models\Email;
+use App\Services\RakBankCheckoutService;
 
 class InstallmentController extends Controller
 {
-    // public function index(){
-    //     $installments = Installment::with('payment')->where('user_id', Auth::id())
-    //     ->whereHas('payment', function($query) {
-    //     $query->where('status', 'Active');
-    //     })
-    //     ->get();
-
-    //     return view('user.installments.index', compact('installments'));
-    // }
-
-    public function updateInstallment(Request $request)
+    public function updateInstallment(Request $request, RakBankCheckoutService $checkout)
     {
-        $installment = Installment::with(['payment.courseFee'])->findOrFail($request->installment_id);
-
-        $installment->update([
-            'paid_amount' => $request->amount,
-            'remaining_amount' => 0,
-            'paid_date' => now(),
-            'status' => 'paid'
+        $request->validate([
+            'installment_id' => 'required|exists:installments,id',
+            'amount' => 'required|numeric|min:0.01',
+            'order_id' => 'nullable|string|max:120',
         ]);
 
-        $user = Auth::user();
-        $emailTemplate = Email::where('name', 'fees-paid')->first();
+        $installment = Installment::with(['payment.courseFee', 'payment.course'])
+            ->where('user_id', Auth::id())
+            ->findOrFail($request->installment_id);
 
-        if ($emailTemplate) {
-            $paidDisplay = format_payment_aed_amount($installment->payment, (float) $request->amount);
-
-            $emailBody = str_replace(
-                ['{name}', '{email}', '{fees-paid}', '{fees-installment}'],
-                [$user->name, $user->email, $paidDisplay, $installment->installment_number],
-                $emailTemplate->body
-            );
-
-            $ccEmails = $emailTemplate->cc ? array_filter(array_map('trim', explode(',', $emailTemplate->cc))) : [];
-            $bccEmails = $emailTemplate->bcc ? array_filter(array_map('trim', explode(',', $emailTemplate->bcc))) : [];
-
-            Mail::to($user->email)
-                ->cc($ccEmails)
-                ->bcc($bccEmails)
-                ->send(new UserMail($user, $emailTemplate->subject, normalize_payment_email_body($emailBody)));
+        if ($installment->status === 'paid') {
+            return response()->json([
+                'success' => true,
+                'message' => 'Installment already paid.',
+                'receipt_url' => route('user.installments.receipt', $installment->id),
+            ]);
         }
 
-        $courseName = $installment->payment?->course?->title ?? 'Installment #' . $installment->installment_number;
-        record_user_activity(
-            'Payment',
-            'Paid ' . format_payment_aed_amount($installment->payment, (float) $request->amount) . ' for ' . $courseName,
-            route('user.home'),
-            'student',
-            $user->id,
-            null,
-            $request
-        );
+        $orderId = $request->input('order_id') ?: (string) data_get($checkout->pendingCheckout(), 'order_id', '');
 
-        return response()->json(["success" => true, "message" => "Installment updated and email sent successfully."]);
+        if ($orderId !== '' && ! $checkout->verifyOrderPaid($orderId)) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Payment was not confirmed by the bank yet. Please wait a moment and refresh.',
+            ], 422);
+        }
+
+        $amount = (float) $request->amount;
+        $installment = $checkout->markInstallmentPaid($installment, $amount, $request);
+        $checkout->clearPendingCheckout();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Installment updated and receipt created.',
+            'receipt_url' => route('user.installments.receipt', $installment->id),
+        ]);
     }
 
     public function receipt($id)
     {
-        $installment = Installment::with(['user', 'payment.course', 'payment.courseFee'])->findOrFail($id);
+        $installment = Installment::with(['user', 'payment.course', 'payment.courseFee'])
+            ->where('user_id', Auth::id())
+            ->findOrFail($id);
 
         return view('user.installments.receipt', compact('installment'));
     }

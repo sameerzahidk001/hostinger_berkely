@@ -11,7 +11,7 @@
     }
 </style>
 <section
-    class="min-h-[174px] lg:px-[120px] px-4 md:px-8 w-full my-16 {{ $background != 'transparent' ? 'py-16' : '' }}"
+    class="w-full lg:px-[120px] px-4 md:px-8 my-6 {{ $background != 'transparent' ? 'py-8' : 'py-4' }}"
     style="background-color: {{ $background }}">
 
     @if (isset($title))
@@ -22,7 +22,7 @@
     @endif
     <div class="p-0">
         <!-- Job Listings -->
-        <div class="space-y-3">
+        <div class="space-y-4 md:space-y-5">
             @foreach ($cards as $card)
                 <div
                     class="flex flex-col sm:flex-col lg:flex-row gap-y-4 items-center justify-between p-6 rounded-lg shadow-sm transition-all ease-in duration-200 delay-100 border career-cards gap-4">

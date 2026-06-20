@@ -154,7 +154,40 @@
         <script>
             let currentInstallmentId = null;
             let currentSettlingAmount = null;
+            let currentOrderId = null;
             let checkoutScriptLoaded = false;
+
+            function storePendingPaymentContext() {
+                if (!currentInstallmentId || !currentSettlingAmount) {
+                    return;
+                }
+
+                sessionStorage.setItem('rakbank_pending', JSON.stringify({
+                    installment_id: currentInstallmentId,
+                    amount: currentSettlingAmount,
+                    order_id: currentOrderId || null,
+                }));
+            }
+
+            function readPendingPaymentContext() {
+                if (currentInstallmentId && currentSettlingAmount) {
+                    return {
+                        installment_id: currentInstallmentId,
+                        amount: currentSettlingAmount,
+                        order_id: currentOrderId || null,
+                    };
+                }
+
+                try {
+                    return JSON.parse(sessionStorage.getItem('rakbank_pending') || '{}');
+                } catch (e) {
+                    return {};
+                }
+            }
+
+            function clearPendingPaymentContext() {
+                sessionStorage.removeItem('rakbank_pending');
+            }
 
             function resetPaymentModal() {
                 $('#payment-amount-display').empty();
@@ -203,8 +236,10 @@
             }
 
             function completeCallback(response) {
-                if (!currentInstallmentId || !currentSettlingAmount) {
-                    console.error("Installment or amount missing.");
+                const pending = readPendingPaymentContext();
+
+                if (!pending.installment_id || !pending.amount) {
+                    console.error("Installment or amount missing.", response);
                     return;
                 }
 
@@ -212,15 +247,22 @@
                     url: '{{ route("user.update.installment") }}',
                     method: 'POST',
                     data: {
-                        amount: currentSettlingAmount,
-                        installment_id: currentInstallmentId
+                        amount: pending.amount,
+                        installment_id: pending.installment_id,
+                        order_id: pending.order_id || null,
                     },
                     headers: {
                         'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                     },
                     success: function (res) {
                         if (res.success == true) {
+                            clearPendingPaymentContext();
                             $(".modal.show").modal('hide');
+
+                            if (res.receipt_url) {
+                                window.location.href = res.receipt_url;
+                                return;
+                            }
 
                             setTimeout(function () {
                                 window.location.reload();
@@ -231,6 +273,7 @@
                     },
                     error: function (err) {
                         console.error("API error", err.responseText);
+                        alert('Payment was taken but receipt could not be created automatically. Please refresh the page or contact support.');
                     }
                 });
             }
@@ -284,6 +327,8 @@
                         }
 
                         currentSettlingAmount = res.settlingAmount || null;
+                        currentOrderId = res.orderId || null;
+                        storePendingPaymentContext();
 
                         if (res.success !== false && res.session && res.session.id) {
                             loadEmbeddedCheckout(res.session.id);
@@ -312,7 +357,6 @@
                     stopPayButtonCleanup();
                 }
                 resetPaymentModal();
-                currentSettlingAmount = null;
             });
         </script>
     @endif

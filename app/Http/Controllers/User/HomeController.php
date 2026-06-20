@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use App\Models\Installment;
+use App\Services\RakBankCheckoutService;
 
 class HomeController extends Controller
 {
@@ -65,7 +66,15 @@ class HomeController extends Controller
         $chargeAmount = number_format($settlingAed, 2, '.', '');
         $studentAmountLabel = format_payment_aed_amount($payment, $settlingAed);
         $orderId = 'order-' . uniqid();
-        $returnUrl = $request->input('return_url', url('/user'));
+        $returnUrl = route('user.rakbank.return', [
+            'installment' => $installment->id,
+        ]);
+
+        app(RakBankCheckoutService::class)->storePendingCheckout(
+            (int) $installment->id,
+            $orderId,
+            $chargeAmount
+        );
 
         $apiUsername = "merchant.{$merchantId}";
         $url = "https://rakbankpay-nam.gateway.mastercard.com/api/rest/version/100/merchant/{$merchantId}/session";
@@ -148,5 +157,27 @@ class HomeController extends Controller
                 'package_name' => $payment->courseFee->package_name ?? 'N/A',
             ],
         ]);
+    }
+
+    public function handleRakBankReturn(Request $request, RakBankCheckoutService $checkout)
+    {
+        $pending = $checkout->pendingCheckout();
+        $orderId = (string) data_get($pending, 'order_id', '');
+
+        if ($orderId !== '') {
+            $installment = $checkout->completePendingCheckout($request, $orderId);
+
+            if ($installment) {
+                return redirect()
+                    ->route('user.installments.receipt', $installment->id)
+                    ->with('success', 'Payment received. Your receipt is ready.');
+            }
+        }
+
+        $checkout->clearPendingCheckout();
+
+        return redirect()
+            ->route('user.home')
+            ->with('error', 'Payment could not be confirmed automatically. If your card was charged, please contact support with your bank reference.');
     }
 }
