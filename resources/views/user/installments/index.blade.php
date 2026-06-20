@@ -101,11 +101,10 @@
                                                                         <span aria-hidden="true">×</span>
                                                                     </button>
                                                                     <div class="modal-body" style="padding: 24px;">
+                                                                        <div id="payment-amount-display-{{ $installment->id }}" class="mb-3"></div>
                                                                         <div id="payment-error-{{ $installment->id }}" class="alert alert-danger" style="display:none;"></div>
                                                                         <div id="payment-loading-{{ $installment->id }}" class="text-center text-muted py-3" style="display:none;">Loading payment form...</div>
-                                                                        <div class="payment-embed-wrap">
-                                                                            <div id="hco-embedded-{{ $installment->id }}"></div>
-                                                                        </div>
+                                                                        <div id="hco-embedded-{{ $installment->id }}" style="min-height: 360px;"></div>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -189,6 +188,7 @@
                 },
                 success: function (res) {
                     if (res.success == true) {
+                        clearPaymentContext();
                         $(".modal.show").modal('hide');
 
                         setTimeout(function(){
@@ -207,19 +207,27 @@
         $('.payNowBtn').on('click', function () {
             currentInstallmentId = $(this).data('installment-id');
             currentAmount = $(this).data('amount');
+            currentCheckoutSessionId = null;
+        });
+
+        $(document).on('click', '.payment-start-btn', function () {
+            launchHostedPayment($(this).closest('.modal'));
         });
 
         $('[id^="paymentModal"]').on('shown.bs.modal', function () {
             var modal = $(this);
             var modalId = modal.attr('id');
             var installmentId = modalId.replace('paymentModal', '');
-            var embeddedDivId = '#hco-embedded-' + installmentId;
+            var amountDisplayId = '#payment-amount-display-' + installmentId;
             var errorDisplayId = '#payment-error-' + installmentId;
             var loadingDisplayId = '#payment-loading-' + installmentId;
+            var startBtnId = '#payment-start-btn-' + installmentId;
 
-            $(embeddedDivId).empty();
-            modal.find('.payment-btn-overlay').remove();
+            currentCheckoutSessionId = null;
+            $(amountDisplayId).empty();
             $(errorDisplayId).hide().empty();
+            $(startBtnId).hide().prop('disabled', false);
+            modal.find('.payment-secure-note').hide();
             $(loadingDisplayId).show();
 
             $.ajax({
@@ -235,18 +243,18 @@
                 success: function (res) {
                     $(loadingDisplayId).hide();
 
+                    if (res.displayAmount) {
+                        renderPaymentModalSummary(amountDisplayId, res);
+                    }
+
                     if (res.settlingAmount) {
                         currentAmount = res.settlingAmount;
                     }
 
                     if (res.success !== false && res.session && res.session.id) {
-                        try {
-                            showRakBankEmbeddedCheckout(embeddedDivId, res.session.id, res.payButtonLabel);
-                        } catch (error) {
-                            $(loadingDisplayId).hide();
-                            $(errorDisplayId).text('Unable to load payment form. Please try again.').show();
-                            console.error("RakBank checkout init failed:", error);
-                        }
+                        currentCheckoutSessionId = res.session.id;
+                        $(startBtnId).show();
+                        modal.find('.payment-secure-note').show();
                     } else {
                         $(errorDisplayId).text(res.error || 'Payment session could not be started. Please try again.').show();
                         console.error("Session creation failed", res);
@@ -268,8 +276,11 @@
         });
 
         $('[id^="paymentModal"]').on('hide.bs.modal', function () {
-            $(this).find('[id^="hco-embedded-"]').empty();
-            $(this).find('[id^="payment-amount-display-"]').empty();
+            currentCheckoutSessionId = null;
+        });
+
+        loadCheckoutScript(function () {
+            restorePaymentContext();
         });
 
         $(document).ready(function () {

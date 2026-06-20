@@ -134,14 +134,13 @@
                         <span aria-hidden="true">&times;</span>
                     </button>
                     <div class="modal-body" style="padding: 24px;">
+                        <div id="payment-amount-display" class="mb-3"></div>
                         <div id="payment-loading" class="text-center py-4" style="display: none;">
                             <i class="fa fa-spinner fa-spin fa-2x"></i>
                             <p class="mt-2 mb-0">Loading payment form...</p>
                         </div>
                         <div id="payment-error" class="alert alert-danger text-center" style="display: none;"></div>
-                        <div class="payment-embed-wrap">
-                            <div id="hco-embedded"></div>
-                        </div>
+                        <div id="hco-embedded" style="min-height: 360px;"></div>
                     </div>
                 </div>
             </div>
@@ -158,8 +157,8 @@
             let checkoutScriptLoaded = false;
 
             function resetPaymentModal() {
+                $('#payment-amount-display').empty();
                 $('#hco-embedded').empty();
-                $('.payment-embed-wrap .payment-btn-overlay').remove();
                 $('#payment-error').hide().empty();
                 $('#payment-loading').hide();
             }
@@ -236,11 +235,14 @@
                 });
             }
 
-            function loadEmbeddedCheckout(sessionId, payButtonLabel) {
+            function loadEmbeddedCheckout(sessionId) {
                 loadCheckoutScript(function () {
                     try {
+                        Checkout.configure({
+                            session: { id: sessionId },
+                        });
                         $('#payment-loading').hide();
-                        showRakBankEmbeddedCheckout('#hco-embedded', sessionId, payButtonLabel);
+                        Checkout.showEmbeddedPage('#hco-embedded');
                     } catch (error) {
                         $('#payment-loading').hide();
                         $('#payment-error').text('Unable to load payment form. Please try again.').show();
@@ -272,10 +274,14 @@
                     success: function (res) {
                         $('#payment-loading').hide();
 
+                        if (res.displayAmount) {
+                            renderPaymentModalSummary('#payment-amount-display', res);
+                        }
+
                         currentSettlingAmount = res.settlingAmount || null;
 
                         if (res.success !== false && res.session && res.session.id) {
-                            loadEmbeddedCheckout(res.session.id, res.payButtonLabel);
+                            loadEmbeddedCheckout(res.session.id);
                         } else {
                             $('#payment-error').text(res.error || 'Payment session could not be started. Please try again.').show();
                             console.error("Session creation failed", res);
