@@ -413,7 +413,11 @@
     const currencyRatesToAed = @json(currency_rates_to_aed());
 
     function paymentCurrency(payment) {
-        return String(payment.currency || payment.course_fee?.currency || payment.courseFee?.currency || 'AED').toUpperCase();
+        const paymentCurrencyRaw = String(payment.currency || '').trim();
+        const feeCurrencyRaw = String(payment.course_fee?.currency || payment.courseFee?.currency || '').trim();
+
+        // Prefer package currency; some old payment records have empty or wrong currency.
+        return String(feeCurrencyRaw || paymentCurrencyRaw || 'AED').toUpperCase();
     }
 
     function adminDisplayAmountNumber(payment, aedAmount) {

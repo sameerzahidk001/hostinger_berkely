@@ -269,6 +269,32 @@ class AdminController extends Controller
     }
 
     public function logout(Request $request){
+        if (Auth::guard('admin')->check()) {
+            $admin = Auth::guard('admin')->user();
+            record_user_activity(
+                'Admin Logout',
+                'Session ended',
+                admin_login_url(),
+                'staff',
+                null,
+                $admin?->id,
+                $request
+            );
+        }
+
+        if (Auth::check()) {
+            $user = Auth::user();
+            record_user_activity(
+                'User Logout',
+                'Session ended from admin panel',
+                admin_login_url(),
+                activity_audience_for_user($user),
+                $user->id,
+                null,
+                $request
+            );
+        }
+
         $wasPanelUser = Auth::check()
             && is_restricted_panel_role(Auth::user()->roles()->value('name'));
 

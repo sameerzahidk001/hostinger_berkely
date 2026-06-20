@@ -127,7 +127,8 @@ if (!function_exists('user_avatar_url')) {
             return asset(ltrim($path, '/'));
         }
 
-        return asset('admin/images/user-avatar.png');
+        // Use a robust fallback that always exists on the theme.
+        return asset('student/img/landing/avatar_all.png');
     }
 }
 
