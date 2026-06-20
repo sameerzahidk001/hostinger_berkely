@@ -184,7 +184,7 @@
                                                 @endif
                                             </td>
                                             <td>
-                                                <select name="course_status" class="form-control" id="course_status_{{ $data->id }}"
+                                                <select name="course_status" class="form-control" id="course_status_{{ $data->id }}" required
                                                     onchange="updateCourseStatus(this.value, {{ $data->id }})">
                                                     <option value="active" @if(is_null($data->deleted_at)) selected @endif>Active</option>
                                                     <option value="disable" @if(!is_null($data->deleted_at)) selected @endif>Disable</option>

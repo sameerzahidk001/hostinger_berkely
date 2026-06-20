@@ -125,13 +125,14 @@
                         src="{{ asset('frontend/images/pngs/header-logo-white.png') }}" alt=""
                         style="width: 220px; padding: 8px 12px;"></a>
                </li>
-               <li class="nav-header" style="padding: 14px 12px 16px; text-align: center; border-bottom: 1px solid #293846;">
-                  <a href="{{ route('user.profile') }}" title="My profile">
-                     <img src="{{ user_avatar_url() }}" alt="{{ auth()->user()->name }}"
-                        style="width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; display: inline-block;">
-                  </a>
-                  <div style="color: #dfe4ea; font-size: 12px; margin-top: 8px; line-height: 1.3;">
-                     {{ auth()->user()->name }}
+               <li style="padding: 10px 12px;">
+                  <div style="display:flex;align-items:center;gap:10px;">
+                     <img src="{{ user_avatar_url(auth()->user()) }}" alt="{{ auth()->user()->name ?? 'User' }}"
+                        style="width:42px;height:42px;border-radius:999px;object-fit:cover;border:2px solid rgba(255,255,255,0.2);" />
+                     <div style="color:#fff;line-height:1.2;">
+                        <div style="font-weight:600;">{{ auth()->user()->name ?? 'User' }}</div>
+                        <div style="font-size:12px;opacity:0.85;">Student Portal</div>
+                     </div>
                   </div>
                </li>
                @if(auth()->user()->hasPermission('dashboard-read'))
