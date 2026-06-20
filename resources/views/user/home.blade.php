@@ -243,6 +243,9 @@
                         });
                         $('#payment-loading').hide();
                         Checkout.showEmbeddedPage('#hco-embedded');
+                        if (typeof normalizeEmbeddedPayButtons === 'function') {
+                            normalizeEmbeddedPayButtons('#hco-embedded');
+                        }
                     } catch (error) {
                         $('#payment-loading').hide();
                         $('#payment-error').text('Unable to load payment form. Please try again.').show();

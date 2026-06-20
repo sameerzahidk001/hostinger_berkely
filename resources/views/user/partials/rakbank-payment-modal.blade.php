@@ -35,6 +35,33 @@
 
     @push('script')
         <script>
+            function normalizeEmbeddedPayButtons(containerSelector) {
+                const root = document.querySelector(containerSelector);
+                if (!root) {
+                    return;
+                }
+
+                const scrub = function () {
+                    root.querySelectorAll('button, [role="button"], input[type="submit"]').forEach(function (btn) {
+                        const text = (btn.textContent || btn.value || '').trim();
+                        if (/^pay\b/i.test(text)) {
+                            if (btn.tagName === 'INPUT') {
+                                btn.value = 'Pay';
+                            } else {
+                                btn.textContent = 'Pay';
+                            }
+                        }
+                    });
+                };
+
+                scrub();
+                const observer = new MutationObserver(scrub);
+                observer.observe(root, { childList: true, subtree: true, characterData: true });
+                setTimeout(function () {
+                    observer.disconnect();
+                }, 30000);
+            }
+
             function renderPaymentModalSummary(targetSelector, res) {
                 var summary = res.summary || {};
                 var amount = res.displayAmount || '';

@@ -59,10 +59,9 @@ class UserActivityLogService
         int $perPage = 15,
         int $page = 1,
         string $path = '',
-        array $query = [],
-        bool $userNoneOnly = false
+        array $query = []
     ): LengthAwarePaginator {
-        $activities = $this->buildFeed($audience, $userId, $dateFrom, $dateTo, $userNoneOnly);
+        $activities = $this->buildFeed($audience, $userId, $dateFrom, $dateTo);
         $total = $activities->count();
         $items = $activities->slice(($page - 1) * $perPage, $perPage)->values();
 
@@ -79,8 +78,7 @@ class UserActivityLogService
         string $audience,
         ?int $userId,
         ?string $dateFrom,
-        ?string $dateTo,
-        bool $userNoneOnly = false
+        ?string $dateTo
     ): Collection {
         if (! $this->tableExists()) {
             return collect();
@@ -93,12 +91,7 @@ class UserActivityLogService
             ->where('audience', $audience)
             ->orderByDesc('created_at');
 
-        if ($userNoneOnly) {
-            $query->whereNull('user_id');
-            if ($audience === 'staff') {
-                $query->whereNull('admin_id');
-            }
-        } elseif ($userId) {
+        if ($userId) {
             $query->where(function ($q) use ($userId) {
                 $q->where('user_id', $userId)
                     ->orWhere('admin_id', $userId);

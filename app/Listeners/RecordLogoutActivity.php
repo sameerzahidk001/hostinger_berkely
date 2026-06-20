@@ -35,12 +35,14 @@ class RecordLogoutActivity
         }
 
         if ($user instanceof User) {
-            $fromAdminPanel = $request->is('admin/*') || $request->is('admin');
+            $item = $event->guard === 'admin'
+                ? 'Session ended from admin panel'
+                : 'Session ended';
 
             record_user_activity(
                 'User Logout',
-                $fromAdminPanel ? 'Session ended from admin panel' : 'Session ended',
-                $fromAdminPanel ? admin_login_url() : public_login_url(),
+                $item,
+                $event->guard === 'admin' ? admin_login_url() : public_login_url(),
                 activity_audience_for_user($user),
                 $user->id,
                 null,
