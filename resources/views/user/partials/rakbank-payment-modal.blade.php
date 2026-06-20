@@ -1,71 +1,75 @@
 @once
     @push('style')
         <style>
-            .payment-summary-table td {
-                padding: 5px 10px 5px 0;
-                font-size: 13px;
-                vertical-align: top;
+            .payment-embed-wrap {
+                position: relative;
+                min-height: 360px;
             }
 
-            .payment-summary-table td:first-child {
-                color: #676a6c;
-                white-space: nowrap;
-                width: 38%;
-            }
-
-            .payment-summary-table td:last-child {
-                font-weight: 500;
-                color: #333;
-            }
-
-            .payment-summary-amount {
-                border-top: 1px solid #e7eaec;
-                margin-top: 16px;
-                padding-top: 16px;
-                text-align: center;
-            }
-
-            #hco-embedded iframe,
-            [id^="hco-embedded-"] iframe {
+            .payment-embed-wrap iframe {
                 width: 100% !important;
                 min-height: 360px;
+            }
+
+            .payment-btn-overlay {
+                position: absolute;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                height: 48px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                background: #dcdcdc;
+                color: #4a4a4a;
+                font-size: 16px;
+                font-weight: 600;
+                pointer-events: none;
+                border-radius: 4px;
+                z-index: 2;
             }
         </style>
     @endpush
 
     @push('script')
         <script>
-            function renderPaymentModalSummary(targetSelector, res) {
-                var summary = res.summary || {};
-                var amount = res.displayAmount || '';
-                var rows = [
-                    ['Invoice No', summary.invoice_no],
-                    ['Invoice Date', summary.invoice_date],
-                    ['Invoice Amount', summary.invoice_amount],
-                    ['Payment Plan', summary.payment_plan],
-                    ['Due Date', summary.due_date],
-                    ['Course', summary.course_name],
-                    ['Package', summary.package_name],
-                ];
+            function applyPayButtonOverlay(embeddedSelector, payButtonLabel) {
+                if (!payButtonLabel) {
+                    return;
+                }
 
-                var tableRows = rows.map(function (row) {
-                    if (!row[1]) {
-                        return '';
-                    }
+                var $embedded = $(embeddedSelector);
+                var $wrap = $embedded.closest('.payment-embed-wrap');
 
-                    return '<tr><td>' + row[0] + '</td><td>' + row[1] + '</td></tr>';
-                }).join('');
+                if (!$wrap.length) {
+                    $embedded.wrap('<div class="payment-embed-wrap"></div>');
+                    $wrap = $embedded.parent();
+                }
 
-                $(targetSelector).html(
-                    '<div style="text-align:left;">' +
-                        '<div style="font-size:14px;font-weight:600;margin-bottom:10px;color:#333;">Payment details</div>' +
-                        '<table class="payment-summary-table" style="width:100%;">' + tableRows + '</table>' +
-                        '<div class="payment-summary-amount">' +
-                            '<div style="font-size:13px;color:#666;margin-bottom:4px;">Amount to pay</div>' +
-                            '<div style="font-size:22px;font-weight:700;">' + amount + '</div>' +
-                        '</div>' +
+                $wrap.find('.payment-btn-overlay').remove();
+                $wrap.append(
+                    '<div class="payment-btn-overlay">' +
+                        '<i class="fa fa-lock"></i> ' + payButtonLabel +
                     '</div>'
                 );
+            }
+
+            function showRakBankEmbeddedCheckout(embeddedSelector, sessionId, payButtonLabel) {
+                try {
+                    Checkout.configure({
+                        session: { id: sessionId },
+                    });
+                    Checkout.showEmbeddedPage(embeddedSelector);
+                    setTimeout(function () {
+                        applyPayButtonOverlay(embeddedSelector, payButtonLabel);
+                    }, 700);
+                    setTimeout(function () {
+                        applyPayButtonOverlay(embeddedSelector, payButtonLabel);
+                    }, 1500);
+                } catch (error) {
+                    throw error;
+                }
             }
         </script>
     @endpush
