@@ -308,6 +308,9 @@
             });
 
             $('#paymentModal').on('hidden.bs.modal', function () {
+                if (typeof stopPayButtonCleanup === 'function') {
+                    stopPayButtonCleanup();
+                }
                 resetPaymentModal();
                 currentSettlingAmount = null;
             });
