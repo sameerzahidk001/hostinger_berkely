@@ -127,26 +127,20 @@
         </div>
     @endif
         <div class="modal fade" id="paymentModal" tabindex="-1" role="dialog" aria-hidden="true">
-            <div class="modal-dialog" role="document" style="max-width: 520px;">
+            <div class="modal-dialog modal-lg" role="document" style="max-width: 560px;">
                 <div class="modal-content">
                     <button type="button" class="close close-white position-absolute top-0 right-0"
                         style="margin-top: -25px; margin-right: 10px;" data-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
-                    <div class="modal-body" style="padding: 28px 24px; text-align: center;">
-                        <div id="payment-amount-display" class="mb-2"></div>
+                    <div class="modal-body" style="padding: 24px;">
+                        <div id="payment-amount-display" class="mb-3"></div>
                         <div id="payment-loading" class="text-center py-4" style="display: none;">
                             <i class="fa fa-spinner fa-spin fa-2x"></i>
-                            <p class="mt-2 mb-0">Preparing secure payment...</p>
+                            <p class="mt-2 mb-0">Loading payment form...</p>
                         </div>
                         <div id="payment-error" class="alert alert-danger text-center" style="display: none;"></div>
-                        <button type="button" id="payment-start-btn" class="btn btn-primary btn-lg"
-                            style="display: none; min-width: 180px; margin-top: 12px;">
-                            <i class="fa fa-lock"></i> Pay
-                        </button>
-                        <p id="payment-secure-note" style="display: none; font-size: 12px; color: #999; margin-top: 14px; margin-bottom: 0;">
-                            Card details are entered on the secure payment screen.
-                        </p>
+                        <div id="hco-embedded" style="min-height: 360px;"></div>
                     </div>
                 </div>
             </div>
@@ -160,40 +154,13 @@
         <script>
             let currentInstallmentId = null;
             let currentSettlingAmount = null;
-            let currentCheckoutSessionId = null;
             let checkoutScriptLoaded = false;
 
             function resetPaymentModal() {
                 $('#payment-amount-display').empty();
+                $('#hco-embedded').empty();
                 $('#payment-error').hide().empty();
                 $('#payment-loading').hide();
-                $('#payment-start-btn').hide().prop('disabled', false);
-                $('#payment-secure-note').hide();
-                currentCheckoutSessionId = null;
-            }
-
-            function persistPaymentContext() {
-                if (!currentInstallmentId || !currentSettlingAmount) {
-                    return;
-                }
-
-                sessionStorage.setItem('rakbank_installment_id', String(currentInstallmentId));
-                sessionStorage.setItem('rakbank_settling_amount', String(currentSettlingAmount));
-            }
-
-            function restorePaymentContext() {
-                if (!currentInstallmentId) {
-                    currentInstallmentId = sessionStorage.getItem('rakbank_installment_id');
-                }
-
-                if (!currentSettlingAmount) {
-                    currentSettlingAmount = sessionStorage.getItem('rakbank_settling_amount');
-                }
-            }
-
-            function clearPaymentContext() {
-                sessionStorage.removeItem('rakbank_installment_id');
-                sessionStorage.removeItem('rakbank_settling_amount');
             }
 
             function loadCheckoutScript(callback) {
@@ -236,8 +203,6 @@
             }
 
             function completeCallback(response) {
-                restorePaymentContext();
-
                 if (!currentInstallmentId || !currentSettlingAmount) {
                     console.error("Installment or amount missing.");
                     return;
@@ -255,7 +220,6 @@
                     },
                     success: function (res) {
                         if (res.success == true) {
-                            clearPaymentContext();
                             $(".modal.show").modal('hide');
 
                             setTimeout(function () {
@@ -271,26 +235,18 @@
                 });
             }
 
-            function launchHostedPayment() {
-                if (!currentCheckoutSessionId) {
-                    $('#payment-error').text('Payment session expired. Please close and try again.').show();
-                    return;
-                }
-
-                $('#payment-start-btn').prop('disabled', true);
-                persistPaymentContext();
-
+            function loadEmbeddedCheckout(sessionId) {
                 loadCheckoutScript(function () {
                     try {
                         Checkout.configure({
-                            session: { id: currentCheckoutSessionId },
+                            session: { id: sessionId },
                         });
-                        $('#paymentModal').modal('hide');
-                        Checkout.showPaymentPage();
+                        $('#payment-loading').hide();
+                        Checkout.showEmbeddedPage('#hco-embedded');
                     } catch (error) {
-                        $('#payment-start-btn').prop('disabled', false);
-                        $('#payment-error').text('Unable to open secure payment. Please try again.').show();
-                        console.error("RakBank checkout launch failed:", error);
+                        $('#payment-loading').hide();
+                        $('#payment-error').text('Unable to load payment form. Please try again.').show();
+                        console.error("RakBank checkout init failed:", error);
                     }
                 });
             }
@@ -299,10 +255,6 @@
                 currentInstallmentId = $(this).data('installment-id');
                 resetPaymentModal();
                 $('#paymentModal').modal('show');
-            });
-
-            $('#payment-start-btn').on('click', function () {
-                launchHostedPayment();
             });
 
             $('#paymentModal').on('shown.bs.modal', function () {
@@ -329,9 +281,7 @@
                         currentSettlingAmount = res.settlingAmount || null;
 
                         if (res.success !== false && res.session && res.session.id) {
-                            currentCheckoutSessionId = res.session.id;
-                            $('#payment-start-btn').show();
-                            $('#payment-secure-note').show();
+                            loadEmbeddedCheckout(res.session.id);
                         } else {
                             $('#payment-error').text(res.error || 'Payment session could not be started. Please try again.').show();
                             console.error("Session creation failed", res);
@@ -355,10 +305,6 @@
             $('#paymentModal').on('hidden.bs.modal', function () {
                 resetPaymentModal();
                 currentSettlingAmount = null;
-            });
-
-            loadCheckoutScript(function () {
-                restorePaymentContext();
             });
         </script>
     @endif

@@ -24,6 +24,12 @@
                 padding-top: 16px;
                 text-align: center;
             }
+
+            #hco-embedded iframe,
+            [id^="hco-embedded-"] iframe {
+                width: 100% !important;
+                min-height: 360px;
+            }
         </style>
     @endpush
 
