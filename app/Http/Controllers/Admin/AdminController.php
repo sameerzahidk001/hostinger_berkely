@@ -269,6 +269,10 @@ class AdminController extends Controller
     }
 
     public function logout(Request $request){
+        $sessionId = $request->hasSession() ? $request->session()->getId() : null;
+        $wasPanelUser = Auth::check()
+            && is_restricted_panel_role(Auth::user()->roles()->value('name'));
+
         if (Auth::guard('admin')->check()) {
             $admin = Auth::guard('admin')->user();
             record_user_activity(
@@ -278,7 +282,8 @@ class AdminController extends Controller
                 'staff',
                 null,
                 $admin?->id,
-                $request
+                $request,
+                $sessionId
             );
         }
 
@@ -291,12 +296,10 @@ class AdminController extends Controller
                 activity_audience_for_user($user),
                 $user->id,
                 null,
-                $request
+                $request,
+                $sessionId
             );
         }
-
-        $wasPanelUser = Auth::check()
-            && is_restricted_panel_role(Auth::user()->roles()->value('name'));
 
         Auth::guard('admin')->logout();
         Auth::logout();
