@@ -25,6 +25,8 @@ class PanelActivityService
             'my_courses' => $userId ? $this->countCoursesCreated($userId, null, null) : 0,
             'my_pages' => $userId ? $this->countPagesCreated($userId, null, null) : 0,
             'total_courses_site' => (int) Course::count(),
+            'total_courses_active' => (int) Course::where('status', 1)->count(),
+            'total_courses_inactive' => (int) Course::where('status', 0)->count(),
             'total_pages_site' => (int) Page::count(),
             'total_payments_site' => $includePayments && Schema::hasTable('payments')
                 ? (int) Payment::count()
@@ -123,7 +125,8 @@ class PanelActivityService
         string $path = '',
         array $query = [],
         ?array $restrictToUserIds = null,
-        bool $paymentsOnly = false
+        bool $paymentsOnly = false,
+        bool $actorNoneOnly = false
     ): LengthAwarePaginator {
         $activities = $this->buildFeed(
             $userId,
@@ -150,6 +153,12 @@ class PanelActivityService
             ->merge($logs)
             ->sortByDesc(fn (array $row) => $row['occurred_at']->timestamp)
             ->values();
+
+        if ($actorNoneOnly) {
+            $merged = $merged->filter(function (array $row) {
+                return empty($row['actor_id']);
+            })->values();
+        }
 
         $total = $merged->count();
         $items = $merged->slice(($page - 1) * $perPage, $perPage)->values();

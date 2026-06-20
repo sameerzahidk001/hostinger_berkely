@@ -26,6 +26,7 @@ php artisan migrate --path=database/migrations/2026_06_16_000004_add_audit_colum
 php artisan migrate --path=database/migrations/2026_06_16_000005_add_source_to_payments_table.php --force
 php artisan migrate --path=database/migrations/2026_06_19_000001_create_user_activity_logs_table.php --force
 php artisan migrate --path=database/migrations/2026_06_19_000002_add_image_alt_columns.php --force
+php artisan migrate --path=database/migrations/2026_06_20_000001_add_status_to_pages_table.php --force
 
 php artisan config:clear
 php artisan cache:clear

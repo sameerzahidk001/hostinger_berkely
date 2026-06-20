@@ -125,6 +125,15 @@
                         src="{{ asset('frontend/images/pngs/header-logo-white.png') }}" alt=""
                         style="width: 220px; padding: 8px 12px;"></a>
                </li>
+               <li class="nav-header" style="padding: 14px 12px 16px; text-align: center; border-bottom: 1px solid #293846;">
+                  <a href="{{ route('user.profile') }}" title="My profile">
+                     <img src="{{ user_avatar_url() }}" alt="{{ auth()->user()->name }}"
+                        style="width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 2px solid #fff; display: inline-block;">
+                  </a>
+                  <div style="color: #dfe4ea; font-size: 12px; margin-top: 8px; line-height: 1.3;">
+                     {{ auth()->user()->name }}
+                  </div>
+               </li>
                @if(auth()->user()->hasPermission('dashboard-read'))
                   <li class="{{ request()->routeIs('user.home') ? 'active' : '' }}">
                      <a href="{{ route('user.home') }}"><i class="fa fa-th-large"></i> <span

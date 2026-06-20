@@ -99,7 +99,7 @@ Route::controller(FrontendController::class)->middleware('set.seo')->group(funct
     // Route::get('/home-schooling-parental-support', 'HomeSchoolParentalSupport')->name('school.page-1');
     // Route::get('/home-school-supporting-child', 'HomeSchoolSupporttingChild')->name('school.page-2');
     // Route::get('/islamic-school', 'islamicSchool')->name('islamic-school');
-    Route::get('/learner-stories', 'LearnerStories')->name('learner-stories');
+    Route::get('/learner-stories', fn () => abort(404))->name('learner-stories');
 
     Route::get('/berkeley-square', 'BerkeleySquare')->name('berkeley-square');
     Route::get('/berkeley-square-london', 'BerkeleySquareLondon')->name('berkeley-square-london');

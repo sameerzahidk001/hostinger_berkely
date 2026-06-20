@@ -103,7 +103,9 @@ class AdminController extends Controller
         }
 
         return $this->activityDashboard($request, [
-            'userId' => $request->filled('user_id') ? (int) $request->query('user_id') : null,
+            'userId' => ($request->query('user_id') === 'none' || ! $request->filled('user_id'))
+                ? null
+                : (int) $request->query('user_id'),
             'roleFilter' => $request->query('role'),
             'showMyStats' => false,
             'showSiteStats' => true,
@@ -151,13 +153,24 @@ class AdminController extends Controller
 
         $restrictToUserIds = null;
         $paymentsOnly = false;
+        $actorNoneOnly = false;
+        $studentNoneOnly = false;
+
+        if (($options['showUserFilter'] ?? false) && $request->query('user_id') === 'none') {
+            $actorNoneOnly = true;
+            $userId = null;
+        } elseif (($options['showUserFilter'] ?? false) && $request->filled('user_id')) {
+            $userId = (int) $request->query('user_id');
+        }
 
         if ($userId) {
             $restrictToUserIds = null;
         } elseif ($roleFilter === 'accountant') {
             $paymentsOnly = true;
-        } elseif ($roleFilter) {
+        } elseif ($roleFilter && $roleFilter !== 'none') {
             $restrictToUserIds = $service->userIdsForRole($roleFilter);
+        } elseif ($roleFilter === 'none') {
+            $actorNoneOnly = true;
         }
 
         $summary = $service->summary($userId, $dateFrom, $dateTo, $includePayments);
@@ -172,12 +185,16 @@ class AdminController extends Controller
             $request->url(),
             $request->query(),
             $restrictToUserIds,
-            $paymentsOnly
+            $paymentsOnly,
+            $actorNoneOnly
         );
 
-        $studentUserId = $request->filled('student_user_id')
-            ? (int) $request->query('student_user_id')
-            : null;
+        $studentUserId = null;
+        if ($showStudentTable && $request->query('student_user_id') === 'none') {
+            $studentNoneOnly = true;
+        } elseif ($showStudentTable && $request->filled('student_user_id')) {
+            $studentUserId = (int) $request->query('student_user_id');
+        }
 
         $studentActivities = $showStudentTable
             ? $logService->paginatedFeed(
@@ -188,7 +205,8 @@ class AdminController extends Controller
                 15,
                 (int) $request->query('student_page', 1),
                 $request->url(),
-                $request->query()
+                $request->query(),
+                $studentNoneOnly
             )
             : null;
 

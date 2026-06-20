@@ -53,8 +53,21 @@
                         <i class="fa fa-files-o fa-3x"></i>
                     </div>
                     <div class="col-xs-8 text-right">
-                        <span>Total Courses</span>
-                        <h2 class="font-bold">{{ $summary['total_courses_site'] }}</h2>
+                        <span>Active Courses</span>
+                        <h2 class="font-bold">{{ $summary['total_courses_active'] ?? $summary['total_courses_site'] }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="widget style1" style="background-color:#95a5a6;color:#fff;">
+                <div class="row">
+                    <div class="col-xs-4">
+                        <i class="fa fa-files-o fa-3x"></i>
+                    </div>
+                    <div class="col-xs-8 text-right">
+                        <span>Inactive Courses</span>
+                        <h2 class="font-bold">{{ $summary['total_courses_inactive'] ?? 0 }}</h2>
                     </div>
                 </div>
             </div>
@@ -159,6 +172,7 @@
                         <label for="role" class="m-r-xs">Role</label>
                         <select id="role" name="role" class="form-control">
                             <option value="">All roles</option>
+                            <option value="none" @selected(request('role') === 'none')>None</option>
                             <option value="content_writer" @selected(request('role') === 'content_writer')>Content Writers</option>
                             <option value="accountant" @selected(request('role') === 'accountant')>Accountants</option>
                             <option value="instructor" @selected(request('role') === 'instructor')>Instructors</option>
@@ -168,6 +182,7 @@
                         <label for="user_id" class="m-r-xs">User</label>
                         <select id="user_id" name="user_id" class="form-control" style="min-width: 220px;">
                             <option value="">All users</option>
+                            <option value="none" @selected(request('user_id') === 'none')>None</option>
                             @foreach($filterUsers ?? [] as $filterUser)
                                 @php $roleName = $filterUser->roles->first()?->name; @endphp
                                 <option value="{{ $filterUser->id }}" @selected((string) request('user_id') === (string) $filterUser->id)>
@@ -182,6 +197,7 @@
                         <label for="student_user_id" class="m-r-xs">Student</label>
                         <select id="student_user_id" name="student_user_id" class="form-control" style="min-width: 220px;">
                             <option value="">All students</option>
+                            <option value="none" @selected(request('student_user_id') === 'none')>None</option>
                             @foreach($studentFilterUsers ?? [] as $studentUser)
                                 <option value="{{ $studentUser->id }}" @selected((string) request('student_user_id') === (string) $studentUser->id)>
                                     {{ $studentUser->name }} ({{ $studentUser->email }})

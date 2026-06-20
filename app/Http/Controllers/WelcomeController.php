@@ -92,7 +92,13 @@ class WelcomeController extends Controller
 
     private function resolvePageBySlug(string $slug): ?Page
     {
-        return Page::where('url', $slug)
+        $query = Page::where('url', $slug);
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('pages', 'status')) {
+            $query->where('status', 1);
+        }
+
+        return $query
             ->withCount('sections')
             ->orderByDesc('sections_count')
             ->orderByDesc('id')

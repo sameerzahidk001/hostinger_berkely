@@ -67,6 +67,7 @@ class PagesController extends Controller
             ],
             'parent_id' => 'nullable|integer|exists:pages,id',
             'category_id' => 'nullable|integer|exists:categories,id',
+            'status' => 'required|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -74,6 +75,8 @@ class PagesController extends Controller
         }
 
         $data = $request->except('_token');
+        $status = $request->boolean('status', true) ? 1 : 0;
+        unset($data['status']);
 
         if (empty($data['url']) && ! empty($data['page_name'])) {
             $data['url'] = Page::slugFromName($data['page_name']);
@@ -88,6 +91,10 @@ class PagesController extends Controller
         $data['url'] = $url;
 
         $pageCreated = Page::create($data);
+        assign_column_if_exists($pageCreated, 'status', $status);
+        if ($pageCreated->isDirty()) {
+            $pageCreated->save();
+        }
 
         if ($pageCreated) {
             session()->flash('success', 'Page created. Add content sections and save.');
@@ -158,6 +165,7 @@ class PagesController extends Controller
             ],
             'parent_id' => 'nullable|integer|exists:pages,id',
             'category_id' => 'nullable|integer|exists:categories,id',
+            'status' => 'required|boolean',
             'meta_title' => 'nullable|string|max:' . seo_field_limits()['title_max'],
             'meta_description' => 'nullable|string|max:' . seo_field_limits()['meta_description_max'],
             'meta_keywords' => 'nullable|string|max:' . seo_field_limits()['priority_keywords_max_total'],
@@ -177,6 +185,7 @@ class PagesController extends Controller
         $page->url = $request->input('url');
         $page->category_id = $request->input('category_id');
         $page->parent_id = $request->input('parent_id');
+        assign_column_if_exists($page, 'status', $request->boolean('status', true) ? 1 : 0);
         if ($page->category_id) {
             $page->parent_id = null;
         }

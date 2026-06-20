@@ -11,7 +11,7 @@
     }
 </style>
 <section
-    class="min-h-[174px] lg:px-[120px] px-4 md:px-8 w-full my-16 {{ $background != 'transparent' ? 'py-16' : '' }}"
+    class="min-h-[174px] lg:px-[120px] px-4 md:px-8 w-full my-8 {{ $background != 'transparent' ? 'py-10' : '' }}"
     style="background-color: {{ $background }}">
 
     @if (isset($title))
@@ -21,11 +21,10 @@
         <div class="mb-4" style="color: {{ $color ?? 'inherit' }}">{!! $description !!}</div>
     @endif
     <div class="p-0">
-        <!-- Job Listings -->
-        <div class="space-y-6">
+        <div class="space-y-3">
             @foreach ($cards as $card)
                 <div
-                    class="flex flex-col sm:flex-col lg:flex-row gap-y-8 items-center justify-between p-6 rounded-lg shadow-sm transition-all ease-in duration-200 delay-100 border career-cards gap-4 mb-4">
+                    class="flex flex-col sm:flex-col lg:flex-row gap-y-4 items-center justify-between p-5 rounded-lg shadow-sm transition-all ease-in duration-200 delay-100 border career-cards gap-4 mb-2">
                     <div>
                         {!! $card['content'] !!}
                         <div class="flex space-x-2 mt-2">

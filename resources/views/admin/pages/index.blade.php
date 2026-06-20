@@ -89,6 +89,13 @@
                                         @endforeach
                                     </select>
                                 </div>
+                                <div class="col-lg-4">
+                                    <label class="mb-1">Status</label>
+                                    <select class="form-control" name="status" required>
+                                        <option value="1" @selected(old('status', '1') == '1')>Active</option>
+                                        <option value="0" @selected(old('status') === '0')>Disabled</option>
+                                    </select>
+                                </div>
                             </div>
                             <div class="row">
                                 <div class="col-lg-12" style="margin-top: 16px;text-align:right;">
@@ -130,6 +137,7 @@
                                         <th style="width: 40px;">SR#</th>
                                         <th>Page</th>
                                         <th>URL</th>
+                                        <th style="width:90px;">Status</th>
                                         <th>FAQ's Count</th>
                                         <th>SEO Status</th>
                                         <th style="width:90px;">Score</th>
@@ -173,6 +181,12 @@
                                                 }}
                                             </td>
                                             <td style="vertical-align: middle;">
+                                                @php $pageStatus = (int) ($page->status ?? 1); @endphp
+                                                <span class="label {{ $pageStatus ? 'label-primary' : 'label-default' }}">
+                                                    {{ $pageStatus ? 'Active' : 'Disabled' }}
+                                                </span>
+                                            </td>
+                                            <td style="vertical-align: middle;">
                                                 {{ $page->faqs->count() }}
                                             </td>
                                             <td style="vertical-align: middle;">
@@ -213,6 +227,7 @@
                                         <th>SR#</th>
                                         <th>Page</th>
                                         <th>URL</th>
+                                        <th>Status</th>
                                         <th>FAQ's Count</th>
                                         <th>SEO Status</th>
                                         <th>Score</th>
@@ -251,7 +266,7 @@
                 ordering: true,
                 responsive: true,
                 dom: 'lftip',
-                order: [[8, 'desc']]
+                order: [[9, 'desc']]
             });
 
             function slugify(text) {

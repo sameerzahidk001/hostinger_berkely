@@ -187,6 +187,17 @@
                                         @endforeach
                                     </select>
                                 </div>
+
+                                <div class="col-lg-4">
+                                    <label class="mb-1">Status</label>
+                                    <select class="form-control" name="status" required>
+                                        <option value="1" @selected((string) old('status', $page->status ?? 1) === '1')>Active</option>
+                                        <option value="0" @selected((string) old('status', $page->status ?? 1) === '0')>Disabled</option>
+                                    </select>
+                                    @error('status')
+                                        <p class="text-danger text-xs italic">{{ $message }}</p>
+                                    @enderror
+                                </div>
                             </div>
                         </div>
                     </div>

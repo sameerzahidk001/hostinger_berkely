@@ -508,6 +508,19 @@ if (!function_exists('activity_audience_for_user')) {
     }
 }
 
+if (!function_exists('user_avatar_url')) {
+    function user_avatar_url($user = null): string
+    {
+        $user = $user ?? auth()->user();
+
+        if ($user && ! empty($user->image)) {
+            return asset($user->image);
+        }
+
+        return asset('images/profiles/user.png');
+    }
+}
+
 if (!function_exists('record_user_activity')) {
     function record_user_activity(
         string $action,
