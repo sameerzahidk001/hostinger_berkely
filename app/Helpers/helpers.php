@@ -113,6 +113,24 @@ if (!function_exists('panel_profile_name')) {
     }
 }
 
+if (!function_exists('user_avatar_url')) {
+    function user_avatar_url($user = null): string
+    {
+        $user = $user ?? panel_profile_user();
+
+        $path = trim((string) data_get($user, 'avatar'));
+        if ($path !== '') {
+            if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+                return $path;
+            }
+
+            return asset(ltrim($path, '/'));
+        }
+
+        return asset('admin/images/user-avatar.png');
+    }
+}
+
 if (!function_exists('normalize_panel_role')) {
     function normalize_panel_role(?string $role): ?string
     {
@@ -618,9 +636,15 @@ if (!function_exists('convert_from_aed')) {
 if (!function_exists('payment_display_currency')) {
     function payment_display_currency($payment): string
     {
-        return package_currency_code(
-            $payment->currency ?? optional($payment->courseFee)->currency ?? 'AED'
-        );
+        $currency = trim((string) ($payment->currency ?? ''));
+
+        // Some historical records have `payments.currency` stored as empty string.
+        // Treat it as missing so we can fall back to the package currency.
+        if ($currency === '') {
+            $currency = trim((string) (optional($payment->courseFee)->currency ?? ''));
+        }
+
+        return package_currency_code($currency !== '' ? $currency : 'AED');
     }
 }
 
