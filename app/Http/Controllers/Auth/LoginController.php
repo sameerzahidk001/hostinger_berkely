@@ -121,19 +121,6 @@ class LoginController extends Controller
      */
     public function logout(Request $request)
     {
-        $user = Auth::user();
-        if ($user) {
-            record_user_activity(
-                'User Logout',
-                'Session ended',
-                public_login_url(),
-                activity_audience_for_user($user),
-                $user->id,
-                null,
-                $request
-            );
-        }
-
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

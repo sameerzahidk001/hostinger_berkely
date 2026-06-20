@@ -39,6 +39,7 @@ class AdminController extends Controller
         ]);
 
         if (Auth::guard('admin')->attempt(['email' => $request->email, 'password' => $request->password])) {
+            $request->session()->regenerate();
             $admin = Auth::guard('admin')->user();
             record_user_activity(
                 'Admin Login',
@@ -77,7 +78,7 @@ class AdminController extends Controller
                 'showMyStats' => true,
                 'showSiteStats' => true,
                 'includePayments' => false,
-                'showUserColumn' => false,
+                'showUserColumn' => true,
                 'showUserFilter' => false,
                 'showSessionColumn' => true,
                 'logAudience' => 'staff',
@@ -90,7 +91,8 @@ class AdminController extends Controller
                 'userId' => null,
                 'roleFilter' => null,
                 'showMyStats' => false,
-                'showSiteStats' => true,
+                'showSiteStats' => false,
+                'showInvoiceStats' => true,
                 'includePayments' => true,
                 'showUserColumn' => true,
                 'showUserFilter' => false,
@@ -105,6 +107,7 @@ class AdminController extends Controller
             'roleFilter' => $request->query('role'),
             'showMyStats' => false,
             'showSiteStats' => true,
+            'showInvoiceStats' => true,
             'includePayments' => true,
             'showUserColumn' => true,
             'showUserFilter' => true,
@@ -193,9 +196,11 @@ class AdminController extends Controller
             'summary' => $summary,
             'activities' => $activities,
             'studentActivities' => $studentActivities,
+            'activityLogsEnabled' => app(UserActivityLogService::class)->tableExists(),
             'includePayments' => $includePayments,
             'showMyStats' => (bool) ($options['showMyStats'] ?? false),
             'showSiteStats' => (bool) ($options['showSiteStats'] ?? false),
+            'showInvoiceStats' => (bool) ($options['showInvoiceStats'] ?? false),
             'showUserColumn' => (bool) ($options['showUserColumn'] ?? false),
             'showUserFilter' => (bool) ($options['showUserFilter'] ?? false),
             'showStudentTable' => $showStudentTable,
@@ -263,38 +268,14 @@ class AdminController extends Controller
         return redirect()->back()->with('success', 'Profile updated successfully!');
     }
 
-    public function logout(){
-        if (Auth::guard('admin')->check()) {
-            $admin = Auth::guard('admin')->user();
-            record_user_activity(
-                'Admin Logout',
-                'Session ended',
-                admin_login_url(),
-                'staff',
-                null,
-                $admin?->id,
-                request()
-            );
-        }
-
+    public function logout(Request $request){
         $wasPanelUser = Auth::check()
             && is_restricted_panel_role(Auth::user()->roles()->value('name'));
 
-        if (Auth::check()) {
-            $user = Auth::user();
-            record_user_activity(
-                'User Logout',
-                'Session ended from admin panel',
-                admin_login_url(),
-                activity_audience_for_user($user),
-                $user->id,
-                null,
-                request()
-            );
-        }
-
         Auth::guard('admin')->logout();
         Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
         return $wasPanelUser
             ? redirect()->to(public_login_url())

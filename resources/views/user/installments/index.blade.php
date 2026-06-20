@@ -174,6 +174,7 @@
                         } else {
                             btn.textContent = 'Pay';
                         }
+                        btn.setAttribute('aria-label', 'Pay');
                     }
                 });
             };
@@ -181,9 +182,11 @@
             scrub();
             const observer = new MutationObserver(scrub);
             observer.observe(root, { childList: true, subtree: true, characterData: true });
+            const scrubInterval = setInterval(scrub, 400);
             setTimeout(function () {
                 observer.disconnect();
-            }, 30000);
+                clearInterval(scrubInterval);
+            }, 60000);
         }
 
         function showPaymentAmount(targetSelector, displayAmount) {

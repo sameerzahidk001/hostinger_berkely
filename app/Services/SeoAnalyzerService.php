@@ -141,17 +141,21 @@ class SeoAnalyzerService
 
     private function resolveContent(PagesSEO $seo): string
     {
-        $seo->loadMissing(['page.sections', 'course']);
+        $seo->loadMissing(['page.sections', 'course.dynamicLabel']);
+
+        $content = '';
 
         if ($seo->page) {
-            return $this->extractPageContent($seo->page);
+            $content = $this->extractPageContent($seo->page);
+        } elseif ($seo->course) {
+            $content = $this->extractCourseContent($seo->course);
         }
 
-        if ($seo->course) {
-            return $this->extractCourseContent($seo->course);
+        if (trim((string) $seo->thumbnail_alt) !== '') {
+            $content .= ' <img alt="' . e($seo->thumbnail_alt) . '">';
         }
 
-        return '';
+        return $content;
     }
 
     private function extractPageContent(Page $page): string
@@ -161,6 +165,7 @@ class SeoAnalyzerService
         foreach ($page->sections ?? [] as $section) {
             $data = is_string($section->data) ? json_decode($section->data, true) : $section->data;
             $chunks[] = $this->flattenContent($data);
+            $chunks[] = $this->extractCmsSeoSignals($data);
         }
 
         return implode(' ', array_filter($chunks));
@@ -179,7 +184,75 @@ class SeoAnalyzerService
             $course->custom_section_01_description,
         ];
 
-        return $this->flattenContent($fields);
+        $content = $this->flattenContent($fields);
+        $content .= ' ' . $this->extractStoredImageAlts($course->image_alts, $course->title);
+
+        if ($course->dynamicLabel) {
+            $content .= ' ' . $this->extractStoredImageAlts($course->dynamicLabel->image_alts, $course->title);
+        }
+
+        return trim($content);
+    }
+
+    /**
+     * CMS sections store headings and image alt text in JSON fields, not as HTML.
+     * Synthesize tags so subheading and alt checks match what the frontend renders.
+     */
+    private function extractCmsSeoSignals(mixed $data, bool $isNestedItem = false): string
+    {
+        if (! is_array($data)) {
+            return '';
+        }
+
+        $signals = [];
+
+        $title = trim((string) ($data['title'] ?? ''));
+        if ($title !== '') {
+            $tag = $isNestedItem ? 'h3' : 'h2';
+            $signals[] = '<' . $tag . '>' . e($title) . '</' . $tag . '>';
+        }
+
+        $subtitle = trim((string) ($data['subtitle'] ?? ''));
+        if ($subtitle !== '') {
+            $signals[] = '<h3>' . e($subtitle) . '</h3>';
+        }
+
+        if (! empty($data['image']) || trim((string) ($data['image_alt'] ?? '')) !== '') {
+            $signals[] = '<img alt="' . e(image_alt($data['image_alt'] ?? null, $data['title'] ?? null)) . '">';
+        }
+
+        if (! empty($data['icon']) || trim((string) ($data['icon_alt'] ?? '')) !== '') {
+            $signals[] = '<img alt="' . e(image_alt($data['icon_alt'] ?? null, ($data['title'] ?? 'Icon') . ' icon')) . '">';
+        }
+
+        foreach (['cards', 'schools', 'testimonials', 'courses', 'items', 'logos'] as $listKey) {
+            foreach ($data[$listKey] ?? [] as $item) {
+                if (is_array($item)) {
+                    $signals[] = $this->extractCmsSeoSignals($item, true);
+                }
+            }
+        }
+
+        return implode(' ', array_filter($signals));
+    }
+
+    private function extractStoredImageAlts(mixed $alts, ?string $fallback = null): string
+    {
+        $parsed = is_array($alts) ? $alts : (json_decode((string) $alts, true) ?: []);
+
+        if (! is_array($parsed)) {
+            return '';
+        }
+
+        $signals = [];
+        foreach ($parsed as $alt) {
+            $effective = image_alt(is_string($alt) ? $alt : null, $fallback);
+            if ($effective !== 'Image') {
+                $signals[] = '<img alt="' . e($effective) . '">';
+            }
+        }
+
+        return implode(' ', $signals);
     }
 
     private function flattenContent(mixed $data): string
