@@ -1,13 +1,6 @@
 @extends('user.layout.app')
 @section('title', 'Dashboard')
-@push('scripts')
-    <style>
-        #hco-embedded iframe {
-            width: 100% !important;
-            min-height: 360px;
-        }
-    </style>
-@endpush
+@include('user.partials.rakbank-payment-modal')
 
 @section('content')
     @if (session('success'))
@@ -134,7 +127,7 @@
         </div>
     @endif
         <div class="modal fade" id="paymentModal" tabindex="-1" role="dialog" aria-hidden="true">
-            <div class="modal-dialog" role="document" style="max-width: 420px;">
+            <div class="modal-dialog" role="document" style="max-width: 520px;">
                 <div class="modal-content">
                     <button type="button" class="close close-white position-absolute top-0 right-0"
                         style="margin-top: -25px; margin-right: 10px;" data-dismiss="modal" aria-label="Close">
@@ -169,17 +162,6 @@
             let currentSettlingAmount = null;
             let currentCheckoutSessionId = null;
             let checkoutScriptLoaded = false;
-
-            function showPaymentAmount(targetSelector, displayAmount) {
-                if (!displayAmount) {
-                    return;
-                }
-
-                $(targetSelector).html(
-                    '<div style="font-size:13px;font-weight:500;color:#666;margin-bottom:4px;">Amount to pay</div>' +
-                    '<div style="font-size:22px;font-weight:700;">' + displayAmount + '</div>'
-                );
-            }
 
             function resetPaymentModal() {
                 $('#payment-amount-display').empty();
@@ -341,7 +323,7 @@
                         $('#payment-loading').hide();
 
                         if (res.displayAmount) {
-                            showPaymentAmount('#payment-amount-display', res.displayAmount);
+                            renderPaymentModalSummary('#payment-amount-display', res);
                         }
 
                         currentSettlingAmount = res.settlingAmount || null;

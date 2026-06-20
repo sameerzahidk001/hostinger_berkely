@@ -35,7 +35,7 @@ class HomeController extends Controller
             'return_url' => 'nullable|url',
         ]);
 
-        $installment = Installment::with(['payment.courseFee'])
+        $installment = Installment::with(['payment.course', 'payment.courseFee'])
             ->where('user_id', Auth::id())
             ->findOrFail($request->installment_id);
 
@@ -136,6 +136,17 @@ class HomeController extends Controller
             'displayAmount' => $studentAmountLabel,
             'settlingAmount' => $chargeAmount,
             'checkoutCurrency' => $checkoutCurrency,
+            'summary' => [
+                'invoice_no' => 'INV-' . str_pad((string) $installment->payment_id, 6, '0', STR_PAD_LEFT),
+                'invoice_date' => $installment->created_at?->format('d-M-Y'),
+                'invoice_amount' => format_payment_amount($payment)['display'],
+                'payment_plan' => $installment->installment_number . '/' . $payment->total_installment,
+                'due_date' => $installment->due_date
+                    ? \Carbon\Carbon::parse($installment->due_date)->format('d-M-Y')
+                    : 'N/A',
+                'course_name' => $payment->course->title ?? 'N/A',
+                'package_name' => $payment->courseFee->package_name ?? 'N/A',
+            ],
         ]);
     }
 }

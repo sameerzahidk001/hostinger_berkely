@@ -1,6 +1,7 @@
 @extends('user.layout.app')
 
 @section('title', 'Installments')
+@include('user.partials.rakbank-payment-modal')
 
 @push('style')
     <link href="{{ asset('/admin/css/plugins/dataTables/datatables.min.css') }}" rel="stylesheet">
@@ -94,7 +95,7 @@
                                                         <!-- Modal -->
                                                         <div class="modal fade" id="paymentModal{{ $installment->id }}" tabindex="-1" role="dialog"
                                                             aria-labelledby="paymentModalLabel{{ $installment->id }}" aria-hidden="true">
-                                                            <div class="modal-dialog" role="document" style="max-width: 420px;">
+                                                            <div class="modal-dialog" role="document" style="max-width: 520px;">
                                                                 <div class="modal-content">
                                                                     <button type="button" id="closeModal" class="close close-white position-absolute top-0 right-0" style="margin-top: -25px;" data-dismiss="modal" aria-label="Close">
                                                                         <span aria-hidden="true">×</span>
