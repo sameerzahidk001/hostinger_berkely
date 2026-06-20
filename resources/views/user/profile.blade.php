@@ -26,9 +26,9 @@
                 <div>
                     <div class="ibox-content no-padding border-left-right">
                         <center class="m-t-sm">
-                            @if ($user->image)
-                                <img alt="image" class="img-responsive" style="max-height: 200px;" src="{{ asset($user->image) }}" />                                
-                            @endif
+                            <img alt="Profile photo" class="img-responsive img-circle"
+                                style="max-height: 200px; max-width: 200px; object-fit: cover;"
+                                src="{{ user_avatar_url($user) }}" />
                         </center>
                     </div>
                     <div class="ibox-content profile-content">

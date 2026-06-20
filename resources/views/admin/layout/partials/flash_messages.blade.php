@@ -12,6 +12,6 @@
 
 @if ($errors->any())
     <script>
-        toastr.error('Failed. Please try again.');
+        toastr.error(@json($errors->first() ?: 'Failed. Please try again.'));
     </script>
 @endif

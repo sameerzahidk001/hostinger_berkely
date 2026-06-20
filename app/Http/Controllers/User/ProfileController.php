@@ -31,13 +31,13 @@ class ProfileController extends Controller
             'image' => 'nullable|file|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'email' => 'required|email|max:255|unique:users,email,' . Auth::id(),
             'mobile_number' => 'required|string|max:20',
-            'gender' => 'required|in:Male,Female,Other',
-            'date_of_birth' => 'required|date|before_or_equal:today',
-            'address' => 'required|string|max:255',
-            'post_code' => 'required|string|max:20',
-            'nationality' => 'required|string|max:255',
-            'city' => 'required|string|max:100',
-            'country' => 'required|string|max:2',
+            'gender' => 'nullable|in:Male,Female,Other',
+            'date_of_birth' => 'nullable|date|before_or_equal:today',
+            'address' => 'nullable|string|max:255',
+            'post_code' => 'nullable|string|max:20',
+            'nationality' => 'nullable|string|max:255',
+            'city' => 'nullable|string|max:100',
+            'country' => 'nullable|string|max:100',
             'experience' => 'nullable|string',
             'short_description' => 'nullable|string',
             'linkedin' => 'nullable|url|string|max:255',
@@ -59,6 +59,11 @@ class ProfileController extends Controller
             $slug = Str::slug($originalName) . '-' . time();
             $fileName = $slug . '.' . $extension;
             $destinationPath = public_path('images/profiles/');
+
+            if (! is_dir($destinationPath)) {
+                mkdir($destinationPath, 0755, true);
+            }
+
             $file->move($destinationPath, $fileName);
             $validatedData['image'] = 'images/profiles/' . $fileName;
         } elseif ($request->filled('image_path')) {

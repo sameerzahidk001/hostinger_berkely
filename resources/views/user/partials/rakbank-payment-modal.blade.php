@@ -36,30 +36,65 @@
     @push('script')
         <script>
             function normalizeEmbeddedPayButtons(containerSelector) {
-                const root = document.querySelector(containerSelector);
+                const root = containerSelector
+                    ? document.querySelector(containerSelector)
+                    : document;
+
                 if (!root) {
                     return;
                 }
 
+                const scrubButton = function (btn) {
+                    const text = (btn.textContent || btn.value || btn.innerText || '').trim();
+                    if (!/pay/i.test(text)) {
+                        return;
+                    }
+
+                    if (/[\d,.]/.test(text) || text.length > 8) {
+                        if (btn.tagName === 'INPUT') {
+                            btn.value = 'Pay';
+                        } else {
+                            btn.textContent = 'Pay';
+                        }
+                    }
+                };
+
                 const scrub = function () {
-                    root.querySelectorAll('button, [role="button"], input[type="submit"]').forEach(function (btn) {
-                        const text = (btn.textContent || btn.value || '').trim();
-                        if (/^pay\b/i.test(text)) {
-                            if (btn.tagName === 'INPUT') {
-                                btn.value = 'Pay';
-                            } else {
-                                btn.textContent = 'Pay';
+                    root.querySelectorAll('button, [role="button"], input[type="submit"], a').forEach(scrubButton);
+
+                    root.querySelectorAll('iframe').forEach(function (frame) {
+                        try {
+                            const doc = frame.contentDocument || frame.contentWindow?.document;
+                            if (!doc) {
+                                return;
                             }
+
+                            doc.querySelectorAll('button, [role="button"], input[type="submit"], a').forEach(scrubButton);
+                        } catch (e) {
+                            // Cross-origin iframe: parent JS cannot edit gateway button text.
                         }
                     });
                 };
 
                 scrub();
+
                 const observer = new MutationObserver(scrub);
                 observer.observe(root, { childList: true, subtree: true, characterData: true });
-                setTimeout(function () {
+
+                const intervalId = window.setInterval(scrub, 400);
+
+                window.setTimeout(function () {
                     observer.disconnect();
-                }, 30000);
+                    window.clearInterval(intervalId);
+                }, 60000);
+            }
+
+            function schedulePayButtonCleanup(containerSelector) {
+                [300, 800, 1500, 3000, 5000].forEach(function (delay) {
+                    window.setTimeout(function () {
+                        normalizeEmbeddedPayButtons(containerSelector);
+                    }, delay);
+                });
             }
 
             function renderPaymentModalSummary(targetSelector, res) {

@@ -243,7 +243,9 @@
                         });
                         $('#payment-loading').hide();
                         Checkout.showEmbeddedPage('#hco-embedded');
-                        if (typeof normalizeEmbeddedPayButtons === 'function') {
+                        if (typeof schedulePayButtonCleanup === 'function') {
+                            schedulePayButtonCleanup('#hco-embedded');
+                        } else if (typeof normalizeEmbeddedPayButtons === 'function') {
                             normalizeEmbeddedPayButtons('#hco-embedded');
                         }
                     } catch (error) {

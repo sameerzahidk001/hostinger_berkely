@@ -118,7 +118,11 @@ if (!function_exists('user_avatar_url')) {
     {
         $user = $user ?? panel_profile_user();
 
-        $path = trim((string) data_get($user, 'avatar'));
+        $path = trim((string) data_get($user, 'image'));
+        if ($path === '') {
+            $path = trim((string) data_get($user, 'avatar'));
+        }
+
         if ($path !== '') {
             if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
                 return $path;
@@ -127,7 +131,6 @@ if (!function_exists('user_avatar_url')) {
             return asset(ltrim($path, '/'));
         }
 
-        // Use a robust fallback that always exists on the theme.
         return asset('student/img/landing/avatar_all.png');
     }
 }
