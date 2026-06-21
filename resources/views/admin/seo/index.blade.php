@@ -1,6 +1,7 @@
 @extends('admin.layout.app')
 @section('title', 'Pages SEO')
 @push('style')
+<link href="{{ asset('/admin/css/plugins/dataTables/datatables.min.css') }}" rel="stylesheet">
 <style>
     td > p { margin: 0; }
     .seo-score-pill {
@@ -60,18 +61,9 @@
                                     <button type="submit" class="btn-primary btn btn-md" style="width:100%;">Filter</button>
                                 </div>
                             </div>
-                            <div class="row" style="margin-bottom: 12px;">
-                                <div class="col-lg-2">
-                                    <select name="per_page" class="form-control" onchange="this.form.submit()">
-                                        @foreach([10,20,50,100] as $n)
-                                            <option value="{{ $n }}" {{ (int) request('per_page', $per_page ?? 20) === $n ? 'selected' : '' }}>{{ $n }} / page</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            </div>
                         </form>
 
-                        <table class="table table-striped table-bordered table-hover">
+                        <table class="table table-striped table-bordered table-hover dataTables-example">
                             <thead>
                                 <tr>
                                     <th style="width:50px;">#</th>
@@ -97,24 +89,24 @@
                                             : ($page_seo->page->full_url ?? $page_seo->page->url ?? '');
                                     @endphp
                                     <tr>
-                                        <td>{{ ($pages_seo->firstItem() ?? 0) + $loop->index }}</td>
-                                        <td>
+                                        <td data-order="{{ $page_seo->id }}">{{ $loop->iteration }}</td>
+                                        <td data-order="{{ $itemTitle }}">
                                             <strong>{{ $itemTitle }}</strong>
                                             @if($itemUrl)
                                                 <br><a href="{{ url($itemUrl) }}" target="_blank" style="font-size:12px;">{{ $itemUrl }}</a>
                                             @endif
                                         </td>
-                                        <td>{{ $isCourse ? 'Course' : 'Page' }}</td>
-                                        <td>
+                                        <td data-order="{{ $isCourse ? 1 : 0 }}">{{ $isCourse ? 'Course' : 'Page' }}</td>
+                                        <td data-order="{{ $score }}">
                                             <span class="seo-score-pill {{ $scoreClass }}">{{ $score }}/100</span>
                                         </td>
-                                        <td class="seo-details">
+                                        <td class="seo-details" data-order="{{ $analysis['word_count'] ?? 0 }}">
                                             <small><strong>Keyword:</strong> {{ $analysis['focus_keyword'] ?: '—' }}</small>
                                             <small><strong>Schema:</strong> {{ $analysis['schema'] ?? 'Article' }}</small>
                                             <small><strong>Links:</strong> {{ $analysis['external_links'] ?? 0 }} ext / {{ $analysis['internal_links'] ?? 0 }} int</small>
                                             <small><strong>Words:</strong> {{ number_format($analysis['word_count'] ?? 0) }}</small>
                                         </td>
-                                        <td>{{ \Illuminate\Support\Str::limit($page_seo->meta_description ?? '', 120) }}</td>
+                                        <td data-order="{{ $page_seo->meta_description ?? '' }}">{{ \Illuminate\Support\Str::limit($page_seo->meta_description ?? '', 120) }}</td>
                                         @include('admin.layout.partials.audit-columns-cells', ['model' => $page_seo])
                                         <td>
                                             <a href="{{ route('pages-seo.edit', $page_seo->id) }}" class="btn-primary btn btn-xs">
@@ -128,16 +120,23 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="9" class="text-center text-muted">No SEO records found.</td>
+                                        <td colspan="11" class="text-center text-muted">No SEO records found.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Title</th>
+                                    <th>Type</th>
+                                    <th>Score</th>
+                                    <th>SEO Details</th>
+                                    <th>Meta Description</th>
+                                    @include('admin.layout.partials.audit-columns-head')
+                                    <th>Action</th>
+                                </tr>
+                            </tfoot>
                         </table>
-                        @if(method_exists($pages_seo, 'links'))
-                            <div class="text-center">
-                                {{ $pages_seo->links() }}
-                            </div>
-                        @endif
                     </div>
                 </div>
             </div>
@@ -145,3 +144,26 @@
     </div>
 </div>
 @endsection
+
+@push('script')
+    <script src="{{ asset('/admin/js/plugins/dataTables/datatables.min.js') }}"></script>
+    <script>
+        $(document).ready(function () {
+            $('.dataTables-example').DataTable({
+                pageLength: 20,
+                lengthMenu: [10, 20, 50, 100],
+                searching: true,
+                lengthChange: true,
+                paging: true,
+                info: true,
+                ordering: true,
+                responsive: true,
+                dom: 'lftip',
+                order: [[8, 'desc']],
+                columnDefs: [
+                    { orderable: false, targets: [10] }
+                ]
+            });
+        });
+    </script>
+@endpush

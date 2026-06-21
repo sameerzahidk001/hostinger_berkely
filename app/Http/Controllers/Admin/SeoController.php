@@ -34,18 +34,12 @@ class SeoController extends Controller
         }
 
         $analyzer = app(SeoAnalyzerService::class);
-        $perPage = (int) ($request->input('per_page', 20));
-        $perPage = in_array($perPage, [10, 20, 50, 100], true) ? $perPage : 20;
 
-        $paginator = $query->orderByDesc('id')->paginate($perPage)->withQueryString();
-
-        $paginator->getCollection()->transform(function (PagesSEO $seo) use ($analyzer) {
+        $pagesSeo = $query->orderByDesc('id')->get()->each(function (PagesSEO $seo) use ($analyzer) {
             $seo->analysis = $analyzer->analyze($seo);
-            return $seo;
         });
 
-        $data['pages_seo'] = $paginator;
-        $data['per_page'] = $perPage;
+        $data['pages_seo'] = $pagesSeo;
 
         // Return the view with filtered data
         return view('admin.seo.index')->with($data);
