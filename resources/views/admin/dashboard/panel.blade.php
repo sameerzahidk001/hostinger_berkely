@@ -53,8 +53,21 @@
                         <i class="fa fa-files-o fa-3x"></i>
                     </div>
                     <div class="col-xs-8 text-right">
-                        <span>Total Courses</span>
-                        <h2 class="font-bold">{{ $summary['total_courses_site'] }}</h2>
+                        <span>Active Courses</span>
+                        <h2 class="font-bold">{{ $summary['active_courses_site'] ?? $summary['total_courses_site'] }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="widget style1 red-bg">
+                <div class="row">
+                    <div class="col-xs-4">
+                        <i class="fa fa-ban fa-3x"></i>
+                    </div>
+                    <div class="col-xs-8 text-right">
+                        <span>Disabled Courses</span>
+                        <h2 class="font-bold">{{ $summary['disabled_courses_site'] ?? 0 }}</h2>
                     </div>
                 </div>
             </div>
@@ -66,8 +79,21 @@
                         <i class="fa fa-sitemap fa-3x"></i>
                     </div>
                     <div class="col-xs-8 text-right">
-                        <span>Total Pages</span>
-                        <h2 class="font-bold">{{ $summary['total_pages_site'] }}</h2>
+                        <span>Active Pages</span>
+                        <h2 class="font-bold">{{ $summary['active_pages_site'] ?? $summary['total_pages_site'] }}</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <div class="widget style1 lazur-bg">
+                <div class="row">
+                    <div class="col-xs-4">
+                        <i class="fa fa-eye-slash fa-3x"></i>
+                    </div>
+                    <div class="col-xs-8 text-right">
+                        <span>Disabled Pages</span>
+                        <h2 class="font-bold">{{ $summary['disabled_pages_site'] ?? 0 }}</h2>
                     </div>
                 </div>
             </div>

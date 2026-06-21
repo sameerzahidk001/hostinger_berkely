@@ -98,6 +98,12 @@ class PagesController extends Controller
 
         if ($pageCreated) {
             session()->flash('success', 'Page created. Add content sections and save.');
+            record_panel_activity(
+                'Page Created',
+                $pageCreated->page_name ?: $pageCreated->url,
+                route('pages.edit', $pageCreated->id),
+                $request
+            );
         } else {
             session()->flash('error', 'Failed to insert record!');
         }
@@ -370,6 +376,15 @@ class PagesController extends Controller
         // Delete removed sections
         $sectionsToDelete = $existingSections->keys()->diff($newSectionIds);
         PageSection::whereIn('id', $sectionsToDelete)->delete();
+
+        $page->refresh();
+        touch_content_audit($page);
+        record_panel_activity(
+            'Page Updated',
+            $page->page_name ?: $page->url,
+            route('pages.edit', $page->id),
+            $request
+        );
 
         return redirect()->route('pages.index')->with('success', 'Page saved successfully!');
     }

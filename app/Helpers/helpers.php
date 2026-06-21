@@ -560,6 +560,86 @@ if (!function_exists('record_user_activity')) {
     }
 }
 
+if (!function_exists('record_panel_activity')) {
+    function record_panel_activity(
+        string $action,
+        ?string $item = null,
+        ?string $url = null,
+        ?\Illuminate\Http\Request $request = null
+    ): void {
+        $request = $request ?? request();
+
+        if (\Illuminate\Support\Facades\Auth::guard('admin')->check()) {
+            record_user_activity(
+                $action,
+                $item,
+                $url,
+                'staff',
+                null,
+                \Illuminate\Support\Facades\Auth::guard('admin')->id(),
+                $request
+            );
+
+            return;
+        }
+
+        if (\Illuminate\Support\Facades\Auth::check()) {
+            record_user_activity(
+                $action,
+                $item,
+                $url,
+                activity_audience_for_user(\Illuminate\Support\Facades\Auth::user()),
+                \Illuminate\Support\Facades\Auth::id(),
+                null,
+                $request
+            );
+        }
+    }
+}
+
+if (!function_exists('touch_content_audit')) {
+    function touch_content_audit(\Illuminate\Database\Eloquent\Model $model): void
+    {
+        $actorId = audit_user_id();
+
+        if (! $actorId) {
+            return;
+        }
+
+        $table = $model->getTable();
+
+        if (! \Illuminate\Support\Facades\Schema::hasColumn($table, 'updated_by')) {
+            return;
+        }
+
+        \Illuminate\Support\Facades\DB::table($table)
+            ->where('id', $model->getKey())
+            ->update([
+                'updated_by' => $actorId,
+                'updated_at' => now(),
+            ]);
+    }
+}
+
+if (!function_exists('log_panel_course_update')) {
+    function log_panel_course_update(\App\Models\Course $course): void
+    {
+        static $loggedCourseIds = [];
+
+        if (isset($loggedCourseIds[$course->id])) {
+            return;
+        }
+
+        $loggedCourseIds[$course->id] = true;
+
+        record_panel_activity(
+            'Course Updated',
+            $course->title ?: 'Course #' . $course->id,
+            route('course.edit', $course->id)
+        );
+    }
+}
+
 if (!function_exists('cart_item_count')) {
     function cart_item_count(): int
     {

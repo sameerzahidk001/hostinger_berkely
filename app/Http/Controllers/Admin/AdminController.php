@@ -289,8 +289,9 @@ class AdminController extends Controller
 
         if (Auth::check()) {
             $user = Auth::user();
+            $logoutAction = activity_audience_for_user($user) === 'staff' ? 'Staff Logout' : 'User Logout';
             record_user_activity(
-                'User Logout',
+                $logoutAction,
                 'Session ended from admin panel',
                 admin_login_url(),
                 activity_audience_for_user($user),

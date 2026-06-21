@@ -25,7 +25,17 @@ class PanelActivityService
             'my_courses' => $userId ? $this->countCoursesCreated($userId, null, null) : 0,
             'my_pages' => $userId ? $this->countPagesCreated($userId, null, null) : 0,
             'total_courses_site' => (int) Course::count(),
+            'active_courses_site' => (int) Course::count(),
+            'disabled_courses_site' => Schema::hasColumn('courses', 'deleted_at')
+                ? (int) Course::onlyTrashed()->count()
+                : 0,
             'total_pages_site' => (int) Page::count(),
+            'active_pages_site' => Schema::hasColumn('pages', 'status')
+                ? (int) Page::where('status', 1)->count()
+                : (int) Page::count(),
+            'disabled_pages_site' => Schema::hasColumn('pages', 'status')
+                ? (int) Page::where('status', 0)->count()
+                : 0,
             'total_payments_site' => $includePayments && Schema::hasTable('payments')
                 ? (int) Payment::count()
                 : 0,
@@ -134,7 +144,8 @@ class PanelActivityService
             $paymentsOnly
         );
 
-        $logs = app(UserActivityLogService::class)->buildFeed($logAudience, $userId, $dateFrom, $dateTo);
+        $logService = app(UserActivityLogService::class);
+        $logs = $logService->buildFeed($logAudience, $userId, $dateFrom, $dateTo);
 
         if ($restrictToUserIds !== null) {
             $logs = $logs->filter(function (array $row) use ($restrictToUserIds) {
@@ -143,6 +154,12 @@ class PanelActivityService
                 }
 
                 return in_array((int) $row['actor_id'], $restrictToUserIds, true);
+            });
+        }
+
+        if ($logService->tableExists()) {
+            $activities = $activities->filter(function (array $row) {
+                return ! in_array($row['action'], ['Page Updated', 'Course Updated'], true);
             });
         }
 

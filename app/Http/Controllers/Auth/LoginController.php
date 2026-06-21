@@ -74,8 +74,9 @@ class LoginController extends Controller
             }
 
             $user = Auth::user();
+            $loginAction = activity_audience_for_user($user) === 'staff' ? 'Staff Login' : 'User Login';
             record_user_activity(
-                'User Login',
+                $loginAction,
                 'Session started via ' . public_login_url(),
                 public_login_url(),
                 activity_audience_for_user($user),
@@ -125,8 +126,9 @@ class LoginController extends Controller
         $user = Auth::user();
 
         if ($user) {
+            $logoutAction = activity_audience_for_user($user) === 'staff' ? 'Staff Logout' : 'User Logout';
             record_user_activity(
-                'User Logout',
+                $logoutAction,
                 'Session ended',
                 public_login_url(),
                 activity_audience_for_user($user),
