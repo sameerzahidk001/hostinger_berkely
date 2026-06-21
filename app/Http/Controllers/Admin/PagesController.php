@@ -470,10 +470,19 @@ class PagesController extends Controller
     public function destroy(string $id)
     {
         $page = Page::findOrFail($id);
+        $pageLabel = $page->page_name ?: $page->url;
+
         $page->sections()->delete();
         $page->seo()->delete();
         $result = $page->delete();
+
         if ($result) {
+            record_panel_activity(
+                'Page Deleted',
+                $pageLabel,
+                route('pages.index'),
+                request()
+            );
             session()->flash('sucess', 'Record deleted successfullly!');
         } else {
             session()->flash('failed', 'Failed to delete Record');
