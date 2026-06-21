@@ -14,8 +14,7 @@
     </div>
 </div>
 @endif
-@if($showSiteStats ?? false)
-@if(!($summary['pages_status_enabled'] ?? true))
+@if(($showSiteStats ?? false) && !($summary['pages_status_enabled'] ?? true))
 <div class="row" style="padding: 0 10px 12px;">
     <div class="col-lg-12">
         <div class="alert alert-warning">
