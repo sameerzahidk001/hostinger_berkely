@@ -115,6 +115,7 @@
                      <a href="javascript:void(0)"><i class="fa fa-sitemap"></i> <span class="nav-label">Pages</span> <span class="fa arrow"></span></a>
                      <ul class="nav nav-second-level">
                         <li><a href="{{ route('pages.index') }}">Pages List</a></li>
+                        <li><a href="{{ route('admin.pages.disabled') }}">Disabled Pages</a></li>
                      </ul>
                   </li>
                   @endif

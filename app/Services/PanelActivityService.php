@@ -30,12 +30,13 @@ class PanelActivityService
                 ? (int) Course::onlyTrashed()->count()
                 : 0,
             'total_pages_site' => (int) Page::count(),
-            'active_pages_site' => Schema::hasColumn('pages', 'status')
+            'active_pages_site' => pages_status_enabled()
                 ? (int) Page::where('status', 1)->count()
                 : (int) Page::count(),
-            'disabled_pages_site' => Schema::hasColumn('pages', 'status')
+            'disabled_pages_site' => pages_status_enabled()
                 ? (int) Page::where('status', 0)->count()
                 : 0,
+            'pages_status_enabled' => pages_status_enabled(),
             'total_payments_site' => $includePayments && Schema::hasTable('payments')
                 ? (int) Payment::count()
                 : 0,

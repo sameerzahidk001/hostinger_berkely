@@ -190,6 +190,11 @@
 
                                 <div class="col-lg-4">
                                     <label class="mb-1">Status</label>
+                                    @if(!pages_status_enabled())
+                                        <div class="alert alert-warning" style="padding:8px 12px;margin-bottom:8px;">
+                                            Active/Disabled will not save until <code>database/sql/add-pages-status-column.sql</code> is run on the server.
+                                        </div>
+                                    @endif
                                     <select class="form-control" name="status" required>
                                         <option value="1" @selected((string) old('status', $page->status ?? 1) === '1')>Active</option>
                                         <option value="0" @selected((string) old('status', $page->status ?? 1) === '0')>Disabled</option>

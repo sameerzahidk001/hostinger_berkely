@@ -14,6 +14,18 @@
     </div>
 </div>
 @endif
+@if($showSiteStats ?? false)
+@if(!($summary['pages_status_enabled'] ?? true))
+<div class="row" style="padding: 0 10px 12px;">
+    <div class="col-lg-12">
+        <div class="alert alert-warning">
+            <strong>Page disable is not active on the database.</strong>
+            Run <code>database/sql/add-pages-status-column.sql</code> on live (or
+            <code>bash deploy-hostinger.sh</code>) before Active/Disabled pages will save or appear on the dashboard.
+        </div>
+    </div>
+</div>
+@endif
 <div class="wrapper wrapper-content animated fadeInRight" style="padding: 20px 10px 0px;">
     <div class="row">
         @if($showMyStats ?? false)
@@ -60,7 +72,7 @@
             </div>
         </div>
         <div class="col-lg-3 col-md-6">
-            <div class="widget style1 red-bg">
+            <a href="{{ route('admin.course.disabled') }}" class="widget style1 red-bg" style="display:block;color:#fff;">
                 <div class="row">
                     <div class="col-xs-4">
                         <i class="fa fa-ban fa-3x"></i>
@@ -70,7 +82,7 @@
                         <h2 class="font-bold">{{ $summary['disabled_courses_site'] ?? 0 }}</h2>
                     </div>
                 </div>
-            </div>
+            </a>
         </div>
         <div class="col-lg-3 col-md-6">
             <div class="widget style1 blue-bg">
@@ -86,7 +98,7 @@
             </div>
         </div>
         <div class="col-lg-3 col-md-6">
-            <div class="widget style1 lazur-bg">
+            <a href="{{ route('admin.pages.disabled') }}" class="widget style1 lazur-bg" style="display:block;color:#fff;">
                 <div class="row">
                     <div class="col-xs-4">
                         <i class="fa fa-eye-slash fa-3x"></i>
@@ -96,7 +108,7 @@
                         <h2 class="font-bold">{{ $summary['disabled_pages_site'] ?? 0 }}</h2>
                     </div>
                 </div>
-            </div>
+            </a>
         </div>
         @if(($includePayments ?? false) && !($showInvoiceStats ?? false))
         <div class="col-lg-3 col-md-6">

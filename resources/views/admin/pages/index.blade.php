@@ -36,9 +36,19 @@
             </ol>
         </div>
         <div class="col-lg-2">
-
+            @if($pagesStatusEnabled ?? false)
+                <a class="btn btn-primary" href="{{ route('admin.pages.disabled') }}"><i class="fa fa-eye-slash"></i> Show Disabled Pages</a>
+            @endif
         </div>
     </div>
+    @if(!($pagesStatusEnabled ?? true))
+        <div class="wrapper wrapper-content animated fadeInRight" style="padding-bottom:0;">
+            <div class="alert alert-warning">
+                <strong>Page disable is not active on the database.</strong>
+                Run <code>database/sql/add-pages-status-column.sql</code> on the server before Active/Disabled will save.
+            </div>
+        </div>
+    @endif
     <div class="wrapper wrapper-content animated fadeInRight" style="padding-bottom:0px;">
         <div class="row">
             <div class="col-lg-12">
@@ -182,9 +192,16 @@
                                             </td>
                                             <td style="vertical-align: middle;">
                                                 @php $pageStatus = (int) ($page->status ?? 1); @endphp
-                                                <span class="label {{ $pageStatus ? 'label-primary' : 'label-default' }}">
-                                                    {{ $pageStatus ? 'Active' : 'Disabled' }}
-                                                </span>
+                                                @if($pagesStatusEnabled ?? false)
+                                                    <select name="page_status" class="form-control"
+                                                        id="page_status_{{ $page->id }}"
+                                                        onchange="updatePageStatus(this.value, {{ $page->id }})">
+                                                        <option value="active" @selected($pageStatus === 1)>Active</option>
+                                                        <option value="disable" @selected($pageStatus === 0)>Disabled</option>
+                                                    </select>
+                                                @else
+                                                    <span class="label label-primary">Active</span>
+                                                @endif
                                             </td>
                                             <td style="vertical-align: middle;">
                                                 {{ $page->faqs->count() }}
@@ -296,6 +313,35 @@
                 }
             });
         });
+
+        function updatePageStatus(status, pageId) {
+            $.ajax({
+                url: '/admin/pages/' + pageId + '/update-status',
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    status: status
+                },
+                success: function (response) {
+                    if (response.success) {
+                        toastr.success(response.success);
+                        if (status === 'disable') {
+                            $('#page_status_' + pageId).closest('tr').fadeOut(500, function () {
+                                $(this).remove();
+                            });
+                        }
+                    } else {
+                        toastr.error('Unexpected response received.');
+                    }
+                },
+                error: function (xhr) {
+                    const message = xhr.responseJSON && xhr.responseJSON.error
+                        ? xhr.responseJSON.error
+                        : 'Error updating page status.';
+                    toastr.error(message);
+                }
+            });
+        }
 
         function confirmDelete(id) {
             Swal.fire({

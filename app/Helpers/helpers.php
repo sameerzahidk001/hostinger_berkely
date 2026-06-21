@@ -461,6 +461,30 @@ if (!function_exists('merge_image_alts')) {
     }
 }
 
+if (!function_exists('pages_status_enabled')) {
+    function pages_status_enabled(): bool
+    {
+        static $enabled = null;
+
+        if ($enabled === null) {
+            $enabled = \Illuminate\Support\Facades\Schema::hasColumn('pages', 'status');
+        }
+
+        return $enabled;
+    }
+}
+
+if (!function_exists('normalize_page_status')) {
+    function normalize_page_status(mixed $value): int
+    {
+        if (in_array($value, ['disable', 'disabled', '0', 0, false], true)) {
+            return 0;
+        }
+
+        return 1;
+    }
+}
+
 if (!function_exists('assign_column_if_exists')) {
     function assign_column_if_exists($model, string $column, mixed $value): void
     {

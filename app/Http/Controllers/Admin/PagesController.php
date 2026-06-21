@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use App\Http\Controllers\Controller;
 use App\Services\SeoAnalyzerService;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 
 class PagesController extends Controller
@@ -30,7 +31,15 @@ class PagesController extends Controller
         $data['categories'] = Category::orderBy('name', 'asc')->get();
         $data['category_page_id'] = SiteSettings::pluck('categories')->first();
         $data['categories_pages_slug_base'] = SiteSettings::pluck('category_perma')->first();
-        $data['pages'] = Page::with(['parent', 'seo.page.sections', 'seo.course', 'faqs', 'createdBy', 'updatedBy'])
+        $data['pagesStatusEnabled'] = pages_status_enabled();
+
+        $query = Page::with(['parent', 'seo.page.sections', 'seo.course', 'faqs', 'createdBy', 'updatedBy']);
+
+        if ($data['pagesStatusEnabled']) {
+            $query->where('status', 1);
+        }
+
+        $data['pages'] = $query
             ->orderByDesc('created_at')
             ->get()
             ->each(function (Page $page) {
@@ -40,6 +49,55 @@ class PagesController extends Controller
             });
 
         return view('admin.pages.index')->with($data);
+    }
+
+    public function disabledPages()
+    {
+        if (! pages_status_enabled()) {
+            return redirect()
+                ->route('pages.index')
+                ->with('error', 'Page disable is not active on the database yet. Run database/sql/add-pages-status-column.sql on the server, then try again.');
+        }
+
+        $data['categories'] = Category::orderBy('name', 'asc')->get();
+        $data['category_page_id'] = SiteSettings::pluck('categories')->first();
+        $data['categories_pages_slug_base'] = SiteSettings::pluck('category_perma')->first();
+        $data['pagesStatusEnabled'] = true;
+        $data['pages'] = Page::with(['parent', 'seo.page.sections', 'seo.course', 'faqs', 'createdBy', 'updatedBy'])
+            ->where('status', 0)
+            ->orderByDesc('updated_at')
+            ->get()
+            ->each(function (Page $page) {
+                if ($page->seo) {
+                    $page->seo_analysis = app(SeoAnalyzerService::class)->analyze($page->seo);
+                }
+            });
+
+        return view('admin.pages.disabled-pages')->with($data);
+    }
+
+    public function updateStatus(Request $request, $id)
+    {
+        if (! pages_status_enabled()) {
+            return response()->json([
+                'error' => 'Page disable is not active on the database yet. Run database/sql/add-pages-status-column.sql on the server.',
+            ], 500);
+        }
+
+        $page = Page::findOrFail($id);
+        $status = normalize_page_status($request->input('status'));
+        $page->status = $status;
+        $page->save();
+
+        touch_content_audit($page);
+        record_panel_activity(
+            $status ? 'Page Enabled' : 'Page Disabled',
+            $page->page_name ?: $page->url,
+            route('pages.edit', $page->id),
+            $request
+        );
+
+        return response()->json(['success' => 'Page status updated successfully!']);
     }
 
     /**
@@ -67,7 +125,7 @@ class PagesController extends Controller
             ],
             'parent_id' => 'nullable|integer|exists:pages,id',
             'category_id' => 'nullable|integer|exists:categories,id',
-            'status' => 'required|boolean',
+            'status' => 'required|in:0,1',
         ]);
 
         if ($validator->fails()) {
@@ -75,7 +133,7 @@ class PagesController extends Controller
         }
 
         $data = $request->except('_token');
-        $status = $request->boolean('status', true) ? 1 : 0;
+        $status = normalize_page_status($request->input('status'));
         unset($data['status']);
 
         if (empty($data['url']) && ! empty($data['page_name'])) {
@@ -94,6 +152,10 @@ class PagesController extends Controller
         assign_column_if_exists($pageCreated, 'status', $status);
         if ($pageCreated->isDirty()) {
             $pageCreated->save();
+        }
+
+        if ($pageCreated && ! pages_status_enabled()) {
+            session()->flash('error', 'Page was created, but Active/Disabled status is not saved until database/sql/add-pages-status-column.sql is run on the server.');
         }
 
         if ($pageCreated) {
@@ -171,7 +233,7 @@ class PagesController extends Controller
             ],
             'parent_id' => 'nullable|integer|exists:pages,id',
             'category_id' => 'nullable|integer|exists:categories,id',
-            'status' => 'required|boolean',
+            'status' => 'required|in:0,1',
             'meta_title' => 'nullable|string|max:' . seo_field_limits()['title_max'],
             'meta_description' => 'nullable|string|max:' . seo_field_limits()['meta_description_max'],
             'meta_keywords' => 'nullable|string|max:' . seo_field_limits()['priority_keywords_max_total'],
@@ -191,11 +253,19 @@ class PagesController extends Controller
         $page->url = $request->input('url');
         $page->category_id = $request->input('category_id');
         $page->parent_id = $request->input('parent_id');
-        assign_column_if_exists($page, 'status', $request->boolean('status', true) ? 1 : 0);
+
+        if (pages_status_enabled()) {
+            $page->status = normalize_page_status($request->input('status'));
+        }
+
         if ($page->category_id) {
             $page->parent_id = null;
         }
         $page->save();
+
+        if (! pages_status_enabled()) {
+            session()->flash('error', 'Page content saved, but Active/Disabled status is not saved until database/sql/add-pages-status-column.sql is run on the server.');
+        }
 
         $meta->title = $request->input('meta_title');
         $meta->meta_description = $request->input('meta_description');
@@ -386,7 +456,11 @@ class PagesController extends Controller
             $request
         );
 
-        return redirect()->route('pages.index')->with('success', 'Page saved successfully!');
+        $redirectRoute = pages_status_enabled() && normalize_page_status($request->input('status')) === 0
+            ? 'admin.pages.disabled'
+            : 'pages.index';
+
+        return redirect()->route($redirectRoute)->with('success', 'Page saved successfully!');
     }
 
 
