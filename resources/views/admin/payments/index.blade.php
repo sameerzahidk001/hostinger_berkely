@@ -73,11 +73,8 @@
     .slider.round:before {
         border-radius: 50%;
     }
-
-    .dt-buttons {
-        margin-bottom: 10px;
-    }
 </style>
+@include('admin.payments.partials.excel-export-toolbar')
 @endpush
 @section('content')
 <div class="row wrapper border-bottom white-bg page-heading">
@@ -382,12 +379,12 @@
             info: false,
             ordering: true,
             responsive: true,
-            dom: 'lBfrtip',
+            dom: '<"payments-dt-toolbar"<l><B><f>>rtip',
             order: [[1, 'desc']],
             buttons: [{
                 extend: 'excelHtml5',
-                text: '<i class="fa fa-file-excel-o"></i> Export to Excel',
-                className: 'btn btn-success btn-sm',
+                className: 'btn-excel-export',
+                text: 'Export to Excel',
                 title: 'Invoices List',
                 filename: 'invoices_list_' + new Date().toISOString().slice(0, 10),
                 exportOptions: {
