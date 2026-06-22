@@ -3084,32 +3084,49 @@
 
             // Initialize SortableJS
             const builderContainer = document.getElementById('builder-container');
-            const sortable = new Sortable(builderContainer, {
-                animation: 150, // Animation speed in milliseconds
-                handle: '.ibox-title', // Drag handle (only the title bar is draggable)
-                onEnd: function (evt) {
-                    // Update the order of sections in the form
-                    updateSectionOrder();
-                }
-            });
+            const pageForm = builderContainer ? builderContainer.closest('form') : null;
 
-            // Function to update the order of sections
-            function updateSectionOrder() {
+            window.updateSectionOrder = function () {
+                if (!builderContainer) {
+                    return;
+                }
+
                 const sections = builderContainer.querySelectorAll('.ibox-container');
                 sections.forEach((section, index) => {
-                    // Update the hidden input for section type
-                    const sectionTypeInput = section.querySelector('input[name*="[section_type]"]');
-                    if (sectionTypeInput) {
-                        sectionTypeInput.name = `sections[${index}][section_type]`;
-                    }
-
-                    // Update all other input fields in the section
                     const inputs = section.querySelectorAll('input, textarea, select');
                     inputs.forEach(input => {
-                        const name = input.name;
-                        const newName = name.replace(/sections\[\d+\]/, `sections[${index}]`);
-                        input.name = newName;
+                        if (!input.name) {
+                            return;
+                        }
+
+                        input.name = input.name.replace(/sections\[\d+\]/g, `sections[${index}]`);
+
+                        if (input.id && input.id.startsWith('sections_')) {
+                            input.id = input.id.replace(/^sections_\d+/, `sections_${index}`);
+                        }
                     });
+
+                    section.querySelectorAll('label[for^="sections_"]').forEach(label => {
+                        if (label.htmlFor) {
+                            label.htmlFor = label.htmlFor.replace(/^sections_\d+/, `sections_${index}`);
+                        }
+                    });
+                });
+            };
+
+            if (builderContainer) {
+                new Sortable(builderContainer, {
+                    animation: 150,
+                    handle: '.ibox-title',
+                    onEnd: function () {
+                        window.updateSectionOrder();
+                    }
+                });
+            }
+
+            if (pageForm) {
+                pageForm.addEventListener('submit', function () {
+                    window.updateSectionOrder();
                 });
             }
         });
@@ -5211,6 +5228,10 @@
             }
             // Append section to builder-container
             $("#builder-container").append(sectionHTML);
+
+            if (typeof window.updateSectionOrder === 'function') {
+                window.updateSectionOrder();
+            }
         }
 
         let currentSectionId = null;

@@ -194,6 +194,7 @@ class PagesController extends Controller
 
         $page->sections = $page->sections
             ->sortBy('order')
+            ->values()
             ->map(function ($section) {
                 $section->data = json_decode($section->data, true) ?? [];
 
@@ -304,6 +305,9 @@ class PagesController extends Controller
                 ->with('error', 'Invalid section data received. Existing sections were kept unchanged.')
                 ->withInput();
         }
+
+        // Form keys must map to visual order (0, 1, 2...), not stale array indexes.
+        $sections = array_values($sections);
 
         foreach ($sections as $order => $section) {
             if (! is_array($section)) {

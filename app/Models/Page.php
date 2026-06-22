@@ -24,7 +24,7 @@ class Page extends Model
     
     public function sections()
     {
-        return $this->hasMany(PageSection::class);
+        return $this->hasMany(PageSection::class)->orderBy('order');
     }
 
     public function parent()

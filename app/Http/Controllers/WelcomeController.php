@@ -109,7 +109,7 @@ class WelcomeController extends Controller
     {
         $page->load('sections');
 
-        $page->sections = $page->sections->sortBy('order')->map(function ($section) {
+        $page->sections = $page->sections->sortBy('order')->values()->map(function ($section) {
             $decoded = is_string($section->data) ? json_decode($section->data, true) : $section->data;
             $section->data = is_array($decoded) ? $decoded : [];
 
@@ -321,7 +321,7 @@ class WelcomeController extends Controller
 
         if ($page) {
             $page->load('sections');
-            $page->sections = $page->sections->sortBy('order')->map(function ($section) {
+            $page->sections = $page->sections->sortBy('order')->values()->map(function ($section) {
                 $section->data = json_decode($section->data, true);
 
                 if ($section->section_type === 'category' && isset($section->data['category'])) {
