@@ -73,6 +73,10 @@
     .slider.round:before {
         border-radius: 50%;
     }
+
+    .dt-buttons {
+        margin-bottom: 10px;
+    }
 </style>
 @endpush
 @section('content')
@@ -120,17 +124,23 @@
                             </thead>
                             <tbody>
                                 @foreach ($installments as $installment)
+                                @php
+                                    $invoiceAmountExport = payment_display_currency($installment->payment) . ' ' . number_format(payment_display_amount_from_aed($installment->payment, (float) $installment->payment->price), 2);
+                                    $dueAmountExport = payment_display_currency($installment->payment) . ' ' . number_format(payment_display_amount_from_aed($installment->payment, (float) ($installment->paid_amount + $installment->remaining_amount)), 2);
+                                    $paidAmountExport = payment_display_currency($installment->payment) . ' ' . number_format(payment_display_amount_from_aed($installment->payment, (float) $installment->paid_amount), 2);
+                                    $paidDateExport = $installment->paid_date ? \Carbon\Carbon::parse($installment->paid_date)->format('Y/m/d') : 'N/A';
+                                @endphp
                                 <tr>
                                     <td>INV-{{ str_pad($installment->payment_id, 6, '0', STR_PAD_LEFT) }}</td>
                                     <td>{{ \Carbon\Carbon::parse($installment->created_at)->format('Y/m/d') }}</td>
                                     <td>{{ $installment->payment->user->name ?? 'N/A' }}</td>
-                                    <td>{!! format_payment_aed_amount_admin($installment->payment, (float) $installment->payment->price) !!}</td>
+                                    <td data-export="{{ $invoiceAmountExport }}">{!! format_payment_aed_amount_admin($installment->payment, (float) $installment->payment->price) !!}</td>
                                     <td>{{ $installment->installment_number }}/{{ $installment->payment->total_installment }}</td>
                                     <td>{{ \Carbon\Carbon::parse($installment->due_date)->format('Y/m/d') }}</td>
-                                    <td>{!! format_payment_aed_amount_admin($installment->payment, (float) ($installment->paid_amount + $installment->remaining_amount)) !!}</td>
+                                    <td data-export="{{ $dueAmountExport }}">{!! format_payment_aed_amount_admin($installment->payment, (float) ($installment->paid_amount + $installment->remaining_amount)) !!}</td>
                                     <td>RC-{{ str_pad($installment->id, 6, '0', STR_PAD_LEFT) }}</td>
-                                    <td>{!! format_payment_aed_amount_admin($installment->payment, (float) $installment->paid_amount) !!}</td>
-                                    <td>
+                                    <td data-export="{{ $paidAmountExport }}">{!! format_payment_aed_amount_admin($installment->payment, (float) $installment->paid_amount) !!}</td>
+                                    <td data-export="{{ $paidDateExport }}">
                                         @if($installment->paid_date)
                                         {{ \Carbon\Carbon::parse($installment->paid_date)->format('Y/m/d') }}
                                         @else
@@ -236,8 +246,28 @@
             info: false,
             ordering: true,
             responsive: true,
-            dom: 'lftip',
-            order: []
+            dom: 'lBfrtip',
+            order: [],
+            buttons: [{
+                extend: 'excelHtml5',
+                text: '<i class="fa fa-file-excel-o"></i> Export to Excel',
+                className: 'btn btn-success btn-sm',
+                title: 'Receipts List',
+                filename: 'receipts_list_' + new Date().toISOString().slice(0, 10),
+                exportOptions: {
+                    columns: ':not(:last-child)',
+                    format: {
+                        body: function (data, row, column, node) {
+                            var exported = $(node).attr('data-export');
+                            if (exported !== undefined && exported !== '') {
+                                return exported;
+                            }
+
+                            return $('<div>').html(data).text().trim().replace(/\s+/g, ' ');
+                        }
+                    }
+                }
+            }]
         });
 
     });

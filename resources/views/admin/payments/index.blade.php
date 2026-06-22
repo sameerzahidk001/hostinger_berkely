@@ -73,6 +73,10 @@
     .slider.round:before {
         border-radius: 50%;
     }
+
+    .dt-buttons {
+        margin-bottom: 10px;
+    }
 </style>
 @endpush
 @section('content')
@@ -134,14 +138,16 @@
                                 } elseif ($totalPaid > 0) {
                                 $paymentStatus = 'Partial';
                                 }
+                                $invoiceAmountExport = format_payment_amount($payment)['display'];
+                                $paidAmountExport = payment_display_currency($payment) . ' ' . number_format(payment_display_amount_from_aed($payment, (float) $paidAmountSum), 2);
                                 @endphp
                                 <tr>
                                     <td>INV-{{ str_pad($payment->id, 6, '0', STR_PAD_LEFT) }}</td>
                                     <td data-order="{{ \Carbon\Carbon::parse($payment->created_at)->timestamp }}">{{ \Carbon\Carbon::parse($payment->created_at)->format('Y/m/d') }}</td>
-                                    <td>{{ $payment->course->title ?? 'N/A' }}<br><span class="text-muted">{{ $payment->courseFee->package_name ?? 'N/A' }}</span></td>
+                                    <td data-export="{{ ($payment->course->title ?? 'N/A') . ' - ' . ($payment->courseFee->package_name ?? 'N/A') }}">{{ $payment->course->title ?? 'N/A' }}<br><span class="text-muted">{{ $payment->courseFee->package_name ?? 'N/A' }}</span></td>
                                     <td>{{ $payment->user->name ?? 'N/A' }}</td>
                                     {{-- <td>{{ $payment->installment_request->installments_requested ?? 'Direct' }}</td> --}}
-                                    <td>
+                                    <td data-export="{{ $payment->installments->count() ?? 0 }}">
                                         <a type="button" href="javascript:void(0)" class="view-installments" data-installments='@json($payment)' data-currency="{{ $payment->courseFee->currency ?? 'AED' }}">
                                             {{ $payment->installments->count() ?? 0 }}
                                             <sup>
@@ -151,17 +157,17 @@
                                             </sup>
                                         </a>
                                     </td>
-                                    <td>
+                                    <td data-export="{{ $invoiceAmountExport }}">
                                         {!! format_payment_amount_admin($payment) !!}
                                     </td>
                                     <td>{{ $paidInstallmentsCount }}/{{ $payment->installments->count() ?? 0 }}</td>
-                                    <td>{!! format_payment_aed_amount_admin($payment, (float) $paidAmountSum) !!}</td>
-                                    <td>
+                                    <td data-export="{{ $paidAmountExport }}">{!! format_payment_aed_amount_admin($payment, (float) $paidAmountSum) !!}</td>
+                                    <td data-export="{{ $paymentStatus }}">
                                         <span class="badge badge-{{ $paymentStatus == 'Paid' ? 'primary' : ($paymentStatus == 'Partial' ? 'warning' : 'success') }}">
                                             {{ $paymentStatus }}
                                         </span>
                                     </td>
-                                    <td>
+                                    <td data-export="{{ $payment->status === 'Active' ? 'Active' : 'Inactive' }}">
                                         <label class="switch">
                                             <input type="checkbox" class="status-toggle"
                                                 data-payment-id="{{ $payment->id }}"
@@ -376,8 +382,28 @@
             info: false,
             ordering: true,
             responsive: true,
-            dom: 'lftip',
-            order: [[1, 'desc']]
+            dom: 'lBfrtip',
+            order: [[1, 'desc']],
+            buttons: [{
+                extend: 'excelHtml5',
+                text: '<i class="fa fa-file-excel-o"></i> Export to Excel',
+                className: 'btn btn-success btn-sm',
+                title: 'Invoices List',
+                filename: 'invoices_list_' + new Date().toISOString().slice(0, 10),
+                exportOptions: {
+                    columns: ':not(:last-child)',
+                    format: {
+                        body: function (data, row, column, node) {
+                            var exported = $(node).attr('data-export');
+                            if (exported !== undefined && exported !== '') {
+                                return exported;
+                            }
+
+                            return $('<div>').html(data).text().trim().replace(/\s+/g, ' ');
+                        }
+                    }
+                }
+            }]
         });
 
         $('.status-toggle').change(function() {
