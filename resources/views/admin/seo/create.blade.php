@@ -45,6 +45,12 @@
                                     <input type="text" class="form-control" placeholder="{{ request()->get('course_name') }}" readonly>
                                     <input type="hidden" name="course_id" value="{{ request()->get('course_id') }}">
                                 </div>
+                            @elseif(request()->has('page_name'))
+                                <div class="col-lg-12 mb">
+                                    <label for="">Page Title</label>
+                                    <input type="text" class="form-control" value="{{ request()->get('page_name') }}" readonly>
+                                    <input type="hidden" name="page_id" value="{{ request()->get('page_id') }}">
+                                </div>
                             @else
                                 <div class="col-lg-12 mb">
                                     <label for="">Choose Page</label>

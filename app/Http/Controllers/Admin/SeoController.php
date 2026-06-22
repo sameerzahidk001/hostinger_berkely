@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Models\Page;
 use App\Models\PagesSEO;
+use App\Models\SiteSettings;
 use App\Services\SeoAnalyzerService;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
@@ -11,37 +12,56 @@ use App\Http\Controllers\Controller;
 
 class SeoController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('long.running')->only(['index']);
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
-        // Initialize the query builder
-        $query = PagesSEO::with(['page', 'course', 'createdBy', 'updatedBy']);
+        $query = PagesSEO::query()
+            ->select([
+                'id',
+                'page_id',
+                'course_id',
+                'title',
+                'meta_description',
+                'keywords',
+                'created_at',
+                'updated_at',
+                'created_by',
+                'updated_by',
+            ])
+            ->with([
+                'page:id,page_name,url,parent_id,category_id',
+                'page.parent:id,url',
+                'course:id,title,slug',
+                'createdBy:id,name',
+                'updatedBy:id,name',
+            ]);
 
-        // Filter by title/name if provided
-        if ($request->has('name') && !empty($request->name)) {
+        if ($request->filled('name')) {
             $query->where('title', 'LIKE', '%' . $request->name . '%');
         }
 
-        // Filter by type (either page or course)
-        if ($request->has('type') && !empty($request->type)) {
-            if ($request->type == 'page') {
-                $query->whereNotNull('page_id'); // Filter for pages
-            } elseif ($request->type == 'course') {
-                $query->whereNotNull('course_id'); // Filter for courses
+        if ($request->filled('type')) {
+            if ($request->type === 'page') {
+                $query->whereNotNull('page_id');
+            } elseif ($request->type === 'course') {
+                $query->whereNotNull('course_id');
             }
         }
 
-        $analyzer = app(SeoAnalyzerService::class);
+        $data['pages_seo'] = $query
+            ->orderByDesc('id')
+            ->paginate(30)
+            ->withQueryString();
 
-        $pagesSeo = $query->orderByDesc('id')->get()->each(function (PagesSEO $seo) use ($analyzer) {
-            $seo->analysis = $analyzer->analyze($seo);
-        });
+        $data['category_perma'] = SiteSettings::value('category_perma') ?? 'category';
 
-        $data['pages_seo'] = $pagesSeo;
-
-        // Return the view with filtered data
         return view('admin.seo.index')->with($data);
     }
 

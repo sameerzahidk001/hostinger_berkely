@@ -272,6 +272,81 @@ if (!function_exists('seo_validation_rules')) {
     }
 }
 
+if (!function_exists('seo_list_focus_keyword')) {
+    function seo_list_focus_keyword(?string $keywords): string
+    {
+        $keywords = trim((string) $keywords);
+        if ($keywords === '') {
+            return '';
+        }
+
+        $parts = preg_split('/[,;|]+/', $keywords);
+
+        return trim((string) ($parts[0] ?? ''));
+    }
+}
+
+if (!function_exists('seo_metadata_list_score')) {
+    function seo_metadata_list_score($seo): int
+    {
+        $title = trim((string) ($seo->title ?? ''));
+        $description = trim((string) ($seo->meta_description ?? ''));
+        $keywords = trim((string) ($seo->keywords ?? ''));
+
+        $passed = 0;
+        $total = 5;
+
+        if ($title !== '') {
+            $passed++;
+        }
+
+        if ($description !== '') {
+            $passed++;
+        }
+
+        if ($keywords !== '') {
+            $passed++;
+        }
+
+        $titleLength = strlen($title);
+        if ($titleLength >= 30 && $titleLength <= 60) {
+            $passed++;
+        }
+
+        $descriptionLength = strlen($description);
+        if ($descriptionLength >= 120 && $descriptionLength <= 160) {
+            $passed++;
+        }
+
+        return (int) round(($passed / $total) * 100);
+    }
+}
+
+if (!function_exists('seo_list_item_url')) {
+    function seo_list_item_url($seo, ?string $categoryPerma = 'category'): string
+    {
+        if (! empty($seo->course_id) && $seo->relationLoaded('course') && $seo->course) {
+            return (string) ($seo->course->slug ?? '');
+        }
+
+        if (! empty($seo->page_id) && $seo->relationLoaded('page') && $seo->page) {
+            $page = $seo->page;
+
+            if ($page->parent_id && $page->relationLoaded('parent') && $page->parent) {
+                return trim($page->parent->url . '/' . $page->url, '/');
+            }
+
+            if ($page->category_id) {
+                return trim(($categoryPerma ?: 'category') . '/' . $page->url, '/');
+            }
+
+            return (string) ($page->url ?? '');
+        }
+
+        return '';
+    }
+}
+
 if (!function_exists('is_content_writer_role')) {
     function is_content_writer_role(?string $role): bool
     {

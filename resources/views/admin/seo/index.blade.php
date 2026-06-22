@@ -63,6 +63,10 @@
                             </div>
                         </form>
 
+                        <div class="d-flex justify-content-end mb-2">
+                            {{ $pages_seo->links() }}
+                        </div>
+
                         <table class="table table-striped table-bordered table-hover dataTables-example">
                             <thead>
                                 <tr>
@@ -79,17 +83,15 @@
                             <tbody>
                                 @forelse($pages_seo as $page_seo)
                                     @php
-                                        $analysis = $page_seo->analysis ?? [];
-                                        $score = $analysis['score'] ?? 0;
+                                        $score = seo_metadata_list_score($page_seo);
                                         $scoreClass = $score >= 80 ? 'excellent' : ($score >= 50 ? 'good' : 'poor');
                                         $isCourse = ! empty($page_seo->course_id);
                                         $itemTitle = $page_seo->title ?: ($isCourse ? ($page_seo->course->title ?? 'Course') : ($page_seo->page->page_name ?? 'Page'));
-                                        $itemUrl = $isCourse
-                                            ? ($page_seo->course->slug ?? '')
-                                            : ($page_seo->page->full_url ?? $page_seo->page->url ?? '');
+                                        $itemUrl = seo_list_item_url($page_seo, $category_perma ?? 'category');
+                                        $focusKeyword = seo_list_focus_keyword($page_seo->keywords);
                                     @endphp
                                     <tr>
-                                        <td data-order="{{ $page_seo->id }}">{{ $loop->iteration }}</td>
+                                        <td data-order="{{ $page_seo->id }}">{{ ($pages_seo->firstItem() ?? 0) + $loop->index }}</td>
                                         <td data-order="{{ $itemTitle }}">
                                             <strong>{{ $itemTitle }}</strong>
                                             @if($itemUrl)
@@ -98,13 +100,13 @@
                                         </td>
                                         <td data-order="{{ $isCourse ? 1 : 0 }}">{{ $isCourse ? 'Course' : 'Page' }}</td>
                                         <td data-order="{{ $score }}">
-                                            <span class="seo-score-pill {{ $scoreClass }}">{{ $score }}/100</span>
+                                            <span class="seo-score-pill {{ $scoreClass }}" title="Quick score from title, description and keywords. Open Edit for full content analysis.">{{ $score }}/100</span>
                                         </td>
-                                        <td class="seo-details" data-order="{{ $analysis['word_count'] ?? 0 }}">
-                                            <small><strong>Keyword:</strong> {{ $analysis['focus_keyword'] ?: '—' }}</small>
-                                            <small><strong>Schema:</strong> {{ $analysis['schema'] ?? 'Article' }}</small>
-                                            <small><strong>Links:</strong> {{ $analysis['external_links'] ?? 0 }} ext / {{ $analysis['internal_links'] ?? 0 }} int</small>
-                                            <small><strong>Words:</strong> {{ number_format($analysis['word_count'] ?? 0) }}</small>
+                                        <td class="seo-details" data-order="{{ $focusKeyword }}">
+                                            <small><strong>Keyword:</strong> {{ $focusKeyword ?: '—' }}</small>
+                                            <small><strong>Schema:</strong> Article</small>
+                                            <small><strong>Links:</strong> —</small>
+                                            <small><strong>Words:</strong> — <span class="text-muted">(open Edit for full analysis)</span></small>
                                         </td>
                                         <td data-order="{{ $page_seo->meta_description ?? '' }}">{{ \Illuminate\Support\Str::limit($page_seo->meta_description ?? '', 120) }}</td>
                                         @include('admin.layout.partials.audit-columns-cells', ['model' => $page_seo])
@@ -137,6 +139,10 @@
                                 </tr>
                             </tfoot>
                         </table>
+
+                        <div class="d-flex justify-content-end mt-2">
+                            {{ $pages_seo->links() }}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -150,16 +156,16 @@
     <script>
         $(document).ready(function () {
             $('.dataTables-example').DataTable({
-                pageLength: 20,
-                lengthMenu: [10, 20, 50, 100],
+                pageLength: 25,
+                lengthMenu: [10, 25, 50, 100],
                 searching: true,
                 lengthChange: true,
-                paging: true,
+                paging: false,
                 info: true,
                 ordering: true,
                 responsive: true,
-                dom: 'lftip',
-                order: [[8, 'desc']],
+                dom: 'lfti',
+                order: [[0, 'desc']],
                 columnDefs: [
                     { orderable: false, targets: [10] }
                 ]

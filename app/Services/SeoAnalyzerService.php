@@ -9,14 +9,14 @@ use Illuminate\Support\Str;
 
 class SeoAnalyzerService
 {
-    public function analyze(PagesSEO $seo): array
+    public function analyze(PagesSEO $seo, bool $forListing = false): array
     {
         $title = trim((string) $seo->title);
         $description = trim((string) $seo->meta_description);
         $focusKeyword = $this->focusKeyword($seo);
         $urlSlug = $this->resolveUrlSlug($seo);
         $previewUrl = $this->resolvePreviewUrl($seo);
-        $content = $this->resolveContent($seo);
+        $content = $forListing ? $this->resolveContentForListing($seo) : $this->resolveContent($seo);
         $plainText = $this->stripToText($content);
         $wordCount = $this->wordCount($plainText);
         $keywordCount = $focusKeyword ? $this->keywordOccurrences($plainText, $focusKeyword) : 0;
@@ -156,6 +156,40 @@ class SeoAnalyzerService
         }
 
         return $content;
+    }
+
+    /**
+     * Lightweight content for admin list screens (avoids loading every page section).
+     */
+    private function resolveContentForListing(PagesSEO $seo): string
+    {
+        $seo->loadMissing(['page', 'course']);
+
+        if ($seo->page) {
+            return trim(implode(' ', array_filter([
+                $seo->page->page_name ?? '',
+                $seo->title ?? '',
+                $seo->meta_description ?? '',
+                $seo->keywords ?? '',
+            ])));
+        }
+
+        if ($seo->course) {
+            return trim(implode(' ', array_filter([
+                $seo->course->title ?? '',
+                $seo->course->short_description ?? '',
+                $this->stripToText((string) ($seo->course->description ?? '')),
+                $seo->title ?? '',
+                $seo->meta_description ?? '',
+                $seo->keywords ?? '',
+            ])));
+        }
+
+        return trim(implode(' ', array_filter([
+            $seo->title ?? '',
+            $seo->meta_description ?? '',
+            $seo->keywords ?? '',
+        ])));
     }
 
     private function extractPageContent(Page $page): string

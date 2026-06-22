@@ -209,9 +209,19 @@
                                                 {{ $page->faqs->count() }}
                                             </td>
                                             <td style="vertical-align: middle;" data-export="{{ $page->seo ? 'Added' : 'Not Added' }}">
-                                                <span class="label {{ $page->seo ? 'label-primary' : 'label-danger' }}">
-                                                    {{ $page->seo ? 'Added' : 'Not Added' }}
-                                                </span>
+                                                @if ($page->seo)
+                                                    <span class="label label-primary">Added</span>
+                                                    <a href="{{ route('pages-seo.edit', ['pages_seo' => $page->seo->id, 'page_name' => $page->page_name, 'page_id' => $page->id]) }}"
+                                                        class="label label-primary" target="_blank">
+                                                        View
+                                                    </a>
+                                                @else
+                                                    <span class="label label-danger">Not Added</span>
+                                                    <a href="{{ route('pages-seo.create', ['page_name' => $page->page_name, 'page_id' => $page->id]) }}"
+                                                        class="label label-danger" target="_blank">
+                                                        Add
+                                                    </a>
+                                                @endif
                                             </td>
                                             @include('admin.seo.partials.list-seo-columns', [
                                                 'seo' => $page->seo,
