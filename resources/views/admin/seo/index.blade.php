@@ -36,11 +36,6 @@
             <div class="ibox float-e-margins" style="margin-bottom: 0;">
                 <div class="ibox-title">
                     <h5>SEO</h5>
-                    <div class="ibox-tools">
-                        <a class="btn-primary btn btn-xs" href="{{ route('pages-seo.create') }}">
-                            <i class="fa fa-plus-square"></i> &nbsp;Add
-                        </a>
-                    </div>
                 </div>
                 <div class="ibox-content">
                     <div class="table-responsive">
