@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 
 class HomeController extends Controller
 {
@@ -37,26 +36,8 @@ class HomeController extends Controller
 
     public function logout()
     {
-        $request = request();
-        $sessionId = $request->hasSession() ? $request->session()->getId() : null;
-        $user = Auth::user();
-
-        if ($user) {
-            record_user_activity(
-                'User Logout',
-                'Session ended',
-                public_login_url(),
-                activity_audience_for_user($user),
-                $user->id,
-                null,
-                $request,
-                $sessionId
-            );
-        }
-
         Auth::logout();
 
-        // Redirect to a specified route after logout
         return redirect()->route('login');
     }
 }
