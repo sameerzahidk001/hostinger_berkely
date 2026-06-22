@@ -104,7 +104,7 @@ class AdminController extends Controller
 
         return $this->activityDashboard($request, [
             'userId' => $request->filled('user_id') ? (int) $request->query('user_id') : null,
-            'roleFilter' => $request->query('role'),
+            'roleFilter' => $request->filled('role') ? $request->query('role') : null,
             'showMyStats' => false,
             'showSiteStats' => true,
             'showInvoiceStats' => true,
@@ -142,7 +142,7 @@ class AdminController extends Controller
         $service = app(PanelActivityService::class);
         $logService = app(UserActivityLogService::class);
         $userId = $options['userId'] ?? null;
-        $roleFilter = $options['roleFilter'] ?? $request->query('role');
+        $roleFilter = $options['roleFilter'] ?? ($request->filled('role') ? $request->query('role') : null);
         $includePayments = (bool) ($options['includePayments'] ?? false);
         $logAudience = (string) ($options['logAudience'] ?? 'staff');
         $showStudentTable = (bool) ($options['showStudentTable'] ?? false);

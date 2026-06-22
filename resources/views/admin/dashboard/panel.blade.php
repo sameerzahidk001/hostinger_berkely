@@ -190,12 +190,12 @@
                 <h5>Filter activity</h5>
             </div>
             <div class="ibox-content">
-                <form method="GET" action="{{ route('admin.home') }}" class="form-inline" style="flex-wrap: wrap;">
+                <form method="GET" action="{{ route('admin.home') }}" class="form-inline" style="flex-wrap: wrap;" id="activityFilterForm">
                     @if($showUserFilter ?? false)
                     <div class="form-group m-r-sm m-b-sm">
                         <label for="role" class="m-r-xs">Role</label>
-                        <select id="role" name="role" class="form-control">
-                            <option value="">All roles</option>
+                        <select id="role" name="role" class="form-control activity-filter-select">
+                            <option value="" @selected(!request()->filled('role'))>None</option>
                             <option value="content_writer" @selected(request('role') === 'content_writer')>Content Writers</option>
                             <option value="accountant" @selected(request('role') === 'accountant')>Accountants</option>
                             <option value="instructor" @selected(request('role') === 'instructor')>Instructors</option>
@@ -203,8 +203,8 @@
                     </div>
                     <div class="form-group m-r-sm m-b-sm">
                         <label for="user_id" class="m-r-xs">User</label>
-                        <select id="user_id" name="user_id" class="form-control" style="min-width: 220px;">
-                            <option value="">All users</option>
+                        <select id="user_id" name="user_id" class="form-control activity-filter-select" style="min-width: 220px;">
+                            <option value="" @selected(!request()->filled('user_id'))>None</option>
                             @foreach($filterUsers ?? [] as $filterUser)
                                 @php $roleName = $filterUser->roles->first()?->name; @endphp
                                 <option value="{{ $filterUser->id }}" @selected((string) request('user_id') === (string) $filterUser->id)>
@@ -217,8 +217,8 @@
                     @if($showStudentTable ?? false)
                     <div class="form-group m-r-sm m-b-sm">
                         <label for="student_user_id" class="m-r-xs">Student</label>
-                        <select id="student_user_id" name="student_user_id" class="form-control" style="min-width: 220px;">
-                            <option value="">All students</option>
+                        <select id="student_user_id" name="student_user_id" class="form-control activity-filter-select" style="min-width: 220px;">
+                            <option value="" @selected(!request()->filled('student_user_id'))>None</option>
                             @foreach($studentFilterUsers ?? [] as $studentUser)
                                 <option value="{{ $studentUser->id }}" @selected((string) request('student_user_id') === (string) $studentUser->id)>
                                     {{ $studentUser->name }} ({{ $studentUser->email }})
@@ -240,6 +240,7 @@
                     <button type="submit" class="btn btn-primary m-r-sm m-b-sm">Filter</button>
                     <a href="{{ route('admin.home') }}" class="btn btn-default m-b-sm">Clear</a>
                 </form>
+                <p class="text-muted small m-t-sm m-b-none">Leave any dropdown on <strong>None</strong> to skip that filter. Use dates only when needed.</p>
 
                 <div class="m-t-md">
                     <span class="label label-primary m-r-xs">Courses created: {{ $summary['courses_created'] }}</span>
@@ -404,6 +405,23 @@ $(document).ready(function() {
         };
     }, 300);
     toastr.success('Welcome, {{ addslashes(panel_profile_name() ?: 'User') }}');
+
+    var $role = $('#role');
+    var $user = $('#user_id');
+
+    if ($role.length && $user.length) {
+        $role.on('change', function() {
+            if ($(this).val() !== '') {
+                $user.val('');
+            }
+        });
+
+        $user.on('change', function() {
+            if ($(this).val() !== '') {
+                $role.val('');
+            }
+        });
+    }
 });
 </script>
 @endpush
