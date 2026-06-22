@@ -205,11 +205,6 @@ a {
                                     <img src="{{ asset('frontend/images/pngs/header-logo.png') }}" alt="logo">
                                 </a>
                             </div>
-                            @if (session('error-message'))
-                                <div class="row px-3 mb-3">
-                                    <p class="text-danger text-sm mb-0">{{ session('error-message') }}</p>
-                                </div>
-                            @endif
                             <!-- <div class="row px-3 mb-4">
                                 <div class="line"></div>
                                 <small class="or text-center">Or</small>

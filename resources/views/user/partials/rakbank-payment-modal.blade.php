@@ -1,5 +1,23 @@
+@once
     @push('style')
         <style>
+            .payment-summary-table td {
+                padding: 5px 10px 5px 0;
+                font-size: 13px;
+                vertical-align: top;
+            }
+
+            .payment-summary-table td:first-child {
+                color: #676a6c;
+                white-space: nowrap;
+                width: 38%;
+            }
+
+            .payment-summary-table td:last-child {
+                font-weight: 500;
+                color: #333;
+            }
+
             .payment-summary-amount {
                 border-top: 1px solid #e7eaec;
                 margin-top: 16px;
@@ -7,79 +25,44 @@
                 text-align: center;
             }
 
-            .rakbank-checkout-shell {
-                position: relative;
-                overflow: visible;
-            }
-
-            #hco-embedded,
-            [id^="hco-embedded-"] {
-                position: relative;
-            }
-
             #hco-embedded iframe,
             [id^="hco-embedded-"] iframe {
                 width: 100% !important;
                 min-height: 360px;
-                display: block;
-                border: 0;
             }
 
-            /*
-             * Covers RakBank "Pay 2,700.00" — absolute inside shell (not fixed; modal-safe).
-             * pointer-events: none lets clicks reach the real gateway button.
-             */
-            .rakbank-pay-button-replica {
-                position: absolute;
-                z-index: 9999;
-                display: none;
-                align-items: center;
-                justify-content: center;
-                pointer-events: none;
-                border: 0;
-                border-radius: 4px;
-                box-sizing: border-box;
-                background-color: #e5e7eb;
-                margin: 0;
-                padding: 0;
-            }
-
-            .rakbank-pay-button-replica.is-visible {
-                display: flex !important;
-            }
-
-            .rakbank-pay-button-replica.is-enabled {
-                background-color: #337ab7;
-            }
-
-            .rakbank-pay-button-replica__label {
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-                font-size: 18px;
-                font-weight: 600;
-                color: #6b7280;
-                line-height: 1;
-                pointer-events: none;
-                user-select: none;
-            }
-
-            .rakbank-pay-button-replica.is-enabled .rakbank-pay-button-replica__label {
-                color: #fff;
-            }
-
-            /* Same-document injection fallback */
+            /* RakBank Angular checkout: hide "Pay 2,700.00" label, show only "Pay" */
             #hco-embedded #pay-button,
-            [id^="hco-embedded-"] #pay-button {
+            #hco-embedded button[id="pay-button"],
+            [id^="hco-embedded-"] #pay-button,
+            [id^="hco-embedded-"] button[id="pay-button"] {
+                position: relative;
                 color: transparent !important;
                 font-size: 0 !important;
                 line-height: 1.25;
             }
 
+            #hco-embedded #pay-button i,
+            #hco-embedded #pay-button svg,
+            #hco-embedded #pay-button img,
+            [id^="hco-embedded-"] #pay-button i,
+            [id^="hco-embedded-"] #pay-button svg,
+            [id^="hco-embedded-"] #pay-button img {
+                font-size: 1rem !important;
+                opacity: 1 !important;
+                color: #6c757d !important;
+                vertical-align: middle;
+            }
+
             #hco-embedded #pay-button::after,
             [id^="hco-embedded-"] #pay-button::after {
                 content: 'Pay';
-                font-size: 18px;
+                font-size: 1.125rem;
                 font-weight: 600;
-                color: #6b7280;
+                color: #6c757d;
+                display: inline-block;
+                vertical-align: middle;
+                margin-left: 4px;
             }
 
             #hco-embedded #pay-button:not(:disabled)::after,
@@ -91,228 +74,157 @@
 
     @push('script')
         <script>
-            window.__payButtonReplicaStop = window.__payButtonReplicaStop || null;
+            window.__payButtonLabelFixStop = window.__payButtonLabelFixStop || null;
 
-            function findCheckoutIframe(container) {
-                if (!container) {
-                    return null;
-                }
-
-                var iframe = container.querySelector('iframe');
-                if (iframe) {
-                    return iframe;
-                }
-
-                var modal = container.closest('.modal');
-                if (modal) {
-                    iframe = modal.querySelector('iframe');
-                    if (iframe) {
-                        return iframe;
-                    }
-                }
-
-                return document.querySelector('#paymentModal iframe, [id^="paymentModal"] iframe');
-            }
-
-            function findGatewayPayButton(container) {
-                if (!container) {
-                    return null;
-                }
-
-                var payBtn = container.querySelector('#pay-button');
-                if (payBtn) {
-                    return payBtn;
-                }
-
-                var frames = container.querySelectorAll('iframe');
-                for (var i = 0; i < frames.length; i++) {
-                    try {
-                        var doc = frames[i].contentDocument || frames[i].contentWindow.document;
-                        payBtn = doc && doc.getElementById('pay-button');
-                        if (payBtn) {
-                            return payBtn;
-                        }
-                    } catch (e) {}
-                }
-
-                var modal = container.closest('.modal');
-                if (modal) {
-                    frames = modal.querySelectorAll('iframe');
-                    for (var j = 0; j < frames.length; j++) {
-                        try {
-                            var modalDoc = frames[j].contentDocument || frames[j].contentWindow.document;
-                            payBtn = modalDoc && modalDoc.getElementById('pay-button');
-                            if (payBtn) {
-                                return payBtn;
-                            }
-                        } catch (e) {}
-                    }
-                }
-
-                return Array.from(container.querySelectorAll('button, [role="button"], input[type="submit"]')).find(function (btn) {
-                    return /pay/i.test((btn.textContent || btn.value || '').trim());
-                }) || null;
-            }
-
-            function getPayReplicaForContainer(container) {
-                var shell = container.closest('.rakbank-checkout-shell');
-                if (!shell) {
-                    return null;
-                }
-
-                var replica = shell.querySelector('.rakbank-pay-button-replica');
-                return replica ? { shell: shell, replica: replica } : null;
-            }
-
-            function syncRakbankPayReplica(containerSelector) {
-                var container = document.querySelector(containerSelector);
-                var parts = getPayReplicaForContainer(container);
-                if (!container || !parts) {
+            function replacePayAmountInButton(btn) {
+                if (!btn) {
                     return;
                 }
 
-                var shell = parts.shell;
-                var replica = parts.replica;
-                var shellRect = shell.getBoundingClientRect();
-                var payBtn = findGatewayPayButton(container);
-                var top;
-                var left;
-                var width;
-                var height;
-                var enabled = false;
+                const id = (btn.id || '').toLowerCase();
+                const label = (btn.textContent || btn.value || '').trim();
 
-                if (payBtn) {
-                    var btnRect = payBtn.getBoundingClientRect();
-                    top = btnRect.top - shellRect.top;
-                    left = btnRect.left - shellRect.left;
-                    width = btnRect.width;
-                    height = btnRect.height;
-                    enabled = !payBtn.disabled;
-                } else {
-                    var iframe = findCheckoutIframe(container);
-                    if (!iframe) {
-                        replica.classList.remove('is-visible');
+                if (id !== 'pay-button' && !/^pay\b/i.test(label) && !/pay\s*[\d,.]/i.test(label)) {
+                    return;
+                }
+
+                if (btn.tagName === 'INPUT') {
+                    btn.value = 'Pay';
+                    return;
+                }
+
+                Array.from(btn.childNodes).forEach(function (node) {
+                    if (node.nodeType !== Node.TEXT_NODE) {
                         return;
                     }
 
-                    var frameRect = iframe.getBoundingClientRect();
-                    height = 52;
-                    width = frameRect.width;
-                    left = frameRect.left - shellRect.left;
-                    top = frameRect.bottom - shellRect.top - height;
-                }
-
-                if (width < 20 || height < 20) {
-                    replica.classList.remove('is-visible');
-                    return;
-                }
-
-                replica.style.top = Math.round(top) + 'px';
-                replica.style.left = Math.round(left) + 'px';
-                replica.style.width = Math.round(width) + 'px';
-                replica.style.height = Math.round(height) + 'px';
-                replica.classList.toggle('is-enabled', enabled);
-                replica.classList.add('is-visible');
-            }
-
-            function installPayButtonReplica(containerSelector) {
-                var container = document.querySelector(containerSelector);
-                if (!container) {
-                    return function () {};
-                }
-
-                var sync = function () {
-                    syncRakbankPayReplica(containerSelector);
-                };
-
-                sync();
-
-                var observer = new MutationObserver(sync);
-                observer.observe(container, { childList: true, subtree: true, attributes: true });
-
-                var modal = container.closest('.modal');
-                if (modal) {
-                    observer.observe(modal, { childList: true, subtree: true, attributes: true });
-                }
-
-                var resizeObserver = null;
-                if (typeof ResizeObserver !== 'undefined') {
-                    resizeObserver = new ResizeObserver(sync);
-                    resizeObserver.observe(container);
-                    var shell = container.closest('.rakbank-checkout-shell');
-                    if (shell) {
-                        resizeObserver.observe(shell);
+                    const text = node.textContent || '';
+                    if (/pay/i.test(text) && /[\d,.]/.test(text)) {
+                        node.textContent = text.replace(/pay\s*[\d,.A-Za-z\s]*/i, 'Pay');
                     }
-                }
-
-                window.addEventListener('resize', sync);
-                window.addEventListener('scroll', sync, true);
-
-                var intervalId = window.setInterval(sync, 200);
-                [50, 150, 300, 600, 1000, 2000, 4000, 8000, 12000].forEach(function (delay) {
-                    window.setTimeout(sync, delay);
                 });
 
-                var bindIframeLoad = function () {
-                    container.querySelectorAll('iframe').forEach(function (frame) {
-                        if (frame.dataset.replicaBound === '1') {
-                            return;
+                if (/pay\s*[\d,.]/i.test(btn.textContent || '')) {
+                    const icons = btn.querySelectorAll('svg, i, img, span.material-icons');
+                    if (icons.length) {
+                        Array.from(btn.childNodes).forEach(function (node) {
+                            if (node.nodeType === Node.TEXT_NODE && /[\d,.]/.test(node.textContent || '')) {
+                                node.textContent = '';
+                            }
+                        });
+                    } else {
+                        btn.textContent = 'Pay';
+                    }
+                }
+            }
+
+            function normalizeEmbeddedPayButtons(containerSelector) {
+                const roots = [];
+
+                if (containerSelector) {
+                    const root = document.querySelector(containerSelector);
+                    if (root) {
+                        roots.push(root);
+                    }
+                } else {
+                    roots.push(document);
+                }
+
+                const scrub = function () {
+                    roots.forEach(function (root) {
+                        const payBtn = root.querySelector ? root.querySelector('#pay-button') : null;
+                        if (payBtn) {
+                            replacePayAmountInButton(payBtn);
                         }
-                        frame.dataset.replicaBound = '1';
-                        frame.addEventListener('load', sync);
+
+                        if (root.querySelectorAll) {
+                            root.querySelectorAll('button, [role="button"], input[type="submit"]').forEach(replacePayAmountInButton);
+                        }
+
+                        if (root.querySelectorAll) {
+                            root.querySelectorAll('iframe').forEach(function (frame) {
+                                try {
+                                    const doc = frame.contentDocument || frame.contentWindow?.document;
+                                    if (!doc) {
+                                        return;
+                                    }
+
+                                    const iframePay = doc.getElementById('pay-button');
+                                    if (iframePay) {
+                                        replacePayAmountInButton(iframePay);
+                                    }
+
+                                    doc.querySelectorAll('button, [role="button"], input[type="submit"]').forEach(replacePayAmountInButton);
+                                } catch (e) {
+                                    // Cross-origin iframe
+                                }
+                            });
+                        }
                     });
-                    var iframe = findCheckoutIframe(container);
-                    if (iframe && iframe.dataset.replicaBound !== '1') {
-                        iframe.dataset.replicaBound = '1';
-                        iframe.addEventListener('load', sync);
+
+                    const globalPay = document.getElementById('pay-button');
+                    if (globalPay) {
+                        replacePayAmountInButton(globalPay);
                     }
                 };
-                bindIframeLoad();
 
-                return function stopPayButtonReplica() {
+                scrub();
+
+                const observer = new MutationObserver(scrub);
+                roots.forEach(function (root) {
+                    observer.observe(root, {
+                        childList: true,
+                        subtree: true,
+                        characterData: true,
+                    });
+                });
+
+                const intervalId = window.setInterval(scrub, 250);
+
+                return function stop() {
                     observer.disconnect();
-                    if (resizeObserver) {
-                        resizeObserver.disconnect();
-                    }
-                    window.removeEventListener('resize', sync);
-                    window.removeEventListener('scroll', sync, true);
                     window.clearInterval(intervalId);
-                    var parts = getPayReplicaForContainer(container);
-                    if (parts && parts.replica) {
-                        parts.replica.classList.remove('is-visible');
-                    }
                 };
             }
 
             function schedulePayButtonCleanup(containerSelector) {
-                if (typeof window.__payButtonReplicaStop === 'function') {
-                    window.__payButtonReplicaStop();
+                if (typeof window.__payButtonLabelFixStop === 'function') {
+                    window.__payButtonLabelFixStop();
+                    window.__payButtonLabelFixStop = null;
                 }
-                window.__payButtonReplicaStop = installPayButtonReplica(containerSelector);
+
+                const root = containerSelector ? document.querySelector(containerSelector) : document;
+                const scrubOnce = function () {
+                    const payBtn = (root && root.querySelector('#pay-button')) || document.getElementById('pay-button');
+                    if (payBtn) {
+                        replacePayAmountInButton(payBtn);
+                    }
+                };
+
+                window.__payButtonLabelFixStop = normalizeEmbeddedPayButtons(containerSelector);
+
+                [100, 300, 600, 1000, 2000, 4000, 8000].forEach(function (delay) {
+                    window.setTimeout(scrubOnce, delay);
+                });
             }
 
             function stopPayButtonCleanup() {
-                if (typeof window.__payButtonReplicaStop === 'function') {
-                    window.__payButtonReplicaStop();
-                    window.__payButtonReplicaStop = null;
+                if (typeof window.__payButtonLabelFixStop === 'function') {
+                    window.__payButtonLabelFixStop();
+                    window.__payButtonLabelFixStop = null;
                 }
             }
 
             function renderPaymentModalSummary(targetSelector, res) {
                 var amount = res.displayAmount || '';
-                var aedLine = res.displayAmountAed || '';
-                var html =
+
+                $(targetSelector).html(
                     '<div class="payment-summary-amount" style="border-top:none;margin-top:0;padding-top:0;">' +
                         '<div style="font-size:13px;color:#666;margin-bottom:4px;">Amount to pay</div>' +
-                        '<div style="font-size:22px;font-weight:700;">' + amount + '</div>';
-
-                if (aedLine) {
-                    html += '<div style="font-size:14px;color:#888;margin-top:6px;">(' + aedLine + ')</div>';
-                }
-
-                html += '</div>';
-
-                $(targetSelector).html(html);
+                        '<div style="font-size:22px;font-weight:700;">' + amount + '</div>' +
+                    '</div>'
+                );
             }
         </script>
     @endpush
+@endonce

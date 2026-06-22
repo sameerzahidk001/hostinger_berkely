@@ -64,7 +64,7 @@ class HomeController extends Controller
         }
 
         $chargeAmount = number_format($settlingAed, 2, '.', '');
-        $studentAmountInfo = format_student_payment_modal_amount($payment, $settlingAed);
+        $studentAmountLabel = format_payment_aed_amount($payment, $settlingAed);
         $orderId = 'order-' . uniqid();
         $returnUrl = route('user.rakbank.return', [
             'installment' => $installment->id,
@@ -96,7 +96,6 @@ class HomeController extends Controller
                         'cancelUrl' => $returnUrl,
                         'displayControl' => [
                             'billingAddress' => 'HIDE',
-                            'orderSummary' => 'HIDE',
                         ],
                         'merchant' => [
                             'name' => 'Berkeley School of Business',
@@ -143,8 +142,7 @@ class HomeController extends Controller
             'success' => true,
             'session' => ['id' => $sessionId],
             'orderId' => $orderId,
-            'displayAmount' => $studentAmountInfo['displayAmount'],
-            'displayAmountAed' => $studentAmountInfo['displayAmountAed'],
+            'displayAmount' => $studentAmountLabel,
             'settlingAmount' => $chargeAmount,
             'checkoutCurrency' => $checkoutCurrency,
             'summary' => [

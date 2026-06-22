@@ -27,8 +27,6 @@ class AdminMiddleware
             }
         }
 
-        return redirect()
-            ->to(public_login_url())
-            ->with('error-message', 'Your session has expired. Please sign in again.');
+        return redirect('admin/login');
     }
 }

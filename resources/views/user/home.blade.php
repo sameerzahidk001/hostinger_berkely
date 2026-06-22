@@ -140,12 +140,7 @@
                             <p class="mt-2 mb-0">Loading payment form...</p>
                         </div>
                         <div id="payment-error" class="alert alert-danger text-center" style="display: none;"></div>
-                        <div class="rakbank-checkout-shell">
-                            <div id="hco-embedded" style="min-height: 360px;"></div>
-                            <div id="rakbank-pay-replica" class="rakbank-pay-button-replica" aria-hidden="true">
-                                <span class="rakbank-pay-button-replica__label">Pay</span>
-                            </div>
-                        </div>
+                        <div id="hco-embedded" style="min-height: 360px;"></div>
                     </div>
                 </div>
             </div>
@@ -199,7 +194,6 @@
                 $('#hco-embedded').empty();
                 $('#payment-error').hide().empty();
                 $('#payment-loading').hide();
-                $('#rakbank-pay-replica').removeClass('is-visible is-enabled');
             }
 
             function loadCheckoutScript(callback) {
@@ -289,28 +283,14 @@
                     try {
                         Checkout.configure({
                             session: { id: sessionId },
-                            interaction: {
-                                displayControl: {
-                                    orderSummary: 'HIDE',
-                                },
-                            },
                         });
                         $('#payment-loading').hide();
-                        Checkout.showEmbeddedPage('#hco-embedded', function () {
-                            function startPayReplica() {
-                                if (typeof syncRakbankPayReplica === 'function') {
-                                    syncRakbankPayReplica('#hco-embedded');
-                                }
-                                if (typeof schedulePayButtonCleanup === 'function') {
-                                    schedulePayButtonCleanup('#hco-embedded');
-                                }
-                            }
-
-                            startPayReplica();
-                            [100, 300, 600, 1200, 2000, 3500, 5000, 8000, 12000].forEach(function (delay) {
-                                window.setTimeout(startPayReplica, delay);
-                            });
-                        });
+                        Checkout.showEmbeddedPage('#hco-embedded');
+                        if (typeof schedulePayButtonCleanup === 'function') {
+                            schedulePayButtonCleanup('#hco-embedded');
+                        } else if (typeof normalizeEmbeddedPayButtons === 'function') {
+                            normalizeEmbeddedPayButtons('#hco-embedded');
+                        }
                     } catch (error) {
                         $('#payment-loading').hide();
                         $('#payment-error').text('Unable to load payment form. Please try again.').show();
