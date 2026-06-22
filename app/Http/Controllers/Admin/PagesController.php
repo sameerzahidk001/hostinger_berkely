@@ -471,6 +471,7 @@ class PagesController extends Controller
     {
         $page = Page::findOrFail($id);
         $pageLabel = $page->page_name ?: $page->url;
+        $wasDisabled = pages_status_enabled() && (int) ($page->status ?? 1) === 0;
 
         $page->sections()->delete();
         $page->seo()->delete();
@@ -479,7 +480,7 @@ class PagesController extends Controller
         if ($result) {
             record_panel_activity(
                 'Page Deleted',
-                $pageLabel,
+                $pageLabel . ($wasDisabled ? ' (was disabled)' : ''),
                 route('pages.index'),
                 request()
             );

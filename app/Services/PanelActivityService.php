@@ -406,7 +406,7 @@ class PanelActivityService
                 $invoiceNo = 'INV-' . str_pad((string) $installment->payment_id, 6, '0', STR_PAD_LEFT);
 
                 return $this->activityRow(
-                    'Payment Completed',
+                    'Receipt Recorded',
                     $course . ' — ' . $student . ' (' . $invoiceNo . ')',
                     route('admin.payments.index'),
                     null,

@@ -163,8 +163,8 @@ class RakBankCheckoutService
         $courseName = $installment->payment?->course?->title ?? 'Installment #' . $installment->installment_number;
 
         record_user_activity(
-            'Payment',
-            'Paid ' . format_payment_aed_amount($installment->payment, $amount) . ' for ' . $courseName,
+            'Receipt Recorded',
+            'Receipt recorded for ' . $courseName . ' — ' . format_payment_aed_amount($installment->payment, $amount),
             route('user.home'),
             'student',
             $user?->id,

@@ -162,8 +162,8 @@ class InstallmentController extends Controller
         $paidAmount = (float) $installment->paid_amount;
 
         record_user_activity(
-            'Payment',
-            'Paid ' . ($payment ? format_payment_aed_amount($payment, $paidAmount) : number_format($paidAmount, 2)) . ' for ' . $courseName,
+            'Receipt Recorded',
+            'Receipt recorded for ' . $courseName . ' — ' . ($payment ? format_payment_aed_amount($payment, $paidAmount) : number_format($paidAmount, 2) . ' AED'),
             route('user.home'),
             'student',
             $installment->user_id,

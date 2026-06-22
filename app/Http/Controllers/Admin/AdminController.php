@@ -223,20 +223,30 @@ class AdminController extends Controller
 
     public function profile_update(Request $request)
     {
+        $imageRules = [
+            'image_path' => 'nullable|string',
+            'image' => 'nullable|file|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+        ];
+
         if (Auth::guard('admin')->check()) {
             $admin = Auth::guard('admin')->user();
 
-            $request->validate([
+            $request->validate(array_merge([
                 'username' => 'required|string|max:255|unique:admins,username,' . $admin->id,
                 'email' => 'required|email|max:255|unique:admins,email,' . $admin->id,
                 'password' => 'nullable|string|min:8',
-            ]);
+            ], $imageRules));
 
             $admin->username = $request->username;
             $admin->email = $request->email;
 
             if ($request->filled('password')) {
                 $admin->password = bcrypt($request->password);
+            }
+
+            $imagePath = save_uploaded_profile_image($request);
+            if ($imagePath !== null) {
+                assign_column_if_exists($admin, 'image', $imagePath);
             }
 
             $admin->save();
@@ -250,11 +260,11 @@ class AdminController extends Controller
             return redirect()->route('admin.login');
         }
 
-        $request->validate([
+        $request->validate(array_merge([
             'username' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email,' . $user->id,
             'password' => 'nullable|string|min:8',
-        ]);
+        ], $imageRules));
 
         $user->name = $request->username;
         $user->email = $request->email;
@@ -263,44 +273,19 @@ class AdminController extends Controller
             $user->password = bcrypt($request->password);
         }
 
+        $imagePath = save_uploaded_profile_image($request);
+        if ($imagePath !== null) {
+            $user->image = $imagePath;
+        }
+
         $user->save();
 
         return redirect()->back()->with('success', 'Profile updated successfully!');
     }
 
     public function logout(Request $request){
-        $sessionId = $request->hasSession() ? $request->session()->getId() : null;
         $wasPanelUser = Auth::check()
             && is_restricted_panel_role(Auth::user()->roles()->value('name'));
-
-        if (Auth::guard('admin')->check()) {
-            $admin = Auth::guard('admin')->user();
-            record_user_activity(
-                'Admin Logout',
-                'Session ended',
-                admin_login_url(),
-                'staff',
-                null,
-                $admin?->id,
-                $request,
-                $sessionId
-            );
-        }
-
-        if (Auth::check()) {
-            $user = Auth::user();
-            $logoutAction = activity_audience_for_user($user) === 'staff' ? 'Staff Logout' : 'User Logout';
-            record_user_activity(
-                $logoutAction,
-                'Session ended from admin panel',
-                admin_login_url(),
-                activity_audience_for_user($user),
-                $user->id,
-                null,
-                $request,
-                $sessionId
-            );
-        }
 
         Auth::guard('admin')->logout();
         Auth::logout();

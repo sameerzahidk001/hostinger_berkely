@@ -485,6 +485,33 @@ if (!function_exists('normalize_page_status')) {
     }
 }
 
+if (!function_exists('save_uploaded_profile_image')) {
+    function save_uploaded_profile_image(\Illuminate\Http\Request $request, string $field = 'image'): ?string
+    {
+        if (! $request->hasFile($field)) {
+            if ($request->filled('image_path')) {
+                return str_replace('\\', '/', $request->input('image_path'));
+            }
+
+            return null;
+        }
+
+        $file = $request->file($field);
+        $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $extension = $file->getClientOriginalExtension();
+        $fileName = \Illuminate\Support\Str::slug($originalName) . '-' . time() . '.' . $extension;
+        $destinationPath = public_path('images/profiles/');
+
+        if (! is_dir($destinationPath)) {
+            mkdir($destinationPath, 0755, true);
+        }
+
+        $file->move($destinationPath, $fileName);
+
+        return 'images/profiles/' . $fileName;
+    }
+}
+
 if (!function_exists('assign_column_if_exists')) {
     function assign_column_if_exists($model, string $column, mixed $value): void
     {

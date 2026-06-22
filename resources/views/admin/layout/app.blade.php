@@ -68,12 +68,12 @@
                     <a href="{{route('welcome')}}" style="padding:0px;"> <img src="{{ asset('frontend/images/pngs/header-logo-white.png') }}" alt="" style="width: 220px; padding: 8px 12px;"></a>
                   </li>
                   @if(panel_profile_user())
-                  <li style="padding: 12px 16px;">
-                     <a href="{{ route('admin.profile') }}" style="display:flex;align-items:center;gap:10px;padding:0;color:#fff;">
+                  <li style="padding: 16px 12px;">
+                     <a href="{{ route('admin.profile') }}" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:0;color:#fff;text-align:center;">
                         <img src="{{ user_avatar_url() }}" alt="{{ panel_profile_name() }}"
-                           style="width:42px;height:42px;border-radius:999px;object-fit:cover;border:2px solid rgba(255,255,255,0.2);" />
-                        <span style="line-height:1.2;">
-                           <span style="display:block;font-weight:600;">{{ panel_profile_name() }}</span>
+                           style="width:72px;height:72px;border-radius:999px;object-fit:cover;border:3px solid rgba(255,255,255,0.25);" />
+                        <span style="line-height:1.3;">
+                           <span style="display:block;font-weight:600;font-size:14px;">{{ panel_profile_name() }}</span>
                            <span style="display:block;font-size:12px;opacity:0.85;">Profile</span>
                         </span>
                      </a>
@@ -89,6 +89,7 @@
                      <a href="javascript:void(0)"><i class="fa fa-files-o"></i> <span class="nav-label">Courses</span> <span class="fa arrow"></span></a>
                      <ul class="nav nav-second-level">
                         <li><a href="{{ route('admin.courses') }}">All Courses List</a></li>
+                        <li><a href="{{ route('admin.course.disabled') }}">Disabled Courses</a></li>
                         <li><a href="{{ route('course.create') }}">Add Course</a></li>
                      </ul>
                   </li>

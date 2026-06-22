@@ -1077,8 +1077,20 @@ class CourseController extends Controller
         try {
             if ($request->status == 'disable') {
                 $course->delete(); // Soft delete
+                record_panel_activity(
+                    'Course Disabled',
+                    $course->title ?: 'Course #' . $course->id,
+                    route('course.edit', $course->id),
+                    $request
+                );
             } elseif ($request->status == 'active') {
                 $course->restore(); // Restore
+                record_panel_activity(
+                    'Course Enabled',
+                    $course->title ?: 'Course #' . $course->id,
+                    route('course.edit', $course->id),
+                    $request
+                );
             }
             return response()->json(['success' => 'Course status updated successfully!'], 200);
         } catch (\Exception $e) {
@@ -1794,11 +1806,18 @@ class CourseController extends Controller
 
     function delete(string $id)
     {
-
-        // Fetch the course with soft deletes (trashed)
         $course = Course::withTrashed()->where('id', $id)->firstOrFail();
+        $courseLabel = $course->title ?: 'Course #' . $course->id;
+        $wasDisabled = $course->trashed();
+
         $course_del = $course->forceDelete();
         if ($course_del) {
+            record_panel_activity(
+                'Course Deleted',
+                $courseLabel . ($wasDisabled ? ' (was disabled)' : ''),
+                route('admin.courses'),
+                request()
+            );
             session()->flash('success', 'Record deleted successfully!');
             return redirect()->route('admin.courses');
         } else {
