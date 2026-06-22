@@ -39,8 +39,8 @@ class SeoController extends Controller
                 'page:id,page_name,url,parent_id,category_id',
                 'page.parent:id,url',
                 'course:id,title,slug',
-                'createdBy:id,name',
-                'updatedBy:id,name',
+                'createdBy:id,username,email',
+                'updatedBy:id,username,email',
             ]);
 
         if ($request->filled('name')) {
