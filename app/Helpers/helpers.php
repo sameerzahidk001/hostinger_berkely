@@ -847,6 +847,21 @@ if (!function_exists('format_payment_aed_amount')) {
     }
 }
 
+if (!function_exists('format_student_payment_modal_amount')) {
+    function format_student_payment_modal_amount($payment, float $aedAmount): array
+    {
+        $currency = payment_display_currency($payment);
+        $displayAmount = payment_display_amount_from_aed($payment, $aedAmount);
+        $primary = $currency . ' ' . number_format($displayAmount, 2);
+
+        return [
+            'displayAmount' => $primary,
+            'displayAmountAed' => $currency === 'AED' ? null : 'AED ' . number_format($aedAmount, 2),
+            'currency' => $currency,
+        ];
+    }
+}
+
 if (!function_exists('format_payment_amount_admin')) {
     function format_payment_amount_admin($payment): string
     {
