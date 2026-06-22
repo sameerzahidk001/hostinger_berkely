@@ -17,6 +17,7 @@
         .seo-score-pill.poor { background: #ed5565; }
         .seo-details small { display: block; color: #676a6c; line-height: 1.5; }
     </style>
+    @include('admin.layout.partials.datatable-excel-toolbar')
 @endpush
 @section('content')
 
@@ -166,11 +167,18 @@
                                             ];
 
                                             $pageName = array_search($page->id, $protectedPages);
+                                            $pageUrl = $page->parent
+                                                ? $page->parent->url . '/' . $page->url
+                                                : ($page->category_id
+                                                    ? ($settings->category_perma ?? 'category') . '/' . $page->url
+                                                    : $page->url);
+                                            $pageStatus = (int) ($page->status ?? 1);
+                                            $pageStatusExport = $pageStatus ? 'Active' : 'Disabled';
                                         @endphp
                                         <tr>
                                             <td style="vertical-align: middle;">{{ ++$index }}</td>
 
-                                            <td style="vertical-align: middle;">
+                                            <td style="vertical-align: middle;" data-export="{{ $page->page_name }}">
                                                 <a href="{{ url($page->parent 
                                                     ? $page->parent->url . '/' . $page->url 
                                                     : ($page->category_id 
@@ -182,16 +190,10 @@
                                                     <span class="badge bg-primary">{{ $pageName }}</span>
                                                 @endif
                                             </td>
-                                            <td style="vertical-align: middle;">
-                                                {{ $page->parent 
-                                                    ? $page->parent->url . '/' . $page->url 
-                                                    : ($page->category_id 
-                                                        ? ($settings->category_perma ?? 'category') . '/' . $page->url 
-                                                        : $page->url) 
-                                                }}
+                                            <td style="vertical-align: middle;" data-export="{{ $pageUrl }}">
+                                                {{ $pageUrl }}
                                             </td>
-                                            <td style="vertical-align: middle;">
-                                                @php $pageStatus = (int) ($page->status ?? 1); @endphp
+                                            <td style="vertical-align: middle;" data-export="{{ $pageStatusExport }}">
                                                 @if($pagesStatusEnabled ?? false)
                                                     <select name="page_status" class="form-control"
                                                         id="page_status_{{ $page->id }}"
@@ -206,7 +208,7 @@
                                             <td style="vertical-align: middle;">
                                                 {{ $page->faqs->count() }}
                                             </td>
-                                            <td style="vertical-align: middle;">
+                                            <td style="vertical-align: middle;" data-export="{{ $page->seo ? 'Added' : 'Not Added' }}">
                                                 <span class="label {{ $page->seo ? 'label-primary' : 'label-danger' }}">
                                                     {{ $page->seo ? 'Added' : 'Not Added' }}
                                                 </span>
@@ -282,8 +284,9 @@
                 info: false,
                 ordering: true,
                 responsive: true,
-                dom: 'lftip',
-                order: [[9, 'desc']]
+                dom: '<"admin-dt-toolbar"<l><B><f>>rtip',
+                order: [[9, 'desc']],
+                buttons: [adminDatatableExcelButton('Pages List', 'pages_list')]
             });
 
             function slugify(text) {

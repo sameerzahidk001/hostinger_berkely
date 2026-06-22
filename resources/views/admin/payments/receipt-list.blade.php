@@ -243,28 +243,9 @@
             info: false,
             ordering: true,
             responsive: true,
-            dom: '<"payments-dt-toolbar"<l><B><f>>rtip',
+            dom: '<"admin-dt-toolbar"<l><B><f>>rtip',
             order: [],
-            buttons: [{
-                extend: 'excelHtml5',
-                className: 'btn-excel-export',
-                text: 'Export to Excel',
-                title: 'Receipts List',
-                filename: 'receipts_list_' + new Date().toISOString().slice(0, 10),
-                exportOptions: {
-                    columns: ':not(:last-child)',
-                    format: {
-                        body: function (data, row, column, node) {
-                            var exported = $(node).attr('data-export');
-                            if (exported !== undefined && exported !== '') {
-                                return exported;
-                            }
-
-                            return $('<div>').html(data).text().trim().replace(/\s+/g, ' ');
-                        }
-                    }
-                }
-            }]
+            buttons: [adminDatatableExcelButton('Receipts List', 'receipts_list')],
         });
 
     });

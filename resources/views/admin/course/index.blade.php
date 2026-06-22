@@ -37,6 +37,7 @@
         .seo-score-pill.poor { background: #ed5565; }
         .seo-details small { display: block; color: #676a6c; line-height: 1.5; }
     </style>
+    @include('admin.layout.partials.datatable-excel-toolbar')
 @endpush
 @section('content')
     <div class="row wrapper border-bottom white-bg page-heading">
@@ -102,9 +103,14 @@
                                 </thead>
                                 <tbody>
                                     @forelse($courses as $index => $data)
+                                        @php
+                                            $courseStatusExport = is_null($data->deleted_at) ? 'Active' : 'Disabled';
+                                            $categoriesExport = $data->categories->pluck('name')->filter()->implode(', ');
+                                            $schoolsExport = $data->schools->pluck('name')->filter()->implode(', ');
+                                        @endphp
                                         <tr>
                                             <td data-order="{{ $data->created_at ? \Carbon\Carbon::parse($data->created_at)->timestamp : 0 }}">{{ $index + 1 }}</td>
-                                            <td style="vertical-align: middle;">
+                                            <td style="vertical-align: middle;" data-export="{{ $data->title }}">
                                                 <a href="{{ route('course.details', ['course' => $data->slug]) }}"
                                                     target="blank" target="blank">
                                                     {{ $data->title }}
@@ -116,14 +122,14 @@
                                                     </a>
                                                 @endif
                                             </td>
-                                            <td>
+                                            <td data-export="{{ $categoriesExport }}">
                                                 <ul style="padding-left:10px;">
                                                     @foreach($data->categories as $key => $category)
                                                         <li>{{ $category->name }}</li>
                                                     @endforeach
                                                 </ul>
                                             </td>
-                                            <td>
+                                            <td data-export="{{ $schoolsExport }}">
                                                 <ul style="padding-left:10px;">
                                                     @foreach($data->schools as $key => $school)
                                                         <li>{{ $school->name }}</li>
@@ -242,7 +248,7 @@
                                                     </a>
                                                 @endif
                                             </td>
-                                            <td>
+                                            <td data-export="{{ $courseStatusExport }}">
                                                 <select name="course_status" class="form-control"
                                                     id="course_status_{{ $data->id }}"
                                                     onchange="updateCourseStatus(this.value, {{ $data->id }})">
@@ -299,8 +305,9 @@
                 info: false,
                 ordering: true,
                 responsive: true,
-                dom: 'lftip',
-                order: [[0, 'desc']]
+                dom: '<"admin-dt-toolbar"<l><B><f>>rtip',
+                order: [[0, 'desc']],
+                buttons: [adminDatatableExcelButton('Courses List', 'courses_list')]
             });
         });
 
