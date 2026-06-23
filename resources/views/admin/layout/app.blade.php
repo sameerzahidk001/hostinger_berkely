@@ -71,7 +71,7 @@
                   <li style="padding: 16px 12px;">
                      <a href="{{ route('admin.profile') }}" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:0;color:#fff;text-align:center;">
                         <img src="{{ user_avatar_url() }}" alt="{{ panel_profile_name() }}"
-                           style="width:88px;height:88px;border-radius:999px;object-fit:cover;border:3px solid rgba(255,255,255,0.25);" />
+                           style="width:225px;height:225px;border-radius:999px;object-fit:cover;border:3px solid rgba(255,255,255,0.25);" />
                         <span style="line-height:1.3;">
                            <span style="display:block;font-weight:600;font-size:14px;">{{ panel_profile_name() }}</span>
                            <span style="display:block;font-size:12px;opacity:0.85;">Profile</span>
