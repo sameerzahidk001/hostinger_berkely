@@ -57,6 +57,7 @@
 
                     <form role="form" action="{{route('admin.profile.update')}}" method="POST" enctype="multipart/form-data">
                         @csrf
+                        <input type="hidden" name="current_image" value="{{ old('current_image', panel_profile_user()?->image) }}">
                         <div class="row">
                             <div class="col-lg-12 mb">
                                 <label for="profile_image">Profile Photo</label>

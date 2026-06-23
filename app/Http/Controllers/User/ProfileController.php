@@ -11,7 +11,6 @@ use App\Models\Country;
 use App\Mail\UserMail;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 class ProfileController extends Controller
 {
@@ -50,27 +49,13 @@ class ProfileController extends Controller
         }
 
         $validatedData = $validator->validated();
+        unset($validatedData['image_path']);
+
         $user = Auth::user();
-
-        if ($request->hasFile('image')) {
-            $file = $request->file('image');
-            $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-            $extension = $file->getClientOriginalExtension();
-            $slug = Str::slug($originalName) . '-' . time();
-            $fileName = $slug . '.' . $extension;
-            $destinationPath = public_path('images/profiles/');
-
-            if (! is_dir($destinationPath)) {
-                mkdir($destinationPath, 0755, true);
-            }
-
-            $file->move($destinationPath, $fileName);
-            $validatedData['image'] = 'images/profiles/' . $fileName;
-        } elseif ($request->filled('image_path')) {
-            $validatedData['image'] = str_replace('\\', '/', $request->image_path);
-        }
-
-        $user->update($validatedData);
+        $user->fill($validatedData);
+        apply_profile_image_from_request($user, $request);
+        $user->save();
+        Auth::setUser($user->fresh());
 
         $mailError = null;
         $emailTemplate = Email::where('name', 'user-update')->first();

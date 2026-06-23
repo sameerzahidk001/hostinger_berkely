@@ -328,12 +328,10 @@ class AdminController extends Controller
                 $admin->password = bcrypt($request->password);
             }
 
-            $imagePath = save_uploaded_profile_image($request);
-            if ($imagePath !== null) {
-                assign_column_if_exists($admin, 'image', $imagePath);
-            }
+            apply_profile_image_from_request($admin, $request);
 
             $admin->save();
+            Auth::guard('admin')->setUser($admin->fresh());
 
             return redirect()->back()->with('success', 'Profile updated successfully!');
         }
@@ -357,12 +355,10 @@ class AdminController extends Controller
             $user->password = bcrypt($request->password);
         }
 
-        $imagePath = save_uploaded_profile_image($request);
-        if ($imagePath !== null) {
-            $user->image = $imagePath;
-        }
+        apply_profile_image_from_request($user, $request);
 
         $user->save();
+        Auth::setUser($user->fresh());
 
         return redirect()->back()->with('success', 'Profile updated successfully!');
     }

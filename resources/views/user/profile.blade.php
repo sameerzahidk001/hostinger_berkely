@@ -102,6 +102,7 @@
 
                                 <div class="col-md-6 mb-3">
                                     <label for="image">Image</label>
+                                    <input type="hidden" name="current_image" value="{{ old('current_image', $user->image) }}">
                                     <input type="file" name="image" id="image" class="form-control">
                                     @error('image') <p class="text-danger text-xs italic">{{ $message }}</p> @enderror
                                 </div>

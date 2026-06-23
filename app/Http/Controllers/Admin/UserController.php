@@ -117,7 +117,7 @@ class UserController extends Controller
             $file->move($destinationPath, $fileName);
             $image = 'images/profiles/' . $fileName;
         } elseif ($request->filled('image_path')) {
-            $image = str_replace('\\', '/', $request->image_path);
+            $image = normalize_profile_image_path($request->image_path);
         }
 
         $user = User::create([
@@ -125,7 +125,7 @@ class UserController extends Controller
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
             'approved' => $data['approved'],
-            'image' => $image ?? '/images/profiles/user.png',
+            'image' => $image ?? 'images/profiles/user.png',
             'mobile_number' => $data['mobile_number'] ?? null,
             'gender' => $data['gender'] ?? null,
             'date_of_birth' => $data['date_of_birth'] ?? null,
@@ -225,18 +225,7 @@ class UserController extends Controller
                 return back()->withErrors($validator)->withInput();
             }
 
-            if ($request->hasFile('local_file_input')) {
-                $file = $request->file('local_file_input');
-                $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-                $extension = $file->getClientOriginalExtension();
-                $slug = Str::slug($originalName) . '-' . time();
-                $fileName = $slug . '.' . $extension;
-                $destinationPath = public_path('images/profiles/');
-                $file->move($destinationPath, $fileName);
-                $user->image = 'images/profiles/' . $fileName;
-            } elseif ($request->filled('image_path')) {
-                $user->image = str_replace('\\', '/', $request->image_path);
-            }
+            apply_profile_image_from_request($user, $request, 'local_file_input');
 
             $user->name = $request->input('name');
             $user->email = $request->input('email');

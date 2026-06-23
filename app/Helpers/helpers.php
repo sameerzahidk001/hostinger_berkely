@@ -113,22 +113,62 @@ if (!function_exists('panel_profile_name')) {
     }
 }
 
+if (!function_exists('normalize_profile_image_path')) {
+    function normalize_profile_image_path(mixed $path): ?string
+    {
+        if ($path === null) {
+            return null;
+        }
+
+        if (is_array($path)) {
+            $path = $path['path'] ?? $path['url'] ?? $path['image'] ?? ($path[0] ?? null);
+        }
+
+        $path = trim(str_replace('\\', '/', (string) $path));
+
+        if ($path === '' || $path === 'null') {
+            return null;
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            $path = (string) preg_replace('#^https?://[^/]+/#', '', $path);
+        }
+
+        $path = ltrim($path, '/');
+
+        if (str_starts_with($path, 'public/')) {
+            $path = substr($path, 7);
+        }
+
+        if (str_starts_with($path, 'images/profiles/')) {
+            return $path;
+        }
+
+        if (str_starts_with($path, '/images/profiles/')) {
+            return ltrim($path, '/');
+        }
+
+        if (! str_contains($path, '/')) {
+            return 'images/profiles/' . $path;
+        }
+
+        return $path;
+    }
+}
+
 if (!function_exists('user_avatar_url')) {
     function user_avatar_url($user = null): string
     {
         $user = $user ?? panel_profile_user();
 
-        $path = trim((string) data_get($user, 'image'));
-        if ($path === '') {
-            $path = trim((string) data_get($user, 'avatar'));
+        $path = normalize_profile_image_path(data_get($user, 'image'));
+
+        if ($path === null) {
+            $path = normalize_profile_image_path(data_get($user, 'avatar'));
         }
 
-        if ($path !== '') {
-            if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
-                return $path;
-            }
-
-            return asset(ltrim($path, '/'));
+        if ($path !== null) {
+            return asset($path);
         }
 
         return asset('student/img/landing/avatar_all.png');
@@ -561,29 +601,93 @@ if (!function_exists('normalize_page_status')) {
 }
 
 if (!function_exists('save_uploaded_profile_image')) {
-    function save_uploaded_profile_image(\Illuminate\Http\Request $request, string $field = 'image'): ?string
-    {
-        if (! $request->hasFile($field)) {
-            if ($request->filled('image_path')) {
-                return str_replace('\\', '/', $request->input('image_path'));
+    function save_uploaded_profile_image(
+        \Illuminate\Http\Request $request,
+        string $field = 'image',
+        ?string $currentPath = null
+    ): ?string {
+        $alternateFields = $field === 'image'
+            ? ['local_file_input']
+            : [];
+
+        foreach (array_merge([$field], $alternateFields) as $uploadField) {
+            if ($request->hasFile($uploadField)) {
+                $file = $request->file($uploadField);
+                $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+                $extension = $file->getClientOriginalExtension();
+                $fileName = \Illuminate\Support\Str::slug($originalName) . '-' . time() . '.' . $extension;
+                $destinationPath = public_path('images/profiles/');
+
+                if (! is_dir($destinationPath)) {
+                    mkdir($destinationPath, 0755, true);
+                }
+
+                $file->move($destinationPath, $fileName);
+
+                return 'images/profiles/' . $fileName;
+            }
+        }
+
+        if ($request->boolean('remove_image')) {
+            return '';
+        }
+
+        if ($request->filled('image_path')) {
+            $rawPath = trim(str_replace('\\', '/', (string) $request->input('image_path')));
+            $normalized = normalize_profile_image_path($rawPath);
+
+            if ($normalized === null) {
+                return $currentPath;
             }
 
-            return null;
+            $hasUpload = collect(array_merge([$field], $alternateFields, ['image', 'local_file_input']))
+                ->contains(fn (string $uploadField) => $request->hasFile($uploadField));
+
+            if (
+                ! $hasUpload
+                && ! str_contains($rawPath, '/')
+                && $currentPath !== null
+                && basename($currentPath) !== basename($rawPath)
+            ) {
+                return $currentPath;
+            }
+
+            return $normalized;
         }
 
-        $file = $request->file($field);
-        $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-        $extension = $file->getClientOriginalExtension();
-        $fileName = \Illuminate\Support\Str::slug($originalName) . '-' . time() . '.' . $extension;
-        $destinationPath = public_path('images/profiles/');
-
-        if (! is_dir($destinationPath)) {
-            mkdir($destinationPath, 0755, true);
+        if ($request->filled('current_image')) {
+            return normalize_profile_image_path($request->input('current_image')) ?? $currentPath;
         }
 
-        $file->move($destinationPath, $fileName);
+        return null;
+    }
+}
 
-        return 'images/profiles/' . $fileName;
+if (!function_exists('apply_profile_image_from_request')) {
+    function apply_profile_image_from_request(
+        $model,
+        \Illuminate\Http\Request $request,
+        string $field = 'image',
+        string $column = 'image'
+    ): void {
+        if (! $model) {
+            return;
+        }
+
+        $currentPath = normalize_profile_image_path($model->{$column} ?? null);
+        $newPath = save_uploaded_profile_image($request, $field, $currentPath);
+
+        if ($newPath === null) {
+            return;
+        }
+
+        if ($newPath === '') {
+            assign_column_if_exists($model, $column, null);
+
+            return;
+        }
+
+        assign_column_if_exists($model, $column, $newPath);
     }
 }
 

@@ -78,6 +78,7 @@
                             enctype="multipart/form-data">
                             @csrf
                             @method('PUT')
+                            <input type="hidden" name="current_image" value="{{ old('current_image', $user->image) }}">
                             <div class="row">
 
                                 <!-- Name -->
@@ -121,7 +122,7 @@
                                     @if(!empty($user->image))
                                         <small id="imageUrlText" class="help-block" style="display:block; margin-top:0px;">
                                             @if($user->image)
-                                                <img src="{{ asset($user->image) }}" alt="" width="30" height="30">
+                                                <img src="{{ user_avatar_url($user) }}" alt="" width="30" height="30">
                                             @else
                                                 <span class="text-muted">No image selected</span>
                                             @endif
@@ -400,13 +401,8 @@
         }
 
         function uploadLocalFile(input) {
-            const file = input.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function () {
-                    document.getElementById('image_path').value = file.name;
-                };
-                reader.readAsDataURL(file);
+            if (!input.files[0]) {
+                return;
             }
         }
 
