@@ -75,7 +75,8 @@
 
                     <div class="ibox-content">
 
-                        <form role="form" action="{{ route('admin.course-agendas.update', $course_agenda) }}"
+                        <form role="form"
+                            action="{{ route('admin.course-agendas.update', ['training_calendar' => $course_agenda->id]) }}"
                             method="POST">
                             @csrf
                             @method('PUT')

@@ -185,8 +185,7 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
         Route::redirect('course-agendas/create', 'training-calendar/create');
         Route::redirect('course-agendas/{id}/edit', 'training-calendar/{id}/edit');
         Route::resource('training-calendar', AdminCourseAgendasController::class)
-            ->names('admin.course-agendas')
-            ->parameters(['training_calendar' => 'course_agenda']);
+            ->names('admin.course-agendas');
 
         Route::get('smtp-settings', [SettingController::class, 'smtpSettings'])->name('admin.smtpSettings.index');
         Route::post('smtp-settings/store', [SettingController::class, 'smtpSettingsStore'])->name('admin.smtpSettings.store');

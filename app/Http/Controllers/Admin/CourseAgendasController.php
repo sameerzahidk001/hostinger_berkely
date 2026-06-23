@@ -79,26 +79,31 @@ class CourseAgendasController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(CourseAgenda $course_agenda)
+    public function show(CourseAgenda $training_calendar)
     {
+        $course_agenda = $training_calendar;
+
         return view('admin.course-agendas.show', compact('course_agenda'));
     }
 
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(CourseAgenda $course_agenda)
+    public function edit(CourseAgenda $training_calendar)
     {
+        $course_agenda = $training_calendar;
         $courses = Course::all();
         $countries = Country::all();
+
         return view('admin.course-agendas.edit', compact('course_agenda', 'courses', 'countries'));
     }
 
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, CourseAgenda $course_agenda)
+    public function update(Request $request, CourseAgenda $training_calendar)
     {
+        $course_agenda = $training_calendar;
         $validator = Validator::make($request->all(), [
             'course' => 'required|exists:courses,id',
             'subject' => 'required|string|max:255',
@@ -143,9 +148,9 @@ class CourseAgendasController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(CourseAgenda $course_agenda)
+    public function destroy(CourseAgenda $training_calendar)
     {
-        $course_agenda->delete();
+        $training_calendar->delete();
         return redirect()->route('admin.course-agendas.index')->with('success', 'Course Agenda deleted successfully.');
     }
 }

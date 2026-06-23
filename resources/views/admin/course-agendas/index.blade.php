@@ -75,14 +75,14 @@
                                         <td>{{ audit_user_name($data->updatedBy, $data->updated_by) }}</td>
                                         <td>
                                             <div class="btn-group">
-                                                <a href="{{ route('admin.course-agendas.edit', $data) }}"
+                                                <a href="{{ route('admin.course-agendas.edit', ['training_calendar' => $data->id]) }}"
                                                     class="btn-primary btn btn-xs">
                                                     <i class="fa fa-pencil"></i> Edit
                                                 </a>
 
                                                 @include('admin.layout.partials.delete-button', [
                                                     'id' => $data->id,
-                                                    'action' => route('admin.course-agendas.destroy', $data),
+                                                    'action' => route('admin.course-agendas.destroy', ['training_calendar' => $data->id]),
                                                 ])
                                             </div>
                                         </td>
