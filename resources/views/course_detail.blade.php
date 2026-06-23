@@ -546,31 +546,6 @@
                         <div class="p-5 flex flex-col gap-3 text-left">
                             <h3 class="text-xl font-bold text-[#000435]">{{ $instructor->name }}</h3>
 
-                            @if ($instructor->experience)
-                                <div class="text-gray-700 text-sm leading-relaxed">
-                                    <strong>Experience:</strong>
-                                    <div class="mt-1 instructor-experience">{!! $instructor->experience !!}</div>
-                                </div>
-                            @endif
-
-                            @php
-                                $educationList = [];
-                                $decodedEducation = json_decode($instructor->education ?? '', true);
-                                if (is_array($decodedEducation)) {
-                                    $educationList = array_filter($decodedEducation);
-                                } elseif (!empty($instructor->education)) {
-                                    $educationList = array_filter(array_map('trim', explode(',', $instructor->education)));
-                                }
-                            @endphp
-
-                            @if (!empty($educationList))
-                                <ul class="text-gray-700 text-sm list-disc list-inside space-y-1">
-                                    @foreach ($educationList as $edu)
-                                        <li>{{ is_string($edu) ? trim($edu, "\"'") : $edu }}</li>
-                                    @endforeach
-                                </ul>
-                            @endif
-
                             @if ($instructor->short_description)
                                 <div class="text-gray-600 text-sm leading-relaxed">
                                     {!! $instructor->short_description !!}
