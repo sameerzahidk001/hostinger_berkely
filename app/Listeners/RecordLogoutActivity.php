@@ -33,7 +33,7 @@ class RecordLogoutActivity
             record_user_activity(
                 'Admin Logout',
                 'Session ended',
-                admin_login_url(),
+                public_login_url(),
                 'staff',
                 null,
                 $user->id,
@@ -54,7 +54,7 @@ class RecordLogoutActivity
             record_user_activity(
                 $logoutAction,
                 $item,
-                $event->guard === 'admin' ? admin_login_url() : public_login_url(),
+                public_login_url(),
                 $audience,
                 $user->id,
                 null,

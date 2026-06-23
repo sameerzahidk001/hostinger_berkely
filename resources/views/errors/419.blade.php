@@ -122,7 +122,7 @@
         <h1 class="title">Page expired</h1>
         <p class="lead">Your session expired or the CSRF token is invalid. Please refresh and try again.</p>
         <div class="d-flex gap-2 justify-content-center flex-wrap">
-            <a href="{{ url()->current() }}" class="btn btn-gold px-4">Refresh</a>
+            <a href="{{ public_login_url() }}" class="btn btn-gold px-4">Sign in</a>
             <a href="{{ url('/') }}" class="btn btn-outline-red px-4">Go Home</a>
         </div>
     </main>

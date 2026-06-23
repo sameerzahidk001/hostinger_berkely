@@ -368,9 +368,6 @@ class AdminController extends Controller
     }
 
     public function logout(Request $request){
-        $wasPanelUser = Auth::check()
-            && is_restricted_panel_role(Auth::user()->roles()->value('name'));
-
         $sessionId = $request->hasSession() ? $request->session()->getId() : null;
 
         if (Auth::guard('admin')->check()) {
@@ -378,7 +375,7 @@ class AdminController extends Controller
             record_user_activity(
                 'Admin Logout',
                 'Session ended',
-                admin_login_url(),
+                public_login_url(),
                 'staff',
                 null,
                 $admin?->id,
@@ -395,8 +392,8 @@ class AdminController extends Controller
 
             record_user_activity(
                 $logoutAction,
-                'Session ended from admin panel',
-                admin_login_url(),
+                'Session ended',
+                public_login_url(),
                 $audience,
                 $user->id,
                 null,
@@ -409,8 +406,6 @@ class AdminController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return $wasPanelUser
-            ? redirect()->to(public_login_url())
-            : redirect()->route('admin.login');
+        return redirect()->to(public_login_url());
     }
 }

@@ -27,6 +27,6 @@ class AdminMiddleware
             }
         }
 
-        return redirect('admin/login');
+        return redirect()->to(public_login_url());
     }
 }
