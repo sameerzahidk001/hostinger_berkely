@@ -105,7 +105,7 @@ class CourseController extends Controller
             $q->where('role_id', 2);
         })->get();
 
-        $instructorIds = array_filter(explode(',', $course->instructor_id));
+        $instructorIds = course_instructor_ids($course);
 
         // Fetch assigned instructor users
         $assignIntructors = User::whereIn('id', $instructorIds)->get();
@@ -276,15 +276,16 @@ class CourseController extends Controller
         $course = Course::findOrFail($course_id);
 
         // Convert existing instructor_ids to array
-        $existingIds = $course->instructor_id
-            ? array_filter(explode(',', $course->instructor_id))
-            : [];
+        $existingIds = course_instructor_ids($course);
 
         // Merge and remove duplicates
-        $allInstructorIds = array_unique(array_merge($existingIds, $newInstructorIds));
+        $allInstructorIds = array_values(array_unique(array_merge(
+            $existingIds,
+            array_map('intval', $newInstructorIds)
+        )));
 
-        // Save updated instructor list
-        $course->instructor_id = implode(',', $allInstructorIds);
+        // Save updated instructor list (stored as JSON array via model cast)
+        $course->instructor_id = $allInstructorIds;
         $course->save();
 
         return back()->with('success', 'Instructors updated successfully!');
@@ -295,16 +296,12 @@ class CourseController extends Controller
         $instructorIdToRemove = $request->input('id');
         $course = Course::findOrFail($id);
 
-        // Convert instructor_id string to array
-        $instructorIds = explode(',', $course->instructor_id);
+        $instructorIds = array_values(array_filter(
+            course_instructor_ids($course),
+            fn ($value) => (int) $value !== (int) $instructorIdToRemove
+        ));
 
-        // Remove the given instructor ID
-        $instructorIds = array_filter($instructorIds, function ($value) use ($instructorIdToRemove) {
-            return $value != $instructorIdToRemove;
-        });
-
-        // Rebuild the string and update
-        $course->instructor_id = implode(',', $instructorIds);
+        $course->instructor_id = $instructorIds;
         $course->save();
 
         return back()->with('success', 'Instructors removed successfully!');

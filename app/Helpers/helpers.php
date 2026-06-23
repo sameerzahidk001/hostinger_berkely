@@ -681,15 +681,12 @@ if (!function_exists('courses_for_instructor')) {
     function courses_for_instructor(int $instructorId): \Illuminate\Support\Collection
     {
         return \App\Models\Course::query()
-            ->where(function ($query) use ($instructorId) {
-                $query->whereRaw('FIND_IN_SET(?, instructor_id)', [$instructorId]);
-
-                if (\Illuminate\Support\Facades\Schema::hasColumn('courses', 'instructor_id')) {
-                    $query->orWhere('instructor_id', 'LIKE', '%"' . $instructorId . '"%');
-                }
-            })
+            ->whereNotNull('instructor_id')
+            ->where('instructor_id', '!=', '')
             ->orderBy('title')
-            ->get(['id', 'title', 'slug', 'description']);
+            ->get(['id', 'title', 'slug', 'description', 'instructor_id'])
+            ->filter(fn ($course) => in_array($instructorId, course_instructor_ids($course), true))
+            ->values();
     }
 }
 

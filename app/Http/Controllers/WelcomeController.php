@@ -406,11 +406,14 @@ class WelcomeController extends Controller
             });
 
         if ($request->filled('course')) {
-            $courseId = (int) $request->course;
-            $query->whereRaw(
-                'EXISTS (SELECT 1 FROM courses WHERE FIND_IN_SET(users.id, courses.instructor_id) AND courses.id = ?)',
-                [$courseId]
-            );
+            $course = \App\Models\Course::find($request->course);
+            $instructorIds = $course ? course_instructor_ids($course) : [];
+
+            if ($instructorIds !== []) {
+                $query->whereIn('id', $instructorIds);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
         }
 
         // Filter by Country
