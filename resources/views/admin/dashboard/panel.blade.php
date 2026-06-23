@@ -260,8 +260,12 @@
 <div class="row" style="padding: 0 10px 12px;">
     <div class="col-lg-12">
         <div class="ibox float-e-margins" style="margin-bottom: 16px;">
-            <div class="ibox-title">
-                <h5>{{ $activityTitle }}</h5>
+            <div class="ibox-title" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <h5 style="margin:0;">{{ $activityTitle }}</h5>
+                <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'staff'])) }}"
+                    class="btn btn-success btn-sm">
+                    <i class="fa fa-file-excel-o"></i> Export to Excel
+                </a>
             </div>
             <div class="ibox-content">
                 <div class="table-responsive">
@@ -331,8 +335,12 @@
 <div class="row" style="padding: 0 10px 12px;">
     <div class="col-lg-12">
         <div class="ibox float-e-margins" style="margin-bottom: 16px;">
-            <div class="ibox-title">
-                <h5>{{ $studentActivityTitle ?? 'Student activity history' }}</h5>
+            <div class="ibox-title" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <h5 style="margin:0;">{{ $studentActivityTitle ?? 'Student activity history' }}</h5>
+                <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'student'])) }}"
+                    class="btn btn-success btn-sm">
+                    <i class="fa fa-file-excel-o"></i> Export to Excel
+                </a>
             </div>
             <div class="ibox-content">
                 <div class="table-responsive">

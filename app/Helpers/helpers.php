@@ -645,6 +645,54 @@ if (!function_exists('activity_audience_for_role')) {
     }
 }
 
+if (!function_exists('course_instructor_ids')) {
+    function course_instructor_ids($course): array
+    {
+        if (! $course) {
+            return [];
+        }
+
+        $raw = method_exists($course, 'getRawOriginal')
+            ? ($course->getRawOriginal('instructor_id') ?? $course->instructor_id)
+            : ($course->instructor_id ?? null);
+
+        if (is_array($raw)) {
+            return array_values(array_filter(array_map('intval', $raw)));
+        }
+
+        if (is_string($raw)) {
+            $trimmed = trim($raw);
+
+            if ($trimmed !== '' && str_starts_with($trimmed, '[')) {
+                $decoded = json_decode($trimmed, true);
+                if (is_array($decoded)) {
+                    return array_values(array_filter(array_map('intval', $decoded)));
+                }
+            }
+
+            return array_values(array_filter(array_map('intval', explode(',', $raw))));
+        }
+
+        return [];
+    }
+}
+
+if (!function_exists('courses_for_instructor')) {
+    function courses_for_instructor(int $instructorId): \Illuminate\Support\Collection
+    {
+        return \App\Models\Course::query()
+            ->where(function ($query) use ($instructorId) {
+                $query->whereRaw('FIND_IN_SET(?, instructor_id)', [$instructorId]);
+
+                if (\Illuminate\Support\Facades\Schema::hasColumn('courses', 'instructor_id')) {
+                    $query->orWhere('instructor_id', 'LIKE', '%"' . $instructorId . '"%');
+                }
+            })
+            ->orderBy('title')
+            ->get(['id', 'title', 'slug', 'description']);
+    }
+}
+
 if (!function_exists('activity_audience_for_user')) {
     function activity_audience_for_user(?\App\Models\User $user): string
     {

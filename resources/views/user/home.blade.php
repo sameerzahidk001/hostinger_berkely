@@ -2,6 +2,46 @@
 @section('title', 'Dashboard')
 @include('user.partials.rakbank-payment-modal')
 
+@push('style')
+<link href="{{ asset('/admin/css/plugins/dataTables/datatables.min.css') }}" rel="stylesheet">
+<style>
+    .wrapper-content {
+        padding-right: 20px;
+    }
+    .admin-dt-toolbar {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px 16px;
+        margin-bottom: 14px;
+        width: 100%;
+    }
+    .admin-dt-toolbar .dataTables_length,
+    .admin-dt-toolbar .dataTables_filter {
+        float: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+    .admin-dt-toolbar .dataTables_length label,
+    .admin-dt-toolbar .dataTables_filter label {
+        margin-bottom: 0;
+        font-weight: normal;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .admin-dt-toolbar .dataTables_filter {
+        margin-left: auto !important;
+    }
+    @media (max-width: 768px) {
+        .admin-dt-toolbar .dataTables_filter {
+            margin-left: 0 !important;
+            width: 100%;
+        }
+    }
+</style>
+@endpush
+
 @section('content')
     @if (session('success'))
         <div class="alert alert-success alert-dismissible show" role="alert">
@@ -371,7 +411,7 @@
                 info: false,
                 ordering: true,
                 responsive: true,
-                dom: 'lftip',
+                dom: '<"admin-dt-toolbar"<l><f>>rtip',
                 order: [[2, 'desc']]
             });
         });

@@ -378,7 +378,7 @@ class WelcomeController extends Controller
 
     public function instructorDetails($id) {
 
-        $instructor = User::with(['courses:id,title,slug', 'countryarray:iso_code,name'])
+        $instructor = User::with(['countryarray:iso_code,name'])
             ->where('approved', 1)
             ->where('is_on_web', 1)
             ->where('id', $id)
@@ -388,6 +388,8 @@ class WelcomeController extends Controller
         if (! $instructor) {
             abort(404, 'Instructor not found or not approved.');
         }
+
+        $instructor->setRelation('courses', courses_for_instructor((int) $id));
 
         return view('instructor-profile', compact('instructor'));
     }
@@ -403,11 +405,12 @@ class WelcomeController extends Controller
                 $q->where('name', 'instructor');
             });
 
-        // Filter by Course
         if ($request->filled('course')) {
-            $query->whereHas('courses', function ($q) use ($request) {
-                $q->where('id', $request->course);
-            });
+            $courseId = (int) $request->course;
+            $query->whereRaw(
+                'EXISTS (SELECT 1 FROM courses WHERE FIND_IN_SET(users.id, courses.instructor_id) AND courses.id = ?)',
+                [$courseId]
+            );
         }
 
         // Filter by Country

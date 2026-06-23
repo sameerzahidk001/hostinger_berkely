@@ -378,7 +378,7 @@
                         <div class="course-card">
                             <h3>{{ $course->title }}</h3>
                             <p>{{ Str::limit($course->description ?? 'No description available.', 90) }}</p>
-                            <a href="{{ url('/courses/' . $course->slug) }}">View Course →</a>
+                            <a href="{{ route('course.details', ['course' => $course->slug]) }}">View Course →</a>
                         </div>
                     @endforeach
                 </div>

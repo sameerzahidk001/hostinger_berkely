@@ -163,6 +163,7 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
         Route::post('/home-update', [HomepageController::class, 'update'])->name('homepage.update');
         Route::post('/home-banner/update', [HomepageController::class, 'bannerUpdate'])->name('home.banner.update');
         Route::get('home', [AdminController::class, 'dashboard'])->name('admin.home');
+        Route::get('home/activity-export', [AdminController::class, 'exportActivity'])->name('admin.home.activity-export');
         Route::get('profile', [AdminController::class, 'profile'])->name('admin.profile');
         Route::post('profile/update', [AdminController::class, 'profile_update'])->name('admin.profile.update');
         Route::get('logout', [AdminController::class, 'logout'])->name('admin.logout');
@@ -183,7 +184,9 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
         Route::redirect('course-agendas', 'training-calendar');
         Route::redirect('course-agendas/create', 'training-calendar/create');
         Route::redirect('course-agendas/{id}/edit', 'training-calendar/{id}/edit');
-        Route::resource('training-calendar', AdminCourseAgendasController::class)->names('admin.course-agendas');
+        Route::resource('training-calendar', AdminCourseAgendasController::class)
+            ->names('admin.course-agendas')
+            ->parameters(['training_calendar' => 'course_agenda']);
 
         Route::get('smtp-settings', [SettingController::class, 'smtpSettings'])->name('admin.smtpSettings.index');
         Route::post('smtp-settings/store', [SettingController::class, 'smtpSettingsStore'])->name('admin.smtpSettings.store');

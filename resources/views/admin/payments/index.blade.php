@@ -179,7 +179,7 @@
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-danger btn-sm"><i class="fa fa-trash"></i> Delete</button>
                                         </form>
-                                        @if($payment->status !== 'Active')
+                                        @if(in_array($paymentStatus, ['Pending', 'Partial'], true))
                                             <a class="btn btn-primary btn-sm" href="{{ route('admin.payments.send-invoice', ['id' => $payment->id]) }}"><i class="fa fa-send"></i> Send</a>
                                         @endif
                                         @if($payment->installment_request && $payment->installments->count() < 1)

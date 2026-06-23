@@ -537,42 +537,50 @@
 
             <div class="grid gap-10 md:grid-cols-2 lg:grid-cols-3">
                 @foreach ($assignIntructors as $instructor)
-                    <div class="relative overflow-hidden group h-[500px]">
-                        @if ($instructor->image)
+                    <div class="flex flex-col bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100">
+                        <div class="w-full h-[280px] overflow-hidden bg-gray-100">
                             <img src="{{ asset($instructor->image ?? '/images/profiles/user.png') }}"
                                 alt="{{ $instructor->name }}"
-                                class="h-full transition-all delay-300 duration-400 ease-in w-full absolute group-hover:scale-105 object-cover">
-                        @endif
-                        <div
-                            class="absolute px-4 py-8 z-50 gap-4 flex flex-col justify-end bg-opacity-45 h-full w-full bottom-0">
-                            <div class="flex items-center justify-start mt-2 gap-2">
-                                <h3 class="text-[20px] sm:text-[24px] md:text-[32px] font-canela w-full text-left"
-                                    style="color: #ffffff">
-                                    {{ $instructor->name }}
-                                </h3>
-                            </div>
-                            <div class="hidden group-hover:block text-white text-[18px] text-left" style="color: #ffffff">
-                                @if ($instructor->experience)
-                                    <p class="text-white text-[16px] mt-1">
-                                        Experience: {{ $instructor->experience }}
-                                    </p>
-                                @endif
-                                @php
-                                    $educationList = explode(',', $instructor->education ?? '');
-                                @endphp
-                                @if (!empty($educationList[0]))
-                                    <ul class="text-white text-[14px] mt-2 list-disc list-inside">
-                                        @foreach ($educationList as $edu)
-                                            <li>🎓 {{ trim($edu) }}</li>
-                                        @endforeach
-                                    </ul>
-                                @else
-                                    <p class="text-white text-[14px] mt-2">No education info</p>
-                                @endif
-                            </div>
+                                class="w-full h-full object-cover object-top">
                         </div>
-                        <div
-                            class="absolute transition-all duration-400 ease-in bg-gradient-to-b from-transparent to-black min-h-[650px] text-white bottom-0 group-hover:bottom-0 group-hover:min-h-[900px] w-full z-30">
+                        <div class="p-5 flex flex-col gap-3 text-left">
+                            <h3 class="text-xl font-bold text-[#000435]">{{ $instructor->name }}</h3>
+
+                            @if ($instructor->experience)
+                                <div class="text-gray-700 text-sm leading-relaxed">
+                                    <strong>Experience:</strong>
+                                    <div class="mt-1 instructor-experience">{!! $instructor->experience !!}</div>
+                                </div>
+                            @endif
+
+                            @php
+                                $educationList = [];
+                                $decodedEducation = json_decode($instructor->education ?? '', true);
+                                if (is_array($decodedEducation)) {
+                                    $educationList = array_filter($decodedEducation);
+                                } elseif (!empty($instructor->education)) {
+                                    $educationList = array_filter(array_map('trim', explode(',', $instructor->education)));
+                                }
+                            @endphp
+
+                            @if (!empty($educationList))
+                                <ul class="text-gray-700 text-sm list-disc list-inside space-y-1">
+                                    @foreach ($educationList as $edu)
+                                        <li>{{ is_string($edu) ? trim($edu, "\"'") : $edu }}</li>
+                                    @endforeach
+                                </ul>
+                            @endif
+
+                            @if ($instructor->short_description)
+                                <div class="text-gray-600 text-sm leading-relaxed">
+                                    {!! $instructor->short_description !!}
+                                </div>
+                            @endif
+
+                            <a href="{{ url('/instructor/' . $instructor->id) }}"
+                                class="mt-2 inline-block text-center py-2 px-4 bg-[#000435] text-white rounded-lg text-sm font-semibold hover:opacity-90 transition">
+                                View detailed profile
+                            </a>
                         </div>
                     </div>
                 @endforeach
@@ -1033,7 +1041,7 @@
 
                             <!-- Price -->
                             <div class="flex justify-center items-baseline mb-2">
-                                <span class="text-4xl sm:text-5xl font-extrabold text-[#000435] leading-tight">
+                                <span class="text-2xl font-bold text-[#000435] leading-tight">
                                     {{ $price['display'] }}
                                 </span>
                             </div>

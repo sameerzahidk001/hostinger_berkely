@@ -212,6 +212,90 @@ class AdminController extends Controller
         ]);
     }
 
+    public function exportActivity(Request $request)
+    {
+        $role = normalize_panel_role(panel_role_name());
+        $service = app(PanelActivityService::class);
+        $logService = app(UserActivityLogService::class);
+
+        $userId = $request->filled('user_id') ? (int) $request->query('user_id') : null;
+        $roleFilter = $request->filled('role') ? $request->query('role') : null;
+        $dateFrom = $request->query('date_from');
+        $dateTo = $request->query('date_to');
+        $exportType = $request->query('type', 'staff');
+        $includePayments = $role !== 'content_writer';
+        $restrictToUserIds = null;
+        $paymentsOnly = false;
+
+        if ($role === 'content_writer') {
+            $userId = audit_user_id();
+        } elseif ($roleFilter === 'accountant') {
+            $paymentsOnly = true;
+        } elseif ($roleFilter) {
+            $restrictToUserIds = $service->userIdsForRole($roleFilter);
+        }
+
+        if ($exportType === 'student') {
+            $rows = $logService->buildFeed('student', $request->filled('student_user_id') ? (int) $request->query('student_user_id') : null, $dateFrom, $dateTo);
+            $filename = 'student-activity-history';
+            $showUserColumn = true;
+        } else {
+            $activities = $service->buildFeed(
+                $userId,
+                $dateFrom,
+                $dateTo,
+                $includePayments && ! $paymentsOnly,
+                $restrictToUserIds,
+                $paymentsOnly
+            );
+
+            $logs = $logService->buildFeed('staff', $userId, $dateFrom, $dateTo);
+
+            if ($restrictToUserIds !== null) {
+                $logs = $logs->filter(function (array $row) use ($restrictToUserIds) {
+                    return ! empty($row['actor_id']) && in_array((int) $row['actor_id'], $restrictToUserIds, true);
+                });
+            }
+
+            if ($logService->tableExists()) {
+                $activities = $activities->filter(function (array $row) {
+                    return ! in_array($row['action'], ['Page Updated', 'Course Updated'], true);
+                });
+            }
+
+            $rows = $activities
+                ->merge($logs)
+                ->sortByDesc(fn (array $row) => $row['occurred_at']->timestamp)
+                ->values();
+
+            $filename = 'dashboard-activity-history';
+            $showUserColumn = true;
+        }
+
+        $headers = ['Date & Time', 'Name', 'Activity', 'Item', 'Session', 'URL'];
+        $callback = function () use ($rows, $headers, $showUserColumn) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, $headers);
+
+            foreach ($rows as $activity) {
+                fputcsv($handle, [
+                    $activity['occurred_at']->format('Y-m-d H:i:s'),
+                    $activity['user_name'] ?? '—',
+                    $activity['action'] ?? '',
+                    $activity['item'] ?? '',
+                    $activity['session_id'] ?? '',
+                    $activity['url'] ?? '',
+                ]);
+            }
+
+            fclose($handle);
+        };
+
+        return response()->streamDownload($callback, $filename . '_' . now()->format('Y-m-d') . '.csv', [
+            'Content-Type' => 'text/csv',
+        ]);
+    }
+
     public function profile()
     {
         if (!panel_profile_user()) {
@@ -287,8 +371,41 @@ class AdminController extends Controller
         $wasPanelUser = Auth::check()
             && is_restricted_panel_role(Auth::user()->roles()->value('name'));
 
-        Auth::guard('admin')->logout();
-        Auth::logout();
+        $sessionId = $request->hasSession() ? $request->session()->getId() : null;
+
+        if (Auth::guard('admin')->check()) {
+            $admin = Auth::guard('admin')->user();
+            record_user_activity(
+                'Admin Logout',
+                'Session ended',
+                admin_login_url(),
+                'staff',
+                null,
+                $admin?->id,
+                $request,
+                $sessionId
+            );
+            Auth::guard('admin')->logout();
+        }
+
+        if (Auth::check()) {
+            $user = Auth::user();
+            $audience = activity_audience_for_user($user);
+            $logoutAction = $audience === 'staff' ? 'Staff Logout' : 'User Logout';
+
+            record_user_activity(
+                $logoutAction,
+                'Session ended from admin panel',
+                admin_login_url(),
+                $audience,
+                $user->id,
+                null,
+                $request,
+                $sessionId
+            );
+            Auth::logout();
+        }
+
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
