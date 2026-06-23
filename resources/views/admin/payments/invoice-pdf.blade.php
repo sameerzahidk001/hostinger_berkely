@@ -180,7 +180,7 @@
         $displayAmount = payment_display_amount_from_aed($payments, $settlingAed);
 
         $price = $settlingAed;
-        $taxPercentage = (float) ($coursefee->tax_percentage ?? 0);
+        $taxPercentage = (float) ($coursefee?->tax_percentage ?? 0);
         if ($displayCurrency === 'AED') {
             $taxAmount = ($settlingAed * $taxPercentage) / 100;
             $summarySubtotal = $settlingAed;
@@ -269,18 +269,18 @@
                     <td>1</td>
                     <td>
                         <strong>{{ $course->title ?? 'Course' }}</strong><br>
-                        {{ $coursefee->package_name ?? '' }}<br>
-                        @if (!empty($coursefee->short_description))
+                        {{ $coursefee?->package_name ?? '' }}<br>
+                        @if (!empty($coursefee?->short_description))
                             {{ $coursefee->short_description }}<br>
                         @endif
-                        @if (!empty($coursefee->key_point))
+                        @if (!empty($coursefee?->key_point))
                             {{ $coursefee->key_point }}<br>
                         @endif
-                        @if (!empty($coursefee->package_includes))
+                        @if (!empty($coursefee?->package_includes))
                             {{ $coursefee->package_includes }}
                         @endif
 
-                        @if (!empty($coursefee->package_feature) && is_array($coursefee->package_feature))
+                        @if (!empty($coursefee?->package_feature) && is_array($coursefee->package_feature))
                             <ul>
                                 @foreach ($coursefee->package_feature as $feature)
                                     <li>{{ $feature }}</li>

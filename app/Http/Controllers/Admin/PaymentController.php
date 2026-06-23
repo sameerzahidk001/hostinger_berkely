@@ -470,22 +470,41 @@ class PaymentController extends Controller
 
     public function sendInvoice($id)
     {
-        $payment = Payment::findOrFail($id);
+        $payment = Payment::with(['user.roles', 'course', 'courseFee', 'installments'])->findOrFail($id);
 
-        if ($payment->status === 'Active') {
-            return redirect()->back()->with('warning', 'This invoice is already active.');
+        $totalPaid = (float) $payment->installments->sum('paid_amount');
+        $price = (float) $payment->price;
+
+        if ($price > 0 && $totalPaid >= $price) {
+            return redirect()->back()->with('fail', 'This invoice is already fully paid.');
         }
 
-        $sent = app(InvoiceService::class)->activateAndSend($payment);
+        if (!$payment->user?->email) {
+            return redirect()->back()->with('fail', 'This invoice has no student email address.');
+        }
+
+        $invoiceService = app(InvoiceService::class);
+        $sent = $invoiceService->sendInvoiceEmail($payment);
 
         if (!$sent) {
             return redirect()->back()->with(
                 'fail',
-                'Invoice could not be emailed. Check Admin → Emails for a "Send Invoice" template and verify mail settings in .env.'
+                'Invoice could not be emailed. Check Admin → Emails for a "Send Invoice" template and verify SMTP settings.'
             );
         }
 
-        return redirect()->back()->with('success', 'Invoice emailed to the student and activated.');
+        if ($payment->status !== 'Active') {
+            $payment->status = 'Active';
+            $payment->save();
+
+            $installmentRequest = InstallmentRequest::where('payment_id', $payment->id)->first();
+            if ($installmentRequest) {
+                $installmentRequest->status = 1;
+                $installmentRequest->save();
+            }
+        }
+
+        return redirect()->back()->with('success', 'Invoice emailed to the student successfully.');
     }
 
     public function sendReceipt($id)

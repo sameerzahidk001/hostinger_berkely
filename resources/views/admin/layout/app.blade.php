@@ -343,6 +343,12 @@
             @if(session('success'))
                toastr.success("{{ session('success') }}", "Success");
             @endif
+            @if(session('fail'))
+               toastr.error("{{ session('fail') }}", "Error");
+            @endif
+            @if(session('warning'))
+               toastr.warning("{{ session('warning') }}", "Warning");
+            @endif
             //  setTimeout(function() {
             //      toastr.options = {
             //          closeButton: true,
