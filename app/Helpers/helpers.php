@@ -1046,6 +1046,29 @@ if (!function_exists('format_package_price')) {
     }
 }
 
+if (!function_exists('payment_invoice_status')) {
+    function payment_invoice_status($payment): string
+    {
+        if (! $payment) {
+            return 'Pending';
+        }
+
+        $payment->loadMissing('installments');
+        $totalPaid = (float) $payment->installments->sum('paid_amount');
+        $price = (float) ($payment->price ?? 0);
+
+        if ($price > 0 && $totalPaid >= $price) {
+            return 'Paid';
+        }
+
+        if ($totalPaid > 0) {
+            return 'Partial';
+        }
+
+        return 'Pending';
+    }
+}
+
 if (!function_exists('format_payment_amount')) {
     function format_payment_amount($payment): array
     {

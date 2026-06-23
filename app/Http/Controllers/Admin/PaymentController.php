@@ -22,13 +22,33 @@ use App\Services\InvoiceService;
 
 class PaymentController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $installments = Installment::get();
-        $payments = Payment::with('user', 'course', 'courseFee', 'installments', 'installment_request')->orderByDesc('created_at')->get();
-        // dd($payments->toArray());
+        $payments = Payment::with('user', 'course', 'courseFee', 'installments', 'installment_request')
+            ->orderByDesc('created_at')
+            ->get();
 
-        return view('admin.payments.index', compact('payments', 'installments'));
+        $filter = $request->query('status');
+        if (in_array($filter, ['pending', 'partial'], true)) {
+            $payments = $payments
+                ->filter(function (Payment $payment) use ($filter) {
+                    $status = payment_invoice_status($payment);
+
+                    return $filter === 'pending'
+                        ? $status === 'Pending'
+                        : $status === 'Partial';
+                })
+                ->values();
+        }
+
+        $listTitle = match ($filter) {
+            'pending' => 'Pending Invoices',
+            'partial' => 'Partial Paid Invoices',
+            default => 'Invoices List',
+        };
+
+        return view('admin.payments.index', compact('payments', 'installments', 'listTitle', 'filter'));
     }
 
     public function receipt()

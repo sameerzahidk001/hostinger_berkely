@@ -79,13 +79,13 @@
 @section('content')
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col">
-        <h2>Invoices List</h2>
+        <h2>{{ $listTitle ?? 'Invoices List' }}</h2>
         <ol class="breadcrumb">
             <li>
                 <a href="{{ route('admin.home') }}">Home</a>
             </li>
             <li class="active">
-                <a>Invoices</a>
+                <a>{{ $listTitle ?? 'Invoices' }}</a>
             </li>
         </ol>
     </div>
@@ -128,13 +128,8 @@
                                 @php
                                 $paidInstallmentsCount = $payment->installments->where('status', 'paid')->count();
                                 $paidAmountSum = $payment->installments->sum('paid_amount');
-                                $totalPaid = $payment->installments->sum('paid_amount');
-                                $paymentStatus = 'Pending';
-                                if ($totalPaid == $payment->price) {
-                                $paymentStatus = 'Paid';
-                                } elseif ($totalPaid > 0) {
-                                $paymentStatus = 'Partial';
-                                }
+                                $totalPaid = $paidAmountSum;
+                                $paymentStatus = payment_invoice_status($payment);
                                 $invoiceAmountExport = format_payment_amount($payment)['display'];
                                 $paidAmountExport = payment_display_currency($payment) . ' ' . number_format(payment_display_amount_from_aed($payment, (float) $paidAmountSum), 2);
                                 @endphp

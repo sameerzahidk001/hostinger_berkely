@@ -163,29 +163,6 @@
                      <a href="{{ route('admin.emails.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Emails</span></a>
                   </li>
                   @endif
-                  @if(admin_menu_allowed('roles'))
-                  <li>
-                     <a href="{{ route('admin.rolesPermissions.index') }}"><i class="fa fa-lock"></i> <span class="nav-label">Roles & Permissions</span></a>
-                  </li>
-                  @endif
-                  @if(admin_menu_allowed('profile'))
-                  <li>
-                     <a href="{{ route('admin.profile') }}"><i class="fa fa-cog"></i> <span class="nav-label">Profile</span></a>
-                  </li>
-                  @endif
-                  @if(admin_menu_allowed('settings'))
-                  <li class="{{ request()->is('admin/homepage/edit') ? 'active show' : '' }}">
-                     <a href="#"><i class="fa fa-address-card"></i> <span class="nav-label">Settings</span> <span class="fa arrow"></span></a>
-                     <ul class="nav nav-second-level">
-                     <li><a href="{{ route('menu.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Menu</span></a></li>
-                        <li><a href="{{ route('site-settings.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Site Settings</span></a></li>
-                        <li><a href="{{ route('widget.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Widgets</span></a></li>
-                        <li><a href="{{ route('header.setting.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Header Settings</span></a></li>
-                        <li><a href="{{ route('footer.setting.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Footer Settings</span></a></li>
-                        <li><a href="{{ route('admin.smtpSettings.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Email SMTP Setting</span></a></li>
-                     </ul>
-                  </li>
-                  @endif
                   @if(admin_menu_allowed('currency-rate-setup'))
                   <li class="{{ request()->is('admin/currency-rate-setup') ? 'active' : '' }}">
                      <a href="{{ route('currency-rates.index') }}"><i class="fa fa-exchange"></i> <span class="nav-label">Currency Rate Setup</span></a>
@@ -200,7 +177,9 @@
               <li class="{{ request()->is('admin/payments*') ? 'active show' : '' }}">
                   <a href="javascript:void(0)"><i class="fa fa-address-card"></i> <span class="nav-label">Payments</span> <span class="fa arrow"></span></a>
                   <ul class="nav nav-second-level">
-                     <li><a href="{{ route('admin.payments.index') }}">Invoice List</a></li>
+                     <li class="{{ request()->routeIs('admin.payments.index') && request('status') === null ? 'active' : '' }}"><a href="{{ route('admin.payments.index') }}">Invoice List</a></li>
+                     <li class="{{ request()->routeIs('admin.payments.index') && request('status') === 'pending' ? 'active' : '' }}"><a href="{{ route('admin.payments.index', ['status' => 'pending']) }}">Pending Invoices</a></li>
+                     <li class="{{ request()->routeIs('admin.payments.index') && request('status') === 'partial' ? 'active' : '' }}"><a href="{{ route('admin.payments.index', ['status' => 'partial']) }}">Partial Paid Invoices</a></li>
                      <li><a href="{{ route('admin.payments.create') }}">Create Invoice</a></li>
                      <li><a href="{{ route('admin.payments.receipts') }}">Receipts</a></li>
                   </ul>
@@ -211,6 +190,29 @@
                   <a href="{{ url('admin/payment-gateways') }}"><i class="fa fa-credit-card"></i> <span class="nav-label">Payment Gateway</span></a>
               </li>
               @endif
+                  @if(admin_menu_allowed('roles'))
+                  <li>
+                     <a href="{{ route('admin.rolesPermissions.index') }}"><i class="fa fa-lock"></i> <span class="nav-label">Roles & Permissions</span></a>
+                  </li>
+                  @endif
+                  @if(admin_menu_allowed('profile'))
+                  <li class="{{ request()->routeIs('admin.profile') ? 'active' : '' }}">
+                     <a href="{{ route('admin.profile') }}"><i class="fa fa-cog"></i> <span class="nav-label">Profile</span></a>
+                  </li>
+                  @endif
+                  @if(admin_menu_allowed('settings'))
+                  <li class="{{ request()->is('admin/homepage/edit') || request()->is('admin/menu*') || request()->is('admin/site-settings*') || request()->is('admin/widget*') || request()->is('admin/header-setting*') || request()->is('admin/footer-setting*') || request()->is('admin/smtp-settings*') ? 'active show' : '' }}">
+                     <a href="#"><i class="fa fa-address-card"></i> <span class="nav-label">Settings</span> <span class="fa arrow"></span></a>
+                     <ul class="nav nav-second-level">
+                     <li><a href="{{ route('menu.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Menu</span></a></li>
+                        <li><a href="{{ route('site-settings.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Site Settings</span></a></li>
+                        <li><a href="{{ route('widget.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Widgets</span></a></li>
+                        <li><a href="{{ route('header.setting.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Header Settings</span></a></li>
+                        <li><a href="{{ route('footer.setting.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Footer Settings</span></a></li>
+                        <li><a href="{{ route('admin.smtpSettings.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Email SMTP Setting</span></a></li>
+                     </ul>
+                  </li>
+                  @endif
                   @if(admin_menu_allowed('logout'))
                   <li>
                      <a href="{{ route('admin.logout') }}"><i class="fa fa-sign-out"></i> <span class="nav-label">Logout</span></a>
