@@ -229,9 +229,22 @@
 
         .course-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 25px;
             margin-top: 20px;
+            text-align: left;
+        }
+
+        @media (max-width: 992px) {
+            .course-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 640px) {
+            .course-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         .course-card {
