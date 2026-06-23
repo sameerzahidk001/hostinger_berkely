@@ -377,7 +377,7 @@
                     @foreach ($instructor->courses as $course)
                         <div class="course-card">
                             <h3>{{ $course->title }}</h3>
-                            <p>{{ Str::limit($course->description ?? 'No description available.', 90) }}</p>
+                            <p>{{ Str::limit(strip_tags($course->short_description ?: $course->description ?? 'No description available.'), 90) }}</p>
                             <a href="{{ route('course.details', ['course' => $course->slug]) }}">View Course →</a>
                         </div>
                     @endforeach
