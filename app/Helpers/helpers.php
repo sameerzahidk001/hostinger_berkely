@@ -597,6 +597,46 @@ if (!function_exists('form_image_alt_value')) {
     }
 }
 
+if (!function_exists('ensure_image_alt_columns_exist')) {
+    function ensure_image_alt_columns_exist(): bool
+    {
+        static $ready = null;
+
+        if ($ready === true) {
+            return true;
+        }
+
+        if ($ready === false) {
+            return false;
+        }
+
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('courses')
+                && ! \Illuminate\Support\Facades\Schema::hasColumn('courses', 'image_alts')) {
+                \Illuminate\Support\Facades\Schema::table('courses', function (\Illuminate\Database\Schema\Blueprint $table) {
+                    $table->json('image_alts')->nullable();
+                });
+            }
+
+            if (\Illuminate\Support\Facades\Schema::hasTable('course_dynamic_labels')
+                && ! \Illuminate\Support\Facades\Schema::hasColumn('course_dynamic_labels', 'image_alts')) {
+                \Illuminate\Support\Facades\Schema::table('course_dynamic_labels', function (\Illuminate\Database\Schema\Blueprint $table) {
+                    $table->json('image_alts')->nullable();
+                });
+            }
+
+            $ready = true;
+
+            return true;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Could not ensure image_alts columns: ' . $e->getMessage());
+            $ready = false;
+
+            return false;
+        }
+    }
+}
+
 if (!function_exists('request_image_alts')) {
     function request_image_alts(\Illuminate\Http\Request $request, string $dotKey): ?array
     {

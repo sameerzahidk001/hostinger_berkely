@@ -2041,6 +2041,10 @@ class CourseController extends Controller
 
     private function withLabelImageAlts(array $createLabels, Request $request, $dynamicLabel): array
     {
+        if (! ensure_image_alt_columns_exist()) {
+            return $createLabels;
+        }
+
         $labelAlts = request_image_alts($request, 'label.image_alts');
 
         if (is_array($labelAlts)) {
@@ -2055,6 +2059,15 @@ class CourseController extends Controller
 
     private function persistCourseModuleImageAlts(Course $course, Request $request): void
     {
+        if (! ensure_image_alt_columns_exist()) {
+            session()->flash(
+                'warning',
+                'Image alt text could not be saved. Ask your host to run: php artisan berkely:ensure-image-alt-columns'
+            );
+
+            return;
+        }
+
         $labelAlts = request_image_alts($request, 'label.image_alts');
 
         if (is_array($labelAlts)) {
