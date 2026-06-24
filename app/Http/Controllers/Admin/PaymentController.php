@@ -145,6 +145,14 @@ class PaymentController extends Controller
                 ]);
             }
 
+            $payment->load(['user', 'course']);
+            record_panel_activity(
+                'Invoice Created',
+                $this->paymentActivityLabel($payment),
+                route('admin.payments.edit', $payment->id),
+                $request
+            );
+
             return redirect()->route('admin.payments.index')->with('success', 'Invoice created in inactive mode. Click Send to email the student.');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -459,6 +467,13 @@ class PaymentController extends Controller
                         normalize_payment_email_body($emailBody)
                     )
                 );
+
+            record_panel_activity(
+                'Receipt Email Sent',
+                $this->receiptActivityLabel($installment),
+                route('admin.payments.index'),
+                $request
+            );
         }
 
         return response()->json([
@@ -524,6 +539,12 @@ class PaymentController extends Controller
             }
         }
 
+        record_panel_activity(
+            'Invoice Issued',
+            $this->paymentActivityLabel($payment),
+            route('admin.payments.index')
+        );
+
         return redirect()->back()->with('success', 'Invoice emailed to the student successfully.');
     }
 
@@ -536,28 +557,37 @@ class PaymentController extends Controller
 
         $filename = 'RC-' . str_pad($installment->id, 6, '0', STR_PAD_LEFT) . '.pdf';
 
-        $emailTemplate = Email::where('name', 'send-receipt')->first();
+        if (!$emailTemplate) {
+            return redirect()->back()->with(
+                'fail',
+                'Receipt could not be emailed. Check Admin → Emails for a "send-receipt" template and verify SMTP settings.'
+            );
+        }
 
-        if ($emailTemplate) {
-            $user = $installment->user;
+        $user = $installment->user;
 
-            $emailBody = str_replace(
-                ['{name}', '{email}', '{role}'],
-                [$user->name, $user->email, ucfirst($user->roles->first()->name ?? '')],
-                $emailTemplate->body
+        $emailBody = str_replace(
+            ['{name}', '{email}', '{role}'],
+            [$user->name, $user->email, ucfirst($user->roles->first()->name ?? '')],
+            $emailTemplate->body
+        );
+
+        $ccEmails = !empty($emailTemplate->cc) ? array_filter(array_map('trim', explode(',', $emailTemplate->cc))) : [];
+        $bccEmails = !empty($emailTemplate->bcc) ? array_filter(array_map('trim', explode(',', $emailTemplate->bcc))) : [];
+
+        Mail::to($user->email)
+            ->cc($ccEmails)
+            ->bcc($bccEmails)
+            ->send(
+                (new UserMail($user, $emailTemplate->subject, $emailBody))
+                    ->attachData($pdf->output(), $filename, ['mime' => 'application/pdf'])
             );
 
-            $ccEmails = !empty($emailTemplate->cc) ? array_filter(array_map('trim', explode(',', $emailTemplate->cc))) : [];
-            $bccEmails = !empty($emailTemplate->bcc) ? array_filter(array_map('trim', explode(',', $emailTemplate->bcc))) : [];
-
-            Mail::to($user->email)
-                ->cc($ccEmails)
-                ->bcc($bccEmails)
-                ->send(
-                    (new UserMail($user, $emailTemplate->subject, $emailBody))
-                        ->attachData($pdf->output(), $filename, ['mime' => 'application/pdf'])
-                );
-        }
+        record_panel_activity(
+            'Receipt Issued',
+            $this->receiptActivityLabel($installment),
+            route('admin.payments.index')
+        );
 
         return redirect()->back()->with('success', 'Receipt sent successfully.');
     }
@@ -569,5 +599,26 @@ class PaymentController extends Controller
         $payment->save();
 
         return response()->json(['success' => true]);
+    }
+
+    private function paymentActivityLabel(Payment $payment): string
+    {
+        $student = $payment->user?->name ?? $payment->user?->email ?? 'Student';
+        $course = $payment->course?->title ?? 'Course #' . $payment->course_id;
+        $invoiceNo = 'INV-' . str_pad((string) $payment->id, 6, '0', STR_PAD_LEFT);
+
+        return $course . ' — ' . $student . ' (' . $invoiceNo . ')';
+    }
+
+    private function receiptActivityLabel(Installment $installment): string
+    {
+        $installment->loadMissing(['user', 'payment.course']);
+
+        $student = $installment->user?->name ?? $installment->user?->email ?? 'Student';
+        $course = $installment->payment?->course?->title ?? 'Course';
+        $invoiceNo = 'INV-' . str_pad((string) $installment->payment_id, 6, '0', STR_PAD_LEFT);
+        $receiptNo = 'RC-' . str_pad((string) $installment->id, 6, '0', STR_PAD_LEFT);
+
+        return $course . ' — ' . $student . ' (' . $invoiceNo . ', ' . $receiptNo . ')';
     }
 }

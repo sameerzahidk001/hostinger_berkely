@@ -89,7 +89,7 @@ class AdminController extends Controller
         if ($role === 'accountant') {
             return $this->activityDashboard($request, [
                 'userId' => null,
-                'roleFilter' => null,
+                'roleFilter' => 'accountant',
                 'showMyStats' => false,
                 'showSiteStats' => false,
                 'showInvoiceStats' => true,
