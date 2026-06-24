@@ -368,11 +368,7 @@ class CourseController extends Controller
             }
 
             $labelData = $request->input('label');
-            $filledFields = array_filter($labelData, function ($value) {
-                return !is_null($value) && $value !== '';
-            });
-
-            if (!empty($filledFields)) {
+            if (label_request_has_content($labelData)) {
                 $createLabels = [
                     'overview' => $labelData['overview'] ?? null,
                     'offered_by' => $labelData['offered_by'] ?? null,
@@ -397,6 +393,8 @@ class CourseController extends Controller
                 session()->flash('failed', 'Failed to add Record!');
             }
 
+            $this->persistCourseModuleImageAlts($course, $request);
+
             return redirect()->route('course.edit', ['id' => $id]);
         } elseif ($courseModule == "banner_section") {
 
@@ -410,11 +408,7 @@ class CourseController extends Controller
 
             $labelData = $request->input('label');
             //return $labelData['what_you_earn_img'];
-            $filledFields = array_filter($labelData, function ($value) {
-                return !is_null($value) && $value !== '';
-            });
-
-            if (!empty($filledFields)) {
+            if (label_request_has_content($labelData)) {
                 //return 'filled';
                 $createLabels = [
                     'banner_title' => $labelData['banner_title'] ?? null,
@@ -455,6 +449,8 @@ class CourseController extends Controller
                 session()->flash('failed', 'Failed to add Record!');
             }
 
+            $this->persistCourseModuleImageAlts($course, $request);
+
             return redirect()->route('course.edit', ['id' => $id]);
         } elseif ($courseModule == "benefits_section") {
 
@@ -468,11 +464,7 @@ class CourseController extends Controller
 
             $labelData = $request->input('label');
             //return $labelData['what_you_earn_img'];
-            $filledFields = array_filter($labelData, function ($value) {
-                return !is_null($value) && $value !== '';
-            });
-
-            if (!empty($filledFields)) {
+            if (label_request_has_content($labelData)) {
                 //return 'filled';
                 $createLabels = [
                     'what_you_earn' => $labelData['what_you_earn'] ?? null,
@@ -507,6 +499,8 @@ class CourseController extends Controller
                 session()->flash('failed', 'Failed to add Record!');
             }
 
+            $this->persistCourseModuleImageAlts($course, $request);
+
             return redirect()->route('course.edit', ['id' => $id]);
         } elseif ($courseModule == "who_can_do_section") {
             //return $request;
@@ -521,11 +515,7 @@ class CourseController extends Controller
 
             $labelData = $request->input('label');
             //return $labelData['what_you_earn_img'];
-            $filledFields = array_filter($labelData, function ($value) {
-                return !is_null($value) && $value !== '';
-            });
-
-            if (!empty($filledFields)) {
+            if (label_request_has_content($labelData)) {
                 //return 'filled';
                 $createLabels = [
 
@@ -562,6 +552,8 @@ class CourseController extends Controller
                 session()->flash('failed', 'Failed to add Record!');
             }
 
+            $this->persistCourseModuleImageAlts($course, $request);
+
             return redirect()->route('course.edit', ['id' => $id]);
         } elseif ($courseModule == "eligibility_section") {
 
@@ -576,11 +568,7 @@ class CourseController extends Controller
 
             $labelData = $request->input('label');
             //return $labelData['what_you_earn_img'];
-            $filledFields = array_filter($labelData, function ($value) {
-                return !is_null($value) && $value !== '';
-            });
-
-            if (!empty($filledFields)) {
+            if (label_request_has_content($labelData)) {
                 //return 'filled';
                 $createLabels = [
 
@@ -603,6 +591,8 @@ class CourseController extends Controller
                 session()->flash('failed', 'Failed to add Record!');
             }
 
+            $this->persistCourseModuleImageAlts($course, $request);
+
             return redirect()->route('course.edit', ['id' => $id]);
         } elseif ($courseModule == "learning_methodology_section") {
             //return $request;
@@ -617,11 +607,7 @@ class CourseController extends Controller
 
             $labelData = $request->input('label');
             //return $labelData['what_you_earn_img'];
-            $filledFields = array_filter($labelData, function ($value) {
-                return !is_null($value) && $value !== '';
-            });
-
-            if (!empty($filledFields)) {
+            if (label_request_has_content($labelData)) {
                 //return 'filled';
                 $createLabels = [
                     'learning_methodology' => $labelData['learning_methodology'] ?? null,
@@ -689,6 +675,8 @@ class CourseController extends Controller
                 session()->flash('failed', 'Failed to add Record!');
             }
 
+            $this->persistCourseModuleImageAlts($course, $request);
+
             return redirect()->route('course.edit', ['id' => $id]);
         } elseif ($courseModule == "performance_standard_section") {
             //return $request;
@@ -708,6 +696,8 @@ class CourseController extends Controller
                 session()->flash('failed', 'Failed to add Record!');
             }
 
+            $this->persistCourseModuleImageAlts($course, $request);
+
             return redirect()->route('course.edit', ['id' => $id]);
         } elseif ($courseModule == "career_path_section") {
             //return $request;
@@ -723,11 +713,7 @@ class CourseController extends Controller
 
             $labelData = $request->input('label');
             //return $labelData['what_you_earn_img'];
-            $filledFields = array_filter($labelData, function ($value) {
-                return !is_null($value) && $value !== '';
-            });
-
-            if (!empty($filledFields)) {
+            if (label_request_has_content($labelData)) {
                 //return 'filled';
                 $createLabels = [
 
@@ -763,6 +749,8 @@ class CourseController extends Controller
                 session()->flash('failed', 'Failed to add Record!');
             }
 
+            $this->persistCourseModuleImageAlts($course, $request);
+
             return redirect()->route('course.edit', ['id' => $id]);
         } elseif ($courseModule == "exam_section") {
             //return $request;
@@ -784,11 +772,7 @@ class CourseController extends Controller
 
             $labelData = $request->input('label');
             //return $labelData['what_you_earn_img'];
-            $filledFields = array_filter($labelData, function ($value) {
-                return !is_null($value) && $value !== '';
-            });
-
-            if (!empty($filledFields)) {
+            if (label_request_has_content($labelData)) {
                 //return 'filled';
                 $createLabels = [
 
@@ -833,6 +817,8 @@ class CourseController extends Controller
                 session()->flash('failed', 'Failed to add Record!');
             }
 
+            $this->persistCourseModuleImageAlts($course, $request);
+
             return redirect()->route('course.edit', ['id' => $id]);
         } elseif ($courseModule == "success_stories_section") {
             //return $request;
@@ -849,11 +835,7 @@ class CourseController extends Controller
 
             $labelData = $request->input('label');
             //return $labelData['what_you_earn_img'];
-            $filledFields = array_filter($labelData, function ($value) {
-                return !is_null($value) && $value !== '';
-            });
-
-            if (!empty($filledFields)) {
+            if (label_request_has_content($labelData)) {
                 //return 'filled';
                 $createLabels = [
 
@@ -892,6 +874,8 @@ class CourseController extends Controller
                 session()->flash('failed', 'Failed to add Record!');
             }
 
+            $this->persistCourseModuleImageAlts($course, $request);
+
             return redirect()->route('course.edit', ['id' => $id]);
         } elseif ($courseModule == "contact_us_section") {
             //return $request;
@@ -913,6 +897,8 @@ class CourseController extends Controller
                 session()->flash('failed', 'Failed to add Record!');
             }
 
+            $this->persistCourseModuleImageAlts($course, $request);
+
             return redirect()->route('course.edit', ['id' => $id]);
         } elseif ($courseModule == "custom_section_01") {
             //return $request;
@@ -929,11 +915,7 @@ class CourseController extends Controller
 
             $labelData = $request->input('label');
             //return $labelData['what_you_earn_img'];
-            $filledFields = array_filter($labelData, function ($value) {
-                return !is_null($value) && $value !== '';
-            });
-
-            if (!empty($filledFields)) {
+            if (label_request_has_content($labelData)) {
                 //return 'filled';
                 $createLabels = [
 
@@ -954,6 +936,8 @@ class CourseController extends Controller
             } else {
                 session()->flash('failed', 'Failed to add Record!');
             }
+
+            $this->persistCourseModuleImageAlts($course, $request);
 
             return redirect()->route('course.edit', ['id' => $id]);
         } elseif ($courseModule == "custom_videos_section") {
@@ -990,11 +974,7 @@ class CourseController extends Controller
 
             $labelData = $request->input('label');
             //return $labelData['what_you_earn_img'];
-            $filledFields = array_filter($labelData, function ($value) {
-                return !is_null($value) && $value !== '';
-            });
-
-            if (!empty($filledFields)) {
+            if (label_request_has_content($labelData)) {
                 //return 'filled';
                 $createLabels = [
 
@@ -1015,6 +995,8 @@ class CourseController extends Controller
             } else {
                 session()->flash('failed', 'Failed to add Record!');
             }
+
+            $this->persistCourseModuleImageAlts($course, $request);
 
             return redirect()->route('course.edit', ['id' => $id]);
         }
@@ -1498,11 +1480,7 @@ class CourseController extends Controller
 
         $labelData = $request->input('label');
         //return $labelData['what_you_earn_img'];
-        $filledFields = array_filter($labelData, function ($value) {
-            return !is_null($value) && $value !== '';
-        });
-
-        if (!empty($filledFields)) {
+        if (label_request_has_content($labelData)) {
             //return 'filled';
             $createLabels = [
                 'fee_strucutre' => $labelData['fee_strucutre'] ?? null,
@@ -1947,11 +1925,7 @@ class CourseController extends Controller
 
         $labelData = $request->input('label');
         //return $labelData['what_you_earn_img'];
-        $filledFields = array_filter($labelData, function ($value) {
-            return !is_null($value) && $value !== '';
-        });
-
-        if (!empty($filledFields)) {
+        if (label_request_has_content($labelData)) {
             //return 'filled';
             $createLabels = [
                 'lecture_plan' => $labelData['lecture_plan'] ?? null,
@@ -2009,11 +1983,7 @@ class CourseController extends Controller
 
         $labelData = $request->input('label');
         //return $labelData['what_you_earn_img'];
-        $filledFields = array_filter($labelData, function ($value) {
-            return !is_null($value) && $value !== '';
-        });
-
-        if (!empty($filledFields)) {
+        if (label_request_has_content($labelData)) {
             //return 'filled';
             $createLabels = [
                 'related_courses' => $labelData['related_courses'] ?? null,
@@ -2051,11 +2021,7 @@ class CourseController extends Controller
 
         $labelData = $request->input('label');
         //return $labelData['what_you_earn_img'];
-        $filledFields = array_filter($labelData, function ($value) {
-            return !is_null($value) && $value !== '';
-        });
-
-        if (!empty($filledFields)) {
+        if (label_request_has_content($labelData)) {
             //return 'filled';
             $createLabels = [
                 'faq_heading' => $labelData['faq_heading'] ?? null,
@@ -2089,5 +2055,30 @@ class CourseController extends Controller
         }
 
         return $createLabels;
+    }
+
+    private function persistCourseModuleImageAlts(Course $course, Request $request): void
+    {
+        if ($request->has('label.image_alts')
+            && \Illuminate\Support\Facades\Schema::hasColumn('course_dynamic_labels', 'image_alts')) {
+            $dynamicLabel = $course->dynamicLabel()->firstOrCreate(
+                ['course_id' => $course->id],
+                []
+            );
+
+            $dynamicLabel->update([
+                'image_alts' => merge_image_alts(
+                    $dynamicLabel->image_alts,
+                    $request->input('label.image_alts', [])
+                ),
+            ]);
+        }
+
+        if ($request->has('image_alts')
+            && \Illuminate\Support\Facades\Schema::hasColumn('courses', 'image_alts')) {
+            $course->update([
+                'image_alts' => merge_image_alts($course->image_alts, $request->input('image_alts', [])),
+            ]);
+        }
     }
 }

@@ -423,6 +423,24 @@ class PagesController extends Controller
                 $section['icon'] = $oldData['icon'];
             }
 
+            foreach (['image_alt', 'icon_alt'] as $altField) {
+                if (trim((string) ($section[$altField] ?? '')) === '' && ! empty($oldData[$altField])) {
+                    $section[$altField] = $oldData[$altField];
+                }
+            }
+
+            if (isset($section['cards'])) {
+                foreach ($section['cards'] as $cardIndex => $card) {
+                    foreach (['image_alt', 'icon_alt'] as $altField) {
+                        $submitted = trim((string) ($section['cards'][$cardIndex][$altField] ?? ''));
+                        $previous = $oldData['cards'][$cardIndex][$altField] ?? null;
+                        if ($submitted === '' && ! empty($previous)) {
+                            $section['cards'][$cardIndex][$altField] = $previous;
+                        }
+                    }
+                }
+            }
+
             if (empty($section['section_type'])) {
                 continue;
             }

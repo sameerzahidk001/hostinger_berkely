@@ -576,6 +576,62 @@ if (!function_exists('merge_image_alts')) {
     }
 }
 
+if (!function_exists('form_image_alt_value')) {
+    function form_image_alt_value($model, string $key, ?string $oldKey = null): string
+    {
+        if ($oldKey !== null) {
+            $fromOld = old($oldKey);
+            if ($fromOld !== null) {
+                return trim((string) $fromOld);
+            }
+        }
+
+        if (! $model) {
+            return '';
+        }
+
+        $alts = $model->image_alts ?? null;
+        $parsed = is_array($alts) ? $alts : (json_decode((string) $alts, true) ?: []);
+
+        return trim((string) data_get($parsed, $key, ''));
+    }
+}
+
+if (!function_exists('label_request_has_content')) {
+    function label_request_has_content(?array $labelData): bool
+    {
+        if (! is_array($labelData) || $labelData === []) {
+            return false;
+        }
+
+        foreach ($labelData as $key => $value) {
+            if ($key === 'image_alts' && is_array($value)) {
+                foreach ($value as $alt) {
+                    if (trim((string) $alt) !== '') {
+                        return true;
+                    }
+                }
+
+                continue;
+            }
+
+            if (is_array($value)) {
+                if ($value !== []) {
+                    return true;
+                }
+
+                continue;
+            }
+
+            if ($value !== null && $value !== '') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
 if (!function_exists('pages_status_enabled')) {
     function pages_status_enabled(): bool
     {

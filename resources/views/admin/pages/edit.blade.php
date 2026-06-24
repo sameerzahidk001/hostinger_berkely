@@ -353,7 +353,7 @@
                                                     @include('admin.partials.image-alt-input', [
                                                         'id' => 'sections_' . $i . '_image_alt',
                                                         'name' => 'sections[' . $i . '][image_alt]',
-                                                        'value' => $section['image_alt'] ?? '',
+                                                        'value' => old('sections.' . $i . '.image_alt', $section['image_alt'] ?? ''),
                                                     ])
 
                                                     @if (!empty($section['image_source']) && $section['image_source'] !== 'remove')
@@ -921,7 +921,7 @@
                                                     @include('admin.partials.image-alt-input', [
                                                         'id' => 'sections_' . $i . '_image_alt',
                                                         'name' => 'sections[' . $i . '][image_alt]',
-                                                        'value' => $section['image_alt'] ?? '',
+                                                        'value' => old('sections.' . $i . '.image_alt', $section['image_alt'] ?? ''),
                                                     ])
 
                                                     @if (!empty($section['image_source']) && $section['image_source'] !== 'remove')
@@ -1538,7 +1538,7 @@
                                                     @include('admin.partials.image-alt-input', [
                                                         'id' => 'sections_' . $i . '_image_alt',
                                                         'name' => 'sections[' . $i . '][image_alt]',
-                                                        'value' => $section['image_alt'] ?? '',
+                                                        'value' => old('sections.' . $i . '.image_alt', $section['image_alt'] ?? ''),
                                                     ])
 
                                                     @if (!empty($section['image_source']) && $section['image_source'] !== 'remove')
@@ -1724,7 +1724,7 @@
                                                     @include('admin.partials.image-alt-input', [
                                                         'id' => 'sections_' . $i . '_image_alt',
                                                         'name' => 'sections[' . $i . '][image_alt]',
-                                                        'value' => $section['image_alt'] ?? '',
+                                                        'value' => old('sections.' . $i . '.image_alt', $section['image_alt'] ?? ''),
                                                     ])
 
                                                     @if (!empty($section['image_source']) && $section['image_source'] !== 'remove')
@@ -1815,7 +1815,7 @@
                                                                     @include('admin.partials.image-alt-input', [
                                                                         'id' => 'sections_' . $i . '_cards_' . $key . '_image_alt',
                                                                         'name' => 'sections[' . $i . '][cards][' . $key . '][image_alt]',
-                                                                        'value' => $card['image_alt'] ?? '',
+                                                                        'value' => old('sections.' . $i . '.cards.' . $key . '.image_alt', $card['image_alt'] ?? ''),
                                                                     ])
 
                                                                     @if (!empty($card['image']) && ($card['image_source'] ?? '') !== 'remove')
@@ -1959,7 +1959,7 @@
                                                     @include('admin.partials.image-alt-input', [
                                                         'id' => 'sections_' . $i . '_image_alt',
                                                         'name' => 'sections[' . $i . '][image_alt]',
-                                                        'value' => $section['image_alt'] ?? '',
+                                                        'value' => old('sections.' . $i . '.image_alt', $section['image_alt'] ?? ''),
                                                     ])
 
                                                     @if (!empty($section['image_source']) && $section['image_source'] !== 'remove')
@@ -2106,7 +2106,7 @@
                                                                     @include('admin.partials.image-alt-input', [
                                                                         'id' => 'sections_' . $i . '_cards_' . $key . '_image_alt',
                                                                         'name' => 'sections[' . $i . '][cards][' . $key . '][image_alt]',
-                                                                        'value' => $card['image_alt'] ?? '',
+                                                                        'value' => old('sections.' . $i . '.cards.' . $key . '.image_alt', $card['image_alt'] ?? ''),
                                                                     ])
 
                                                                     @if (!empty($card['image']) && ($card['image_source'] ?? '') !== 'remove')
@@ -2484,7 +2484,7 @@
                                                     @include('admin.partials.image-alt-input', [
                                                         'id' => 'sections_' . $i . '_image_alt',
                                                         'name' => 'sections[' . $i . '][image_alt]',
-                                                        'value' => $section['image_alt'] ?? '',
+                                                        'value' => old('sections.' . $i . '.image_alt', $section['image_alt'] ?? ''),
                                                     ])
 
                                                     @if (!empty($section['image_source']) && $section['image_source'] !== 'remove')
