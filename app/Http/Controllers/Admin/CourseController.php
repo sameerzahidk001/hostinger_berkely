@@ -349,12 +349,6 @@ class CourseController extends Controller
 
             $course_overview_updated = $course->update($updatedData);
 
-            if ($request->has('image_alts') && \Illuminate\Support\Facades\Schema::hasColumn('courses', 'image_alts')) {
-                $course->update([
-                    'image_alts' => merge_image_alts($course->image_alts, $request->input('image_alts', [])),
-                ]);
-            }
-
             if ($request->has('categories') && !empty($request->categories)) {
                 $course->categories()->sync($request->categories);
             } else {
@@ -2047,10 +2041,12 @@ class CourseController extends Controller
 
     private function withLabelImageAlts(array $createLabels, Request $request, $dynamicLabel): array
     {
-        if ($request->has('label.image_alts') && \Illuminate\Support\Facades\Schema::hasColumn('course_dynamic_labels', 'image_alts')) {
+        $labelAlts = request_image_alts($request, 'label.image_alts');
+
+        if (is_array($labelAlts)) {
             $createLabels['image_alts'] = merge_image_alts(
                 $dynamicLabel?->image_alts,
-                $request->input('label.image_alts', [])
+                $labelAlts
             );
         }
 
@@ -2059,26 +2055,28 @@ class CourseController extends Controller
 
     private function persistCourseModuleImageAlts(Course $course, Request $request): void
     {
-        if ($request->has('label.image_alts')
-            && \Illuminate\Support\Facades\Schema::hasColumn('course_dynamic_labels', 'image_alts')) {
-            $dynamicLabel = $course->dynamicLabel()->firstOrCreate(
-                ['course_id' => $course->id],
-                []
-            );
+        $labelAlts = request_image_alts($request, 'label.image_alts');
 
-            $dynamicLabel->update([
-                'image_alts' => merge_image_alts(
-                    $dynamicLabel->image_alts,
-                    $request->input('label.image_alts', [])
-                ),
-            ]);
+        if (is_array($labelAlts)) {
+            $dynamicLabel = $course->dynamicLabel()->firstOrCreate(['course_id' => $course->id]);
+
+            if (! persist_model_image_alts($dynamicLabel, $labelAlts)) {
+                session()->flash(
+                    'warning',
+                    'Image alt text could not be saved. Run database/sql/add-image-alt-columns.sql or deploy migrations on the server.'
+                );
+            }
         }
 
-        if ($request->has('image_alts')
-            && \Illuminate\Support\Facades\Schema::hasColumn('courses', 'image_alts')) {
-            $course->update([
-                'image_alts' => merge_image_alts($course->image_alts, $request->input('image_alts', [])),
-            ]);
+        $courseAlts = request_image_alts($request, 'image_alts');
+
+        if (is_array($courseAlts)) {
+            if (! persist_model_image_alts($course, $courseAlts)) {
+                session()->flash(
+                    'warning',
+                    'Image alt text could not be saved. Run database/sql/add-image-alt-columns.sql or deploy migrations on the server.'
+                );
+            }
         }
     }
 }

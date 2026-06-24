@@ -2,6 +2,7 @@
 
 namespace Tests\Unit;
 
+use Illuminate\Http\Request;
 use PHPUnit\Framework\TestCase;
 
 class ImageAltHelpersTest extends TestCase
@@ -44,5 +45,20 @@ class ImageAltHelpersTest extends TestCase
         };
 
         $this->assertSame('Stored banner alt', form_image_alt_value($model, 'banner_image'));
+    }
+
+    public function test_request_image_alts_reads_nested_label_input(): void
+    {
+        $request = Request::create('/test', 'POST', [
+            'label' => [
+                'image_alts' => ['banner_image' => 'AWS banner alt'],
+                'banner_title' => 'AWS',
+            ],
+        ]);
+
+        $this->assertSame(
+            ['banner_image' => 'AWS banner alt'],
+            request_image_alts($request, 'label.image_alts')
+        );
     }
 }

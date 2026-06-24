@@ -597,6 +597,52 @@ if (!function_exists('form_image_alt_value')) {
     }
 }
 
+if (!function_exists('request_image_alts')) {
+    function request_image_alts(\Illuminate\Http\Request $request, string $dotKey): ?array
+    {
+        $value = $request->input($dotKey);
+
+        if (is_array($value)) {
+            return $value;
+        }
+
+        if ($dotKey === 'label.image_alts') {
+            $label = $request->input('label');
+
+            if (is_array($label) && is_array($label['image_alts'] ?? null)) {
+                return $label['image_alts'];
+            }
+        }
+
+        if ($dotKey === 'image_alts' && is_array($request->input('image_alts'))) {
+            return $request->input('image_alts');
+        }
+
+        return null;
+    }
+}
+
+if (!function_exists('persist_model_image_alts')) {
+    function persist_model_image_alts($model, ?array $incoming): bool
+    {
+        if (! $model || ! is_array($incoming)) {
+            return false;
+        }
+
+        $model->setAttribute('image_alts', merge_image_alts($model->image_alts ?? null, $incoming));
+
+        try {
+            return $model->save();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning(
+                'Failed to save image_alts on ' . $model->getTable() . ': ' . $e->getMessage()
+            );
+
+            return false;
+        }
+    }
+}
+
 if (!function_exists('label_request_has_content')) {
     function label_request_has_content(?array $labelData): bool
     {
