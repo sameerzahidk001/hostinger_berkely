@@ -2,6 +2,7 @@
 @section('title', 'Pages SEO')
 @push('style')
 <link href="{{ asset('/admin/css/plugins/dataTables/datatables.min.css') }}" rel="stylesheet">
+@include('admin.layout.partials.datatable-excel-toolbar')
 <style>
     td > p { margin: 0; }
     .seo-score-pill {
@@ -58,10 +59,6 @@
                             </div>
                         </form>
 
-                        <div class="d-flex justify-content-end mb-2">
-                            {{ $pages_seo->links() }}
-                        </div>
-
                         <table class="table table-striped table-bordered table-hover dataTables-example">
                             <thead>
                                 <tr>
@@ -86,7 +83,7 @@
                                         $focusKeyword = seo_list_focus_keyword($page_seo->keywords);
                                     @endphp
                                     <tr>
-                                        <td data-order="{{ $page_seo->id }}">{{ ($pages_seo->firstItem() ?? 0) + $loop->index }}</td>
+                                        <td data-order="{{ $page_seo->id }}">{{ $loop->iteration }}</td>
                                         <td data-order="{{ $itemTitle }}">
                                             <strong>{{ $itemTitle }}</strong>
                                             @if($itemUrl)
@@ -134,10 +131,6 @@
                                 </tr>
                             </tfoot>
                         </table>
-
-                        <div class="d-flex justify-content-end mt-2">
-                            {{ $pages_seo->links() }}
-                        </div>
                     </div>
                 </div>
             </div>
@@ -151,16 +144,17 @@
     <script>
         $(document).ready(function () {
             $('.dataTables-example').DataTable({
-                pageLength: 25,
-                lengthMenu: [10, 25, 50, 100],
+                pageLength: 10,
+                lengthMenu: [10, 20, 50, 100],
                 searching: true,
                 lengthChange: true,
-                paging: false,
+                paging: true,
                 info: true,
                 ordering: true,
                 responsive: true,
-                dom: 'lfti',
+                dom: '<"admin-dt-toolbar"<l><B><f>>rtip',
                 order: [[0, 'desc']],
+                buttons: [adminDatatableExcelButton('SEO List', 'seo_list')],
                 columnDefs: [
                     { orderable: false, targets: [10] }
                 ]

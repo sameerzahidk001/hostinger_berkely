@@ -143,7 +143,7 @@
                 searching: true,
                 lengthChange: true,
                 paging: true,
-                info: false,
+                info: true,
                 ordering: true,
                 responsive: true,
                 dom: 'lftip',

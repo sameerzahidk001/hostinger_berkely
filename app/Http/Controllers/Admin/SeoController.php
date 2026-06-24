@@ -57,8 +57,7 @@ class SeoController extends Controller
 
         $data['pages_seo'] = $query
             ->orderByDesc('id')
-            ->paginate(30)
-            ->withQueryString();
+            ->get();
 
         $data['category_perma'] = SiteSettings::value('category_perma') ?? 'category';
 

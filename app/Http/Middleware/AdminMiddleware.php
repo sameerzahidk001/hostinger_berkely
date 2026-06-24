@@ -17,12 +17,26 @@ class AdminMiddleware
     public function handle(Request $request, Closure $next): Response
     {
         if (Auth::guard('admin')->check()) {
+            $admin = Auth::guard('admin')->user()?->fresh();
+
+            if ($admin) {
+                Auth::guard('admin')->setUser($admin);
+            }
+
             return $next($request);
         }
 
         if (Auth::check()) {
-            $role = Auth::user()->roles()->value('name');
+            $user = Auth::user();
+            $role = $user?->roles()->value('name');
+
             if (is_restricted_panel_role($role)) {
+                $freshUser = $user?->fresh(['roles']);
+
+                if ($freshUser) {
+                    Auth::setUser($freshUser);
+                }
+
                 return $next($request);
             }
         }
