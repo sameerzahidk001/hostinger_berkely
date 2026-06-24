@@ -364,7 +364,6 @@
                 :color="$section->data['color'] ?? '#000000'"
                 :columns="$section->data['columns'] ?? '4'"
                 :courses="$results" />
-            />
         @elseif($section->section_type === 'instructors')
             
             <x-instructors 
