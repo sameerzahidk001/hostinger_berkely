@@ -151,6 +151,12 @@
                   <a href="{{ route('user.profile') }}"><i class="fa fa-th-large"></i> <span
                         class="nav-label">Profile</span></a>
                </li>
+               <li>
+                  <a href="https://elearning.eduberkeley.com" target="_blank" rel="noopener noreferrer">
+                     <i class="fa fa-book"></i>
+                     <span class="nav-label">Study Material</span>
+                  </a>
+               </li>
                @if(auth()->user()->hasPermission('testimonial-list'))
                   <li class="{{ request()->routeIs('user.testimonial.index') ? 'active' : '' }}">
                      <a href="{{ route('user.testimonial.index') }}"><i class="fa fa-th-large"></i> <span
