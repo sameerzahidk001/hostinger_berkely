@@ -57,7 +57,7 @@
                            <li><a href="{{ route('admin.profile') }}">Profile</a></li>
                            
                            <li class="divider"></li>
-                           <li><a href="{{ route('admin.logout') }}">Logout</a></li>
+                           <li><a href="{{ route('admin.logout') }}">Log out</a></li>
                         </ul>
                      </div>
                      <div class="logo-element">
@@ -84,8 +84,18 @@
                      <a href="{{ route('admin.home') }}"><i class="fa fa-th-large"></i> <span class="nav-label">Dashboard</span></a>
                   </li>
                   @endif
+                  @if(admin_menu_allowed('school'))
+                  <li class="{{ request()->is('school/*') ? 'active' : '' }}">
+                     <a href="{{ route('school.index') }}"><i class="fa fa-cogs"></i> <span class="nav-label">Schools</span></a>
+                  </li>
+                  @endif
+                  @if(admin_menu_allowed('categories'))
+                  <li class="{{ request()->is('admin/category*') ? 'active' : '' }}">
+                     <a href="{{ route('category.index') }}"><i class="fa fa-cogs"></i> <span class="nav-label">Categories</span></a>
+                  </li>
+                  @endif
                   @if(admin_menu_allowed('courses'))
-                  <li class="{{ request()->is('admin/course') || request()->is('admin/course/*') ? 'active' : '' }} }}">
+                  <li class="{{ request()->is('admin/course') || request()->is('admin/course/*') ? 'active' : '' }}">
                      <a href="javascript:void(0)"><i class="fa fa-files-o"></i> <span class="nav-label">Courses</span> <span class="fa arrow"></span></a>
                      <ul class="nav nav-second-level">
                         <li><a href="{{ route('admin.courses') }}">All Courses List</a></li>
@@ -94,53 +104,43 @@
                      </ul>
                   </li>
                   @endif
-
+                  @if(admin_menu_allowed('pages'))
+                  <li class="{{ request()->is('admin/pages*') || request()->is('admin/faq*') ? 'active' : '' }}">
+                     <a href="javascript:void(0)"><i class="fa fa-sitemap"></i> <span class="nav-label">Pages</span> <span class="fa arrow"></span></a>
+                     <ul class="nav nav-second-level">
+                        <li><a href="{{ route('pages.index') }}">Pages List</a></li>
+                        <li><a href="{{ route('admin.pages.disabled') }}">Disabled Pages</a></li>
+                        @if(admin_menu_allowed('faq'))
+                        <li><a href="{{ route('faq.index') }}">FAQs</a></li>
+                        @endif
+                     </ul>
+                  </li>
+                  @endif
+                  @if(admin_menu_allowed('seo'))
+                  <li class="{{ request()->is('admin/pages-seo*') ? 'active' : '' }}">
+                     <a href="{{ route('pages-seo.index') }}"><i class="fa fa-laptop"></i> <span class="nav-label">SEO</span></a>
+                  </li>
+                  @endif
                   @if(admin_menu_allowed('training-calendar'))
                   <li class="{{ request()->is('admin/training-calendar*') || request()->is('admin/course-agendas*') ? 'active' : '' }}">
                      <a href="{{ route('admin.course-agendas.index') }}"><i class="fa fa-th-large"></i> <span class="nav-label">Training Calendar</span></a>
                   </li>
                   @endif
-                  
-                  @if(admin_menu_allowed('school'))
-                  <li class="{{ request()->is('school/*') ? 'active' : '' }}">
-                     <a href="{{ route('school.index') }}"><i class="fa fa-cogs"></i> <span class="nav-label">School</span></a>
+                  @if(admin_menu_allowed('stories'))
+                  <li class="{{ request()->is('admin/testimonial*') ? 'active' : '' }}">
+                     <a href="{{ route('testimonial.index') }}"><i class="fa fa-star"></i> <span class="nav-label">Testimonials</span></a>
                   </li>
                   @endif
-                  @if(admin_menu_allowed('categories'))
-                  <li>
-                     <a href="{{ route('category.index') }}"><i class="fa fa-cogs"></i> <span class="nav-label">Categories</span></a>
-                  </li>
-                  @endif
-                  @if(admin_menu_allowed('pages'))
-                  <li class="{{ request()->is('admin/pages*') ? 'active' : '' }}">
-                     <a href="javascript:void(0)"><i class="fa fa-sitemap"></i> <span class="nav-label">Pages</span> <span class="fa arrow"></span></a>
-                     <ul class="nav nav-second-level">
-                        <li><a href="{{ route('pages.index') }}">Pages List</a></li>
-                        <li><a href="{{ route('admin.pages.disabled') }}">Disabled Pages</a></li>
-                     </ul>
-                  </li>
-                  @endif
-                  @if(admin_menu_allowed('seo'))
-                  <li>
-                     <a href="{{ route('pages-seo.index') }}"><i class="fa fa-laptop"></i> <span class="nav-label">SEO</span></a>
-                  </li>
-                  @endif
-                  @if(admin_menu_allowed('faq'))
-                  <li>
-                     <a href="{{ route('faq.index') }}"><i class="fa fa-id-badge"></i> <span class="nav-label">FAQ's</span></a>
+                  @if(admin_menu_allowed('clients'))
+                  <li class="{{ request()->is('admin/clients*') ? 'active' : '' }}">
+                     <a href="{{ route('admin.clients.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Clients</span></a>
                   </li>
                   @endif
                   @if(admin_menu_allowed('analytics'))
-                  <li>
+                  <li class="{{ request()->is('admin/analytics*') ? 'active' : '' }}">
                      <a href="{{ route('admin.analytics') }}"><i class="fa fa-star"></i> <span class="nav-label">Analytics</span></a>
                   </li>
                   @endif
-                  @if(admin_menu_allowed('stories'))
-                  <li>
-                     <a href="{{ route('testimonial.index') }}"><i class="fa fa-star"></i> <span class="nav-label">Stories</span></a>
-                  </li>
-                  @endif
-                  
                   @if(admin_menu_allowed('users'))
                   <li class="{{ request()->is('admin/user*') ? 'active show' : '' }}">
                      <a href="javascript:void(0)"><i class="fa fa-address-card"></i> <span class="nav-label">Users</span> <span class="fa arrow"></span></a>
@@ -153,46 +153,22 @@
                      </ul>
                   </li>
                   @endif
-                  @if(admin_menu_allowed('clients'))
-                  <li>
-                     <a href="{{ route('admin.clients.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Clients</span></a>
-                  </li>
-                  @endif
-                  @if(admin_menu_allowed('emails'))
-                  <li>
-                     <a href="{{ route('admin.emails.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Emails</span></a>
-                  </li>
-                  @endif
-                  @if(admin_menu_allowed('currency-rate-setup'))
-                  <li class="{{ request()->is('admin/currency-rate-setup') ? 'active' : '' }}">
-                     <a href="{{ route('currency-rates.index') }}"><i class="fa fa-exchange"></i> <span class="nav-label">Currency Rate Setup</span></a>
-                  </li>
-                  @endif
-                  @if(admin_menu_allowed('currencies'))
-                  <li class="{{ request()->is('admin/currencies') ? 'active' : '' }}">
-                  <a href="{{ route('currencies') }}"><i class="fa fa-credit-card"></i> <span class="nav-label">Currencies</span></a>
-              </li>
-              @endif
-              @if(admin_menu_allowed('payments'))
-              <li class="{{ request()->is('admin/payments*') ? 'active show' : '' }}">
-                  <a href="javascript:void(0)"><i class="fa fa-address-card"></i> <span class="nav-label">Payments</span> <span class="fa arrow"></span></a>
-                  <ul class="nav nav-second-level">
-                     <li class="{{ request()->routeIs('admin.payments.index') && request('status') === null ? 'active' : '' }}"><a href="{{ route('admin.payments.index') }}">Invoice List</a></li>
-                     <li class="{{ request()->routeIs('admin.payments.index') && request('status') === 'pending' ? 'active' : '' }}"><a href="{{ route('admin.payments.index', ['status' => 'pending']) }}">Pending Invoices</a></li>
-                     <li class="{{ request()->routeIs('admin.payments.index') && request('status') === 'partial' ? 'active' : '' }}"><a href="{{ route('admin.payments.index', ['status' => 'partial']) }}">Partial Paid Invoices</a></li>
-                     <li><a href="{{ route('admin.payments.create') }}">Create Invoice</a></li>
-                     <li><a href="{{ route('admin.payments.receipts') }}">Receipts</a></li>
-                  </ul>
-               </li>
-               @endif
-              @if(admin_menu_allowed('payment-gateway'))
-              <li class="{{ request()->is('admin/payment-gateways') ? 'active' : '' }}">
-                  <a href="{{ url('admin/payment-gateways') }}"><i class="fa fa-credit-card"></i> <span class="nav-label">Payment Gateway</span></a>
-              </li>
-              @endif
-                  @if(admin_menu_allowed('roles'))
-                  <li>
-                     <a href="{{ route('admin.rolesPermissions.index') }}"><i class="fa fa-lock"></i> <span class="nav-label">Roles & Permissions</span></a>
+                  @if(admin_menu_allowed('payments'))
+                  <li class="{{ request()->is('admin/payments*') || request()->is('admin/currency-rate-setup') || request()->is('admin/payment-gateways*') ? 'active show' : '' }}">
+                     <a href="javascript:void(0)"><i class="fa fa-address-card"></i> <span class="nav-label">Payments</span> <span class="fa arrow"></span></a>
+                     <ul class="nav nav-second-level">
+                        <li class="{{ request()->routeIs('admin.payments.index') && request('status') === null ? 'active' : '' }}"><a href="{{ route('admin.payments.index') }}">Invoice List</a></li>
+                        <li class="{{ request()->routeIs('admin.payments.index') && request('status') === 'pending' ? 'active' : '' }}"><a href="{{ route('admin.payments.index', ['status' => 'pending']) }}">Pending Invoices</a></li>
+                        <li class="{{ request()->routeIs('admin.payments.index') && request('status') === 'partial' ? 'active' : '' }}"><a href="{{ route('admin.payments.index', ['status' => 'partial']) }}">Partial Paid Invoices</a></li>
+                        <li><a href="{{ route('admin.payments.create') }}">Create Invoice</a></li>
+                        <li><a href="{{ route('admin.payments.receipts') }}">Receipts</a></li>
+                        @if(admin_menu_allowed('currency-rate-setup'))
+                        <li class="{{ request()->is('admin/currency-rate-setup') ? 'active' : '' }}"><a href="{{ route('currency-rates.index') }}">Currency Rate Setup</a></li>
+                        @endif
+                        @if(admin_menu_allowed('payment-gateway'))
+                        <li class="{{ request()->is('admin/payment-gateways*') ? 'active' : '' }}"><a href="{{ url('admin/payment-gateways') }}">Payment Gateway</a></li>
+                        @endif
+                     </ul>
                   </li>
                   @endif
                   @if(admin_menu_allowed('profile'))
@@ -201,21 +177,24 @@
                   </li>
                   @endif
                   @if(admin_menu_allowed('settings'))
-                  <li class="{{ request()->is('admin/homepage/edit') || request()->is('admin/menu*') || request()->is('admin/site-settings*') || request()->is('admin/widget*') || request()->is('admin/header-setting*') || request()->is('admin/footer-setting*') || request()->is('admin/smtp-settings*') ? 'active show' : '' }}">
+                  <li class="{{ request()->is('admin/homepage/edit') || request()->is('admin/menu*') || request()->is('admin/site-settings*') || request()->is('admin/widget*') || request()->is('admin/header-setting*') || request()->is('admin/footer-setting*') || request()->is('admin/smtp-settings*') || request()->is('admin/email-templates*') ? 'active show' : '' }}">
                      <a href="#"><i class="fa fa-address-card"></i> <span class="nav-label">Settings</span> <span class="fa arrow"></span></a>
                      <ul class="nav nav-second-level">
-                     <li><a href="{{ route('menu.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Menu</span></a></li>
+                        <li><a href="{{ route('menu.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Menu</span></a></li>
                         <li><a href="{{ route('site-settings.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Site Settings</span></a></li>
                         <li><a href="{{ route('widget.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Widgets</span></a></li>
                         <li><a href="{{ route('header.setting.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Header Settings</span></a></li>
                         <li><a href="{{ route('footer.setting.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Footer Settings</span></a></li>
                         <li><a href="{{ route('admin.smtpSettings.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Email SMTP Setting</span></a></li>
+                        @if(admin_menu_allowed('emails'))
+                        <li class="{{ request()->is('admin/email-templates*') ? 'active' : '' }}"><a href="{{ route('admin.emails.index') }}"><i class="fa fa-envelope"></i> <span class="nav-label">Email Templates</span></a></li>
+                        @endif
                      </ul>
                   </li>
                   @endif
                   @if(admin_menu_allowed('logout'))
                   <li>
-                     <a href="{{ route('admin.logout') }}"><i class="fa fa-sign-out"></i> <span class="nav-label">Logout</span></a>
+                     <a href="{{ route('admin.logout') }}"><i class="fa fa-sign-out"></i> <span class="nav-label">Log out</span></a>
                   </li>
                   @endif
                  

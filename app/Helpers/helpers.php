@@ -467,12 +467,12 @@ if (!function_exists('admin_menu_allowed')) {
 
         $contentWriterMenus = [
             'dashboard', 'courses', 'training-calendar', 'school', 'categories',
-            'pages', 'seo', 'faq', 'analytics', 'clients', 'profile', 'logout',
+            'pages', 'faq', 'seo', 'analytics', 'clients', 'profile', 'logout',
         ];
 
         $accountantMenus = [
-            'dashboard', 'courses', 'currency-rate-setup', 'currencies',
-            'payments', 'profile', 'logout',
+            'dashboard', 'courses', 'currency-rate-setup',
+            'payments', 'payment-gateway', 'profile', 'logout',
         ];
 
         if ($role === 'content_writer') {
