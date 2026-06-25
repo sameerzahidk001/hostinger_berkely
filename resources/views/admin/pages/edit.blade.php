@@ -130,9 +130,8 @@
             </div>
         </div>
     </div>
-    <form action="{{ route('pages.update', $page->id) }}" method="POST" enctype="multipart/form-data">
+    <form action="{{ route('pages.update.post', $page->id) }}" method="POST" enctype="multipart/form-data">
         @csrf
-        @method('PUT')
         <input type="hidden" name="sections_submitted" value="1">
         @if ($page->category_id)
             <input type="hidden" name="parent_id" value="">

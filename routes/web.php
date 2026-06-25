@@ -367,6 +367,8 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
         Route::resource('faq', FaqController::class);
         Route::get('pages/disabled/list', [PagesController::class, 'disabledPages'])->name('admin.pages.disabled');
         Route::post('pages/{id}/update-status', [PagesController::class, 'updateStatus'])->name('pages.update-status');
+        // Some hosts/WAFs block method spoofing to PUT/PATCH; allow a POST update endpoint too.
+        Route::post('pages/{id}/update', [PagesController::class, 'update'])->name('pages.update.post');
         Route::resource('pages', PagesController::class);
         Route::resource('learner-stories', LearnerStoryController::class);
         Route::post('pages-seo/{pages_seo}/analyze', [SeoController::class, 'analyzePreview'])->name('pages-seo.analyze');
