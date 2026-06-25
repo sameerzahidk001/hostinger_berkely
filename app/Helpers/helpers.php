@@ -797,11 +797,29 @@ if (!function_exists('save_uploaded_profile_image')) {
             return $normalized;
         }
 
-        if ($request->filled('current_image')) {
-            return normalize_profile_image_path($request->input('current_image')) ?? $currentPath;
+        $submittedCurrent = $request->input('current_image');
+        if (is_string($submittedCurrent) && trim($submittedCurrent) !== '') {
+            return normalize_profile_image_path($submittedCurrent) ?? $currentPath;
         }
 
-        return null;
+        return $currentPath;
+    }
+}
+
+if (!function_exists('set_profile_image_column')) {
+    function set_profile_image_column($model, string $column, mixed $value): void
+    {
+        if (! $model) {
+            return;
+        }
+
+        if (in_array($model->getTable(), ['users', 'admins'], true)) {
+            $model->setAttribute($column, $value);
+
+            return;
+        }
+
+        assign_column_if_exists($model, $column, $value);
     }
 }
 
@@ -817,19 +835,29 @@ if (!function_exists('apply_profile_image_from_request')) {
         }
 
         $currentPath = normalize_profile_image_path($model->{$column} ?? null);
+        $submittedCurrent = $request->input('current_image');
+
+        if (is_string($submittedCurrent) && trim($submittedCurrent) !== '') {
+            $currentPath = normalize_profile_image_path($submittedCurrent) ?? $currentPath;
+        }
+
         $newPath = save_uploaded_profile_image($request, $field, $currentPath);
 
         if ($newPath === null) {
+            if ($currentPath !== null) {
+                set_profile_image_column($model, $column, $currentPath);
+            }
+
             return;
         }
 
         if ($newPath === '') {
-            assign_column_if_exists($model, $column, null);
+            set_profile_image_column($model, $column, null);
 
             return;
         }
 
-        assign_column_if_exists($model, $column, $newPath);
+        set_profile_image_column($model, $column, $newPath);
     }
 }
 

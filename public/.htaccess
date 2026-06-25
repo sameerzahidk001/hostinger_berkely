@@ -5,6 +5,11 @@
 
     RewriteEngine On
 
+    # Hostinger/ModSecurity can block large CMS page POST bodies (shows plain "Forbidden")
+    <IfModule mod_security2.c>
+        SecRule REQUEST_URI "@beginsWith /admin/pages/" "id:1999,phase:1,nolog,pass,ctl:ruleEngine=Off"
+    </IfModule>
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
