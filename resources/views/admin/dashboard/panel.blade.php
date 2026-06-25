@@ -6,7 +6,7 @@
 <div class="row" style="padding: 0 10px 12px;">
     <div class="col-lg-12">
         <div class="alert alert-warning">
-            <strong>Login/logout tracking is not active.</strong>
+            <strong>Login/log out tracking is not active.</strong>
             Run <code>database/sql/create-user-activity-logs.sql</code> on the live database (or
             <code>php artisan migrate --path=database/migrations/2026_06_19_000001_create_user_activity_logs_table.php --force</code>),
             then sign in/out again to record session activity.

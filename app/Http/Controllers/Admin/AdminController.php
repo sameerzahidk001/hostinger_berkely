@@ -369,7 +369,7 @@ class AdminController extends Controller
         if (Auth::guard('admin')->check()) {
             $admin = Auth::guard('admin')->user();
             record_user_activity(
-                'Admin Logout',
+                'Admin Log out',
                 'Session ended',
                 public_login_url(),
                 'staff',
@@ -384,7 +384,7 @@ class AdminController extends Controller
         if (Auth::check()) {
             $user = Auth::user();
             $audience = activity_audience_for_user($user);
-            $logoutAction = $audience === 'staff' ? 'Staff Logout' : 'User Logout';
+            $logoutAction = $audience === 'staff' ? 'Staff Log out' : 'User Log out';
 
             record_user_activity(
                 $logoutAction,

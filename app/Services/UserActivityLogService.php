@@ -36,6 +36,7 @@ class UserActivityLogService
         $sessionActions = [
             'Admin Login', 'Staff Login', 'User Login',
             'Admin Logout', 'Staff Logout', 'User Logout',
+            'Admin Log out', 'Staff Log out', 'User Log out',
         ];
 
         if (in_array($action, $sessionActions, true)) {
@@ -131,7 +132,7 @@ class UserActivityLogService
 
         return $query->get()->map(function (UserActivityLog $log) {
             return [
-                'action' => $log->action,
+                'action' => str_replace(' Logout', ' Log out', (string) $log->action),
                 'item' => $log->item ?? '',
                 'url' => $log->url,
                 'session_id' => $log->session_id,

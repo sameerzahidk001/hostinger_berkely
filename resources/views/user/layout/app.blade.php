@@ -171,7 +171,7 @@
                @endif
                <li>
                   <a href="{{ route('user.logout') }}"><i class="fa fa-sign-out"></i> <span
-                        class="nav-label">Logout</span></a>
+                        class="nav-label">Log out</span></a>
                </li>
 
             </ul>
