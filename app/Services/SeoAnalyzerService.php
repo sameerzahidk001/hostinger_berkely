@@ -5,18 +5,21 @@ namespace App\Services;
 use App\Models\Course;
 use App\Models\Page;
 use App\Models\PagesSEO;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
 class SeoAnalyzerService
 {
-    public function analyze(PagesSEO $seo, bool $forListing = false): array
+    public function analyze(PagesSEO $seo, bool $forListing = false, bool $lightContent = false): array
     {
         $title = trim((string) $seo->title);
         $description = trim((string) $seo->meta_description);
         $focusKeyword = $this->focusKeyword($seo);
         $urlSlug = $this->resolveUrlSlug($seo);
         $previewUrl = $this->resolvePreviewUrl($seo);
-        $content = $forListing ? $this->resolveContentForListing($seo) : $this->resolveContent($seo);
+        $content = ($forListing || $lightContent)
+            ? $this->resolveContentForListing($seo)
+            : $this->resolveContent($seo);
         $plainText = $this->stripToText($content);
         $wordCount = $this->wordCount($plainText);
         $keywordCount = $focusKeyword ? $this->keywordOccurrences($plainText, $focusKeyword) : 0;
@@ -75,12 +78,29 @@ class SeoAnalyzerService
         ];
 
         $allChecks = array_merge($basic, $additional);
-        $passed = count(array_filter($allChecks, fn ($c) => $c['ok']));
-        $score = (int) round(($passed / max(count($allChecks), 1)) * 100);
+        $technical = $forListing
+            ? $this->technicalChecksForListing($seo, $title, $description)
+            : $this->technicalChecks($seo, $previewUrl, $title, $description, $focusKeyword);
+
+        $contentChecks = array_merge($basic, $additional);
+        $contentPassed = count(array_filter($contentChecks, fn ($c) => $c['ok']));
+        $contentScore = (int) round(($contentPassed / max(count($contentChecks), 1)) * 100);
+        $technicalPassed = count(array_filter($technical, fn ($c) => $c['ok']));
+        $liveScore = (int) round(($technicalPassed / max(count($technical), 1)) * 100);
+
+        $score = $forListing
+            ? $contentScore
+            : $this->weightedScore([
+                ['checks' => $basic, 'weight' => 25],
+                ['checks' => $additional, 'weight' => 25],
+                ['checks' => $technical, 'weight' => 50],
+            ]);
 
         return [
             'score' => $score,
             'label' => $this->scoreLabel($score),
+            'content_score' => $contentScore,
+            'live_score' => $liveScore,
             'focus_keyword' => $focusKeyword,
             'word_count' => $wordCount,
             'keyword_density' => $density,
@@ -89,8 +109,10 @@ class SeoAnalyzerService
             'url_slug' => $urlSlug,
             'basic' => $basic,
             'additional' => $additional,
+            'technical' => $technical,
             'basic_errors' => count(array_filter($basic, fn ($c) => ! $c['ok'])),
             'additional_errors' => count(array_filter($additional, fn ($c) => ! $c['ok'])),
+            'technical_errors' => count(array_filter($technical, fn ($c) => ! $c['ok'])),
             'external_links' => $this->countLinks($content, 'external'),
             'internal_links' => $this->countLinks($content, 'internal'),
             'schema' => 'Article',
@@ -136,12 +158,20 @@ class SeoAnalyzerService
     {
         $slug = $this->resolveUrlSlug($seo);
 
-        return $slug !== '' ? rtrim(config('app.url'), '/') . '/' . ltrim($slug, '/') : url('/');
+        if ($slug === '') {
+            return url('/');
+        }
+
+        if ($seo->course_id || ($seo->relationLoaded('course') && $seo->course)) {
+            return route('course.details', ['course' => $slug]);
+        }
+
+        return rtrim(config('app.url'), '/') . '/' . ltrim($slug, '/');
     }
 
     private function resolveContent(PagesSEO $seo): string
     {
-        $seo->loadMissing(['page.sections', 'course.dynamicLabel']);
+        $seo->loadMissing(['page.sections', 'course.dynamicLabel', 'course.courseFaq']);
 
         $content = '';
 
@@ -415,6 +445,204 @@ class SeoAnalyzerService
         }
 
         return $count;
+    }
+
+    private function weightedScore(array $sections): int
+    {
+        $total = 0.0;
+
+        foreach ($sections as $section) {
+            $checks = $section['checks'] ?? [];
+            $weight = (float) ($section['weight'] ?? 0);
+            $passed = count(array_filter($checks, fn ($c) => $c['ok']));
+            $total += ($passed / max(count($checks), 1)) * $weight;
+        }
+
+        return (int) round(min(100, max(0, $total)));
+    }
+
+    private function technicalChecksForListing(PagesSEO $seo, string $title, string $description): array
+    {
+        return [
+            $this->check($title !== '', 'SEO title saved in admin.'),
+            $this->check($description !== '', 'Meta description saved in admin.'),
+            $this->check($seo->course_id !== null || $seo->page_id !== null, 'SEO record linked to a page or course.'),
+        ];
+    }
+
+    private function technicalChecks(
+        PagesSEO $seo,
+        string $previewUrl,
+        string $title,
+        string $description,
+        string $focusKeyword
+    ): array {
+        $html = $this->fetchLivePageHtml($previewUrl);
+
+        if ($html === null || $html === '') {
+            return [
+                $this->check(false, 'Could not fetch the live public page for verification.'),
+                $this->check($title !== '', 'SEO title saved in admin (live page not verified).'),
+                $this->check($description !== '', 'Meta description saved in admin (live page not verified).'),
+                $this->check($seo->course_id !== null || $seo->page_id !== null, 'SEO record linked to a page or course.'),
+            ];
+        }
+
+        $live = $this->parseLivePage($html, $focusKeyword);
+
+        $titleMatches = $title === ''
+            || $live['title'] === ''
+            || Str::contains(Str::lower($live['title']), Str::lower(Str::limit($title, 30, '')));
+
+        $checks = [
+            $this->check(
+                $live['title'] !== '',
+                $live['title'] !== ''
+                    ? 'Live page has a <title> tag.'
+                    : 'Live page is missing a <title> tag (critical).'
+            ),
+            $this->check(
+                $live['meta_description'] !== '',
+                $live['meta_description'] !== ''
+                    ? 'Live page has a meta description.'
+                    : 'Live page is missing a meta description (critical).'
+            ),
+            $this->check($titleMatches, 'Live <title> matches the saved SEO title.'),
+            $this->check(
+                $live['h1_count'] === 1,
+                'Live page has one primary H1 (' . $live['h1_count'] . ' found; aim for 1).'
+            ),
+            $this->check(
+                $focusKeyword === '' || $live['h1_has_keyword'],
+                'Primary H1 on the live page includes the focus keyword.'
+            ),
+            $this->check(
+                $live['image_alt_coverage'] >= 60,
+                'Image alt coverage on the live page is ' . $live['image_alt_coverage'] . '% (aim for 60%+).'
+            ),
+            $this->check(
+                $live['text_ratio'] >= 8,
+                'Text-to-HTML ratio is ' . $live['text_ratio'] . '% (aim for 8%+).'
+            ),
+            $this->check(
+                $live['internal_links'] >= 2,
+                'Live page has ' . $live['internal_links'] . ' internal links (aim for 2+).'
+            ),
+        ];
+
+        if ($seo->course_id) {
+            $checks[] = $this->check(
+                $live['has_cta'],
+                'Clear call-to-action buttons found on the live course page.'
+            );
+            $checks[] = $this->check(
+                $live['has_faq'],
+                'FAQ section detected on the live course page.'
+            );
+        }
+
+        return $checks;
+    }
+
+    public function clearLivePageCache(PagesSEO $seo): void
+    {
+        $url = $this->resolvePreviewUrl($seo);
+        if ($url !== '') {
+            Cache::forget($this->livePageCacheKey($url));
+        }
+    }
+
+    private function livePageCacheKey(string $url): string
+    {
+        return 'seo_live_html:' . md5($url);
+    }
+    private function fetchLivePageHtml(string $url): ?string
+    {
+        if ($url === '' || ! str_starts_with($url, 'http')) {
+            return null;
+        }
+
+        return Cache::remember($this->livePageCacheKey($url), now()->addHour(), function () use ($url) {
+            try {
+                $response = \Illuminate\Support\Facades\Http::timeout(10)
+                    ->withHeaders(['User-Agent' => 'BerkeleySEOChecker/1.0'])
+                    ->get($url);
+
+                if ($response->successful()) {
+                    return (string) $response->body();
+                }
+            } catch (\Throwable $e) {
+                \Illuminate\Support\Facades\Log::warning('SEO live page fetch failed: ' . $e->getMessage());
+            }
+
+            return null;
+        });
+    }
+
+    private function parseLivePage(string $html, string $focusKeyword = ''): array
+    {
+        $title = '';
+        if (preg_match('/<title[^>]*>(.*?)<\/title>/is', $html, $matches)) {
+            $title = trim(html_entity_decode(strip_tags($matches[1]), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        }
+
+        $metaDescription = '';
+        if (preg_match('/<meta[^>]+name=["\']description["\'][^>]+content=["\']([^"\']*)["\']/i', $html, $matches)) {
+            $metaDescription = trim(html_entity_decode($matches[1], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        } elseif (preg_match('/<meta[^>]+content=["\']([^"\']*)["\'][^>]+name=["\']description["\']/i', $html, $matches)) {
+            $metaDescription = trim(html_entity_decode($matches[1], ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+        }
+
+        preg_match_all('/<h1\b[^>]*>(.*?)<\/h1>/is', $html, $h1Matches);
+        $h1Texts = array_map(fn ($chunk) => $this->stripToText($chunk), $h1Matches[1] ?? []);
+        $h1Count = count($h1Texts);
+
+        $h1HasKeyword = $focusKeyword === '';
+        if ($focusKeyword !== '') {
+            foreach ($h1Texts as $h1Text) {
+                if (Str::contains(Str::lower($h1Text), Str::lower($focusKeyword))) {
+                    $h1HasKeyword = true;
+                    break;
+                }
+            }
+        }
+
+        preg_match_all('/<img\b[^>]*>/i', $html, $imgMatches);
+        $imgTags = $imgMatches[0] ?? [];
+        $imagesWithAlt = 0;
+
+        foreach ($imgTags as $tag) {
+            if (preg_match('/\balt=["\']([^"\']*)["\']/i', $tag, $altMatch)) {
+                $alt = trim($altMatch[1]);
+                if ($alt !== '' && Str::lower($alt) !== 'image') {
+                    $imagesWithAlt++;
+                }
+            }
+        }
+
+        $imageAltCoverage = count($imgTags) > 0
+            ? (int) round(($imagesWithAlt / count($imgTags)) * 100)
+            : 100;
+
+        $plainText = $this->stripToText($html);
+        $textRatio = strlen($html) > 0
+            ? round((strlen($plainText) / strlen($html)) * 100, 1)
+            : 0.0;
+
+        return [
+            'title' => $title,
+            'meta_description' => $metaDescription,
+            'h1_count' => $h1Count,
+            'h1_has_keyword' => $h1HasKeyword,
+            'image_alt_coverage' => $imageAltCoverage,
+            'text_ratio' => $textRatio,
+            'internal_links' => $this->countLinks($html, 'internal'),
+            'has_cta' => (bool) preg_match(
+                '/\b(enroll|register|apply now|contact|admission|download brochure)\b/i',
+                $html
+            ),
+            'has_faq' => (bool) preg_match('/\bfaq\b/i', $html) || str_contains($html, 'id="eleven"'),
+        ];
     }
 
     private function check(bool $ok, string $text): array

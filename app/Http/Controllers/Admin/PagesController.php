@@ -44,7 +44,7 @@ class PagesController extends Controller
             ->get()
             ->each(function (Page $page) {
                 if ($page->seo) {
-                    $page->seo_analysis = app(SeoAnalyzerService::class)->analyze($page->seo);
+                    $page->seo_analysis = app(SeoAnalyzerService::class)->analyze($page->seo, true);
                 }
             });
 
@@ -69,7 +69,7 @@ class PagesController extends Controller
             ->get()
             ->each(function (Page $page) {
                 if ($page->seo) {
-                    $page->seo_analysis = app(SeoAnalyzerService::class)->analyze($page->seo);
+                    $page->seo_analysis = app(SeoAnalyzerService::class)->analyze($page->seo, true);
                 }
             });
 

@@ -49,14 +49,14 @@
 
                 <div class="flex flex-col gap-4 my-4">
                     @if ($course->dynamicLabel->banner_sub_title_placement === 1)
-                        <h1 class="text-[20px] leading-8 text-primary_orange">{{ $course->dynamicLabel->banner_sub_title }}
-                        </h1>
+                        <h2 class="text-[20px] leading-8 text-primary_orange">{{ $course->dynamicLabel->banner_sub_title }}
+                        </h2>
                     @endif
-                    <h2 class="text-[32px] md:text-[36px] leading-[58px] font-canela text-white">
-                        {{ $course->dynamicLabel->banner_title }}</h2>
+                    <h1 class="text-[32px] md:text-[36px] leading-[58px] font-canela text-white">
+                        {{ $course->dynamicLabel->banner_title }}</h1>
                     @if ($course->dynamicLabel->banner_sub_title_placement !== 1)
-                        <h1 class="text-[20px] leading-8 text-primary_orange">{{ $course->dynamicLabel->banner_sub_title }}
-                        </h1>
+                        <h2 class="text-[20px] leading-8 text-primary_orange">{{ $course->dynamicLabel->banner_sub_title }}
+                        </h2>
                     @endif
                 </div>
                 <div clas="text-[18px] text-white editor">

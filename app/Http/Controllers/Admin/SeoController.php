@@ -57,7 +57,10 @@ class SeoController extends Controller
 
         $data['pages_seo'] = $query
             ->orderByDesc('id')
-            ->get();
+            ->get()
+            ->each(function (PagesSEO $pageSeo) {
+                $pageSeo->seo_analysis = app(SeoAnalyzerService::class)->analyze($pageSeo, false, true);
+            });
 
         $data['category_perma'] = SiteSettings::value('category_perma') ?? 'category';
 
@@ -120,14 +123,14 @@ class SeoController extends Controller
      */
     public function edit(string $id)
     {
-        $data['page_seo'] = PagesSEO::with(['page.sections', 'course'])->findOrFail($id);
+        $data['page_seo'] = PagesSEO::with(['page.sections', 'course.dynamicLabel', 'course.courseFaq'])->findOrFail($id);
         $data['seo_analysis'] = app(SeoAnalyzerService::class)->analyze($data['page_seo']);
         return view('admin.seo.edit')->with($data);
     }
 
     public function analyzePreview(Request $request, string $id)
     {
-        $seo = PagesSEO::with(['page.sections', 'course'])->findOrFail($id);
+        $seo = PagesSEO::with(['page.sections', 'course.dynamicLabel', 'course.courseFaq'])->findOrFail($id);
 
         $seo->fill($request->only(['title', 'meta_description', 'keywords']));
 
@@ -162,6 +165,7 @@ class SeoController extends Controller
         }
 
         $pages_seo_updated = $page_seo->update($data);
+        app(SeoAnalyzerService::class)->clearLivePageCache($page_seo->fresh());
         
         if($pages_seo_updated && $request->has('course_id') ){
             if($pages_seo_updated){
