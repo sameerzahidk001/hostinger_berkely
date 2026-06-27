@@ -99,20 +99,24 @@
                                                 <label for="">Page URL</label>
                                                 <input type="text" class="form-control" name="page_url" placeholder="add page url"  value="{{ old('page_url',  $page_seo->page_url) }}">
                                             </div> -->
-                                @if(request()->has('course_name'))
-
+                                @if($page_seo->course_id && $page_seo->course)
                                     <div class="col-lg-12 mb">
                                         <label for="">Course Title</label>
                                         <input type="text" class="form-control"
-                                            placeholder="{{ request()->get('course_name') }}" readonly>
-                                        <input type="hidden" name="course_id" value="{{ request()->get('course_id') }}">
+                                            value="{{ $page_seo->course->title }}" readonly>
+                                        <p class="help-block text-muted" style="margin-top:4px;">The course name on the website (H1 banner). Edit under Courses, not here.</p>
                                     </div>
-                                @else
-                                    <input type="hidden" name="page_id" value="{{ $page_seo->page_id }}">
+                                @elseif($page_seo->page_id && $page_seo->page)
+                                    <div class="col-lg-12 mb">
+                                        <label for="">Page Name</label>
+                                        <input type="text" class="form-control"
+                                            value="{{ $page_seo->page->page_name }}" readonly>
+                                        <p class="help-block text-muted" style="margin-top:4px;">The CMS page name. Main on-page heading comes from the page banner section.</p>
+                                    </div>
                                 @endif
                                 <div class="col-lg-12 mb">
-                                    <label for="">Title <small>( Less or 60 characters )</small></label>
-                                    <input type="text" class="form-control" name="title" placeholder="add page title"
+                                    <label for="">SEO Title <small>(max 60 characters — browser tab &amp; Google)</small></label>
+                                    <input type="text" class="form-control" name="title" placeholder="e.g. Course Name | Berkeley School"
                                         value="{{ old('title', $page_seo->title) }}" data-maxlength="60" maxlength="60">
                                 </div>
                                 <div class="col-lg-12 mb">

@@ -145,12 +145,9 @@ class SeoController extends Controller
     {
         $request->validate(seo_validation_rules());
 
-        if ($request->has('course_id')) {
-            $page_seo = PagesSEO::where('course_id', $request->course_id)->first();
-        } elseif ($request->has('page_id')) {
-            $page_seo = PagesSEO::where('page_id', $request->page_id)->first();
-        }
-        $data = $request->except('_token');
+        $page_seo = PagesSEO::findOrFail($id);
+
+        $data = $request->except('_token', '_method');
         // dd($request->toArray());
         if ($request->hasFile('thumbnail_img')) {
             $file = $request->file('thumbnail_img');
@@ -167,24 +164,18 @@ class SeoController extends Controller
 
         $pages_seo_updated = $page_seo->update($data);
         app(SeoAnalyzerService::class)->clearAnalysisCache($page_seo->fresh());
-        
-        if($pages_seo_updated && $request->has('course_id') ){
-            if($pages_seo_updated){
-                session()->flash('sucess', 'Record Added successfullly!');
-            }else{
-                session()->flash('failed', 'Failed to insert Record!');
-            }
-            
-            return redirect()->route('admin.courses');
 
-        }elseif($pages_seo_updated && $request->has('page_id')){
-            if($pages_seo_updated){
-                session()->flash('sucess', 'Record Added successfullly!');
-            }else{
-                session()->flash('failed', 'Failed to insert Record!');
-            }
-            return redirect()->route('pages-seo.index');
+        if ($pages_seo_updated) {
+            session()->flash('sucess', 'Record updated successfully!');
+        } else {
+            session()->flash('failed', 'Failed to update record!');
         }
+
+        if ($page_seo->course_id) {
+            return redirect()->route('admin.courses');
+        }
+
+        return redirect()->route('pages-seo.index');
     }
 
     /**
