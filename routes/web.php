@@ -131,6 +131,10 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
     Route::post('ckeditor-image-upload', [CourseController::class, 'ckeditorImageUpload']);
     Route::prefix('admin/')->group(function () {
 
+        Route::get('csrf-token', function () {
+            return response()->json(['token' => csrf_token()]);
+        })->name('admin.csrf-token');
+
         // Payment Gateway
         Route::get('/payment-gateways', [PaymentGatewayController::class, 'index'])->name('admin.payment-gateways.index');
         Route::get('/payment-gateways/{id}/edit', [PaymentGatewayController::class, 'edit'])->name('admin.payment-gateways.edit');

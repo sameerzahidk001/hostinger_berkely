@@ -3124,8 +3124,52 @@
                 });
             }
 
+            const csrfRefreshUrl = @json(route('admin.csrf-token'));
+
+            function applyCsrfToken(token) {
+                if (!token) {
+                    return;
+                }
+
+                const tokenInput = pageForm ? pageForm.querySelector('input[name="_token"]') : null;
+                if (tokenInput) {
+                    tokenInput.value = token;
+                }
+
+                const meta = document.querySelector('meta[name="csrf-token"]');
+                if (meta) {
+                    meta.setAttribute('content', token);
+                }
+            }
+
+            function refreshCsrfToken() {
+                return fetch(csrfRefreshUrl, {
+                    credentials: 'same-origin',
+                    headers: { 'Accept': 'application/json' },
+                })
+                    .then(function (response) {
+                        if (!response.ok) {
+                            throw new Error('csrf refresh failed');
+                        }
+                        return response.json();
+                    })
+                    .then(function (data) {
+                        applyCsrfToken(data.token);
+                        return data.token;
+                    });
+            }
+
             if (pageForm) {
+                setInterval(function () {
+                    refreshCsrfToken().catch(function () {});
+                }, 10 * 60 * 1000);
+
                 pageForm.addEventListener('submit', function (event) {
+                    if (pageForm.dataset.submitting === '1') {
+                        return;
+                    }
+
+                    event.preventDefault();
                     window.updateSectionOrder();
 
                     if (window.jQuery) {
@@ -3175,6 +3219,7 @@
                     }
 
                     if (!encodedPayload) {
+                        alert('Could not prepare page content for save. Please refresh the page and try again.');
                         return;
                     }
 
@@ -3187,6 +3232,13 @@
                             el.disabled = true;
                         }
                     }
+
+                    refreshCsrfToken()
+                        .catch(function () {})
+                        .finally(function () {
+                            pageForm.dataset.submitting = '1';
+                            pageForm.submit();
+                        });
                 });
             }
         });

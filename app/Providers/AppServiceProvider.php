@@ -23,5 +23,15 @@ class AppServiceProvider extends ServiceProvider
         if ($this->app->environment('local') && ! $this->app->runningInConsole()) {
             URL::forceRootUrl(request()->getSchemeAndHttpHost());
         }
+
+        if ($this->app->environment('production')) {
+            if (str_starts_with((string) config('app.url'), 'https://')) {
+                URL::forceScheme('https');
+            }
+
+            if (config('session.secure') === null) {
+                config(['session.secure' => true]);
+            }
+        }
     }
 }

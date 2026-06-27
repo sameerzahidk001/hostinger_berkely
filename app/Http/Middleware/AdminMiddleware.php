@@ -23,7 +23,7 @@ class AdminMiddleware
                 Auth::guard('admin')->setUser($admin);
             }
 
-            return $next($request);
+            return $this->withoutAdminCaching($next($request));
         }
 
         if (Auth::check()) {
@@ -37,10 +37,20 @@ class AdminMiddleware
                     Auth::setUser($freshUser);
                 }
 
-                return $next($request);
+                return $this->withoutAdminCaching($next($request));
             }
         }
 
         return redirect()->to(public_login_url());
+    }
+
+    private function withoutAdminCaching(Response $response): Response
+    {
+        $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+        $response->headers->set('Pragma', 'no-cache');
+        $response->headers->set('Expires', '0');
+        $response->headers->set('CDN-Cache-Control', 'no-store');
+
+        return $response;
     }
 }

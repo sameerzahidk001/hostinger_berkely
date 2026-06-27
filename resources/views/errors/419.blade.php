@@ -120,10 +120,10 @@
         <div class="code">419</div>
         <div class="bar"></div>
         <h1 class="title">Page expired</h1>
-        <p class="lead">Your session expired or the CSRF token is invalid. Please refresh and try again.</p>
+        <p class="lead">Your session expired or the CSRF token is invalid. Refresh the page editor, sign in again if needed, then save.</p>
         <div class="d-flex gap-2 justify-content-center flex-wrap">
-            <a href="{{ public_login_url() }}" class="btn btn-gold px-4">Sign in</a>
-            <a href="{{ url('/') }}" class="btn btn-outline-red px-4">Go Home</a>
+            <a href="javascript:history.back()" class="btn btn-gold px-4">Go Back &amp; Refresh</a>
+            <a href="{{ public_login_url() }}" class="btn btn-outline-red px-4">Sign in</a>
         </div>
     </main>
     <footer>Copyright © 2025 Berkeley School of Business, Arts & Sciences</footer>
