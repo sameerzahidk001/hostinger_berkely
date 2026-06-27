@@ -2,6 +2,17 @@
     Order allow,deny
     Deny from all
 </Files>
+
+# Hostinger/WAF can block large CMS page POST bodies (plain "Forbidden").
+<IfModule mod_security2.c>
+    SecRule REQUEST_URI "@rx ^/admin/pages" "id:1999,phase:1,nolog,pass,ctl:ruleEngine=Off"
+    SecRule REQUEST_URI "@rx ^/admin/course/[0-9]+/update" "id:2000,phase:1,nolog,pass,ctl:ruleEngine=Off"
+</IfModule>
+<IfModule security2_module>
+    SecRule REQUEST_URI "@rx ^/admin/pages" "id:1999,phase:1,nolog,pass,ctl:ruleEngine=Off"
+    SecRule REQUEST_URI "@rx ^/admin/course/[0-9]+/update" "id:2000,phase:1,nolog,pass,ctl:ruleEngine=Off"
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes

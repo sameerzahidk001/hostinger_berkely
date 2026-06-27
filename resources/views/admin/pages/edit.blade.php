@@ -133,6 +133,7 @@
     <form action="{{ route('pages.update.post', $page->id) }}" method="POST" enctype="multipart/form-data">
         @csrf
         <input type="hidden" name="sections_submitted" value="1">
+        <input type="hidden" name="sections_payload" id="sections_payload" value="">
         @if ($page->category_id)
             <input type="hidden" name="parent_id" value="">
         @endif
@@ -3126,6 +3127,50 @@
             if (pageForm) {
                 pageForm.addEventListener('submit', function () {
                     window.updateSectionOrder();
+
+                    if (window.jQuery) {
+                        jQuery(pageForm).find('.editor').each(function () {
+                            if (jQuery(this).next('.note-editor').length) {
+                                jQuery(this).val(jQuery(this).summernote('code'));
+                            }
+                        });
+                    }
+
+                    const sections = {};
+                    for (const el of pageForm.elements) {
+                        if (!el.name || !el.name.startsWith('sections[')) {
+                            continue;
+                        }
+                        if (el.type === 'file') {
+                            continue;
+                        }
+                        if ((el.type === 'checkbox' || el.type === 'radio') && !el.checked) {
+                            continue;
+                        }
+
+                        const parts = el.name.replace(/\]/g, '').split('[').slice(1);
+                        let cur = sections;
+                        for (let i = 0; i < parts.length - 1; i++) {
+                            const key = parts[i];
+                            const nextKey = parts[i + 1];
+                            if (cur[key] === undefined) {
+                                cur[key] = /^\d+$/.test(nextKey) ? [] : {};
+                            }
+                            cur = cur[key];
+                        }
+                        cur[parts[parts.length - 1]] = el.value;
+                    }
+
+                    const payloadInput = document.getElementById('sections_payload');
+                    if (payloadInput) {
+                        payloadInput.value = btoa(unescape(encodeURIComponent(JSON.stringify(sections))));
+                    }
+
+                    for (const el of pageForm.elements) {
+                        if (el.name && el.name.startsWith('sections[') && el.type !== 'file') {
+                            el.disabled = true;
+                        }
+                    }
                 });
             }
         });

@@ -219,6 +219,7 @@ class PagesController extends Controller
     public function update(Request $request, $id)
     {
         $page = Page::findOrFail($id);
+        $this->mergeSectionsPayload($request);
 
         $validator = Validator::make($request->all(), [
             'page_name' => 'required|string|max:255',
@@ -496,6 +497,26 @@ class PagesController extends Controller
             : 'pages.index';
 
         return redirect()->route($redirectRoute)->with('success', 'Page saved successfully!');
+    }
+
+    private function mergeSectionsPayload(Request $request): void
+    {
+        $payload = (string) $request->input('sections_payload', '');
+        if ($payload === '') {
+            return;
+        }
+
+        $json = base64_decode($payload, true);
+        if ($json === false) {
+            return;
+        }
+
+        $sections = json_decode($json, true);
+        if (! is_array($sections)) {
+            return;
+        }
+
+        $request->merge(['sections' => $sections]);
     }
 
 

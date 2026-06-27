@@ -7,7 +7,12 @@
 
     # Hostinger/ModSecurity can block large CMS page POST bodies (shows plain "Forbidden")
     <IfModule mod_security2.c>
-        SecRule REQUEST_URI "@beginsWith /admin/pages/" "id:1999,phase:1,nolog,pass,ctl:ruleEngine=Off"
+        SecRule REQUEST_URI "@rx ^/admin/pages" "id:1999,phase:1,nolog,pass,ctl:ruleEngine=Off"
+        SecRule REQUEST_URI "@rx ^/admin/course/[0-9]+/update" "id:2000,phase:1,nolog,pass,ctl:ruleEngine=Off"
+    </IfModule>
+    <IfModule security2_module>
+        SecRule REQUEST_URI "@rx ^/admin/pages" "id:1999,phase:1,nolog,pass,ctl:ruleEngine=Off"
+        SecRule REQUEST_URI "@rx ^/admin/course/[0-9]+/update" "id:2000,phase:1,nolog,pass,ctl:ruleEngine=Off"
     </IfModule>
 
     # Handle Authorization Header
