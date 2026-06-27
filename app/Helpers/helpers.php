@@ -326,6 +326,7 @@ if (!function_exists('seo_validation_rules')) {
             'focus_keyword' => 'nullable|string|max:' . $limits['focus_keyword_max'],
             'keywords' => 'nullable|string|max:' . $limits['priority_keywords_max_total'],
             'additional_keywords' => 'nullable|string|max:' . $limits['additional_keywords_max_total'],
+            'thumbnail_alt' => 'nullable|string|max:125',
         ];
     }
 }
@@ -635,9 +636,14 @@ if (!function_exists('seo_prepare_save_data')) {
     function seo_prepare_save_data(array $data): array
     {
         ensure_seo_focus_keyword_column_exists();
+        ensure_seo_thumbnail_alt_column_exists();
 
         if (! \Illuminate\Support\Facades\Schema::hasColumn('pages_s_e_o_s', 'focus_keyword')) {
             unset($data['focus_keyword']);
+        }
+
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('pages_s_e_o_s', 'thumbnail_alt')) {
+            unset($data['thumbnail_alt']);
         }
 
         return $data;
@@ -670,6 +676,39 @@ if (!function_exists('ensure_seo_focus_keyword_column_exists')) {
             return true;
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('Could not ensure focus_keyword column: ' . $e->getMessage());
+            $ready = false;
+
+            return false;
+        }
+    }
+}
+
+if (!function_exists('ensure_seo_thumbnail_alt_column_exists')) {
+    function ensure_seo_thumbnail_alt_column_exists(): bool
+    {
+        static $ready = null;
+
+        if ($ready === true) {
+            return true;
+        }
+
+        if ($ready === false) {
+            return false;
+        }
+
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('pages_s_e_o_s')
+                && ! \Illuminate\Support\Facades\Schema::hasColumn('pages_s_e_o_s', 'thumbnail_alt')) {
+                \Illuminate\Support\Facades\Schema::table('pages_s_e_o_s', function (\Illuminate\Database\Schema\Blueprint $table) {
+                    $table->string('thumbnail_alt', 255)->nullable();
+                });
+            }
+
+            $ready = true;
+
+            return true;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Could not ensure thumbnail_alt column: ' . $e->getMessage());
             $ready = false;
 
             return false;

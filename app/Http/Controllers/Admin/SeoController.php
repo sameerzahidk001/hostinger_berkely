@@ -17,6 +17,7 @@ class SeoController extends Controller
         $this->middleware('long.running')->only(['edit', 'analyzePreview']);
         $this->middleware(function ($request, $next) {
             ensure_seo_focus_keyword_column_exists();
+            ensure_seo_thumbnail_alt_column_exists();
 
             return $next($request);
         });
@@ -126,7 +127,7 @@ class SeoController extends Controller
     {
         $seo = PagesSEO::with(['page.sections', 'course.dynamicLabel', 'course.courseFaq'])->findOrFail($id);
 
-        $seo->fill($request->only(['title', 'meta_description', 'focus_keyword', 'keywords']));
+        $seo->fill($request->only(['title', 'meta_description', 'focus_keyword', 'keywords', 'thumbnail_alt']));
 
         return response()->json(app(SeoAnalyzerService::class)->analyze($seo));
     }

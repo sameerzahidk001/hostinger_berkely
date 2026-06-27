@@ -86,10 +86,9 @@
                         </div>
                     </div>
                     <div class="ibox-content">
-                        <form role="form" action="{{ route('courses-pages-seo.update', $page_seo->id) }}" method="POST"
+                        <form role="form" action="{{ route('courses-pages-seo.update.post', $page_seo->id) }}" method="POST"
                             enctype="multipart/form-data">
                             @csrf
-                            @method('PUT')
                             <div class="row">
                                 <div class="col-lg-5">
                                     @include('admin.seo.partials.seo-score')
@@ -177,6 +176,12 @@
                                         <a href="{{ asset($page_seo->thumbnail) }}" target="_blank">Current
                                             Image</a>
                                     @endif
+                                    @include('admin.partials.image-alt-input', [
+                                        'id' => 'thumbnail_alt',
+                                        'name' => 'thumbnail_alt',
+                                        'value' => old('thumbnail_alt', $page_seo->thumbnail_alt ?? ''),
+                                    ])
+                                    <p class="help-block text-muted" style="margin-top:4px;">Describe the social/OG thumbnail for accessibility and SEO scoring (include focus keyword when relevant).</p>
                                 </div>
                             </div>
                                 </div>

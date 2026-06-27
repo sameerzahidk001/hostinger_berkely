@@ -382,6 +382,7 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
             return redirect('courses-pages-seo' . $suffix, 301);
         })->where('path', '.*');
         Route::post('courses-pages-seo/{pages_seo}/analyze', [SeoController::class, 'analyzePreview'])->name('courses-pages-seo.analyze');
+        Route::post('courses-pages-seo/{pages_seo}/update', [SeoController::class, 'update'])->name('courses-pages-seo.update.post');
         Route::resource('courses-pages-seo', SeoController::class)
             ->names('courses-pages-seo')
             ->parameters(['courses-pages-seo' => 'pages_seo']);
