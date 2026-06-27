@@ -32,7 +32,9 @@ class SeoController extends Controller
             ->with([
                 'page:id,page_name,url,parent_id,category_id',
                 'page.parent:id,url',
-                'course:id,title,slug',
+                'page.sections',
+                'course.dynamicLabel',
+                'course.courseFaq',
                 'createdBy:id,username,email',
                 'updatedBy:id,username,email',
             ]);

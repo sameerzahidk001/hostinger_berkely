@@ -94,7 +94,7 @@
                                         </td>
                                         <td data-order="{{ $isCourse ? 1 : 0 }}">{{ $isCourse ? 'Course' : 'Page' }}</td>
                                         <td data-order="{{ $score }}">
-                                            <span class="seo-score-pill {{ $scoreClass }}" title="Quick content score. Open Edit for full live-page check.">{{ $score }}/100</span>
+                                            <span class="seo-score-pill {{ $scoreClass }}" title="Same scoring as Edit (opens live checks when you edit).">{{ $score }}/100</span>
                                         </td>
                                         <td class="seo-details" data-order="{{ $focusKeyword }}">
                                             <small><strong>Keyword:</strong> {{ $focusKeyword ?: '—' }}</small>

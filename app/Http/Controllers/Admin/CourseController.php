@@ -43,7 +43,8 @@ class CourseController extends Controller
         $analyzer = app(SeoAnalyzerService::class);
         $data['courses'] = $query->orderByDesc('created_at')->get()->each(function (Course $course) use ($analyzer) {
             if ($course->seo) {
-                $course->seo->loadMissing(['page.sections', 'course']);
+                $course->seo->setRelation('course', $course);
+                $course->seo->loadMissing(['page.sections', 'course.dynamicLabel', 'course.courseFaq']);
                 $course->seo_analysis = $analyzer->analyzeForListing($course->seo);
             }
         });
@@ -90,7 +91,8 @@ class CourseController extends Controller
         $analyzer = app(SeoAnalyzerService::class);
         $data['courses'] = $query->orderByDesc('created_at')->get()->each(function (Course $course) use ($analyzer) {
             if ($course->seo) {
-                $course->seo->loadMissing(['page.sections', 'course']);
+                $course->seo->setRelation('course', $course);
+                $course->seo->loadMissing(['page.sections', 'course.dynamicLabel', 'course.courseFaq']);
                 $course->seo_analysis = $analyzer->analyzeForListing($course->seo);
             }
         });

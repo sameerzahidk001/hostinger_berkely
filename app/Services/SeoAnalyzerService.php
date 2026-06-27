@@ -88,13 +88,11 @@ class SeoAnalyzerService
         $technicalPassed = count(array_filter($technical, fn ($c) => $c['ok']));
         $liveScore = (int) round(($technicalPassed / max(count($technical), 1)) * 100);
 
-        $score = $forListing
-            ? $contentScore
-            : $this->weightedScore([
-                ['checks' => $basic, 'weight' => 25],
-                ['checks' => $additional, 'weight' => 25],
-                ['checks' => $technical, 'weight' => 50],
-            ]);
+        $score = $this->weightedScore([
+            ['checks' => $basic, 'weight' => 25],
+            ['checks' => $additional, 'weight' => 25],
+            ['checks' => $technical, 'weight' => 50],
+        ]);
 
         return [
             'score' => $score,
@@ -121,11 +119,22 @@ class SeoAnalyzerService
     }
 
     /**
-     * Fast score for admin tables (no live HTTP requests).
+     * Score for admin tables — same formula as edit, but skips live HTTP (uses cached full analysis when available).
      */
     public function analyzeForListing(PagesSEO $seo): array
     {
-        return $this->analyze($seo, true, true);
+        $cacheStamp = $seo->updated_at?->getTimestamp() ?? 0;
+        $fullCacheKey = 'seo_full_analysis:' . $seo->id . ':' . $cacheStamp;
+
+        if ($cached = Cache::get($fullCacheKey)) {
+            return $cached;
+        }
+
+        $listingCacheKey = 'seo_listing_analysis:' . $seo->id . ':' . $cacheStamp;
+
+        return Cache::remember($listingCacheKey, now()->addHours(6), function () use ($seo) {
+            return $this->analyze($seo, true, false);
+        });
     }
 
     /**
@@ -133,17 +142,22 @@ class SeoAnalyzerService
      */
     public function analyzeForEdit(PagesSEO $seo): array
     {
-        $cacheKey = 'seo_full_analysis:' . $seo->id . ':' . ($seo->updated_at?->getTimestamp() ?? 0);
+        $cacheStamp = $seo->updated_at?->getTimestamp() ?? 0;
+        $fullCacheKey = 'seo_full_analysis:' . $seo->id . ':' . $cacheStamp;
 
-        return Cache::remember($cacheKey, now()->addMinutes(30), function () use ($seo) {
-            return $this->analyze($seo, false, false);
+        return Cache::remember($fullCacheKey, now()->addMinutes(30), function () use ($seo, $cacheStamp) {
+            $result = $this->analyze($seo, false, false);
+            Cache::put('seo_listing_analysis:' . $seo->id . ':' . $cacheStamp, $result, now()->addHours(6));
+
+            return $result;
         });
     }
 
     public function clearAnalysisCache(PagesSEO $seo): void
     {
-        $cacheKey = 'seo_full_analysis:' . $seo->id . ':' . ($seo->updated_at?->getTimestamp() ?? 0);
-        Cache::forget($cacheKey);
+        $cacheStamp = $seo->updated_at?->getTimestamp() ?? 0;
+        Cache::forget('seo_full_analysis:' . $seo->id . ':' . $cacheStamp);
+        Cache::forget('seo_listing_analysis:' . $seo->id . ':' . $cacheStamp);
         $this->clearLivePageCache($seo);
     }
 

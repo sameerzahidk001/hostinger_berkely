@@ -33,7 +33,7 @@ class PagesController extends Controller
         $data['categories_pages_slug_base'] = SiteSettings::pluck('category_perma')->first();
         $data['pagesStatusEnabled'] = pages_status_enabled();
 
-        $query = Page::with(['parent', 'seo.page.sections', 'seo.course', 'faqs', 'createdBy', 'updatedBy']);
+        $query = Page::with(['parent', 'seo.page.sections', 'seo.course.dynamicLabel', 'seo.course.courseFaq', 'faqs', 'createdBy', 'updatedBy']);
 
         if ($data['pagesStatusEnabled']) {
             $query->where('status', 1);
@@ -63,7 +63,7 @@ class PagesController extends Controller
         $data['category_page_id'] = SiteSettings::pluck('categories')->first();
         $data['categories_pages_slug_base'] = SiteSettings::pluck('category_perma')->first();
         $data['pagesStatusEnabled'] = true;
-        $data['pages'] = Page::with(['parent', 'seo.page.sections', 'seo.course', 'faqs', 'createdBy', 'updatedBy'])
+        $data['pages'] = Page::with(['parent', 'seo.page.sections', 'seo.course.dynamicLabel', 'seo.course.courseFaq', 'faqs', 'createdBy', 'updatedBy'])
             ->where('status', 0)
             ->orderByDesc('updated_at')
             ->get()
