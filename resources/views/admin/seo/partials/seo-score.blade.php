@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const descInput = document.querySelector('[name="meta_description"]');
     const focusKeywordInput = document.querySelector('[name="focus_keyword"]');
     const keywordsInput = document.querySelector('[name="keywords"]');
-    const analyzeUrl = @json(route('pages-seo.analyze', $page_seo->id));
+    const analyzeUrl = @json(route('courses-pages-seo.analyze', $page_seo->id));
     const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     let timer = null;
 

@@ -211,13 +211,13 @@
                                             <td style="vertical-align: middle;" data-export="{{ $page->seo ? 'Added' : 'Not Added' }}">
                                                 @if ($page->seo)
                                                     <span class="label label-primary">Added</span>
-                                                    <a href="{{ route('pages-seo.edit', ['pages_seo' => $page->seo->id, 'page_name' => $page->page_name, 'page_id' => $page->id]) }}"
+                                                    <a href="{{ route('courses-pages-seo.edit', ['pages_seo' => $page->seo->id, 'page_name' => $page->page_name, 'page_id' => $page->id]) }}"
                                                         class="label label-primary" target="_blank">
                                                         View
                                                     </a>
                                                 @else
                                                     <span class="label label-danger">Not Added</span>
-                                                    <a href="{{ route('pages-seo.create', ['page_name' => $page->page_name, 'page_id' => $page->id]) }}"
+                                                    <a href="{{ route('courses-pages-seo.create', ['page_name' => $page->page_name, 'page_id' => $page->id]) }}"
                                                         class="label label-danger" target="_blank">
                                                         Add
                                                     </a>

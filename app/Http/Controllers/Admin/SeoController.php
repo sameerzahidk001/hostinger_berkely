@@ -22,35 +22,12 @@ class SeoController extends Controller
         });
     }
 
-    private function seoListingColumns(): array
-    {
-        $columns = [
-            'id',
-            'page_id',
-            'course_id',
-            'title',
-            'meta_description',
-            'keywords',
-            'created_at',
-            'updated_at',
-            'created_by',
-            'updated_by',
-        ];
-
-        if (\Illuminate\Support\Facades\Schema::hasColumn('pages_s_e_o_s', 'focus_keyword')) {
-            array_splice($columns, 5, 0, ['focus_keyword']);
-        }
-
-        return $columns;
-    }
-
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
         $query = PagesSEO::query()
-            ->select($this->seoListingColumns())
             ->with([
                 'page:id,page_name,url,parent_id,category_id',
                 'page.parent:id,url',
@@ -100,7 +77,7 @@ class SeoController extends Controller
     {
         $request->validate(seo_validation_rules());
 
-        $data = $request->except('_token');
+        $data = seo_prepare_save_data($request->except('_token'));
         if ($request->has('course_id')) {
             $data['course_id'] = $request->input('course_id');
             $data['page_id'] = NULL;
@@ -120,10 +97,10 @@ class SeoController extends Controller
         
         if($pages_seo){
             session()->flash('sucess', 'Record Added successfullly!');
-            return redirect()->route('pages-seo.index');
+            return redirect()->route('courses-pages-seo.index');
         }else{
             session()->flash('sucess', 'Failed to insert Record!');
-            return redirect()->route('pages-seo.index');
+            return redirect()->route('courses-pages-seo.index');
         }
     }
 
@@ -163,7 +140,7 @@ class SeoController extends Controller
 
         $page_seo = PagesSEO::findOrFail($id);
 
-        $data = $request->except('_token', '_method');
+        $data = seo_prepare_save_data($request->except('_token', '_method'));
         // dd($request->toArray());
         if ($request->hasFile('thumbnail_img')) {
             $file = $request->file('thumbnail_img');
@@ -191,7 +168,7 @@ class SeoController extends Controller
             return redirect()->route('admin.courses');
         }
 
-        return redirect()->route('pages-seo.index');
+        return redirect()->route('courses-pages-seo.index');
     }
 
     /**
@@ -208,7 +185,7 @@ class SeoController extends Controller
         }else{
             session()->flash('failed', 'Failed to delete Record');
         }
-        return redirect()->route('pages-seo.index');
+        return redirect()->route('courses-pages-seo.index');
 
     }
 }

@@ -41,7 +41,7 @@
                 </div>
                 <div class="ibox-content">
                     <div class="table-responsive">
-                        <form action="{{ route('pages-seo.index') }}" method="GET">
+                        <form action="{{ route('courses-pages-seo.index') }}" method="GET">
                             <div class="row" style="margin-bottom: 6px;">
                                 <div class="col-lg-4">
                                     <select name="type" class="form-control">
@@ -105,12 +105,12 @@
                                         <td data-order="{{ $page_seo->meta_description ?? '' }}">{{ \Illuminate\Support\Str::limit($page_seo->meta_description ?? '', 120) }}</td>
                                         @include('admin.layout.partials.audit-columns-cells', ['model' => $page_seo])
                                         <td>
-                                            <a href="{{ route('pages-seo.edit', $page_seo->id) }}" class="btn-primary btn btn-xs">
+                                            <a href="{{ route('courses-pages-seo.edit', $page_seo->id) }}" class="btn-primary btn btn-xs">
                                                 <i class="fa fa-pencil"></i> Edit
                                             </a>
                                             @include('admin.layout.partials.delete-button', [
                                                 'id' => $page_seo->id,
-                                                'action' => route('pages-seo.destroy', $page_seo->id),
+                                                'action' => route('courses-pages-seo.destroy', $page_seo->id),
                                             ])
                                         </td>
                                     </tr>

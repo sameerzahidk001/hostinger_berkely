@@ -36,7 +36,7 @@
                     <h5>SEO</h5>
                 </div>
                 <div class="ibox-content">
-                    <form role="form" action="{{ route('pages-seo.store') }}" method="POST" enctype="multipart/form-data">
+                    <form role="form" action="{{ route('courses-pages-seo.store') }}" method="POST" enctype="multipart/form-data">
                         @csrf
                         <div class="row">
                             @if(request()->has('course_name'))

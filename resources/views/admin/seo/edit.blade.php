@@ -86,7 +86,7 @@
                         </div>
                     </div>
                     <div class="ibox-content">
-                        <form role="form" action="{{ route('pages-seo.update', $page_seo->id) }}" method="POST"
+                        <form role="form" action="{{ route('courses-pages-seo.update', $page_seo->id) }}" method="POST"
                             enctype="multipart/form-data">
                             @csrf
                             @method('PUT')

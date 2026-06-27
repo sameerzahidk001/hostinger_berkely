@@ -372,8 +372,15 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
         Route::post('user/{id}/update', [UserController::class, 'update'])->name('users.update.post');
         Route::resource('pages', PagesController::class);
         Route::resource('learner-stories', LearnerStoryController::class);
-        Route::post('pages-seo/{pages_seo}/analyze', [SeoController::class, 'analyzePreview'])->name('pages-seo.analyze');
-        Route::resource('pages-seo', SeoController::class);
+        Route::get('pages-seo/{path?}', function (?string $path = null) {
+            $suffix = $path !== null && $path !== '' ? '/' . $path : '';
+
+            return redirect('courses-pages-seo' . $suffix, 301);
+        })->where('path', '.*');
+        Route::post('courses-pages-seo/{pages_seo}/analyze', [SeoController::class, 'analyzePreview'])->name('courses-pages-seo.analyze');
+        Route::resource('courses-pages-seo', SeoController::class)
+            ->names('courses-pages-seo')
+            ->parameters(['courses-pages-seo' => 'pages_seo']);
 
         Route::resource('school', SchoolController::class);
         Route::post('school/{id}/update-status-school', [SchoolController::class, 'updateStatusSchool'])->name('courses.update-status-school');

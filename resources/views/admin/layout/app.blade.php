@@ -117,8 +117,8 @@
                   </li>
                   @endif
                   @if(admin_menu_allowed('seo'))
-                  <li class="{{ request()->is('admin/pages-seo*') ? 'active' : '' }}">
-                     <a href="{{ route('pages-seo.index') }}"><i class="fa fa-laptop"></i> <span class="nav-label">SEO</span></a>
+                  <li class="{{ request()->is('admin/courses-pages-seo*') ? 'active' : '' }}">
+                     <a href="{{ route('courses-pages-seo.index') }}"><i class="fa fa-laptop"></i> <span class="nav-label">SEO</span></a>
                   </li>
                   @endif
                   @if(admin_menu_allowed('training-calendar'))

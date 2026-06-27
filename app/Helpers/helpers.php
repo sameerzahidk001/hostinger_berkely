@@ -631,6 +631,19 @@ if (!function_exists('form_image_alt_value')) {
     }
 }
 
+if (!function_exists('seo_prepare_save_data')) {
+    function seo_prepare_save_data(array $data): array
+    {
+        ensure_seo_focus_keyword_column_exists();
+
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('pages_s_e_o_s', 'focus_keyword')) {
+            unset($data['focus_keyword']);
+        }
+
+        return $data;
+    }
+}
+
 if (!function_exists('ensure_seo_focus_keyword_column_exists')) {
     function ensure_seo_focus_keyword_column_exists(): bool
     {

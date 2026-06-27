@@ -153,9 +153,9 @@
                                             </td>
                                             <td>
                                                 @if ($data->seo)
-                                                    <a href="{{ route('pages-seo.edit', ['pages_seo' => $data->seo->id, 'course_name' => $data->title, 'course_id' => $data->id]) }}" class="label label-primary" target="_blank">View</a>
+                                                    <a href="{{ route('courses-pages-seo.edit', ['pages_seo' => $data->seo->id, 'course_name' => $data->title, 'course_id' => $data->id]) }}" class="label label-primary" target="_blank">View</a>
                                                 @else
-                                                    <a href="{{ route('pages-seo.create', ['course_name' => $data->title, 'course_id' => $data->id]) }}" class="label label-danger" target="_blank">Add</a>
+                                                    <a href="{{ route('courses-pages-seo.create', ['course_name' => $data->title, 'course_id' => $data->id]) }}" class="label label-danger" target="_blank">Add</a>
                                                 @endif
                                             </td>
                                             @include('admin.seo.partials.list-seo-columns', [
