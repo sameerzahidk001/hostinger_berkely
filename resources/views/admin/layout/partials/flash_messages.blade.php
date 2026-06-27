@@ -10,6 +10,18 @@
     </script>
 @endif
 
+@if (session('fail'))
+    <script>
+        toastr.error(@json(session('fail')));
+    </script>
+@endif
+
+@if (session('error'))
+    <script>
+        toastr.error(@json(session('error')));
+    </script>
+@endif
+
 @if ($errors->any())
     <script>
         toastr.error(@json($errors->first() ?: 'Failed. Please try again.'));

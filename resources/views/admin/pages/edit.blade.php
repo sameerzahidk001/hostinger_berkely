@@ -3125,7 +3125,7 @@
             }
 
             if (pageForm) {
-                pageForm.addEventListener('submit', function () {
+                pageForm.addEventListener('submit', function (event) {
                     window.updateSectionOrder();
 
                     if (window.jQuery) {
@@ -3162,8 +3162,24 @@
                     }
 
                     const payloadInput = document.getElementById('sections_payload');
+                    let encodedPayload = '';
+
+                    try {
+                        const json = JSON.stringify(sections);
+                        encodedPayload = btoa(unescape(encodeURIComponent(json)))
+                            .replace(/\+/g, '-')
+                            .replace(/\//g, '_')
+                            .replace(/=+$/g, '');
+                    } catch (error) {
+                        console.error('Could not encode page sections', error);
+                    }
+
+                    if (!encodedPayload) {
+                        return;
+                    }
+
                     if (payloadInput) {
-                        payloadInput.value = btoa(unescape(encodeURIComponent(JSON.stringify(sections))));
+                        payloadInput.value = encodedPayload;
                     }
 
                     for (const el of pageForm.elements) {

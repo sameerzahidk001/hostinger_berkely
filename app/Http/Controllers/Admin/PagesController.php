@@ -296,14 +296,14 @@ class PagesController extends Controller
 
         if (! $request->has('sections')) {
             return redirect()->back()
-                ->with('error', 'Page meta saved, but section data was not received. The form may be too large — try again or ask hosting to increase post_max_size and max_input_vars.')
+                ->with('fail', 'Section data was not received. Please try saving again. If it keeps failing, contact support to raise post_max_size on the server.')
                 ->withInput();
         }
 
         $sections = $request->input('sections');
         if (! is_array($sections)) {
             return redirect()->back()
-                ->with('error', 'Invalid section data received. Existing sections were kept unchanged.')
+                ->with('fail', 'Invalid section data received. Existing sections were kept unchanged.')
                 ->withInput();
         }
 
@@ -501,22 +501,35 @@ class PagesController extends Controller
 
     private function mergeSectionsPayload(Request $request): void
     {
-        $payload = (string) $request->input('sections_payload', '');
-        if ($payload === '') {
-            return;
-        }
-
-        $json = base64_decode($payload, true);
-        if ($json === false) {
-            return;
-        }
-
-        $sections = json_decode($json, true);
-        if (! is_array($sections)) {
+        $sections = $this->decodeSectionsPayload((string) $request->input('sections_payload', ''));
+        if ($sections === null) {
             return;
         }
 
         $request->merge(['sections' => $sections]);
+    }
+
+    private function decodeSectionsPayload(string $payload): ?array
+    {
+        if ($payload === '') {
+            return null;
+        }
+
+        // URL-encoded form posts turn base64 "+" into spaces — restore before decode.
+        $normalized = strtr(str_replace(' ', '+', $payload), '-_', '+/');
+        $padding = strlen($normalized) % 4;
+        if ($padding > 0) {
+            $normalized .= str_repeat('=', 4 - $padding);
+        }
+
+        $json = base64_decode($normalized, true);
+        if ($json === false) {
+            return null;
+        }
+
+        $sections = json_decode($json, true);
+
+        return is_array($sections) ? $sections : null;
     }
 
 
