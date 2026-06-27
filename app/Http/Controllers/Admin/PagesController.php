@@ -341,6 +341,9 @@ class PagesController extends Controller
                         $section['cards'][$cardIndex]['icon'] = $request->input("sections.$order.cards.$cardIndex.icon");
                     } elseif ($request->input("sections.$order.cards.$cardIndex.icon_source") === 'remove') {
                         $section['cards'][$cardIndex]['icon'] = null;
+                    } else {
+                        $section['cards'][$cardIndex]['icon'] = $section['cards'][$cardIndex]['icon']
+                            ?? ($oldData['cards'][$cardIndex]['icon'] ?? null);
                     }
 
                     if ($request->input("sections.$order.cards.$cardIndex.image_source") === 'upload') {
@@ -358,6 +361,16 @@ class PagesController extends Controller
                         $section['cards'][$cardIndex]['image'] = $request->input("sections.$order.cards.$cardIndex.image");
                     } elseif ($request->input("sections.$order.cards.$cardIndex.image_source") === 'remove') {
                         $section['cards'][$cardIndex]['image'] = null;
+                    } else {
+                        $section['cards'][$cardIndex]['image'] = $section['cards'][$cardIndex]['image']
+                            ?? ($oldData['cards'][$cardIndex]['image'] ?? null);
+                    }
+
+                    if (empty($section['cards'][$cardIndex]['image']) && ! empty($oldData['cards'][$cardIndex]['image'])) {
+                        $section['cards'][$cardIndex]['image'] = $oldData['cards'][$cardIndex]['image'];
+                    }
+                    if (empty($section['cards'][$cardIndex]['icon']) && ! empty($oldData['cards'][$cardIndex]['icon'])) {
+                        $section['cards'][$cardIndex]['icon'] = $oldData['cards'][$cardIndex]['icon'];
                     }
                 }
             }

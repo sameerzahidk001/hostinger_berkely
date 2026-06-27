@@ -1,6 +1,53 @@
 #!/bin/bash
 set -e
 
+# User uploads live under public/ but are usually NOT committed to git.
+# A plain `git pull` + `git clean` on Hostinger deletes them. This script
+# archives uploads to storage/ (gitignored), pulls code, then restores files.
+
+PRESERVE_ROOT="storage/app/preserved-public-uploads"
+DEPLOY_BRANCH="${DEPLOY_BRANCH:-fix/rollback-jun19-night}"
+UPLOAD_DIRS=(
+  "public/images/library"
+  "public/images/clients"
+  "public/images/profiles"
+  "public/images"
+  "public/admin/courses"
+)
+
+preserve_uploads() {
+  echo "==> Archiving user uploads (before code update)"
+  for dir in "${UPLOAD_DIRS[@]}"; do
+    if [ -d "$dir" ]; then
+      mkdir -p "$PRESERVE_ROOT/$dir"
+      cp -a "$dir/." "$PRESERVE_ROOT/$dir/" 2>/dev/null || true
+    else
+      mkdir -p "$dir"
+    fi
+  done
+}
+
+restore_uploads() {
+  echo "==> Restoring user uploads (after code update)"
+  for dir in "${UPLOAD_DIRS[@]}"; do
+    if [ -d "$PRESERVE_ROOT/$dir" ]; then
+      mkdir -p "$dir"
+      cp -a "$PRESERVE_ROOT/$dir/." "$dir/" 2>/dev/null || true
+    fi
+  done
+}
+
+preserve_uploads
+
+if [ -d .git ]; then
+  echo "==> Git pull ($DEPLOY_BRANCH)"
+  git pull origin "$DEPLOY_BRANCH"
+else
+  echo "!! Not a git repo — skipped git pull"
+fi
+
+restore_uploads
+
 echo "==> Composer install"
 composer install --no-dev --optimize-autoloader
 
@@ -39,4 +86,6 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
-echo "==> Done. Open your site URL."
+echo "==> Done. User uploads preserved in $PRESERVE_ROOT"
+echo "!! Never run: git clean -fd  (it deletes uploaded images)"
+echo "!! Use only: bash deploy-hostinger.sh"
