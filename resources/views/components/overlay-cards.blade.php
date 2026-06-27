@@ -9,9 +9,11 @@
     <div class="grid place-content-center gap-10 {{ $background != 'transparent' ? 'mb-16 mt-16' : '' }} {{ $grid }}">
         @foreach ($cards as $card)
             <div class="relative overflow-hidden group h-[500px] bg-primary">
+            @if (!empty($card['image']))
                 <img src="{{ $card['image'] }}"
                     alt="{{ image_alt($card['image_alt'] ?? null, $card['title'] ?? 'Card image') }}"
                     class="h-full transition-all delay-300 duration-400 ease-in w-full absolute group-hover:scale-105 object-cover">
+            @endif
                 
                 <div class="absolute px-4 py-8 z-50 gap-4 flex flex-col justify-end bg-opacity-45 h-full w-full bottom-0">
                     <span class="text-[20px] sm:text-[24px] text-white md:text-[32px] font-canela" style="color: {{ $color }}">{{ $card['title'] }}</span>

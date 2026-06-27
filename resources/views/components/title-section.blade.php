@@ -9,9 +9,9 @@
 <section id="section-{{$id}}" class="card-hidden px-6 min-[1200px]:px-[72px] flex items-center mb-16 mt-16" 
     style="background: {{ $background }}; background-size: cover; background-position: center;">
     <div class="flex flex-col md:flex-row gap-4 {{ $background != 'transparent' ? 'mb-16 mt-16' : '' }}">
-        <h1 class="flex-1 font-canela text-[32px] leading-[40px] md:text-[48px] md:leading-[58px] min-[960px]:text-[56px] min-[960px]:leading-[67px] {{ $textAlignment }}" style="color: {{ $color }};">
+        <h2 class="flex-1 font-canela text-[32px] leading-[40px] md:text-[48px] md:leading-[58px] min-[960px]:text-[56px] min-[960px]:leading-[67px] {{ $textAlignment }}" style="color: {{ $color }};">
             {{ $title }}
-        </h1>
+        </h2>
         <div class="flex flex-col gap-12 flex-1">
             <div class="text-[18px]" style="color: {{ $color }};">
                 {!! $description !!}

@@ -40,9 +40,9 @@
                 @if ($course->dynamicLabel->banner_breadcrumb === 1)
                     <div class="items-center gap-1 hidden md:flex ">
                         <a href="#">Home</a>
-                        <img src="{{ asset('frontend/images/svgs/caret-r-o.svg') }}" class="w-4 h-4" alt="">
+                        <img src="{{ asset('frontend/images/svgs/caret-r-o.svg') }}" class="w-4 h-4" alt="Breadcrumb separator">
                         <span class="font-bold">Course</span>
-                        <img src="{{ asset('frontend/images/svgs/caret-r-o.svg') }}" class="w-4 h-4" alt="">
+                        <img src="{{ asset('frontend/images/svgs/caret-r-o.svg') }}" class="w-4 h-4" alt="Breadcrumb separator">
                         <span class="font-bold">{{ $course->title }}</span>
                     </div>
                 @endif
@@ -60,7 +60,7 @@
                     @endif
                 </div>
                 <div clas="text-[18px] text-white editor">
-                    {!! $course->short_description !!}
+                    {!! demote_page_headings($course->short_description) !!}
                 </div>
                 <div class="flex gap-6 mt-4 md:mt-auto">
                     @if ($course->dynamicLabel->banner_button_1_text && $course->dynamicLabel->banner_button_1_url)
@@ -121,7 +121,7 @@
                     <a href="#apply"
                         class="shrink-0 px-6 py-2 inline-flex gap-1 items-center font-ghothic text-[13px]  bg-crimson  text-white hover:bg-primary ">
                         Apply Now
-                        <img src="{{ asset('frontend/images/svgs/caret-right.svg') }}" class="w-8 h-8" alt="">
+                        <img src="{{ asset('frontend/images/svgs/caret-right.svg') }}" class="w-8 h-8" alt="Next section">
                     </a>
                 @endif
 
@@ -370,10 +370,10 @@
                 gap-4 gap-x-4 mt-4 w-full">
                     @foreach ($course->courseStructuresFirst ?? [] as $index => $courseStructure)
                         <div class="flex flex-col gap-0 w-full max-w-[600px] mx-auto">
-                            <h1 class="text-[16px] font-semibold text-crimson leading-normal">
+                            <h2 class="text-[16px] font-semibold text-crimson leading-normal">
                                 {{ $courseStructure->title . ' ' . $courseStructure->heading }}
-                            </h1>
-                            <div class="pb-0 editor">{!! $courseStructure->overview !!}</div>
+                            </h2>
+                            <div class="pb-0 editor">{!! demote_page_headings($courseStructure->overview) !!}</div>
 
                             <div class="flex  flex-col flex-1 gap-0 justify-start">
 
@@ -381,7 +381,7 @@
                                 @foreach ($courseStructure->subHeadingsFirst as $index => $subHeadings)
                                     <div class="flex items-center gap-2 ">
                                         <img src="{{ asset('frontend/images/svgs/tick.svg') }}" class="max-w-8 h-8"
-                                            alt="">
+                                            alt="Included">
                                         <p class="text-[16px]">{{ $subHeadings->sub_heading }}</p>
                                     </div>
                                 @endforeach
@@ -412,10 +412,10 @@
                 @elseif(count($course->courseStructures) >= 4) md:grid-cols-4 @endif gap-4 gap-x-2 mt-4 w-full">
                     @foreach ($course->courseStructures ?? [] as $index => $LecturePlan)
                         <div class="flex flex-col gap-0 bg-[#f5f5f5] py-4 px-4 md:px-4 w-full max-w-[600px] mx-auto">
-                            <h1 class="text-[16px] font-semibold text-crimson leading-normal">
+                            <h2 class="text-[16px] font-semibold text-crimson leading-normal">
                                 {{ $LecturePlan->title . ' ' . $LecturePlan->heading }}
-                            </h1>
-                            <div class="pb-4">{!! $LecturePlan->overview !!}</div>
+                            </h2>
+                            <div class="pb-4">{!! demote_page_headings($LecturePlan->overview) !!}</div>
 
                             <div class="accordion flex flex-col gap-2 mt-0">
                                 @foreach ($LecturePlan->subHeadings as $index => $subHeadings)
@@ -783,19 +783,19 @@
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 gap-y-12 w-full py-24">
         <!-- Card 1 -->
         <div class="flex flex-col items-start gap-4 text-center">
-            <img src="{{ asset('frontend/images/svgs/inperson.svg') }}" alt="" class="mx-auto">
+            <img src="{{ asset('frontend/images/svgs/inperson.svg') }}" alt="In-person classes" class="mx-auto">
             <h3 class="mx-auto font-bold text-[24px] lg:text-[32px] text-white whitespace-nowrap">In-person Classes</h3>
             <p class="font-semibold text-[16px] md:text-[18px] text-white flex-1">Hosted in modern, comfortable facilities, providing a collaborative and engaging learning environment.</p>
         </div>
         <!-- Card 2 -->
         <div class="flex flex-col items-start gap-4 text-center">
-            <img src="{{ asset('frontend/images/svgs/onlineclass.svg') }}" alt="" class="mx-auto">
+            <img src="{{ asset('frontend/images/svgs/onlineclass.svg') }}" alt="Live online classes" class="mx-auto">
             <h3 class="mx-auto font-bold text-[24px] lg:text-[32px] text-white whitespace-nowrap">Live Online Classes</h3>
             <p class="font-semibold text-[16px] md:text-[18px] text-white flex-1">Provides an engaging experience, enabling you to attend classes from anywhere in the world.</p>
         </div>
         <!-- Card 3 -->
         <div class="flex flex-col items-start gap-4 text-center">
-            <img src="{{ asset('frontend/images/svgs/packages.svg') }}" alt="" class="mx-auto">
+            <img src="{{ asset('frontend/images/svgs/packages.svg') }}" alt="Self-paced packages" class="mx-auto">
             <h3 class="mx-auto font-bold text-[24px] lg:text-[32px] text-white whitespace-nowrap">Self-paced Packages</h3>
             <p class="font-semibold text-[16px] md:text-[18px] text-white flex-1">Offers flexible, self-paced packages, allowing you to learn at your own convenience from anywhere in the world.</p>
         </div>
@@ -1289,9 +1289,9 @@
             class="card-hidden flex flex-col px-4 bg-[#000435] py-[44px] items-center min-[1200px]:px-[72px]" style="margin-bottom: 0px !important;">
             <div class="max-w-[900px]">
                 <div class="flex justify-between border-white border-b pb-3 w-full">
-                    <h1
+                    <h2
                         class="text-[20px] sm:text-[24px] text-white md:text-[32px] font-canela section-heading text-center">
-                        {{ $course->dynamicLabel?->faq_heading ?? 'FAQ: ' . $course->title }}</h1>
+                        {{ $course->dynamicLabel?->faq_heading ?? 'FAQ: ' . $course->title }}</h2>
                     <!-- <a href="#" class="text-[24px] text-white hover:underline">All FAQs</a> -->
                 </div>
                 <div class="accordion flex flex-col gap-3">
@@ -1320,10 +1320,10 @@
         <section id="apply"
             class="card-hidden flex flex-col px-4 bg-[#e7a70b] py-[44px] items-center min-[1200px]:px-[72px]" style="margin-bottom: 0px !important;">
             <div class="max-w-[845px]">
-                <h1 class="text-dark text-[18px] sm:text-[20px] md:text-[28px] section-heading text-center">
+                <h2 class="text-dark text-[18px] sm:text-[20px] md:text-[28px] section-heading text-center">
                     {!! $course->contact_us_text ??
                         'contact us for more information or to apply for admission. Seats fill up quickly, so we encourage early registration!' !!}
-                </h1>
+                </h2>
             </div>
         </section>
 

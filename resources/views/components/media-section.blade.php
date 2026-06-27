@@ -60,10 +60,10 @@
                 <div
                     class="flex-1 w-full xl:py-4 min-[1340px]:py-8 my-2 xl:absolute {{ $direction === 'left' ? 'xl:-left-20' : 'xl:-right-20' }} xl:px-8 gap-2 flex flex-col {{ $contentBackground != 'transparent' ? 'content-bg' : 'xl:bg-white' }}">
                     @if(isset($title))
-                        <h1 class="font-roboto text-[32px] leading-[40px] md:text-[48px] md:leading-[58px] min-[960px]:text-[32px] min-[960px]:leading-[40px] tracking-wide max-w-[450px]"
+                        <h2 class="font-roboto text-[32px] leading-[40px] md:text-[48px] md:leading-[58px] min-[960px]:text-[32px] min-[960px]:leading-[40px] tracking-wide max-w-[450px]"
                             style="color: {{ $color ?? 'inherit' }};">
                                 {{ $title }}
-                        </h1>
+                        </h2>
                     @endif
                     <div class="flex flex-col gap-2">
                         @if(isset($description))
@@ -74,8 +74,8 @@
                             <a href="{{ $link }}" class="flex items-center gap-2 mt-2" target="{{ $urlTarget == '0' ? '_blank' : '' }}">
                                 <div
                                     class="flex  group-hover:bg-secondary justify-center items-center rounded-full bg-primary  min-h-10 min-w-10 max-h-10 max-w-10">
-                                    <img src="https://derbygirls.co.uk/public/frontend/images/svgs/arrow-right.svg"
-                                        class="w-[28px] h-4" alt="">
+                                    <img src="{{ asset('frontend/images/svgs/arrow-right.svg') }}"
+                                        class="w-[28px] h-4" alt="Arrow Right">
                                 </div>
                                 <h2 class="font-bold text-[16px] hover:underline" style="color: {{ $color ?? 'inherit' }};">{{ $buttonText }}
                                 </h2>

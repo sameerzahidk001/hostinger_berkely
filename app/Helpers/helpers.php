@@ -69,13 +69,29 @@ if (!function_exists('media_url')) {
     }
 }
 
-function generateFileName($file, $prefix = '')
-{
-    $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-    $extension = $file->getClientOriginalExtension();
-    $slug = Str::slug($originalName);
-    $unique = uniqid();
-    return ($prefix ? $prefix . '_' : '') . $slug . '-' . $unique . '.' . $extension;
+if (!function_exists('demote_page_headings')) {
+    /**
+     * CMS/editor HTML often contains extra H1 tags. Keep a single page H1 in the template only.
+     */
+    function demote_page_headings(?string $html): string
+    {
+        if ($html === null || trim($html) === '') {
+            return '';
+        }
+
+        return preg_replace(['/<(\/?)h1\b/i'], ['<$1h2'], $html) ?? $html;
+    }
+}
+
+if (!function_exists('generateFileName')) {
+    function generateFileName($file, $prefix = '')
+    {
+        $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $extension = $file->getClientOriginalExtension();
+        $slug = Str::slug($originalName);
+        $unique = uniqid();
+        return ($prefix ? $prefix . '_' : '') . $slug . '-' . $unique . '.' . $extension;
+    }
 }
 
 if (!function_exists('panel_role_name')) {

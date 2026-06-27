@@ -84,10 +84,11 @@
                     return [
                         'image' => media_url($card['image'] ?? null),
                         'title' => $card['title'] ?? '',
-                        'description' => $card['description'] ?? '',
+                        'description' => demote_page_headings($card['description'] ?? ''),
                         'url' => $card['url'] ?? null,
                         'url_target' => $card['url_target'] ?? '1',
                         'buttonText' => $card['url_text'] ?? null,
+                        'image_alt' => image_alt($card['image_alt'] ?? null, $card['title'] ?? 'Card image'),
                     ];
                 })->toArray();
             @endphp
@@ -101,7 +102,7 @@
                 :color="$section->data['color'] ?? ''"
                 :layout="$section->data['layout'] ?? ''"
                 :columns="$section->data['columns'] ?? 3"
-                :cards="$section->data['cards'] ?? []"
+                :cards="$cards"
             />
         @elseif ($section->section_type === 'title-section')
             <x-title-section 
@@ -134,12 +135,13 @@
             @php
                 $cards = collect($section->data['cards'] ?? [])->map(function ($card) {
                     return [
-                        'image' => (!empty($card['image']) && is_string($card['image'])) ? media_url($card['image']) : null,
+                        'image' => media_url($card['image'] ?? null),
                         'title' => $card['title'] ?? '',
-                        'description' => $card['description'] ?? '',
+                        'description' => demote_page_headings($card['description'] ?? ''),
                         'url' => $card['url'] ?? '#',
                         'url_target' => $card['url_target'] ?? '1',
-                        'buttonText' => $card['url_text'] ?? 'Learn More'
+                        'buttonText' => $card['url_text'] ?? 'Learn More',
+                        'image_alt' => image_alt($card['image_alt'] ?? null, $card['title'] ?? 'Card image'),
                     ];
                 })->toArray();
             @endphp
