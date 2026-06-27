@@ -105,6 +105,7 @@
 document.addEventListener('DOMContentLoaded', function () {
     const titleInput = document.querySelector('[name="title"]');
     const descInput = document.querySelector('[name="meta_description"]');
+    const focusKeywordInput = document.querySelector('[name="focus_keyword"]');
     const keywordsInput = document.querySelector('[name="keywords"]');
     const analyzeUrl = @json(route('pages-seo.analyze', $page_seo->id));
     const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
@@ -160,6 +161,7 @@ document.addEventListener('DOMContentLoaded', function () {
         timer = setTimeout(function () {
             const title = (titleInput?.value || '').trim();
             const description = (descInput?.value || '').trim();
+            const focusKeyword = (focusKeywordInput?.value || '').trim();
             const keywords = (keywordsInput?.value || '').trim();
 
             document.getElementById('seo-preview-title').textContent = title || 'Page title preview';
@@ -176,6 +178,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 body: JSON.stringify({
                     title: title,
                     meta_description: description,
+                    focus_keyword: focusKeyword,
                     keywords: keywords,
                 }),
             })
@@ -185,7 +188,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 400);
     }
 
-    [titleInput, descInput].forEach(function (el) {
+    [titleInput, descInput, focusKeywordInput].forEach(function (el) {
         el?.addEventListener('input', refreshAnalysis);
     });
 

@@ -149,14 +149,7 @@ class SeoAnalyzerService
 
     public function focusKeyword(PagesSEO $seo): string
     {
-        $keywords = trim((string) $seo->keywords);
-        if ($keywords === '') {
-            return '';
-        }
-
-        $parts = preg_split('/[,;|]+/', $keywords);
-
-        return trim((string) ($parts[0] ?? ''));
+        return seo_focus_keyword($seo);
     }
 
     private function resolveUrlSlug(PagesSEO $seo): string

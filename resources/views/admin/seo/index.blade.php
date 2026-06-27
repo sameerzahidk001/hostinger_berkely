@@ -82,7 +82,7 @@
                                         $isCourse = ! empty($page_seo->course_id);
                                         $itemTitle = $page_seo->title ?: ($isCourse ? ($page_seo->course->title ?? 'Course') : ($page_seo->page->page_name ?? 'Page'));
                                         $itemUrl = seo_list_item_url($page_seo, $category_perma ?? 'category');
-                                        $focusKeyword = $analysis['focus_keyword'] ?? seo_list_focus_keyword($page_seo->keywords);
+                                        $focusKeyword = $analysis['focus_keyword'] ?? seo_focus_keyword($page_seo);
                                     @endphp
                                     <tr>
                                         <td data-order="{{ $page_seo->id }}">{{ $loop->iteration }}</td>

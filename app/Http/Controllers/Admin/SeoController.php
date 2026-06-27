@@ -29,6 +29,7 @@ class SeoController extends Controller
                 'course_id',
                 'title',
                 'meta_description',
+                'focus_keyword',
                 'keywords',
                 'created_at',
                 'updated_at',
@@ -133,7 +134,7 @@ class SeoController extends Controller
     {
         $seo = PagesSEO::with(['page.sections', 'course.dynamicLabel', 'course.courseFaq'])->findOrFail($id);
 
-        $seo->fill($request->only(['title', 'meta_description', 'keywords']));
+        $seo->fill($request->only(['title', 'meta_description', 'focus_keyword', 'keywords']));
 
         return response()->json(app(SeoAnalyzerService::class)->analyze($seo));
     }

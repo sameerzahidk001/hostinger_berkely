@@ -76,6 +76,7 @@ php artisan migrate --path=database/migrations/2026_06_19_000002_add_image_alt_c
 php artisan berkely:ensure-image-alt-columns
 php artisan migrate --path=database/migrations/2026_06_20_000001_add_status_to_pages_table.php --force
 php artisan migrate --path=database/migrations/2026_06_22_000001_add_image_to_admins_table.php --force
+php artisan migrate --path=database/migrations/2026_06_23_000001_add_focus_keyword_to_pages_seo_table.php --force
 
 php artisan config:clear
 php artisan cache:clear

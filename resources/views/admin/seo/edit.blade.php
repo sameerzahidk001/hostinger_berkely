@@ -125,6 +125,15 @@
                                         placeholder="Add meta description" data-maxlength="160" maxlength="160">{{ old('meta_description', $page_seo->meta_description) }}</textarea>
                                 </div>
                                 <div class="col-lg-12 mb">
+                                    <label for="focus_keyword">Focus Keyword <small>(primary phrase for SEO scoring — max {{ seo_field_limits()['focus_keyword_max'] }} characters)</small></label>
+                                    <input type="text" class="form-control" name="focus_keyword" id="focus_keyword"
+                                        placeholder="e.g. Executive Women Leadership Programme"
+                                        value="{{ old('focus_keyword', $page_seo->focus_keyword) }}"
+                                        data-maxlength="{{ seo_field_limits()['focus_keyword_max'] }}"
+                                        maxlength="{{ seo_field_limits()['focus_keyword_max'] }}">
+                                    <p class="help-block text-muted" style="margin-top:4px;">Main keyword the SEO tool checks in title, description, URL, and live page H1. If left empty, the first priority keyword is used.</p>
+                                </div>
+                                <div class="col-lg-12 mb">
                                     <label for="">Priority Keywords <small>( Max {{ seo_field_limits()['priority_keywords_max_tags'] }} keywords, {{ seo_field_limits()['keyword_tag_max_length'] }} chars each )</small></label>
                                     <input class="form-control" name="keywords" id="keywords"
                                         placeholder="Add keywords with comma separated" value="{{ old('keywords', $page_seo->keywords) }}">

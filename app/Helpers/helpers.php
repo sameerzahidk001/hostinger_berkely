@@ -308,6 +308,7 @@ if (!function_exists('seo_field_limits')) {
             'priority_keywords_max_tags' => 10,
             'additional_keywords_max_tags' => 15,
             'keyword_tag_max_length' => 60,
+            'focus_keyword_max' => 80,
             'priority_keywords_max_total' => 400,
             'additional_keywords_max_total' => 400,
         ];
@@ -322,9 +323,26 @@ if (!function_exists('seo_validation_rules')) {
         return [
             'title' => ($titleRequired ? 'required' : 'nullable') . '|string|max:' . $limits['title_max'],
             'meta_description' => 'nullable|string|max:' . $limits['meta_description_max'],
+            'focus_keyword' => 'nullable|string|max:' . $limits['focus_keyword_max'],
             'keywords' => 'nullable|string|max:' . $limits['priority_keywords_max_total'],
             'additional_keywords' => 'nullable|string|max:' . $limits['additional_keywords_max_total'],
         ];
+    }
+}
+
+if (!function_exists('seo_focus_keyword')) {
+    function seo_focus_keyword(mixed $seo): string
+    {
+        if (is_object($seo)) {
+            $dedicated = trim((string) ($seo->focus_keyword ?? ''));
+            if ($dedicated !== '') {
+                return $dedicated;
+            }
+
+            return seo_list_focus_keyword($seo->keywords ?? '');
+        }
+
+        return seo_list_focus_keyword(is_string($seo) ? $seo : '');
     }
 }
 
