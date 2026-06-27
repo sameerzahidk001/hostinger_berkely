@@ -79,7 +79,7 @@
                                 class="inline-block mt-4 px-4 py-2 bg-secondary text-white rounded-lg hover:bg-primary transition duration-300"
                                 target="{{ $card['url_target'] == '0' ? '_blank' : '' }}"
                                 style="color: {{ $card['color'] ?? 'inherit' }}">
-                                {{ $card['url_text'] ?? 'Learn More' }}
+                                {{ $card['url_text'] ?? $card['buttonText'] ?? 'Learn More' }}
                             </a>
                         @endif
                     </div>
@@ -106,7 +106,7 @@
                                     class="flex group-hover:bg-secondary justify-center items-center rounded-full bg-primary min-h-10 min-w-10 max-h-10 max-w-10">
                                     <img src="{{ asset('frontend/images/svgs/arrow-right.svg') }}" class="w-[28px] h-4" alt="">
                                 </div>
-                                <h2 class="font-bold text-[18px] text-white" style="color: {{ $card['color'] ?? 'inherit' }}">{{ $card['url_text'] }}</h2>
+                                <h2 class="font-bold text-[18px] text-white" style="color: {{ $card['color'] ?? 'inherit' }}">{{ $card['url_text'] ?? $card['buttonText'] ?? 'Learn More' }}</h2>
                             </a>
                         @endif
                     </div>
@@ -139,7 +139,7 @@
                                     class="flex group-hover:bg-secondary justify-center items-center rounded-full bg-primary min-h-10 min-w-10 max-h-10 max-w-10">
                                     <img src="{{ asset('frontend/images/svgs/arrow-right.svg') }}" class="w-[28px] h-4" alt="">
                                 </div>
-                                <h2 class="font-bold text-[18px] text-white" style="color: {{ $card['color'] ?? 'inherit' }}">{{ $card['url_text'] }}</h2>
+                                <h2 class="font-bold text-[18px] text-white" style="color: {{ $card['color'] ?? 'inherit' }}">{{ $card['url_text'] ?? $card['buttonText'] ?? 'Learn More' }}</h2>
                             </a>
                         @endif
                     </div>

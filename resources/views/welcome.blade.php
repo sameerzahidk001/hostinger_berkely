@@ -86,8 +86,10 @@
                         'title' => $card['title'] ?? '',
                         'description' => demote_page_headings($card['description'] ?? ''),
                         'url' => $card['url'] ?? null,
+                        'url_text' => $card['url_text'] ?? null,
                         'url_target' => $card['url_target'] ?? '1',
-                        'buttonText' => $card['url_text'] ?? null,
+                        'background' => $card['background'] ?? null,
+                        'color' => $card['color'] ?? null,
                         'image_alt' => image_alt($card['image_alt'] ?? null, $card['title'] ?? 'Card image'),
                     ];
                 })->toArray();
