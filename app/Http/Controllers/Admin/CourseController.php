@@ -44,7 +44,7 @@ class CourseController extends Controller
         $data['courses'] = $query->orderByDesc('created_at')->get()->each(function (Course $course) use ($analyzer) {
             if ($course->seo) {
                 $course->seo->loadMissing(['page.sections', 'course']);
-                $course->seo_analysis = $analyzer->analyze($course->seo, true);
+                $course->seo_analysis = $analyzer->analyzeForListing($course->seo);
             }
         });
         $data['instructors'] = DB::table('users')
@@ -91,7 +91,7 @@ class CourseController extends Controller
         $data['courses'] = $query->orderByDesc('created_at')->get()->each(function (Course $course) use ($analyzer) {
             if ($course->seo) {
                 $course->seo->loadMissing(['page.sections', 'course']);
-                $course->seo_analysis = $analyzer->analyze($course->seo, true);
+                $course->seo_analysis = $analyzer->analyzeForListing($course->seo);
             }
         });
 

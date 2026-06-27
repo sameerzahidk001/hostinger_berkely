@@ -101,6 +101,7 @@ class SeoAnalyzerService
             'label' => $this->scoreLabel($score),
             'content_score' => $contentScore,
             'live_score' => $liveScore,
+            'listing_fast' => $forListing,
             'focus_keyword' => $focusKeyword,
             'word_count' => $wordCount,
             'keyword_density' => $density,
@@ -117,6 +118,33 @@ class SeoAnalyzerService
             'internal_links' => $this->countLinks($content, 'internal'),
             'schema' => 'Article',
         ];
+    }
+
+    /**
+     * Fast score for admin tables (no live HTTP requests).
+     */
+    public function analyzeForListing(PagesSEO $seo): array
+    {
+        return $this->analyze($seo, true, true);
+    }
+
+    /**
+     * Full score with live page checks (single record — edit screen).
+     */
+    public function analyzeForEdit(PagesSEO $seo): array
+    {
+        $cacheKey = 'seo_full_analysis:' . $seo->id . ':' . ($seo->updated_at?->getTimestamp() ?? 0);
+
+        return Cache::remember($cacheKey, now()->addMinutes(30), function () use ($seo) {
+            return $this->analyze($seo, false, false);
+        });
+    }
+
+    public function clearAnalysisCache(PagesSEO $seo): void
+    {
+        $cacheKey = 'seo_full_analysis:' . $seo->id . ':' . ($seo->updated_at?->getTimestamp() ?? 0);
+        Cache::forget($cacheKey);
+        $this->clearLivePageCache($seo);
     }
 
     public function focusKeyword(PagesSEO $seo): string

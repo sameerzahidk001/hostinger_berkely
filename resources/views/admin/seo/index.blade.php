@@ -37,6 +37,7 @@
             <div class="ibox float-e-margins" style="margin-bottom: 0;">
                 <div class="ibox-title">
                     <h5>SEO</h5>
+                    <small class="text-muted">List shows a quick content score. Open <strong>Edit</strong> for full live-page analysis.</small>
                 </div>
                 <div class="ibox-content">
                     <div class="table-responsive">
@@ -93,13 +94,13 @@
                                         </td>
                                         <td data-order="{{ $isCourse ? 1 : 0 }}">{{ $isCourse ? 'Course' : 'Page' }}</td>
                                         <td data-order="{{ $score }}">
-                                            <span class="seo-score-pill {{ $scoreClass }}" title="Content {{ $analysis['content_score'] ?? 0 }}/100 · Live page {{ $analysis['live_score'] ?? 0 }}/100">{{ $score }}/100</span>
+                                            <span class="seo-score-pill {{ $scoreClass }}" title="Quick content score. Open Edit for full live-page check.">{{ $score }}/100</span>
                                         </td>
                                         <td class="seo-details" data-order="{{ $focusKeyword }}">
                                             <small><strong>Keyword:</strong> {{ $focusKeyword ?: '—' }}</small>
                                             <small><strong>Schema:</strong> {{ $analysis['schema'] ?? 'Article' }}</small>
                                             <small><strong>Links:</strong> {{ $analysis['external_links'] ?? 0 }} ext / {{ $analysis['internal_links'] ?? 0 }} int</small>
-                                            <small><strong>Words:</strong> {{ number_format($analysis['word_count'] ?? 0) }} · Live {{ $analysis['live_score'] ?? 0 }}/100</small>
+                                            <small><strong>Words:</strong> {{ number_format($analysis['word_count'] ?? 0) }}</small>
                                         </td>
                                         <td data-order="{{ $page_seo->meta_description ?? '' }}">{{ \Illuminate\Support\Str::limit($page_seo->meta_description ?? '', 120) }}</td>
                                         @include('admin.layout.partials.audit-columns-cells', ['model' => $page_seo])
