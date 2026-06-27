@@ -74,6 +74,7 @@ php artisan migrate --path=database/migrations/2026_06_16_000005_add_source_to_p
 php artisan migrate --path=database/migrations/2026_06_19_000001_create_user_activity_logs_table.php --force
 php artisan migrate --path=database/migrations/2026_06_19_000002_add_image_alt_columns.php --force
 php artisan berkely:ensure-image-alt-columns
+php artisan berkely:ensure-seo-focus-keyword-column
 php artisan migrate --path=database/migrations/2026_06_20_000001_add_status_to_pages_table.php --force
 php artisan migrate --path=database/migrations/2026_06_22_000001_add_image_to_admins_table.php --force
 php artisan migrate --path=database/migrations/2026_06_23_000001_add_focus_keyword_to_pages_seo_table.php --force

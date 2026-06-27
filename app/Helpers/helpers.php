@@ -631,6 +631,39 @@ if (!function_exists('form_image_alt_value')) {
     }
 }
 
+if (!function_exists('ensure_seo_focus_keyword_column_exists')) {
+    function ensure_seo_focus_keyword_column_exists(): bool
+    {
+        static $ready = null;
+
+        if ($ready === true) {
+            return true;
+        }
+
+        if ($ready === false) {
+            return false;
+        }
+
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('pages_s_e_o_s')
+                && ! \Illuminate\Support\Facades\Schema::hasColumn('pages_s_e_o_s', 'focus_keyword')) {
+                \Illuminate\Support\Facades\Schema::table('pages_s_e_o_s', function (\Illuminate\Database\Schema\Blueprint $table) {
+                    $table->string('focus_keyword', 80)->nullable()->after('meta_description');
+                });
+            }
+
+            $ready = true;
+
+            return true;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Could not ensure focus_keyword column: ' . $e->getMessage());
+            $ready = false;
+
+            return false;
+        }
+    }
+}
+
 if (!function_exists('ensure_image_alt_columns_exist')) {
     function ensure_image_alt_columns_exist(): bool
     {

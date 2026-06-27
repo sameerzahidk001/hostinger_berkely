@@ -15,6 +15,33 @@ class SeoController extends Controller
     public function __construct()
     {
         $this->middleware('long.running')->only(['edit', 'analyzePreview']);
+        $this->middleware(function ($request, $next) {
+            ensure_seo_focus_keyword_column_exists();
+
+            return $next($request);
+        });
+    }
+
+    private function seoListingColumns(): array
+    {
+        $columns = [
+            'id',
+            'page_id',
+            'course_id',
+            'title',
+            'meta_description',
+            'keywords',
+            'created_at',
+            'updated_at',
+            'created_by',
+            'updated_by',
+        ];
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('pages_s_e_o_s', 'focus_keyword')) {
+            array_splice($columns, 5, 0, ['focus_keyword']);
+        }
+
+        return $columns;
     }
 
     /**
@@ -23,19 +50,7 @@ class SeoController extends Controller
     public function index(Request $request)
     {
         $query = PagesSEO::query()
-            ->select([
-                'id',
-                'page_id',
-                'course_id',
-                'title',
-                'meta_description',
-                'focus_keyword',
-                'keywords',
-                'created_at',
-                'updated_at',
-                'created_by',
-                'updated_by',
-            ])
+            ->select($this->seoListingColumns())
             ->with([
                 'page:id,page_name,url,parent_id,category_id',
                 'page.parent:id,url',
