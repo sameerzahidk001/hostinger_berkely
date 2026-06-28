@@ -95,7 +95,11 @@
                   </li>
                   @endif
                   @if(admin_menu_allowed('courses'))
-                  <li class="{{ request()->is('admin/course') || request()->is('admin/course/*') ? 'active' : '' }}">
+                  @php
+                     $coursesMenuActive = (request()->is('admin/course') || request()->is('admin/course/*'))
+                        && ! request()->is('admin/courses-*');
+                  @endphp
+                  <li class="{{ $coursesMenuActive ? 'active' : '' }}">
                      <a href="javascript:void(0)"><i class="fa fa-files-o"></i> <span class="nav-label">Courses</span> <span class="fa arrow"></span></a>
                      <ul class="nav nav-second-level">
                         <li><a href="{{ route('admin.courses') }}">All Courses List</a></li>
@@ -314,6 +318,19 @@
 
          $(document).ready(function () {
             clearAdminUiBlockers();
+
+            // MetisMenu can leave multiple sections open when several match "active" — keep only one expanded.
+            var $sideMenu = $('#side-menu');
+            var $openParents = $sideMenu.children('li.active').has('> ul');
+            if ($openParents.length > 1) {
+               $openParents.slice(0, -1).each(function () {
+                  $(this).removeClass('active')
+                     .children('ul')
+                     .removeClass('in')
+                     .addClass('collapse')
+                     .css('height', '');
+               });
+            }
          });
 
          $(window).on('load', function () {
