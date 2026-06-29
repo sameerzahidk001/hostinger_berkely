@@ -7,7 +7,9 @@
     $seoTitle = old('title', $page_seo->title ?? '');
     $seoDescription = old('meta_description', $page_seo->meta_description ?? '');
     $contentScore = (int) ($analysis['content_score'] ?? 0);
-    $liveScore = (int) ($analysis['live_score'] ?? 0);
+    $liveScore = isset($analysis['live_score']) && $analysis['live_score'] !== null
+        ? (int) $analysis['live_score']
+        : null;
     $basicChecks = $analysis['basic'] ?? [];
     $additionalChecks = $analysis['additional'] ?? [];
     $technicalChecks = $analysis['technical'] ?? [];
@@ -55,7 +57,7 @@
                 <div id="seo-subscores" class="seo-subscore">
                     SEO: <span id="seo-content-score">{{ $score }}</span>/100
                     &middot;
-                    Live page: <span id="seo-live-score">{{ $liveScore !== null ? $liveScore : '—' }}</span>@if($liveScore !== null)/100@endif
+                    Live page: <span id="seo-live-score">{{ $liveScore !== null ? $liveScore . '/100' : '—' }}</span>
                 </div>
                 <p class="text-muted" style="font-size:11px;margin-top:10px;">
                     Overall score matches Courses, Pages, and SEO lists. Live page checks below are for verification only.
@@ -145,8 +147,10 @@ document.addEventListener('DOMContentLoaded', function () {
         label.className = labelClass(score);
         label.textContent = data.label || 'Needs work';
 
+        const liveScore = data.live_score;
         document.getElementById('seo-content-score').textContent = data.score || 0;
-        document.getElementById('seo-live-score').textContent = data.live_score ?? '—';
+        document.getElementById('seo-live-score').textContent =
+            liveScore !== null && liveScore !== undefined && liveScore !== '' ? liveScore + '/100' : '—';
 
         renderChecklist('seo-checklist-basic', data.basic || []);
         renderChecklist('seo-checklist-additional', data.additional || []);
