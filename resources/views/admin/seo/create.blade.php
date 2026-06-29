@@ -90,6 +90,12 @@
                             <div class="col-lg-6 mb">
                                 <label for="">Thumbnail <small>( 1200 x 627 px )</small></label>
                                 <input type="file" class="form-control" name="thumbnail" accept="image/*">
+                                @include('admin.partials.image-alt-input', [
+                                    'id' => 'thumbnail_alt',
+                                    'name' => 'thumbnail_alt',
+                                    'value' => old('thumbnail_alt'),
+                                ])
+                                <p class="help-block text-muted" style="margin-top:4px;">Alt text for the thumbnail image (recommended for SEO).</p>
                             </div>
                         </div>
 

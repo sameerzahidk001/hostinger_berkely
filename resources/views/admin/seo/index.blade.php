@@ -37,7 +37,7 @@
             <div class="ibox float-e-margins" style="margin-bottom: 0;">
                 <div class="ibox-title">
                     <h5>SEO</h5>
-                    <small class="text-muted">List shows a quick content score. Open <strong>Edit</strong> for full live-page analysis.</small>
+                    <small class="text-muted">SEO Score matches Edit. Live Score scans the public page (cached after first load).</small>
                 </div>
                 <div class="ibox-content">
                     <div class="table-responsive">
@@ -66,7 +66,8 @@
                                     <th style="width:50px;">#</th>
                                     <th>Title</th>
                                     <th style="width:90px;">Type</th>
-                                    <th style="width:90px;">Score</th>
+                                    <th style="width:90px;">SEO Score</th>
+                                    <th style="width:90px;">Live Score</th>
                                     <th style="width:220px;">SEO Details</th>
                                     <th>Meta Description</th>
                                     @include('admin.layout.partials.audit-columns-head')
@@ -77,12 +78,9 @@
                                 @forelse($pages_seo as $page_seo)
                                     @php
                                         $analysis = $page_seo->seo_analysis ?? null;
-                                        $score = (int) ($analysis['score'] ?? 0);
-                                        $scoreClass = $score >= 80 ? 'excellent' : ($score >= 50 ? 'good' : 'poor');
                                         $isCourse = ! empty($page_seo->course_id);
                                         $itemTitle = $page_seo->title ?: ($isCourse ? ($page_seo->course->title ?? 'Course') : ($page_seo->page->page_name ?? 'Page'));
                                         $itemUrl = seo_list_item_url($page_seo, $category_perma ?? 'category');
-                                        $focusKeyword = $analysis['focus_keyword'] ?? seo_focus_keyword($page_seo);
                                     @endphp
                                     <tr>
                                         <td data-order="{{ $page_seo->id }}">{{ $loop->iteration }}</td>
@@ -93,16 +91,10 @@
                                             @endif
                                         </td>
                                         <td data-order="{{ $isCourse ? 1 : 0 }}">{{ $isCourse ? 'Course' : 'Page' }}</td>
-                                        <td data-order="{{ $score }}">
-                                            <span class="seo-score-pill {{ $scoreClass }}" title="Same scoring as Edit (opens live checks when you edit).">{{ $score }}/100</span>
-                                        </td>
-                                        <td class="seo-details" data-order="{{ $focusKeyword }}">
-                                            <small><strong>Keyword:</strong> {{ $focusKeyword ?: '—' }}</small>
-                                            <small><strong>Schema:</strong> {{ $analysis['schema'] ?? 'Article' }}</small>
-                                            <small><strong>Links:</strong> {{ $analysis['external_links'] ?? 0 }} ext / {{ $analysis['internal_links'] ?? 0 }} int</small>
-                                            <small><strong>Words:</strong> {{ number_format($analysis['word_count'] ?? 0) }}</small>
-                                        </td>
-                                        <td data-order="{{ $page_seo->meta_description ?? '' }}">{{ \Illuminate\Support\Str::limit($page_seo->meta_description ?? '', 120) }}</td>
+                                        @include('admin.seo.partials.list-seo-columns', [
+                                            'seo' => $page_seo,
+                                            'analysis' => $analysis,
+                                        ])
                                         @include('admin.layout.partials.audit-columns-cells', ['model' => $page_seo])
                                         <td>
                                             <a href="{{ route('courses-pages-seo.edit', $page_seo->id) }}" class="btn-primary btn btn-xs">
@@ -116,7 +108,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="11" class="text-center text-muted">No SEO records found.</td>
+                                        <td colspan="12" class="text-center text-muted">No SEO records found.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -125,7 +117,8 @@
                                     <th>#</th>
                                     <th>Title</th>
                                     <th>Type</th>
-                                    <th>Score</th>
+                                    <th>SEO Score</th>
+                                    <th>Live Score</th>
                                     <th>SEO Details</th>
                                     <th>Meta Description</th>
                                     @include('admin.layout.partials.audit-columns-head')

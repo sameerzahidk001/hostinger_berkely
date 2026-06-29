@@ -126,9 +126,22 @@ class SeoAnalyzerService
     /**
      * Shared score for Courses, Pages, and SEO admin tables.
      */
-    public function analyzeForListing(PagesSEO $seo): array
+    public function analyzeForListing(PagesSEO $seo, bool $fetchLiveIfMissing = false): array
     {
-        return $this->cachedDisplayAnalysis($seo);
+        $display = $this->cachedDisplayAnalysis($seo);
+        $liveKey = $this->analysisCacheKey($seo, 'live');
+
+        if (Cache::has($liveKey)) {
+            $liveScore = Cache::get($liveKey)['live_score'] ?? null;
+        } elseif ($fetchLiveIfMissing) {
+            $liveScore = $this->cachedLiveVerification($seo)['live_score'] ?? null;
+        } else {
+            $liveScore = null;
+        }
+
+        return array_merge($display, [
+            'live_score' => $liveScore,
+        ]);
     }
 
     /**

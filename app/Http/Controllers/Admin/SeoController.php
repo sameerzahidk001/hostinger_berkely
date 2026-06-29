@@ -56,7 +56,7 @@ class SeoController extends Controller
             ->orderByDesc('id')
             ->get()
             ->each(function (PagesSEO $pageSeo) use ($analyzer) {
-                $pageSeo->seo_analysis = $analyzer->analyzeForListing($pageSeo);
+                $pageSeo->seo_analysis = $analyzer->analyzeForListing($pageSeo, true);
             });
 
         $data['category_perma'] = SiteSettings::value('category_perma') ?? 'category';

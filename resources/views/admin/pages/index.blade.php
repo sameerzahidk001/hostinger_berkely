@@ -151,7 +151,8 @@
                                         <th style="width:90px;">Status</th>
                                         <th>FAQ's Count</th>
                                         <th>SEO Status</th>
-                                        <th style="width:90px;">Score</th>
+                                        <th style="width:90px;">SEO Score</th>
+                                        <th style="width:90px;">Live Score</th>
                                         <th style="width:220px;">SEO Details</th>
                                         <th>Meta Description</th>
                                         @include('admin.layout.partials.audit-columns-head')
@@ -259,7 +260,8 @@
                                         <th>Status</th>
                                         <th>FAQ's Count</th>
                                         <th>SEO Status</th>
-                                        <th>Score</th>
+                                        <th>SEO Score</th>
+                                        <th>Live Score</th>
                                         <th>SEO Details</th>
                                         <th>Meta Description</th>
                                         <th>Created</th>

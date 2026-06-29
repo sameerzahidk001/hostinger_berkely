@@ -53,9 +53,9 @@
                 <div class="text-muted" style="margin-top:8px;">Overall SEO score</div>
                 <div id="seo-score-label" class="label label-default" style="margin-top:8px;display:inline-block;">{{ $label }}</div>
                 <div id="seo-subscores" class="seo-subscore">
-                    Content: <span id="seo-content-score">{{ $contentScore }}</span>/100
+                    SEO: <span id="seo-content-score">{{ $score }}</span>/100
                     &middot;
-                    Live page: <span id="seo-live-score">{{ $liveScore }}</span>/100
+                    Live page: <span id="seo-live-score">{{ $liveScore !== null ? $liveScore : '—' }}</span>@if($liveScore !== null)/100@endif
                 </div>
                 <p class="text-muted" style="font-size:11px;margin-top:10px;">
                     Overall score matches Courses, Pages, and SEO lists. Live page checks below are for verification only.
@@ -145,8 +145,8 @@ document.addEventListener('DOMContentLoaded', function () {
         label.className = labelClass(score);
         label.textContent = data.label || 'Needs work';
 
-        document.getElementById('seo-content-score').textContent = data.content_score || 0;
-        document.getElementById('seo-live-score').textContent = data.live_score || 0;
+        document.getElementById('seo-content-score').textContent = data.score || 0;
+        document.getElementById('seo-live-score').textContent = data.live_score ?? '—';
 
         renderChecklist('seo-checklist-basic', data.basic || []);
         renderChecklist('seo-checklist-additional', data.additional || []);
