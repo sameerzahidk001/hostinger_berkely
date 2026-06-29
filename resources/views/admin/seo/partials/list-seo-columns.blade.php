@@ -5,23 +5,36 @@
     $liveScore = array_key_exists('live_score', $analysis ?? []) && $analysis['live_score'] !== null
         ? (int) $analysis['live_score']
         : null;
+    $scoreExport = $analysis
+        ? trim('SEO: ' . ($seoScore !== null ? $seoScore . '/100' : '—') . ' | Live: ' . ($liveScore !== null ? $liveScore . '/100' : '—'))
+        : '—';
 @endphp
-<td style="vertical-align: middle;" data-export="{{ $seoScore !== null ? ($seoScore . '/100') : '—' }}">
+@once
+@push('style')
+<style>
+    .seo-dual-scores { display: flex; flex-direction: column; gap: 4px; min-width: 88px; }
+    .seo-dual-scores__row { display: flex; align-items: center; gap: 6px; }
+    .seo-dual-scores__label {
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        color: #676a6c;
+        width: 28px;
+        flex-shrink: 0;
+    }
+    .seo-dual-scores .seo-score-pill {
+        min-width: 52px;
+        font-size: 12px;
+        padding: 3px 6px;
+    }
+</style>
+@endpush
+@endonce
+<td style="vertical-align: middle;" data-export="{{ $scoreExport }}">
     @if($analysis)
-        @include('admin.seo.partials.score-pill', [
-            'score' => $seoScore,
-            'title' => 'SEO score (content + saved metadata). Matches the score on SEO Edit.',
-        ])
-    @else
-        <span class="text-muted">—</span>
-    @endif
-</td>
-<td style="vertical-align: middle;" data-export="{{ $liveScore !== null ? ($liveScore . '/100') : '—' }}">
-    @if($analysis)
-        @include('admin.seo.partials.score-pill', [
-            'score' => $liveScore,
-            'emptyTitle' => 'Live page not scanned yet. Open SEO Edit to refresh.',
-            'title' => $liveScore !== null ? 'Live public page verification score' : null,
+        @include('admin.seo.partials.combined-score-cell', [
+            'seoScore' => $seoScore,
+            'liveScore' => $liveScore,
         ])
     @else
         <span class="text-muted">—</span>

@@ -37,7 +37,7 @@
             <div class="ibox float-e-margins" style="margin-bottom: 0;">
                 <div class="ibox-title">
                     <h5>SEO</h5>
-                    <small class="text-muted">SEO Score matches Edit. Live Score scans the public page (cached after first load).</small>
+                    <small class="text-muted">Score column shows <strong>SEO</strong> (content + metadata) and <strong>Live</strong> (public page) together.</small>
                 </div>
                 <div class="ibox-content">
                     <div class="table-responsive">
@@ -66,8 +66,7 @@
                                     <th style="width:50px;">#</th>
                                     <th>Title</th>
                                     <th style="width:90px;">Type</th>
-                                    <th style="width:90px;">SEO Score</th>
-                                    <th style="width:90px;">Live Score</th>
+                                    <th style="width:110px;">Score<br><small class="text-muted" style="font-weight:normal;">SEO / Live</small></th>
                                     <th style="width:220px;">SEO Details</th>
                                     <th>Meta Description</th>
                                     @include('admin.layout.partials.audit-columns-head')
@@ -108,7 +107,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="12" class="text-center text-muted">No SEO records found.</td>
+                                        <td colspan="11" class="text-center text-muted">No SEO records found.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -117,8 +116,7 @@
                                     <th>#</th>
                                     <th>Title</th>
                                     <th>Type</th>
-                                    <th>SEO Score</th>
-                                    <th>Live Score</th>
+                                    <th>Score <small class="text-muted">(SEO / Live)</small></th>
                                     <th>SEO Details</th>
                                     <th>Meta Description</th>
                                     @include('admin.layout.partials.audit-columns-head')

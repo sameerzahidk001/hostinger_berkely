@@ -90,8 +90,7 @@
                                         <th>Course Structure</th>
                                         <th style="width:130px;">Lecture Plan</th>
                                         <th>SEO</th>
-                                        <th style="width:90px;">SEO Score</th>
-                                        <th style="width:90px;">Live Score</th>
+                                        <th style="width:110px;">Score<br><small class="text-muted" style="font-weight:normal;">SEO / Live</small></th>
                                         <th style="width:220px;">SEO Details</th>
                                         <th>Meta Description</th>
                                         <th>FAQ's</th>
