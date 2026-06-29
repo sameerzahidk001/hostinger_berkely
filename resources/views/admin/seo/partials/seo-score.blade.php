@@ -58,7 +58,7 @@
                     Live page: <span id="seo-live-score">{{ $liveScore }}</span>/100
                 </div>
                 <p class="text-muted" style="font-size:11px;margin-top:10px;">
-                    Scores combine admin content (50%) with checks on the public page (50%). 100 is rare until both are strong.
+                    Overall score matches Courses, Pages, and SEO lists. Live page checks below are for verification only.
                 </p>
             </div>
             <div class="col-md-8">
@@ -107,6 +107,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const descInput = document.querySelector('[name="meta_description"]');
     const focusKeywordInput = document.querySelector('[name="focus_keyword"]');
     const keywordsInput = document.querySelector('[name="keywords"]');
+    const thumbnailAltInput = document.querySelector('[name="thumbnail_alt"]');
     const analyzeUrl = @json(route('courses-pages-seo.analyze', $page_seo->id));
     const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     let timer = null;
@@ -163,6 +164,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const description = (descInput?.value || '').trim();
             const focusKeyword = (focusKeywordInput?.value || '').trim();
             const keywords = (keywordsInput?.value || '').trim();
+            const thumbnailAlt = (thumbnailAltInput?.value || '').trim();
 
             document.getElementById('seo-preview-title').textContent = title || 'Page title preview';
             document.getElementById('seo-preview-description').textContent =
@@ -180,6 +182,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     meta_description: description,
                     focus_keyword: focusKeyword,
                     keywords: keywords,
+                    thumbnail_alt: thumbnailAlt,
                 }),
             })
                 .then(function (r) { return r.json(); })
@@ -188,7 +191,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }, 400);
     }
 
-    [titleInput, descInput, focusKeywordInput].forEach(function (el) {
+    [titleInput, descInput, focusKeywordInput, thumbnailAltInput].forEach(function (el) {
         el?.addEventListener('input', refreshAnalysis);
     });
 

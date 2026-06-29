@@ -131,7 +131,7 @@ class SeoController extends Controller
 
         $seo->fill($request->only(['title', 'meta_description', 'focus_keyword', 'keywords', 'thumbnail_alt']));
 
-        return response()->json(app(SeoAnalyzerService::class)->analyze($seo));
+        return response()->json(app(SeoAnalyzerService::class)->analyze($seo, true));
     }
 
     /**

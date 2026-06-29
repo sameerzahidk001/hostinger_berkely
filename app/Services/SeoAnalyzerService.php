@@ -10,16 +10,14 @@ use Illuminate\Support\Str;
 
 class SeoAnalyzerService
 {
-    public function analyze(PagesSEO $seo, bool $forListing = false, bool $lightContent = false): array
+    public function analyze(PagesSEO $seo, bool $withLiveVerification = false): array
     {
         $title = trim((string) $seo->title);
         $description = trim((string) $seo->meta_description);
         $focusKeyword = $this->focusKeyword($seo);
         $urlSlug = $this->resolveUrlSlug($seo);
         $previewUrl = $this->resolvePreviewUrl($seo);
-        $content = ($forListing || $lightContent)
-            ? $this->resolveContentForListing($seo)
-            : $this->resolveContent($seo);
+        $content = $this->resolveContent($seo);
         $plainText = $this->stripToText($content);
         $wordCount = $this->wordCount($plainText);
         $keywordCount = $focusKeyword ? $this->keywordOccurrences($plainText, $focusKeyword) : 0;
@@ -77,29 +75,36 @@ class SeoAnalyzerService
             ),
         ];
 
-        $allChecks = array_merge($basic, $additional);
-        $technical = $forListing
-            ? $this->technicalChecksForListing($seo, $title, $description)
-            : $this->technicalChecks($seo, $previewUrl, $title, $description, $focusKeyword);
+        $technicalAdmin = $this->technicalChecksForListing($seo, $title, $description);
 
         $contentChecks = array_merge($basic, $additional);
         $contentPassed = count(array_filter($contentChecks, fn ($c) => $c['ok']));
         $contentScore = (int) round(($contentPassed / max(count($contentChecks), 1)) * 100);
-        $technicalPassed = count(array_filter($technical, fn ($c) => $c['ok']));
-        $liveScore = (int) round(($technicalPassed / max(count($technical), 1)) * 100);
+        $adminTechnicalPassed = count(array_filter($technicalAdmin, fn ($c) => $c['ok']));
+        $adminTechnicalScore = (int) round(($adminTechnicalPassed / max(count($technicalAdmin), 1)) * 100);
 
+        // One overall score everywhere (Courses list, Pages list, SEO list, SEO edit header).
         $score = $this->weightedScore([
             ['checks' => $basic, 'weight' => 25],
             ['checks' => $additional, 'weight' => 25],
-            ['checks' => $technical, 'weight' => 50],
+            ['checks' => $technicalAdmin, 'weight' => 50],
         ]);
+
+        $technical = $technicalAdmin;
+        $liveScore = $adminTechnicalScore;
+
+        if ($withLiveVerification) {
+            $technicalLive = $this->technicalChecks($seo, $previewUrl, $title, $description, $focusKeyword);
+            $livePassed = count(array_filter($technicalLive, fn ($c) => $c['ok']));
+            $liveScore = (int) round(($livePassed / max(count($technicalLive), 1)) * 100);
+            $technical = $technicalLive;
+        }
 
         return [
             'score' => $score,
             'label' => $this->scoreLabel($score),
             'content_score' => $contentScore,
             'live_score' => $liveScore,
-            'listing_fast' => $forListing,
             'focus_keyword' => $focusKeyword,
             'word_count' => $wordCount,
             'keyword_density' => $density,
@@ -119,46 +124,70 @@ class SeoAnalyzerService
     }
 
     /**
-     * Score for admin tables — same formula as edit, but skips live HTTP (uses cached full analysis when available).
+     * Shared score for Courses, Pages, and SEO admin tables.
      */
     public function analyzeForListing(PagesSEO $seo): array
     {
-        $cacheStamp = $seo->updated_at?->getTimestamp() ?? 0;
-        $fullCacheKey = 'seo_full_analysis:' . $seo->id . ':' . $cacheStamp;
-
-        if ($cached = Cache::get($fullCacheKey)) {
-            return $cached;
-        }
-
-        $listingCacheKey = 'seo_listing_analysis:' . $seo->id . ':' . $cacheStamp;
-
-        return Cache::remember($listingCacheKey, now()->addHours(6), function () use ($seo) {
-            return $this->analyze($seo, true, false);
-        });
+        return $this->cachedDisplayAnalysis($seo);
     }
 
     /**
-     * Full score with live page checks (single record — edit screen).
+     * Edit screen — same overall score as tables, plus live public-page checks below.
      */
     public function analyzeForEdit(PagesSEO $seo): array
     {
-        $cacheStamp = $seo->updated_at?->getTimestamp() ?? 0;
-        $fullCacheKey = 'seo_full_analysis:' . $seo->id . ':' . $cacheStamp;
+        $display = $this->cachedDisplayAnalysis($seo);
+        $live = $this->cachedLiveVerification($seo);
 
-        return Cache::remember($fullCacheKey, now()->addMinutes(30), function () use ($seo, $cacheStamp) {
-            $result = $this->analyze($seo, false, false);
-            Cache::put('seo_listing_analysis:' . $seo->id . ':' . $cacheStamp, $result, now()->addHours(6));
-
-            return $result;
-        });
+        return array_merge($display, [
+            'technical' => $live['technical'],
+            'live_score' => $live['live_score'],
+            'technical_errors' => count(array_filter($live['technical'], fn ($c) => ! $c['ok'])),
+        ]);
     }
 
     public function clearAnalysisCache(PagesSEO $seo): void
     {
-        $cacheStamp = $seo->updated_at?->getTimestamp() ?? 0;
-        Cache::forget('seo_full_analysis:' . $seo->id . ':' . $cacheStamp);
-        Cache::forget('seo_listing_analysis:' . $seo->id . ':' . $cacheStamp);
+        Cache::forget($this->analysisCacheKey($seo, 'display'));
+        Cache::forget($this->analysisCacheKey($seo, 'live'));
         $this->clearLivePageCache($seo);
+    }
+
+    private function cachedDisplayAnalysis(PagesSEO $seo): array
+    {
+        return Cache::remember(
+            $this->analysisCacheKey($seo, 'display'),
+            now()->addHours(6),
+            fn () => $this->analyze($seo, false)
+        );
+    }
+
+    private function cachedLiveVerification(PagesSEO $seo): array
+    {
+        return Cache::remember(
+            $this->analysisCacheKey($seo, 'live'),
+            now()->addMinutes(30),
+            function () use ($seo) {
+                $title = trim((string) $seo->title);
+                $description = trim((string) $seo->meta_description);
+                $focusKeyword = $this->focusKeyword($seo);
+                $previewUrl = $this->resolvePreviewUrl($seo);
+                $technicalLive = $this->technicalChecks($seo, $previewUrl, $title, $description, $focusKeyword);
+                $livePassed = count(array_filter($technicalLive, fn ($c) => $c['ok']));
+
+                return [
+                    'technical' => $technicalLive,
+                    'live_score' => (int) round(($livePassed / max(count($technicalLive), 1)) * 100),
+                ];
+            }
+        );
+    }
+
+    private function analysisCacheKey(PagesSEO $seo, string $type): string
+    {
+        $stamp = $seo->updated_at?->getTimestamp() ?? 0;
+
+        return 'seo_analysis:' . $seo->id . ':' . $stamp . ':' . $type;
     }
 
     public function focusKeyword(PagesSEO $seo): string
