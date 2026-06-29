@@ -1,6 +1,6 @@
 <style>
     .instructor-section {
-        background-color: {{ $background }};
+        background-color: {{ section_bg_color($background) }};
     }
 
     .instructor-section h2 {
@@ -29,7 +29,7 @@
         align-items: center;
         justify-content: space-between;
         flex-wrap: wrap;
-        background-color: {{ section_color($cardBackground, '#ffffff') }};
+        background-color: {{ card_bg_color($cardBackground, false, '#ffffff') }};
         color: {{ section_color($cardColor, '#222222') }};
         border: 1px solid #e0e0e0;
         border-radius: 16px;
@@ -261,7 +261,7 @@
     @endif
 
     @if (isset($description))
-        <div class="description">{!! $description !!}</div>
+        <div class="description cms-html">{!! render_cms_html($description) !!}</div>
     @endif
     <form id="instructors-search-form">
         <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

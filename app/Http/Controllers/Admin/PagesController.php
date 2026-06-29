@@ -459,6 +459,8 @@ class PagesController extends Controller
                 continue;
             }
 
+            $section = normalize_section_backgrounds($section);
+
             $sectionId = $section['section_id'] ?? $section['id'] ?? null;
             $sectionPayload = [
                 'order' => $order,

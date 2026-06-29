@@ -9,7 +9,7 @@
 <section id="section-{{$id}}" class="px-6 min-[1200px]:px-[72px] md:px-12 w-full mt-16 mb-16 {{ $backgroundColor || $backgroundImage ? 'py-16' : '' }}" style="
         background-size: cover; 
         background-position: center; 
-        background-color: {{ $backgroundColor ?? 'transparent' }};
+        background-color: {{ section_bg_color($backgroundColor ?? null) }};
         background-image: {{ $backgroundImage ? 'url(' . $backgroundImage . ')' : 'none' }};
     ">
 
@@ -23,8 +23,8 @@
                     <h2 class="text-3xl font-bold mt-2" style="color: {{ $color ?? 'inherit' }};">{{ $title }}</h2>
                 @endif
                 @if($description)
-                    <div class="mt-2" style="color: {{ $color ?? 'inherit' }};">
-                        {!! $description !!}
+                    <div class="mt-2 cms-html" style="color: {{ $color ?? 'inherit' }};">
+                        {!! render_cms_html($description) !!}
                     </div>
                 @endif
             </div>
@@ -46,8 +46,8 @@
                 </div>
                 <div class="flex flex-col gap-12 flex-1">
                     @if($description)
-                        <div class="mt-2" style="color: {{ $color ?? 'inherit' }};">
-                            {!! $description !!}
+                        <div class="mt-2 cms-html" style="color: {{ $color ?? 'inherit' }};">
+                            {!! render_cms_html($description) !!}
                         </div>
                     @endif
                 </div>
@@ -59,7 +59,7 @@
         @foreach ($cards as $card)
             @php
                 $hasImage = ! empty($card['image']);
-                $cardBg = section_color($card['background'] ?? null, $hasImage ? 'transparent' : '#ffffff');
+                $cardBg = card_bg_color($card['background'] ?? null, $hasImage, '#ffffff');
                 $cardTextColor = section_color($card['color'] ?? null, 'inherit');
             @endphp
             @if (in_array($layout, ['layout-1', 'layout-2']))
@@ -77,7 +77,7 @@
                             </h3>
                         @endif
                         @if(isset($card['description']))
-                            <div class="text-lg mt-2" style="color: {{ $cardTextColor }}">{!! $card['description'] !!}</div>
+                            <div class="text-lg mt-2 cms-html" style="color: {{ $cardTextColor }}">{!! render_cms_html($card['description'] ?? '') !!}</div>
                         @endif
                         @if(isset($card['url']))
                             <a href="{{ $card['url'] }}"
@@ -90,20 +90,21 @@
                     </div>
                 </div>
             @elseif (in_array($layout, ['layout-3', 'layout-4']))
-                <div class="relative overflow-hidden group h-[500px]" style="background-color: {{ $cardBg }};">
+                <div class="relative overflow-hidden group h-[500px]" data-cms-card style="background-color: {{ $cardBg }};">
                     @if($hasImage)
                         <img src="{{ $card['image'] }}"
                             alt="{{ image_alt($card['image_alt'] ?? null, $card['title'] ?? 'Card image') }}"
-                            class="h-full transition-all delay-300 duration-400 ease-in w-full absolute group-hover:scale-105 object-cover">
+                            class="h-full transition-all delay-300 duration-400 ease-in w-full absolute group-hover:scale-105 object-cover"
+                            onerror="window.cmsCardImageError&&window.cmsCardImageError(this)">
                     @endif
-                    <div class="absolute px-4 py-8 z-50 gap-4 flex flex-col justify-end h-full w-full bottom-0 {{ $hasImage ? 'bg-black/20' : '' }}">
+                    <div class="card-image-overlay absolute px-4 py-8 z-50 gap-4 flex flex-col justify-end h-full w-full bottom-0 {{ $hasImage ? 'bg-black/20' : '' }}">
                         @if(isset($card['title']))
                             <span class="text-[20px] sm:text-[24px] md:text-[32px] font-canela {{ $hasImage ? 'text-white' : 'text-dark' }}"
                                 style="color: {{ $cardTextColor }}">{{ $card['title'] }}</span>
                         @endif
                         @if(isset($card['description']))
                             <div class="hidden font-semibold group-hover:block text-[18px] {{ $hasImage ? 'text-white' : 'text-dark' }}" style="color: {{ $cardTextColor }}">
-                                {!! $card['description'] !!}</div>
+                                {!! render_cms_html($card['description'] ?? '') !!}</div>
                         @endif
                         @if(isset($card['url']))
                             <a href="{{ $card['url'] }}" class="flex items-center gap-2" target="{{ $card['url_target'] == '0' ? '_blank' : '' }}">
@@ -117,7 +118,7 @@
                     </div>
 
                     @if($hasImage)
-                    <div class="absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent via-black/10 to-black/75 z-30 transition-all duration-400 group-hover:to-black/90"></div>
+                    <div class="card-image-gradient absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent via-black/10 to-black/75 z-30 transition-all duration-400 group-hover:to-black/90"></div>
                     @endif
                 </div>
             @elseif (in_array($layout, ['layout-5', 'layout-6']))
@@ -136,7 +137,7 @@
                         @endif
                         @if(isset($card['description']))
                             <div class="text-[18px] leading-[41px] lg:leading-[40px] text-dark text-center lg:text-left mt-2" style="color: {{ $cardTextColor }}">
-                                {!! $card['description'] !!}
+                                {!! render_cms_html($card['description'] ?? '') !!}
                             </div>
                         @endif
                         @if(isset($card['url']))

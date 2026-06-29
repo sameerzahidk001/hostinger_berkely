@@ -485,6 +485,17 @@
     </script>
 
     <script>
+        window.cmsCardImageError = function (img) {
+            img.onerror = null;
+            img.hidden = true;
+            const card = img.closest('[data-cms-card]');
+            if (card) {
+                card.classList.add('card-image-missing');
+            }
+        };
+    </script>
+
+    <script>
         // Accordian start
         document.querySelectorAll('.accordion-button').forEach(button => {
             button.addEventListener('click', () => {

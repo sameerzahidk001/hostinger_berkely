@@ -21,7 +21,7 @@
                 :title="$section->data['title'] ?? ''" 
                 :subtitle="$section->data['subtitle'] ?? ''"
                 :description="$section->data['description'] ?? ''"
-                :backgroundColor="$section->data['background_color'] ?? ''"
+                :backgroundColor="$section->data['background_color'] ?? '#000000'"
                 :image="media_url($section->data['image'] ?? null)"
                 :color="$section->data['color'] ?? ''"
                 :solidButtonUrl="$section->data['solid_button_url'] ?? ''"
@@ -82,9 +82,9 @@
             @php
                 $cards = collect($section->data['cards'] ?? [])->map(function ($card) {
                     return [
-                        'image' => media_url($card['image'] ?? null),
+                        'image' => card_image_url($card['image'] ?? null, $card['title'] ?? null),
                         'title' => $card['title'] ?? '',
-                        'description' => demote_page_headings($card['description'] ?? ''),
+                        'description' => render_cms_html($card['description'] ?? ''),
                         'url' => $card['url'] ?? null,
                         'url_text' => $card['url_text'] ?? null,
                         'url_target' => $card['url_target'] ?? '1',
@@ -100,7 +100,7 @@
                 :subtitle="$section->data['subtitle'] ?? ''"
                 :description="$section->data['description'] ?? ''"
                 :backgroundColor="$section->data['background'] ?? ''"
-                :backgroundImage="media_url($section->data['image'] ?? null)"
+                :backgroundImage="displayable_media_url($section->data['image'] ?? null)"
                 :color="$section->data['color'] ?? ''"
                 :layout="$section->data['layout'] ?? ''"
                 :columns="$section->data['columns'] ?? 3"
@@ -137,9 +137,9 @@
             @php
                 $cards = collect($section->data['cards'] ?? [])->map(function ($card) {
                     return [
-                        'image' => media_url($card['image'] ?? null),
+                        'image' => card_image_url($card['image'] ?? null, $card['title'] ?? null),
                         'title' => $card['title'] ?? '',
-                        'description' => demote_page_headings($card['description'] ?? ''),
+                        'description' => render_cms_html($card['description'] ?? ''),
                         'url' => $card['url'] ?? '#',
                         'url_target' => $card['url_target'] ?? '1',
                         'buttonText' => $card['url_text'] ?? 'Learn More',
@@ -153,7 +153,7 @@
             @php
                 $cards = collect($section->data['cards'] ?? [])->map(function ($card) {
                     return [
-                        'image' => media_url($card['image'] ?? null),
+                        'image' => card_image_url($card['image'] ?? null, $card['title'] ?? null),
                         'icon' => media_url($card['icon'] ?? null),
                         'title' => $card['title'] ?? '',
                         'description' => $card['description'] ?? '',
@@ -169,7 +169,7 @@
                 :columns="$section->data['columns'] ?? '3'" 
                 :layout="$section->data['layout'] ?? 'layout-1'" 
                 :backgroundColor="$section->data['background'] ?? 'transparent'" 
-                :backgroundImage="media_url($section->data['image'] ?? null)"
+                :backgroundImage="displayable_media_url($section->data['image'] ?? null)"
                 :color="$section->data['color'] ?? '#000000'" 
                 :alignment="$section->data['alignment'] ?? 'left'" 
                 :cards="$cards"

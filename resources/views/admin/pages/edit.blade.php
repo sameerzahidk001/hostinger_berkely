@@ -3191,6 +3191,9 @@
                         if ((el.type === 'checkbox' || el.type === 'radio') && !el.checked) {
                             continue;
                         }
+                        if (el.disabled) {
+                            continue;
+                        }
 
                         const parts = el.name.replace(/\]/g, '').split('[').slice(1);
                         let cur = sections;
@@ -3689,12 +3692,51 @@
 
         function toggleTransparent(checkbox, colorInputId) {
             const colorInput = document.getElementById(colorInputId);
+            if (!colorInput) {
+                return;
+            }
+
             if (checkbox.checked) {
-                colorInput.value = '#000000';  // Set to default color
+                if (colorInput.value && colorInput.value !== '#000000' && colorInput.value !== '#000') {
+                    colorInput.dataset.previousValue = colorInput.value;
+                }
+                colorInput.value = '';
                 colorInput.disabled = true;
             } else {
                 colorInput.disabled = false;
+                if (!colorInput.value || colorInput.value === '#000000' || colorInput.value === '#000') {
+                    colorInput.value = colorInput.dataset.previousValue || '#ffffff';
+                }
             }
+        }
+
+        function initTransparentControls() {
+            document.querySelectorAll('input[type="checkbox"][id*="transparent"]').forEach(function (checkbox) {
+                const onchange = checkbox.getAttribute('onchange') || '';
+                const match = onchange.match(/toggleTransparent\(this,\s*'([^']+)'\)/);
+                if (!match) {
+                    return;
+                }
+
+                const colorInput = document.getElementById(match[1]);
+                if (!colorInput) {
+                    return;
+                }
+
+                const value = (colorInput.value || '').toLowerCase();
+                const shouldBeTransparent = value === '' || value === '#000000' || value === '#000' || value === 'black';
+
+                if (shouldBeTransparent) {
+                    checkbox.checked = true;
+                    toggleTransparent(checkbox, match[1]);
+                }
+            });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initTransparentControls);
+        } else {
+            initTransparentControls();
         }
 
         function toggleDisable(checkbox, inputId) {

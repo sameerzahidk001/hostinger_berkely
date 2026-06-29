@@ -1,14 +1,14 @@
 <style>
     .career-cards {
-        background-color: {{ section_color($cardBackground, '#ffffff') }};
+        background-color: {{ card_bg_color($cardBackground, false, '#ffffff') }};
         color: {{ section_color($cardColor, 'inherit') }};
-        border-color: {{ section_color($cardBorderColor, '#e5e7eb') }};
+        border-color: {{ section_bg_color($cardBorderColor, '#e5e7eb') }};
     }
 
     .career-cards:hover {
-        background-color: {{ section_color($cardHoverBackground, '#f9fafb') }};
+        background-color: {{ section_bg_color($cardHoverBackground, '#f9fafb') }};
         color: {{ section_color($cardHoverColor, 'inherit') }};
-        border-color: {{ section_color($cardHoverBorderColor, '#e5e7eb') }};
+        border-color: {{ section_bg_color($cardHoverBorderColor, '#e5e7eb') }};
     }
 
     .careers-section {
@@ -38,13 +38,13 @@
 <section
     id="section-{{ $id }}"
     class="careers-section w-full lg:px-[120px] px-4 md:px-8"
-    style="background-color: {{ $background }}">
+    style="background-color: {{ section_bg_color($background) }}">
 
     @if (trim(strip_tags((string) ($title ?? ''))) !== '')
         <h2 class="font-heading mb-2 text-3xl font-bold lg:text-4xl text-center" style="color: {{ $color ?? 'inherit' }}">{{ $title }}</h2>
     @endif
     @if (trim(strip_tags((string) ($description ?? ''))) !== '')
-        <div class="mb-3" style="color: {{ $color ?? 'inherit' }}">{!! $description !!}</div>
+        <div class="mb-3 cms-html" style="color: {{ $color ?? 'inherit' }}">{!! render_cms_html($description) !!}</div>
     @endif
 
     <div class="flex flex-col gap-3">
@@ -52,7 +52,7 @@
             <div
                 class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 p-4 md:p-5 rounded-lg shadow-sm border career-cards">
                 <div class="flex-1 min-w-0">
-                    <div class="career-card-content">{!! $card['content'] !!}</div>
+                    <div class="career-card-content cms-html">{!! render_cms_html($card['content'] ?? '') !!}</div>
                     @if (trim((string) ($card['tags'] ?? '')) !== '')
                         <div class="flex flex-wrap gap-2 mt-2">
                             @foreach (array_filter(array_map('trim', explode(',', $card['tags']))) as $tag)

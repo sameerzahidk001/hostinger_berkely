@@ -38,6 +38,84 @@ if (!function_exists('section_color')) {
     }
 }
 
+if (!function_exists('section_bg_color')) {
+    /** Section-level backgrounds: only fill in when empty; keeps intentional black/dark colors. */
+    function section_bg_color(mixed $value, string $default = 'transparent'): string
+    {
+        return section_color($value, $default);
+    }
+}
+
+if (!function_exists('banner_bg_color')) {
+    /** Banner left panel: restore dark/black default when admin value is empty or white. */
+    function banner_bg_color(mixed $value, string $default = '#000000'): string
+    {
+        $color = strtolower(trim((string) $value));
+
+        if ($color === '' || $color === 'transparent' || in_array($color, ['#ffffff', '#fff', 'white'], true)) {
+            return $default;
+        }
+
+        return (string) $value;
+    }
+}
+
+if (!function_exists('card_bg_color')) {
+    /**
+     * Card backgrounds only. Cards without images that were saved as #000000 by the
+     * transparent-checkbox bug should fall back to white instead of solid black.
+     */
+    function card_bg_color(mixed $value, bool $hasImage, string $defaultWhenEmpty = '#ffffff'): string
+    {
+        $color = strtolower(trim((string) $value));
+
+        if ($color === '') {
+            return $hasImage ? 'transparent' : $defaultWhenEmpty;
+        }
+
+        if (! $hasImage && in_array($color, ['#000000', '#000', 'black'], true)) {
+            return $defaultWhenEmpty;
+        }
+
+        return (string) $value;
+    }
+}
+
+if (!function_exists('normalize_section_background_value')) {
+    function normalize_section_background_value(mixed $value, string $emptyDefault = ''): string
+    {
+        $color = trim((string) $value);
+
+        return $color === '' ? $emptyDefault : $color;
+    }
+}
+
+if (!function_exists('normalize_section_backgrounds')) {
+    function normalize_section_backgrounds(array $section): array
+    {
+        foreach (['background', 'background_color', 'content_background', 'card_background', 'border_color', 'content_border_color', 'card_border_color', 'card_hover_background', 'card_hover_border_color'] as $field) {
+            if (! array_key_exists($field, $section)) {
+                continue;
+            }
+
+            $default = in_array($field, ['card_background', 'card_hover_background'], true) ? '#ffffff' : '';
+            $section[$field] = normalize_section_background_value($section[$field], $default);
+        }
+
+        if (! empty($section['cards']) && is_array($section['cards'])) {
+            foreach ($section['cards'] as $index => $card) {
+                if (! is_array($card) || ! array_key_exists('background', $card)) {
+                    continue;
+                }
+
+                $section['cards'][$index]['background'] = normalize_section_background_value($card['background'], '#ffffff');
+            }
+        }
+
+        return $section;
+    }
+}
+
 if (!function_exists('media_url')) {
     function media_url(mixed $path): ?string
     {
@@ -78,6 +156,109 @@ if (!function_exists('media_url')) {
     }
 }
 
+if (!function_exists('local_media_exists')) {
+    function local_media_exists(mixed $path): bool
+    {
+        if (is_array($path)) {
+            $path = $path['path'] ?? $path['url'] ?? $path['image'] ?? ($path[0] ?? null);
+        }
+
+        if (! is_string($path) || trim($path) === '' || $path === 'null') {
+            return false;
+        }
+
+        $path = str_replace('\\', '/', trim($path));
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            $host = parse_url($path, PHP_URL_HOST);
+            $appHost = parse_url((string) config('app.url'), PHP_URL_HOST);
+
+            if ($host && $appHost && ! in_array($host, [$appHost, 'www.' . $appHost, 'berkeleyschool.org', 'www.berkeleyschool.org', 'eduberkeley.com', 'www.eduberkeley.com'], true)) {
+                return true;
+            }
+
+            $path = ltrim((string) parse_url($path, PHP_URL_PATH), '/');
+        }
+
+        $path = str_replace(
+            [
+                'https://eduberkeley.com/public/',
+                'http://eduberkeley.com/public/',
+                'https://eduberkeley.com/',
+                'http://eduberkeley.com/',
+                'https://berkeleyschool.org/public/',
+                'http://berkeleyschool.org/public/',
+                'https://berkeleyschool.org/',
+                'http://berkeleyschool.org/',
+            ],
+            '',
+            $path
+        );
+
+        $path = ltrim($path, '/');
+
+        if (str_starts_with($path, 'public/')) {
+            $path = substr($path, 7);
+        }
+
+        if (str_starts_with($path, 'images/') || str_starts_with($path, 'frontend/') || str_starts_with($path, 'admin/')) {
+            return is_file(public_path($path));
+        }
+
+        return is_file(public_path('images/library/' . $path));
+    }
+}
+
+if (!function_exists('displayable_media_url')) {
+    /** URL for frontend display; null when the local file is missing (avoids black overlay cards). */
+    function displayable_media_url(mixed $path): ?string
+    {
+        if (! local_media_exists($path)) {
+            return null;
+        }
+
+        return media_url($path);
+    }
+}
+
+if (!function_exists('card_image_url')) {
+    /** Resolve card images, with fallbacks when library files were deleted or never uploaded. */
+    function card_image_url(mixed $path, ?string $title = null): ?string
+    {
+        $url = displayable_media_url($path);
+        if ($url !== null) {
+            return $url;
+        }
+
+        $basename = is_string($path) ? strtolower(basename(str_replace('\\', '/', $path))) : '';
+
+        $knownMissing = [
+            'key-stage-4-6a3f0e7e5d3e1.png' => 'frontend/images/jpg/GCSE.jpg',
+            'key-stage-5-6a3f0e7e5ca66.png' => 'frontend/images/jpg/six-form.jpg',
+        ];
+
+        if ($basename !== '' && isset($knownMissing[$basename])) {
+            return asset($knownMissing[$basename]);
+        }
+
+        $label = strtolower((string) $title);
+
+        if (str_contains($label, 'key stage 4') || str_contains($label, 'igcse') || str_contains($label, 'gcse')) {
+            return asset('frontend/images/jpg/GCSE.jpg');
+        }
+
+        if (str_contains($label, 'key stage 5') || str_contains($label, 'sixth form') || str_contains($label, 'a level')) {
+            return asset('frontend/images/jpg/six-form.jpg');
+        }
+
+        if (str_contains($label, 'key stage 3') || str_contains($label, 'lower secondary')) {
+            return asset('frontend/images/jpg/Primary-1.jpg');
+        }
+
+        return null;
+    }
+}
+
 if (!function_exists('demote_page_headings')) {
     /**
      * CMS/editor HTML often contains extra H1 tags. Keep a single page H1 in the template only.
@@ -89,6 +270,71 @@ if (!function_exists('demote_page_headings')) {
         }
 
         return preg_replace(['/<(\/?)h1\b/i'], ['<$1h2'], $html) ?? $html;
+    }
+}
+
+if (!function_exists('strip_cms_inline_backgrounds')) {
+    /**
+     * Remove accidental black/inline backgrounds pasted from Word or Summernote.
+     */
+    function strip_cms_inline_backgrounds(string $html): string
+    {
+        $html = preg_replace('/\sbgcolor=(["\'])[^"\']*\1/i', '', $html) ?? $html;
+
+        return preg_replace_callback(
+            '/\sstyle=(["\'])(.*?)\1/is',
+            function (array $matches): string {
+                $quote = $matches[1];
+                $style = $matches[2];
+
+                $style = preg_replace('/\s*background(?:-color)?\s*:\s*[^;"]+;?/i', '', $style) ?? $style;
+                $style = trim($style, " ;");
+
+                if ($style === '') {
+                    return '';
+                }
+
+                return ' style=' . $quote . $style . $quote;
+            },
+            $html
+        ) ?? $html;
+    }
+}
+
+if (!function_exists('rewrite_cms_asset_urls')) {
+    /**
+     * CMS HTML often embeds full URLs from old hosts (e.g. derbygirls.co.uk) with /public/ in the path.
+     */
+    function rewrite_cms_asset_urls(string $html): string
+    {
+        $html = preg_replace_callback(
+            '#https?://[^"\'>\s]+?/(?:public/)?(frontend/[^"\'>\s]+|images/[^"\'>\s]+)#i',
+            static function (array $matches): string {
+                return asset($matches[1]);
+            },
+            $html
+        ) ?? $html;
+
+        return preg_replace_callback(
+            '#\bsrc=(["\'])(?:\./)?(?:public/)?(frontend/images/svgs/[^"\']+)\1#i',
+            static function (array $matches): string {
+                return 'src=' . $matches[1] . asset($matches[2]) . $matches[1];
+            },
+            $html
+        ) ?? $html;
+    }
+}
+
+if (!function_exists('render_cms_html')) {
+    function render_cms_html(?string $html): string
+    {
+        if ($html === null || trim($html) === '') {
+            return '';
+        }
+
+        return strip_cms_inline_backgrounds(
+            rewrite_cms_asset_urls(demote_page_headings($html))
+        );
     }
 }
 

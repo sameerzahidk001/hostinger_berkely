@@ -25,7 +25,7 @@
         @endif
         @if (isset($description))
             <div class="card-hidden px-6 min-[1200px]:px-[72px] mt-10 lg:pt-0 md:px-12 flex flex-col w-full">
-                {!! $description !!}
+                {!! render_cms_html($description) !!}
             </div>
         @endif
         <div class="absolute min-h-[20%] w-px top-0 left-1/2 transform -translate-x-1/2 bg-white"></div>
