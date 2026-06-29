@@ -438,11 +438,17 @@ if (!function_exists('user_avatar_url')) {
             $path = normalize_profile_image_path(data_get($user, 'avatar'));
         }
 
-        if ($path !== null) {
+        if ($path !== null && local_media_exists($path)) {
             return asset($path);
         }
 
-        return asset('student/img/landing/avatar_all.png');
+        foreach (['images/profiles/user.png', 'admin/images/logo.png'] as $fallback) {
+            if (local_media_exists($fallback)) {
+                return asset($fallback);
+            }
+        }
+
+        return asset('admin/images/logo.png');
     }
 }
 
