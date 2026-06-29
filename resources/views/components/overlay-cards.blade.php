@@ -20,7 +20,7 @@
                     onerror="window.cmsCardImageError&&window.cmsCardImageError(this)">
             @endif
                 
-                <div class="card-image-overlay absolute px-4 py-8 z-50 gap-4 flex flex-col justify-end h-full w-full bottom-0 {{ $hasImage ? 'bg-black/20' : '' }}">
+                <div class="card-image-overlay absolute px-4 py-8 z-50 gap-4 flex flex-col justify-end h-full w-full bottom-0">
                     <span class="text-[20px] sm:text-[24px] md:text-[32px] font-canela {{ $hasImage ? 'text-white' : 'text-dark' }}" style="color: {{ $color }}">{{ $card['title'] }}</span>
                     <p class="hidden font-semibold group-hover:block text-[18px] cms-html {{ $hasImage ? 'text-white' : 'text-dark' }}" style="color: {{ $color }}">{!! render_cms_html($card['description'] ?? '') !!}</p>
                     <a href="{{ $card['url'] }}" class="flex items-center gap-2" target="{{ $card['url_target'] == '0' ? '_blank' : '' }}">
@@ -32,7 +32,7 @@
                 </div>
                 
                 @if($hasImage)
-                <div class="card-image-gradient absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent via-black/10 to-black/75 z-30 transition-all duration-400 group-hover:to-black/90"></div>
+                <div class="card-image-gradient"></div>
                 @endif
             </div>
         @endforeach

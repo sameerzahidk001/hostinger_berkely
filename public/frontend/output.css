@@ -3161,11 +3161,34 @@ section[id^="section-"] .cms-html [bgcolor] {
 }
 
 [data-cms-card].card-image-missing .card-image-overlay {
-  background-color: transparent !important;
+  background: transparent !important;
 }
 
 [data-cms-card].card-image-missing .text-white {
   color: #1f2937 !important;
+}
+
+/* Image cards: dark gradient shading behind white text */
+[data-cms-card]:not(.card-image-missing) .card-image-gradient {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  min-height: 65%;
+  pointer-events: none;
+  z-index: 30;
+  background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.85));
+  transition: min-height 0.4s ease, background 0.4s ease;
+}
+
+[data-cms-card]:not(.card-image-missing):hover .card-image-gradient {
+  min-height: 100%;
+  background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.95));
+}
+
+[data-cms-card]:not(.card-image-missing) .card-image-overlay {
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.15) 55%, transparent 100%);
 }
 
 .cms-banner-section {

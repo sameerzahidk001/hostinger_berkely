@@ -97,7 +97,7 @@
                             class="h-full transition-all delay-300 duration-400 ease-in w-full absolute group-hover:scale-105 object-cover"
                             onerror="window.cmsCardImageError&&window.cmsCardImageError(this)">
                     @endif
-                    <div class="card-image-overlay absolute px-4 py-8 z-50 gap-4 flex flex-col justify-end h-full w-full bottom-0 {{ $hasImage ? 'bg-black/20' : '' }}">
+                    <div class="card-image-overlay absolute px-4 py-8 z-50 gap-4 flex flex-col justify-end h-full w-full bottom-0">
                         @if(isset($card['title']))
                             <span class="text-[20px] sm:text-[24px] md:text-[32px] font-canela {{ $hasImage ? 'text-white' : 'text-dark' }}"
                                 style="color: {{ $cardTextColor }}">{{ $card['title'] }}</span>
@@ -118,7 +118,7 @@
                     </div>
 
                     @if($hasImage)
-                    <div class="card-image-gradient absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent via-black/10 to-black/75 z-30 transition-all duration-400 group-hover:to-black/90"></div>
+                    <div class="card-image-gradient"></div>
                     @endif
                 </div>
             @elseif (in_array($layout, ['layout-5', 'layout-6']))
