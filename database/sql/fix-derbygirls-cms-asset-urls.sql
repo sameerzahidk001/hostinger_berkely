@@ -15,20 +15,20 @@ UPDATE `page_sections`
 SET `data` = REPLACE(`data`, CONCAT(@new, '/public/'), CONCAT(@new, '/'))
 WHERE `data` LIKE '%eduberkeley.com/public/%';
 
-UPDATE `pages`
-SET `description` = REPLACE(REPLACE(REPLACE(REPLACE(
-    `description`, CONCAT(@old, '/public/'), CONCAT(@new, '/')), CONCAT(@oldh, '/public/'), CONCAT(@new, '/')),
-    @old, @new), @oldh, @new)
-WHERE `description` LIKE '%derbygirls.co.uk%';
-
 UPDATE `courses`
 SET `description` = REPLACE(REPLACE(REPLACE(REPLACE(
     `description`, CONCAT(@old, '/public/'), CONCAT(@new, '/')), CONCAT(@oldh, '/public/'), CONCAT(@new, '/')),
     @old, @new), @oldh, @new)
 WHERE `description` LIKE '%derbygirls.co.uk%';
 
-UPDATE `widgets`
-SET `content` = REPLACE(REPLACE(REPLACE(REPLACE(
-    `content`, CONCAT(@old, '/public/'), CONCAT(@new, '/')), CONCAT(@oldh, '/public/'), CONCAT(@new, '/')),
+UPDATE `courses`
+SET `short_description` = REPLACE(REPLACE(REPLACE(REPLACE(
+    `short_description`, CONCAT(@old, '/public/'), CONCAT(@new, '/')), CONCAT(@oldh, '/public/'), CONCAT(@new, '/')),
     @old, @new), @oldh, @new)
-WHERE `content` LIKE '%derbygirls.co.uk%';
+WHERE `short_description` LIKE '%derbygirls.co.uk%';
+
+UPDATE `widgets`
+SET `description` = REPLACE(REPLACE(REPLACE(REPLACE(
+    `description`, CONCAT(@old, '/public/'), CONCAT(@new, '/')), CONCAT(@oldh, '/public/'), CONCAT(@new, '/')),
+    @old, @new), @oldh, @new)
+WHERE `description` LIKE '%derbygirls.co.uk%';

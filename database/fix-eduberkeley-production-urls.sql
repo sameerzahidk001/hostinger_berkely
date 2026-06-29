@@ -141,20 +141,14 @@ UPDATE `users` SET `image` = REPLACE(`image`, CONCAT(@new, '/public/'), CONCAT(@
 UPDATE `users` SET `image` = REPLACE(`image`, @old1, @new) WHERE `image` LIKE '%berkeleyme%';
 UPDATE `users` SET `image` = REPLACE(`image`, @old2, @new) WHERE `image` LIKE '%testing.eduberkeley.com%';
 
-UPDATE `pages` SET `description` = REPLACE(`description`, CONCAT(@new, '/public/'), CONCAT(@new, '/')) WHERE `description` LIKE '%/public/%';
-UPDATE `pages` SET `description` = REPLACE(`description`, @old1, @new) WHERE `description` LIKE '%berkeleyme.com%';
-UPDATE `pages` SET `description` = REPLACE(`description`, @old1h, @new) WHERE `description` LIKE '%berkeleyme.com%';
-UPDATE `pages` SET `description` = REPLACE(`description`, @old2, @new) WHERE `description` LIKE '%testing.eduberkeley.com%';
-UPDATE `pages` SET `description` = REPLACE(`description`, @old2h, @new) WHERE `description` LIKE '%testing.eduberkeley.com%';
-
 -- ---------------------------------------------------------------------------
 -- 5) Widgets (if any HTML/images stored)
 -- ---------------------------------------------------------------------------
-UPDATE `widgets` SET `content` = REPLACE(`content`, CONCAT(@new, '/public/'), CONCAT(@new, '/')) WHERE `content` LIKE '%/public/%';
-UPDATE `widgets` SET `content` = REPLACE(`content`, @old1, @new) WHERE `content` LIKE '%berkeleyme.com%';
-UPDATE `widgets` SET `content` = REPLACE(`content`, @old1h, @new) WHERE `content` LIKE '%berkeleyme.com%';
-UPDATE `widgets` SET `content` = REPLACE(`content`, @old2, @new) WHERE `content` LIKE '%testing.eduberkeley.com%';
-UPDATE `widgets` SET `content` = REPLACE(`content`, @old2h, @new) WHERE `content` LIKE '%testing.eduberkeley.com%';
+UPDATE `widgets` SET `description` = REPLACE(`description`, CONCAT(@new, '/public/'), CONCAT(@new, '/')) WHERE `description` LIKE '%/public/%';
+UPDATE `widgets` SET `description` = REPLACE(`description`, @old1, @new) WHERE `description` LIKE '%berkeleyme.com%';
+UPDATE `widgets` SET `description` = REPLACE(`description`, @old1h, @new) WHERE `description` LIKE '%berkeleyme.com%';
+UPDATE `widgets` SET `description` = REPLACE(`description`, @old2, @new) WHERE `description` LIKE '%testing.eduberkeley.com%';
+UPDATE `widgets` SET `description` = REPLACE(`description`, @old2h, @new) WHERE `description` LIKE '%testing.eduberkeley.com%';
 
 -- ---------------------------------------------------------------------------
 -- Done — clear Laravel cache on server after this:
