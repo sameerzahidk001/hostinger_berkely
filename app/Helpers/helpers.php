@@ -29,6 +29,15 @@ function getYouTubeVideoID($url) {
     return $matches[1] ?? null;
 }
 
+if (!function_exists('section_color')) {
+    function section_color(mixed $value, string $default = 'transparent'): string
+    {
+        $color = trim((string) $value);
+
+        return $color !== '' ? $color : $default;
+    }
+}
+
 if (!function_exists('media_url')) {
     function media_url(mixed $path): ?string
     {

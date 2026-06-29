@@ -50,13 +50,16 @@
                     </div>
                 </div>
             @elseif (in_array($layout, ['layout-2']))
-                <div class="relative overflow-hidden group h-[500px]">
-                    @if(isset($card['image']))
+                @php
+                    $hasImage = ! empty($card['image']);
+                @endphp
+                <div class="relative overflow-hidden group h-[500px]" style="background-color: {{ $hasImage ? 'transparent' : '#ffffff' }};">
+                    @if($hasImage)
                         <img src="{{ $card['image'] }}"
                             alt="{{ image_alt($card['image_alt'] ?? null, $card['title'] ?? 'Card image') }}"
                             class="h-full transition-all delay-300 duration-400 ease-in w-full absolute group-hover:scale-105 object-cover">
                     @endif
-                    <div class="absolute px-4 py-8 z-50 gap-4 flex flex-col justify-end bg-opacity-45 h-full w-full bottom-0">
+                    <div class="absolute px-4 py-8 z-50 gap-4 flex flex-col justify-end h-full w-full bottom-0 {{ $hasImage ? 'bg-black/20' : '' }}">
                         @if(isset($card['title']) || (isset($card['icon']) && $card['icon'] != ''))
                             <div class="flex items-center justify-start mt-2 gap-2">
                                 @if(isset($card['icon']) && $card['icon'] != '')
@@ -84,8 +87,9 @@
                         @endif
                     </div>
 
-                    <div class="absolute transition-all duration-400 ease-in bg-gradient-to-b from-transparent to-black min-h-[650px] text-white bottom-0 group-hover:bottom-0 group-hover:min-h-[900px] w-full z-30">
-                    </div>
+                    @if($hasImage)
+                    <div class="absolute inset-0 pointer-events-none bg-gradient-to-b from-transparent via-black/10 to-black/75 z-30 transition-all duration-400 group-hover:to-black/90"></div>
+                    @endif
                 </div>
             @elseif (in_array($layout, ['layout-3']))
                 <div>

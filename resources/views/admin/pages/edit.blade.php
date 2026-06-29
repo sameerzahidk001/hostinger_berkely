@@ -2614,7 +2614,7 @@
                                                     <label for="sections_{{ $i }}_card_background" class="form-label">Card
                                                         Background:</label>
                                                     <input type="color" id="sections_{{ $i }}_card_background"
-                                                        name="sections[{{ $i }}][_card_background]" class="form-control"
+                                                        name="sections[{{ $i }}][card_background]" class="form-control"
                                                         value="{{ $section['card_background'] ?? '' }}">
                                                 </div>
                                                 <div class="col-md-4">

@@ -1,14 +1,14 @@
 <style>
     .career-cards {
-        background-color: {{ $cardBackground }};
-        color: {{ $cardColor }};
-        border-color: {{ $cardBorderColor }};
+        background-color: {{ section_color($cardBackground, '#ffffff') }};
+        color: {{ section_color($cardColor, 'inherit') }};
+        border-color: {{ section_color($cardBorderColor, '#e5e7eb') }};
     }
 
     .career-cards:hover {
-        background-color: {{ $cardHoverBackground }};
-        color: {{ $cardHoverColor }};
-        border-color: {{ $cardHoverBorderColor }};
+        background-color: {{ section_color($cardHoverBackground, '#f9fafb') }};
+        color: {{ section_color($cardHoverColor, 'inherit') }};
+        border-color: {{ section_color($cardHoverBorderColor, '#e5e7eb') }};
     }
 
     .careers-section {

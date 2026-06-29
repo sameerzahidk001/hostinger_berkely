@@ -237,7 +237,7 @@
                 :background="$section->data['background'] ?? 'transparent'"
                 :color="$section->data['color'] ?? '#000000'"
                 :borderColor="$section->data['border_color'] ?? 'transparent'"
-                :cardBackground="$section->data['card_background']"
+                :cardBackground="$section->data['card_background'] ?? '#ffffff'"
                 :orderby="$section->data['orderby'] ?? ''"
                 :pagination="$section->data['pagination'] ?? 0"
                 :url_target="$section->data['url_target'] ?? ''"

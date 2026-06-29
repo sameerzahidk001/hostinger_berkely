@@ -11,7 +11,7 @@ $grid = $columns == 1 ? 'lg:grid-cols-1' :
 
         <div class="gap-4 grid {{ $grid }}">
             @foreach($categories as $index => $data)
-            <div class="p-8 self-start flex flex-col h-full" style="background-color: {{ $cardBackground }}">
+            <div class="p-8 self-start flex flex-col h-full" style="background-color: {{ section_color($cardBackground, '#ffffff') }}">
                 <h3 class="text-[20px] font-canela font-bold capitalize" style="color: #f8961f;">
                     {{ $data->name }}
                 </h3>
