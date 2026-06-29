@@ -210,7 +210,11 @@ class PagesController extends Controller
         $schools = School::orderBy('name', 'asc')->get();
         $categories = Category::orderBy('name', 'asc')->get();
 
-        return view('admin.pages.edit', compact('page', 'meta', 'schools', 'categories', 'allpages', 'category_page_id'));
+        $seo_analysis = $meta
+            ? app(\App\Services\SeoAnalyzerService::class)->analyzeForEdit($meta)
+            : null;
+
+        return view('admin.pages.edit', compact('page', 'meta', 'schools', 'categories', 'allpages', 'category_page_id', 'seo_analysis'));
     }
 
     /**
@@ -238,9 +242,11 @@ class PagesController extends Controller
             'status' => 'required|in:0,1',
             'meta_title' => 'nullable|string|max:' . seo_field_limits()['title_max'],
             'meta_description' => 'nullable|string|max:' . seo_field_limits()['meta_description_max'],
+            'meta_focus_keyword' => 'nullable|string|max:' . seo_field_limits()['focus_keyword_max'],
             'meta_keywords' => 'nullable|string|max:' . seo_field_limits()['priority_keywords_max_total'],
             'meta_additional_keywords' => 'nullable|string|max:' . seo_field_limits()['additional_keywords_max_total'],
             'meta_thumbnail_path' => 'nullable|string',
+            'meta_thumbnail_file' => 'nullable|file|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'local_meta_thumbnail_input' => 'nullable|file|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
         ]);
 
@@ -250,6 +256,7 @@ class PagesController extends Controller
 
         // Handle Meta Information (PagesSEO)
         $meta = PagesSEO::firstOrNew(['page_id' => $id]);
+        $meta->page_id = $id;
 
         $page->page_name = $request->input('page_name');
         $page->url = $request->input('url');
@@ -273,9 +280,19 @@ class PagesController extends Controller
         $meta->meta_description = $request->input('meta_description');
         $meta->keywords = $request->input('meta_keywords');
         $meta->additional_keywords = $request->input('meta_additional_keywords');
+        assign_column_if_exists($meta, 'focus_keyword', $request->input('meta_focus_keyword'));
         assign_column_if_exists($meta, 'thumbnail_alt', $request->input('meta_thumbnail_alt'));
 
-        if ($request->hasFile('local_meta_thumbnail_input')) {
+        if ($request->hasFile('meta_thumbnail_file')) {
+            $file = $request->file('meta_thumbnail_file');
+            $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+            $extension = $file->getClientOriginalExtension();
+            $slug = Str::slug($originalName) . '-' . time();
+            $fileName = $slug . '.' . $extension;
+            $destinationPath = public_path('images/library/');
+            $file->move($destinationPath, $fileName);
+            $meta->thumbnail = '/images/library/' . $fileName;
+        } elseif ($request->hasFile('local_meta_thumbnail_input')) {
             $file = $request->file('local_meta_thumbnail_input');
             $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
             $extension = $file->getClientOriginalExtension();

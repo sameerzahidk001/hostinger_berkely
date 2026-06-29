@@ -26,12 +26,12 @@
             min-height: auto !important;
         }
 
-        #meta_keywords_addTag, #meta_additional_keywords_tagsinput {
+        #meta_keywords_addTag, #meta_additional_keywords_addTag {
             flex: 0 0 auto;
         }
 
         .tag,
-        #meta_keywords_tag, #meta_additional_keywords_tagsinput {
+        #meta_keywords_tag, #meta_additional_keywords_tag {
             margin: 0px !important;
             width: auto !important;
         }
@@ -2909,125 +2909,43 @@
                         </div>
                         <div class="ibox-content">
                             <div class="row">
-                                <div class="col-lg-6 mb">
-                                    <label for="meta_title">Title <small>( Max {{ seo_field_limits()['title_max'] }} characters )</small></label>
-                                    <input type="text" class="form-control" name="meta_title"
-                                        placeholder="Add SEO Meta title"
-                                        value="{{ old('meta_title', $meta->title ?? '') }}"
-                                        data-maxlength="{{ seo_field_limits()['title_max'] }}"
-                                        maxlength="{{ seo_field_limits()['title_max'] }}">
-                                    @error('meta_title')
-                                        <p class="text-danger text-xs italic">{{ $message }}</p>
-                                    @enderror
-                                </div>
-                                <!-- Image Input Group -->
-                                <div class="col-lg-6 mb form-group">
-                                    <label for="meta_thumbnail">Thumbnail <small>( 1200 X 627 px )</label>
-                                    <div class="input-group">
-                                        <input type="text" id="meta_thumbnail_path" name="meta_thumbnail_path"
-                                            class="form-control" readonly onclick="showFileModal()"
-                                            value="{{ old('meta_thumbnail_path', $meta->thumbnail ?? '') }}">
-                                        <span class="input-group-btn">
-                                            <button class="btn btn-default" type="button"
-                                                onclick="showFileModal()">Browse</button>
-                                        </span>
+                                @if($meta && $meta->id)
+                                    <div class="col-lg-5">
+                                        @include('admin.seo.partials.seo-score', [
+                                            'page_seo' => $meta,
+                                            'seo_analysis' => $seo_analysis ?? null,
+                                            'fieldNames' => [
+                                                'title' => 'meta_title',
+                                                'meta_description' => 'meta_description',
+                                                'focus_keyword' => 'meta_focus_keyword',
+                                                'keywords' => 'meta_keywords',
+                                                'thumbnail_alt' => 'meta_thumbnail_alt',
+                                            ],
+                                        ])
                                     </div>
-
-                                    @error('meta_thumbnail_path') <span class="help-block text-danger">{{ $message }}</span>
-                                    @enderror
-                                    @error('local_meta_thumbnail_input') <span
-                                    class="help-block text-danger">{{ $message }}</span> @enderror
-
-                                    @if(!empty($meta->thumbnail))
-                                        <small id="imageUrlText" class="help-block" style="display:block; margin-top:0px;">
-                                            @if($meta->thumbnail)
-                                                View image <a href="{{ old('meta_thumbnail_path', $meta->thumbnail ?? '') }}"
-                                                    target="_blank" rel="noopener">here</a>
-                                            @else
-                                                <span class="text-muted">No image selected</span>
-                                            @endif
-                                        </small>
-                                    @endif
-                                </div>
-                                @include('admin.partials.image-alt-input', [
-                                    'id' => 'meta_thumbnail_alt',
-                                    'name' => 'meta_thumbnail_alt',
-                                    'value' => old('meta_thumbnail_alt', $meta->thumbnail_alt ?? ''),
-                                ])
-
-                                <!-- Hidden file input -->
-                                <input type="file" id="local_meta_thumbnail_input" name="local_meta_thumbnail_input"
-                                    style="display: none;" accept="image/*" onchange="uploadLocalFile(this)">
-
-                                <!-- File Source Modal -->
-                                <div id="fileModal" class="modal fade" tabindex="-1" role="dialog"
-                                    aria-labelledby="fileModalLabel">
-                                    <div class="modal-dialog modal-sm">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <button type="button" class="close" data-dismiss="modal">&times;</button>
-                                                <h4 class="modal-title" id="fileModalLabel">Select Image</h4>
-                                            </div>
-                                            <div class="modal-body text-center">
-                                                <button type="button" class="btn btn-primary btn-block"
-                                                    onclick="pickLocalFile()">Upload from Computer</button>
-                                                <button type="button" class="btn btn-success btn-block"
-                                                    onclick="showFileManagerModal()">Choose from File Manager</button>
-                                            </div>
-                                        </div>
+                                    <div class="col-lg-7">
+                                @else
+                                    <div class="col-lg-12">
+                                @endif
+                                        @include('admin.seo.partials.seo-meta-fields', [
+                                            'seoMeta' => $meta,
+                                            'fieldNames' => [
+                                                'title' => 'meta_title',
+                                                'meta_description' => 'meta_description',
+                                                'focus_keyword' => 'meta_focus_keyword',
+                                                'keywords' => 'meta_keywords',
+                                                'additional_keywords' => 'meta_additional_keywords',
+                                                'thumbnail_path' => 'meta_thumbnail_path',
+                                                'thumbnail_file' => 'meta_thumbnail_file',
+                                                'thumbnail_alt' => 'meta_thumbnail_alt',
+                                                'thumbnail_id_base' => 'meta_thumbnail',
+                                            ],
+                                        ])
+                                @if($meta && $meta->id)
                                     </div>
-                                </div>
-
-                                <!-- File Manager Modal -->
-                                <div id="fileManagerModal" class="modal fade" tabindex="-1" role="dialog">
-                                    <div class="modal-dialog modal-lg">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <button type="button" class="close" data-dismiss="modal">&times;</button>
-                                                <h4 class="modal-title">Choose Image</h4>
-                                            </div>
-
-                                            <div class="modal-body" style="max-height: 65vh; overflow-y: auto;"
-                                                id="fileManagerModalBody">
-                                                {{-- Your image grid with checkboxes --}}
-                                            </div>
-
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary"
-                                                    data-dismiss="modal">Cancel</button>
-                                                <button type="button" class="btn btn-primary"
-                                                    onclick="confirmImageSelection()">Select</button>
-                                            </div>
-                                        </div>
+                                @else
                                     </div>
-                                </div>
-                                <div class="col-lg-12 mb">
-                                    <label for="meta_description">Meta Description <small>( Max {{ seo_field_limits()['meta_description_max'] }} characters )</small></label>
-                                    <textarea class="form-control editor" name="meta_description"
-                                        placeholder="Add SEO Meta description"
-                                        data-maxlength="{{ seo_field_limits()['meta_description_max'] }}"
-                                        maxlength="{{ seo_field_limits()['meta_description_max'] }}">{{ old('meta_description', $meta->meta_description ?? '') }}</textarea>
-                                    @error('meta_description')
-                                        <p class="text-danger text-xs italic">{{ $message }}</p>
-                                    @enderror
-                                </div>
-                                <div class="col-lg-6" style="margin-bottom: 15px;">
-                                    <label for="meta_keywords">Priority Keywords <small>( Max {{ seo_field_limits()['priority_keywords_max_tags'] }} keywords )</small></label>
-                                    <input name="meta_keywords" id="meta_keywords"
-                                        value="{{ old('meta_keywords', $meta->keywords ?? '') }}" class="form-control" />
-                                    @error('meta_keywords')
-                                        <p class="text-danger text-xs italic">{{ $message }}</p>
-                                    @enderror
-                                </div>
-
-                                <div class="col-lg-6" style="margin-bottom: 15px;">
-                                    <label for="meta_additional_keywords">Additional Keywords <small>( Max {{ seo_field_limits()['additional_keywords_max_tags'] }} keywords )</small></label>
-                                    <input name="meta_additional_keywords" id="meta_additional_keywords"
-                                        value="{{ old('meta_additional_keywords', $meta->additional_keywords ?? '') }}" class="form-control" />
-                                    @error('meta_additional_keywords')
-                                        <p class="text-danger text-xs italic">{{ $message }}</p>
-                                    @enderror
-                                </div>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -3053,6 +2971,8 @@
             </div>
         </div>
     </form>
+
+    @include('admin.partials.media-picker')
 
 @endsection
 
@@ -3247,6 +3167,16 @@
         });
     </script>
     @include('admin.seo.partials.tags-limits-script')
+    <script>
+        $(document).ready(function () {
+            $('form').on('keydown', function (e) {
+                if (e.key === 'Enter' && !$(e.target).closest('#meta_keywords_tagsinput, #meta_additional_keywords_tagsinput').length) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+        });
+    </script>
     <script>
         $(document).ready(function () {
             // Handle collapse toggle

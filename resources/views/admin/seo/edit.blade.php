@@ -94,96 +94,24 @@
                                     @include('admin.seo.partials.seo-score')
                                 </div>
                                 <div class="col-lg-7">
-                                <!-- <div class="col-lg-6 mb">
-                                                <label for="">Page URL</label>
-                                                <input type="text" class="form-control" name="page_url" placeholder="add page url"  value="{{ old('page_url',  $page_seo->page_url) }}">
-                                            </div> -->
                                 @if($page_seo->course_id && $page_seo->course)
                                     <div class="col-lg-12 mb">
-                                        <label for="">Course Title</label>
+                                        <label>Course Title</label>
                                         <input type="text" class="form-control"
                                             value="{{ $page_seo->course->title }}" readonly>
                                         <p class="help-block text-muted" style="margin-top:4px;">The course name on the website (H1 banner). Edit under Courses, not here.</p>
                                     </div>
                                 @elseif($page_seo->page_id && $page_seo->page)
                                     <div class="col-lg-12 mb">
-                                        <label for="">Page Name</label>
+                                        <label>Page Name</label>
                                         <input type="text" class="form-control"
                                             value="{{ $page_seo->page->page_name }}" readonly>
                                         <p class="help-block text-muted" style="margin-top:4px;">The CMS page name. Main on-page heading comes from the page banner section.</p>
                                     </div>
                                 @endif
-                                <div class="col-lg-12 mb">
-                                    <label for="">SEO Title <small>(max 60 characters — browser tab &amp; Google)</small></label>
-                                    <input type="text" class="form-control" name="title" placeholder="e.g. Course Name | Berkeley School"
-                                        value="{{ old('title', $page_seo->title) }}" data-maxlength="60" maxlength="60">
-                                </div>
-                                <div class="col-lg-12 mb">
-                                    <label for="">Meta Description <small>( Max 160 characters )</small></label>
-                                    <textarea class="form-control" name="meta_description"
-                                        placeholder="Add meta description" data-maxlength="160" maxlength="160">{{ old('meta_description', $page_seo->meta_description) }}</textarea>
-                                </div>
-                                <div class="col-lg-12 mb">
-                                    <label for="focus_keyword">Focus Keyword <small>(primary phrase for SEO scoring — max {{ seo_field_limits()['focus_keyword_max'] }} characters)</small></label>
-                                    <input type="text" class="form-control" name="focus_keyword" id="focus_keyword"
-                                        placeholder="e.g. Executive Women Leadership Programme"
-                                        value="{{ old('focus_keyword', $page_seo->focus_keyword) }}"
-                                        data-maxlength="{{ seo_field_limits()['focus_keyword_max'] }}"
-                                        maxlength="{{ seo_field_limits()['focus_keyword_max'] }}">
-                                    <p class="help-block text-muted" style="margin-top:4px;">Main keyword the SEO tool checks in title, description, URL, and live page H1. If left empty, the first priority keyword is used.</p>
-                                </div>
-                                <div class="col-lg-12 mb">
-                                    <label for="">Priority Keywords <small>( Max {{ seo_field_limits()['priority_keywords_max_tags'] }} keywords, {{ seo_field_limits()['keyword_tag_max_length'] }} chars each )</small></label>
-                                    <input class="form-control" name="keywords" id="keywords"
-                                        placeholder="Add keywords with comma separated" value="{{ old('keywords', $page_seo->keywords) }}">
-                                </div>
-                                <div class="col-lg-12 mb">
-                                    <label for="">Additional Keywords <small>( Max {{ seo_field_limits()['additional_keywords_max_tags'] }} keywords, {{ seo_field_limits()['keyword_tag_max_length'] }} chars each )</small></label>
-                                    <input class="form-control" name="additional_keywords" id="additional_keywords"
-                                        placeholder="Add keywords with comma separated" value="{{ old('additional_keywords', $page_seo->additional_keywords) }}">
-                                </div>
-                                <div class="col-lg-6 mb">
-                                    <label class="mb-1">Thumbnail <small>( 1200 627 px )</label>
-
-                                    <div class="input-group">
-                                        <input type="text" id="thumbnail_img_display" class="form-control"
-                                            placeholder="Choose or upload..." readonly
-                                            onclick="MediaPicker.open({ idBase:'thumbnail_img', multiple:false, accept:'image/*', fmType:'image' })">
-                                        <span class="input-group-btn">
-                                            <button class="btn btn-default" type="button"
-                                                onclick="MediaPicker.open({ idBase:'thumbnail_img', multiple:false, accept:'image/*', fmType:'image' })">
-                                                Browse
-                                            </button>
-                                        </span>
-                                    </div>
-
-                                    <!-- hidden URL (kept inside your label[] array) -->
-                                    <input type="hidden" id="thumbnail_img_path" name="thumbnail_img_path"
-                                        value="{{ old('thumbnail_img_path', $page_seo->thumbnail) }}">
-
-                                    <!-- actual file upload, keep original key -->
-                                    <input type="file" id="thumbnail_img_file" name="thumbnail_img" accept="image/*"
-                                        style="display:none">
-
-                                    <div id="thumbnail_img_preview" class="picker-preview" style="margin-top:6px;">
-                                        @if($page_seo->thumbnail)
-                                            <img src="{{ asset($page_seo->thumbnail) }}"
-                                                style="max-height:60px;border-radius:4px;">
-                                        @endif
-                                    </div>
-
-                                    @if($page_seo->thumbnail)
-                                        <a href="{{ asset($page_seo->thumbnail) }}" target="_blank">Current
-                                            Image</a>
-                                    @endif
-                                    @include('admin.partials.image-alt-input', [
-                                        'id' => 'thumbnail_alt',
-                                        'name' => 'thumbnail_alt',
-                                        'value' => old('thumbnail_alt', $page_seo->thumbnail_alt ?? ''),
-                                    ])
-                                    <p class="help-block text-muted" style="margin-top:4px;">Describe the social/OG thumbnail for accessibility and SEO scoring (include focus keyword when relevant).</p>
-                                </div>
-                            </div>
+                                @include('admin.seo.partials.seo-meta-fields', [
+                                    'page_seo' => $page_seo,
+                                ])
                                 </div>
                             </div>
 

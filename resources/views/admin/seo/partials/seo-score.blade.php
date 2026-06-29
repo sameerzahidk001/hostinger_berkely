@@ -4,8 +4,16 @@
     $scoreClass = $score >= 80 ? 'excellent' : ($score >= 50 ? 'good' : 'poor');
     $label = $analysis['label'] ?? 'Needs work';
     $previewUrl = $analysis['preview_url'] ?? url('/');
-    $seoTitle = old('title', $page_seo->title ?? '');
-    $seoDescription = old('meta_description', $page_seo->meta_description ?? '');
+    $fieldNames = array_merge([
+        'title' => 'title',
+        'meta_description' => 'meta_description',
+        'focus_keyword' => 'focus_keyword',
+        'keywords' => 'keywords',
+        'thumbnail_alt' => 'thumbnail_alt',
+    ], $fieldNames ?? []);
+    $seoMeta = $page_seo ?? $seoMeta ?? null;
+    $seoTitle = old($fieldNames['title'], $seoMeta->title ?? '');
+    $seoDescription = old($fieldNames['meta_description'], $seoMeta->meta_description ?? '');
     $contentScore = (int) ($analysis['content_score'] ?? 0);
     $liveScore = isset($analysis['live_score']) && $analysis['live_score'] !== null
         ? (int) $analysis['live_score']
@@ -105,11 +113,11 @@
 @if(isset($page_seo) && $page_seo->id)
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const titleInput = document.querySelector('[name="title"]');
-    const descInput = document.querySelector('[name="meta_description"]');
-    const focusKeywordInput = document.querySelector('[name="focus_keyword"]');
-    const keywordsInput = document.querySelector('[name="keywords"]');
-    const thumbnailAltInput = document.querySelector('[name="thumbnail_alt"]');
+    const titleInput = document.querySelector('[name="{{ $fieldNames['title'] }}"]');
+    const descInput = document.querySelector('[name="{{ $fieldNames['meta_description'] }}"]');
+    const focusKeywordInput = document.querySelector('[name="{{ $fieldNames['focus_keyword'] }}"]');
+    const keywordsInput = document.querySelector('[name="{{ $fieldNames['keywords'] }}"]');
+    const thumbnailAltInput = document.querySelector('[name="{{ $fieldNames['thumbnail_alt'] }}"]');
     const analyzeUrl = @json(route('courses-pages-seo.analyze', $page_seo->id));
     const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     let timer = null;
