@@ -140,7 +140,19 @@ class WelcomeController extends Controller
                     'contact-us' => 'contactus',
                     'contactus' => 'contactus',
                     'separator' => 'separator',
+                    'separator-section' => 'separator',
                     'certificate' => 'certificate',
+                    'certificate-section' => 'certificate',
+                    'filter-courses' => 'filter-courses',
+                    'filter-courses-section' => 'filter-courses',
+                    'career' => 'career',
+                    'career-section' => 'career',
+                    'search-bar' => 'search-bar',
+                    'search-section' => 'search-section',
+                    'course-agendas' => 'course-agendas',
+                    'testimonials' => 'testimonials',
+                    'content' => 'content',
+                    'instructors' => 'instructors',
                 ];
 
                 $section->section_type = $aliases[$normalized] ?? $normalized;
