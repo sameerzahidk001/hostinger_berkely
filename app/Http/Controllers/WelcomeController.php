@@ -117,6 +117,35 @@ class WelcomeController extends Controller
                 $section->section_type = $section->data['section_type'] ?? null;
             }
 
+            // Normalize admin labels (e.g. "Hero Banner") to frontend keys (e.g. "hero-banner").
+            if (!empty($section->section_type) && is_string($section->section_type)) {
+                $raw = trim($section->section_type);
+                $normalized = strtolower(str_replace(['_', ' '], '-', $raw));
+
+                $aliases = [
+                    'hero-banner' => 'hero-banner',
+                    'banner-section' => 'banner',
+                    'banner' => 'banner',
+                    'school-category' => 'school-category',
+                    'category' => 'category',
+                    'grid-cards' => 'grid-cards',
+                    'overlay-cards' => 'overlay-cards',
+                    'title-section' => 'title-section',
+                    'media-section' => 'media-section',
+                    'cards' => 'cards',
+                    'clients' => 'clients',
+                    'list-section' => 'list',
+                    'list' => 'list',
+                    'programmes' => 'programmes',
+                    'contact-us' => 'contactus',
+                    'contactus' => 'contactus',
+                    'separator' => 'separator',
+                    'certificate' => 'certificate',
+                ];
+
+                $section->section_type = $aliases[$normalized] ?? $normalized;
+            }
+
             if ($section->section_type === 'category' && isset($section->data['category'])) {
                 $orderBy = explode(',', $section->data['orderby']);
                 $orderColumn = $orderBy[0] ?? 'id';
