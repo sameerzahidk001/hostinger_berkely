@@ -1050,7 +1050,7 @@ class CourseController extends Controller
                 $course->delete(); // Soft delete
                 record_panel_activity(
                     'Course Disabled',
-                    $course->title ?: 'Course #' . $course->id,
+                    ($course->title ?: 'Course #' . $course->id) . ' — Status: Disable',
                     route('course.edit', $course->id),
                     $request
                 );
@@ -1058,7 +1058,7 @@ class CourseController extends Controller
                 $course->restore(); // Restore
                 record_panel_activity(
                     'Course Enabled',
-                    $course->title ?: 'Course #' . $course->id,
+                    ($course->title ?: 'Course #' . $course->id) . ' — Status: Active',
                     route('course.edit', $course->id),
                     $request
                 );

@@ -94,7 +94,7 @@ class PagesController extends Controller
         touch_content_audit($page);
         record_panel_activity(
             $status ? 'Page Enabled' : 'Page Disabled',
-            $page->page_name ?: $page->url,
+            ($page->page_name ?: $page->url) . ' — Status: ' . ($status ? 'Active' : 'Disable'),
             route('pages.edit', $page->id),
             $request
         );

@@ -714,14 +714,21 @@ if (!function_exists('seo_metadata_list_score')) {
 if (!function_exists('seo_list_item_url')) {
     function seo_list_item_url($seo, ?string $categoryPerma = 'category'): string
     {
-        if (! empty($seo->course_id) && $seo->relationLoaded('course') && $seo->course) {
-            return (string) ($seo->course->slug ?? '');
+        if (! empty($seo->course_id)) {
+            $seo->loadMissing('course');
+            $slug = (string) ($seo->course->slug ?? '');
+
+            return $slug !== '' ? 'course/' . ltrim($slug, '/') : '';
         }
 
-        if (! empty($seo->page_id) && $seo->relationLoaded('page') && $seo->page) {
+        if (! empty($seo->page_id)) {
+            $seo->loadMissing(['page.parent']);
             $page = $seo->page;
+            if (! $page) {
+                return '';
+            }
 
-            if ($page->parent_id && $page->relationLoaded('parent') && $page->parent) {
+            if ($page->parent_id && $page->parent) {
                 return trim($page->parent->url . '/' . $page->url, '/');
             }
 
@@ -733,6 +740,22 @@ if (!function_exists('seo_list_item_url')) {
         }
 
         return '';
+    }
+}
+
+if (!function_exists('seo_list_item_public_href')) {
+    function seo_list_item_public_href($seo, ?string $categoryPerma = 'category'): string
+    {
+        if (! empty($seo->course_id)) {
+            $seo->loadMissing('course');
+            $slug = (string) ($seo->course->slug ?? '');
+
+            return $slug !== '' ? route('course.details', ['course' => $slug]) : '';
+        }
+
+        $path = seo_list_item_url($seo, $categoryPerma);
+
+        return $path !== '' ? url($path) : '';
     }
 }
 

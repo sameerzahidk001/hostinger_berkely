@@ -79,13 +79,14 @@
                                         $isCourse = ! empty($page_seo->course_id);
                                         $itemTitle = $page_seo->title ?: ($isCourse ? ($page_seo->course->title ?? 'Course') : ($page_seo->page->page_name ?? 'Page'));
                                         $itemUrl = seo_list_item_url($page_seo, $category_perma ?? 'category');
+                                        $itemHref = seo_list_item_public_href($page_seo, $category_perma ?? 'category');
                                     @endphp
                                     <tr>
                                         <td data-order="{{ $page_seo->id }}">{{ $loop->iteration }}</td>
                                         <td data-order="{{ $itemTitle }}">
                                             <strong>{{ $itemTitle }}</strong>
-                                            @if($itemUrl)
-                                                <br><a href="{{ url($itemUrl) }}" target="_blank" style="font-size:12px;">{{ $itemUrl }}</a>
+                                            @if($itemUrl && $itemHref)
+                                                <br><a href="{{ $itemHref }}" target="_blank" style="font-size:12px;">{{ $itemUrl }}</a>
                                             @endif
                                         </td>
                                         <td data-order="{{ $isCourse ? 1 : 0 }}">{{ $isCourse ? 'Course' : 'Page' }}</td>
