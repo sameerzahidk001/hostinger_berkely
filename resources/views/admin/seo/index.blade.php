@@ -69,7 +69,6 @@
                                     <th style="width:110px;">Score<br><small class="text-muted" style="font-weight:normal;">SEO / Live</small></th>
                                     <th style="width:220px;">SEO Details</th>
                                     <th>Meta Description</th>
-                                    @include('admin.layout.partials.audit-columns-head')
                                     <th style="width:110px;">Action</th>
                                 </tr>
                             </thead>
@@ -94,7 +93,6 @@
                                             'seo' => $page_seo,
                                             'analysis' => $analysis,
                                         ])
-                                        @include('admin.layout.partials.audit-columns-cells', ['model' => $page_seo])
                                         <td>
                                             <a href="{{ route('courses-pages-seo.edit', $page_seo->id) }}" class="btn-primary btn btn-xs">
                                                 <i class="fa fa-pencil"></i> Edit
@@ -119,7 +117,6 @@
                                     <th>Score <small class="text-muted">(SEO / Live)</small></th>
                                     <th>SEO Details</th>
                                     <th>Meta Description</th>
-                                    @include('admin.layout.partials.audit-columns-head')
                                     <th>Action</th>
                                 </tr>
                             </tfoot>

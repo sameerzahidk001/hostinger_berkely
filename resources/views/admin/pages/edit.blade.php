@@ -294,6 +294,8 @@
                                 if (empty($section['section_type'])) {
                                     $section['section_type'] = $page->sections[$i]->section_type ?? '';
                                 }
+                                $section['section_type'] = normalize_section_type_key($section['section_type'] ?? '')
+                                    ?? ($section['section_type'] ?? '');
                                 $sectionType = ucwords(str_replace('-', ' ', $section['section_type'] ?? ''));
                             @endphp
 

@@ -117,45 +117,8 @@ class WelcomeController extends Controller
                 $section->section_type = $section->data['section_type'] ?? null;
             }
 
-            // Normalize admin labels (e.g. "Hero Banner") to frontend keys (e.g. "hero-banner").
-            if (!empty($section->section_type) && is_string($section->section_type)) {
-                $raw = trim($section->section_type);
-                $normalized = strtolower(str_replace(['_', ' '], '-', $raw));
-
-                $aliases = [
-                    'hero-banner' => 'hero-banner',
-                    'banner-section' => 'banner',
-                    'banner' => 'banner',
-                    'school-category' => 'school-category',
-                    'category' => 'category',
-                    'grid-cards' => 'grid-cards',
-                    'overlay-cards' => 'overlay-cards',
-                    'title-section' => 'title-section',
-                    'media-section' => 'media-section',
-                    'cards' => 'cards',
-                    'clients' => 'clients',
-                    'list-section' => 'list',
-                    'list' => 'list',
-                    'programmes' => 'programmes',
-                    'contact-us' => 'contactus',
-                    'contactus' => 'contactus',
-                    'separator' => 'separator',
-                    'separator-section' => 'separator',
-                    'certificate' => 'certificate',
-                    'certificate-section' => 'certificate',
-                    'filter-courses' => 'filter-courses',
-                    'filter-courses-section' => 'filter-courses',
-                    'career' => 'career',
-                    'career-section' => 'career',
-                    'search-bar' => 'search-bar',
-                    'search-section' => 'search-section',
-                    'course-agendas' => 'course-agendas',
-                    'testimonials' => 'testimonials',
-                    'content' => 'content',
-                    'instructors' => 'instructors',
-                ];
-
-                $section->section_type = $aliases[$normalized] ?? $normalized;
+            if (! empty($section->section_type) && is_string($section->section_type)) {
+                $section->section_type = normalize_section_type_key($section->section_type) ?? $section->section_type;
             }
 
             if ($section->section_type === 'category' && isset($section->data['category'])) {

@@ -116,6 +116,59 @@ if (!function_exists('normalize_section_backgrounds')) {
     }
 }
 
+if (!function_exists('section_type_aliases')) {
+    function section_type_aliases(): array
+    {
+        return [
+            'hero-banner' => 'hero-banner',
+            'banner-section' => 'banner',
+            'banner' => 'banner',
+            'school-category' => 'school-category',
+            'category' => 'category',
+            'grid-cards' => 'grid-cards',
+            'overlay-cards' => 'overlay-cards',
+            'title-section' => 'title-section',
+            'media-section' => 'media-section',
+            'cards' => 'cards',
+            'clients' => 'clients',
+            'list-section' => 'list',
+            'list' => 'list',
+            'programmes' => 'programmes',
+            'contact-us' => 'contactus',
+            'contactus' => 'contactus',
+            'separator' => 'separator',
+            'separator-section' => 'separator',
+            'certificate' => 'certificate',
+            'certificate-section' => 'certificate',
+            'filter-courses' => 'filter-courses',
+            'filter-courses-section' => 'filter-courses',
+            'career' => 'career',
+            'career-section' => 'career',
+            'search-bar' => 'search-bar',
+            'search-section' => 'search-section',
+            'course-agendas' => 'course-agendas',
+            'testimonials' => 'testimonials',
+            'content' => 'content',
+            'instructors' => 'instructors',
+        ];
+    }
+}
+
+if (!function_exists('normalize_section_type_key')) {
+    /** Map admin labels (e.g. "Hero Banner", "Banner Section") to frontend/editor keys. */
+    function normalize_section_type_key(?string $sectionType): ?string
+    {
+        if ($sectionType === null || trim($sectionType) === '') {
+            return null;
+        }
+
+        $normalized = strtolower(str_replace(['_', ' '], '-', trim($sectionType)));
+        $aliases = section_type_aliases();
+
+        return $aliases[$normalized] ?? $normalized;
+    }
+}
+
 if (!function_exists('media_url')) {
     function media_url(mixed $path): ?string
     {

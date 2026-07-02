@@ -341,6 +341,9 @@ class PagesController extends Controller
                     ?? ($oldData['section_type'] ?? null);
             }
 
+            $section['section_type'] = normalize_section_type_key($section['section_type'] ?? '')
+                ?? ($section['section_type'] ?? null);
+
             // 🔹 Preserve old images for cards before updating
             if (isset($section['cards'])) {
                 foreach ($section['cards'] as $cardIndex => $card) {
@@ -498,8 +501,28 @@ class PagesController extends Controller
             $newSectionIds[] = $savedSection->id;
         }
 
-        // Delete removed sections
+        // Delete removed sections — block accidental mass wipe when the editor sends incomplete data.
         $sectionsToDelete = $existingSections->keys()->diff($newSectionIds);
+        $existingCount = $existingSections->count();
+        $incomingCount = count($newSectionIds);
+
+        if ($sectionsToDelete->isNotEmpty() && $existingCount > 0) {
+            $wouldDeleteCount = $sectionsToDelete->count();
+            $looksLikePartialSave = $incomingCount < $existingCount
+                && ($wouldDeleteCount > 1 || $incomingCount < (int) ceil($existingCount * 0.5));
+
+            if ($looksLikePartialSave) {
+                return redirect()->back()
+                    ->with(
+                        'fail',
+                        'Save blocked to protect page content. The editor only sent '
+                        . $incomingCount . ' of ' . $existingCount
+                        . ' sections (missing sections were not deleted). Refresh the page, confirm all sections are visible, then save again.'
+                    )
+                    ->withInput();
+            }
+        }
+
         PageSection::whereIn('id', $sectionsToDelete)->delete();
 
         $page->refresh();
