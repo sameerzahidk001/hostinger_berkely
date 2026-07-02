@@ -32,7 +32,6 @@ class SeoController extends Controller
             ->with([
                 'page:id,page_name,url,parent_id,category_id',
                 'page.parent:id,url',
-                'page.sections',
                 'course.dynamicLabel',
                 'course.courseFaq',
                 'createdBy:id,username,email',
@@ -52,11 +51,20 @@ class SeoController extends Controller
         }
 
         $analyzer = app(SeoAnalyzerService::class);
+        // Avoid timeouts on large databases:
+        // - don't eager-load full page sections for every row
+        // - don't run live verification for every row on the listing
+        // - cap the default list size (filters can still narrow results)
+        if (! $request->filled('name') && ! $request->filled('type')) {
+            $query->limit(200);
+        }
+
         $data['pages_seo'] = $query
             ->orderByDesc('id')
             ->get()
             ->each(function (PagesSEO $pageSeo) use ($analyzer) {
-                $pageSeo->seo_analysis = $analyzer->analyzeForListing($pageSeo, true);
+                // Only show cached live score on list; full live checks are on the edit screen.
+                $pageSeo->seo_analysis = $analyzer->analyzeForListing($pageSeo, false);
             });
 
         $data['category_perma'] = SiteSettings::value('category_perma') ?? 'category';
