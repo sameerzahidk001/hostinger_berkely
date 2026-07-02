@@ -63,8 +63,7 @@ class SeoController extends Controller
             ->orderByDesc('id')
             ->get()
             ->each(function (PagesSEO $pageSeo) use ($analyzer) {
-                // Only show cached live score on list; full live checks are on the edit screen.
-                $pageSeo->seo_analysis = $analyzer->analyzeForListing($pageSeo, false);
+                $pageSeo->seo_analysis = $analyzer->analyzeMetaOnlyForListing($pageSeo);
             });
 
         $data['category_perma'] = SiteSettings::value('category_perma') ?? 'category';

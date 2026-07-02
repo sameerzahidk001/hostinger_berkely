@@ -10,6 +10,72 @@ use Illuminate\Support\Str;
 
 class SeoAnalyzerService
 {
+    /**
+     * Listing view must be fast and never hit live pages.
+     * Keep this intentionally lightweight (no section loads, no HTML parsing).
+     */
+    public function analyzeMetaOnlyForListing(PagesSEO $seo): array
+    {
+        $title = trim((string) $seo->title);
+        $description = trim((string) $seo->meta_description);
+        $focusKeyword = $this->focusKeyword($seo);
+
+        $basic = [
+            $this->check($focusKeyword !== '', 'Focus keyword is set.'),
+            $this->check($title !== '', 'SEO title is set.'),
+            $this->check($description !== '', 'Meta description is set.'),
+        ];
+
+        $additional = [
+            $this->check(
+                $focusKeyword !== '' && $title !== '' && Str::contains(Str::lower($title), Str::lower($focusKeyword)),
+                'Focus keyword used in the SEO title.'
+            ),
+            $this->check(
+                $focusKeyword !== '' && $description !== '' && Str::contains(Str::lower($description), Str::lower($focusKeyword)),
+                'Focus keyword used in the meta description.'
+            ),
+            $this->check(
+                $title === '' || (strlen($title) >= 30 && strlen($title) <= 60),
+                'SEO title length is ' . strlen($title) . ' characters (ideal 30–60).'
+            ),
+            $this->check(
+                $description === '' || (strlen($description) >= 120 && strlen($description) <= 160),
+                'Meta description length is ' . strlen($description) . ' characters (ideal 120–160).'
+            ),
+        ];
+
+        $technical = $this->technicalChecksForListing($seo, $title, $description);
+
+        $score = $this->weightedScore([
+            ['checks' => $basic, 'weight' => 40],
+            ['checks' => $additional, 'weight' => 40],
+            ['checks' => $technical, 'weight' => 20],
+        ]);
+
+        return [
+            'score' => $score,
+            'label' => $this->scoreLabel($score),
+            'content_score' => $score,
+            'live_score' => null,
+            'focus_keyword' => $focusKeyword,
+            'word_count' => 0,
+            'keyword_density' => 0,
+            'keyword_count' => 0,
+            'preview_url' => url('/'),
+            'url_slug' => '',
+            'basic' => $basic,
+            'additional' => $additional,
+            'technical' => $technical,
+            'basic_errors' => count(array_filter($basic, fn ($c) => ! $c['ok'])),
+            'additional_errors' => count(array_filter($additional, fn ($c) => ! $c['ok'])),
+            'technical_errors' => count(array_filter($technical, fn ($c) => ! $c['ok'])),
+            'external_links' => 0,
+            'internal_links' => 0,
+            'schema' => 'Article',
+        ];
+    }
+
     public function analyze(PagesSEO $seo, bool $withLiveVerification = false): array
     {
         $title = trim((string) $seo->title);
