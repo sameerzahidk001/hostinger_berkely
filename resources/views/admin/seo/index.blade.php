@@ -37,7 +37,7 @@
             <div class="ibox float-e-margins" style="margin-bottom: 0;">
                 <div class="ibox-title">
                     <h5>SEO</h5>
-                    <small class="text-muted">Score column shows <strong>SEO</strong> (content + metadata) and <strong>Live</strong> (public page) together.</small>
+                    <small class="text-muted">Click any column header to sort. Open <strong>Edit</strong> for full SEO analysis and live page checks.</small>
                 </div>
                 <div class="ibox-content">
                     <div class="table-responsive">
@@ -66,7 +66,7 @@
                                     <th style="width:50px;">#</th>
                                     <th>Title</th>
                                     <th style="width:90px;">Type</th>
-                                    <th style="width:110px;">Score<br><small class="text-muted" style="font-weight:normal;">SEO / Live</small></th>
+                                    <th style="width:90px;">Score</th>
                                     <th style="width:220px;">SEO Details</th>
                                     <th>Meta Description</th>
                                     <th style="width:110px;">Action</th>
@@ -105,21 +105,10 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="11" class="text-center text-muted">No SEO records found.</td>
+                                        <td colspan="7" class="text-center text-muted">No SEO records found.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
-                            <tfoot>
-                                <tr>
-                                    <th>#</th>
-                                    <th>Title</th>
-                                    <th>Type</th>
-                                    <th>Score <small class="text-muted">(SEO / Live)</small></th>
-                                    <th>SEO Details</th>
-                                    <th>Meta Description</th>
-                                    <th>Action</th>
-                                </tr>
-                            </tfoot>
                         </table>
                     </div>
                 </div>
@@ -141,12 +130,12 @@
                 paging: true,
                 info: true,
                 ordering: true,
-                responsive: true,
+                responsive: false,
                 dom: '<"admin-dt-toolbar"<l><B><f>>rtip',
                 order: [[0, 'desc']],
                 buttons: [adminDatatableExcelButton('SEO List', 'seo_list')],
                 columnDefs: [
-                    { orderable: false, targets: [10] }
+                    { orderable: false, targets: [6] }
                 ]
             });
         });

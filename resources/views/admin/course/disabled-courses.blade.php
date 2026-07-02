@@ -78,9 +78,6 @@
                                         <th>Course Structure</th>
                                         <th style="width:130px;">Lecture Plan</th>
                                         <th>SEO</th>
-                                        <th style="width:110px;">Score<br><small class="text-muted" style="font-weight:normal;">SEO / Live</small></th>
-                                        <th style="width:220px;">SEO Details</th>
-                                        <th>Meta Description</th>
                                         <th>FAQ's</th>
                                         <th>Testimonial</th>
                                         <th>Instructors</th>
@@ -158,10 +155,6 @@
                                                     <a href="{{ route('courses-pages-seo.create', ['course_name' => $data->title, 'course_id' => $data->id]) }}" class="label label-danger" target="_blank">Add</a>
                                                 @endif
                                             </td>
-                                            @include('admin.seo.partials.list-seo-columns', [
-                                                'seo' => $data->seo,
-                                                'analysis' => $data->seo_analysis ?? null,
-                                            ])
                                             <td>
                                                 @if ($data->courseFaq->isEmpty())
                                                     <a href="{{ route('course.show-faqs', ['id' => $data->id]) }}" class="label label-danger" target="_blank">Add</a>

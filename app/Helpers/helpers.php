@@ -1502,19 +1502,52 @@ if (!function_exists('touch_content_audit')) {
 if (!function_exists('log_panel_course_update')) {
     function log_panel_course_update(\App\Models\Course $course): void
     {
-        static $loggedCourseIds = [];
+        static $loggedCourseKeys = [];
 
-        if (isset($loggedCourseIds[$course->id])) {
+        $module = trim((string) request()->input('course_module', ''));
+        $logKey = $course->id . ':' . ($module !== '' ? $module : 'save');
+
+        if (isset($loggedCourseKeys[$logKey])) {
             return;
         }
 
-        $loggedCourseIds[$course->id] = true;
+        $loggedCourseKeys[$logKey] = true;
+
+        $item = $course->title ?: 'Course #' . $course->id;
+        if ($module !== '') {
+            $sectionLabel = ucwords(str_replace('_', ' ', preg_replace('/_section$/', '', $module)));
+            $item .= ' — ' . $sectionLabel;
+        }
 
         record_panel_activity(
             'Course Updated',
-            $course->title ?: 'Course #' . $course->id,
+            $item,
             route('course.edit', $course->id)
         );
+    }
+}
+
+if (!function_exists('log_panel_seo_activity')) {
+    function log_panel_seo_activity(\App\Models\PagesSEO $seo, string $action): void
+    {
+        $seo->loadMissing(['page', 'course']);
+
+        $type = $seo->course_id ? 'Course' : 'Page';
+        $name = $seo->course_id
+            ? ($seo->course?->title ?: 'Course #' . $seo->course_id)
+            : ($seo->page?->page_name ?: 'Page #' . $seo->page_id);
+
+        $item = $type . ': ' . $name;
+        $seoTitle = trim((string) $seo->title);
+        if ($seoTitle !== '') {
+            $item .= ' — ' . $seoTitle;
+        }
+
+        $url = $seo->id
+            ? route('courses-pages-seo.edit', $seo->id)
+            : null;
+
+        record_panel_activity($action, $item, $url);
     }
 }
 

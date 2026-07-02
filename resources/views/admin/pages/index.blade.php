@@ -151,9 +151,6 @@
                                         <th style="width:90px;">Status</th>
                                         <th>FAQ's Count</th>
                                         <th>SEO Status</th>
-                                        <th style="width:110px;">Score<br><small class="text-muted" style="font-weight:normal;">SEO / Live</small></th>
-                                        <th style="width:220px;">SEO Details</th>
-                                        <th>Meta Description</th>
                                         @include('admin.layout.partials.audit-columns-head')
                                         <th style="width:130px;">Action</th>
                                     </tr>
@@ -223,10 +220,6 @@
                                                     </a>
                                                 @endif
                                             </td>
-                                            @include('admin.seo.partials.list-seo-columns', [
-                                                'seo' => $page->seo,
-                                                'analysis' => $page->seo_analysis ?? null,
-                                            ])
                                             @include('admin.layout.partials.audit-columns-cells', ['model' => $page])
                                             <td style="vertical-align: middle;" class="center">
 
@@ -259,13 +252,7 @@
                                         <th>Status</th>
                                         <th>FAQ's Count</th>
                                         <th>SEO Status</th>
-                                        <th>Score <small class="text-muted">(SEO / Live)</small></th>
-                                        <th>SEO Details</th>
-                                        <th>Meta Description</th>
-                                        <th>Created</th>
-                                        <th>Created By</th>
-                                        <th>Last Modified</th>
-                                        <th>Modified By</th>
+                                        @include('admin.layout.partials.audit-columns-head')
                                         <th>Action</th>
                                     </tr>
                                 </tfoot>
@@ -295,7 +282,7 @@
                 ordering: true,
                 responsive: true,
                 dom: '<"admin-dt-toolbar"<l><B><f>>rtip',
-                order: [[9, 'desc']],
+                order: [[6, 'desc']],
                 buttons: [adminDatatableExcelButton('Pages List', 'pages_list')]
             });
 

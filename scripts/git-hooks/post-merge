@@ -1,0 +1,12 @@
+#!/bin/bash
+# Auto-restore profile photos & CMS uploads after any `git pull` on the server.
+# Installed by: bash scripts/install-hostinger-git-hooks.sh
+
+ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+HOOK_SCRIPT="$ROOT/scripts/preserve-public-uploads.sh"
+
+if [ -f "$HOOK_SCRIPT" ]; then
+  # shellcheck source=/dev/null
+  . "$HOOK_SCRIPT"
+  restore_uploads
+fi

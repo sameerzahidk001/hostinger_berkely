@@ -12,7 +12,6 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use App\Models\{Currency, Subject, Course, School, CourseObjective, CourseReward, CourseFaq, CourseEnrollment, CourseSyllabus, CourseBeneficiaries, CourseFeePackages, FeePackagesFeatures, CourseStructure, CourseFee};
-use App\Services\SeoAnalyzerService;
 
 class CourseController extends Controller
 {
@@ -40,14 +39,7 @@ class CourseController extends Controller
         $data['categories'] = Category::all();
 
         // Get the filtered or default list of courses
-        $analyzer = app(SeoAnalyzerService::class);
-        $data['courses'] = $query->orderByDesc('created_at')->get()->each(function (Course $course) use ($analyzer) {
-            if ($course->seo) {
-                $course->seo->setRelation('course', $course);
-                $course->seo->loadMissing(['page.sections', 'course.dynamicLabel', 'course.courseFaq']);
-                $course->seo_analysis = $analyzer->analyzeForListing($course->seo);
-            }
-        });
+        $data['courses'] = $query->orderByDesc('created_at')->get();
         $data['instructors'] = DB::table('users')
             ->join('courses', function ($join) {
                 $join->on(DB::raw("FIND_IN_SET(users.id, courses.instructor_id)"), '>', DB::raw('0'));
@@ -88,14 +80,7 @@ class CourseController extends Controller
             'updatedBy',
         ]);
 
-        $analyzer = app(SeoAnalyzerService::class);
-        $data['courses'] = $query->orderByDesc('created_at')->get()->each(function (Course $course) use ($analyzer) {
-            if ($course->seo) {
-                $course->seo->setRelation('course', $course);
-                $course->seo->loadMissing(['page.sections', 'course.dynamicLabel', 'course.courseFaq']);
-                $course->seo_analysis = $analyzer->analyzeForListing($course->seo);
-            }
-        });
+        $data['courses'] = $query->orderByDesc('created_at')->get();
 
         return view('admin.course.disabled-courses')->with($data);
     }

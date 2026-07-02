@@ -104,8 +104,10 @@ class SeoController extends Controller
             $data['thumbnail'] = '/admin/images/seo/' . $fileName;
         }
         $pages_seo = PagesSEO::create($data);
-        
-        if($pages_seo){
+
+        if ($pages_seo) {
+            touch_content_audit($pages_seo);
+            log_panel_seo_activity($pages_seo, 'SEO Created');
             session()->flash('sucess', 'Record Added successfullly!');
             return redirect()->route('courses-pages-seo.index');
         }else{
@@ -166,9 +168,12 @@ class SeoController extends Controller
         }
 
         $pages_seo_updated = $page_seo->update($data);
-        app(SeoAnalyzerService::class)->clearAnalysisCache($page_seo->fresh());
+        $page_seo = $page_seo->fresh();
+        app(SeoAnalyzerService::class)->clearAnalysisCache($page_seo);
 
         if ($pages_seo_updated) {
+            touch_content_audit($page_seo);
+            log_panel_seo_activity($page_seo, 'SEO Updated');
             session()->flash('sucess', 'Record updated successfully!');
         } else {
             session()->flash('failed', 'Failed to update record!');
@@ -188,8 +193,10 @@ class SeoController extends Controller
     {
         //return $id;
         $page_seo = PagesSEO::findOrFail($id);
+        $page_seo->loadMissing(['page', 'course']);
         $del_page_seo = $page_seo->delete();
-        if($del_page_seo){
+        if ($del_page_seo) {
+            log_panel_seo_activity($page_seo, 'SEO Deleted');
             session()->flash('sucess', 'Record deleted successfullly!');
             
         }else{

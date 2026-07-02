@@ -158,16 +158,11 @@ class PanelActivityService
             });
         }
 
-        if ($logService->tableExists()) {
-            $activities = $activities->filter(function (array $row) {
-                return ! in_array($row['action'], ['Page Updated', 'Course Updated'], true);
-            });
-        }
+        // Keep legacy panel activities even when logs exist.
+        // On some servers role/user filtering can hide log rows (admin_id vs user_id),
+        // which previously made "Page Updated" / "Course Updated" disappear entirely.
 
-        $merged = $activities
-            ->merge($logs)
-            ->sortByDesc(fn (array $row) => $row['occurred_at']->timestamp)
-            ->values();
+        $merged = $this->mergeActivityRows($activities, $logs);
 
         $total = $merged->count();
         $items = $merged->slice(($page - 1) * $perPage, $perPage)->values();
@@ -478,6 +473,22 @@ class PanelActivityService
         }
 
         return (int) $query->count();
+    }
+
+    private function mergeActivityRows(Collection $activities, Collection $logs): Collection
+    {
+        return $activities
+            ->merge($logs)
+            ->sortByDesc(fn (array $row) => $row['occurred_at']->timestamp)
+            ->unique(function (array $row) {
+                return implode('|', [
+                    $row['action'] ?? '',
+                    $row['item'] ?? '',
+                    $row['actor_id'] ?? '',
+                    $row['occurred_at']?->format('Y-m-d H:i') ?? '',
+                ]);
+            })
+            ->values();
     }
 
     private function activityRow(

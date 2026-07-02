@@ -51,9 +51,6 @@
                                         <th style="width:120px;">Status</th>
                                         <th>FAQ's Count</th>
                                         <th>SEO Status</th>
-                                        <th style="width:110px;">Score<br><small class="text-muted" style="font-weight:normal;">SEO / Live</small></th>
-                                        <th style="width:220px;">SEO Details</th>
-                                        <th>Meta Description</th>
                                         @include('admin.layout.partials.audit-columns-head')
                                         <th style="width:130px;">Action</th>
                                     </tr>
@@ -107,10 +104,6 @@
                                                     </a>
                                                 @endif
                                             </td>
-                                            @include('admin.seo.partials.list-seo-columns', [
-                                                'seo' => $page->seo,
-                                                'analysis' => $page->seo_analysis ?? null,
-                                            ])
                                             @include('admin.layout.partials.audit-columns-cells', ['model' => $page])
                                             <td style="vertical-align: middle;" class="center">
                                                 <a href="{{ route('pages.edit', $page->id) }}" class="btn-primary btn btn-xs">

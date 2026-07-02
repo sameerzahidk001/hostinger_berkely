@@ -4,6 +4,7 @@
     $scoreClass = $score >= 80 ? 'excellent' : ($score >= 50 ? 'good' : 'poor');
     $label = $analysis['label'] ?? 'Needs work';
     $previewUrl = $analysis['preview_url'] ?? url('/');
+    $sections = $analysis['sections'] ?? [];
     $fieldNames = array_merge([
         'title' => 'title',
         'meta_description' => 'meta_description',
@@ -14,13 +15,14 @@
     $seoMeta = $page_seo ?? $seoMeta ?? null;
     $seoTitle = old($fieldNames['title'], $seoMeta->title ?? '');
     $seoDescription = old($fieldNames['meta_description'], $seoMeta->meta_description ?? '');
-    $contentScore = (int) ($analysis['content_score'] ?? 0);
-    $liveScore = isset($analysis['live_score']) && $analysis['live_score'] !== null
-        ? (int) $analysis['live_score']
-        : null;
-    $basicChecks = $analysis['basic'] ?? [];
-    $additionalChecks = $analysis['additional'] ?? [];
-    $technicalChecks = $analysis['technical'] ?? [];
+
+    if ($sections === [] && $analysis) {
+        $sections = [
+            ['title' => 'Basic SEO', 'score' => null, 'checks' => $analysis['basic'] ?? []],
+            ['title' => 'Content & Links', 'score' => null, 'checks' => $analysis['additional'] ?? []],
+            ['title' => 'Technical & Live', 'score' => null, 'checks' => $analysis['technical'] ?? []],
+        ];
+    }
 @endphp
 
 <style>
@@ -37,16 +39,32 @@
     #seo-score-panel .seo-score-pill.excellent { background: #1ab394; }
     #seo-score-panel .seo-score-pill.good { background: #f8ac59; }
     #seo-score-panel .seo-score-pill.poor { background: #ed5565; }
-    #seo-score-panel .seo-subscore {
-        font-size: 12px;
-        color: #676a6c;
-        margin-top: 4px;
+    #seo-score-panel .seo-section-block {
+        margin-bottom: 14px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #e7eaec;
+    }
+    #seo-score-panel .seo-section-block:last-child {
+        border-bottom: 0;
+        margin-bottom: 0;
+        padding-bottom: 0;
     }
     #seo-score-panel .seo-section-title {
         font-size: 13px;
         font-weight: 600;
-        margin: 12px 0 6px;
+        margin: 0 0 6px;
         color: #2f4050;
+    }
+    #seo-score-panel .seo-section-score {
+        font-size: 11px;
+        color: #676a6c;
+        font-weight: normal;
+    }
+    #seo-score-panel .seo-stats {
+        font-size: 12px;
+        color: #676a6c;
+        margin-top: 10px;
+        line-height: 1.6;
     }
 </style>
 
@@ -62,43 +80,36 @@
                 </div>
                 <div class="text-muted" style="margin-top:8px;">Overall SEO score</div>
                 <div id="seo-score-label" class="label label-default" style="margin-top:8px;display:inline-block;">{{ $label }}</div>
-                <div id="seo-subscores" class="seo-subscore">
-                    SEO: <span id="seo-content-score">{{ $score }}</span>/100
-                    &middot;
-                    Live page: <span id="seo-live-score">{{ $liveScore !== null ? $liveScore . '/100' : '—' }}</span>
+                <div id="seo-stats" class="seo-stats">
+                    @if($analysis)
+                        <div><strong>Words:</strong> <span id="seo-word-count">{{ number_format($analysis['word_count'] ?? 0) }}</span></div>
+                        <div><strong>Keyword density:</strong> <span id="seo-keyword-density">{{ $analysis['keyword_density'] ?? 0 }}</span>%</div>
+                        <div><strong>Readability:</strong> <span id="seo-readability">{{ $analysis['readability_score'] ?? '—' }}</span></div>
+                    @endif
                 </div>
                 <p class="text-muted" style="font-size:11px;margin-top:10px;">
-                    Overall score matches Courses, Pages, and SEO lists. Live page checks below are for verification only.
+                    Same score as Courses, Pages, and SEO lists. Full Yoast-style checks run here on save and as you type.
                 </p>
             </div>
-            <div class="col-md-8">
-                <div class="seo-section-title">Content checks (admin fields &amp; copy)</div>
-                <ul class="list-unstyled" id="seo-checklist-basic" style="margin:0 0 8px;">
-                    @foreach($basicChecks as $check)
-                        <li style="margin-bottom:6px;">
-                            <i class="fa fa-{{ !empty($check['ok']) ? 'check text-success' : 'times text-danger' }}"></i>
-                            {{ $check['text'] }}
-                        </li>
-                    @endforeach
-                </ul>
-                <ul class="list-unstyled" id="seo-checklist-additional" style="margin:0;">
-                    @foreach($additionalChecks as $check)
-                        <li style="margin-bottom:6px;">
-                            <i class="fa fa-{{ !empty($check['ok']) ? 'check text-success' : 'times text-danger' }}"></i>
-                            {{ $check['text'] }}
-                        </li>
-                    @endforeach
-                </ul>
-
-                <div class="seo-section-title">Live page checks (public URL)</div>
-                <ul class="list-unstyled" id="seo-checklist-technical" style="margin:0;">
-                    @foreach($technicalChecks as $check)
-                        <li style="margin-bottom:6px;">
-                            <i class="fa fa-{{ !empty($check['ok']) ? 'check text-success' : 'times text-danger' }}"></i>
-                            {{ $check['text'] }}
-                        </li>
-                    @endforeach
-                </ul>
+            <div class="col-md-8" id="seo-sections-container">
+                @foreach($sections as $section)
+                    <div class="seo-section-block" data-section-key="{{ $section['key'] ?? '' }}">
+                        <div class="seo-section-title">
+                            {{ $section['title'] ?? 'Checks' }}
+                            @if(isset($section['score']))
+                                <span class="seo-section-score">({{ (int) $section['score'] }}/100)</span>
+                            @endif
+                        </div>
+                        <ul class="list-unstyled seo-checklist" style="margin:0;">
+                            @foreach($section['checks'] ?? [] as $check)
+                                <li style="margin-bottom:6px;">
+                                    <i class="fa fa-{{ !empty($check['ok']) ? 'check text-success' : 'times text-danger' }}"></i>
+                                    {{ $check['text'] }}
+                                </li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endforeach
             </div>
         </div>
         <hr>
@@ -134,13 +145,25 @@ document.addEventListener('DOMContentLoaded', function () {
         return 'label label-danger';
     }
 
-    function renderChecklist(id, checks) {
-        const el = document.getElementById(id);
-        if (!el) return;
-        el.innerHTML = (checks || []).map(function (c) {
-            return '<li style="margin-bottom:6px;"><i class="fa fa-' +
-                (c.ok ? 'check text-success' : 'times text-danger') +
-                '"></i> ' + c.text + '</li>';
+    function renderSections(sections) {
+        const container = document.getElementById('seo-sections-container');
+        if (!container) return;
+
+        container.innerHTML = (sections || []).map(function (section) {
+            const checks = (section.checks || []).map(function (c) {
+                return '<li style="margin-bottom:6px;"><i class="fa fa-' +
+                    (c.ok ? 'check text-success' : 'times text-danger') +
+                    '"></i> ' + c.text + '</li>';
+            }).join('');
+
+            const sectionScore = section.score !== undefined && section.score !== null
+                ? '<span class="seo-section-score">(' + section.score + '/100)</span>'
+                : '';
+
+            return '<div class="seo-section-block" data-section-key="' + (section.key || '') + '">' +
+                '<div class="seo-section-title">' + (section.title || 'Checks') + sectionScore + '</div>' +
+                '<ul class="list-unstyled seo-checklist" style="margin:0;">' + checks + '</ul>' +
+                '</div>';
         }).join('');
     }
 
@@ -155,14 +178,28 @@ document.addEventListener('DOMContentLoaded', function () {
         label.className = labelClass(score);
         label.textContent = data.label || 'Needs work';
 
-        const liveScore = data.live_score;
-        document.getElementById('seo-content-score').textContent = data.score || 0;
-        document.getElementById('seo-live-score').textContent =
-            liveScore !== null && liveScore !== undefined && liveScore !== '' ? liveScore + '/100' : '—';
+        if (data.word_count !== undefined) {
+            const wc = document.getElementById('seo-word-count');
+            if (wc) wc.textContent = Number(data.word_count || 0).toLocaleString();
+        }
+        if (data.keyword_density !== undefined) {
+            const kd = document.getElementById('seo-keyword-density');
+            if (kd) kd.textContent = data.keyword_density;
+        }
+        if (data.readability_score !== undefined) {
+            const rs = document.getElementById('seo-readability');
+            if (rs) rs.textContent = data.readability_score !== null ? data.readability_score : '—';
+        }
 
-        renderChecklist('seo-checklist-basic', data.basic || []);
-        renderChecklist('seo-checklist-additional', data.additional || []);
-        renderChecklist('seo-checklist-technical', data.technical || []);
+        if (data.sections && data.sections.length) {
+            renderSections(data.sections);
+        } else {
+            renderSections([
+                { title: 'Basic SEO', checks: data.basic || [] },
+                { title: 'Content & Links', checks: data.additional || [] },
+                { title: 'Technical & Live', checks: data.technical || [] },
+            ]);
+        }
 
         if (data.preview_url) {
             document.getElementById('seo-preview-url').textContent = data.preview_url;
