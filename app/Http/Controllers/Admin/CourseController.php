@@ -12,6 +12,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use App\Models\{Currency, Subject, Course, School, CourseObjective, CourseReward, CourseFaq, CourseEnrollment, CourseSyllabus, CourseBeneficiaries, CourseFeePackages, FeePackagesFeatures, CourseStructure, CourseFee};
+use App\Services\SeoAnalyzerService;
 
 class CourseController extends Controller
 {
@@ -39,7 +40,12 @@ class CourseController extends Controller
         $data['categories'] = Category::all();
 
         // Get the filtered or default list of courses
-        $data['courses'] = $query->orderByDesc('created_at')->get();
+        $analyzer = app(SeoAnalyzerService::class);
+        $data['courses'] = $query->orderByDesc('created_at')->get()->each(function (Course $course) use ($analyzer) {
+            if ($course->seo) {
+                $course->seo_analysis = $analyzer->analyzeMetaOnlyForListing($course->seo);
+            }
+        });
         $data['instructors'] = DB::table('users')
             ->join('courses', function ($join) {
                 $join->on(DB::raw("FIND_IN_SET(users.id, courses.instructor_id)"), '>', DB::raw('0'));
@@ -80,7 +86,12 @@ class CourseController extends Controller
             'updatedBy',
         ]);
 
-        $data['courses'] = $query->orderByDesc('created_at')->get();
+        $analyzer = app(SeoAnalyzerService::class);
+        $data['courses'] = $query->orderByDesc('created_at')->get()->each(function (Course $course) use ($analyzer) {
+            if ($course->seo) {
+                $course->seo_analysis = $analyzer->analyzeMetaOnlyForListing($course->seo);
+            }
+        });
 
         return view('admin.course.disabled-courses')->with($data);
     }

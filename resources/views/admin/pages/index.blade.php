@@ -150,7 +150,7 @@
                                         <th>URL</th>
                                         <th style="width:90px;">Status</th>
                                         <th>FAQ's Count</th>
-                                        <th>SEO Status</th>
+                                        <th>SEO</th>
                                         @include('admin.layout.partials.audit-columns-head')
                                         <th style="width:130px;">Action</th>
                                     </tr>
@@ -205,21 +205,14 @@
                                             <td style="vertical-align: middle;">
                                                 {{ $page->faqs->count() }}
                                             </td>
-                                            <td style="vertical-align: middle;" data-export="{{ $page->seo ? 'Added' : 'Not Added' }}">
-                                                @if ($page->seo)
-                                                    <span class="label label-primary">Added</span>
-                                                    <a href="{{ route('courses-pages-seo.edit', ['pages_seo' => $page->seo->id, 'page_name' => $page->page_name, 'page_id' => $page->id]) }}"
-                                                        class="label label-primary" target="_blank">
-                                                        View
-                                                    </a>
-                                                @else
-                                                    <span class="label label-danger">Not Added</span>
-                                                    <a href="{{ route('courses-pages-seo.create', ['page_name' => $page->page_name, 'page_id' => $page->id]) }}"
-                                                        class="label label-danger" target="_blank">
-                                                        Add
-                                                    </a>
-                                                @endif
-                                            </td>
+                                            @include('admin.seo.partials.list-seo-cell', [
+                                                'seo' => $page->seo,
+                                                'analysis' => $page->seo_analysis ?? null,
+                                                'editUrl' => $page->seo
+                                                    ? route('courses-pages-seo.edit', ['pages_seo' => $page->seo->id, 'page_name' => $page->page_name, 'page_id' => $page->id])
+                                                    : '#',
+                                                'createUrl' => route('courses-pages-seo.create', ['page_name' => $page->page_name, 'page_id' => $page->id]),
+                                            ])
                                             @include('admin.layout.partials.audit-columns-cells', ['model' => $page])
                                             <td style="vertical-align: middle;" class="center">
 
@@ -251,7 +244,7 @@
                                         <th>URL</th>
                                         <th>Status</th>
                                         <th>FAQ's Count</th>
-                                        <th>SEO Status</th>
+                                        <th>SEO</th>
                                         @include('admin.layout.partials.audit-columns-head')
                                         <th>Action</th>
                                     </tr>

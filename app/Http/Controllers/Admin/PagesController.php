@@ -12,6 +12,7 @@ use App\Models\SiteSettings;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use App\Http\Controllers\Controller;
+use App\Services\SeoAnalyzerService;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 
@@ -38,9 +39,15 @@ class PagesController extends Controller
             $query->where('status', 1);
         }
 
+        $analyzer = app(SeoAnalyzerService::class);
         $data['pages'] = $query
             ->orderByDesc('created_at')
-            ->get();
+            ->get()
+            ->each(function (Page $page) use ($analyzer) {
+                if ($page->seo) {
+                    $page->seo_analysis = $analyzer->analyzeMetaOnlyForListing($page->seo);
+                }
+            });
 
         return view('admin.pages.index')->with($data);
     }
@@ -57,10 +64,16 @@ class PagesController extends Controller
         $data['category_page_id'] = SiteSettings::pluck('categories')->first();
         $data['categories_pages_slug_base'] = SiteSettings::pluck('category_perma')->first();
         $data['pagesStatusEnabled'] = true;
+        $analyzer = app(SeoAnalyzerService::class);
         $data['pages'] = Page::with(['parent', 'seo', 'faqs', 'createdBy', 'updatedBy'])
             ->where('status', 0)
             ->orderByDesc('updated_at')
-            ->get();
+            ->get()
+            ->each(function (Page $page) use ($analyzer) {
+                if ($page->seo) {
+                    $page->seo_analysis = $analyzer->analyzeMetaOnlyForListing($page->seo);
+                }
+            });
 
         return view('admin.pages.disabled-pages')->with($data);
     }

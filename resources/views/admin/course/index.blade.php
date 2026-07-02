@@ -189,19 +189,14 @@
                                                     </span>
                                                 @endif
                                             </td>
-                                            <td>
-                                                @if ($data->seo)
-                                                    <a href="{{ route('courses-pages-seo.edit', ['pages_seo' => $data->seo->id, 'course_name' => $data->title, 'course_id' => $data->id]) }}"
-                                                        class="label label-primary" target="_blank">
-                                                        View
-                                                    </a>
-                                                @else
-                                                    <a href="{{ route('courses-pages-seo.create', ['course_name' => $data->title, 'course_id' => $data->id]) }}"
-                                                        class="label label-danger" target="_blank">
-                                                        Add
-                                                    </a>
-                                                @endif
-                                            </td>
+                                            @include('admin.seo.partials.list-seo-cell', [
+                                                'seo' => $data->seo,
+                                                'analysis' => $data->seo_analysis ?? null,
+                                                'editUrl' => $data->seo
+                                                    ? route('courses-pages-seo.edit', ['pages_seo' => $data->seo->id, 'course_name' => $data->title, 'course_id' => $data->id])
+                                                    : '#',
+                                                'createUrl' => route('courses-pages-seo.create', ['course_name' => $data->title, 'course_id' => $data->id]),
+                                            ])
                                             <td>
                                                 @if ($data->courseFaq->isEmpty())
                                                     <a href="{{ route('course.show-faqs', ['id' => $data->id]) }}"
