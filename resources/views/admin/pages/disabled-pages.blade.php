@@ -99,7 +99,7 @@
                                             ])
                                             @include('admin.layout.partials.audit-columns-cells', ['model' => $page])
                                             <td style="vertical-align: middle;" class="center">
-                                                <a href="{{ route('pages.edit', $page->id) }}" class="btn-primary btn btn-xs">
+                                                <a href="{{ route('pages.edit', $page->id) }}" class="btn-primary btn btn-xs" target="_blank">
                                                     <i class="fa fa-pencil"></i> Edit
                                                 </a>
                                             </td>

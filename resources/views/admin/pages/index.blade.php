@@ -218,7 +218,7 @@
 
                                                 <div class="btn-group">
                                                     <a href="{{ route('pages.edit', $page->id) }}"
-                                                        class="btn-primary btn btn-xs">
+                                                        class="btn-primary btn btn-xs" target="_blank">
                                                         <i class="fa fa-pencil"></i> Edit
                                                     </a>
                                                     @if(!$pageName)

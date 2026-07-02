@@ -52,7 +52,7 @@ Route::view('/sample', 'sample');
 Route::view('/test', 'test');
 
 // Route::view('/visa', 'visa');
-Route::get('/', [WelcomeController::class, 'index'])->name('welcome');
+Route::get('/', [WelcomeController::class, 'index'])->middleware('set.seo')->name('welcome');
 Route::get('/search', [WelcomeController::class, 'search'])->name('search');
 Route::get('/agenda_search', [WelcomeController::class, 'agenda_search'])->name('agenda_search');
 Route::get('/faculty_search', [WelcomeController::class, 'faculty_search'])->name('faculty_search');
@@ -491,9 +491,11 @@ Route::get('/instructor/{id}', [WelcomeController::class, 'instructorDetails']);
 
 Route::get('/{categoryPerma}/{slug}', [WelcomeController::class, 'categoryDetails'])
     ->where('categoryPerma', '^(?!admin|some-reserved-word)[a-zA-Z0-9_-]+$')
+    ->middleware('set.seo')
     ->name('category.details');
 
 // Catch-All Route for Pages (Must Be Last)
 Route::get('/{any?}', [WelcomeController::class, 'pages'])
     ->where('any', '.*')
+    ->middleware('set.seo')
     ->name('pages');

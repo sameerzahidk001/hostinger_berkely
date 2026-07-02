@@ -408,12 +408,32 @@ class SeoComprehensiveChecks
         return [
             $this->check($live['schema_any'], 'Structured data (JSON-LD) detected.'),
             $this->check($live['schema_course'] || ! $seo->course_id, 'Course schema present (for course pages).'),
-            $this->check($live['schema_faq'], 'FAQ schema detected (if FAQs exist).'),
+            $this->check($live['schema_faq'] || ! $this->seoHasFaqs($seo), 'FAQ schema detected (if FAQs exist).'),
             $this->check($live['schema_breadcrumb'], 'Breadcrumb schema detected.'),
             $this->check($live['schema_organization'], 'Organization schema detected.'),
             $this->check($seo->updated_at !== null, 'EEAT signal: content update date available.'),
             $this->check($seo->thumbnail !== null && $seo->thumbnail !== '', 'Social/OG thumbnail configured in admin.'),
         ];
+    }
+
+    private function seoHasFaqs(PagesSEO $seo): bool
+    {
+        if ($seo->course_id) {
+            $course = $seo->course ?? $seo->course()->with('courseFaq')->first();
+            if (! $course) {
+                return false;
+            }
+
+            return (int) $course->faq_section === 1 && $course->courseFaq->isNotEmpty();
+        }
+
+        if ($seo->page_id) {
+            $page = $seo->page ?? $seo->page()->with('faqs')->first();
+
+            return $page && $page->faqs->isNotEmpty();
+        }
+
+        return false;
     }
 
     private function parseLiveDocument(string $html, string $focusKeyword): array

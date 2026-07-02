@@ -886,6 +886,46 @@ if (!function_exists('audit_user_id')) {
     }
 }
 
+if (!function_exists('site_twitter_handle')) {
+    function site_twitter_handle(): ?string
+    {
+        static $resolved = false;
+        static $handle = null;
+
+        if ($resolved) {
+            return $handle ?: null;
+        }
+
+        $resolved = true;
+        $configured = trim((string) env('TWITTER_SITE_HANDLE', ''));
+        if ($configured !== '') {
+            $handle = str_starts_with($configured, '@') ? $configured : '@' . $configured;
+
+            return $handle;
+        }
+
+        try {
+            $url = trim((string) (\App\Models\SiteSettings::value('twitter_url') ?? ''));
+        } catch (\Throwable $e) {
+            $url = '';
+        }
+
+        if ($url === '') {
+            return null;
+        }
+
+        if (preg_match('/(?:twitter\.com|x\.com)\/(@?[\w]+)/i', $url, $matches)) {
+            $handle = '@' . ltrim($matches[1], '@');
+
+            return $handle;
+        }
+
+        $handle = str_starts_with($url, '@') ? $url : '@' . ltrim($url, '@');
+
+        return $handle;
+    }
+}
+
 if (!function_exists('panel_actor_display_name')) {
     function panel_actor_display_name(?string $name, ?string $email = null, ?string $username = null): string
     {

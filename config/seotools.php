@@ -49,8 +49,8 @@ return [
          * The default values to be used by the twitter cards generator.
          */
         'defaults' => [
-            //'card'        => 'summary',
-            //'site'        => '@LuizVinicius73',
+            'card'        => 'summary_large_image',
+            'site'        => env('TWITTER_SITE_HANDLE', ''),
         ],
     ],
     'json-ld' => [
