@@ -78,7 +78,7 @@
                                         <th>Course Structure</th>
                                         <th style="width:130px;">Lecture Plan</th>
                                         <th>SEO</th>
-                                        <th style="width:90px;">Score</th>
+                                        <th style="width:110px;">Score<br><small class="text-muted" style="font-weight:normal;">SEO / Live</small></th>
                                         <th style="width:220px;">SEO Details</th>
                                         <th>Meta Description</th>
                                         <th>FAQ's</th>
@@ -153,9 +153,9 @@
                                             </td>
                                             <td>
                                                 @if ($data->seo)
-                                                    <a href="{{ route('pages-seo.edit', ['pages_seo' => $data->seo->id, 'course_name' => $data->title, 'course_id' => $data->id]) }}" class="label label-primary" target="_blank">View</a>
+                                                    <a href="{{ route('courses-pages-seo.edit', ['pages_seo' => $data->seo->id, 'course_name' => $data->title, 'course_id' => $data->id]) }}" class="label label-primary" target="_blank">View</a>
                                                 @else
-                                                    <a href="{{ route('pages-seo.create', ['course_name' => $data->title, 'course_id' => $data->id]) }}" class="label label-danger" target="_blank">Add</a>
+                                                    <a href="{{ route('courses-pages-seo.create', ['course_name' => $data->title, 'course_id' => $data->id]) }}" class="label label-danger" target="_blank">Add</a>
                                                 @endif
                                             </td>
                                             @include('admin.seo.partials.list-seo-columns', [
@@ -184,7 +184,7 @@
                                                 @endif
                                             </td>
                                             <td>
-                                                <select name="course_status" class="form-control" id="course_status_{{ $data->id }}"
+                                                <select name="course_status" class="form-control" id="course_status_{{ $data->id }}" required
                                                     onchange="updateCourseStatus(this.value, {{ $data->id }})">
                                                     <option value="active" @if(is_null($data->deleted_at)) selected @endif>Active</option>
                                                     <option value="disable" @if(!is_null($data->deleted_at)) selected @endif>Disable</option>
@@ -228,7 +228,7 @@
                 searching: true,
                 lengthChange: true,
                 paging: true,
-                info: false,
+                info: true,
                 ordering: true,
                 responsive: true,
                 dom: 'lftip',

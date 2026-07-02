@@ -26,9 +26,9 @@
                 <div>
                     <div class="ibox-content no-padding border-left-right">
                         <center class="m-t-sm">
-                            @if ($user->image)
-                                <img alt="image" class="img-responsive" style="max-height: 200px;" src="{{ asset($user->image) }}" />                                
-                            @endif
+                            <img alt="Profile photo" class="img-responsive img-circle"
+                                style="max-height: 200px; max-width: 200px; object-fit: cover;"
+                                src="{{ user_avatar_url($user) }}" />
                         </center>
                     </div>
                     <div class="ibox-content profile-content">
@@ -102,6 +102,7 @@
 
                                 <div class="col-md-6 mb-3">
                                     <label for="image">Image</label>
+                                    <input type="hidden" name="current_image" value="{{ old('current_image', $user->image) }}">
                                     <input type="file" name="image" id="image" class="form-control">
                                     @error('image') <p class="text-danger text-xs italic">{{ $message }}</p> @enderror
                                 </div>

@@ -1,12 +1,12 @@
 <section id="section-{{ $id }}" class="relative overflow-hidden {{ (!empty($video) || !empty($background)) ? 'min-h-screen max-h-screen' : 'py-16 bg-[#000435]' }}">
     @if (!empty($video) || !empty($background))
         <div class="absolute scroll-smooth bg-black top-0 flex justify-center flex-col z-30 h-full w-full items-center">
-            @if(!empty($video))
+            @if(!empty($video) && getYouTubeVideoID($video))
                 <iframe class="w-full min-h-screen max-h-screen object-cover" 
                     src="https://www.youtube.com/embed/{{ getYouTubeVideoID($video) }}?autoplay=1&mute=1&loop=1&playlist={{ getYouTubeVideoID($video) }}&controls=0&showinfo=0&modestbranding=1" 
                     frameborder="0" allowfullscreen>
                 </iframe>
-            @else
+            @elseif(!empty($background))
                 <img src="{{ media_url($background) }}" class="min-h-screen max-h-screen object-cover w-full zoom-in" alt="{{ image_alt($altText ?? null, $title ?? 'Hero banner') }}">
             @endif
         </div>
@@ -25,7 +25,7 @@
         @endif
         @if (isset($description))
             <div class="card-hidden px-6 min-[1200px]:px-[72px] mt-10 lg:pt-0 md:px-12 flex flex-col w-full">
-                {!! $description !!}
+                {!! render_cms_html($description) !!}
             </div>
         @endif
         <div class="absolute min-h-[20%] w-px top-0 left-1/2 transform -translate-x-1/2 bg-white"></div>

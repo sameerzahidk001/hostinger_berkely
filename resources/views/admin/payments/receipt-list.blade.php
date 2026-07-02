@@ -74,6 +74,7 @@
         border-radius: 50%;
     }
 </style>
+@include('admin.payments.partials.excel-export-toolbar')
 @endpush
 @section('content')
 <div class="row wrapper border-bottom white-bg page-heading">
@@ -120,17 +121,23 @@
                             </thead>
                             <tbody>
                                 @foreach ($installments as $installment)
+                                @php
+                                    $invoiceAmountExport = payment_display_currency($installment->payment) . ' ' . number_format(payment_display_amount_from_aed($installment->payment, (float) $installment->payment->price), 2);
+                                    $dueAmountExport = payment_display_currency($installment->payment) . ' ' . number_format(payment_display_amount_from_aed($installment->payment, (float) ($installment->paid_amount + $installment->remaining_amount)), 2);
+                                    $paidAmountExport = payment_display_currency($installment->payment) . ' ' . number_format(payment_display_amount_from_aed($installment->payment, (float) $installment->paid_amount), 2);
+                                    $paidDateExport = $installment->paid_date ? \Carbon\Carbon::parse($installment->paid_date)->format('Y/m/d') : 'N/A';
+                                @endphp
                                 <tr>
                                     <td>INV-{{ str_pad($installment->payment_id, 6, '0', STR_PAD_LEFT) }}</td>
                                     <td>{{ \Carbon\Carbon::parse($installment->created_at)->format('Y/m/d') }}</td>
                                     <td>{{ $installment->payment->user->name ?? 'N/A' }}</td>
-                                    <td>{!! format_payment_aed_amount_admin($installment->payment, (float) $installment->payment->price) !!}</td>
+                                    <td data-export="{{ $invoiceAmountExport }}">{!! format_payment_aed_amount_admin($installment->payment, (float) $installment->payment->price) !!}</td>
                                     <td>{{ $installment->installment_number }}/{{ $installment->payment->total_installment }}</td>
                                     <td>{{ \Carbon\Carbon::parse($installment->due_date)->format('Y/m/d') }}</td>
-                                    <td>{!! format_payment_aed_amount_admin($installment->payment, (float) ($installment->paid_amount + $installment->remaining_amount)) !!}</td>
+                                    <td data-export="{{ $dueAmountExport }}">{!! format_payment_aed_amount_admin($installment->payment, (float) ($installment->paid_amount + $installment->remaining_amount)) !!}</td>
                                     <td>RC-{{ str_pad($installment->id, 6, '0', STR_PAD_LEFT) }}</td>
-                                    <td>{!! format_payment_aed_amount_admin($installment->payment, (float) $installment->paid_amount) !!}</td>
-                                    <td>
+                                    <td data-export="{{ $paidAmountExport }}">{!! format_payment_aed_amount_admin($installment->payment, (float) $installment->paid_amount) !!}</td>
+                                    <td data-export="{{ $paidDateExport }}">
                                         @if($installment->paid_date)
                                         {{ \Carbon\Carbon::parse($installment->paid_date)->format('Y/m/d') }}
                                         @else
@@ -236,8 +243,9 @@
             info: false,
             ordering: true,
             responsive: true,
-            dom: 'lftip',
-            order: []
+            dom: '<"admin-dt-toolbar"<l><B><f>>rtip',
+            order: [],
+            buttons: [adminDatatableExcelButton('Receipts List', 'receipts_list')],
         });
 
     });

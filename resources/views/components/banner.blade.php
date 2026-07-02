@@ -15,9 +15,10 @@
     $fallbackBannerImage = asset('frontend/images/jpg/60.jpg');
     $useFallbackImage = empty($image) && (request()->is('courses') || stripos((string) $fixedTitle, 'executive') !== false);
     $resolvedImage = !empty($image) ? $image : ($useFallbackImage ? $fallbackBannerImage : '');
+    $resolvedBannerBg = banner_bg_color($backgroundColor ?? null);
 @endphp
 
-<section class="flex flex-col-reverse justify-between relative min-h-[491px] md:max-h-[491px]" style="background-color: {{ $backgroundColor ?? 'transparent' }}" id="section-{{$id}}">
+<section class="cms-banner-section flex flex-col-reverse justify-between relative min-h-[491px] md:max-h-[491px] bg-black" style="background-color: {{ $resolvedBannerBg }}" id="section-{{$id}}">
     <div class="flex text-white min-[1200px]:pl-[72px] md:pr-12 py-[30px] px-6 md:w-[50%] m-0 flex-1 flex-col">
         @if (isset($breadcrumb) && count($breadcrumb) > 0)
             <div class="items-center gap-1 hidden md:flex">
@@ -45,7 +46,7 @@
             </div>
         @endif
         @if (isset($description))
-            <div class="" style="color: {{ $color }}">{!! $description !!}</div>
+            <div class="cms-html" style="color: {{ $color }}">{!! render_cms_html($description) !!}</div>
         @endif
         
         @if (!empty($solidButtonUrl) || !empty($outlineButtonUrl)) 

@@ -74,17 +74,18 @@
         border-radius: 50%;
     }
 </style>
+@include('admin.payments.partials.excel-export-toolbar')
 @endpush
 @section('content')
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col">
-        <h2>Invoices List</h2>
+        <h2>{{ $listTitle ?? 'Invoices List' }}</h2>
         <ol class="breadcrumb">
             <li>
                 <a href="{{ route('admin.home') }}">Home</a>
             </li>
             <li class="active">
-                <a>Invoices</a>
+                <a>{{ $listTitle ?? 'Invoices' }}</a>
             </li>
         </ol>
     </div>
@@ -127,21 +128,18 @@
                                 @php
                                 $paidInstallmentsCount = $payment->installments->where('status', 'paid')->count();
                                 $paidAmountSum = $payment->installments->sum('paid_amount');
-                                $totalPaid = $payment->installments->sum('paid_amount');
-                                $paymentStatus = 'Pending';
-                                if ($totalPaid == $payment->price) {
-                                $paymentStatus = 'Paid';
-                                } elseif ($totalPaid > 0) {
-                                $paymentStatus = 'Partial';
-                                }
+                                $totalPaid = $paidAmountSum;
+                                $paymentStatus = payment_invoice_status($payment);
+                                $invoiceAmountExport = format_payment_amount($payment)['display'];
+                                $paidAmountExport = payment_display_currency($payment) . ' ' . number_format(payment_display_amount_from_aed($payment, (float) $paidAmountSum), 2);
                                 @endphp
                                 <tr>
                                     <td>INV-{{ str_pad($payment->id, 6, '0', STR_PAD_LEFT) }}</td>
                                     <td data-order="{{ \Carbon\Carbon::parse($payment->created_at)->timestamp }}">{{ \Carbon\Carbon::parse($payment->created_at)->format('Y/m/d') }}</td>
-                                    <td>{{ $payment->course->title ?? 'N/A' }}<br><span class="text-muted">{{ $payment->courseFee->package_name ?? 'N/A' }}</span></td>
+                                    <td data-export="{{ ($payment->course->title ?? 'N/A') . ' - ' . ($payment->courseFee->package_name ?? 'N/A') }}">{{ $payment->course->title ?? 'N/A' }}<br><span class="text-muted">{{ $payment->courseFee->package_name ?? 'N/A' }}</span></td>
                                     <td>{{ $payment->user->name ?? 'N/A' }}</td>
                                     {{-- <td>{{ $payment->installment_request->installments_requested ?? 'Direct' }}</td> --}}
-                                    <td>
+                                    <td data-export="{{ $payment->installments->count() ?? 0 }}">
                                         <a type="button" href="javascript:void(0)" class="view-installments" data-installments='@json($payment)' data-currency="{{ $payment->courseFee->currency ?? 'AED' }}">
                                             {{ $payment->installments->count() ?? 0 }}
                                             <sup>
@@ -151,17 +149,17 @@
                                             </sup>
                                         </a>
                                     </td>
-                                    <td>
+                                    <td data-export="{{ $invoiceAmountExport }}">
                                         {!! format_payment_amount_admin($payment) !!}
                                     </td>
                                     <td>{{ $paidInstallmentsCount }}/{{ $payment->installments->count() ?? 0 }}</td>
-                                    <td>{!! format_payment_aed_amount_admin($payment, (float) $paidAmountSum) !!}</td>
-                                    <td>
+                                    <td data-export="{{ $paidAmountExport }}">{!! format_payment_aed_amount_admin($payment, (float) $paidAmountSum) !!}</td>
+                                    <td data-export="{{ $paymentStatus }}">
                                         <span class="badge badge-{{ $paymentStatus == 'Paid' ? 'primary' : ($paymentStatus == 'Partial' ? 'warning' : 'success') }}">
                                             {{ $paymentStatus }}
                                         </span>
                                     </td>
-                                    <td>
+                                    <td data-export="{{ $payment->status === 'Active' ? 'Active' : 'Inactive' }}">
                                         <label class="switch">
                                             <input type="checkbox" class="status-toggle"
                                                 data-payment-id="{{ $payment->id }}"
@@ -176,7 +174,7 @@
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-danger btn-sm"><i class="fa fa-trash"></i> Delete</button>
                                         </form>
-                                        @if($payment->status !== 'Active')
+                                        @if(in_array($paymentStatus, ['Pending', 'Partial'], true))
                                             <a class="btn btn-primary btn-sm" href="{{ route('admin.payments.send-invoice', ['id' => $payment->id]) }}"><i class="fa fa-send"></i> Send</a>
                                         @endif
                                         @if($payment->installment_request && $payment->installments->count() < 1)
@@ -376,8 +374,9 @@
             info: false,
             ordering: true,
             responsive: true,
-            dom: 'lftip',
-            order: [[1, 'desc']]
+            dom: '<"admin-dt-toolbar"<l><B><f>>rtip',
+            order: [[1, 'desc']],
+            buttons: [adminDatatableExcelButton('Invoices List', 'invoices_list')],
         });
 
         $('.status-toggle').change(function() {
@@ -413,7 +412,11 @@
     const currencyRatesToAed = @json(currency_rates_to_aed());
 
     function paymentCurrency(payment) {
-        return String(payment.currency || payment.course_fee?.currency || payment.courseFee?.currency || 'AED').toUpperCase();
+        const paymentCurrencyRaw = String(payment.currency || '').trim();
+        const feeCurrencyRaw = String(payment.course_fee?.currency || payment.courseFee?.currency || '').trim();
+
+        // Prefer package currency; some old payment records have empty or wrong currency.
+        return String(feeCurrencyRaw || paymentCurrencyRaw || 'AED').toUpperCase();
     }
 
     function adminDisplayAmountNumber(payment, aedAmount) {

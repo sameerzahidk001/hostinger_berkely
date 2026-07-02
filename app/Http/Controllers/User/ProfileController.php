@@ -11,7 +11,6 @@ use App\Models\Country;
 use App\Mail\UserMail;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 class ProfileController extends Controller
 {
@@ -31,13 +30,13 @@ class ProfileController extends Controller
             'image' => 'nullable|file|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'email' => 'required|email|max:255|unique:users,email,' . Auth::id(),
             'mobile_number' => 'required|string|max:20',
-            'gender' => 'required|in:Male,Female,Other',
-            'date_of_birth' => 'required|date|before_or_equal:today',
-            'address' => 'required|string|max:255',
-            'post_code' => 'required|string|max:20',
-            'nationality' => 'required|string|max:255',
-            'city' => 'required|string|max:100',
-            'country' => 'required|string|max:2',
+            'gender' => 'nullable|in:Male,Female,Other',
+            'date_of_birth' => 'nullable|date|before_or_equal:today',
+            'address' => 'nullable|string|max:255',
+            'post_code' => 'nullable|string|max:20',
+            'nationality' => 'nullable|string|max:255',
+            'city' => 'nullable|string|max:100',
+            'country' => 'nullable|string|max:100',
             'experience' => 'nullable|string',
             'short_description' => 'nullable|string',
             'linkedin' => 'nullable|url|string|max:255',
@@ -50,22 +49,13 @@ class ProfileController extends Controller
         }
 
         $validatedData = $validator->validated();
+        unset($validatedData['image_path']);
+
         $user = Auth::user();
-
-        if ($request->hasFile('image')) {
-            $file = $request->file('image');
-            $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-            $extension = $file->getClientOriginalExtension();
-            $slug = Str::slug($originalName) . '-' . time();
-            $fileName = $slug . '.' . $extension;
-            $destinationPath = public_path('images/profiles/');
-            $file->move($destinationPath, $fileName);
-            $validatedData['image'] = 'images/profiles/' . $fileName;
-        } elseif ($request->filled('image_path')) {
-            $validatedData['image'] = str_replace('\\', '/', $request->image_path);
-        }
-
-        $user->update($validatedData);
+        $user->fill($validatedData);
+        apply_profile_image_from_request($user, $request);
+        $user->save();
+        Auth::setUser($user->fresh());
 
         $mailError = null;
         $emailTemplate = Email::where('name', 'user-update')->first();

@@ -1,6 +1,8 @@
 @extends('admin.layout.app')
 @section('title', 'Pages SEO')
 @push('style')
+<link href="{{ asset('/admin/css/plugins/dataTables/datatables.min.css') }}" rel="stylesheet">
+@include('admin.layout.partials.datatable-excel-toolbar')
 <style>
     td > p { margin: 0; }
     .seo-score-pill {
@@ -35,15 +37,11 @@
             <div class="ibox float-e-margins" style="margin-bottom: 0;">
                 <div class="ibox-title">
                     <h5>SEO</h5>
-                    <div class="ibox-tools">
-                        <a class="btn-primary btn btn-xs" href="{{ route('pages-seo.create') }}">
-                            <i class="fa fa-plus-square"></i> &nbsp;Add
-                        </a>
-                    </div>
+                    <small class="text-muted">Score column shows <strong>SEO</strong> (content + metadata) and <strong>Live</strong> (public page) together.</small>
                 </div>
                 <div class="ibox-content">
                     <div class="table-responsive">
-                        <form action="{{ route('pages-seo.index') }}" method="GET">
+                        <form action="{{ route('courses-pages-seo.index') }}" method="GET">
                             <div class="row" style="margin-bottom: 6px;">
                                 <div class="col-lg-4">
                                     <select name="type" class="form-control">
@@ -60,84 +58,69 @@
                                     <button type="submit" class="btn-primary btn btn-md" style="width:100%;">Filter</button>
                                 </div>
                             </div>
-                            <div class="row" style="margin-bottom: 12px;">
-                                <div class="col-lg-2">
-                                    <select name="per_page" class="form-control" onchange="this.form.submit()">
-                                        @foreach([10,20,50,100] as $n)
-                                            <option value="{{ $n }}" {{ (int) request('per_page', $per_page ?? 20) === $n ? 'selected' : '' }}>{{ $n }} / page</option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                            </div>
                         </form>
 
-                        <table class="table table-striped table-bordered table-hover">
+                        <table class="table table-striped table-bordered table-hover dataTables-example">
                             <thead>
                                 <tr>
                                     <th style="width:50px;">#</th>
                                     <th>Title</th>
                                     <th style="width:90px;">Type</th>
-                                    <th style="width:90px;">Score</th>
+                                    <th style="width:110px;">Score<br><small class="text-muted" style="font-weight:normal;">SEO / Live</small></th>
                                     <th style="width:220px;">SEO Details</th>
                                     <th>Meta Description</th>
-                                    @include('admin.layout.partials.audit-columns-head')
                                     <th style="width:110px;">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse($pages_seo as $page_seo)
                                     @php
-                                        $analysis = $page_seo->analysis ?? [];
-                                        $score = $analysis['score'] ?? 0;
-                                        $scoreClass = $score >= 80 ? 'excellent' : ($score >= 50 ? 'good' : 'poor');
+                                        $analysis = $page_seo->seo_analysis ?? null;
                                         $isCourse = ! empty($page_seo->course_id);
                                         $itemTitle = $page_seo->title ?: ($isCourse ? ($page_seo->course->title ?? 'Course') : ($page_seo->page->page_name ?? 'Page'));
-                                        $itemUrl = $isCourse
-                                            ? ($page_seo->course->slug ?? '')
-                                            : ($page_seo->page->full_url ?? $page_seo->page->url ?? '');
+                                        $itemUrl = seo_list_item_url($page_seo, $category_perma ?? 'category');
                                     @endphp
                                     <tr>
-                                        <td>{{ ($pages_seo->firstItem() ?? 0) + $loop->index }}</td>
-                                        <td>
+                                        <td data-order="{{ $page_seo->id }}">{{ $loop->iteration }}</td>
+                                        <td data-order="{{ $itemTitle }}">
                                             <strong>{{ $itemTitle }}</strong>
                                             @if($itemUrl)
                                                 <br><a href="{{ url($itemUrl) }}" target="_blank" style="font-size:12px;">{{ $itemUrl }}</a>
                                             @endif
                                         </td>
-                                        <td>{{ $isCourse ? 'Course' : 'Page' }}</td>
+                                        <td data-order="{{ $isCourse ? 1 : 0 }}">{{ $isCourse ? 'Course' : 'Page' }}</td>
+                                        @include('admin.seo.partials.list-seo-columns', [
+                                            'seo' => $page_seo,
+                                            'analysis' => $analysis,
+                                        ])
                                         <td>
-                                            <span class="seo-score-pill {{ $scoreClass }}">{{ $score }}/100</span>
-                                        </td>
-                                        <td class="seo-details">
-                                            <small><strong>Keyword:</strong> {{ $analysis['focus_keyword'] ?: '—' }}</small>
-                                            <small><strong>Schema:</strong> {{ $analysis['schema'] ?? 'Article' }}</small>
-                                            <small><strong>Links:</strong> {{ $analysis['external_links'] ?? 0 }} ext / {{ $analysis['internal_links'] ?? 0 }} int</small>
-                                            <small><strong>Words:</strong> {{ number_format($analysis['word_count'] ?? 0) }}</small>
-                                        </td>
-                                        <td>{{ \Illuminate\Support\Str::limit($page_seo->meta_description ?? '', 120) }}</td>
-                                        @include('admin.layout.partials.audit-columns-cells', ['model' => $page_seo])
-                                        <td>
-                                            <a href="{{ route('pages-seo.edit', $page_seo->id) }}" class="btn-primary btn btn-xs">
+                                            <a href="{{ route('courses-pages-seo.edit', $page_seo->id) }}" class="btn-primary btn btn-xs">
                                                 <i class="fa fa-pencil"></i> Edit
                                             </a>
                                             @include('admin.layout.partials.delete-button', [
                                                 'id' => $page_seo->id,
-                                                'action' => route('pages-seo.destroy', $page_seo->id),
+                                                'action' => route('courses-pages-seo.destroy', $page_seo->id),
                                             ])
                                         </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="9" class="text-center text-muted">No SEO records found.</td>
+                                        <td colspan="11" class="text-center text-muted">No SEO records found.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
+                            <tfoot>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Title</th>
+                                    <th>Type</th>
+                                    <th>Score <small class="text-muted">(SEO / Live)</small></th>
+                                    <th>SEO Details</th>
+                                    <th>Meta Description</th>
+                                    <th>Action</th>
+                                </tr>
+                            </tfoot>
                         </table>
-                        @if(method_exists($pages_seo, 'links'))
-                            <div class="text-center">
-                                {{ $pages_seo->links() }}
-                            </div>
-                        @endif
                     </div>
                 </div>
             </div>
@@ -145,3 +128,27 @@
     </div>
 </div>
 @endsection
+
+@push('script')
+    <script src="{{ asset('/admin/js/plugins/dataTables/datatables.min.js') }}"></script>
+    <script>
+        $(document).ready(function () {
+            $('.dataTables-example').DataTable({
+                pageLength: 10,
+                lengthMenu: [10, 20, 50, 100],
+                searching: true,
+                lengthChange: true,
+                paging: true,
+                info: true,
+                ordering: true,
+                responsive: true,
+                dom: '<"admin-dt-toolbar"<l><B><f>>rtip',
+                order: [[0, 'desc']],
+                buttons: [adminDatatableExcelButton('SEO List', 'seo_list')],
+                columnDefs: [
+                    { orderable: false, targets: [10] }
+                ]
+            });
+        });
+    </script>
+@endpush

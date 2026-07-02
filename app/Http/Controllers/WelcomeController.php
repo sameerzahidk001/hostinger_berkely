@@ -92,7 +92,13 @@ class WelcomeController extends Controller
 
     private function resolvePageBySlug(string $slug): ?Page
     {
-        return Page::where('url', $slug)
+        $query = Page::where('url', $slug);
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('pages', 'status')) {
+            $query->where('status', 1);
+        }
+
+        return $query
             ->withCount('sections')
             ->orderByDesc('sections_count')
             ->orderByDesc('id')
@@ -103,12 +109,16 @@ class WelcomeController extends Controller
     {
         $page->load('sections');
 
-        $page->sections = $page->sections->sortBy('order')->map(function ($section) {
+        $page->sections = $page->sections->sortBy('order')->values()->map(function ($section) {
             $decoded = is_string($section->data) ? json_decode($section->data, true) : $section->data;
             $section->data = is_array($decoded) ? $decoded : [];
 
             if (empty($section->section_type)) {
                 $section->section_type = $section->data['section_type'] ?? null;
+            }
+
+            if (! empty($section->section_type) && is_string($section->section_type)) {
+                $section->section_type = normalize_section_type_key($section->section_type) ?? $section->section_type;
             }
 
             if ($section->section_type === 'category' && isset($section->data['category'])) {
@@ -315,7 +325,7 @@ class WelcomeController extends Controller
 
         if ($page) {
             $page->load('sections');
-            $page->sections = $page->sections->sortBy('order')->map(function ($section) {
+            $page->sections = $page->sections->sortBy('order')->values()->map(function ($section) {
                 $section->data = json_decode($section->data, true);
 
                 if ($section->section_type === 'category' && isset($section->data['category'])) {
@@ -372,7 +382,7 @@ class WelcomeController extends Controller
 
     public function instructorDetails($id) {
 
-        $instructor = User::with(['courses:id,title,slug', 'countryarray:iso_code,name'])
+        $instructor = User::with(['countryarray:iso_code,name'])
             ->where('approved', 1)
             ->where('is_on_web', 1)
             ->where('id', $id)
@@ -382,6 +392,8 @@ class WelcomeController extends Controller
         if (! $instructor) {
             abort(404, 'Instructor not found or not approved.');
         }
+
+        $instructor->setRelation('courses', courses_for_instructor((int) $id));
 
         return view('instructor-profile', compact('instructor'));
     }
@@ -397,11 +409,15 @@ class WelcomeController extends Controller
                 $q->where('name', 'instructor');
             });
 
-        // Filter by Course
         if ($request->filled('course')) {
-            $query->whereHas('courses', function ($q) use ($request) {
-                $q->where('id', $request->course);
-            });
+            $course = \App\Models\Course::find($request->course);
+            $instructorIds = $course ? course_instructor_ids($course) : [];
+
+            if ($instructorIds !== []) {
+                $query->whereIn('id', $instructorIds);
+            } else {
+                $query->whereRaw('1 = 0');
+            }
         }
 
         // Filter by Country

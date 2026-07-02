@@ -6,12 +6,12 @@ $grid = $columns == 1 ? 'lg:grid-cols-1' :
 @endphp
 
 <section class="flex flex-col card-hidden my-16" id="section-{{$id}}">
-    <div class="flex flex-col items-center px-2 sm:px-4 md:px-10 lg:px-16 lg:py-10 gap-12 {{ $background ? 'py-16' : '' }}" style="background-color: {{ $background }}">
-        <h1 class="text-[32px] font-canela leading-[38px] md:text-[40px] md:leading-[40px]" style="color: {{ $color }}">{{ $title }}</h1>
+    <div class="flex flex-col items-center px-2 sm:px-4 md:px-10 lg:px-16 lg:py-10 gap-12 {{ $background ? 'py-16' : '' }}" style="background-color: {{ section_bg_color($background) }}">
+        <h2 class="text-[32px] font-canela leading-[38px] md:text-[40px] md:leading-[40px]" style="color: {{ $color }}">{{ $title }}</h2>
 
         <div class="gap-4 grid {{ $grid }}">
             @foreach($categories as $index => $data)
-            <div class="p-8 self-start flex flex-col h-full" style="background-color: {{ $cardBackground }}">
+            <div class="p-8 self-start flex flex-col h-full" style="background-color: {{ card_bg_color($cardBackground, false, '#ffffff') }}">
                 <h3 class="text-[20px] font-canela font-bold capitalize" style="color: #f8961f;">
                     {{ $data->name }}
                 </h3>

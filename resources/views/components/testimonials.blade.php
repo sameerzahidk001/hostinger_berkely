@@ -227,8 +227,8 @@
                                 </div>
                                 <div class="flex flex-col gap-0 flex-grow">
                                     <!-- Make the text section grow to fill available space -->
-                                    <h1 class="text-[23px] font-semibold" style="color: {{ $cardColor }};">
-                                        {{ $testimonial->name }}</h1>
+                                    <h2 class="text-[23px] font-semibold" style="color: {{ $cardColor }};">
+                                        {{ $testimonial->name }}</h2>
                                     <p style="color: {{ $cardColor }};">
                                         {{ $testimonial->city . ', ' . $testimonial->country }}</p>
                                     <a href="{{ url()->current() }}?course={{ $testimonial->course->slug }}"

@@ -31,4 +31,10 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'rakbank' => [
+        'merchant_id' => env('RAKBANK_MERCHANT_ID'),
+        'api_password' => env('RAKBANK_API_PASSWORD'),
+        'checkout_currency' => env('RAKBANK_CHECKOUT_CURRENCY', 'AED'),
+    ],
+
 ];

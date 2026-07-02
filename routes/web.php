@@ -99,7 +99,8 @@ Route::controller(FrontendController::class)->middleware('set.seo')->group(funct
     // Route::get('/home-schooling-parental-support', 'HomeSchoolParentalSupport')->name('school.page-1');
     // Route::get('/home-school-supporting-child', 'HomeSchoolSupporttingChild')->name('school.page-2');
     // Route::get('/islamic-school', 'islamicSchool')->name('islamic-school');
-    Route::get('/learner-stories', 'LearnerStories')->name('learner-stories');
+    // Learner stories page removed from public site.
+    Route::redirect('/learner-stories', '/', 301)->name('learner-stories');
 
     Route::get('/berkeley-square', 'BerkeleySquare')->name('berkeley-square');
     Route::get('/berkeley-square-london', 'BerkeleySquareLondon')->name('berkeley-square-london');
@@ -129,6 +130,10 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
     // Define routes for each section type
     Route::post('ckeditor-image-upload', [CourseController::class, 'ckeditorImageUpload']);
     Route::prefix('admin/')->group(function () {
+
+        Route::get('csrf-token', function () {
+            return response()->json(['token' => csrf_token()]);
+        })->name('admin.csrf-token');
 
         // Payment Gateway
         Route::get('/payment-gateways', [PaymentGatewayController::class, 'index'])->name('admin.payment-gateways.index');
@@ -162,6 +167,7 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
         Route::post('/home-update', [HomepageController::class, 'update'])->name('homepage.update');
         Route::post('/home-banner/update', [HomepageController::class, 'bannerUpdate'])->name('home.banner.update');
         Route::get('home', [AdminController::class, 'dashboard'])->name('admin.home');
+        Route::get('home/activity-export', [AdminController::class, 'exportActivity'])->name('admin.home.activity-export');
         Route::get('profile', [AdminController::class, 'profile'])->name('admin.profile');
         Route::post('profile/update', [AdminController::class, 'profile_update'])->name('admin.profile.update');
         Route::get('logout', [AdminController::class, 'logout'])->name('admin.logout');
@@ -182,7 +188,8 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
         Route::redirect('course-agendas', 'training-calendar');
         Route::redirect('course-agendas/create', 'training-calendar/create');
         Route::redirect('course-agendas/{id}/edit', 'training-calendar/{id}/edit');
-        Route::resource('training-calendar', AdminCourseAgendasController::class)->names('admin.course-agendas');
+        Route::resource('training-calendar', AdminCourseAgendasController::class)
+            ->names('admin.course-agendas');
 
         Route::get('smtp-settings', [SettingController::class, 'smtpSettings'])->name('admin.smtpSettings.index');
         Route::post('smtp-settings/store', [SettingController::class, 'smtpSettingsStore'])->name('admin.smtpSettings.store');
@@ -362,10 +369,23 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
         // });
 
         Route::resource('faq', FaqController::class);
+        Route::get('pages/disabled/list', [PagesController::class, 'disabledPages'])->name('admin.pages.disabled');
+        Route::post('pages/{id}/update-status', [PagesController::class, 'updateStatus'])->name('pages.update-status');
+        // Some hosts/WAFs block method spoofing to PUT/PATCH; allow a POST update endpoint too.
+        Route::post('pages/{id}/update', [PagesController::class, 'update'])->name('pages.update.post');
+        Route::post('user/{id}/update', [UserController::class, 'update'])->name('users.update.post');
         Route::resource('pages', PagesController::class);
         Route::resource('learner-stories', LearnerStoryController::class);
-        Route::post('pages-seo/{pages_seo}/analyze', [SeoController::class, 'analyzePreview'])->name('pages-seo.analyze');
-        Route::resource('pages-seo', SeoController::class);
+        Route::get('pages-seo/{path?}', function (?string $path = null) {
+            $suffix = $path !== null && $path !== '' ? '/' . $path : '';
+
+            return redirect('courses-pages-seo' . $suffix, 301);
+        })->where('path', '.*');
+        Route::post('courses-pages-seo/{pages_seo}/analyze', [SeoController::class, 'analyzePreview'])->name('courses-pages-seo.analyze');
+        Route::post('courses-pages-seo/{pages_seo}/update', [SeoController::class, 'update'])->name('courses-pages-seo.update.post');
+        Route::resource('courses-pages-seo', SeoController::class)
+            ->names('courses-pages-seo')
+            ->parameters(['courses-pages-seo' => 'pages_seo']);
 
         Route::resource('school', SchoolController::class);
         Route::post('school/{id}/update-status-school', [SchoolController::class, 'updateStatusSchool'])->name('courses.update-status-school');
@@ -436,6 +456,7 @@ Route::prefix('user')->middleware(['auth', 'approved', 'redirect.panel.from.stud
     Route::get('/', [UserHomeController::class, 'index'])->name('user.home')->middleware('hasPermission:dashboard-read');
     Route::get('/cart', [CartController::class, 'index'])->name('user.cart.index');
     Route::post('/generate/rakBankPaySession', [UserHomeController::class, 'generateRakBankPaySession'])->name('user.generate.rakBankPaySession');
+    Route::get('/rakbank/return', [UserHomeController::class, 'handleRakBankReturn'])->name('user.rakbank.return');
 
     // Logout
     Route::get('/logout', [App\Http\Controllers\HomeController::class, 'logout'])->name('user.logout');

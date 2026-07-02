@@ -26,12 +26,12 @@
             min-height: auto !important;
         }
 
-        #meta_keywords_addTag, #meta_additional_keywords_tagsinput {
+        #meta_keywords_addTag, #meta_additional_keywords_addTag {
             flex: 0 0 auto;
         }
 
         .tag,
-        #meta_keywords_tag, #meta_additional_keywords_tagsinput {
+        #meta_keywords_tag, #meta_additional_keywords_tag {
             margin: 0px !important;
             width: auto !important;
         }
@@ -130,10 +130,10 @@
             </div>
         </div>
     </div>
-    <form action="{{ route('pages.update', $page->id) }}" method="POST" enctype="multipart/form-data">
+    <form action="{{ route('pages.update.post', $page->id) }}" method="POST" enctype="multipart/form-data">
         @csrf
-        @method('PUT')
         <input type="hidden" name="sections_submitted" value="1">
+        <input type="hidden" name="sections_payload" id="sections_payload" value="">
         @if ($page->category_id)
             <input type="hidden" name="parent_id" value="">
         @endif
@@ -186,6 +186,22 @@
                                             </option>
                                         @endforeach
                                     </select>
+                                </div>
+
+                                <div class="col-lg-4">
+                                    <label class="mb-1">Status</label>
+                                    @if(!pages_status_enabled())
+                                        <div class="alert alert-warning" style="padding:8px 12px;margin-bottom:8px;">
+                                            Active/Disabled will not save until <code>database/sql/add-pages-status-column.sql</code> is run on the server.
+                                        </div>
+                                    @endif
+                                    <select class="form-control" name="status" required>
+                                        <option value="1" @selected((string) old('status', $page->status ?? 1) === '1')>Active</option>
+                                        <option value="0" @selected((string) old('status', $page->status ?? 1) === '0')>Disabled</option>
+                                    </select>
+                                    @error('status')
+                                        <p class="text-danger text-xs italic">{{ $message }}</p>
+                                    @enderror
                                 </div>
                             </div>
                         </div>
@@ -278,6 +294,8 @@
                                 if (empty($section['section_type'])) {
                                     $section['section_type'] = $page->sections[$i]->section_type ?? '';
                                 }
+                                $section['section_type'] = normalize_section_type_key($section['section_type'] ?? '')
+                                    ?? ($section['section_type'] ?? '');
                                 $sectionType = ucwords(str_replace('-', ' ', $section['section_type'] ?? ''));
                             @endphp
 
@@ -337,7 +355,7 @@
                                                     @include('admin.partials.image-alt-input', [
                                                         'id' => 'sections_' . $i . '_image_alt',
                                                         'name' => 'sections[' . $i . '][image_alt]',
-                                                        'value' => $section['image_alt'] ?? '',
+                                                        'value' => old('sections.' . $i . '.image_alt', $section['image_alt'] ?? ''),
                                                     ])
 
                                                     @if (!empty($section['image_source']) && $section['image_source'] !== 'remove')
@@ -905,7 +923,7 @@
                                                     @include('admin.partials.image-alt-input', [
                                                         'id' => 'sections_' . $i . '_image_alt',
                                                         'name' => 'sections[' . $i . '][image_alt]',
-                                                        'value' => $section['image_alt'] ?? '',
+                                                        'value' => old('sections.' . $i . '.image_alt', $section['image_alt'] ?? ''),
                                                     ])
 
                                                     @if (!empty($section['image_source']) && $section['image_source'] !== 'remove')
@@ -1522,7 +1540,7 @@
                                                     @include('admin.partials.image-alt-input', [
                                                         'id' => 'sections_' . $i . '_image_alt',
                                                         'name' => 'sections[' . $i . '][image_alt]',
-                                                        'value' => $section['image_alt'] ?? '',
+                                                        'value' => old('sections.' . $i . '.image_alt', $section['image_alt'] ?? ''),
                                                     ])
 
                                                     @if (!empty($section['image_source']) && $section['image_source'] !== 'remove')
@@ -1708,7 +1726,7 @@
                                                     @include('admin.partials.image-alt-input', [
                                                         'id' => 'sections_' . $i . '_image_alt',
                                                         'name' => 'sections[' . $i . '][image_alt]',
-                                                        'value' => $section['image_alt'] ?? '',
+                                                        'value' => old('sections.' . $i . '.image_alt', $section['image_alt'] ?? ''),
                                                     ])
 
                                                     @if (!empty($section['image_source']) && $section['image_source'] !== 'remove')
@@ -1799,7 +1817,7 @@
                                                                     @include('admin.partials.image-alt-input', [
                                                                         'id' => 'sections_' . $i . '_cards_' . $key . '_image_alt',
                                                                         'name' => 'sections[' . $i . '][cards][' . $key . '][image_alt]',
-                                                                        'value' => $card['image_alt'] ?? '',
+                                                                        'value' => old('sections.' . $i . '.cards.' . $key . '.image_alt', $card['image_alt'] ?? ''),
                                                                     ])
 
                                                                     @if (!empty($card['image']) && ($card['image_source'] ?? '') !== 'remove')
@@ -1943,7 +1961,7 @@
                                                     @include('admin.partials.image-alt-input', [
                                                         'id' => 'sections_' . $i . '_image_alt',
                                                         'name' => 'sections[' . $i . '][image_alt]',
-                                                        'value' => $section['image_alt'] ?? '',
+                                                        'value' => old('sections.' . $i . '.image_alt', $section['image_alt'] ?? ''),
                                                     ])
 
                                                     @if (!empty($section['image_source']) && $section['image_source'] !== 'remove')
@@ -2090,7 +2108,7 @@
                                                                     @include('admin.partials.image-alt-input', [
                                                                         'id' => 'sections_' . $i . '_cards_' . $key . '_image_alt',
                                                                         'name' => 'sections[' . $i . '][cards][' . $key . '][image_alt]',
-                                                                        'value' => $card['image_alt'] ?? '',
+                                                                        'value' => old('sections.' . $i . '.cards.' . $key . '.image_alt', $card['image_alt'] ?? ''),
                                                                     ])
 
                                                                     @if (!empty($card['image']) && ($card['image_source'] ?? '') !== 'remove')
@@ -2468,7 +2486,7 @@
                                                     @include('admin.partials.image-alt-input', [
                                                         'id' => 'sections_' . $i . '_image_alt',
                                                         'name' => 'sections[' . $i . '][image_alt]',
-                                                        'value' => $section['image_alt'] ?? '',
+                                                        'value' => old('sections.' . $i . '.image_alt', $section['image_alt'] ?? ''),
                                                     ])
 
                                                     @if (!empty($section['image_source']) && $section['image_source'] !== 'remove')
@@ -2598,7 +2616,7 @@
                                                     <label for="sections_{{ $i }}_card_background" class="form-label">Card
                                                         Background:</label>
                                                     <input type="color" id="sections_{{ $i }}_card_background"
-                                                        name="sections[{{ $i }}][_card_background]" class="form-control"
+                                                        name="sections[{{ $i }}][card_background]" class="form-control"
                                                         value="{{ $section['card_background'] ?? '' }}">
                                                 </div>
                                                 <div class="col-md-4">
@@ -2893,125 +2911,43 @@
                         </div>
                         <div class="ibox-content">
                             <div class="row">
-                                <div class="col-lg-6 mb">
-                                    <label for="meta_title">Title <small>( Max {{ seo_field_limits()['title_max'] }} characters )</small></label>
-                                    <input type="text" class="form-control" name="meta_title"
-                                        placeholder="Add SEO Meta title"
-                                        value="{{ old('meta_title', $meta->title ?? '') }}"
-                                        data-maxlength="{{ seo_field_limits()['title_max'] }}"
-                                        maxlength="{{ seo_field_limits()['title_max'] }}">
-                                    @error('meta_title')
-                                        <p class="text-danger text-xs italic">{{ $message }}</p>
-                                    @enderror
-                                </div>
-                                <!-- Image Input Group -->
-                                <div class="col-lg-6 mb form-group">
-                                    <label for="meta_thumbnail">Thumbnail <small>( 1200 X 627 px )</label>
-                                    <div class="input-group">
-                                        <input type="text" id="meta_thumbnail_path" name="meta_thumbnail_path"
-                                            class="form-control" readonly onclick="showFileModal()"
-                                            value="{{ old('meta_thumbnail_path', $meta->thumbnail ?? '') }}">
-                                        <span class="input-group-btn">
-                                            <button class="btn btn-default" type="button"
-                                                onclick="showFileModal()">Browse</button>
-                                        </span>
+                                @if($meta && $meta->id)
+                                    <div class="col-lg-5">
+                                        @include('admin.seo.partials.seo-score', [
+                                            'page_seo' => $meta,
+                                            'seo_analysis' => $seo_analysis ?? null,
+                                            'fieldNames' => [
+                                                'title' => 'meta_title',
+                                                'meta_description' => 'meta_description',
+                                                'focus_keyword' => 'meta_focus_keyword',
+                                                'keywords' => 'meta_keywords',
+                                                'thumbnail_alt' => 'meta_thumbnail_alt',
+                                            ],
+                                        ])
                                     </div>
-
-                                    @error('meta_thumbnail_path') <span class="help-block text-danger">{{ $message }}</span>
-                                    @enderror
-                                    @error('local_meta_thumbnail_input') <span
-                                    class="help-block text-danger">{{ $message }}</span> @enderror
-
-                                    @if(!empty($meta->thumbnail))
-                                        <small id="imageUrlText" class="help-block" style="display:block; margin-top:0px;">
-                                            @if($meta->thumbnail)
-                                                View image <a href="{{ old('meta_thumbnail_path', $meta->thumbnail ?? '') }}"
-                                                    target="_blank" rel="noopener">here</a>
-                                            @else
-                                                <span class="text-muted">No image selected</span>
-                                            @endif
-                                        </small>
-                                    @endif
-                                </div>
-                                @include('admin.partials.image-alt-input', [
-                                    'id' => 'meta_thumbnail_alt',
-                                    'name' => 'meta_thumbnail_alt',
-                                    'value' => old('meta_thumbnail_alt', $meta->thumbnail_alt ?? ''),
-                                ])
-
-                                <!-- Hidden file input -->
-                                <input type="file" id="local_meta_thumbnail_input" name="local_meta_thumbnail_input"
-                                    style="display: none;" accept="image/*" onchange="uploadLocalFile(this)">
-
-                                <!-- File Source Modal -->
-                                <div id="fileModal" class="modal fade" tabindex="-1" role="dialog"
-                                    aria-labelledby="fileModalLabel">
-                                    <div class="modal-dialog modal-sm">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <button type="button" class="close" data-dismiss="modal">&times;</button>
-                                                <h4 class="modal-title" id="fileModalLabel">Select Image</h4>
-                                            </div>
-                                            <div class="modal-body text-center">
-                                                <button type="button" class="btn btn-primary btn-block"
-                                                    onclick="pickLocalFile()">Upload from Computer</button>
-                                                <button type="button" class="btn btn-success btn-block"
-                                                    onclick="showFileManagerModal()">Choose from File Manager</button>
-                                            </div>
-                                        </div>
+                                    <div class="col-lg-7">
+                                @else
+                                    <div class="col-lg-12">
+                                @endif
+                                        @include('admin.seo.partials.seo-meta-fields', [
+                                            'seoMeta' => $meta,
+                                            'fieldNames' => [
+                                                'title' => 'meta_title',
+                                                'meta_description' => 'meta_description',
+                                                'focus_keyword' => 'meta_focus_keyword',
+                                                'keywords' => 'meta_keywords',
+                                                'additional_keywords' => 'meta_additional_keywords',
+                                                'thumbnail_path' => 'meta_thumbnail_path',
+                                                'thumbnail_file' => 'meta_thumbnail_file',
+                                                'thumbnail_alt' => 'meta_thumbnail_alt',
+                                                'thumbnail_id_base' => 'meta_thumbnail',
+                                            ],
+                                        ])
+                                @if($meta && $meta->id)
                                     </div>
-                                </div>
-
-                                <!-- File Manager Modal -->
-                                <div id="fileManagerModal" class="modal fade" tabindex="-1" role="dialog">
-                                    <div class="modal-dialog modal-lg">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <button type="button" class="close" data-dismiss="modal">&times;</button>
-                                                <h4 class="modal-title">Choose Image</h4>
-                                            </div>
-
-                                            <div class="modal-body" style="max-height: 65vh; overflow-y: auto;"
-                                                id="fileManagerModalBody">
-                                                {{-- Your image grid with checkboxes --}}
-                                            </div>
-
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary"
-                                                    data-dismiss="modal">Cancel</button>
-                                                <button type="button" class="btn btn-primary"
-                                                    onclick="confirmImageSelection()">Select</button>
-                                            </div>
-                                        </div>
+                                @else
                                     </div>
-                                </div>
-                                <div class="col-lg-12 mb">
-                                    <label for="meta_description">Meta Description <small>( Max {{ seo_field_limits()['meta_description_max'] }} characters )</small></label>
-                                    <textarea class="form-control editor" name="meta_description"
-                                        placeholder="Add SEO Meta description"
-                                        data-maxlength="{{ seo_field_limits()['meta_description_max'] }}"
-                                        maxlength="{{ seo_field_limits()['meta_description_max'] }}">{{ old('meta_description', $meta->meta_description ?? '') }}</textarea>
-                                    @error('meta_description')
-                                        <p class="text-danger text-xs italic">{{ $message }}</p>
-                                    @enderror
-                                </div>
-                                <div class="col-lg-6" style="margin-bottom: 15px;">
-                                    <label for="meta_keywords">Priority Keywords <small>( Max {{ seo_field_limits()['priority_keywords_max_tags'] }} keywords )</small></label>
-                                    <input name="meta_keywords" id="meta_keywords"
-                                        value="{{ old('meta_keywords', $meta->keywords ?? '') }}" class="form-control" />
-                                    @error('meta_keywords')
-                                        <p class="text-danger text-xs italic">{{ $message }}</p>
-                                    @enderror
-                                </div>
-
-                                <div class="col-lg-6" style="margin-bottom: 15px;">
-                                    <label for="meta_additional_keywords">Additional Keywords <small>( Max {{ seo_field_limits()['additional_keywords_max_tags'] }} keywords )</small></label>
-                                    <input name="meta_additional_keywords" id="meta_additional_keywords"
-                                        value="{{ old('meta_additional_keywords', $meta->additional_keywords ?? '') }}" class="form-control" />
-                                    @error('meta_additional_keywords')
-                                        <p class="text-danger text-xs italic">{{ $message }}</p>
-                                    @enderror
-                                </div>
+                                @endif
                             </div>
                         </div>
                     </div>
@@ -3037,6 +2973,8 @@
             </div>
         </div>
     </form>
+
+    @include('admin.partials.media-picker')
 
 @endsection
 
@@ -3068,37 +3006,179 @@
 
             // Initialize SortableJS
             const builderContainer = document.getElementById('builder-container');
-            const sortable = new Sortable(builderContainer, {
-                animation: 150, // Animation speed in milliseconds
-                handle: '.ibox-title', // Drag handle (only the title bar is draggable)
-                onEnd: function (evt) {
-                    // Update the order of sections in the form
-                    updateSectionOrder();
-                }
-            });
+            const pageForm = builderContainer ? builderContainer.closest('form') : null;
 
-            // Function to update the order of sections
-            function updateSectionOrder() {
+            window.updateSectionOrder = function () {
+                if (!builderContainer) {
+                    return;
+                }
+
                 const sections = builderContainer.querySelectorAll('.ibox-container');
                 sections.forEach((section, index) => {
-                    // Update the hidden input for section type
-                    const sectionTypeInput = section.querySelector('input[name*="[section_type]"]');
-                    if (sectionTypeInput) {
-                        sectionTypeInput.name = `sections[${index}][section_type]`;
-                    }
-
-                    // Update all other input fields in the section
                     const inputs = section.querySelectorAll('input, textarea, select');
                     inputs.forEach(input => {
-                        const name = input.name;
-                        const newName = name.replace(/sections\[\d+\]/, `sections[${index}]`);
-                        input.name = newName;
+                        if (!input.name) {
+                            return;
+                        }
+
+                        input.name = input.name.replace(/sections\[\d+\]/g, `sections[${index}]`);
+
+                        if (input.id && input.id.startsWith('sections_')) {
+                            input.id = input.id.replace(/^sections_\d+/, `sections_${index}`);
+                        }
                     });
+
+                    section.querySelectorAll('label[for^="sections_"]').forEach(label => {
+                        if (label.htmlFor) {
+                            label.htmlFor = label.htmlFor.replace(/^sections_\d+/, `sections_${index}`);
+                        }
+                    });
+                });
+            };
+
+            if (builderContainer) {
+                new Sortable(builderContainer, {
+                    animation: 150,
+                    handle: '.ibox-title',
+                    onEnd: function () {
+                        window.updateSectionOrder();
+                    }
+                });
+            }
+
+            const csrfRefreshUrl = @json(route('admin.csrf-token'));
+
+            function applyCsrfToken(token) {
+                if (!token) {
+                    return;
+                }
+
+                const tokenInput = pageForm ? pageForm.querySelector('input[name="_token"]') : null;
+                if (tokenInput) {
+                    tokenInput.value = token;
+                }
+
+                const meta = document.querySelector('meta[name="csrf-token"]');
+                if (meta) {
+                    meta.setAttribute('content', token);
+                }
+            }
+
+            function refreshCsrfToken() {
+                return fetch(csrfRefreshUrl, {
+                    credentials: 'same-origin',
+                    headers: { 'Accept': 'application/json' },
+                })
+                    .then(function (response) {
+                        if (!response.ok) {
+                            throw new Error('csrf refresh failed');
+                        }
+                        return response.json();
+                    })
+                    .then(function (data) {
+                        applyCsrfToken(data.token);
+                        return data.token;
+                    });
+            }
+
+            if (pageForm) {
+                setInterval(function () {
+                    refreshCsrfToken().catch(function () {});
+                }, 10 * 60 * 1000);
+
+                pageForm.addEventListener('submit', function (event) {
+                    if (pageForm.dataset.submitting === '1') {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    window.updateSectionOrder();
+
+                    if (window.jQuery) {
+                        jQuery(pageForm).find('.editor').each(function () {
+                            if (jQuery(this).next('.note-editor').length) {
+                                jQuery(this).val(jQuery(this).summernote('code'));
+                            }
+                        });
+                    }
+
+                    const sections = {};
+                    for (const el of pageForm.elements) {
+                        if (!el.name || !el.name.startsWith('sections[')) {
+                            continue;
+                        }
+                        if (el.type === 'file') {
+                            continue;
+                        }
+                        if ((el.type === 'checkbox' || el.type === 'radio') && !el.checked) {
+                            continue;
+                        }
+                        if (el.disabled) {
+                            continue;
+                        }
+
+                        const parts = el.name.replace(/\]/g, '').split('[').slice(1);
+                        let cur = sections;
+                        for (let i = 0; i < parts.length - 1; i++) {
+                            const key = parts[i];
+                            const nextKey = parts[i + 1];
+                            if (cur[key] === undefined) {
+                                cur[key] = /^\d+$/.test(nextKey) ? [] : {};
+                            }
+                            cur = cur[key];
+                        }
+                        cur[parts[parts.length - 1]] = el.value;
+                    }
+
+                    const payloadInput = document.getElementById('sections_payload');
+                    let encodedPayload = '';
+
+                    try {
+                        const json = JSON.stringify(sections);
+                        encodedPayload = btoa(unescape(encodeURIComponent(json)))
+                            .replace(/\+/g, '-')
+                            .replace(/\//g, '_')
+                            .replace(/=+$/g, '');
+                    } catch (error) {
+                        console.error('Could not encode page sections', error);
+                    }
+
+                    if (!encodedPayload) {
+                        alert('Could not prepare page content for save. Please refresh the page and try again.');
+                        return;
+                    }
+
+                    if (payloadInput) {
+                        payloadInput.value = encodedPayload;
+                    }
+
+                    for (const el of pageForm.elements) {
+                        if (el.name && el.name.startsWith('sections[') && el.type !== 'file') {
+                            el.disabled = true;
+                        }
+                    }
+
+                    refreshCsrfToken()
+                        .catch(function () {})
+                        .finally(function () {
+                            pageForm.dataset.submitting = '1';
+                            pageForm.submit();
+                        });
                 });
             }
         });
     </script>
     @include('admin.seo.partials.tags-limits-script')
+    <script>
+        $(document).ready(function () {
+            $('form').on('keydown', function (e) {
+                if (e.key === 'Enter' && !$(e.target).closest('#meta_keywords_tagsinput, #meta_additional_keywords_tagsinput').length) {
+                    e.preventDefault();
+                    return false;
+                }
+            });
+        });
+    </script>
     <script>
         $(document).ready(function () {
             // Handle collapse toggle
@@ -3544,12 +3624,51 @@
 
         function toggleTransparent(checkbox, colorInputId) {
             const colorInput = document.getElementById(colorInputId);
+            if (!colorInput) {
+                return;
+            }
+
             if (checkbox.checked) {
-                colorInput.value = '#000000';  // Set to default color
+                if (colorInput.value && colorInput.value !== '#000000' && colorInput.value !== '#000') {
+                    colorInput.dataset.previousValue = colorInput.value;
+                }
+                colorInput.value = '';
                 colorInput.disabled = true;
             } else {
                 colorInput.disabled = false;
+                if (!colorInput.value || colorInput.value === '#000000' || colorInput.value === '#000') {
+                    colorInput.value = colorInput.dataset.previousValue || '#ffffff';
+                }
             }
+        }
+
+        function initTransparentControls() {
+            document.querySelectorAll('input[type="checkbox"][id*="transparent"]').forEach(function (checkbox) {
+                const onchange = checkbox.getAttribute('onchange') || '';
+                const match = onchange.match(/toggleTransparent\(this,\s*'([^']+)'\)/);
+                if (!match) {
+                    return;
+                }
+
+                const colorInput = document.getElementById(match[1]);
+                if (!colorInput) {
+                    return;
+                }
+
+                const value = (colorInput.value || '').toLowerCase();
+                const shouldBeTransparent = value === '' || value === '#000000' || value === '#000' || value === 'black';
+
+                if (shouldBeTransparent) {
+                    checkbox.checked = true;
+                    toggleTransparent(checkbox, match[1]);
+                }
+            });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initTransparentControls);
+        } else {
+            initTransparentControls();
         }
 
         function toggleDisable(checkbox, inputId) {
@@ -5195,6 +5314,10 @@
             }
             // Append section to builder-container
             $("#builder-container").append(sectionHTML);
+
+            if (typeof window.updateSectionOrder === 'function') {
+                window.updateSectionOrder();
+            }
         }
 
         let currentSectionId = null;

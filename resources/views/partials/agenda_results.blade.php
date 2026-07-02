@@ -72,15 +72,21 @@
                         <strong>End Date:</strong>
                         {{ \Carbon\Carbon::parse($course_agenda->to)->format('d M Y') }}
                     </td>
-                    @if ($course_agenda->inquiry)
-                        <td>
-                            <button type="button"
-                                class="border px-4 py-1 w-full border-[#000435] bg-[#000435] text-white transition-all delay-300 duration-300 content-center rounded uppercase"
-                                data-form="{!! htmlentities($course_agenda->inquiry, ENT_QUOTES) !!}">
+                    <td class="px-4 py-3 text-right">
+                        <div class="flex flex-col gap-2 min-w-[120px]">
+                            <a href="{{ route('course.details', ['course' => $course_agenda->course->slug]) }}#eight"
+                                class="border px-4 py-1 w-full border-[#000435] bg-[#000435] text-white transition-all delay-300 duration-300 content-center rounded uppercase text-center text-xs font-semibold">
                                 Enroll
-                            </button>
-                        </td>
-                    @endif
+                            </a>
+                            @if ($course_agenda->inquiry)
+                                <button type="button"
+                                    class="border px-4 py-1 w-full border-[#000435] bg-white text-[#000435] transition-all delay-300 duration-300 content-center rounded uppercase text-xs font-semibold"
+                                    data-form="{!! htmlentities($course_agenda->inquiry, ENT_QUOTES) !!}">
+                                    Inquire
+                                </button>
+                            @endif
+                        </div>
+                    </td>
                 </tr>
             @endforeach
         </tbody>

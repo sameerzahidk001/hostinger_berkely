@@ -11,7 +11,7 @@ class PagesSEO extends Model
     use HasFactory, TracksAudit;
 
     protected $table = 'pages_s_e_o_s';
-    protected $fillable = ['page_id','course_id','title','meta_description', 'keywords', 'additional_keywords', 'thumbnail', 'thumbnail_alt'];
+    protected $fillable = ['page_id','course_id','title','meta_description', 'focus_keyword', 'keywords', 'additional_keywords', 'thumbnail', 'thumbnail_alt'];
 
     public function page()
     {

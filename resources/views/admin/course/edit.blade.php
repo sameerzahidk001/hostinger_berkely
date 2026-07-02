@@ -127,7 +127,7 @@
                                     @include('admin.partials.image-alt-input', [
                                         'id' => 'banner_image_alt',
                                         'name' => 'label[image_alts][banner_image]',
-                                        'value' => data_get($course->dynamicLabel?->image_alts, 'banner_image'),
+                                        'value' => form_image_alt_value($course->dynamicLabel, 'banner_image', 'label.image_alts.banner_image'),
                                     ])
                                 </div>
                                 <div class="col-lg-6 mb">
@@ -365,7 +365,7 @@
                                     @include('admin.partials.image-alt-input', [
                                         'id' => 'overview_img_alt',
                                         'name' => 'image_alts[overview_img]',
-                                        'value' => data_get($course->image_alts, 'overview_img'),
+                                        'value' => form_image_alt_value($course, 'overview_img', 'image_alts.overview_img'),
                                     ])
                                 </div>
                                 <div class="col-lg-6 mb">
@@ -556,7 +556,7 @@
                                     @include('admin.partials.image-alt-input', [
                                         'id' => 'who_can_do_img_alt',
                                         'name' => 'label[image_alts][who_can_do_img]',
-                                        'value' => data_get($course->dynamicLabel?->image_alts, 'who_can_do_img'),
+                                        'value' => form_image_alt_value($course->dynamicLabel, 'who_can_do_img', 'label.image_alts.who_can_do_img'),
                                     ])
                                 </div>
 
@@ -856,7 +856,7 @@
                                     @include('admin.partials.image-alt-input', [
                                         'id' => 'lectures_img_alt',
                                         'name' => 'label[image_alts][lectures_img]',
-                                        'value' => data_get($course->dynamicLabel?->image_alts, 'lectures_img'),
+                                        'value' => form_image_alt_value($course->dynamicLabel, 'lectures_img', 'label.image_alts.lectures_img'),
                                     ])
                                 </div>
 
@@ -913,7 +913,7 @@
                                     @include('admin.partials.image-alt-input', [
                                         'id' => 'practice_session_img_alt',
                                         'name' => 'label[image_alts][practice_session_img]',
-                                        'value' => data_get($course->dynamicLabel?->image_alts, 'practice_session_img'),
+                                        'value' => form_image_alt_value($course->dynamicLabel, 'practice_session_img', 'label.image_alts.practice_session_img'),
                                     ])
                                 </div>
 
@@ -969,7 +969,7 @@
                                     @include('admin.partials.image-alt-input', [
                                         'id' => 'mock_examination_img_alt',
                                         'name' => 'label[image_alts][mock_examination_img]',
-                                        'value' => data_get($course->dynamicLabel?->image_alts, 'mock_examination_img'),
+                                        'value' => form_image_alt_value($course->dynamicLabel, 'mock_examination_img', 'label.image_alts.mock_examination_img'),
                                     ])
                                 </div>
 
@@ -1157,7 +1157,7 @@
                                     @include('admin.partials.image-alt-input', [
                                         'id' => 'career_path_section_img_alt',
                                         'name' => 'label[image_alts][career_path_section_img]',
-                                        'value' => data_get($course->dynamicLabel?->image_alts, 'career_path_section_img'),
+                                        'value' => form_image_alt_value($course->dynamicLabel, 'career_path_section_img', 'label.image_alts.career_path_section_img'),
                                     ])
                                 </div>
 
@@ -1265,7 +1265,7 @@
                                     @include('admin.partials.image-alt-input', [
                                         'id' => 'exam_information_section_img_alt',
                                         'name' => 'label[image_alts][exam_information_section_img]',
-                                        'value' => data_get($course->dynamicLabel?->image_alts, 'exam_information_section_img'),
+                                        'value' => form_image_alt_value($course->dynamicLabel, 'exam_information_section_img', 'label.image_alts.exam_information_section_img'),
                                     ])
                                 </div>
 
@@ -1489,7 +1489,7 @@
                                     @include('admin.partials.image-alt-input', [
                                         'id' => 'learner_stories_img_alt',
                                         'name' => 'label[image_alts][learner_stories_img]',
-                                        'value' => data_get($course->dynamicLabel?->image_alts, 'learner_stories_img'),
+                                        'value' => form_image_alt_value($course->dynamicLabel, 'learner_stories_img', 'label.image_alts.learner_stories_img'),
                                     ])
                                 </div>
                                 <div class="col-lg-6 mb">
@@ -1702,7 +1702,7 @@
                                     @include('admin.partials.image-alt-input', [
                                         'id' => 'what_you_earn_img_alt',
                                         'name' => 'label[image_alts][what_you_earn_img]',
-                                        'value' => data_get($course->dynamicLabel?->image_alts, 'what_you_earn_img'),
+                                        'value' => form_image_alt_value($course->dynamicLabel, 'what_you_earn_img', 'label.image_alts.what_you_earn_img'),
                                     ])
                                 </div>
 

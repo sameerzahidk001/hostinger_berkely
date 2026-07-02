@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Models\Page;
 use App\Models\PagesSEO;
+use App\Models\SiteSettings;
 use App\Services\SeoAnalyzerService;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
@@ -11,43 +12,55 @@ use App\Http\Controllers\Controller;
 
 class SeoController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('long.running')->only(['edit', 'analyzePreview']);
+        $this->middleware(function ($request, $next) {
+            ensure_seo_focus_keyword_column_exists();
+            ensure_seo_thumbnail_alt_column_exists();
+
+            return $next($request);
+        });
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index(Request $request)
     {
-        // Initialize the query builder
-        $query = PagesSEO::with(['page', 'course', 'createdBy', 'updatedBy']);
+        $query = PagesSEO::query()
+            ->with([
+                'page:id,page_name,url,parent_id,category_id',
+                'page.parent:id,url',
+                'page.sections',
+                'course.dynamicLabel',
+                'course.courseFaq',
+                'createdBy:id,username,email',
+                'updatedBy:id,username,email',
+            ]);
 
-        // Filter by title/name if provided
-        if ($request->has('name') && !empty($request->name)) {
+        if ($request->filled('name')) {
             $query->where('title', 'LIKE', '%' . $request->name . '%');
         }
 
-        // Filter by type (either page or course)
-        if ($request->has('type') && !empty($request->type)) {
-            if ($request->type == 'page') {
-                $query->whereNotNull('page_id'); // Filter for pages
-            } elseif ($request->type == 'course') {
-                $query->whereNotNull('course_id'); // Filter for courses
+        if ($request->filled('type')) {
+            if ($request->type === 'page') {
+                $query->whereNotNull('page_id');
+            } elseif ($request->type === 'course') {
+                $query->whereNotNull('course_id');
             }
         }
 
         $analyzer = app(SeoAnalyzerService::class);
-        $perPage = (int) ($request->input('per_page', 20));
-        $perPage = in_array($perPage, [10, 20, 50, 100], true) ? $perPage : 20;
+        $data['pages_seo'] = $query
+            ->orderByDesc('id')
+            ->get()
+            ->each(function (PagesSEO $pageSeo) use ($analyzer) {
+                $pageSeo->seo_analysis = $analyzer->analyzeForListing($pageSeo, true);
+            });
 
-        $paginator = $query->orderByDesc('id')->paginate($perPage)->withQueryString();
+        $data['category_perma'] = SiteSettings::value('category_perma') ?? 'category';
 
-        $paginator->getCollection()->transform(function (PagesSEO $seo) use ($analyzer) {
-            $seo->analysis = $analyzer->analyze($seo);
-            return $seo;
-        });
-
-        $data['pages_seo'] = $paginator;
-        $data['per_page'] = $perPage;
-
-        // Return the view with filtered data
         return view('admin.seo.index')->with($data);
     }
 
@@ -67,7 +80,7 @@ class SeoController extends Controller
     {
         $request->validate(seo_validation_rules());
 
-        $data = $request->except('_token');
+        $data = seo_prepare_save_data($request->except('_token'));
         if ($request->has('course_id')) {
             $data['course_id'] = $request->input('course_id');
             $data['page_id'] = NULL;
@@ -87,10 +100,10 @@ class SeoController extends Controller
         
         if($pages_seo){
             session()->flash('sucess', 'Record Added successfullly!');
-            return redirect()->route('pages-seo.index');
+            return redirect()->route('courses-pages-seo.index');
         }else{
             session()->flash('sucess', 'Failed to insert Record!');
-            return redirect()->route('pages-seo.index');
+            return redirect()->route('courses-pages-seo.index');
         }
     }
 
@@ -107,18 +120,18 @@ class SeoController extends Controller
      */
     public function edit(string $id)
     {
-        $data['page_seo'] = PagesSEO::with(['page.sections', 'course'])->findOrFail($id);
-        $data['seo_analysis'] = app(SeoAnalyzerService::class)->analyze($data['page_seo']);
+        $data['page_seo'] = PagesSEO::with(['page.sections', 'course.dynamicLabel', 'course.courseFaq'])->findOrFail($id);
+        $data['seo_analysis'] = app(SeoAnalyzerService::class)->analyzeForEdit($data['page_seo']);
         return view('admin.seo.edit')->with($data);
     }
 
     public function analyzePreview(Request $request, string $id)
     {
-        $seo = PagesSEO::with(['page.sections', 'course'])->findOrFail($id);
+        $seo = PagesSEO::with(['page.sections', 'course.dynamicLabel', 'course.courseFaq'])->findOrFail($id);
 
-        $seo->fill($request->only(['title', 'meta_description', 'keywords']));
+        $seo->fill($request->only(['title', 'meta_description', 'focus_keyword', 'keywords', 'thumbnail_alt']));
 
-        return response()->json(app(SeoAnalyzerService::class)->analyze($seo));
+        return response()->json(app(SeoAnalyzerService::class)->analyze($seo, true));
     }
 
     /**
@@ -128,12 +141,9 @@ class SeoController extends Controller
     {
         $request->validate(seo_validation_rules());
 
-        if ($request->has('course_id')) {
-            $page_seo = PagesSEO::where('course_id', $request->course_id)->first();
-        } elseif ($request->has('page_id')) {
-            $page_seo = PagesSEO::where('page_id', $request->page_id)->first();
-        }
-        $data = $request->except('_token');
+        $page_seo = PagesSEO::findOrFail($id);
+
+        $data = seo_prepare_save_data($request->except('_token', '_method'));
         // dd($request->toArray());
         if ($request->hasFile('thumbnail_img')) {
             $file = $request->file('thumbnail_img');
@@ -149,24 +159,19 @@ class SeoController extends Controller
         }
 
         $pages_seo_updated = $page_seo->update($data);
-        
-        if($pages_seo_updated && $request->has('course_id') ){
-            if($pages_seo_updated){
-                session()->flash('sucess', 'Record Added successfullly!');
-            }else{
-                session()->flash('failed', 'Failed to insert Record!');
-            }
-            
-            return redirect()->route('admin.courses');
+        app(SeoAnalyzerService::class)->clearAnalysisCache($page_seo->fresh());
 
-        }elseif($pages_seo_updated && $request->has('page_id')){
-            if($pages_seo_updated){
-                session()->flash('sucess', 'Record Added successfullly!');
-            }else{
-                session()->flash('failed', 'Failed to insert Record!');
-            }
-            return redirect()->route('pages-seo.index');
+        if ($pages_seo_updated) {
+            session()->flash('sucess', 'Record updated successfully!');
+        } else {
+            session()->flash('failed', 'Failed to update record!');
         }
+
+        if ($page_seo->course_id) {
+            return redirect()->route('admin.courses');
+        }
+
+        return redirect()->route('courses-pages-seo.index');
     }
 
     /**
@@ -183,7 +188,7 @@ class SeoController extends Controller
         }else{
             session()->flash('failed', 'Failed to delete Record');
         }
-        return redirect()->route('pages-seo.index');
+        return redirect()->route('courses-pages-seo.index');
 
     }
 }

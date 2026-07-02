@@ -98,8 +98,8 @@ class CheckoutController extends Controller
             $courseName = $fee->course?->title ?? 'Course #' . $fee->courses_id;
             $amountLabel = format_payment_amount($payment)['display'];
             record_user_activity(
-                'Checkout',
-                'Created payment for ' . $courseName . ' (' . $amountLabel . ')',
+                'Invoice Created',
+                'Created invoice for ' . $courseName . ' (' . $amountLabel . ')',
                 route('user.home'),
                 'student',
                 Auth::id(),

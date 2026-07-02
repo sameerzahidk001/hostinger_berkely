@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 class Page extends Model
 {
     use HasFactory, TracksAudit;
-    protected $fillable = ['page_name', 'url', 'parent_id', 'category_id'];
+    protected $fillable = ['page_name', 'url', 'parent_id', 'category_id', 'status'];
 
     public function faqs()
     {
@@ -24,7 +24,7 @@ class Page extends Model
     
     public function sections()
     {
-        return $this->hasMany(PageSection::class);
+        return $this->hasMany(PageSection::class)->orderBy('order');
     }
 
     public function parent()

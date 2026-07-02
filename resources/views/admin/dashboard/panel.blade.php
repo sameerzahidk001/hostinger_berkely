@@ -6,10 +6,21 @@
 <div class="row" style="padding: 0 10px 12px;">
     <div class="col-lg-12">
         <div class="alert alert-warning">
-            <strong>Login/logout tracking is not active.</strong>
+            <strong>Login/log out tracking is not active.</strong>
             Run <code>database/sql/create-user-activity-logs.sql</code> on the live database (or
             <code>php artisan migrate --path=database/migrations/2026_06_19_000001_create_user_activity_logs_table.php --force</code>),
             then sign in/out again to record session activity.
+        </div>
+    </div>
+</div>
+@endif
+@if(($showSiteStats ?? false) && !($summary['pages_status_enabled'] ?? true))
+<div class="row" style="padding: 0 10px 12px;">
+    <div class="col-lg-12">
+        <div class="alert alert-warning">
+            <strong>Page disable is not active on the database.</strong>
+            Run <code>database/sql/add-pages-status-column.sql</code> on live (or
+            <code>bash deploy-hostinger.sh</code>) before Active/Disabled pages will save or appear on the dashboard.
         </div>
     </div>
 </div>
@@ -53,11 +64,24 @@
                         <i class="fa fa-files-o fa-3x"></i>
                     </div>
                     <div class="col-xs-8 text-right">
-                        <span>Total Courses</span>
-                        <h2 class="font-bold">{{ $summary['total_courses_site'] }}</h2>
+                        <span>Active Courses</span>
+                        <h2 class="font-bold">{{ $summary['active_courses_site'] ?? $summary['total_courses_site'] }}</h2>
                     </div>
                 </div>
             </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <a href="{{ route('admin.course.disabled') }}" class="widget style1 red-bg" style="display:block;color:#fff;">
+                <div class="row">
+                    <div class="col-xs-4">
+                        <i class="fa fa-ban fa-3x"></i>
+                    </div>
+                    <div class="col-xs-8 text-right">
+                        <span>Disabled Courses</span>
+                        <h2 class="font-bold">{{ $summary['disabled_courses_site'] ?? 0 }}</h2>
+                    </div>
+                </div>
+            </a>
         </div>
         <div class="col-lg-3 col-md-6">
             <div class="widget style1 blue-bg">
@@ -66,22 +90,35 @@
                         <i class="fa fa-sitemap fa-3x"></i>
                     </div>
                     <div class="col-xs-8 text-right">
-                        <span>Total Pages</span>
-                        <h2 class="font-bold">{{ $summary['total_pages_site'] }}</h2>
+                        <span>Active Pages</span>
+                        <h2 class="font-bold">{{ $summary['active_pages_site'] ?? $summary['total_pages_site'] }}</h2>
                     </div>
                 </div>
             </div>
+        </div>
+        <div class="col-lg-3 col-md-6">
+            <a href="{{ route('admin.pages.disabled') }}" class="widget style1 lazur-bg" style="display:block;color:#fff;">
+                <div class="row">
+                    <div class="col-xs-4">
+                        <i class="fa fa-eye-slash fa-3x"></i>
+                    </div>
+                    <div class="col-xs-8 text-right">
+                        <span>Disabled Pages</span>
+                        <h2 class="font-bold">{{ $summary['disabled_pages_site'] ?? 0 }}</h2>
+                    </div>
+                </div>
+            </a>
         </div>
         @if(($includePayments ?? false) && !($showInvoiceStats ?? false))
         <div class="col-lg-3 col-md-6">
             <div class="widget style1 red-bg">
                 <div class="row">
                     <div class="col-xs-4">
-                        <i class="fa fa-money fa-3x"></i>
+                        <i class="fa fa-file-text-o fa-3x"></i>
                     </div>
                     <div class="col-xs-8 text-right">
                         <span>Total Invoices</span>
-                        <h2 class="font-bold">{{ $summary['total_payments_site'] }}</h2>
+                        <h2 class="font-bold">{{ $summary['invoice_total'] ?? $summary['total_payments_site'] }}</h2>
                     </div>
                 </div>
             </div>
@@ -153,12 +190,12 @@
                 <h5>Filter activity</h5>
             </div>
             <div class="ibox-content">
-                <form method="GET" action="{{ route('admin.home') }}" class="form-inline" style="flex-wrap: wrap;">
+                <form method="GET" action="{{ route('admin.home') }}" class="form-inline" style="flex-wrap: wrap;" id="activityFilterForm">
                     @if($showUserFilter ?? false)
                     <div class="form-group m-r-sm m-b-sm">
                         <label for="role" class="m-r-xs">Role</label>
-                        <select id="role" name="role" class="form-control">
-                            <option value="">All roles</option>
+                        <select id="role" name="role" class="form-control activity-filter-select">
+                            <option value="" @selected(!request()->filled('role'))>None</option>
                             <option value="content_writer" @selected(request('role') === 'content_writer')>Content Writers</option>
                             <option value="accountant" @selected(request('role') === 'accountant')>Accountants</option>
                             <option value="instructor" @selected(request('role') === 'instructor')>Instructors</option>
@@ -166,8 +203,8 @@
                     </div>
                     <div class="form-group m-r-sm m-b-sm">
                         <label for="user_id" class="m-r-xs">User</label>
-                        <select id="user_id" name="user_id" class="form-control" style="min-width: 220px;">
-                            <option value="">All users</option>
+                        <select id="user_id" name="user_id" class="form-control activity-filter-select" style="min-width: 220px;">
+                            <option value="" @selected(!request()->filled('user_id'))>None</option>
                             @foreach($filterUsers ?? [] as $filterUser)
                                 @php $roleName = $filterUser->roles->first()?->name; @endphp
                                 <option value="{{ $filterUser->id }}" @selected((string) request('user_id') === (string) $filterUser->id)>
@@ -180,8 +217,8 @@
                     @if($showStudentTable ?? false)
                     <div class="form-group m-r-sm m-b-sm">
                         <label for="student_user_id" class="m-r-xs">Student</label>
-                        <select id="student_user_id" name="student_user_id" class="form-control" style="min-width: 220px;">
-                            <option value="">All students</option>
+                        <select id="student_user_id" name="student_user_id" class="form-control activity-filter-select" style="min-width: 220px;">
+                            <option value="" @selected(!request()->filled('student_user_id'))>None</option>
                             @foreach($studentFilterUsers ?? [] as $studentUser)
                                 <option value="{{ $studentUser->id }}" @selected((string) request('student_user_id') === (string) $studentUser->id)>
                                     {{ $studentUser->name }} ({{ $studentUser->email }})
@@ -203,6 +240,7 @@
                     <button type="submit" class="btn btn-primary m-r-sm m-b-sm">Filter</button>
                     <a href="{{ route('admin.home') }}" class="btn btn-default m-b-sm">Clear</a>
                 </form>
+                <p class="text-muted small m-t-sm m-b-none">Leave any dropdown on <strong>None</strong> to skip that filter. Use dates only when needed.</p>
 
                 <div class="m-t-md">
                     <span class="label label-primary m-r-xs">Courses created: {{ $summary['courses_created'] }}</span>
@@ -222,8 +260,12 @@
 <div class="row" style="padding: 0 10px 12px;">
     <div class="col-lg-12">
         <div class="ibox float-e-margins" style="margin-bottom: 16px;">
-            <div class="ibox-title">
-                <h5>{{ $activityTitle }}</h5>
+            <div class="ibox-title" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <h5 style="margin:0;">{{ $activityTitle }}</h5>
+                <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'staff'])) }}"
+                    class="btn btn-success btn-sm">
+                    <i class="fa fa-file-excel-o"></i> Export to Excel
+                </a>
             </div>
             <div class="ibox-content">
                 <div class="table-responsive">
@@ -293,8 +335,12 @@
 <div class="row" style="padding: 0 10px 12px;">
     <div class="col-lg-12">
         <div class="ibox float-e-margins" style="margin-bottom: 16px;">
-            <div class="ibox-title">
-                <h5>{{ $studentActivityTitle ?? 'Student activity history' }}</h5>
+            <div class="ibox-title" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <h5 style="margin:0;">{{ $studentActivityTitle ?? 'Student activity history' }}</h5>
+                <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'student'])) }}"
+                    class="btn btn-success btn-sm">
+                    <i class="fa fa-file-excel-o"></i> Export to Excel
+                </a>
             </div>
             <div class="ibox-content">
                 <div class="table-responsive">
@@ -367,6 +413,23 @@ $(document).ready(function() {
         };
     }, 300);
     toastr.success('Welcome, {{ addslashes(panel_profile_name() ?: 'User') }}');
+
+    var $role = $('#role');
+    var $user = $('#user_id');
+
+    if ($role.length && $user.length) {
+        $role.on('change', function() {
+            if ($(this).val() !== '') {
+                $user.val('');
+            }
+        });
+
+        $user.on('change', function() {
+            if ($(this).val() !== '') {
+                $role.val('');
+            }
+        });
+    }
 });
 </script>
 @endpush

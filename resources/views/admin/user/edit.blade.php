@@ -74,10 +74,10 @@
                         </div>
                     </div>
                     <div class="ibox-content">
-                        <form role="form" action="{{ route('users.update', $user->id) }}" method="POST"
+                        <form role="form" action="{{ route('users.update.post', $user->id) }}" method="POST"
                             enctype="multipart/form-data">
                             @csrf
-                            @method('PUT')
+                            <input type="hidden" name="current_image" value="{{ old('current_image', $user->image) }}">
                             <div class="row">
 
                                 <!-- Name -->
@@ -121,7 +121,7 @@
                                     @if(!empty($user->image))
                                         <small id="imageUrlText" class="help-block" style="display:block; margin-top:0px;">
                                             @if($user->image)
-                                                <img src="{{ asset($user->image) }}" alt="" width="30" height="30">
+                                                <img src="{{ user_avatar_url($user) }}" alt="" width="30" height="30">
                                             @else
                                                 <span class="text-muted">No image selected</span>
                                             @endif
@@ -400,13 +400,8 @@
         }
 
         function uploadLocalFile(input) {
-            const file = input.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function () {
-                    document.getElementById('image_path').value = file.name;
-                };
-                reader.readAsDataURL(file);
+            if (!input.files[0]) {
+                return;
             }
         }
 
@@ -438,11 +433,17 @@
 
         function confirmImageSelection() {
             const isMultiple = $('#image_path').prop('multiple');
-            if (isMultiple) {
-                $('#image_path').val(selectedImageURLs.join(','));
-            } else {
-                $('#image_path').val(selectedImageURLs.length > 0 ? selectedImageURLs[0] : '');
+            if (selectedImageURLs.length === 0) {
+                $('#fileManagerModal').modal('hide');
+                return;
             }
+
+            const selectedPath = isMultiple
+                ? selectedImageURLs.join(',')
+                : selectedImageURLs[0];
+
+            $('#image_path').val(selectedPath);
+            $('input[name="current_image"]').val(selectedPath);
             $('#fileManagerModal').modal('hide');
         }
 
@@ -461,6 +462,13 @@
         }
 
         $(document).ready(function () {
+            $('form[action*="update"]').on('submit', function () {
+                const imagePath = $('#image_path').val();
+                if (imagePath) {
+                    $('input[name="current_image"]').val(imagePath);
+                }
+            });
+
             let shortEditorElement = document.getElementById('short_description');
             let longEditorElement = document.getElementById('long_description');
             let experienceElement = document.getElementById('experience');

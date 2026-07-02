@@ -11,8 +11,18 @@ class AnalyticsController extends Controller
 {
     private const PERIODS = ['today', '7', '28', '90', '180', '365', 'lifetime'];
 
+    public function __construct()
+    {
+        $this->middleware('long.running');
+    }
+
     public function index(Request $request)
     {
+        if (! Schema::hasTable('page_views')) {
+            return view('admin.analytics.index', $this->emptyAnalyticsPayload($request));
+        }
+
+        try {
         $period = (string) $request->query('days', '28');
         if (! in_array($period, self::PERIODS, true)) {
             $period = '28';
@@ -80,6 +90,46 @@ class AnalyticsController extends Controller
             'start',
             'end'
         ));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Analytics page failed: ' . $e->getMessage());
+
+            return view('admin.analytics.index', $this->emptyAnalyticsPayload($request));
+        }
+    }
+
+    private function emptyAnalyticsPayload(Request $request): array
+    {
+        $period = (string) $request->query('days', '28');
+        if (! in_array($period, self::PERIODS, true)) {
+            $period = '28';
+        }
+
+        $emptyChart = [
+            'labels' => ['No data'],
+            'values' => [1],
+            'percents' => [100],
+            'colors' => ['#e0e0e0'],
+            'sliceColors' => ['#e0e0e0'],
+            'total' => 0,
+        ];
+
+        return [
+            'period' => $period,
+            'periodLabel' => $period,
+            'comparisonLabel' => 'the previous period',
+            'currentVisitors' => 0,
+            'previousVisitors' => 0,
+            'growth' => 0,
+            'dailyLabels' => [],
+            'dailyValues' => [],
+            'channels' => $emptyChart,
+            'locations' => $emptyChart,
+            'devices' => $emptyChart,
+            'topPages' => [],
+            'latestPageViews' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 15),
+            'start' => \Carbon\Carbon::today()->startOfDay(),
+            'end' => \Carbon\Carbon::today()->endOfDay(),
+        ];
     }
 
     private function resolvePeriodRange(string $period): array
@@ -335,7 +385,13 @@ class AnalyticsController extends Controller
 
     private function backfillMissingLocations($views): void
     {
+        $filled = 0;
+
         foreach ($views as $view) {
+            if ($filled >= 5) {
+                break;
+            }
+
             if (! empty($view->country) || empty($view->ip_address)) {
                 continue;
             }
@@ -351,6 +407,7 @@ class AnalyticsController extends Controller
             $view->region = $location['region'];
             $view->postal = $location['postal'];
             $view->location = $location['location'];
+            $filled++;
         }
     }
 

@@ -62,12 +62,12 @@
     }
 </style>
 
-<section class="flex flex-col text-black card-hidden my-16 {{ $background != 'transparent' ? 'pb-16 pt-16' : '' }}"
-    style="background-color: {{ $background }};">
+<section class="flex flex-col text-black card-hidden my-16 {{ section_bg_color($background) !== 'transparent' ? 'pb-16 pt-16' : '' }}"
+    style="background-color: {{ section_bg_color($background) }};">
     <div class="flex flex-col items-center px-2 sm:px-4 md:px-10 lg:px-32 gap-8">
         <div class="b-custom">
             <h3 class="text-[24px] font-semibold pb-2" style="color: {{ $color }}">{{ $title }}</h3>
-            <div class="text-[18px] pb-2" style="color: {{ $color }}">{!! $description !!}</div>
+            <div class="text-[18px] pb-2 cms-html" style="color: {{ $color }}">{!! render_cms_html($description) !!}</div>
 
             <!-- School Filters -->
             @if(isset($schools) && count($schools) > 0)

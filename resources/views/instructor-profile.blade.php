@@ -229,9 +229,22 @@
 
         .course-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 25px;
             margin-top: 20px;
+            text-align: left;
+        }
+
+        @media (max-width: 992px) {
+            .course-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 640px) {
+            .course-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         .course-card {
@@ -377,8 +390,8 @@
                     @foreach ($instructor->courses as $course)
                         <div class="course-card">
                             <h3>{{ $course->title }}</h3>
-                            <p>{{ Str::limit($course->description ?? 'No description available.', 90) }}</p>
-                            <a href="{{ url('/courses/' . $course->slug) }}">View Course →</a>
+                            <p>{{ Str::limit(strip_tags($course->short_description ?: $course->description ?? 'No description available.'), 90) }}</p>
+                            <a href="{{ route('course.details', ['course' => $course->slug]) }}">View Course →</a>
                         </div>
                     @endforeach
                 </div>

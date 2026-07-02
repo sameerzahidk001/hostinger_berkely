@@ -22,13 +22,33 @@ use App\Services\InvoiceService;
 
 class PaymentController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $installments = Installment::get();
-        $payments = Payment::with('user', 'course', 'courseFee', 'installments', 'installment_request')->orderByDesc('created_at')->get();
-        // dd($payments->toArray());
+        $payments = Payment::with('user', 'course', 'courseFee', 'installments', 'installment_request')
+            ->orderByDesc('created_at')
+            ->get();
 
-        return view('admin.payments.index', compact('payments', 'installments'));
+        $filter = $request->query('status');
+        if (in_array($filter, ['pending', 'partial'], true)) {
+            $payments = $payments
+                ->filter(function (Payment $payment) use ($filter) {
+                    $status = payment_invoice_status($payment);
+
+                    return $filter === 'pending'
+                        ? $status === 'Pending'
+                        : $status === 'Partial';
+                })
+                ->values();
+        }
+
+        $listTitle = match ($filter) {
+            'pending' => 'Pending Invoices',
+            'partial' => 'Partial Paid Invoices',
+            default => 'Invoices List',
+        };
+
+        return view('admin.payments.index', compact('payments', 'installments', 'listTitle', 'filter'));
     }
 
     public function receipt()
@@ -124,6 +144,14 @@ class PaymentController extends Controller
                     'status' => 'pending',
                 ]);
             }
+
+            $payment->load(['user', 'course']);
+            record_panel_activity(
+                'Invoice Created',
+                $this->paymentActivityLabel($payment),
+                route('admin.payments.edit', $payment->id),
+                $request
+            );
 
             return redirect()->route('admin.payments.index')->with('success', 'Invoice created in inactive mode. Click Send to email the student.');
         } catch (\Exception $e) {
@@ -439,6 +467,13 @@ class PaymentController extends Controller
                         normalize_payment_email_body($emailBody)
                     )
                 );
+
+            record_panel_activity(
+                'Receipt Email Sent',
+                $this->receiptActivityLabel($installment),
+                route('admin.payments.index'),
+                $request
+            );
         }
 
         return response()->json([
@@ -470,22 +505,47 @@ class PaymentController extends Controller
 
     public function sendInvoice($id)
     {
-        $payment = Payment::findOrFail($id);
+        $payment = Payment::with(['user.roles', 'course', 'courseFee', 'installments'])->findOrFail($id);
 
-        if ($payment->status === 'Active') {
-            return redirect()->back()->with('warning', 'This invoice is already active.');
+        $totalPaid = (float) $payment->installments->sum('paid_amount');
+        $price = (float) $payment->price;
+
+        if ($price > 0 && $totalPaid >= $price) {
+            return redirect()->back()->with('fail', 'This invoice is already fully paid.');
         }
 
-        $sent = app(InvoiceService::class)->activateAndSend($payment);
+        if (!$payment->user?->email) {
+            return redirect()->back()->with('fail', 'This invoice has no student email address.');
+        }
+
+        $invoiceService = app(InvoiceService::class);
+        $sent = $invoiceService->sendInvoiceEmail($payment);
 
         if (!$sent) {
             return redirect()->back()->with(
                 'fail',
-                'Invoice could not be emailed. Check Admin → Emails for a "Send Invoice" template and verify mail settings in .env.'
+                'Invoice could not be emailed. Check Admin → Emails for a "Send Invoice" template and verify SMTP settings.'
             );
         }
 
-        return redirect()->back()->with('success', 'Invoice emailed to the student and activated.');
+        if ($payment->status !== 'Active') {
+            $payment->status = 'Active';
+            $payment->save();
+
+            $installmentRequest = InstallmentRequest::where('payment_id', $payment->id)->first();
+            if ($installmentRequest) {
+                $installmentRequest->status = 1;
+                $installmentRequest->save();
+            }
+        }
+
+        record_panel_activity(
+            'Invoice Issued',
+            $this->paymentActivityLabel($payment),
+            route('admin.payments.index')
+        );
+
+        return redirect()->back()->with('success', 'Invoice emailed to the student successfully.');
     }
 
     public function sendReceipt($id)
@@ -497,28 +557,37 @@ class PaymentController extends Controller
 
         $filename = 'RC-' . str_pad($installment->id, 6, '0', STR_PAD_LEFT) . '.pdf';
 
-        $emailTemplate = Email::where('name', 'send-receipt')->first();
+        if (!$emailTemplate) {
+            return redirect()->back()->with(
+                'fail',
+                'Receipt could not be emailed. Check Admin → Emails for a "send-receipt" template and verify SMTP settings.'
+            );
+        }
 
-        if ($emailTemplate) {
-            $user = $installment->user;
+        $user = $installment->user;
 
-            $emailBody = str_replace(
-                ['{name}', '{email}', '{role}'],
-                [$user->name, $user->email, ucfirst($user->roles->first()->name ?? '')],
-                $emailTemplate->body
+        $emailBody = str_replace(
+            ['{name}', '{email}', '{role}'],
+            [$user->name, $user->email, ucfirst($user->roles->first()->name ?? '')],
+            $emailTemplate->body
+        );
+
+        $ccEmails = !empty($emailTemplate->cc) ? array_filter(array_map('trim', explode(',', $emailTemplate->cc))) : [];
+        $bccEmails = !empty($emailTemplate->bcc) ? array_filter(array_map('trim', explode(',', $emailTemplate->bcc))) : [];
+
+        Mail::to($user->email)
+            ->cc($ccEmails)
+            ->bcc($bccEmails)
+            ->send(
+                (new UserMail($user, $emailTemplate->subject, $emailBody))
+                    ->attachData($pdf->output(), $filename, ['mime' => 'application/pdf'])
             );
 
-            $ccEmails = !empty($emailTemplate->cc) ? array_filter(array_map('trim', explode(',', $emailTemplate->cc))) : [];
-            $bccEmails = !empty($emailTemplate->bcc) ? array_filter(array_map('trim', explode(',', $emailTemplate->bcc))) : [];
-
-            Mail::to($user->email)
-                ->cc($ccEmails)
-                ->bcc($bccEmails)
-                ->send(
-                    (new UserMail($user, $emailTemplate->subject, $emailBody))
-                        ->attachData($pdf->output(), $filename, ['mime' => 'application/pdf'])
-                );
-        }
+        record_panel_activity(
+            'Receipt Issued',
+            $this->receiptActivityLabel($installment),
+            route('admin.payments.index')
+        );
 
         return redirect()->back()->with('success', 'Receipt sent successfully.');
     }
@@ -530,5 +599,26 @@ class PaymentController extends Controller
         $payment->save();
 
         return response()->json(['success' => true]);
+    }
+
+    private function paymentActivityLabel(Payment $payment): string
+    {
+        $student = $payment->user?->name ?? $payment->user?->email ?? 'Student';
+        $course = $payment->course?->title ?? 'Course #' . $payment->course_id;
+        $invoiceNo = 'INV-' . str_pad((string) $payment->id, 6, '0', STR_PAD_LEFT);
+
+        return $course . ' — ' . $student . ' (' . $invoiceNo . ')';
+    }
+
+    private function receiptActivityLabel(Installment $installment): string
+    {
+        $installment->loadMissing(['user', 'payment.course']);
+
+        $student = $installment->user?->name ?? $installment->user?->email ?? 'Student';
+        $course = $installment->payment?->course?->title ?? 'Course';
+        $invoiceNo = 'INV-' . str_pad((string) $installment->payment_id, 6, '0', STR_PAD_LEFT);
+        $receiptNo = 'RC-' . str_pad((string) $installment->id, 6, '0', STR_PAD_LEFT);
+
+        return $course . ' — ' . $student . ' (' . $invoiceNo . ', ' . $receiptNo . ')';
     }
 }

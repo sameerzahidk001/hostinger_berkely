@@ -17,6 +17,7 @@
         .seo-score-pill.poor { background: #ed5565; }
         .seo-details small { display: block; color: #676a6c; line-height: 1.5; }
     </style>
+    @include('admin.layout.partials.datatable-excel-toolbar')
 @endpush
 @section('content')
 
@@ -36,9 +37,19 @@
             </ol>
         </div>
         <div class="col-lg-2">
-
+            @if($pagesStatusEnabled ?? false)
+                <a class="btn btn-primary" href="{{ route('admin.pages.disabled') }}"><i class="fa fa-eye-slash"></i> Show Disabled Pages</a>
+            @endif
         </div>
     </div>
+    @if(!($pagesStatusEnabled ?? true))
+        <div class="wrapper wrapper-content animated fadeInRight" style="padding-bottom:0;">
+            <div class="alert alert-warning">
+                <strong>Page disable is not active on the database.</strong>
+                Run <code>database/sql/add-pages-status-column.sql</code> on the server before Active/Disabled will save.
+            </div>
+        </div>
+    @endif
     <div class="wrapper wrapper-content animated fadeInRight" style="padding-bottom:0px;">
         <div class="row">
             <div class="col-lg-12">
@@ -89,6 +100,13 @@
                                         @endforeach
                                     </select>
                                 </div>
+                                <div class="col-lg-4">
+                                    <label class="mb-1">Status</label>
+                                    <select class="form-control" name="status" required>
+                                        <option value="1" @selected(old('status', '1') == '1')>Active</option>
+                                        <option value="0" @selected(old('status') === '0')>Disabled</option>
+                                    </select>
+                                </div>
                             </div>
                             <div class="row">
                                 <div class="col-lg-12" style="margin-top: 16px;text-align:right;">
@@ -130,9 +148,10 @@
                                         <th style="width: 40px;">SR#</th>
                                         <th>Page</th>
                                         <th>URL</th>
+                                        <th style="width:90px;">Status</th>
                                         <th>FAQ's Count</th>
                                         <th>SEO Status</th>
-                                        <th style="width:90px;">Score</th>
+                                        <th style="width:110px;">Score<br><small class="text-muted" style="font-weight:normal;">SEO / Live</small></th>
                                         <th style="width:220px;">SEO Details</th>
                                         <th>Meta Description</th>
                                         @include('admin.layout.partials.audit-columns-head')
@@ -148,11 +167,18 @@
                                             ];
 
                                             $pageName = array_search($page->id, $protectedPages);
+                                            $pageUrl = $page->parent
+                                                ? $page->parent->url . '/' . $page->url
+                                                : ($page->category_id
+                                                    ? ($settings->category_perma ?? 'category') . '/' . $page->url
+                                                    : $page->url);
+                                            $pageStatus = (int) ($page->status ?? 1);
+                                            $pageStatusExport = $pageStatus ? 'Active' : 'Disabled';
                                         @endphp
                                         <tr>
                                             <td style="vertical-align: middle;">{{ ++$index }}</td>
 
-                                            <td style="vertical-align: middle;">
+                                            <td style="vertical-align: middle;" data-export="{{ $page->page_name }}">
                                                 <a href="{{ url($page->parent 
                                                     ? $page->parent->url . '/' . $page->url 
                                                     : ($page->category_id 
@@ -164,21 +190,38 @@
                                                     <span class="badge bg-primary">{{ $pageName }}</span>
                                                 @endif
                                             </td>
-                                            <td style="vertical-align: middle;">
-                                                {{ $page->parent 
-                                                    ? $page->parent->url . '/' . $page->url 
-                                                    : ($page->category_id 
-                                                        ? ($settings->category_perma ?? 'category') . '/' . $page->url 
-                                                        : $page->url) 
-                                                }}
+                                            <td style="vertical-align: middle;" data-export="{{ $pageUrl }}">
+                                                {{ $pageUrl }}
+                                            </td>
+                                            <td style="vertical-align: middle;" data-export="{{ $pageStatusExport }}">
+                                                @if($pagesStatusEnabled ?? false)
+                                                    <select name="page_status" class="form-control"
+                                                        id="page_status_{{ $page->id }}"
+                                                        onchange="updatePageStatus(this.value, {{ $page->id }})">
+                                                        <option value="active" @selected($pageStatus === 1)>Active</option>
+                                                        <option value="disable" @selected($pageStatus === 0)>Disabled</option>
+                                                    </select>
+                                                @else
+                                                    <span class="label label-primary">Active</span>
+                                                @endif
                                             </td>
                                             <td style="vertical-align: middle;">
                                                 {{ $page->faqs->count() }}
                                             </td>
-                                            <td style="vertical-align: middle;">
-                                                <span class="label {{ $page->seo ? 'label-primary' : 'label-danger' }}">
-                                                    {{ $page->seo ? 'Added' : 'Not Added' }}
-                                                </span>
+                                            <td style="vertical-align: middle;" data-export="{{ $page->seo ? 'Added' : 'Not Added' }}">
+                                                @if ($page->seo)
+                                                    <span class="label label-primary">Added</span>
+                                                    <a href="{{ route('courses-pages-seo.edit', ['pages_seo' => $page->seo->id, 'page_name' => $page->page_name, 'page_id' => $page->id]) }}"
+                                                        class="label label-primary" target="_blank">
+                                                        View
+                                                    </a>
+                                                @else
+                                                    <span class="label label-danger">Not Added</span>
+                                                    <a href="{{ route('courses-pages-seo.create', ['page_name' => $page->page_name, 'page_id' => $page->id]) }}"
+                                                        class="label label-danger" target="_blank">
+                                                        Add
+                                                    </a>
+                                                @endif
                                             </td>
                                             @include('admin.seo.partials.list-seo-columns', [
                                                 'seo' => $page->seo,
@@ -213,9 +256,10 @@
                                         <th>SR#</th>
                                         <th>Page</th>
                                         <th>URL</th>
+                                        <th>Status</th>
                                         <th>FAQ's Count</th>
                                         <th>SEO Status</th>
-                                        <th>Score</th>
+                                        <th>Score <small class="text-muted">(SEO / Live)</small></th>
                                         <th>SEO Details</th>
                                         <th>Meta Description</th>
                                         <th>Created</th>
@@ -247,11 +291,12 @@
                 searching: true,
                 lengthChange: true,
                 paging: true,
-                info: false,
+                info: true,
                 ordering: true,
                 responsive: true,
-                dom: 'lftip',
-                order: [[8, 'desc']]
+                dom: '<"admin-dt-toolbar"<l><B><f>>rtip',
+                order: [[9, 'desc']],
+                buttons: [adminDatatableExcelButton('Pages List', 'pages_list')]
             });
 
             function slugify(text) {
@@ -281,6 +326,35 @@
                 }
             });
         });
+
+        function updatePageStatus(status, pageId) {
+            $.ajax({
+                url: '/admin/pages/' + pageId + '/update-status',
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    status: status
+                },
+                success: function (response) {
+                    if (response.success) {
+                        toastr.success(response.success);
+                        if (status === 'disable') {
+                            $('#page_status_' + pageId).closest('tr').fadeOut(500, function () {
+                                $(this).remove();
+                            });
+                        }
+                    } else {
+                        toastr.error('Unexpected response received.');
+                    }
+                },
+                error: function (xhr) {
+                    const message = xhr.responseJSON && xhr.responseJSON.error
+                        ? xhr.responseJSON.error
+                        : 'Error updating page status.';
+                    toastr.error(message);
+                }
+            });
+        }
 
         function confirmDelete(id) {
             Swal.fire({

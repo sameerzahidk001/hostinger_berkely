@@ -109,7 +109,7 @@ class FrontendController extends Controller
             'relatedCourses:id,title,slug,short_description,thumbnail'
         ])->where('slug', $slug)->firstOrFail();
 
-        $instructorIds = array_filter(explode(',', $data['course']->instructor_id));
+        $instructorIds = course_instructor_ids($data['course']);
 
         // Fetch assigned instructor users
         $data['assignIntructors'] = User::whereIn('id', $instructorIds)->get();

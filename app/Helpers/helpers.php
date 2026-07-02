@@ -29,6 +29,146 @@ function getYouTubeVideoID($url) {
     return $matches[1] ?? null;
 }
 
+if (!function_exists('section_color')) {
+    function section_color(mixed $value, string $default = 'transparent'): string
+    {
+        $color = trim((string) $value);
+
+        return $color !== '' ? $color : $default;
+    }
+}
+
+if (!function_exists('section_bg_color')) {
+    /** Section-level backgrounds: only fill in when empty; keeps intentional black/dark colors. */
+    function section_bg_color(mixed $value, string $default = 'transparent'): string
+    {
+        return section_color($value, $default);
+    }
+}
+
+if (!function_exists('banner_bg_color')) {
+    /** Banner left panel: restore dark/black default when admin value is empty or white. */
+    function banner_bg_color(mixed $value, string $default = '#000000'): string
+    {
+        $color = strtolower(trim((string) $value));
+
+        if ($color === '' || $color === 'transparent' || in_array($color, ['#ffffff', '#fff', 'white'], true)) {
+            return $default;
+        }
+
+        return (string) $value;
+    }
+}
+
+if (!function_exists('card_bg_color')) {
+    /**
+     * Card backgrounds only. Cards without images that were saved as #000000 by the
+     * transparent-checkbox bug should fall back to white instead of solid black.
+     */
+    function card_bg_color(mixed $value, bool $hasImage, string $defaultWhenEmpty = '#ffffff'): string
+    {
+        $color = strtolower(trim((string) $value));
+
+        if ($color === '') {
+            return $hasImage ? 'transparent' : $defaultWhenEmpty;
+        }
+
+        if (! $hasImage && in_array($color, ['#000000', '#000', 'black'], true)) {
+            return $defaultWhenEmpty;
+        }
+
+        return (string) $value;
+    }
+}
+
+if (!function_exists('normalize_section_background_value')) {
+    function normalize_section_background_value(mixed $value, string $emptyDefault = ''): string
+    {
+        $color = trim((string) $value);
+
+        return $color === '' ? $emptyDefault : $color;
+    }
+}
+
+if (!function_exists('normalize_section_backgrounds')) {
+    function normalize_section_backgrounds(array $section): array
+    {
+        foreach (['background', 'background_color', 'content_background', 'card_background', 'border_color', 'content_border_color', 'card_border_color', 'card_hover_background', 'card_hover_border_color'] as $field) {
+            if (! array_key_exists($field, $section)) {
+                continue;
+            }
+
+            $default = in_array($field, ['card_background', 'card_hover_background'], true) ? '#ffffff' : '';
+            $section[$field] = normalize_section_background_value($section[$field], $default);
+        }
+
+        if (! empty($section['cards']) && is_array($section['cards'])) {
+            foreach ($section['cards'] as $index => $card) {
+                if (! is_array($card) || ! array_key_exists('background', $card)) {
+                    continue;
+                }
+
+                $section['cards'][$index]['background'] = normalize_section_background_value($card['background'], '#ffffff');
+            }
+        }
+
+        return $section;
+    }
+}
+
+if (!function_exists('section_type_aliases')) {
+    function section_type_aliases(): array
+    {
+        return [
+            'hero-banner' => 'hero-banner',
+            'banner-section' => 'banner',
+            'banner' => 'banner',
+            'school-category' => 'school-category',
+            'category' => 'category',
+            'grid-cards' => 'grid-cards',
+            'overlay-cards' => 'overlay-cards',
+            'title-section' => 'title-section',
+            'media-section' => 'media-section',
+            'cards' => 'cards',
+            'clients' => 'clients',
+            'list-section' => 'list',
+            'list' => 'list',
+            'programmes' => 'programmes',
+            'contact-us' => 'contactus',
+            'contactus' => 'contactus',
+            'separator' => 'separator',
+            'separator-section' => 'separator',
+            'certificate' => 'certificate',
+            'certificate-section' => 'certificate',
+            'filter-courses' => 'filter-courses',
+            'filter-courses-section' => 'filter-courses',
+            'career' => 'career',
+            'career-section' => 'career',
+            'search-bar' => 'search-bar',
+            'search-section' => 'search-section',
+            'course-agendas' => 'course-agendas',
+            'testimonials' => 'testimonials',
+            'content' => 'content',
+            'instructors' => 'instructors',
+        ];
+    }
+}
+
+if (!function_exists('normalize_section_type_key')) {
+    /** Map admin labels (e.g. "Hero Banner", "Banner Section") to frontend/editor keys. */
+    function normalize_section_type_key(?string $sectionType): ?string
+    {
+        if ($sectionType === null || trim($sectionType) === '') {
+            return null;
+        }
+
+        $normalized = strtolower(str_replace(['_', ' '], '-', trim($sectionType)));
+        $aliases = section_type_aliases();
+
+        return $aliases[$normalized] ?? $normalized;
+    }
+}
+
 if (!function_exists('media_url')) {
     function media_url(mixed $path): ?string
     {
@@ -69,13 +209,197 @@ if (!function_exists('media_url')) {
     }
 }
 
-function generateFileName($file, $prefix = '')
-{
-    $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-    $extension = $file->getClientOriginalExtension();
-    $slug = Str::slug($originalName);
-    $unique = uniqid();
-    return ($prefix ? $prefix . '_' : '') . $slug . '-' . $unique . '.' . $extension;
+if (!function_exists('local_media_exists')) {
+    function local_media_exists(mixed $path): bool
+    {
+        if (is_array($path)) {
+            $path = $path['path'] ?? $path['url'] ?? $path['image'] ?? ($path[0] ?? null);
+        }
+
+        if (! is_string($path) || trim($path) === '' || $path === 'null') {
+            return false;
+        }
+
+        $path = str_replace('\\', '/', trim($path));
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            $host = parse_url($path, PHP_URL_HOST);
+            $appHost = parse_url((string) config('app.url'), PHP_URL_HOST);
+
+            if ($host && $appHost && ! in_array($host, [$appHost, 'www.' . $appHost, 'berkeleyschool.org', 'www.berkeleyschool.org', 'eduberkeley.com', 'www.eduberkeley.com'], true)) {
+                return true;
+            }
+
+            $path = ltrim((string) parse_url($path, PHP_URL_PATH), '/');
+        }
+
+        $path = str_replace(
+            [
+                'https://eduberkeley.com/public/',
+                'http://eduberkeley.com/public/',
+                'https://eduberkeley.com/',
+                'http://eduberkeley.com/',
+                'https://berkeleyschool.org/public/',
+                'http://berkeleyschool.org/public/',
+                'https://berkeleyschool.org/',
+                'http://berkeleyschool.org/',
+            ],
+            '',
+            $path
+        );
+
+        $path = ltrim($path, '/');
+
+        if (str_starts_with($path, 'public/')) {
+            $path = substr($path, 7);
+        }
+
+        if (str_starts_with($path, 'images/') || str_starts_with($path, 'frontend/') || str_starts_with($path, 'admin/')) {
+            return is_file(public_path($path));
+        }
+
+        return is_file(public_path('images/library/' . $path));
+    }
+}
+
+if (!function_exists('displayable_media_url')) {
+    /** URL for frontend display; null when the local file is missing (avoids black overlay cards). */
+    function displayable_media_url(mixed $path): ?string
+    {
+        if (! local_media_exists($path)) {
+            return null;
+        }
+
+        return media_url($path);
+    }
+}
+
+if (!function_exists('card_image_url')) {
+    /** Resolve card images, with fallbacks when library files were deleted or never uploaded. */
+    function card_image_url(mixed $path, ?string $title = null): ?string
+    {
+        $url = displayable_media_url($path);
+        if ($url !== null) {
+            return $url;
+        }
+
+        $basename = is_string($path) ? strtolower(basename(str_replace('\\', '/', $path))) : '';
+
+        $knownMissing = [
+            'key-stage-4-6a3f0e7e5d3e1.png' => 'frontend/images/jpg/GCSE.jpg',
+            'key-stage-5-6a3f0e7e5ca66.png' => 'frontend/images/jpg/six-form.jpg',
+        ];
+
+        if ($basename !== '' && isset($knownMissing[$basename])) {
+            return asset($knownMissing[$basename]);
+        }
+
+        $label = strtolower((string) $title);
+
+        if (str_contains($label, 'key stage 4') || str_contains($label, 'igcse') || str_contains($label, 'gcse')) {
+            return asset('frontend/images/jpg/GCSE.jpg');
+        }
+
+        if (str_contains($label, 'key stage 5') || str_contains($label, 'sixth form') || str_contains($label, 'a level')) {
+            return asset('frontend/images/jpg/six-form.jpg');
+        }
+
+        if (str_contains($label, 'key stage 3') || str_contains($label, 'lower secondary')) {
+            return asset('frontend/images/jpg/Primary-1.jpg');
+        }
+
+        return null;
+    }
+}
+
+if (!function_exists('demote_page_headings')) {
+    /**
+     * CMS/editor HTML often contains extra H1 tags. Keep a single page H1 in the template only.
+     */
+    function demote_page_headings(?string $html): string
+    {
+        if ($html === null || trim($html) === '') {
+            return '';
+        }
+
+        return preg_replace(['/<(\/?)h1\b/i'], ['<$1h2'], $html) ?? $html;
+    }
+}
+
+if (!function_exists('strip_cms_inline_backgrounds')) {
+    /**
+     * Remove accidental black/inline backgrounds pasted from Word or Summernote.
+     */
+    function strip_cms_inline_backgrounds(string $html): string
+    {
+        $html = preg_replace('/\sbgcolor=(["\'])[^"\']*\1/i', '', $html) ?? $html;
+
+        return preg_replace_callback(
+            '/\sstyle=(["\'])(.*?)\1/is',
+            function (array $matches): string {
+                $quote = $matches[1];
+                $style = $matches[2];
+
+                $style = preg_replace('/\s*background(?:-color)?\s*:\s*[^;"]+;?/i', '', $style) ?? $style;
+                $style = trim($style, " ;");
+
+                if ($style === '') {
+                    return '';
+                }
+
+                return ' style=' . $quote . $style . $quote;
+            },
+            $html
+        ) ?? $html;
+    }
+}
+
+if (!function_exists('rewrite_cms_asset_urls')) {
+    /**
+     * CMS HTML often embeds full URLs from old hosts (e.g. derbygirls.co.uk) with /public/ in the path.
+     */
+    function rewrite_cms_asset_urls(string $html): string
+    {
+        $html = preg_replace_callback(
+            '#https?://[^"\'>\s]+?/(?:public/)?(frontend/[^"\'>\s]+|images/[^"\'>\s]+)#i',
+            static function (array $matches): string {
+                return asset($matches[1]);
+            },
+            $html
+        ) ?? $html;
+
+        return preg_replace_callback(
+            '#\bsrc=(["\'])(?:\./)?(?:public/)?(frontend/images/svgs/[^"\']+)\1#i',
+            static function (array $matches): string {
+                return 'src=' . $matches[1] . asset($matches[2]) . $matches[1];
+            },
+            $html
+        ) ?? $html;
+    }
+}
+
+if (!function_exists('render_cms_html')) {
+    function render_cms_html(?string $html): string
+    {
+        if ($html === null || trim($html) === '') {
+            return '';
+        }
+
+        return strip_cms_inline_backgrounds(
+            rewrite_cms_asset_urls(demote_page_headings($html))
+        );
+    }
+}
+
+if (!function_exists('generateFileName')) {
+    function generateFileName($file, $prefix = '')
+    {
+        $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+        $extension = $file->getClientOriginalExtension();
+        $slug = Str::slug($originalName);
+        $unique = uniqid();
+        return ($prefix ? $prefix . '_' : '') . $slug . '-' . $unique . '.' . $extension;
+    }
 }
 
 if (!function_exists('panel_role_name')) {
@@ -110,6 +434,74 @@ if (!function_exists('panel_profile_name')) {
         }
 
         return $user->username ?? $user->name ?? '';
+    }
+}
+
+if (!function_exists('normalize_profile_image_path')) {
+    function normalize_profile_image_path(mixed $path): ?string
+    {
+        if ($path === null) {
+            return null;
+        }
+
+        if (is_array($path)) {
+            $path = $path['path'] ?? $path['url'] ?? $path['image'] ?? ($path[0] ?? null);
+        }
+
+        $path = trim(str_replace('\\', '/', (string) $path));
+
+        if ($path === '' || $path === 'null') {
+            return null;
+        }
+
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            $path = (string) preg_replace('#^https?://[^/]+/#', '', $path);
+        }
+
+        $path = ltrim($path, '/');
+
+        if (str_starts_with($path, 'public/')) {
+            $path = substr($path, 7);
+        }
+
+        if (str_starts_with($path, 'images/profiles/')) {
+            return $path;
+        }
+
+        if (str_starts_with($path, '/images/profiles/')) {
+            return ltrim($path, '/');
+        }
+
+        if (! str_contains($path, '/')) {
+            return 'images/profiles/' . $path;
+        }
+
+        return $path;
+    }
+}
+
+if (!function_exists('user_avatar_url')) {
+    function user_avatar_url($user = null): string
+    {
+        $user = $user ?? panel_profile_user();
+
+        $path = normalize_profile_image_path(data_get($user, 'image'));
+
+        if ($path === null) {
+            $path = normalize_profile_image_path(data_get($user, 'avatar'));
+        }
+
+        if ($path !== null && local_media_exists($path)) {
+            return asset($path);
+        }
+
+        foreach (['images/profiles/user.png', 'admin/images/logo.png'] as $fallback) {
+            if (local_media_exists($fallback)) {
+                return asset($fallback);
+            }
+        }
+
+        return asset('admin/images/logo.png');
     }
 }
 
@@ -230,6 +622,7 @@ if (!function_exists('seo_field_limits')) {
             'priority_keywords_max_tags' => 10,
             'additional_keywords_max_tags' => 15,
             'keyword_tag_max_length' => 60,
+            'focus_keyword_max' => 80,
             'priority_keywords_max_total' => 400,
             'additional_keywords_max_total' => 400,
         ];
@@ -244,9 +637,102 @@ if (!function_exists('seo_validation_rules')) {
         return [
             'title' => ($titleRequired ? 'required' : 'nullable') . '|string|max:' . $limits['title_max'],
             'meta_description' => 'nullable|string|max:' . $limits['meta_description_max'],
+            'focus_keyword' => 'nullable|string|max:' . $limits['focus_keyword_max'],
             'keywords' => 'nullable|string|max:' . $limits['priority_keywords_max_total'],
             'additional_keywords' => 'nullable|string|max:' . $limits['additional_keywords_max_total'],
+            'thumbnail_alt' => 'nullable|string|max:125',
         ];
+    }
+}
+
+if (!function_exists('seo_focus_keyword')) {
+    function seo_focus_keyword(mixed $seo): string
+    {
+        if (is_object($seo)) {
+            $dedicated = trim((string) ($seo->focus_keyword ?? ''));
+            if ($dedicated !== '') {
+                return $dedicated;
+            }
+
+            return seo_list_focus_keyword($seo->keywords ?? '');
+        }
+
+        return seo_list_focus_keyword(is_string($seo) ? $seo : '');
+    }
+}
+
+if (!function_exists('seo_list_focus_keyword')) {
+    function seo_list_focus_keyword(?string $keywords): string
+    {
+        $keywords = trim((string) $keywords);
+        if ($keywords === '') {
+            return '';
+        }
+
+        $parts = preg_split('/[,;|]+/', $keywords);
+
+        return trim((string) ($parts[0] ?? ''));
+    }
+}
+
+if (!function_exists('seo_metadata_list_score')) {
+    function seo_metadata_list_score($seo): int
+    {
+        $title = trim((string) ($seo->title ?? ''));
+        $description = trim((string) ($seo->meta_description ?? ''));
+        $keywords = trim((string) ($seo->keywords ?? ''));
+
+        $passed = 0;
+        $total = 5;
+
+        if ($title !== '') {
+            $passed++;
+        }
+
+        if ($description !== '') {
+            $passed++;
+        }
+
+        if ($keywords !== '') {
+            $passed++;
+        }
+
+        $titleLength = strlen($title);
+        if ($titleLength >= 30 && $titleLength <= 60) {
+            $passed++;
+        }
+
+        $descriptionLength = strlen($description);
+        if ($descriptionLength >= 120 && $descriptionLength <= 160) {
+            $passed++;
+        }
+
+        return (int) round(($passed / $total) * 100);
+    }
+}
+
+if (!function_exists('seo_list_item_url')) {
+    function seo_list_item_url($seo, ?string $categoryPerma = 'category'): string
+    {
+        if (! empty($seo->course_id) && $seo->relationLoaded('course') && $seo->course) {
+            return (string) ($seo->course->slug ?? '');
+        }
+
+        if (! empty($seo->page_id) && $seo->relationLoaded('page') && $seo->page) {
+            $page = $seo->page;
+
+            if ($page->parent_id && $page->relationLoaded('parent') && $page->parent) {
+                return trim($page->parent->url . '/' . $page->url, '/');
+            }
+
+            if ($page->category_id) {
+                return trim(($categoryPerma ?: 'category') . '/' . $page->url, '/');
+            }
+
+            return (string) ($page->url ?? '');
+        }
+
+        return '';
     }
 }
 
@@ -330,12 +816,12 @@ if (!function_exists('admin_menu_allowed')) {
 
         $contentWriterMenus = [
             'dashboard', 'courses', 'training-calendar', 'school', 'categories',
-            'pages', 'seo', 'faq', 'analytics', 'clients', 'profile', 'logout',
+            'pages', 'faq', 'seo', 'analytics', 'clients', 'profile', 'logout',
         ];
 
         $accountantMenus = [
-            'dashboard', 'courses', 'currency-rate-setup', 'currencies',
-            'payments', 'profile', 'logout',
+            'dashboard', 'courses', 'currency-rate-setup',
+            'payments', 'payment-gateway', 'profile', 'logout',
         ];
 
         if ($role === 'content_writer') {
@@ -439,6 +925,375 @@ if (!function_exists('merge_image_alts')) {
     }
 }
 
+if (!function_exists('form_image_alt_value')) {
+    function form_image_alt_value($model, string $key, ?string $oldKey = null): string
+    {
+        if ($oldKey !== null) {
+            $fromOld = old($oldKey);
+            if ($fromOld !== null) {
+                return trim((string) $fromOld);
+            }
+        }
+
+        if (! $model) {
+            return '';
+        }
+
+        $alts = $model->image_alts ?? null;
+        $parsed = is_array($alts) ? $alts : (json_decode((string) $alts, true) ?: []);
+
+        return trim((string) data_get($parsed, $key, ''));
+    }
+}
+
+if (!function_exists('seo_prepare_save_data')) {
+    function seo_prepare_save_data(array $data): array
+    {
+        ensure_seo_focus_keyword_column_exists();
+        ensure_seo_thumbnail_alt_column_exists();
+
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('pages_s_e_o_s', 'focus_keyword')) {
+            unset($data['focus_keyword']);
+        }
+
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('pages_s_e_o_s', 'thumbnail_alt')) {
+            unset($data['thumbnail_alt']);
+        }
+
+        return $data;
+    }
+}
+
+if (!function_exists('ensure_seo_focus_keyword_column_exists')) {
+    function ensure_seo_focus_keyword_column_exists(): bool
+    {
+        static $ready = null;
+
+        if ($ready === true) {
+            return true;
+        }
+
+        if ($ready === false) {
+            return false;
+        }
+
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('pages_s_e_o_s')
+                && ! \Illuminate\Support\Facades\Schema::hasColumn('pages_s_e_o_s', 'focus_keyword')) {
+                \Illuminate\Support\Facades\Schema::table('pages_s_e_o_s', function (\Illuminate\Database\Schema\Blueprint $table) {
+                    $table->string('focus_keyword', 80)->nullable()->after('meta_description');
+                });
+            }
+
+            $ready = true;
+
+            return true;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Could not ensure focus_keyword column: ' . $e->getMessage());
+            $ready = false;
+
+            return false;
+        }
+    }
+}
+
+if (!function_exists('ensure_seo_thumbnail_alt_column_exists')) {
+    function ensure_seo_thumbnail_alt_column_exists(): bool
+    {
+        static $ready = null;
+
+        if ($ready === true) {
+            return true;
+        }
+
+        if ($ready === false) {
+            return false;
+        }
+
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('pages_s_e_o_s')
+                && ! \Illuminate\Support\Facades\Schema::hasColumn('pages_s_e_o_s', 'thumbnail_alt')) {
+                \Illuminate\Support\Facades\Schema::table('pages_s_e_o_s', function (\Illuminate\Database\Schema\Blueprint $table) {
+                    $table->string('thumbnail_alt', 255)->nullable();
+                });
+            }
+
+            $ready = true;
+
+            return true;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Could not ensure thumbnail_alt column: ' . $e->getMessage());
+            $ready = false;
+
+            return false;
+        }
+    }
+}
+
+if (!function_exists('ensure_image_alt_columns_exist')) {
+    function ensure_image_alt_columns_exist(): bool
+    {
+        static $ready = null;
+
+        if ($ready === true) {
+            return true;
+        }
+
+        if ($ready === false) {
+            return false;
+        }
+
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('courses')
+                && ! \Illuminate\Support\Facades\Schema::hasColumn('courses', 'image_alts')) {
+                \Illuminate\Support\Facades\Schema::table('courses', function (\Illuminate\Database\Schema\Blueprint $table) {
+                    $table->json('image_alts')->nullable();
+                });
+            }
+
+            if (\Illuminate\Support\Facades\Schema::hasTable('course_dynamic_labels')
+                && ! \Illuminate\Support\Facades\Schema::hasColumn('course_dynamic_labels', 'image_alts')) {
+                \Illuminate\Support\Facades\Schema::table('course_dynamic_labels', function (\Illuminate\Database\Schema\Blueprint $table) {
+                    $table->json('image_alts')->nullable();
+                });
+            }
+
+            $ready = true;
+
+            return true;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Could not ensure image_alts columns: ' . $e->getMessage());
+            $ready = false;
+
+            return false;
+        }
+    }
+}
+
+if (!function_exists('request_image_alts')) {
+    function request_image_alts(\Illuminate\Http\Request $request, string $dotKey): ?array
+    {
+        $value = $request->input($dotKey);
+
+        if (is_array($value)) {
+            return $value;
+        }
+
+        if ($dotKey === 'label.image_alts') {
+            $label = $request->input('label');
+
+            if (is_array($label) && is_array($label['image_alts'] ?? null)) {
+                return $label['image_alts'];
+            }
+        }
+
+        if ($dotKey === 'image_alts' && is_array($request->input('image_alts'))) {
+            return $request->input('image_alts');
+        }
+
+        return null;
+    }
+}
+
+if (!function_exists('persist_model_image_alts')) {
+    function persist_model_image_alts($model, ?array $incoming): bool
+    {
+        if (! $model || ! is_array($incoming)) {
+            return false;
+        }
+
+        $model->setAttribute('image_alts', merge_image_alts($model->image_alts ?? null, $incoming));
+
+        try {
+            return $model->save();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning(
+                'Failed to save image_alts on ' . $model->getTable() . ': ' . $e->getMessage()
+            );
+
+            return false;
+        }
+    }
+}
+
+if (!function_exists('label_request_has_content')) {
+    function label_request_has_content(?array $labelData): bool
+    {
+        if (! is_array($labelData) || $labelData === []) {
+            return false;
+        }
+
+        foreach ($labelData as $key => $value) {
+            if ($key === 'image_alts' && is_array($value)) {
+                foreach ($value as $alt) {
+                    if (trim((string) $alt) !== '') {
+                        return true;
+                    }
+                }
+
+                continue;
+            }
+
+            if (is_array($value)) {
+                if ($value !== []) {
+                    return true;
+                }
+
+                continue;
+            }
+
+            if ($value !== null && $value !== '') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
+if (!function_exists('pages_status_enabled')) {
+    function pages_status_enabled(): bool
+    {
+        static $enabled = null;
+
+        if ($enabled === null) {
+            $enabled = \Illuminate\Support\Facades\Schema::hasColumn('pages', 'status');
+        }
+
+        return $enabled;
+    }
+}
+
+if (!function_exists('normalize_page_status')) {
+    function normalize_page_status(mixed $value): int
+    {
+        if (in_array($value, ['disable', 'disabled', '0', 0, false], true)) {
+            return 0;
+        }
+
+        return 1;
+    }
+}
+
+if (!function_exists('save_uploaded_profile_image')) {
+    function save_uploaded_profile_image(
+        \Illuminate\Http\Request $request,
+        string $field = 'image',
+        ?string $currentPath = null
+    ): ?string {
+        $alternateFields = $field === 'image'
+            ? ['local_file_input']
+            : [];
+
+        foreach (array_merge([$field], $alternateFields) as $uploadField) {
+            if ($request->hasFile($uploadField)) {
+                $file = $request->file($uploadField);
+                $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+                $extension = $file->getClientOriginalExtension();
+                $fileName = \Illuminate\Support\Str::slug($originalName) . '-' . time() . '.' . $extension;
+                $destinationPath = public_path('images/profiles/');
+
+                if (! is_dir($destinationPath)) {
+                    mkdir($destinationPath, 0755, true);
+                }
+
+                $file->move($destinationPath, $fileName);
+
+                return 'images/profiles/' . $fileName;
+            }
+        }
+
+        if ($request->boolean('remove_image')) {
+            return '';
+        }
+
+        if ($request->filled('image_path')) {
+            $rawPath = trim(str_replace('\\', '/', (string) $request->input('image_path')));
+            $normalized = normalize_profile_image_path($rawPath);
+
+            if ($normalized === null) {
+                return $currentPath;
+            }
+
+            $hasUpload = collect(array_merge([$field], $alternateFields, ['image', 'local_file_input']))
+                ->contains(fn (string $uploadField) => $request->hasFile($uploadField));
+
+            if (
+                ! $hasUpload
+                && ! str_contains($rawPath, '/')
+                && $currentPath !== null
+                && basename($currentPath) !== basename($rawPath)
+            ) {
+                return $currentPath;
+            }
+
+            return $normalized;
+        }
+
+        $submittedCurrent = $request->input('current_image');
+        if (is_string($submittedCurrent) && trim($submittedCurrent) !== '') {
+            return normalize_profile_image_path($submittedCurrent) ?? $currentPath;
+        }
+
+        return $currentPath;
+    }
+}
+
+if (!function_exists('set_profile_image_column')) {
+    function set_profile_image_column($model, string $column, mixed $value): void
+    {
+        if (! $model) {
+            return;
+        }
+
+        if (in_array($model->getTable(), ['users', 'admins'], true)) {
+            $model->setAttribute($column, $value);
+
+            return;
+        }
+
+        assign_column_if_exists($model, $column, $value);
+    }
+}
+
+if (!function_exists('apply_profile_image_from_request')) {
+    function apply_profile_image_from_request(
+        $model,
+        \Illuminate\Http\Request $request,
+        string $field = 'image',
+        string $column = 'image'
+    ): void {
+        if (! $model) {
+            return;
+        }
+
+        $currentPath = normalize_profile_image_path($model->{$column} ?? null);
+        $submittedCurrent = $request->input('current_image');
+
+        if (is_string($submittedCurrent) && trim($submittedCurrent) !== '') {
+            $currentPath = normalize_profile_image_path($submittedCurrent) ?? $currentPath;
+        }
+
+        $newPath = save_uploaded_profile_image($request, $field, $currentPath);
+
+        if ($newPath === null) {
+            if ($currentPath !== null) {
+                set_profile_image_column($model, $column, $currentPath);
+            }
+
+            return;
+        }
+
+        if ($newPath === '') {
+            set_profile_image_column($model, $column, null);
+
+            return;
+        }
+
+        set_profile_image_column($model, $column, $newPath);
+    }
+}
+
 if (!function_exists('assign_column_if_exists')) {
     function assign_column_if_exists($model, string $column, mixed $value): void
     {
@@ -497,6 +1352,51 @@ if (!function_exists('activity_audience_for_role')) {
     }
 }
 
+if (!function_exists('course_instructor_ids')) {
+    function course_instructor_ids($course): array
+    {
+        if (! $course) {
+            return [];
+        }
+
+        $raw = method_exists($course, 'getRawOriginal')
+            ? ($course->getRawOriginal('instructor_id') ?? $course->instructor_id)
+            : ($course->instructor_id ?? null);
+
+        if (is_array($raw)) {
+            return array_values(array_filter(array_map('intval', $raw)));
+        }
+
+        if (is_string($raw)) {
+            $trimmed = trim($raw);
+
+            if ($trimmed !== '' && str_starts_with($trimmed, '[')) {
+                $decoded = json_decode($trimmed, true);
+                if (is_array($decoded)) {
+                    return array_values(array_filter(array_map('intval', $decoded)));
+                }
+            }
+
+            return array_values(array_filter(array_map('intval', explode(',', $raw))));
+        }
+
+        return [];
+    }
+}
+
+if (!function_exists('courses_for_instructor')) {
+    function courses_for_instructor(int $instructorId): \Illuminate\Support\Collection
+    {
+        return \App\Models\Course::query()
+            ->whereNotNull('instructor_id')
+            ->where('instructor_id', '!=', '')
+            ->orderBy('title')
+            ->get(['id', 'title', 'slug', 'description', 'instructor_id'])
+            ->filter(fn ($course) => in_array($instructorId, course_instructor_ids($course), true))
+            ->values();
+    }
+}
+
 if (!function_exists('activity_audience_for_user')) {
     function activity_audience_for_user(?\App\Models\User $user): string
     {
@@ -534,6 +1434,86 @@ if (!function_exists('record_user_activity')) {
             $adminId,
             $request?->ip(),
             $sessionId,
+        );
+    }
+}
+
+if (!function_exists('record_panel_activity')) {
+    function record_panel_activity(
+        string $action,
+        ?string $item = null,
+        ?string $url = null,
+        ?\Illuminate\Http\Request $request = null
+    ): void {
+        $request = $request ?? request();
+
+        if (\Illuminate\Support\Facades\Auth::guard('admin')->check()) {
+            record_user_activity(
+                $action,
+                $item,
+                $url,
+                'staff',
+                null,
+                \Illuminate\Support\Facades\Auth::guard('admin')->id(),
+                $request
+            );
+
+            return;
+        }
+
+        if (\Illuminate\Support\Facades\Auth::check()) {
+            record_user_activity(
+                $action,
+                $item,
+                $url,
+                activity_audience_for_user(\Illuminate\Support\Facades\Auth::user()),
+                \Illuminate\Support\Facades\Auth::id(),
+                null,
+                $request
+            );
+        }
+    }
+}
+
+if (!function_exists('touch_content_audit')) {
+    function touch_content_audit(\Illuminate\Database\Eloquent\Model $model): void
+    {
+        $actorId = audit_user_id();
+
+        if (! $actorId) {
+            return;
+        }
+
+        $table = $model->getTable();
+
+        if (! \Illuminate\Support\Facades\Schema::hasColumn($table, 'updated_by')) {
+            return;
+        }
+
+        \Illuminate\Support\Facades\DB::table($table)
+            ->where('id', $model->getKey())
+            ->update([
+                'updated_by' => $actorId,
+                'updated_at' => now(),
+            ]);
+    }
+}
+
+if (!function_exists('log_panel_course_update')) {
+    function log_panel_course_update(\App\Models\Course $course): void
+    {
+        static $loggedCourseIds = [];
+
+        if (isset($loggedCourseIds[$course->id])) {
+            return;
+        }
+
+        $loggedCourseIds[$course->id] = true;
+
+        record_panel_activity(
+            'Course Updated',
+            $course->title ?: 'Course #' . $course->id,
+            route('course.edit', $course->id)
         );
     }
 }
@@ -618,9 +1598,15 @@ if (!function_exists('convert_from_aed')) {
 if (!function_exists('payment_display_currency')) {
     function payment_display_currency($payment): string
     {
-        return package_currency_code(
-            $payment->currency ?? optional($payment->courseFee)->currency ?? 'AED'
-        );
+        $currency = trim((string) ($payment->currency ?? ''));
+
+        // Some historical records have `payments.currency` stored as empty string.
+        // Treat it as missing so we can fall back to the package currency.
+        if ($currency === '') {
+            $currency = trim((string) (optional($payment->courseFee)->currency ?? ''));
+        }
+
+        return package_currency_code($currency !== '' ? $currency : 'AED');
     }
 }
 
@@ -764,6 +1750,29 @@ if (!function_exists('format_package_price')) {
             'show_settling_note' => false,
             'admin_display' => $display . ' <span class="text-muted">(AED ' . number_format($settling, 2) . ')</span>',
         ];
+    }
+}
+
+if (!function_exists('payment_invoice_status')) {
+    function payment_invoice_status($payment): string
+    {
+        if (! $payment) {
+            return 'Pending';
+        }
+
+        $payment->loadMissing('installments');
+        $totalPaid = (float) $payment->installments->sum('paid_amount');
+        $price = (float) ($payment->price ?? 0);
+
+        if ($price > 0 && $totalPaid >= $price) {
+            return 'Paid';
+        }
+
+        if ($totalPaid > 0) {
+            return 'Partial';
+        }
+
+        return 'Pending';
     }
 }
 

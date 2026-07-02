@@ -25,14 +25,25 @@ class PanelActivityService
             'my_courses' => $userId ? $this->countCoursesCreated($userId, null, null) : 0,
             'my_pages' => $userId ? $this->countPagesCreated($userId, null, null) : 0,
             'total_courses_site' => (int) Course::count(),
+            'active_courses_site' => (int) Course::count(),
+            'disabled_courses_site' => Schema::hasColumn('courses', 'deleted_at')
+                ? (int) Course::onlyTrashed()->count()
+                : 0,
             'total_pages_site' => (int) Page::count(),
+            'active_pages_site' => pages_status_enabled()
+                ? (int) Page::where('status', 1)->count()
+                : (int) Page::count(),
+            'disabled_pages_site' => pages_status_enabled()
+                ? (int) Page::where('status', 0)->count()
+                : 0,
+            'pages_status_enabled' => pages_status_enabled(),
             'total_payments_site' => $includePayments && Schema::hasTable('payments')
                 ? (int) Payment::count()
                 : 0,
             'courses_created' => $this->countCoursesCreated($userId, $from, $to),
             'pages_created' => $this->countPagesCreated($userId, $from, $to),
-            'payments_recorded' => $includePayments ? $this->countPayments($from, $to) : 0,
-            'invoices_recorded' => $includePayments ? $this->countPayments($from, $to) : 0,
+            'payments_recorded' => ($includePayments && $userId === null) ? $this->countPayments($from, $to) : 0,
+            'invoices_recorded' => ($includePayments && $userId === null) ? $this->countPayments($from, $to) : 0,
         ] + ($includePayments ? $this->invoiceSummary() : [
             'invoice_total' => 0,
             'invoice_paid' => 0,
@@ -134,7 +145,8 @@ class PanelActivityService
             $paymentsOnly
         );
 
-        $logs = app(UserActivityLogService::class)->buildFeed($logAudience, $userId, $dateFrom, $dateTo);
+        $logService = app(UserActivityLogService::class);
+        $logs = $logService->buildFeed($logAudience, $userId, $dateFrom, $dateTo);
 
         if ($restrictToUserIds !== null) {
             $logs = $logs->filter(function (array $row) use ($restrictToUserIds) {
@@ -143,6 +155,12 @@ class PanelActivityService
                 }
 
                 return in_array((int) $row['actor_id'], $restrictToUserIds, true);
+            });
+        }
+
+        if ($logService->tableExists()) {
+            $activities = $activities->filter(function (array $row) {
+                return ! in_array($row['action'], ['Page Updated', 'Course Updated'], true);
             });
         }
 
@@ -174,7 +192,8 @@ class PanelActivityService
         [$from, $to] = $this->parseDateRange($dateFrom, $dateTo);
 
         if ($paymentsOnly) {
-            return $this->paymentActivities($from, $to)
+            return $this->invoiceActivities($from, $to)
+                ->merge($this->installmentPaymentActivities($from, $to))
                 ->sortByDesc(fn (array $row) => $row['occurred_at']->timestamp)
                 ->values();
         }
@@ -182,8 +201,10 @@ class PanelActivityService
         $feed = $this->courseActivities($userId, $from, $to)
             ->merge($this->pageActivities($userId, $from, $to));
 
-        if ($includePayments && ! $userId && $restrictToUserIds === null) {
-            $feed = $feed->merge($this->paymentActivities($from, $to));
+        if ($includePayments && $userId === null && $restrictToUserIds === null) {
+            $feed = $feed
+                ->merge($this->invoiceActivities($from, $to))
+                ->merge($this->installmentPaymentActivities($from, $to));
         }
 
         if ($restrictToUserIds !== null) {
@@ -336,7 +357,7 @@ class PanelActivityService
         });
     }
 
-    private function paymentActivities(?Carbon $from, ?Carbon $to): Collection
+    private function invoiceActivities(?Carbon $from, ?Carbon $to): Collection
     {
         if (! Schema::hasTable('payments')) {
             return collect();
@@ -357,6 +378,39 @@ class PanelActivityService
                     route('admin.payments.index'),
                     null,
                     $payment->created_at
+                );
+            });
+    }
+
+    private function installmentPaymentActivities(?Carbon $from, ?Carbon $to): Collection
+    {
+        if (! Schema::hasTable('installments')) {
+            return collect();
+        }
+
+        return \App\Models\Installment::query()
+            ->with(['user', 'payment.course'])
+            ->where('status', 'paid')
+            ->where('paid_amount', '>', 0)
+            ->orderByDesc('paid_date')
+            ->orderByDesc('updated_at')
+            ->get()
+            ->filter(function ($installment) use ($from, $to) {
+                $at = $installment->paid_date ?? $installment->updated_at;
+
+                return $this->inRange($at, $from, $to);
+            })
+            ->map(function ($installment) {
+                $student = $installment->user?->name ?? $installment->user?->email ?? 'Student';
+                $course = $installment->payment?->course?->title ?? 'Course';
+                $invoiceNo = 'INV-' . str_pad((string) $installment->payment_id, 6, '0', STR_PAD_LEFT);
+
+                return $this->activityRow(
+                    'Receipt Recorded',
+                    $course . ' — ' . $student . ' (' . $invoiceNo . ')',
+                    route('admin.payments.index'),
+                    null,
+                    $installment->paid_date ?? $installment->updated_at
                 );
             });
     }

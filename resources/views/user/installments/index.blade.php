@@ -1,6 +1,7 @@
 @extends('user.layout.app')
 
 @section('title', 'Installments')
+@include('user.partials.rakbank-payment-modal')
 
 @push('style')
     <link href="{{ asset('/admin/css/plugins/dataTables/datatables.min.css') }}" rel="stylesheet">
@@ -94,14 +95,16 @@
                                                         <!-- Modal -->
                                                         <div class="modal fade" id="paymentModal{{ $installment->id }}" tabindex="-1" role="dialog"
                                                             aria-labelledby="paymentModalLabel{{ $installment->id }}" aria-hidden="true">
-                                                            <div class="modal-dialog" role="document">
+                                                            <div class="modal-dialog modal-lg" role="document" style="max-width: 560px;">
                                                                 <div class="modal-content">
                                                                     <button type="button" id="closeModal" class="close close-white position-absolute top-0 right-0" style="margin-top: -25px;" data-dismiss="modal" aria-label="Close">
                                                                         <span aria-hidden="true">×</span>
                                                                     </button>
-                                                                    <div class="modal-body">
-                                                                        <div id="payment-amount-display-{{ $installment->id }}" class="text-center mb-3" style="font-size: 18px; font-weight: 600;"></div>
-                                                                        <div id="hco-embedded-{{ $installment->id }}"></div>
+                                                                    <div class="modal-body" style="padding: 24px;">
+                                                                        <div id="payment-amount-display-{{ $installment->id }}" class="mb-3"></div>
+                                                                        <div id="payment-error-{{ $installment->id }}" class="alert alert-danger" style="display:none;"></div>
+                                                                        <div id="payment-loading-{{ $installment->id }}" class="text-center text-muted py-3" style="display:none;">Loading payment form...</div>
+                                                                        <div id="hco-embedded-{{ $installment->id }}" style="min-height: 360px;"></div>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -159,47 +162,6 @@
         let currentInstallmentId = null;
         let currentAmount = null;
 
-        function normalizeEmbeddedPayButtons(containerSelector) {
-            const root = document.querySelector(containerSelector);
-            if (!root) {
-                return;
-            }
-
-            const scrub = function () {
-                root.querySelectorAll('button, [role="button"], input[type="submit"]').forEach(function (btn) {
-                    const text = (btn.textContent || btn.value || '').trim();
-                    if (/^pay\b/i.test(text)) {
-                        if (btn.tagName === 'INPUT') {
-                            btn.value = 'Pay';
-                        } else {
-                            btn.textContent = 'Pay';
-                        }
-                        btn.setAttribute('aria-label', 'Pay');
-                    }
-                });
-            };
-
-            scrub();
-            const observer = new MutationObserver(scrub);
-            observer.observe(root, { childList: true, subtree: true, characterData: true });
-            const scrubInterval = setInterval(scrub, 400);
-            setTimeout(function () {
-                observer.disconnect();
-                clearInterval(scrubInterval);
-            }, 60000);
-        }
-
-        function showPaymentAmount(targetSelector, displayAmount) {
-            if (!displayAmount) {
-                return;
-            }
-
-            $(targetSelector).html(
-                '<div style="font-size:13px;font-weight:500;color:#666;margin-bottom:4px;">Amount to pay</div>' +
-                '<div style="font-size:22px;font-weight:700;">' + displayAmount + '</div>'
-            );
-        }
-
         function errorCallback(error) {
             console.log(JSON.stringify(error));
         }
@@ -226,10 +188,9 @@
                 },
                 success: function (res) {
                     if (res.success == true) {
-                        // Close the currently open modal
+                        clearPaymentContext();
                         $(".modal.show").modal('hide');
 
-                        // Refresh after short delay
                         setTimeout(function(){
                             window.location.reload();
                         }, 1000);
@@ -246,55 +207,80 @@
         $('.payNowBtn').on('click', function () {
             currentInstallmentId = $(this).data('installment-id');
             currentAmount = $(this).data('amount');
+            currentCheckoutSessionId = null;
+        });
+
+        $(document).on('click', '.payment-start-btn', function () {
+            launchHostedPayment($(this).closest('.modal'));
         });
 
         $('[id^="paymentModal"]').on('shown.bs.modal', function () {
-            var modalId = $(this).attr('id');
+            var modal = $(this);
+            var modalId = modal.attr('id');
             var installmentId = modalId.replace('paymentModal', '');
-            var embeddedDivId = '#hco-embedded-' + installmentId;
             var amountDisplayId = '#payment-amount-display-' + installmentId;
+            var errorDisplayId = '#payment-error-' + installmentId;
+            var loadingDisplayId = '#payment-loading-' + installmentId;
+            var startBtnId = '#payment-start-btn-' + installmentId;
 
+            currentCheckoutSessionId = null;
             $(amountDisplayId).empty();
-            $(embeddedDivId).empty();
+            $(errorDisplayId).hide().empty();
+            $(startBtnId).hide().prop('disabled', false);
+            modal.find('.payment-secure-note').hide();
+            $(loadingDisplayId).show();
 
             $.ajax({
                 url: '{{ route("user.generate.rakBankPaySession") }}',
                 method: 'POST',
-                data: { installment_id: installmentId },
+                data: {
+                    installment_id: installmentId,
+                    return_url: window.location.href
+                },
                 headers: {
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                 },
                 success: function (res) {
+                    $(loadingDisplayId).hide();
+
                     if (res.displayAmount) {
-                        showPaymentAmount(amountDisplayId, res.displayAmount);
+                        renderPaymentModalSummary(amountDisplayId, res);
                     }
 
-                    if (res.session && res.session.id) {
-                        try {
-                            Checkout.configure({
-                                session: { id: res.session.id },
-                            });
-                            Checkout.showEmbeddedPage(embeddedDivId, () => {
-                                $('#' + modalId).modal();
-                            });
-                            normalizeEmbeddedPayButtons(embeddedDivId);
-                        } catch (error) {
-                            console.error("An error occurred while initializing RakBank Checkout:", error);
-                        }
+                    if (res.settlingAmount) {
+                        currentAmount = res.settlingAmount;
+                    }
+
+                    if (res.success !== false && res.session && res.session.id) {
+                        currentCheckoutSessionId = res.session.id;
+                        $(startBtnId).show();
+                        modal.find('.payment-secure-note').show();
                     } else {
+                        $(errorDisplayId).text(res.error || 'Payment session could not be started. Please try again.').show();
                         console.error("Session creation failed", res);
                     }
                 },
                 error: function (err) {
+                    $(loadingDisplayId).hide();
+                    var message = 'Payment session could not be started. Please try again.';
+                    try {
+                        var body = JSON.parse(err.responseText);
+                        if (body.error) {
+                            message = body.error;
+                        }
+                    } catch (e) {}
+                    $(errorDisplayId).text(message).show();
                     console.error("API error", err.responseText);
                 }
             });
         });
 
         $('[id^="paymentModal"]').on('hide.bs.modal', function () {
-            sessionStorage.clear();
-            
-            $(this).find('[id^="hco-embedded"]').empty();
+            currentCheckoutSessionId = null;
+        });
+
+        loadCheckoutScript(function () {
+            restorePaymentContext();
         });
 
         $(document).ready(function () {

@@ -36,7 +36,7 @@
 <section 
     id="section-{{ $id }}" 
     class="search-section {{ $alignmentClass }}" 
-    style="background-color: {{ $background }};"
+    style="background-color: {{ section_bg_color($background) }};"
 >
     <div class="custom-container">
         <div class="custom-row">

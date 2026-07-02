@@ -10,6 +10,17 @@ use App\Traits\TracksAudit;
 class Course extends Model
 {
     use HasFactory, SoftDeletes, TracksAudit;
+
+    protected static function booted(): void
+    {
+        static::updated(function (Course $course) {
+            if (! request()->is('admin/*') && ! request()->is('course/*')) {
+                return;
+            }
+
+            log_panel_course_update($course);
+        });
+    }
     
     protected $fillable = [
         

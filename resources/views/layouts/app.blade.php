@@ -345,7 +345,7 @@
     @endphp
     <footer
         class="card-hidden px-6 min-[1200px]:px-[72px] min-h-[465px] flex items-center flex-col justify-center w-full py-8 mt-auto"
-        style="background-color: {{ $footerBg }}; margin-bottom: 0px !important;">
+        style="background-color: {{ $footerBg }}; color: {{ $footerText }}; margin-bottom: 0px !important;">
         @php
             $columns = $settings->footer_columns == null ? 4 : $settings->footer_columns;
 
@@ -482,6 +482,17 @@
             utilsScript: "/intl-tel-input/js/utils.js?1716383386062" // just for formatting/placeholders etc
         });
         // tel End
+    </script>
+
+    <script>
+        window.cmsCardImageError = function (img) {
+            img.onerror = null;
+            img.hidden = true;
+            const card = img.closest('[data-cms-card]');
+            if (card) {
+                card.classList.add('card-image-missing');
+            }
+        };
     </script>
 
     <script>

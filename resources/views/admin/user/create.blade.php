@@ -329,13 +329,8 @@
     }
 
     function uploadLocalFile(input) {
-        const file = input.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function () {
-                document.getElementById('image_path').value = file.name;
-            };
-            reader.readAsDataURL(file);
+        if (!input.files[0]) {
+            return;
         }
     }
 

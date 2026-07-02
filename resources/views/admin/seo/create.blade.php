@@ -36,7 +36,7 @@
                     <h5>SEO</h5>
                 </div>
                 <div class="ibox-content">
-                    <form role="form" action="{{ route('pages-seo.store') }}" method="POST" enctype="multipart/form-data">
+                    <form role="form" action="{{ route('courses-pages-seo.store') }}" method="POST" enctype="multipart/form-data">
                         @csrf
                         <div class="row">
                             @if(request()->has('course_name'))
@@ -44,6 +44,12 @@
                                     <label for="">Course Title</label>
                                     <input type="text" class="form-control" placeholder="{{ request()->get('course_name') }}" readonly>
                                     <input type="hidden" name="course_id" value="{{ request()->get('course_id') }}">
+                                </div>
+                            @elseif(request()->has('page_name'))
+                                <div class="col-lg-12 mb">
+                                    <label for="">Page Title</label>
+                                    <input type="text" class="form-control" value="{{ request()->get('page_name') }}" readonly>
+                                    <input type="hidden" name="page_id" value="{{ request()->get('page_id') }}">
                                 </div>
                             @else
                                 <div class="col-lg-12 mb">
@@ -66,6 +72,14 @@
                                     data-maxlength="{{ seo_field_limits()['meta_description_max'] }}" maxlength="{{ seo_field_limits()['meta_description_max'] }}">{{ old('meta_description') }}</textarea>
                             </div>
                             <div class="col-lg-12 mb">
+                                <label for="focus_keyword">Focus Keyword <small>(max {{ seo_field_limits()['focus_keyword_max'] }} characters)</small></label>
+                                <input type="text" class="form-control" name="focus_keyword" id="focus_keyword"
+                                    placeholder="e.g. USMLE Preparation Programme"
+                                    value="{{ old('focus_keyword') }}"
+                                    maxlength="{{ seo_field_limits()['focus_keyword_max'] }}">
+                                <p class="help-block text-muted" style="margin-top:4px;">Primary phrase for SEO analysis. Priority keywords are supporting terms.</p>
+                            </div>
+                            <div class="col-lg-12 mb">
                                 <label for="">Priority Keywords <small>( Max {{ seo_field_limits()['priority_keywords_max_tags'] }} keywords )</small></label>
                                 <input class="form-control" name="keywords" id="keywords" value="{{ old('keywords') }}">
                             </div>
@@ -76,6 +90,12 @@
                             <div class="col-lg-6 mb">
                                 <label for="">Thumbnail <small>( 1200 x 627 px )</small></label>
                                 <input type="file" class="form-control" name="thumbnail" accept="image/*">
+                                @include('admin.partials.image-alt-input', [
+                                    'id' => 'thumbnail_alt',
+                                    'name' => 'thumbnail_alt',
+                                    'value' => old('thumbnail_alt'),
+                                ])
+                                <p class="help-block text-muted" style="margin-top:4px;">Alt text for the thumbnail image (recommended for SEO).</p>
                             </div>
                         </div>
 

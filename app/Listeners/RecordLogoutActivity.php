@@ -8,6 +8,9 @@ use Illuminate\Auth\Events\Logout;
 
 class RecordLogoutActivity
 {
+    /** @var array<string, bool> */
+    private static array $logged = [];
+
     public function handle(Logout $event): void
     {
         $user = $event->user;
@@ -18,12 +21,19 @@ class RecordLogoutActivity
 
         $request = request();
         $sessionId = $request->hasSession() ? $request->session()->getId() : null;
+        $dedupeKey = ($sessionId ?? 'no-session') . '|' . $user::class . '|' . $user->getKey();
+
+        if (isset(self::$logged[$dedupeKey])) {
+            return;
+        }
+
+        self::$logged[$dedupeKey] = true;
 
         if ($user instanceof Admin) {
             record_user_activity(
-                'Admin Logout',
+                'Admin Log out',
                 'Session ended',
-                admin_login_url(),
+                public_login_url(),
                 'staff',
                 null,
                 $user->id,
@@ -35,13 +45,17 @@ class RecordLogoutActivity
         }
 
         if ($user instanceof User) {
-            $fromAdminPanel = $request->is('admin/*') || $request->is('admin');
+            $audience = activity_audience_for_user($user);
+            $logoutAction = $audience === 'staff' ? 'Staff Log out' : 'User Log out';
+            $item = $event->guard === 'admin'
+                ? 'Session ended from admin panel'
+                : 'Session ended';
 
             record_user_activity(
-                'User Logout',
-                $fromAdminPanel ? 'Session ended from admin panel' : 'Session ended',
-                $fromAdminPanel ? admin_login_url() : public_login_url(),
-                activity_audience_for_user($user),
+                $logoutAction,
+                $item,
+                public_login_url(),
+                $audience,
                 $user->id,
                 null,
                 $request,

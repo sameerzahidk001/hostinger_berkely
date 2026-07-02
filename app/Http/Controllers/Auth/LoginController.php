@@ -74,8 +74,9 @@ class LoginController extends Controller
             }
 
             $user = Auth::user();
+            $loginAction = activity_audience_for_user($user) === 'staff' ? 'Staff Login' : 'User Login';
             record_user_activity(
-                'User Login',
+                $loginAction,
                 'Session started via ' . public_login_url(),
                 public_login_url(),
                 activity_audience_for_user($user),
@@ -121,6 +122,25 @@ class LoginController extends Controller
      */
     public function logout(Request $request)
     {
+        $sessionId = $request->hasSession() ? $request->session()->getId() : null;
+
+        if (Auth::check()) {
+            $user = Auth::user();
+            $audience = activity_audience_for_user($user);
+            $logoutAction = $audience === 'staff' ? 'Staff Log out' : 'User Log out';
+
+            record_user_activity(
+                $logoutAction,
+                'Session ended',
+                public_login_url(),
+                $audience,
+                $user->id,
+                null,
+                $request,
+                $sessionId
+            );
+        }
+
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();

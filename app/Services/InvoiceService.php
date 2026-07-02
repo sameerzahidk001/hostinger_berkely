@@ -59,30 +59,35 @@ class InvoiceService
 
         $filename = $invoiceNo . '.pdf';
 
-        $emailTemplate = Email::where('name', 'send-invoice')->first();
-        if (!$emailTemplate) {
-            Log::warning('Invoice email skipped: send-invoice template missing');
-
-            return false;
-        }
+        $emailTemplate = $this->resolveInvoiceEmailTemplate();
 
         $emailBody = str_replace(
             ['{name}', '{email}', '{password}', '{role}', '{invoice_no}'],
-            [$user->name, $user->email, '', ucfirst($user->roles->first()->name ?? ''), $invoiceNo],
-            $emailTemplate->body
+            [$user->name, $user->email, '', ucfirst($user->roles->first()->name ?? 'Student'), $invoiceNo],
+            $emailTemplate->body ?? ''
+        );
+
+        $emailSubject = str_replace(
+            ['{name}', '{email}', '{invoice_no}'],
+            [$user->name, $user->email, $invoiceNo],
+            $emailTemplate->subject ?? 'Invoice {invoice_no}'
         );
 
         $ccEmails = !empty($emailTemplate->cc) ? array_filter(array_map('trim', explode(',', $emailTemplate->cc))) : [];
         $bccEmails = !empty($emailTemplate->bcc) ? array_filter(array_map('trim', explode(',', $emailTemplate->bcc))) : [];
 
         try {
-            Mail::to($user->email)
-                ->cc($ccEmails)
-                ->bcc($bccEmails)
-                ->send(
-                    (new UserMail($user, $emailTemplate->subject, $emailBody))
-                        ->attachData($pdf->output(), $filename, ['mime' => 'application/pdf'])
-                );
+            $mailable = (new UserMail($user, $emailSubject, $emailBody))
+                ->attachData($pdf->output(), $filename, ['mime' => 'application/pdf']);
+
+            $mail = Mail::to($user->email);
+            if ($ccEmails !== []) {
+                $mail->cc($ccEmails);
+            }
+            if ($bccEmails !== []) {
+                $mail->bcc($bccEmails);
+            }
+            $mail->send($mailable);
         } catch (\Throwable $e) {
             Log::error('Invoice email delivery failed', ['payment_id' => $payment->id, 'error' => $e->getMessage()]);
 
@@ -90,5 +95,36 @@ class InvoiceService
         }
 
         return true;
+    }
+
+    private function resolveInvoiceEmailTemplate(): Email
+    {
+        $template = Email::query()
+            ->whereIn('name', ['send-invoice', 'Send Invoice', 'send_invoice'])
+            ->first();
+
+        if ($template) {
+            return $template;
+        }
+
+        $template = Email::query()
+            ->where('name', 'like', '%send%')
+            ->where(function ($query) {
+                $query->where('name', 'like', '%invoice%')
+                    ->orWhere('subject', 'like', '%invoice%');
+            })
+            ->first();
+
+        if ($template) {
+            return $template;
+        }
+
+        Log::warning('Invoice email using built-in fallback template: send-invoice missing in Admin → Emails');
+
+        $fallback = new Email();
+        $fallback->subject = 'Invoice {invoice_no}';
+        $fallback->body = '<p>Dear {name},</p><p>Please find attached your invoice <strong>{invoice_no}</strong>.</p><p>Regards,<br>Berkeley School of Business, Arts &amp; Sciences</p>';
+
+        return $fallback;
     }
 }
