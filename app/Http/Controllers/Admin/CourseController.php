@@ -43,7 +43,7 @@ class CourseController extends Controller
         $analyzer = app(SeoAnalyzerService::class);
         $data['courses'] = $query->orderByDesc('created_at')->get()->each(function (Course $course) use ($analyzer) {
             if ($course->seo) {
-                $course->seo_analysis = $analyzer->analyzeMetaOnlyForListing($course->seo);
+                $course->seo_analysis = $analyzer->analyzeForTables($course->seo);
             }
         });
         $data['instructors'] = DB::table('users')
@@ -89,7 +89,7 @@ class CourseController extends Controller
         $analyzer = app(SeoAnalyzerService::class);
         $data['courses'] = $query->orderByDesc('created_at')->get()->each(function (Course $course) use ($analyzer) {
             if ($course->seo) {
-                $course->seo_analysis = $analyzer->analyzeMetaOnlyForListing($course->seo);
+                $course->seo_analysis = $analyzer->analyzeForTables($course->seo);
             }
         });
 

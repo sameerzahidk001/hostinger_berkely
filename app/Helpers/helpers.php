@@ -886,22 +886,48 @@ if (!function_exists('audit_user_id')) {
     }
 }
 
+if (!function_exists('panel_actor_display_name')) {
+    function panel_actor_display_name(?string $name, ?string $email = null, ?string $username = null): string
+    {
+        $name = trim((string) $name);
+        if ($name !== '') {
+            return $name;
+        }
+
+        $username = trim((string) $username);
+        if ($username !== '') {
+            return $username;
+        }
+
+        $email = trim((string) $email);
+        if ($email !== '' && str_contains($email, '@')) {
+            return ucwords(str_replace(['.', '_', '-'], ' ', (string) \Illuminate\Support\Str::before($email, '@')));
+        }
+
+        return $email !== '' ? $email : '-';
+    }
+}
+
 if (!function_exists('audit_user_name')) {
     function audit_user_name($model, $fallbackId = null): string
     {
         if ($model) {
-            return $model->name ?? $model->username ?? $model->email ?? '-';
+            return panel_actor_display_name(
+                $model->name ?? null,
+                $model->email ?? null,
+                $model->username ?? null
+            );
         }
 
         if ($fallbackId) {
             $admin = \App\Models\Admin::find($fallbackId);
             if ($admin) {
-                return $admin->name ?? $admin->email ?? '-';
+                return panel_actor_display_name($admin->name ?? null, $admin->email ?? null);
             }
 
             $user = \App\Models\User::find($fallbackId);
             if ($user) {
-                return $user->name ?? $user->email ?? '-';
+                return panel_actor_display_name($user->name ?? null, $user->email ?? null, $user->username ?? null);
             }
         }
 

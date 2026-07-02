@@ -45,7 +45,7 @@ class PagesController extends Controller
             ->get()
             ->each(function (Page $page) use ($analyzer) {
                 if ($page->seo) {
-                    $page->seo_analysis = $analyzer->analyzeMetaOnlyForListing($page->seo);
+                    $page->seo_analysis = $analyzer->analyzeForTables($page->seo);
                 }
             });
 
@@ -71,7 +71,7 @@ class PagesController extends Controller
             ->get()
             ->each(function (Page $page) use ($analyzer) {
                 if ($page->seo) {
-                    $page->seo_analysis = $analyzer->analyzeMetaOnlyForListing($page->seo);
+                    $page->seo_analysis = $analyzer->analyzeForTables($page->seo);
                 }
             });
 

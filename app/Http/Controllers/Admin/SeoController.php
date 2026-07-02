@@ -63,7 +63,7 @@ class SeoController extends Controller
             ->orderByDesc('id')
             ->get()
             ->each(function (PagesSEO $pageSeo) use ($analyzer) {
-                $pageSeo->seo_analysis = $analyzer->analyzeMetaOnlyForListing($pageSeo);
+                $pageSeo->seo_analysis = $analyzer->analyzeForTables($pageSeo);
             });
 
         $data['category_perma'] = SiteSettings::value('category_perma') ?? 'category';
@@ -140,7 +140,7 @@ class SeoController extends Controller
 
         $seo->fill($request->only(['title', 'meta_description', 'focus_keyword', 'keywords', 'thumbnail_alt']));
 
-        return response()->json(app(SeoAnalyzerService::class)->analyze($seo, true));
+        return response()->json(app(SeoAnalyzerService::class)->analyze($seo, false));
     }
 
     /**

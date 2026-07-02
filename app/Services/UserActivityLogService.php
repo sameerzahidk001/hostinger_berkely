@@ -155,11 +155,15 @@ class UserActivityLogService
     private function resolveActorName(UserActivityLog $log): string
     {
         if ($log->user) {
-            return $log->user->name ?? $log->user->email ?? 'User #' . $log->user_id;
+            return panel_actor_display_name(
+                $log->user->name ?? null,
+                $log->user->email ?? null,
+                $log->user->username ?? null
+            );
         }
 
         if ($log->admin) {
-            return $log->admin->username ?? $log->admin->name ?? $log->admin->email ?? 'Admin #' . $log->admin_id;
+            return panel_actor_display_name($log->admin->name ?? null, $log->admin->email ?? null);
         }
 
         return '-';

@@ -18,6 +18,14 @@ class Course extends Model
                 return;
             }
 
+            if (request()->routeIs('courses.update-status')) {
+                return;
+            }
+
+            if ($course->wasChanged('deleted_at') && count($course->getChanges()) <= 2) {
+                return;
+            }
+
             log_panel_course_update($course);
         });
     }

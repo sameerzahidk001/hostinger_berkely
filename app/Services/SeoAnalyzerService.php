@@ -12,20 +12,19 @@ class SeoAnalyzerService
 {
     public function analyzeMetaOnlyForListing(PagesSEO $seo): array
     {
-        $title = trim((string) $seo->title);
-        $description = trim((string) $seo->meta_description);
-        $focusKeyword = $this->focusKeyword($seo);
-        $previewUrl = $this->resolvePreviewUrl($seo);
-        $urlSlug = $this->resolveUrlSlug($seo);
+        return $this->analyzeForTables($seo);
+    }
 
-        $built = app(SeoComprehensiveChecks::class)->buildMetaOnly(
-            $seo,
-            $title,
-            $description,
-            $focusKeyword
+    /**
+     * Shared score for Courses, Pages, and SEO admin tables (full checks, no live fetch).
+     */
+    public function analyzeForTables(PagesSEO $seo): array
+    {
+        return Cache::remember(
+            $this->analysisCacheKey($seo, 'display'),
+            now()->addHours(6),
+            fn () => $this->analyze($seo, false)
         );
-
-        return $this->packageResult($built, $focusKeyword, $previewUrl, $urlSlug);
     }
 
     public function analyze(PagesSEO $seo, bool $withLiveVerification = false): array
@@ -94,23 +93,31 @@ class SeoAnalyzerService
     }
 
     /**
-     * @deprecated Use analyzeMetaOnlyForListing() on admin tables.
+     * @deprecated Use analyzeForTables() on admin tables.
      */
     public function analyzeForListing(PagesSEO $seo, bool $fetchLiveIfMissing = false): array
     {
-        return $this->analyzeMetaOnlyForListing($seo);
+        return $this->analyzeForTables($seo);
     }
 
     /**
-     * Edit screen — full analysis with live public-page checks.
+     * Edit screen — same overall score as tables, plus live public-page checks in sections.
      */
     public function analyzeForEdit(PagesSEO $seo): array
     {
-        return Cache::remember(
-            $this->analysisCacheKey($seo, 'full'),
+        $display = $this->analyzeForTables($seo);
+
+        $live = Cache::remember(
+            $this->analysisCacheKey($seo, 'live_full'),
             now()->addMinutes(30),
             fn () => $this->analyze($seo, true)
         );
+
+        return array_merge($live, [
+            'score' => $display['score'],
+            'label' => $display['label'],
+            'content_score' => $display['content_score'],
+        ]);
     }
 
     public function clearAnalysisCache(PagesSEO $seo): void
@@ -118,16 +125,13 @@ class SeoAnalyzerService
         Cache::forget($this->analysisCacheKey($seo, 'display'));
         Cache::forget($this->analysisCacheKey($seo, 'live'));
         Cache::forget($this->analysisCacheKey($seo, 'full'));
+        Cache::forget($this->analysisCacheKey($seo, 'live_full'));
         $this->clearLivePageCache($seo);
     }
 
     private function cachedDisplayAnalysis(PagesSEO $seo): array
     {
-        return Cache::remember(
-            $this->analysisCacheKey($seo, 'display'),
-            now()->addHours(6),
-            fn () => $this->analyze($seo, false)
-        );
+        return $this->analyzeForTables($seo);
     }
 
     private function cachedLiveVerification(PagesSEO $seo): array
