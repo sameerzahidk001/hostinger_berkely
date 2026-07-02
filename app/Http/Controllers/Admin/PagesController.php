@@ -12,7 +12,6 @@ use App\Models\SiteSettings;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use App\Http\Controllers\Controller;
-use App\Services\SeoAnalyzerService;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 
@@ -33,7 +32,7 @@ class PagesController extends Controller
         $data['categories_pages_slug_base'] = SiteSettings::pluck('category_perma')->first();
         $data['pagesStatusEnabled'] = pages_status_enabled();
 
-        $query = Page::with(['parent', 'seo.page.sections', 'seo.course.dynamicLabel', 'seo.course.courseFaq', 'faqs', 'createdBy', 'updatedBy']);
+        $query = Page::with(['parent', 'seo', 'faqs', 'createdBy', 'updatedBy']);
 
         if ($data['pagesStatusEnabled']) {
             $query->where('status', 1);
@@ -41,12 +40,7 @@ class PagesController extends Controller
 
         $data['pages'] = $query
             ->orderByDesc('created_at')
-            ->get()
-            ->each(function (Page $page) {
-                if ($page->seo) {
-                    $page->seo_analysis = app(SeoAnalyzerService::class)->analyzeForListing($page->seo);
-                }
-            });
+            ->get();
 
         return view('admin.pages.index')->with($data);
     }
@@ -63,15 +57,10 @@ class PagesController extends Controller
         $data['category_page_id'] = SiteSettings::pluck('categories')->first();
         $data['categories_pages_slug_base'] = SiteSettings::pluck('category_perma')->first();
         $data['pagesStatusEnabled'] = true;
-        $data['pages'] = Page::with(['parent', 'seo.page.sections', 'seo.course.dynamicLabel', 'seo.course.courseFaq', 'faqs', 'createdBy', 'updatedBy'])
+        $data['pages'] = Page::with(['parent', 'seo', 'faqs', 'createdBy', 'updatedBy'])
             ->where('status', 0)
             ->orderByDesc('updated_at')
-            ->get()
-            ->each(function (Page $page) {
-                if ($page->seo) {
-                    $page->seo_analysis = app(SeoAnalyzerService::class)->analyzeForListing($page->seo);
-                }
-            });
+            ->get();
 
         return view('admin.pages.disabled-pages')->with($data);
     }
@@ -210,11 +199,7 @@ class PagesController extends Controller
         $schools = School::orderBy('name', 'asc')->get();
         $categories = Category::orderBy('name', 'asc')->get();
 
-        $seo_analysis = $meta
-            ? app(\App\Services\SeoAnalyzerService::class)->analyzeForEdit($meta)
-            : null;
-
-        return view('admin.pages.edit', compact('page', 'meta', 'schools', 'categories', 'allpages', 'category_page_id', 'seo_analysis'));
+        return view('admin.pages.edit', compact('page', 'meta', 'schools', 'categories', 'allpages', 'category_page_id'));
     }
 
     /**
@@ -240,23 +225,11 @@ class PagesController extends Controller
             'parent_id' => 'nullable|integer|exists:pages,id',
             'category_id' => 'nullable|integer|exists:categories,id',
             'status' => 'required|in:0,1',
-            'meta_title' => 'nullable|string|max:' . seo_field_limits()['title_max'],
-            'meta_description' => 'nullable|string|max:' . seo_field_limits()['meta_description_max'],
-            'meta_focus_keyword' => 'nullable|string|max:' . seo_field_limits()['focus_keyword_max'],
-            'meta_keywords' => 'nullable|string|max:' . seo_field_limits()['priority_keywords_max_total'],
-            'meta_additional_keywords' => 'nullable|string|max:' . seo_field_limits()['additional_keywords_max_total'],
-            'meta_thumbnail_path' => 'nullable|string',
-            'meta_thumbnail_file' => 'nullable|file|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
-            'local_meta_thumbnail_input' => 'nullable|file|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
         ]);
 
         if ($validator->fails()) {
             return redirect()->back()->withErrors($validator)->withInput();
         }
-
-        // Handle Meta Information (PagesSEO)
-        $meta = PagesSEO::firstOrNew(['page_id' => $id]);
-        $meta->page_id = $id;
 
         $page->page_name = $request->input('page_name');
         $page->url = $request->input('url');
@@ -275,37 +248,6 @@ class PagesController extends Controller
         if (! pages_status_enabled()) {
             session()->flash('error', 'Page content saved, but Active/Disabled status is not saved until database/sql/add-pages-status-column.sql is run on the server.');
         }
-
-        $meta->title = $request->input('meta_title');
-        $meta->meta_description = $request->input('meta_description');
-        $meta->keywords = $request->input('meta_keywords');
-        $meta->additional_keywords = $request->input('meta_additional_keywords');
-        assign_column_if_exists($meta, 'focus_keyword', $request->input('meta_focus_keyword'));
-        assign_column_if_exists($meta, 'thumbnail_alt', $request->input('meta_thumbnail_alt'));
-
-        if ($request->hasFile('meta_thumbnail_file')) {
-            $file = $request->file('meta_thumbnail_file');
-            $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-            $extension = $file->getClientOriginalExtension();
-            $slug = Str::slug($originalName) . '-' . time();
-            $fileName = $slug . '.' . $extension;
-            $destinationPath = public_path('images/library/');
-            $file->move($destinationPath, $fileName);
-            $meta->thumbnail = '/images/library/' . $fileName;
-        } elseif ($request->hasFile('local_meta_thumbnail_input')) {
-            $file = $request->file('local_meta_thumbnail_input');
-            $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
-            $extension = $file->getClientOriginalExtension();
-            $slug = Str::slug($originalName) . '-' . time();
-            $fileName = $slug . '.' . $extension;
-            $destinationPath = public_path('images/library/');
-            $file->move($destinationPath, $fileName);
-            $meta->thumbnail = '/images/library/' . $fileName;
-        } elseif ($request->filled('meta_thumbnail_path')) {
-            $meta->thumbnail = str_replace('\\', '/', $request->meta_thumbnail_path);
-        }
-
-        $meta->save();
 
         $page->load('sections');
         $existingSections = $page->sections->keyBy('id');

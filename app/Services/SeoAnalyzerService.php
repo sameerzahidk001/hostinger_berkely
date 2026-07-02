@@ -10,6 +10,24 @@ use Illuminate\Support\Str;
 
 class SeoAnalyzerService
 {
+    public function analyzeMetaOnlyForListing(PagesSEO $seo): array
+    {
+        $title = trim((string) $seo->title);
+        $description = trim((string) $seo->meta_description);
+        $focusKeyword = $this->focusKeyword($seo);
+        $previewUrl = $this->resolvePreviewUrl($seo);
+        $urlSlug = $this->resolveUrlSlug($seo);
+
+        $built = app(SeoComprehensiveChecks::class)->buildMetaOnly(
+            $seo,
+            $title,
+            $description,
+            $focusKeyword
+        );
+
+        return $this->packageResult($built, $focusKeyword, $previewUrl, $urlSlug);
+    }
+
     public function analyze(PagesSEO $seo, bool $withLiveVerification = false): array
     {
         $title = trim((string) $seo->title);
@@ -20,95 +38,49 @@ class SeoAnalyzerService
         $content = $this->resolveContent($seo);
         $plainText = $this->stripToText($content);
         $wordCount = $this->wordCount($plainText);
-        $keywordCount = $focusKeyword ? $this->keywordOccurrences($plainText, $focusKeyword) : 0;
-        $density = $wordCount > 0 ? round(($keywordCount / $wordCount) * 100, 2) : 0.0;
+        $priorityKeywords = trim((string) ($seo->keywords ?? ''));
 
-        $basic = [
-            $this->check($focusKeyword !== '', 'Focus keyword is set.'),
-            $this->check(
-                $focusKeyword !== '' && Str::contains(Str::lower($title), Str::lower($focusKeyword)),
-                'Focus keyword used in the SEO title.'
-            ),
-            $this->check(
-                $focusKeyword !== '' && Str::contains(Str::lower($description), Str::lower($focusKeyword)),
-                'Focus keyword used in the meta description.'
-            ),
-            $this->check(
-                $focusKeyword !== '' && Str::contains(Str::lower($urlSlug), Str::lower(str_replace(' ', '-', $focusKeyword))),
-                'Focus keyword used in the URL.'
-            ),
-            $this->check(
-                $focusKeyword === '' || $this->keywordInFirstTenPercent($plainText, $focusKeyword),
-                'Focus keyword appears in the first 10% of the content.'
-            ),
-            $this->check(
-                $focusKeyword === '' || Str::contains(Str::lower($plainText), Str::lower($focusKeyword)),
-                'Focus keyword found in the content.'
-            ),
-            $this->check($wordCount >= 300, 'Content length is ' . number_format($wordCount) . ' words.' . ($wordCount < 300 ? ' (aim for 300+)' : '')),
-        ];
+        $liveHtml = $withLiveVerification ? $this->fetchLivePageHtml($previewUrl) : null;
 
-        $additional = [
-            $this->check(
-                $focusKeyword === '' || $this->keywordInSubheadings($content, $focusKeyword),
-                'Focus keyword found in subheadings (H2/H3).'
-            ),
-            $this->check(strlen($urlSlug) <= 75, 'URL length is ' . strlen($urlSlug) . ' characters.' . (strlen($urlSlug) > 75 ? ' (keep under 75)' : '')),
-            $this->check($this->hasExternalLinks($content), 'Linking to external resources.'),
-            $this->check($this->hasInternalLinks($content), 'Internal links found in content.'),
-            $this->check(
-                $focusKeyword === '' || $this->keywordInImageAlt($content, $focusKeyword),
-                'Image with focus keyword as alt text.'
-            ),
-            $this->check(
-                $focusKeyword === '' || ($density >= 0.5 && $density <= 2.5),
-                'Keyword density is ' . $density . '%' . ($focusKeyword !== '' ? ' (' . $keywordCount . ' times)' : '') . '.'
-            ),
-            $this->check($title !== '' && $description !== '', 'Title and meta description are set.'),
-            $this->check(
-                $title === '' || (strlen($title) >= 30 && strlen($title) <= 60),
-                'SEO title length is ' . strlen($title) . ' characters (ideal 30–60).'
-            ),
-            $this->check(
-                $description === '' || (strlen($description) >= 120 && strlen($description) <= 160),
-                'Meta description length is ' . strlen($description) . ' characters (ideal 120–160).'
-            ),
-        ];
+        $built = app(SeoComprehensiveChecks::class)->build(
+            $seo,
+            $title,
+            $description,
+            $focusKeyword,
+            $priorityKeywords,
+            $urlSlug,
+            $content,
+            $plainText,
+            $wordCount,
+            $liveHtml,
+            $withLiveVerification
+        );
 
-        $technicalAdmin = $this->technicalChecksForListing($seo, $title, $description);
+        return $this->packageResult($built, $focusKeyword, $previewUrl, $urlSlug);
+    }
 
-        $contentChecks = array_merge($basic, $additional);
-        $contentPassed = count(array_filter($contentChecks, fn ($c) => $c['ok']));
-        $contentScore = (int) round(($contentPassed / max(count($contentChecks), 1)) * 100);
-        $adminTechnicalPassed = count(array_filter($technicalAdmin, fn ($c) => $c['ok']));
-        $adminTechnicalScore = (int) round(($adminTechnicalPassed / max(count($technicalAdmin), 1)) * 100);
+    private function packageResult(array $built, string $focusKeyword, string $previewUrl, string $urlSlug): array
+    {
+        $basic = array_merge($built['keyword_optimization'] ?? [], $built['title_meta'] ?? []);
+        $additional = array_merge(
+            $built['content_quality'] ?? [],
+            $built['ux_readability'] ?? [],
+            $built['headings'] ?? [],
+            $built['links'] ?? []
+        );
+        $technical = array_merge(
+            $built['image_seo'] ?? [],
+            $built['technical_seo'] ?? [],
+            $built['performance'] ?? [],
+            $built['mobile_seo'] ?? [],
+            $built['schema_rich'] ?? []
+        );
 
-        // One overall score everywhere (Courses list, Pages list, SEO list, SEO edit header).
-        $score = $this->weightedScore([
-            ['checks' => $basic, 'weight' => 25],
-            ['checks' => $additional, 'weight' => 25],
-            ['checks' => $technicalAdmin, 'weight' => 50],
-        ]);
-
-        $technical = $technicalAdmin;
-        $liveScore = $adminTechnicalScore;
-
-        if ($withLiveVerification) {
-            $technicalLive = $this->technicalChecks($seo, $previewUrl, $title, $description, $focusKeyword);
-            $livePassed = count(array_filter($technicalLive, fn ($c) => $c['ok']));
-            $liveScore = (int) round(($livePassed / max(count($technicalLive), 1)) * 100);
-            $technical = $technicalLive;
-        }
-
-        return [
-            'score' => $score,
-            'label' => $this->scoreLabel($score),
-            'content_score' => $contentScore,
-            'live_score' => $liveScore,
+        return array_merge($built, [
+            'content_score' => $built['score'],
+            'live_score' => null,
             'focus_keyword' => $focusKeyword,
-            'word_count' => $wordCount,
-            'keyword_density' => $density,
-            'keyword_count' => $keywordCount,
+            'keyword_count' => $built['keyword_count'] ?? 0,
             'preview_url' => $previewUrl,
             'url_slug' => $urlSlug,
             'basic' => $basic,
@@ -117,52 +89,35 @@ class SeoAnalyzerService
             'basic_errors' => count(array_filter($basic, fn ($c) => ! $c['ok'])),
             'additional_errors' => count(array_filter($additional, fn ($c) => ! $c['ok'])),
             'technical_errors' => count(array_filter($technical, fn ($c) => ! $c['ok'])),
-            'external_links' => $this->countLinks($content, 'external'),
-            'internal_links' => $this->countLinks($content, 'internal'),
             'schema' => 'Article',
-        ];
+        ]);
     }
 
     /**
-     * Shared score for Courses, Pages, and SEO admin tables.
+     * @deprecated Use analyzeMetaOnlyForListing() on admin tables.
      */
     public function analyzeForListing(PagesSEO $seo, bool $fetchLiveIfMissing = false): array
     {
-        $display = $this->cachedDisplayAnalysis($seo);
-        $liveKey = $this->analysisCacheKey($seo, 'live');
-
-        if (Cache::has($liveKey)) {
-            $liveScore = Cache::get($liveKey)['live_score'] ?? null;
-        } elseif ($fetchLiveIfMissing) {
-            $liveScore = $this->cachedLiveVerification($seo)['live_score'] ?? null;
-        } else {
-            $liveScore = null;
-        }
-
-        return array_merge($display, [
-            'live_score' => $liveScore,
-        ]);
+        return $this->analyzeMetaOnlyForListing($seo);
     }
 
     /**
-     * Edit screen — same overall score as tables, plus live public-page checks below.
+     * Edit screen — full analysis with live public-page checks.
      */
     public function analyzeForEdit(PagesSEO $seo): array
     {
-        $display = $this->cachedDisplayAnalysis($seo);
-        $live = $this->cachedLiveVerification($seo);
-
-        return array_merge($display, [
-            'technical' => $live['technical'],
-            'live_score' => $live['live_score'],
-            'technical_errors' => count(array_filter($live['technical'], fn ($c) => ! $c['ok'])),
-        ]);
+        return Cache::remember(
+            $this->analysisCacheKey($seo, 'full'),
+            now()->addMinutes(30),
+            fn () => $this->analyze($seo, true)
+        );
     }
 
     public function clearAnalysisCache(PagesSEO $seo): void
     {
         Cache::forget($this->analysisCacheKey($seo, 'display'));
         Cache::forget($this->analysisCacheKey($seo, 'live'));
+        Cache::forget($this->analysisCacheKey($seo, 'full'));
         $this->clearLivePageCache($seo);
     }
 

@@ -10,6 +10,7 @@
 /storage/*.key
 /storage/app/public/
 /storage/app/private/
+/storage/app/preserved-public-uploads/
 /storage/debugbar/
 /storage/framework/cache/data/*
 !/storage/framework/cache/data/.gitignore

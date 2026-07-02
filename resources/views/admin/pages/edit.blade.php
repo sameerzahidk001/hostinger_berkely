@@ -17,25 +17,6 @@
             padding: 0;
         }
 
-        #meta_keywords_tagsinput, #meta_additional_keywords_tagsinput {
-            width: 100% !important;
-            height: auto !important;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            min-height: auto !important;
-        }
-
-        #meta_keywords_addTag, #meta_additional_keywords_addTag {
-            flex: 0 0 auto;
-        }
-
-        .tag,
-        #meta_keywords_tag, #meta_additional_keywords_tag {
-            margin: 0px !important;
-            width: auto !important;
-        }
-
         .tags-field .tagsinput {
             width: 100% !important;
             height: auto !important;
@@ -2905,54 +2886,6 @@
                 </div>
 
                 <div class="wrapper wrapper-content animated fadeInRight" style="padding-bottom:0px;">
-                    <div class="ibox float-e-margins" style="margin-bottom: 0;">
-                        <div class="ibox-title">
-                            <h5>SEO Meta</h5>
-                        </div>
-                        <div class="ibox-content">
-                            <div class="row">
-                                @if($meta && $meta->id)
-                                    <div class="col-lg-5">
-                                        @include('admin.seo.partials.seo-score', [
-                                            'page_seo' => $meta,
-                                            'seo_analysis' => $seo_analysis ?? null,
-                                            'fieldNames' => [
-                                                'title' => 'meta_title',
-                                                'meta_description' => 'meta_description',
-                                                'focus_keyword' => 'meta_focus_keyword',
-                                                'keywords' => 'meta_keywords',
-                                                'thumbnail_alt' => 'meta_thumbnail_alt',
-                                            ],
-                                        ])
-                                    </div>
-                                    <div class="col-lg-7">
-                                @else
-                                    <div class="col-lg-12">
-                                @endif
-                                        @include('admin.seo.partials.seo-meta-fields', [
-                                            'seoMeta' => $meta,
-                                            'fieldNames' => [
-                                                'title' => 'meta_title',
-                                                'meta_description' => 'meta_description',
-                                                'focus_keyword' => 'meta_focus_keyword',
-                                                'keywords' => 'meta_keywords',
-                                                'additional_keywords' => 'meta_additional_keywords',
-                                                'thumbnail_path' => 'meta_thumbnail_path',
-                                                'thumbnail_file' => 'meta_thumbnail_file',
-                                                'thumbnail_alt' => 'meta_thumbnail_alt',
-                                                'thumbnail_id_base' => 'meta_thumbnail',
-                                            ],
-                                        ])
-                                @if($meta && $meta->id)
-                                    </div>
-                                @else
-                                    </div>
-                                @endif
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="wrapper wrapper-content animated fadeInRight" style="padding-bottom:0px;">
                     <div class="row">
                         <div class="col-lg-12">
                             <div class="ibox float-e-margins" style="margin-bottom: 0;">
@@ -3168,11 +3101,10 @@
             }
         });
     </script>
-    @include('admin.seo.partials.tags-limits-script')
     <script>
         $(document).ready(function () {
             $('form').on('keydown', function (e) {
-                if (e.key === 'Enter' && !$(e.target).closest('#meta_keywords_tagsinput, #meta_additional_keywords_tagsinput').length) {
+                if (e.key === 'Enter' && !$(e.target).is('textarea')) {
                     e.preventDefault();
                     return false;
                 }
@@ -5429,60 +5361,5 @@
             }
         });
 
-        function showFileModal() {
-            $('#fileModal').modal('show');
-        }
-
-        function pickLocalFile() {
-            $('#fileModal').modal('hide');
-            $('#local_meta_thumbnail_input').click();
-        }
-
-        function uploadLocalFile(input) {
-            const file = input.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function () {
-                    document.getElementById('meta_thumbnail_path').value = file.name;
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
-        function showFileManagerModal() {
-            $('#fileModal').modal('hide');
-            $('#fileModal').on('hidden.bs.modal', function () {
-                $('#fileManagerModal').modal('show');
-                $('#fileManagerModalBody').html('<div class="text-center p-4"><i class="fa fa-spinner fa-spin fa-2x"></i> Loading...</div>');
-                $('#fileManagerModalBody').load("{{ route('file-manager.index', ['type' => 'image']) }}");
-                $(this).off('hidden.bs.modal');
-            });
-        }
-
-        let selectedImageURLs = [];
-
-        function selectImage(url) {
-            const isMultiple = $('#meta_thumbnail_path').prop('multiple');
-            if (isMultiple) {
-                if (!selectedImageURLs.includes(url)) selectedImageURLs.push(url);
-            } else {
-                selectedImageURLs = [url];
-            }
-
-            $('.file-thumbnail').removeClass('selected');
-            selectedImageURLs.forEach(function (selected) {
-                $(`.file-thumbnail[data-url="${selected}"]`).addClass('selected');
-            });
-        }
-
-        function confirmImageSelection() {
-            const isMultiple = $('#meta_thumbnail_path').prop('multiple');
-            if (isMultiple) {
-                $('#meta_thumbnail_path').val(selectedImageURLs.join(','));
-            } else {
-                $('#meta_thumbnail_path').val(selectedImageURLs.length > 0 ? selectedImageURLs[0] : '');
-            }
-            $('#fileManagerModal').modal('hide');
-        }
     </script>
 @endpush

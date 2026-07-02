@@ -14,7 +14,7 @@ class Course extends Model
     protected static function booted(): void
     {
         static::updated(function (Course $course) {
-            if (! request()->is('admin/*') && ! request()->is('course/*')) {
+            if (! audit_user_id()) {
                 return;
             }
 
