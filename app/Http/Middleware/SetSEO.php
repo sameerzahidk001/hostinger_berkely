@@ -265,7 +265,7 @@ class SetSEO
 
         if ($handle) {
             $twitter->setSite($handle);
-            $twitter->setCreator($handle);
+            $twitter->addValue('creator', $handle);
         }
 
         if ($imageUrl !== '') {
