@@ -484,7 +484,7 @@ Route::prefix('user')->middleware(['auth', 'approved', 'redirect.panel.from.stud
 });
 
 Route::get('/approval-notice', function () {
-    return view('student.auth.approval-notice');
+    return view('auth.approval-notice');
 })->name('approval.notice');
 
 Route::get('/instructor/{id}', [WelcomeController::class, 'instructorDetails']);
