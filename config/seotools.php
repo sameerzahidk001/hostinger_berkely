@@ -14,8 +14,8 @@ return [
             'description'  => 'Experience the transformative power of education at our center, where we empower minds to create a better future. Immerse yourself in the academic excellence at Berkeley Hills, located in the heart of California. Our center offers a dynamic learning environment, fostering innovation and critical thinking. Join us and be part of a community dedicated to making a difference in the world. Your journey to a brighter future starts here.', // set false to total remove
             'separator'    => ' - ',
             'keywords'     => ["BERKELEY SCHOOL OF BUSINESS, ARTS & SCIENCES", "professional certification"],
-            'canonical'    => false, // Set to null or 'full' to use Url::full(), set to 'current' to use Url::current(), set false to total remove
-            'robots'       => false, // Set to 'all', 'none' or any combination of index/noindex and follow/nofollow
+            'canonical'    => 'current', // Set to null or 'full' to use Url::full(), set to 'current' to use Url::current(), set false to total remove
+            'robots'       => 'index, follow', // Set to 'all', 'none' or any combination of index/noindex and follow/nofollow
         ],
         /*
          * Webmaster tags are always added.
@@ -38,9 +38,9 @@ return [
         'defaults' => [
             'title'       => 'BERKELEY SCHOOL OF BUSINESS, ARTS & SCIENCES', // set false to total remove
             'description' => 'Experience the transformative power of education at our center, where we empower minds to create a better future. Immerse yourself in the academic excellence at Berkeley Hills, located in the heart of California. Our center offers a dynamic learning environment, fostering innovation and critical thinking. Join us and be part of a community dedicated to making a difference in the world. Your journey to a brighter future starts here.', // set false to total remove
-            'url'         => false, // Set null for using Url::current(), set false to total remove
-            'type'        => false,
-            'site_name'   => false,
+            'url'         => null, // Set null for using Url::current(), set false to total remove
+            'type'        => 'website',
+            'site_name'   => 'BERKELEY SCHOOL OF BUSINESS, ARTS & SCIENCES',
             'images'      => [],
         ],
     ],
@@ -49,8 +49,7 @@ return [
          * The default values to be used by the twitter cards generator.
          */
         'defaults' => [
-            //'card'        => 'summary',
-            //'site'        => '@LuizVinicius73',
+            'card' => 'summary_large_image',
         ],
     ],
     'json-ld' => [
@@ -60,7 +59,7 @@ return [
         'defaults' => [
             'title'       => 'BERKELEY SCHOOL OF BUSINESS, ARTS & SCIENCES', // set false to total remove
             'description' => 'Experience the transformative power of education at our center, where we empower minds to create a better future. Immerse yourself in the academic excellence at Berkeley Hills, located in the heart of California. Our center offers a dynamic learning environment, fostering innovation and critical thinking. Join us and be part of a community dedicated to making a difference in the world. Your journey to a brighter future starts here.', // set false to total remove
-            'url'         => false, // Set to null or 'full' to use Url::full(), set to 'current' to use Url::current(), set false to total remove
+            'url'         => null, // Set to null or 'full' to use Url::full(), set to 'current' to use Url::current(), set false to total remove
             'type'        => 'WebPage',
             'images'      => [],
         ],

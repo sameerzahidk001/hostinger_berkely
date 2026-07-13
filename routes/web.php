@@ -23,6 +23,7 @@ use App\Http\Controllers\Instructor\InstructorAuthController;
 use App\Http\Controllers\Admin\RolePermissionController;
 use App\Http\Controllers\WelcomeController;
 use App\Http\Controllers\FrontendController;
+use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\FrontendCourseController;
 use App\Http\Controllers\UserBehaviorController;
 use App\Http\Controllers\AnalyticsController;
@@ -51,6 +52,8 @@ use Illuminate\Support\Facades\Artisan;
 Route::view('/sample', 'sample');
 Route::view('/test', 'test');
 
+Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
+
 // Route::view('/visa', 'visa');
 Route::get('/', [WelcomeController::class, 'index'])->name('welcome');
 Route::get('/search', [WelcomeController::class, 'search'])->name('search');
@@ -72,7 +75,7 @@ Route::delete('/cart/{id}', [CartController::class, 'destroy'])->name('cart.dest
 Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index')->middleware(['auth', 'verified', 'approved']);
 Route::post('/checkout/place-order', [CheckoutController::class, 'store'])->name('checkout.store')->middleware(['auth', 'verified', 'approved']);
 
-Route::controller(FrontendController::class)->middleware('set.seo')->group(function () {
+Route::controller(FrontendController::class)->group(function () {
     // Cart & CHECKOUT routes
     Route::get('/optimize', 'optimize');
     //Route::get('/courses', 'courses')->name('courses');

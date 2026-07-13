@@ -1,2 +1,13 @@
 User-agent: *
-Disallow:
+Disallow: /admin
+Disallow: /user
+Disallow: /instructor
+Disallow: /login
+Disallow: /register
+Disallow: /cart
+Disallow: /checkout
+Disallow: /approval-notice
+
+Allow: /
+
+Sitemap: https://eduberkeley.com/sitemap.xml

@@ -2,61 +2,137 @@
 
 namespace App\Http\Middleware;
 
-use Closure;
-use Illuminate\Http\Request;
-use Symfony\Component\HttpFoundation\Response;
+use App\Models\Course;
+use App\Models\Page;
+use App\Models\SiteSettings;
 use Artesaos\SEOTools\Facades\SEOTools;
-use App\Models\{Page,Course, SiteSettings};
+use Closure;
 use Illuminate\Support\Str;
 
 class SetSEO
 {
+    /** Paths that should not receive public SEO tags. */
+    private array $skipPrefixes = [
+        'admin',
+        'user',
+        'instructor',
+        'login',
+        'register',
+        'password',
+        'email',
+        'cart',
+        'checkout',
+        'sanctum',
+        'api',
+        'approval-notice',
+        'optimize',
+        'sitemap.xml',
+        'robots.txt',
+    ];
+
     public function handle($request, Closure $next)
     {
         $currentUrl = trim($request->path(), '/');
 
-        if (Str::startsWith($currentUrl, 'course/')) {
-            $course_slug = Str::after($currentUrl, 'course/');
-            $seoData = Course::where('slug', $course_slug)->with('seo')->first();
-        } else {
-            $seoData = $this->resolvePageSeo($currentUrl);
+        if ($this->shouldSkip($currentUrl)) {
+            return $next($request);
         }
 
-        if (!$seoData) {
-            $defaultSlug = 'general'; // Set your default slug here
-            $seoData = Page::where('url', $defaultSlug)->with('seo')->first();
+        $seoOwner = $this->resolveSeoOwner($currentUrl);
+        $seo = $seoOwner?->seo;
+
+        if (! $seo) {
+            return $next($request);
         }
 
-        if ($seoData && $seoData->seo) {
-            // Set basic SEO meta tags
-            SEOTools::setTitle($seoData->seo->title);
-            SEOTools::setDescription($seoData->seo->meta_description);
-            SEOTools::setCanonical(url()->current());
-            SEOTools::metatags()->setKeywords($seoData->seo->keywords);  // Add keywords
+        $canonical = url()->current();
+        $title = (string) ($seo->title ?? '');
+        $description = (string) ($seo->meta_description ?? '');
+        $image = $this->resolveImage($seo->thumbnail ?? null);
+        $isCourse = $seoOwner instanceof Course;
+        $robots = $this->resolveRobots($seoOwner);
 
-            // Open Graph (Facebook, LinkedIn, etc.)
-            SEOTools::opengraph()->setTitle($seoData->seo->title);
-            SEOTools::opengraph()->setDescription($seoData->seo->meta_description);
-            SEOTools::opengraph()->setUrl(url()->current());
-            SEOTools::opengraph()->addImage(asset($seoData->seo->thumbnail)); // Full URL for the image
-            SEOTools::opengraph()->addProperty('type', 'article');
+        SEOTools::setTitle($title);
+        SEOTools::setDescription($description);
+        SEOTools::setCanonical($canonical);
+        SEOTools::metatags()->setKeywords($seo->keywords);
+        SEOTools::metatags()->setRobots($robots);
 
-            // Twitter Cards
-            SEOTools::twitter()->setTitle($seoData->seo->title);
-            SEOTools::twitter()->setDescription($seoData->seo->meta_description);
-            SEOTools::twitter()->setUrl(url()->current());
-            SEOTools::twitter()->setImage(asset($seoData->seo->thumbnail));   // Full URL for Twitter
-            SEOTools::twitter()->setSite('@your_twitter_handle');  // Replace with your Twitter handle
+        SEOTools::opengraph()->setTitle($title);
+        SEOTools::opengraph()->setDescription($description);
+        SEOTools::opengraph()->setUrl($canonical);
+        SEOTools::opengraph()->addProperty('type', $isCourse ? 'website' : 'article');
+        SEOTools::opengraph()->addProperty('site_name', config('app.name', 'BERKELEYME'));
+        if ($image) {
+            SEOTools::opengraph()->addImage($image);
+        }
 
-            // Pinterest Rich Pins
-            SEOTools::metatags()->addMeta('pinterest-rich-pin', 'true');
+        SEOTools::twitter()->setType('summary_large_image');
+        SEOTools::twitter()->setTitle($title);
+        SEOTools::twitter()->setDescription($description);
+        SEOTools::twitter()->setUrl($canonical);
+        if ($image) {
+            SEOTools::twitter()->setImage($image);
+        }
 
-            // WhatsApp Share Link (WhatsApp does not use specific meta tags)
-            $whatsappUrl = "https://wa.me/?text=" . urlencode($seoData->seo->title . " - " . url()->current());
-            SEOTools::opengraph()->addProperty('whatsapp-share-url', $whatsappUrl);
+        SEOTools::jsonLd()->setTitle($title);
+        SEOTools::jsonLd()->setDescription($description);
+        SEOTools::jsonLd()->setType($isCourse ? 'Course' : 'WebPage');
+        SEOTools::jsonLd()->setUrl($canonical);
+        if ($image) {
+            SEOTools::jsonLd()->addImage($image);
+        }
+
+        SEOTools::jsonLdMulti()->newJsonLd();
+        SEOTools::jsonLdMulti()->setType('Organization');
+        SEOTools::jsonLdMulti()->setTitle(config('app.name', 'Berkeley School of Business, Arts & Sciences'));
+        SEOTools::jsonLdMulti()->setUrl(url('/'));
+        SEOTools::jsonLdMulti()->addValue('name', config('app.name', 'Berkeley School of Business, Arts & Sciences'));
+        $logo = SiteSettings::value('logo');
+        if ($logo) {
+            SEOTools::jsonLdMulti()->addImage(media_url($logo) ?? asset('images/' . ltrim((string) $logo, '/')));
         }
 
         return $next($request);
+    }
+
+    private function shouldSkip(string $path): bool
+    {
+        if ($path === '') {
+            return false;
+        }
+
+        foreach ($this->skipPrefixes as $prefix) {
+            if ($path === $prefix || Str::startsWith($path, $prefix . '/')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function resolveSeoOwner(string $path): Page|Course|null
+    {
+        if (Str::startsWith($path, 'course/')) {
+            $courseSlug = Str::after($path, 'course/');
+
+            return Course::where('slug', $courseSlug)->with('seo')->first();
+        }
+
+        if ($path === '') {
+            $homeId = SiteSettings::value('home');
+
+            return $homeId
+                ? Page::with('seo')->find($homeId)
+                : null;
+        }
+
+        $page = $this->resolvePageSeo($path);
+        if ($page) {
+            return $page;
+        }
+
+        return Page::where('url', 'general')->with('seo')->first();
     }
 
     private function resolvePageSeo(string $path): ?Page
@@ -72,8 +148,34 @@ class SetSEO
                     return $page;
                 }
             }
+
+            $leaf = basename($path);
+            $page = Page::where('url', $leaf)->with('seo')->first();
+            if ($page) {
+                return $page;
+            }
         }
 
         return Page::where('url', $path)->with('seo')->first();
+    }
+
+    private function resolveImage(mixed $thumbnail): ?string
+    {
+        if (! is_string($thumbnail) || trim($thumbnail) === '') {
+            return null;
+        }
+
+        return media_url($thumbnail);
+    }
+
+    private function resolveRobots(Page|Course $owner): string
+    {
+        if ($owner instanceof Page && pages_status_enabled()) {
+            if ((int) normalize_page_status($owner->status ?? 1) === 0) {
+                return 'noindex, follow';
+            }
+        }
+
+        return 'index, follow';
     }
 }

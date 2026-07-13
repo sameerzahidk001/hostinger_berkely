@@ -38,6 +38,8 @@ class Kernel extends HttpKernel
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\CheckIfUserApproved::class,
             \App\Http\Middleware\LogPageView::class,
+            // Public SEO tags (canonical, robots, OG, JSON-LD) for homepage + CMS pages
+            \App\Http\Middleware\SetSEO::class,
         ],
 
         'api' => [
