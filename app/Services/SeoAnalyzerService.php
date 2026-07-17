@@ -318,13 +318,16 @@ class SeoAnalyzerService
         }
 
         if ($course->courseFaq && $course->courseFaq->isNotEmpty()) {
-            $faqParts = ['<section class="faq">'];
+            $faqParts = ['<section class="faq" id="faq"><h2>FAQ</h2>'];
             foreach ($course->courseFaq as $faq) {
                 $faqParts[] = '<h3>' . e((string) $faq->title) . '</h3>';
                 $faqParts[] = (string) ($faq->short_description ?? '');
             }
             $faqParts[] = '</section>';
             $chunks[] = implode(' ', $faqParts);
+        } elseif ((int) $course->faq_section === 1) {
+            // Keep FAQ signal when section is enabled even if questions are empty in CMS.
+            $chunks[] = '<section class="faq" id="faq"><h2>FAQ</h2></section>';
         }
 
         foreach ([
@@ -352,7 +355,10 @@ class SeoAnalyzerService
             ['enabled' => (int) $course->career_path_section === 1, 'text' => $label?->career_path_heading ?? 'Career Path'],
             ['enabled' => (int) $course->success_stories === 1, 'text' => $label?->success_stories ?? 'Success Stories'],
             ['enabled' => (int) $course->faq_section === 1 && $course->courseFaq?->isNotEmpty(), 'text' => $label?->faq_heading ?? ('FAQ: ' . $course->title)],
-            ['enabled' => ! empty($course->offered_by), 'text' => $label?->offered_by ?? 'Offered By', 'tag' => 'h3'],
+            ['enabled' => ! empty($course->offered_by['institute'] ?? null), 'text' => $label?->offered_by ?? 'Offered By', 'tag' => 'h3'],
+            ['enabled' => ! empty($course->offered_by['head_office'] ?? null), 'text' => $label?->head_office ?? 'Head Office', 'tag' => 'h3'],
+            ['enabled' => ! empty($course->offered_by['members'] ?? null), 'text' => $label?->members ?? 'Members', 'tag' => 'h3'],
+            ['enabled' => ! empty($course->offered_by['founded_in'] ?? null), 'text' => $label?->founded_in ?? 'Founded In', 'tag' => 'h3'],
             ['enabled' => ! empty($course->vision_and_mission), 'text' => $label?->vission_mission ?? 'Vision & Mission', 'tag' => 'h3'],
         ];
 

@@ -271,7 +271,9 @@ class SeoComprehensiveChecks
         $hasLists = (bool) preg_match('/<(ul|ol)\b/i', $html);
         $hasTable = (bool) preg_match('/<table\b/i', $html);
         $hasQuote = (bool) preg_match('/<(blockquote|q)\b/i', $html);
-        $hasFaq = (bool) preg_match('/\bfaq\b/i', $html);
+        $hasFaq = (bool) preg_match('/\b(faq|faqs|frequently\s+asked)\b/i', $html)
+            || (bool) preg_match('/id=["\']faq["\']/i', $html)
+            || (bool) preg_match('/class=["\'][^"\']*\bfaq\b/i', $html);
         $hasToc = (bool) preg_match('/\b(table of contents|toc|on this page)\b/i', $html)
             || (bool) preg_match('/<nav[^>]+class=["\'][^"\']*toc/i', $html);
 
@@ -284,7 +286,7 @@ class SeoComprehensiveChecks
             $this->check($wordCount < 800 || $hasToc, 'Table of contents detected for long content (or page under 800 words).'),
             $this->check($hasTable || $wordCount < 600, 'Tables detected in content (if applicable).'),
             $this->check($hasQuote || $wordCount < 300, 'Quotes or blockquotes detected.'),
-            $this->check($hasFaq || ! ($seo->course_id && $wordCount < 300), 'FAQ content detected.'),
+            $this->check($hasFaq || ! $seo->course_id, 'FAQ content detected.'),
             $this->check($seo->updated_at !== null, 'Content freshness: updated date available.'),
         ];
     }
