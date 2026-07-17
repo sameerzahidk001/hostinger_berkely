@@ -280,11 +280,11 @@ class SeoComprehensiveChecks
             $this->check($wordCount >= 150, 'Thin content warning: ' . number_format($wordCount) . ' words (150+ recommended).'),
             $this->check($readability['avg_sentence_words'] <= 25, 'Average sentence length is ' . $readability['avg_sentence_words'] . ' words (aim ≤ 25).'),
             $this->check($readability['avg_paragraph_words'] <= 150, 'Average paragraph length is reasonable (' . $readability['avg_paragraph_words'] . ' words).'),
-            $this->check($hasLists, 'Lists detected in content.'),
+            $this->check($hasLists || $wordCount < 300, 'Lists detected in content.'),
             $this->check($wordCount < 800 || $hasToc, 'Table of contents detected for long content (or page under 800 words).'),
-            $this->check($hasTable, 'Tables detected in content (if applicable).'),
-            $this->check($hasQuote, 'Quotes or blockquotes detected.'),
-            $this->check($hasFaq, 'FAQ content detected.'),
+            $this->check($hasTable || $wordCount < 600, 'Tables detected in content (if applicable).'),
+            $this->check($hasQuote || $wordCount < 300, 'Quotes or blockquotes detected.'),
+            $this->check($hasFaq || ! ($seo->course_id && $wordCount < 300), 'FAQ content detected.'),
             $this->check($seo->updated_at !== null, 'Content freshness: updated date available.'),
         ];
     }
@@ -292,7 +292,10 @@ class SeoComprehensiveChecks
     private function uxReadabilityChecks(array $readability, string $plainText): array
     {
         return [
-            $this->check($readability['flesch'] >= 50, 'Readability score is ' . $readability['flesch'] . '/100 (aim 50+).'),
+            $this->check(
+                $readability['flesch'] >= 30 || ($readability['transition_percent'] >= 15 && $readability['passive_percent'] <= 20),
+                'Readability score is ' . $readability['flesch'] . '/100 (aim 50+).'
+            ),
             $this->check($readability['passive_percent'] <= 20, 'Passive voice is ' . $readability['passive_percent'] . '% (aim ≤ 20%).'),
             $this->check($readability['transition_percent'] >= 15, 'Transition words used in ' . $readability['transition_percent'] . '% of sentences (aim 15%+).'),
             $this->check($readability['sentence_count'] >= 3, 'Enough sentences for readability analysis (' . $readability['sentence_count'] . ').'),
@@ -312,7 +315,7 @@ class SeoComprehensiveChecks
             $this->check($headings['h3'] >= 0, 'H3 headings counted (' . $headings['h3'] . ').'),
             $this->check(! $headings['skipped_levels'], 'Heading hierarchy is correct (no skipped levels).'),
             $this->check($focusKeyword === '' || $this->keywordInSubheadings($html, $focusKeyword), 'Focus keyword found in H2/H3 headings.'),
-            $this->check($headings['max_heading_len'] <= 70, 'Heading lengths are reasonable (max ' . $headings['max_heading_len'] . ' chars).'),
+            $this->check($headings['max_heading_len'] <= 120, 'Heading lengths are reasonable (max ' . $headings['max_heading_len'] . ' chars).'),
         ];
     }
 

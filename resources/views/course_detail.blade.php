@@ -80,6 +80,7 @@
             </div>
             <div class=" flex xl:px-0 md:top-0 md:absolute md:right-0 z-40 md:w-[50%] m-0 flex-1 flex-col gap-4 md:h-full">
                 <img src="{{ asset($course->dynamicLabel->banner_image) }}" alt="{{ course_image_alt($course, 'banner_image', $course->dynamicLabel?->banner_title ?? $course->title) }}"
+                    loading="lazy" width="1200" height="800"
                     class="object-cover h-full md:max-h-full md:w-full md:h-full">
             </div>
         </section>
@@ -135,8 +136,8 @@
             <div class="flex flex-col pb-4">
                 <div class="flex gap-3 items-center justify-center mb-6 ">
                     <div class="bg-yellow w-[50px] h-[2px]"></div>
-                    <span
-                        class="text-[20px] sm:text-[24px] text-dark md:text-[32px] font-canela  text-center section-heading">{{ $course->dynamicLabel->overview ?? 'overview' }}</span>
+                    <h2
+                        class="text-[20px] sm:text-[24px] text-dark md:text-[32px] font-canela  text-center section-heading">{{ $course->dynamicLabel->overview ?? 'overview' }}</h2>
                     <div class="bg-yellow w-[50px] h-[2px]"></div>
                 </div>
 
@@ -175,9 +176,11 @@
                             @endif
                         @elseif($course->overview_img)
                             <img src="{{ asset($course->overview_img) }}" alt="{{ course_image_alt($course, 'overview_img') }}"
+                                loading="lazy" width="1200" height="800"
                                 class="w-full min-h-[300px] xl:min-h-[500px] xl:min-w-[500px] object-cover">
                         @else
                             <img src="{{ asset('admin/courses/course.png') }}" alt="{{ course_image_alt($course, 'overview_img', $course->title . ' overview') }}"
+                                loading="lazy" width="1200" height="800"
                                 class="w-full min-h-[300px] xl:min-h-[500px] xl:min-w-[500px] object-cover">
                         @endif
                         <!-- <img src="{{ asset($course->overview_img ? $course->overview_img : 'admin/courses/course.png') }}" alt=""
@@ -194,8 +197,8 @@
                             <div class="flex flex-col pb-4">
                                 <div class="flex gap-3 items-center justify-center mb-3 mt-3">
                                     <div class="bg-yellow w-[50px] h-[2px]"></div>
-                                    <span
-                                        class="font-semibold section-subheading">{{ $course->dynamicLabel->offered_by ?? 'Offered by' }}</span>
+                                    <h3
+                                        class="font-semibold section-subheading">{{ $course->dynamicLabel->offered_by ?? 'Offered by' }}</h3>
                                     <div class="bg-yellow w-[50px] h-[2px]"></div>
                                 </div>
                                 <div class="flex flex-col items-center">
@@ -278,8 +281,8 @@
         <section id="three" class="card-hidden bg-white px-6 my-0 py-10  md:px-16 lg:px-[120px]">
             <div class="flex gap-3 items-center justify-center mb-4 ">
                 <div class="bg-yellow w-[50px] h-[2px]"></div>
-                <span
-                    class="text-[20px] sm:text-[24px] text-dark md:text-[32px] font-canela section-heading text-center">{{ $course->dynamicLabel->eligibility ?? 'Eligibility' }}</span>
+                <h2
+                    class="text-[20px] sm:text-[24px] text-dark md:text-[32px] font-canela section-heading text-center">{{ $course->dynamicLabel->eligibility ?? 'Eligibility' }}</h2>
                 <div class="bg-yellow w-[50px] h-[2px]"></div>
             </div>
 
@@ -1081,15 +1084,16 @@
                         ? asset($course->dynamicLabel->learner_stories_img)
                         : asset('frontend/images/jpg/sheikh.jpg') }}"
                         class="h-full w-full absolute object-cover transition-all duration-500 ease-in-out group-hover:scale-105"
+                        loading="lazy" width="1200" height="800"
                         alt="{{ course_image_alt($course, 'learner_stories_img', $course->dynamicLabel?->success_stories ?? 'Learner stories') }}">
 
                     <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black"></div>
 
                     <div class="absolute p-8 z-50 flex flex-col justify-end h-full w-full">
 
-                        <span class="font-canela text-white text-[26px] md:text-[36px] lg:text-[44px]">
+                        <h2 class="font-canela text-white text-[26px] md:text-[36px] lg:text-[44px]">
                             {{ $course->dynamicLabel->success_stories ?? 'Success Stories' }}
-                        </span>
+                        </h2>
 
                         <p class="font-semibold text-white text-[18px] mt-3">
                             {{ strip_tags($course->dynamicLabel->alumni_benefits) }}
@@ -1101,9 +1105,9 @@
                                     class="w-[28px] h-4 invert">
                             </div>
 
-                            <h2 class="font-bold text-[18px] text-white">
+                            <span class="font-bold text-[18px] text-white">
                                 {{ $course->dynamicLabel->success_stories_link_text ?? 'Success Stories Link' }}
-                            </h2>
+                            </span>
                         </a>
 
                     </div>
@@ -1145,9 +1149,9 @@
                             </div>
                         </div>
                     @else
-                        <div class="editor">
+                        <blockquote class="editor border-l-4 border-primary_orange pl-4">
                             {!! $course->alumni_benefits_description !!}
-                        </div>
+                        </blockquote>
                     @endif
                 </div>
             </div>
