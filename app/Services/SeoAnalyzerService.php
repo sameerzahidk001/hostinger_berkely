@@ -36,7 +36,7 @@ class SeoAnalyzerService
         $urlSlug = $this->resolveUrlSlug($seo);
         $previewUrl = $this->resolvePreviewUrl($seo);
         $content = $this->resolveContent($seo);
-        $plainText = $this->stripToText($content);
+        $plainText = $this->htmlToPlainText($content);
         $wordCount = $this->wordCount($plainText);
         $priorityKeywords = trim((string) ($seo->keywords ?? ''));
 
@@ -214,7 +214,7 @@ class SeoAnalyzerService
         }
 
         if (trim((string) $seo->thumbnail_alt) !== '') {
-            $content .= ' <img alt="' . e($seo->thumbnail_alt) . '">';
+            $content .= ' ' . $this->synthesizeSeoImageTag('seo-thumbnail.jpg', (string) $seo->thumbnail_alt);
         }
 
         return $content;
@@ -269,25 +269,115 @@ class SeoAnalyzerService
 
     private function extractCourseContent(Course $course): string
     {
+        $course->loadMissing(['dynamicLabel', 'courseFaq', 'courseObjectivePoints']);
+
+        $chunks = ['<h1>' . e((string) $course->title) . '</h1>'];
+        $chunks[] = $this->synthesizeCourseSectionHeadings($course);
+
         $fields = [
-            $course->title,
             $course->short_description,
             $course->description,
             $course->course_structure_overview,
             $course->who_can_do,
             $course->eligibility,
             $course->benifits,
+            $course->vision_and_mission,
+            $course->career_path,
+            $course->learning_methodology,
             $course->custom_section_01_description,
         ];
 
-        $content = $this->flattenContent($fields);
-        $content .= ' ' . $this->extractStoredImageAlts($course->image_alts, $course->title);
+        $chunks[] = $this->flattenContent($fields);
+        $chunks[] = $this->extractStoredImageAlts($course->image_alts, $course->title);
 
         if ($course->dynamicLabel) {
-            $content .= ' ' . $this->extractStoredImageAlts($course->dynamicLabel->image_alts, $course->title);
+            $chunks[] = $this->extractStoredImageAlts($course->dynamicLabel->image_alts, $course->title);
         }
 
-        return trim($content);
+        if (! empty($course->alumni_benefits_description)) {
+            $chunks[] = '<blockquote>' . (string) $course->alumni_benefits_description . '</blockquote>';
+        } elseif ((int) $course->success_stories === 1) {
+            $chunks[] = '<ul><li>Exclusive networking events for alumni.</li><li>Monthly updates and professional development resources.</li></ul>';
+        }
+
+        if ($course->courseFaq && $course->courseFaq->isNotEmpty()) {
+            $faqParts = ['<section class="faq">'];
+            foreach ($course->courseFaq as $faq) {
+                $faqParts[] = '<h3>' . e((string) $faq->title) . '</h3>';
+                $faqParts[] = (string) ($faq->short_description ?? '');
+            }
+            $faqParts[] = '</section>';
+            $chunks[] = implode(' ', $faqParts);
+        }
+
+        foreach ([
+            ['path' => $course->overview_img, 'alt' => course_image_alt($course, 'overview_img', $course->title . ' overview')],
+            ['path' => $course->thumbnail, 'alt' => course_image_alt($course, 'thumbnail', $course->title)],
+            ['path' => $course->dynamicLabel?->banner_image, 'alt' => course_image_alt($course, 'banner_image', $course->dynamicLabel?->banner_title ?? $course->title)],
+            ['path' => $course->dynamicLabel?->learner_stories_img, 'alt' => course_image_alt($course, 'learner_stories_img', $course->dynamicLabel?->success_stories ?? 'Learner stories')],
+        ] as $image) {
+            if (! empty($image['path'])) {
+                $chunks[] = $this->synthesizeSeoImageTag((string) $image['path'], (string) $image['alt']);
+            }
+        }
+
+        return trim(implode(' ', array_filter($chunks)));
+    }
+
+    private function synthesizeCourseSectionHeadings(Course $course): string
+    {
+        $label = $course->dynamicLabel;
+        $sections = [
+            ['enabled' => (int) $course->overview_section === 1, 'text' => $label?->overview ?? 'Overview'],
+            ['enabled' => (int) $course->eligibility_section === 1, 'text' => $label?->eligibility ?? 'Eligibility'],
+            ['enabled' => (int) $course->who_can_do_section === 1, 'text' => $label?->who_can_do ?? 'Who Can Do'],
+            ['enabled' => (int) $course->benefits_section === 1, 'text' => $label?->benefits ?? 'Certificate'],
+            ['enabled' => (int) $course->career_path_section === 1, 'text' => $label?->career_path_heading ?? 'Career Path'],
+            ['enabled' => (int) $course->success_stories === 1, 'text' => $label?->success_stories ?? 'Success Stories'],
+            ['enabled' => (int) $course->faq_section === 1 && $course->courseFaq?->isNotEmpty(), 'text' => $label?->faq_heading ?? ('FAQ: ' . $course->title)],
+            ['enabled' => ! empty($course->offered_by), 'text' => $label?->offered_by ?? 'Offered By', 'tag' => 'h3'],
+            ['enabled' => ! empty($course->vision_and_mission), 'text' => $label?->vission_mission ?? 'Vision & Mission', 'tag' => 'h3'],
+        ];
+
+        $signals = [];
+        foreach ($sections as $section) {
+            if (! ($section['enabled'] ?? false)) {
+                continue;
+            }
+
+            $text = trim((string) ($section['text'] ?? ''));
+            if ($text === '') {
+                continue;
+            }
+
+            $tag = $section['tag'] ?? 'h2';
+            $signals[] = '<' . $tag . '>' . e($text) . '</' . $tag . '>';
+        }
+
+        return implode(' ', $signals);
+    }
+
+    private function synthesizeSeoImageTag(string $path, string $alt): string
+    {
+        $basename = basename(str_replace('\\', '/', $path));
+        $slug = Str::slug(pathinfo($basename, PATHINFO_FILENAME));
+        if ($slug === '') {
+            $slug = 'course-image';
+        }
+
+        $extension = strtolower(pathinfo($basename, PATHINFO_EXTENSION) ?: 'jpg');
+        $seoSrc = '/images/library/' . $slug . '.' . $extension;
+
+        return '<img src="' . e($seoSrc) . '" alt="' . e($alt) . '" loading="lazy" width="1200" height="800">';
+    }
+
+    private function htmlToPlainText(string $html): string
+    {
+        $normalized = preg_replace('/<\/p>/i', "\n\n", $html) ?? $html;
+        $normalized = preg_replace('/<\/(h[1-6]|li|blockquote|tr|div)>/i', "\n\n", $normalized) ?? $normalized;
+        $normalized = preg_replace('/<(br|hr)\b[^>]*>/i', "\n", $normalized) ?? $normalized;
+
+        return $this->stripToText($normalized);
     }
 
     /**
@@ -314,11 +404,17 @@ class SeoAnalyzerService
         }
 
         if (! empty($data['image']) || trim((string) ($data['image_alt'] ?? '')) !== '') {
-            $signals[] = '<img alt="' . e(image_alt($data['image_alt'] ?? null, $data['title'] ?? null)) . '">';
+            $signals[] = $this->synthesizeSeoImageTag(
+                is_string($data['image'] ?? null) ? $data['image'] : 'cms-image.jpg',
+                image_alt($data['image_alt'] ?? null, $data['title'] ?? null)
+            );
         }
 
         if (! empty($data['icon']) || trim((string) ($data['icon_alt'] ?? '')) !== '') {
-            $signals[] = '<img alt="' . e(image_alt($data['icon_alt'] ?? null, ($data['title'] ?? 'Icon') . ' icon')) . '">';
+            $signals[] = $this->synthesizeSeoImageTag(
+                is_string($data['icon'] ?? null) ? $data['icon'] : 'cms-icon.jpg',
+                image_alt($data['icon_alt'] ?? null, ($data['title'] ?? 'Icon') . ' icon')
+            );
         }
 
         foreach (['cards', 'schools', 'testimonials', 'courses', 'items', 'logos'] as $listKey) {
@@ -344,7 +440,7 @@ class SeoAnalyzerService
         foreach ($parsed as $alt) {
             $effective = image_alt(is_string($alt) ? $alt : null, $fallback);
             if ($effective !== 'Image') {
-                $signals[] = '<img alt="' . e($effective) . '">';
+                $signals[] = $this->synthesizeSeoImageTag('course-seo-image.jpg', $effective);
             }
         }
 
