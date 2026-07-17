@@ -262,8 +262,8 @@
                 @if (!empty($course->vision_and_mission))
                     <div class="flex gap-3 items-center justify-center mt-6 mb-3 ">
                         <div class="bg-yellow w-[50px] h-[2px]"></div>
-                        <span
-                            class="font-semibold section-subheading">{{ $course->dynamicLabel->vission_mission ?? 'Vision & mission' }}</span>
+                        <h3
+                            class="font-semibold section-subheading">{{ $course->dynamicLabel->vission_mission ?? 'Vision & mission' }}</h3>
                         <div class="bg-yellow w-[50px] h-[2px]"></div>
                     </div>
                     <div class="flex flex-col items-center">
@@ -301,8 +301,8 @@
         <section class="card-hidden bg-[#000435] px-6 pb-0 py-8 mb-12 md:px-16 lg:px-[72px]">
             <div class="flex gap-3 items-center justify-center mb-3 ">
                 <div class="bg-yellow w-[50px] h-[2px]"></div>
-                <span
-                    class="text-[20px] sm:text-[24px] md:text-[32px] font-canela text-white section-heading text-center">{{ $course->dynamicLabel->who_can_do ?? 'Who can do?' }}</span>
+                <h2
+                    class="text-[20px] sm:text-[24px] md:text-[32px] font-canela text-white section-heading text-center">{{ $course->dynamicLabel->who_can_do ?? 'Who can do?' }}</h2>
                 <div class="bg-yellow w-[50px] h-[2px]"></div>
             </div>
 
