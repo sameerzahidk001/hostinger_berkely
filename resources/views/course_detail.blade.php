@@ -213,8 +213,8 @@
                             <div class="flex flex-col pb-4">
                                 <div class="flex gap-3 items-center justify-center mb-3 ">
                                     <div class="bg-yellow w-[50px] h-[2px]"></div>
-                                    <span
-                                        class="font-semibold section-subheading">{{ $course->dynamicLabel->head_office ?? 'Head office' }}</span>
+                                    <h3
+                                        class="font-semibold section-subheading">{{ $course->dynamicLabel->head_office ?? 'Head office' }}</h3>
                                     <div class="bg-yellow w-[50px] h-[2px]"></div>
                                 </div>
                                 <div class="flex flex-col items-center">
@@ -228,8 +228,8 @@
                             <div class="flex flex-col pb-4">
                                 <div class="flex gap-3 items-center justify-center mb-3 ">
                                     <div class="bg-yellow w-[50px] h-[2px]"></div>
-                                    <span
-                                        class="font-semibold section-subheading">{{ $course->dynamicLabel->members ?? 'Members' }}</span>
+                                    <h3
+                                        class="font-semibold section-subheading">{{ $course->dynamicLabel->members ?? 'Members' }}</h3>
                                     <div class="bg-yellow w-[50px] h-[2px]"></div>
                                 </div>
                                 <div class="flex flex-col items-center">
@@ -242,8 +242,8 @@
                         @if (!empty($course->offered_by['founded_in']))
                             <div class="flex gap-3 items-center justify-center mb-3 ">
                                 <div class="bg-yellow w-[50px] h-[2px]"></div>
-                                <span
-                                    class="font-semibold section-subheading">{{ $course->dynamicLabel->founded_in ?? 'Founded in' }}</span>
+                                <h3
+                                    class="font-semibold section-subheading">{{ $course->dynamicLabel->founded_in ?? 'Founded in' }}</h3>
                                 <div class="bg-yellow w-[50px] h-[2px]"></div>
                             </div>
                             <div class="flex flex-col items-center">
@@ -1290,7 +1290,7 @@
 
     @if (!$course->courseFaq->isEmpty() && $course->faq_section == 1)
         <section id="eleven"
-            class="card-hidden flex flex-col px-4 bg-[#000435] py-[44px] items-center min-[1200px]:px-[72px]" style="margin-bottom: 0px !important;">
+            class="card-hidden faq flex flex-col px-4 bg-[#000435] py-[44px] items-center min-[1200px]:px-[72px]" style="margin-bottom: 0px !important;">
             <div class="max-w-[900px]">
                 <div class="flex justify-between border-white border-b pb-3 w-full">
                     <h2
