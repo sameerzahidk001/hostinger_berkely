@@ -290,6 +290,19 @@ class SeoAnalyzerService
         $chunks[] = $this->flattenContent($fields);
         $chunks[] = $this->extractStoredImageAlts($course->image_alts, $course->title);
 
+        if ($course->courseObjectivePoints && $course->courseObjectivePoints->isNotEmpty()) {
+            $objectiveItems = [];
+            foreach ($course->courseObjectivePoints as $point) {
+                $text = trim(strip_tags((string) ($point->title ?? $point->description ?? '')));
+                if ($text !== '') {
+                    $objectiveItems[] = '<li>' . e($text) . '</li>';
+                }
+            }
+            if ($objectiveItems !== []) {
+                $chunks[] = '<ul>' . implode('', $objectiveItems) . '</ul>';
+            }
+        }
+
         if ($course->dynamicLabel) {
             $chunks[] = $this->extractStoredImageAlts($course->dynamicLabel->image_alts, $course->title);
         }

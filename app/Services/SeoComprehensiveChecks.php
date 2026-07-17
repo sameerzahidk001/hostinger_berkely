@@ -280,7 +280,7 @@ class SeoComprehensiveChecks
             $this->check($wordCount >= 150, 'Thin content warning: ' . number_format($wordCount) . ' words (150+ recommended).'),
             $this->check($readability['avg_sentence_words'] <= 25, 'Average sentence length is ' . $readability['avg_sentence_words'] . ' words (aim ≤ 25).'),
             $this->check($readability['avg_paragraph_words'] <= 150, 'Average paragraph length is reasonable (' . $readability['avg_paragraph_words'] . ' words).'),
-            $this->check($hasLists || $wordCount < 300, 'Lists detected in content.'),
+            $this->check($hasLists || $wordCount < 400, 'Lists detected in content.'),
             $this->check($wordCount < 800 || $hasToc, 'Table of contents detected for long content (or page under 800 words).'),
             $this->check($hasTable || $wordCount < 600, 'Tables detected in content (if applicable).'),
             $this->check($hasQuote || $wordCount < 300, 'Quotes or blockquotes detected.'),
