@@ -549,7 +549,7 @@
                     <td>${formatAdminPaymentAmount(installments, installments.price)}</td>
                     <td>${installment.installment_number}/${installments.total_installment}</td>
                     <td>${installment.due_date ?? 'N/A'}</td>
-                    <td>${formatAdminPaymentAmount(installments, parseFloat(installment.paid_amount) + parseFloat(installment.remaining_amount))}</td>
+                    <td>${formatAdminPaymentAmount(installments, installment.status === 'paid' ? 0 : (parseFloat(installment.remaining_amount) || 0))}</td>
                     <td>${installment.status === 'paid' ? 'RC-' + receipt : 'N/A'}</td>
                     <td>${installment.paid_amount ? formatAdminPaymentAmount(installments, installment.paid_amount) : 'N/A'}</td>
                     <td>${installment.paid_date ?? 'N/A'}</td>

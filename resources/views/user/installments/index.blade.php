@@ -35,16 +35,16 @@
                                 <thead>
                                     <tr>
                                         <th>Invoice No</th>
-                                        <th>Receipt No</th>
                                         <th>Invoice Issued Date</th>
+                                        <th>Course Name</th>
+                                        <th>Package Name</th>
                                         <th>Invoice Amount</th>
                                         <th>Payment Plan</th>
                                         <th>Due Date</th>
                                         <th>Due Amount</th>
+                                        <th>Receipt No</th>
                                         <th>Paid Amount</th>
                                         <th>Paid Date</th>
-                                        <th>Course Name</th>
-                                        <th>Package Name</th>
                                         <th>Payment Status</th>
                                         <th>Actions</th>
                                     </tr>
@@ -56,7 +56,19 @@
                                     @foreach ($installments as $installment)
                                         @if($installment->payment->status != 'pending')
                                             <tr>
+                                                @php
+                                                    $dueAed = ($installment->status === 'paid')
+                                                        ? 0.0
+                                                        : (float) ($installment->remaining_amount ?? 0);
+                                                @endphp
                                                 <td>INV-{{ str_pad($installment->payment_id, 6, '0', STR_PAD_LEFT) }}</td>
+                                                <td>{{ \Carbon\Carbon::parse($installment->created_at)->format('d-M-Y') ?? 'N/A' }}</td>
+                                                <td>{{ $installment->payment->course->title ?? 'N/A' }}</td>
+                                                <td>{{ $installment->payment->courseFee->package_name ?? 'N/A' }}</td>
+                                                <td>{{ format_payment_amount($installment->payment)['display'] }}</td>
+                                                <td>{{ $installment->installment_number }}/{{ $installment->payment->total_installment }}</td>
+                                                <td>{{ $installment->due_date ?? 'N/A' }}</td>
+                                                <td>{{ format_payment_aed_amount($installment->payment, $dueAed) }}</td>
                                                 <td>
                                                     @if ($installment->status === 'paid')
                                                         RC-{{ str_pad($installment->id, 6, '0', STR_PAD_LEFT) }}
@@ -64,15 +76,8 @@
                                                         N/A
                                                     @endif
                                                 </td>
-                                                <td>{{ \Carbon\Carbon::parse($installment->created_at)->format('d-M-Y') ?? 'N/A' }}</td>
-                                                <td>{{ format_payment_amount($installment->payment)['display'] }}</td>
-                                                <td>{{ $installment->installment_number }}/{{ $installment->payment->total_installment }}</td>
-                                                <td>{{ $installment->due_date ?? 'N/A' }}</td>
-                                                <td>{{ format_payment_aed_amount($installment->payment, (float) ($installment->paid_amount + $installment->remaining_amount)) }}</td>
                                                 <td>{{ $installment->paid_amount ? format_payment_aed_amount($installment->payment, (float) $installment->paid_amount) : 'N/A' }}</td>
                                                 <td>{{ $installment->paid_date ?? 'N/A' }}</td>
-                                                <td>{{ $installment->payment->course->title ?? 'N/A' }}</td>
-                                                <td>{{ $installment->payment->courseFee->package_name ?? 'N/A' }}</td>
                                                 <td>
                                                     <span
                                                         class="badge badge-{{ $installment->status == 'paid' ? 'success' : 'warning' }}">
