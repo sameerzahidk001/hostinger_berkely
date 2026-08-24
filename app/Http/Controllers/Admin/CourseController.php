@@ -1382,6 +1382,7 @@ class CourseController extends Controller
         }
 
         $validated = $validator->validated();
+        $validated['showonwebsite'] = $request->has('showonwebsite') ? 1 : 0;
 
         if (!empty($validated['package_feature'])) {
             $validated['package_feature'] = array_filter($validated['package_feature']);
@@ -1432,6 +1433,7 @@ class CourseController extends Controller
         }
 
         $validated = $validator->validated();
+        $validated['showonwebsite'] = $request->has('showonwebsite') ? 1 : 0;
 
         if (!empty($validated['package_feature'])) {
             $validated['package_feature'] = array_filter($validated['package_feature']);

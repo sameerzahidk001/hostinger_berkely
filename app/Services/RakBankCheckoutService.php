@@ -152,7 +152,7 @@ class RakBankCheckoutService
                 Mail::to($user->email)
                     ->cc($ccEmails)
                     ->bcc($bccEmails)
-                    ->send(new UserMail($user, $emailTemplate->subject, normalize_payment_email_body($emailBody)));
+                    ->send(new UserMail($user, $emailTemplate->subject, normalize_payment_email_body($emailBody, $paidDisplay)));
             } catch (\Throwable $e) {
                 Log::warning('Installment paid email failed: ' . $e->getMessage(), [
                     'installment_id' => $installment->id,

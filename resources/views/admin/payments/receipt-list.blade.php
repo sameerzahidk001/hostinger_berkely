@@ -122,9 +122,9 @@
                             <tbody>
                                 @foreach ($installments as $installment)
                                 @php
-                                    $invoiceAmountExport = payment_display_currency($installment->payment) . ' ' . number_format(payment_display_amount_from_aed($installment->payment, (float) $installment->payment->price), 2);
-                                    $dueAmountExport = payment_display_currency($installment->payment) . ' ' . number_format(payment_display_amount_from_aed($installment->payment, (float) ($installment->paid_amount + $installment->remaining_amount)), 2);
-                                    $paidAmountExport = payment_display_currency($installment->payment) . ' ' . number_format(payment_display_amount_from_aed($installment->payment, (float) $installment->paid_amount), 2);
+                                    $invoiceAmountExport = trim(html_entity_decode(strip_tags(format_payment_aed_amount_admin($installment->payment, (float) $installment->payment->price))));
+                                    $dueAmountExport = trim(html_entity_decode(strip_tags(format_payment_aed_amount_admin($installment->payment, (float) ($installment->paid_amount + $installment->remaining_amount)))));
+                                    $paidAmountExport = trim(html_entity_decode(strip_tags(format_payment_aed_amount_admin($installment->payment, (float) $installment->paid_amount))));
                                     $paidDateExport = $installment->paid_date ? \Carbon\Carbon::parse($installment->paid_date)->format('Y/m/d') : 'N/A';
                                 @endphp
                                 <tr>

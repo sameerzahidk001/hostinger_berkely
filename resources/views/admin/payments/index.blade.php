@@ -130,8 +130,8 @@
                                 $paidAmountSum = $payment->installments->sum('paid_amount');
                                 $totalPaid = $paidAmountSum;
                                 $paymentStatus = payment_invoice_status($payment);
-                                $invoiceAmountExport = format_payment_amount($payment)['display'];
-                                $paidAmountExport = payment_display_currency($payment) . ' ' . number_format(payment_display_amount_from_aed($payment, (float) $paidAmountSum), 2);
+                                $invoiceAmountExport = trim(html_entity_decode(strip_tags(format_payment_amount_admin($payment))));
+                                $paidAmountExport = trim(html_entity_decode(strip_tags(format_payment_aed_amount_admin($payment, (float) $paidAmountSum))));
                                 @endphp
                                 <tr>
                                     <td>INV-{{ str_pad($payment->id, 6, '0', STR_PAD_LEFT) }}</td>
@@ -458,14 +458,13 @@
     function formatAdminPaymentAmount(payment, aedAmount) {
         const currency = paymentCurrency(payment);
         const display = adminDisplayAmountNumber(payment, aedAmount);
+        const aed = parseFloat(aedAmount) || 0;
 
         if (currency === 'AED') {
             return 'AED ' + display.toFixed(2);
         }
 
-        const bracket = adminBracketAed(currency, display);
-
-        return currency + ' ' + display.toFixed(2) + ' <span class="text-muted">(AED ' + bracket + ')</span>';
+        return 'AED ' + aed.toFixed(2) + ' <span class="text-muted">(' + currency + ' ' + display.toFixed(2) + ')</span>';
     }
 
     $(document).on('click', '.open-bank-transfer-modal', function() {

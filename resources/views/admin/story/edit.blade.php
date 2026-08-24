@@ -70,7 +70,7 @@
                                 <div class="input-group">
                                     <input type="text" id="image_path" name="image_path" class="form-control" readonly
                                         onclick="showFileModal()"
-                                        value="{{ old('image_path', $testimonial->image_path) }}">
+                                        value="{{ old('image_path', $testimonial->image) }}">
                                     <span class="input-group-btn">
                                         <button class="btn btn-default" type="button"
                                             onclick="showFileModal()">Browse</button>
@@ -268,14 +268,8 @@
     }
 
     function uploadLocalFile(input) {
-        const file = input.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function() {
-                document.getElementById('image_path').value = file.name;
-            };
-            reader.readAsDataURL(file);
-        }
+        // The file is submitted via local_file_input. Do not replace the stored
+        // image path with a bare filename, which was wiping photos on save.
     }
 
     function showFileManagerModal() {

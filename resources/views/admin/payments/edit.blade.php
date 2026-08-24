@@ -113,9 +113,9 @@
                             <div class="col-lg-4" style="margin-bottom: 15px;">
                                 <label for="total_amount">Total Amount</label>
                                 <div class="input-group">
-                                    <span class="input-group-addon currency-addon">{{ $payment->courseFee->currency ?? 'AED' }}</span>
-                                    <input type="hidden" name="currency" class="currency" value="{{ $payment->courseFee->currency ?? 'AED' }}">
-                                    <input type="text" class="form-control" id="total_amount" name="total_amount" value="{{ old('total_amount', $payment->price) }}">
+                                    <span class="input-group-addon currency-addon">{{ payment_display_currency($payment) }}</span>
+                                    <input type="hidden" name="currency" class="currency" value="{{ payment_display_currency($payment) }}">
+                                    <input type="text" class="form-control" id="total_amount" name="total_amount" value="{{ old('total_amount', number_format(payment_display_amount_from_aed($payment, (float) $payment->price), 2, '.', '')) }}">
                                 </div>
                                 @error('total_amount')
                                     <p class="text-danger text-xs italic">{{ $message }}</p>
@@ -145,10 +145,10 @@
                                     <div class="col-md-6">
                                         <label for="amount_{{ $index + 1 }}">Amount</label>
                                         <div class="input-group">
-                                            <span class="input-group-addon currency-addon">{{ $payment->courseFee->currency ?? 'AED' }}</span>
-                                            <input type="hidden" name="currency" class="currency" value="{{ $payment->courseFee->currency ?? 'AED' }}">
+                                            <span class="input-group-addon currency-addon">{{ payment_display_currency($payment) }}</span>
+                                            <input type="hidden" name="currency" class="currency" value="{{ payment_display_currency($payment) }}">
                                             <input type="text" class="form-control" name="amount[]" id="amount_{{ $index + 1 }}"
-                                                value="{{ old('amount.' . $index, $installment->remaining_amount + $installment->paid_amount) }}">
+                                                value="{{ old('amount.' . $index, number_format(payment_display_amount_from_aed($payment, (float) ($installment->remaining_amount + $installment->paid_amount)), 2, '.', '')) }}">
                                         </div>
                                         @error("amount.$index")
                                             <p class="text-danger text-xs italic">{{ $message }}</p>

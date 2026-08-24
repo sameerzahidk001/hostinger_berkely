@@ -464,7 +464,7 @@ class PaymentController extends Controller
                     new UserMail(
                         $installment->user,
                         $emailTemplate->subject,
-                        normalize_payment_email_body($emailBody)
+                        normalize_payment_email_body($emailBody, $paidDisplay)
                     )
                 );
 

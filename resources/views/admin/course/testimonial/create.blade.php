@@ -163,14 +163,8 @@
         }
 
         function uploadLocalFile(input) {
-            const file = input.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    document.getElementById('image_path').value = file.name;
-                };
-                reader.readAsDataURL(file);
-            }
+            // The file is submitted via local_file_input. Do not replace the stored
+            // image path with a bare filename, which was wiping photos on save.
         }
 
         function showFileManagerModal() {

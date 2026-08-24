@@ -100,7 +100,9 @@ class CourseTestimonialController extends Controller
         $testimonial->asset_type = $request->asset_path ? 'youtube_video' : 'image';
         $testimonial->date = $request->date;
 
-        // ✅ Image handling
+        // Image handling: keep the current photo unless a real new image is provided.
+        // The browse field can be filled with a bare filename (e.g. photo.jpg), which
+        // must not overwrite the stored path.
         if ($request->hasFile('local_file_input')) {
             $file = $request->file('local_file_input');
             $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
@@ -108,10 +110,16 @@ class CourseTestimonialController extends Controller
             $slug = Str::slug($originalName) . '-' . time();
             $fileName = $slug . '.' . $extension;
             $destinationPath = public_path('admin/courses/testimonial/');
+            if (!is_dir($destinationPath)) {
+                mkdir($destinationPath, 0755, true);
+            }
             $file->move($destinationPath, $fileName);
             $testimonial->image = '/admin/courses/testimonial/' . $fileName;
-        } elseif ($request->filled('image_path')) {
-            $testimonial->image = str_replace('\\', '/', $request->image_path);
+        } else {
+            $imagePath = str_replace('\\', '/', trim((string) $request->input('image_path', '')));
+            if ($imagePath !== '' && str_contains($imagePath, '/')) {
+                $testimonial->image = $imagePath;
+            }
         }
 
         $testimonial->save();
@@ -174,25 +182,25 @@ class CourseTestimonialController extends Controller
         $testimonial->asset_type = $request->asset_path ? 'youtube_video' : 'image';
         $testimonial->date = $request->date;
 
-        // ✅ Image update handling
+        // Keep the existing photo unless a real new image is provided.
+        // Do not overwrite the stored path with a bare filename from the browse field.
         if ($request->hasFile('local_file_input')) {
-            if (!empty($testimonial->image) && Str::startsWith($testimonial->image, '/admin/courses/testimonial/')) {
-                $oldFullPath = public_path(ltrim($testimonial->image, '/'));
-                if (is_file($oldFullPath)) {
-                    @unlink($oldFullPath);
-                }
-            }
-
             $file = $request->file('local_file_input');
             $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
             $extension = $file->getClientOriginalExtension();
             $slug = Str::slug($originalName) . '-' . time();
             $fileName = $slug . '.' . $extension;
             $destinationPath = public_path('admin/courses/testimonial/');
+            if (!is_dir($destinationPath)) {
+                mkdir($destinationPath, 0755, true);
+            }
             $file->move($destinationPath, $fileName);
             $testimonial->image = '/admin/courses/testimonial/' . $fileName;
-        } elseif ($request->filled('image_path')) {
-            $testimonial->image = str_replace('\\', '/', $request->image_path);
+        } else {
+            $imagePath = str_replace('\\', '/', trim((string) $request->input('image_path', '')));
+            if ($imagePath !== '' && str_contains($imagePath, '/')) {
+                $testimonial->image = $imagePath;
+            }
         }
 
         $testimonial->save();
@@ -207,7 +215,12 @@ class CourseTestimonialController extends Controller
     {
         $testimonial = CourseTestimonial::withTrashed()->findOrFail($id);
 
-        if (!empty($testimonial->image) && Str::startsWith($testimonial->image, '/admin/courses/testimonial/')) {
+        $imageStillUsed = CourseTestimonial::withTrashed()
+            ->where('id', '!=', $testimonial->id)
+            ->where('image', $testimonial->image)
+            ->exists();
+
+        if (!$imageStillUsed && !empty($testimonial->image) && Str::startsWith($testimonial->image, '/admin/courses/testimonial/')) {
             $oldFullPath = public_path(ltrim($testimonial->image, '/'));
             if (is_file($oldFullPath)) {
                 @unlink($oldFullPath);

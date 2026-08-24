@@ -1805,7 +1805,8 @@ if (!function_exists('format_payment_amount_admin')) {
             return e($info['display']);
         }
 
-        return e($info['display']) . ' <span class="text-muted">(AED ' . number_format($info['settling_aed'], 2) . ')</span>';
+        return e('AED ' . number_format($info['settling_aed'], 2))
+            . ' <span class="text-muted">(' . e($info['display']) . ')</span>';
     }
 }
 
@@ -1814,15 +1815,14 @@ if (!function_exists('format_payment_aed_amount_admin')) {
     {
         $currency = payment_display_currency($payment);
         $displayAmount = payment_display_amount_from_aed($payment, $aedAmount);
-        $display = $currency . ' ' . number_format($displayAmount, 2);
+        $aedDisplay = 'AED ' . number_format($aedAmount, 2);
 
         if ($currency === 'AED') {
-            return $display;
+            return e($aedDisplay);
         }
 
-        $bracketAed = payment_bracket_aed_from_display($payment, $displayAmount);
-
-        return $display . ' <span class="text-muted">(AED ' . number_format($bracketAed, 2) . ')</span>';
+        return e($aedDisplay)
+            . ' <span class="text-muted">(' . e($currency . ' ' . number_format($displayAmount, 2)) . ')</span>';
     }
 }
 
@@ -1915,13 +1915,28 @@ if (!function_exists('format_payment_amount')) {
 }
 
 if (!function_exists('normalize_payment_email_body')) {
-    function normalize_payment_email_body(string $body): string
+    function normalize_payment_email_body(string $body, ?string $paidDisplay = null): string
     {
-        return preg_replace(
-            '/Amount Paid:\s*AED\s+(?=(USD|GBP|AED)\s)/i',
+        if ($paidDisplay !== null && $paidDisplay !== '') {
+            $replaced = preg_replace(
+                '/Amount Paid:\s*(?:(?:AED|USD|GBP|EUR)\s+){0,2}(?:' . preg_quote($paidDisplay, '/') . '|[\d,]+\.?\d*)/i',
+                'Amount Paid: ' . $paidDisplay,
+                $body,
+                1
+            );
+
+            if (is_string($replaced)) {
+                $body = $replaced;
+            }
+        }
+
+        $stripped = preg_replace(
+            '/Amount Paid:\s*AED\s+(?=(USD|GBP|AED|EUR)\s)/i',
             'Amount Paid: ',
             $body
         );
+
+        return is_string($stripped) ? $stripped : $body;
     }
 }
 
