@@ -33,5 +33,7 @@ class AppServiceProvider extends ServiceProvider
                 config(['session.secure' => true]);
             }
         }
+
+        restore_persistent_uploads_if_needed();
     }
 }

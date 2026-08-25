@@ -113,7 +113,7 @@ class CourseTestimonialController extends Controller
             if (!is_dir($destinationPath)) {
                 mkdir($destinationPath, 0755, true);
             }
-            $file->move($destinationPath, $fileName);
+            public_upload_move($file, $destinationPath, $fileName);
             $testimonial->image = '/admin/courses/testimonial/' . $fileName;
         } else {
             $imagePath = str_replace('\\', '/', trim((string) $request->input('image_path', '')));
@@ -194,7 +194,7 @@ class CourseTestimonialController extends Controller
             if (!is_dir($destinationPath)) {
                 mkdir($destinationPath, 0755, true);
             }
-            $file->move($destinationPath, $fileName);
+            public_upload_move($file, $destinationPath, $fileName);
             $testimonial->image = '/admin/courses/testimonial/' . $fileName;
         } else {
             $imagePath = str_replace('\\', '/', trim((string) $request->input('image_path', '')));

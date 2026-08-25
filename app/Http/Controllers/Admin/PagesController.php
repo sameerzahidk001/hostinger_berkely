@@ -306,7 +306,7 @@ class PagesController extends Controller
                         if ($request->hasFile("sections.$order.cards.$cardIndex.icon")) {
                             $uploadedFile = $request->file("sections.$order.cards.$cardIndex.icon");
                             $filename = generateFileName($uploadedFile);
-                            $uploadedFile->move(public_path('images/library'), $filename);
+                            public_upload_move($uploadedFile, public_path('images/library'), $filename);
 
                             $section['cards'][$cardIndex]['icon'] = $filename;
                         } else {
@@ -326,7 +326,7 @@ class PagesController extends Controller
                         if ($request->hasFile("sections.$order.cards.$cardIndex.image")) {
                             $uploadedFile = $request->file("sections.$order.cards.$cardIndex.image");
                             $filename = generateFileName($uploadedFile);
-                            $uploadedFile->move(public_path('images/library'), $filename);
+                            public_upload_move($uploadedFile, public_path('images/library'), $filename);
 
                             $section['cards'][$cardIndex]['image'] = $filename;
                         } else {
@@ -357,7 +357,7 @@ class PagesController extends Controller
                         if ($request->hasFile("sections.$order.list_items.$itemIndex.icon")) {
                             $uploadedFile = $request->file("sections.$order.list_items.$itemIndex.icon");
                             $filename = generateFileName($uploadedFile);
-                            $uploadedFile->move(public_path('images/library'), $filename);
+                            public_upload_move($uploadedFile, public_path('images/library'), $filename);
 
                             $section['list_items'][$itemIndex]['icon'] = $filename;
                         } else {
@@ -377,7 +377,7 @@ class PagesController extends Controller
 
                     $uploadedFile = $request->file("sections.$order.image");
                     $filename = generateFileName($uploadedFile);
-                    $uploadedFile->move(public_path('images/library'), $filename);
+                    public_upload_move($uploadedFile, public_path('images/library'), $filename);
 
                     $section['image'] = $filename;
                 } else {
@@ -393,7 +393,7 @@ class PagesController extends Controller
                 if ($request->hasFile("sections.$order.icon")) {
                     $uploadedFile = $request->file("sections.$order.icon");
                     $filename = generateFileName($uploadedFile);
-                    $uploadedFile->move(public_path('images/library'), $filename);
+                    public_upload_move($uploadedFile, public_path('images/library'), $filename);
 
                     $section['icon'] = $filename;
                 } else {

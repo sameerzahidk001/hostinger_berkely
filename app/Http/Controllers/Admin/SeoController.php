@@ -100,7 +100,7 @@ class SeoController extends Controller
             $file = $request->file('thumbnail');
             $fileName = $file->getClientOriginalName();
             $destinationPath = public_path('admin/images/seo/');
-            $file->move($destinationPath, $fileName);
+            public_upload_move($file, $destinationPath, $fileName);
             $data['thumbnail'] = '/admin/images/seo/' . $fileName;
         }
         $pages_seo = PagesSEO::create($data);
@@ -161,7 +161,7 @@ class SeoController extends Controller
             $slug = Str::slug($originalName) . '-' . time();
             $fileName = $slug . '.' . $extension;
             $destinationPath = public_path('admin/courses');
-            $file->move($destinationPath, $fileName);
+            public_upload_move($file, $destinationPath, $fileName);
             $data['thumbnail'] = '/admin/courses/' . $fileName;
         } elseif ($request->filled('thumbnail_img_path')) {
             $data['thumbnail'] = $request->input('thumbnail_img_path');

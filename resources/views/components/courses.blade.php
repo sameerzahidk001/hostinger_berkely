@@ -2,7 +2,7 @@
     <div class="grid grid-cols-1 place-content-center sm:grid-cols-3 gap-10">
         @foreach ($courses as $course)
             <div class="relative overflow-hidden group h-[500px] bg-primary">
-                <img src="{{ asset($course['image']) }}"
+                <img src="{{ media_url($course['image']) ?? asset($course['image']) }}"
                     alt="{{ image_alt($course['image_alt'] ?? null, $course['title'] ?? 'Course') }}"
                     class="h-full transition-all delay-300 duration-400 ease-in w-full absolute group-hover:scale-105 object-cover">
                 

@@ -25,6 +25,7 @@ public function store(Request $request)
         $file = $request->file('sections.image');
         $fileName = time() . '_' . $file->getClientOriginalName();
         $file->move(public_path('images/library'), $fileName);
+        persist_moved_upload(public_path('images/library'), $fileName);
     } elseif ($request->has('sections.selected_image')) {
         // Handle Selection from Public Folder
         $fileName = $request->input('sections.selected_image');
@@ -55,7 +56,9 @@ public function store(Request $request)
         }
 
         $file = $request->file('file');
-        $file->move($destinationPath, $file->getClientOriginalName());
+        $uploadedName = $file->getClientOriginalName();
+        $file->move($destinationPath, $uploadedName);
+        persist_moved_upload($destinationPath, $uploadedName);
    
         return back()->with('success', 'File uploaded successfully!');
     }

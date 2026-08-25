@@ -79,9 +79,12 @@
 
             </div>
             <div class=" flex xl:px-0 md:top-0 md:absolute md:right-0 z-40 md:w-[50%] m-0 flex-1 flex-col gap-4 md:h-full">
-                <img src="{{ asset($course->dynamicLabel->banner_image) }}" alt="{{ course_image_alt($course, 'banner_image', $course->dynamicLabel?->banner_title ?? $course->title) }}"
+                @php $bannerUrl = displayable_media_url($course->dynamicLabel->banner_image); @endphp
+                @if($bannerUrl)
+                <img src="{{ $bannerUrl }}" alt="{{ course_image_alt($course, 'banner_image', $course->dynamicLabel?->banner_title ?? $course->title) }}"
                     loading="lazy" width="1200" height="800"
                     class="object-cover h-full md:max-h-full md:w-full md:h-full">
+                @endif
             </div>
         </section>
     @endif
@@ -174,8 +177,8 @@
                             @else
                                 <p>Invalid YouTube URL</p>
                             @endif
-                        @elseif($course->overview_img)
-                            <img src="{{ asset($course->overview_img) }}" alt="{{ course_image_alt($course, 'overview_img') }}"
+                        @elseif($course->overview_img && displayable_media_url($course->overview_img))
+                            <img src="{{ displayable_media_url($course->overview_img) }}" alt="{{ course_image_alt($course, 'overview_img') }}"
                                 loading="lazy" width="1200" height="800"
                                 class="w-full min-h-[300px] xl:min-h-[500px] xl:min-w-[500px] object-cover">
                         @else
@@ -542,7 +545,7 @@
                 @foreach ($assignIntructors as $instructor)
                     <div class="flex flex-col bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100">
                         <div class="w-full h-[280px] overflow-hidden bg-gray-100">
-                            <img src="{{ asset($instructor->image ?? '/images/profiles/user.png') }}"
+                            <img src="{{ displayable_media_url($instructor->image) ?? media_url('/images/profiles/user.png') ?? asset('/images/profiles/user.png') }}"
                                 alt="{{ $instructor->name }}"
                                 class="w-full h-full object-cover object-top">
                         </div>

@@ -98,7 +98,7 @@
 
                                 <!-- Image + Name + City + Course -->
                                 <div class="flex items-start gap-4 mb-2">
-                                    <img src="{{ asset($testimonials->image) }}" alt="{{ image_alt($testimonials->image_alt ?? null, $testimonials->name ?? 'Testimonial') }}"
+                                    <img src="{{ media_url($testimonials->image) ?? asset($testimonials->image) }}" alt="{{ image_alt($testimonials->image_alt ?? null, $testimonials->name ?? 'Testimonial') }}"
                                         class="w-20 h-20 shrink-0 object-cover self-center rounded-full"
                                         onerror="this.removeAttribute('alt'); this.style.opacity='0';">
 
@@ -222,7 +222,7 @@
                             style="background-color: {{ $cardBackground }}; border: 2px solid {{ $cardBorderColor }};">
                             <div class="flex items-start gap-4">
                                 <div class="flex-shrink-0 w-20 h-20"> <!-- Specific width for image div -->
-                                    <img src="{{ asset($testimonial->image) }}" alt="{{ image_alt($testimonial->image_alt ?? null, $testimonial->name ?? 'Testimonial') }}"
+                                    <img src="{{ media_url($testimonial->image) ?? asset($testimonial->image) }}" alt="{{ image_alt($testimonial->image_alt ?? null, $testimonial->name ?? 'Testimonial') }}"
                                         class="w-full h-full object-cover rounded-full"
                                         onerror="this.removeAttribute('alt'); this.style.opacity='0';">
                                     <!-- Ensure the image covers the div -->
@@ -276,7 +276,7 @@
                             style="background-color: {{ $cardBackground }}; border: 2px solid {{ $cardBorderColor }};">
                             <div class="p-2">
                                 <div class="flex items-start gap-4 mb-2">
-                                    <img src="{{ asset($testimonials->image) }}" alt="{{ image_alt($testimonials->image_alt ?? null, $testimonials->name ?? 'Testimonial') }}"
+                                    <img src="{{ media_url($testimonials->image) ?? asset($testimonials->image) }}" alt="{{ image_alt($testimonials->image_alt ?? null, $testimonials->name ?? 'Testimonial') }}"
                                         class="w-20 h-20 shrink-0 object-cover self-center rounded-full"
                                         onerror="this.removeAttribute('alt'); this.style.opacity='0';">
                                     <div class="flex flex-col gap-0">
@@ -348,7 +348,7 @@
                             style="background-color: {{ $cardBackground }}; border: 2px solid {{ $cardBorderColor }};">
                             <div class="p-2"> <!-- Set a fixed height for the card -->
                                 <div class="flex items-start gap-4 mb-2">
-                                    <img src="{{ asset($testimonials->image) }}" alt="{{ image_alt($testimonials->image_alt ?? null, $testimonials->name ?? 'Testimonial') }}"
+                                    <img src="{{ media_url($testimonials->image) ?? asset($testimonials->image) }}" alt="{{ image_alt($testimonials->image_alt ?? null, $testimonials->name ?? 'Testimonial') }}"
                                         class="w-20 h-20 shrink-0 object-cover self-center rounded-full"
                                         onerror="this.removeAttribute('alt'); this.style.opacity='0';">
                                     <div class="flex flex-col gap-0">

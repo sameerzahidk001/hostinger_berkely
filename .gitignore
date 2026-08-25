@@ -51,4 +51,17 @@ user-behavior/
 database/live-to-sublive-content-sync.sql
 *.sqlite
 *.sqlite3
+# Uploaded course/profile media (Hostinger git deploy must not track these)
+/public/admin/courses/**/*.jpg
+/public/admin/courses/**/*.jpeg
+/public/admin/courses/**/*.png
+/public/admin/courses/**/*.webp
+/public/admin/courses/**/*.gif
+/public/images/profiles/**
+/public/images/library/**/*.jpg
+/public/images/library/**/*.jpeg
+/public/images/library/**/*.png
+/public/images/library/**/*.webp
+/public/images/library/**/*.gif
+/public/images/clients/**
 

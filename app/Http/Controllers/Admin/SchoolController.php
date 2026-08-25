@@ -59,7 +59,7 @@ class SchoolController extends Controller
             if ($request->hasFile($field)) {
                 $uploadedFile = $request->file($field);
                 $filename = "{$field}_" . time() . '.' . $uploadedFile->getClientOriginalExtension();
-                $uploadedFile->move(public_path('images/library'), $filename);
+                public_upload_move($uploadedFile, public_path('images/library'), $filename);
 
                 $data[$field] = $filename;
             }
@@ -116,7 +116,7 @@ class SchoolController extends Controller
             if ($request->hasFile($field)) {
                 $uploadedFile = $request->file($field);
                 $filename = "{$field}_" . time() . '.' . $uploadedFile->getClientOriginalExtension();
-                $uploadedFile->move(public_path('images/library'), $filename);
+                public_upload_move($uploadedFile, public_path('images/library'), $filename);
 
                 if (!empty($settings->$field) && file_exists(public_path('images/library/' . $school->$field))) {
                     unlink(public_path('images/library/' . $school->$field));

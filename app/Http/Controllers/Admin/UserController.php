@@ -114,7 +114,7 @@ class UserController extends Controller
             $slug = Str::slug($originalName) . '-' . time();
             $fileName = $slug . '.' . $extension;
             $destinationPath = public_path('images/profiles/');
-            $file->move($destinationPath, $fileName);
+            public_upload_move($file, $destinationPath, $fileName);
             $image = 'images/profiles/' . $fileName;
         } elseif ($request->filled('image_path')) {
             $image = normalize_profile_image_path($request->image_path);

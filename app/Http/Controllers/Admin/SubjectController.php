@@ -42,7 +42,7 @@ class SubjectController extends Controller
             $file = $request->file('image');
             $fileName = $file->getClientOriginalName();
             $destinationPath = public_path('admin/subject');
-            $file->move($destinationPath, $fileName);
+            public_upload_move($file, $destinationPath, $fileName);
             $data['image'] = '/admin/subject/' . $fileName;
             //$data['image'] = $path;
         }
@@ -80,7 +80,7 @@ class SubjectController extends Controller
             $file = $request->file('image');
             $fileName = $file->getClientOriginalName();
             $destinationPath = public_path('admin/subject');
-            $file->move($destinationPath, $fileName);
+            public_upload_move($file, $destinationPath, $fileName);
             $data['image'] = '/admin/subject/' . $fileName;
         }
         $updateResult = $subject->update($data);

@@ -76,7 +76,7 @@ class HomepageController extends Controller
                 $file = $data['image'];
                 $fileName = time() . '_' . $file->getClientOriginalName();
                 $destinationPath = public_path('frontend/homepage');
-                $file->move($destinationPath, $fileName);
+                public_upload_move($file, $destinationPath, $fileName);
             
                 // Store relative path
                 $data['image'] = 'frontend/homepage/' . $fileName;

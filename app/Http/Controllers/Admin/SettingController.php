@@ -155,7 +155,7 @@ class SettingController extends Controller
             if ($request->hasFile($field)) {
                 $uploadedFile = $request->file($field);
                 $filename = "{$field}_" . time() . '.' . $uploadedFile->getClientOriginalExtension();
-                $uploadedFile->move(public_path('images'), $filename);
+                public_upload_move($uploadedFile, public_path('images'), $filename);
 
                 if (!empty($settings->$field) && file_exists(public_path('images/' . $settings->$field))) {
                     unlink(public_path('images/' . $settings->$field));
@@ -185,7 +185,7 @@ class SettingController extends Controller
             if ($request->hasFile($iconField)) {
                 $uploadedFile = $request->file($iconField);
                 $filename = "{$platform}_icon_" . time() . '.' . $uploadedFile->getClientOriginalExtension();
-                $uploadedFile->move(public_path('images'), $filename);
+                public_upload_move($uploadedFile, public_path('images'), $filename);
 
                 if (!empty($settings->$iconField) && file_exists(public_path('images/' . $settings->$iconField))) {
                     unlink(public_path('images/' . $settings->$iconField));

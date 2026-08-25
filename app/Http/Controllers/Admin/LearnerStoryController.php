@@ -43,7 +43,7 @@ class LearnerStoryController extends Controller
             $file = $request->file('image');
             $fileName = $file->getClientOriginalName();
             $destinationPath = public_path('admin/images/stories');
-            $file->move($destinationPath, $fileName);
+            public_upload_move($file, $destinationPath, $fileName);
             $data['image'] = '/admin/images/stories/' . $fileName;
         }
         $LearnerStories = LearnerStory::create($data);

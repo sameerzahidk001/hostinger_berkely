@@ -76,7 +76,7 @@ class TestimonialController extends Controller
             $file = $request->file('image');
             $fileName = $file->getClientOriginalName();
             $destinationPath = public_path('student/courses/testimonial/');
-            $file->move($destinationPath, $fileName);
+            public_upload_move($file, $destinationPath, $fileName);
             $data['image'] = '/student/courses/testimonial/' . $fileName;
         }
 

@@ -38,7 +38,7 @@ class ClientController extends Controller
         if ($request->hasFile('image')) {
             $uploadedFile = $request->file('image');
             $filename = "client_" . time() . '.' . $uploadedFile->getClientOriginalExtension();
-            $uploadedFile->move(public_path('images/clients'), $filename);
+            public_upload_move($uploadedFile, public_path('images/clients'), $filename);
 
             $client->image = $filename;
         }
@@ -79,7 +79,7 @@ class ClientController extends Controller
         if ($request->hasFile('image')) {
             $uploadedFile = $request->file('image');
             $filename = "client_" . time() . '.' . $uploadedFile->getClientOriginalExtension();
-            $uploadedFile->move(public_path('images/clients'), $filename);
+            public_upload_move($uploadedFile, public_path('images/clients'), $filename);
 
             if (!empty($client->image) && file_exists(public_path('images/clients/' . $client->image))) {
                 unlink(public_path('images/clients/' . $client->image));

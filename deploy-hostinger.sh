@@ -15,6 +15,7 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 cd "$ROOT"
 
 # shellcheck source=/dev/null
+export PRESERVE_ROOT="${PRESERVE_ROOT:-$ROOT/../persistent-uploads}"
 . "$ROOT/scripts/preserve-public-uploads.sh"
 
 DEPLOY_BRANCH="${DEPLOY_BRANCH:-fix/rollback-jun19-night}"

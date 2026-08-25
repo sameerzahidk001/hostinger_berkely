@@ -197,15 +197,20 @@ if (!function_exists('media_url')) {
 
         $path = ltrim($path, '/');
 
+        $path = ltrim(str_replace('\\', '/', $path), '/');
+        $encoded = implode('/', array_map(static function (string $part): string {
+            return rawurlencode(rawurldecode($part));
+        }, explode('/', $path)));
+
         if (str_starts_with($path, 'admin/')) {
-            return asset($path);
+            return asset($encoded);
         }
 
         if (str_starts_with($path, 'images/') || str_starts_with($path, 'frontend/')) {
-            return asset($path);
+            return asset($encoded);
         }
 
-        return asset('images/library/' . $path);
+        return asset('images/library/' . $encoded);
     }
 }
 
@@ -259,6 +264,208 @@ if (!function_exists('local_media_exists')) {
         }
 
         return is_file(public_path('images/library/' . $path));
+    }
+}
+
+if (!function_exists('persistent_uploads_root')) {
+    function persistent_uploads_root(): string
+    {
+        $configured = env('PERSISTENT_UPLOADS_PATH');
+        if (is_string($configured) && trim($configured) !== '') {
+            return rtrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $configured), DIRECTORY_SEPARATOR);
+        }
+
+        $outside = dirname(base_path()) . DIRECTORY_SEPARATOR . 'persistent-uploads';
+
+        if (is_dir($outside) || (@mkdir($outside, 0755, true) && is_dir($outside))) {
+            if (is_writable($outside)) {
+                return $outside;
+            }
+        }
+
+        return storage_path('app/preserved-public-uploads');
+    }
+}
+
+if (!function_exists('persistent_upload_dirs')) {
+    function persistent_upload_dirs(): array
+    {
+        return [
+            'admin/courses',
+            'images/profiles',
+            'images/library',
+            'images/clients',
+            'images',
+        ];
+    }
+}
+
+if (!function_exists('copy_directory_contents')) {
+    function copy_directory_contents(string $from, string $to): void
+    {
+        if (! is_dir($from)) {
+            return;
+        }
+
+        if (! is_dir($to) && ! @mkdir($to, 0755, true) && ! is_dir($to)) {
+            return;
+        }
+
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($from, \FilesystemIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::SELF_FIRST
+        );
+
+        foreach ($iterator as $item) {
+            $target = $to . DIRECTORY_SEPARATOR . $iterator->getSubPathName();
+
+            if ($item->isDir()) {
+                if (! is_dir($target)) {
+                    @mkdir($target, 0755, true);
+                }
+                continue;
+            }
+
+            $parent = dirname($target);
+            if (! is_dir($parent)) {
+                @mkdir($parent, 0755, true);
+            }
+
+            @copy($item->getPathname(), $target);
+        }
+    }
+}
+
+if (!function_exists('remember_public_upload')) {
+    function remember_public_upload(?string $relativePath): void
+    {
+        $relativePath = ltrim(str_replace('\\', '/', (string) $relativePath), '/');
+
+        if ($relativePath === '' || str_contains($relativePath, '..')) {
+            return;
+        }
+
+        $source = public_path($relativePath);
+
+        if (! is_file($source)) {
+            return;
+        }
+
+        $destination = persistent_uploads_root() . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relativePath);
+        $parent = dirname($destination);
+
+        if (! is_dir($parent) && ! @mkdir($parent, 0755, true) && ! is_dir($parent)) {
+            return;
+        }
+
+        @copy($source, $destination);
+    }
+}
+
+if (!function_exists('persist_moved_upload')) {
+    function persist_moved_upload(string $destinationPath, string $fileName): void
+    {
+        $publicRoot = rtrim(str_replace('\\', '/', public_path()), '/');
+        $dest = rtrim(str_replace('\\', '/', $destinationPath), '/');
+
+        if ($publicRoot === '' || ! str_starts_with($dest, $publicRoot)) {
+            return;
+        }
+
+        $relative = ltrim(substr($dest, strlen($publicRoot)) . '/' . $fileName, '/');
+        remember_public_upload($relative);
+    }
+}
+
+if (!function_exists('public_upload_move')) {
+    function public_upload_move($file, string $destinationPath, string $fileName): void
+    {
+        if (! is_dir($destinationPath)) {
+            @mkdir($destinationPath, 0755, true);
+        }
+
+        $file->move($destinationPath, $fileName);
+        persist_moved_upload($destinationPath, $fileName);
+    }
+}
+
+if (!function_exists('current_deploy_id')) {
+    function current_deploy_id(): string
+    {
+        $headFile = base_path('.git/HEAD');
+        $head = trim((string) @file_get_contents($headFile));
+
+        if ($head === '') {
+            return (string) @filemtime(base_path('vendor/autoload.php'));
+        }
+
+        if (str_starts_with($head, 'ref: ')) {
+            $ref = trim(substr($head, 5));
+            $hash = trim((string) @file_get_contents(base_path('.git/' . $ref)));
+
+            return $hash !== '' ? $hash : $head;
+        }
+
+        return $head;
+    }
+}
+
+if (!function_exists('persist_public_uploads_tree')) {
+    function persist_public_uploads_tree(): void
+    {
+        $root = persistent_uploads_root() . DIRECTORY_SEPARATOR . 'public';
+
+        foreach (persistent_upload_dirs() as $dir) {
+            copy_directory_contents(public_path($dir), $root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $dir));
+        }
+    }
+}
+
+if (!function_exists('restore_persistent_uploads_if_needed')) {
+    function restore_persistent_uploads_if_needed(): void
+    {
+        static $alreadyRan = false;
+
+        if ($alreadyRan || app()->runningUnitTests()) {
+            return;
+        }
+
+        $alreadyRan = true;
+
+        try {
+
+        $root = persistent_uploads_root();
+        $publicMirror = $root . DIRECTORY_SEPARATOR . 'public';
+        $marker = $root . DIRECTORY_SEPARATOR . '.restored-for';
+        $deployId = current_deploy_id();
+
+        if (! is_dir($root)) {
+            persist_public_uploads_tree();
+            @file_put_contents($marker, $deployId);
+
+            return;
+        }
+
+        $last = trim((string) @file_get_contents($marker));
+
+        if ($last === $deployId && $last !== '') {
+            return;
+        }
+
+        if (is_dir($publicMirror)) {
+            foreach (persistent_upload_dirs() as $dir) {
+                copy_directory_contents(
+                    $publicMirror . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $dir),
+                    public_path($dir)
+                );
+            }
+        }
+
+        persist_public_uploads_tree();
+        @file_put_contents($marker, $deployId);
+        } catch (\Throwable $e) {
+            // Never block the site if upload backup/restore fails.
+        }
     }
 }
 
@@ -492,7 +699,7 @@ if (!function_exists('user_avatar_url')) {
         }
 
         if ($path !== null && local_media_exists($path)) {
-            return asset($path);
+            return media_url($path) ?: asset($path);
         }
 
         foreach (['images/profiles/user.png', 'admin/images/logo.png'] as $fallback) {
@@ -1286,7 +1493,7 @@ if (!function_exists('save_uploaded_profile_image')) {
                     mkdir($destinationPath, 0755, true);
                 }
 
-                $file->move($destinationPath, $fileName);
+                public_upload_move($file, $destinationPath, $fileName);
 
                 return 'images/profiles/' . $fileName;
             }
