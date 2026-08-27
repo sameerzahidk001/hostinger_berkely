@@ -478,15 +478,17 @@
                 @endif
 
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4 w-full">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4 w-full items-stretch">
 
                     @if (!empty($course->custom_videos))
                         @foreach (json_decode($course->custom_videos, true) as $index => $video)
-                            <div class="video-item flex flex-col mb-2">
+                            <div class="video-item flex flex-col h-full mb-2">
 
-                                <div class="flex gap-2 items-center justify-center mb-2 mt-2 min-h-[2.5rem]">
+                                <div class="flex gap-2 items-center justify-center mb-2 mt-2 shrink-0"
+                                    style="min-height: 4.75rem; height: 4.75rem;">
                                     <div class="bg-yellow w-[16px] sm:w-[24px] h-[2px] shrink-0"></div>
-                                    <span class="font-semibold section-subheading text-center text-[13px] sm:text-sm leading-snug">{{ $video['title'] }}</span>
+                                    <span class="font-semibold section-subheading text-center text-[13px] sm:text-sm leading-snug"
+                                        style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">{{ $video['title'] }}</span>
                                     <div class="bg-yellow w-[16px] sm:w-[24px] h-[2px] shrink-0"></div>
                                 </div>
                                 @php
@@ -512,10 +514,12 @@
                                 @endphp
 
                                 @if ($embedUrl)
-                                    <iframe class="w-full aspect-video object-cover"
-                                        src="{{ $embedUrl }}" frameborder="0" loading="lazy"
-                                        allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
-                                        allowfullscreen></iframe>
+                                    <div class="relative w-full overflow-hidden bg-black" style="aspect-ratio: 16 / 9;">
+                                        <iframe class="absolute top-0 left-0 w-full h-full"
+                                            src="{{ $embedUrl }}" frameborder="0" loading="lazy"
+                                            allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
+                                            allowfullscreen></iframe>
+                                    </div>
                                 @else
                                     <p class="text-red-500">Invalid YouTube URL</p>
                                 @endif
@@ -541,9 +545,12 @@
                 <div class="bg-yellow w-[50px] h-[2px]"></div>
             </div>
 
-            <div class="grid gap-10 md:grid-cols-2 lg:grid-cols-3">
+            @php $instructorCount = count($assignIntructors); @endphp
+            <div
+                class="{{ $instructorCount === 1 ? 'flex justify-center' : 'grid gap-10 md:grid-cols-2 lg:grid-cols-3' }}">
                 @foreach ($assignIntructors as $instructor)
-                    <div class="flex flex-col bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100">
+                    <div
+                        class="flex flex-col bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100 {{ $instructorCount === 1 ? 'w-full max-w-[380px]' : '' }}">
                         <div class="w-full h-[280px] overflow-hidden bg-gray-100">
                             <img src="{{ displayable_media_url($instructor->image) ?? media_url('/images/profiles/user.png') ?? asset('/images/profiles/user.png') }}"
                                 alt="{{ $instructor->name }}"
