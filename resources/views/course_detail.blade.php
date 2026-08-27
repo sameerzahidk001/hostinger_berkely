@@ -478,16 +478,16 @@
                 @endif
 
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 w-full">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4 w-full">
 
                     @if (!empty($course->custom_videos))
                         @foreach (json_decode($course->custom_videos, true) as $index => $video)
-                            <div class="video-item flex flex-col mb-4">
+                            <div class="video-item flex flex-col mb-2">
 
-                                <div class="flex gap-3 items-center justify-center mb-3 mt-3">
-                                    <div class="bg-yellow w-[50px] h-[2px]"></div>
-                                    <span class="font-semibold section-subheading">{{ $video['title'] }}</span>
-                                    <div class="bg-yellow w-[50px] h-[2px]"></div>
+                                <div class="flex gap-2 items-center justify-center mb-2 mt-2 min-h-[2.5rem]">
+                                    <div class="bg-yellow w-[16px] sm:w-[24px] h-[2px] shrink-0"></div>
+                                    <span class="font-semibold section-subheading text-center text-[13px] sm:text-sm leading-snug">{{ $video['title'] }}</span>
+                                    <div class="bg-yellow w-[16px] sm:w-[24px] h-[2px] shrink-0"></div>
                                 </div>
                                 @php
 
@@ -501,20 +501,20 @@
                                         )
                                     ) {
                                         $videoId = $matches[1]; // Extract the video ID from different YouTube URL formats
-                                        // Convert to embed URL with autoplay, mute, and controls
+                                        // Embed without autoplay so visitors start playback themselves
                                         $embedUrl =
                                             'https://www.youtube.com/embed/' .
                                             $videoId .
-                                            '?autoplay=1&mute=1&controls=1';
+                                            '?autoplay=0&mute=0&controls=1&rel=0';
                                     } else {
                                         $embedUrl = ''; // Set empty if URL is invalid
                                     }
                                 @endphp
 
                                 @if ($embedUrl)
-                                    <iframe class="w-full min-h-[300px] xl:min-h-[350px] object-cover"
-                                        src="{{ $embedUrl }}" frameborder="0"
-                                        allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
+                                    <iframe class="w-full aspect-video object-cover"
+                                        src="{{ $embedUrl }}" frameborder="0" loading="lazy"
+                                        allow="accelerometer; encrypted-media; gyroscope; picture-in-picture"
                                         allowfullscreen></iframe>
                                 @else
                                     <p class="text-red-500">Invalid YouTube URL</p>

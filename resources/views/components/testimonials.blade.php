@@ -100,7 +100,7 @@
                                 <div class="flex items-start gap-4 mb-2">
                                     <img src="{{ media_url($testimonials->image) ?? asset($testimonials->image) }}" alt="{{ image_alt($testimonials->image_alt ?? null, $testimonials->name ?? 'Testimonial') }}"
                                         class="w-20 h-20 shrink-0 object-cover self-center rounded-full"
-                                        onerror="this.removeAttribute('alt'); this.style.opacity='0';">
+                                        onerror="this.onerror=null; this.src='{{ asset('images/profiles/user.png') }}';">
 
 
                                     <div class="flex flex-col gap-0 w-full">
@@ -224,7 +224,7 @@
                                 <div class="flex-shrink-0 w-20 h-20"> <!-- Specific width for image div -->
                                     <img src="{{ media_url($testimonial->image) ?? asset($testimonial->image) }}" alt="{{ image_alt($testimonial->image_alt ?? null, $testimonial->name ?? 'Testimonial') }}"
                                         class="w-full h-full object-cover rounded-full"
-                                        onerror="this.removeAttribute('alt'); this.style.opacity='0';">
+                                        onerror="this.onerror=null; this.src='{{ asset('images/profiles/user.png') }}';">
                                     <!-- Ensure the image covers the div -->
                                 </div>
                                 <div class="flex flex-col gap-0 flex-grow">
@@ -278,7 +278,7 @@
                                 <div class="flex items-start gap-4 mb-2">
                                     <img src="{{ media_url($testimonials->image) ?? asset($testimonials->image) }}" alt="{{ image_alt($testimonials->image_alt ?? null, $testimonials->name ?? 'Testimonial') }}"
                                         class="w-20 h-20 shrink-0 object-cover self-center rounded-full"
-                                        onerror="this.removeAttribute('alt'); this.style.opacity='0';">
+                                        onerror="this.onerror=null; this.src='{{ asset('images/profiles/user.png') }}';">
                                     <div class="flex flex-col gap-0">
                                         <h3 class="text-[20px] font-semibold leading-[20px]" style="color: {{ $cardColor }};">
                                             {{ $testimonials->name }}</h3>
@@ -350,7 +350,7 @@
                                 <div class="flex items-start gap-4 mb-2">
                                     <img src="{{ media_url($testimonials->image) ?? asset($testimonials->image) }}" alt="{{ image_alt($testimonials->image_alt ?? null, $testimonials->name ?? 'Testimonial') }}"
                                         class="w-20 h-20 shrink-0 object-cover self-center rounded-full"
-                                        onerror="this.removeAttribute('alt'); this.style.opacity='0';">
+                                        onerror="this.onerror=null; this.src='{{ asset('images/profiles/user.png') }}';">
                                     <div class="flex flex-col gap-0">
                                         <h3 class="text-[20px] font-semibold leading-[20px]" style="color: {{ $cardColor }};">
                                             {{ $testimonials->name }}</h3>

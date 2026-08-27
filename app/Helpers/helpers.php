@@ -214,15 +214,15 @@ if (!function_exists('media_url')) {
     }
 }
 
-if (!function_exists('local_media_exists')) {
-    function local_media_exists(mixed $path): bool
+if (!function_exists('normalize_public_media_relative_path')) {
+    function normalize_public_media_relative_path(mixed $path): ?string
     {
         if (is_array($path)) {
             $path = $path['path'] ?? $path['url'] ?? $path['image'] ?? ($path[0] ?? null);
         }
 
         if (! is_string($path) || trim($path) === '' || $path === 'null') {
-            return false;
+            return null;
         }
 
         $path = str_replace('\\', '/', trim($path));
@@ -232,7 +232,7 @@ if (!function_exists('local_media_exists')) {
             $appHost = parse_url((string) config('app.url'), PHP_URL_HOST);
 
             if ($host && $appHost && ! in_array($host, [$appHost, 'www.' . $appHost, 'berkeleyschool.org', 'www.berkeleyschool.org', 'eduberkeley.com', 'www.eduberkeley.com'], true)) {
-                return true;
+                return null;
             }
 
             $path = ltrim((string) parse_url($path, PHP_URL_PATH), '/');
@@ -253,17 +253,119 @@ if (!function_exists('local_media_exists')) {
             $path
         );
 
-        $path = ltrim($path, '/');
+        $path = rawurldecode(ltrim($path, '/'));
 
         if (str_starts_with($path, 'public/')) {
             $path = substr($path, 7);
         }
 
-        if (str_starts_with($path, 'images/') || str_starts_with($path, 'frontend/') || str_starts_with($path, 'admin/')) {
-            return is_file(public_path($path));
+        if ($path === '' || str_contains($path, '..')) {
+            return null;
         }
 
-        return is_file(public_path('images/library/' . $path));
+        if (str_starts_with($path, 'images/') || str_starts_with($path, 'frontend/') || str_starts_with($path, 'admin/')) {
+            return $path;
+        }
+
+        return 'images/library/' . $path;
+    }
+}
+
+if (!function_exists('restore_public_upload_if_missing')) {
+    function restore_public_upload_if_missing(mixed $path): bool
+    {
+        $relative = normalize_public_media_relative_path($path);
+
+        if ($relative === null) {
+            return false;
+        }
+
+        $dest = public_path($relative);
+
+        if (is_file($dest)) {
+            return true;
+        }
+
+        $src = persistent_uploads_root() . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $relative);
+
+        if (! is_file($src)) {
+            return false;
+        }
+
+        $parent = dirname($dest);
+
+        if (! is_dir($parent) && ! @mkdir($parent, 0755, true) && ! is_dir($parent)) {
+            return false;
+        }
+
+        return @copy($src, $dest) && is_file($dest);
+    }
+}
+
+if (!function_exists('count_flat_files')) {
+    function count_flat_files(string $dir): int
+    {
+        if (! is_dir($dir)) {
+            return 0;
+        }
+
+        $handle = @opendir($dir);
+
+        if ($handle === false) {
+            return 0;
+        }
+
+        $count = 0;
+
+        while (($entry = readdir($handle)) !== false) {
+            if ($entry === '.' || $entry === '..') {
+                continue;
+            }
+
+            if (is_file($dir . DIRECTORY_SEPARATOR . $entry)) {
+                $count++;
+            }
+        }
+
+        closedir($handle);
+
+        return $count;
+    }
+}
+
+if (!function_exists('local_media_exists')) {
+    function local_media_exists(mixed $path): bool
+    {
+        if (is_array($path)) {
+            $path = $path['path'] ?? $path['url'] ?? $path['image'] ?? ($path[0] ?? null);
+        }
+
+        if (! is_string($path) || trim($path) === '' || $path === 'null') {
+            return false;
+        }
+
+        $raw = str_replace('\\', '/', trim($path));
+
+        if (str_starts_with($raw, 'http://') || str_starts_with($raw, 'https://')) {
+            $host = parse_url($raw, PHP_URL_HOST);
+            $appHost = parse_url((string) config('app.url'), PHP_URL_HOST);
+
+            if ($host && $appHost && ! in_array($host, [$appHost, 'www.' . $appHost, 'berkeleyschool.org', 'www.berkeleyschool.org', 'eduberkeley.com', 'www.eduberkeley.com'], true)) {
+                return true;
+            }
+        }
+
+        $relative = normalize_public_media_relative_path($path);
+
+        if ($relative === null) {
+            return false;
+        }
+
+        if (is_file(public_path($relative))) {
+            return true;
+        }
+
+        return restore_public_upload_if_missing($relative);
     }
 }
 
@@ -329,6 +431,10 @@ if (!function_exists('copy_directory_contents')) {
             $parent = dirname($target);
             if (! is_dir($parent)) {
                 @mkdir($parent, 0755, true);
+            }
+
+            if (is_file($target) && (int) $item->getSize() === (int) @filesize($target)) {
+                continue;
             }
 
             @copy($item->getPathname(), $target);
@@ -447,8 +553,12 @@ if (!function_exists('restore_persistent_uploads_if_needed')) {
         }
 
         $last = trim((string) @file_get_contents($marker));
+        $backupCourses = count_flat_files($publicMirror . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'courses');
+        $publicCourses = count_flat_files(public_path('admin/courses'));
+        $backupLooksFuller = $backupCourses > 0 && $publicCourses < (int) floor($backupCourses * 0.8);
+        $deployChanged = $last !== $deployId || $last === '';
 
-        if ($last === $deployId && $last !== '') {
+        if (! $deployChanged && ! $backupLooksFuller) {
             return;
         }
 
@@ -461,7 +571,14 @@ if (!function_exists('restore_persistent_uploads_if_needed')) {
             }
         }
 
-        persist_public_uploads_tree();
+        $publicCoursesAfter = count_flat_files(public_path('admin/courses'));
+        $backupCoursesNow = count_flat_files($publicMirror . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'courses');
+
+        // Never copy a wiped public tree over a fuller backup.
+        if ($backupCoursesNow === 0 || $publicCoursesAfter >= (int) floor($backupCoursesNow * 0.8)) {
+            persist_public_uploads_tree();
+        }
+
         @file_put_contents($marker, $deployId);
         } catch (\Throwable $e) {
             // Never block the site if upload backup/restore fails.
@@ -470,12 +587,10 @@ if (!function_exists('restore_persistent_uploads_if_needed')) {
 }
 
 if (!function_exists('displayable_media_url')) {
-    /** URL for frontend display; null when the local file is missing (avoids black overlay cards). */
+    /** URL for frontend display. Restores from backup when possible; does not hide a valid path. */
     function displayable_media_url(mixed $path): ?string
     {
-        if (! local_media_exists($path)) {
-            return null;
-        }
+        restore_public_upload_if_missing($path);
 
         return media_url($path);
     }
@@ -485,9 +600,10 @@ if (!function_exists('card_image_url')) {
     /** Resolve card images, with fallbacks when library files were deleted or never uploaded. */
     function card_image_url(mixed $path, ?string $title = null): ?string
     {
-        $url = displayable_media_url($path);
-        if ($url !== null) {
-            return $url;
+        restore_public_upload_if_missing($path);
+
+        if (local_media_exists($path)) {
+            return media_url($path);
         }
 
         $basename = is_string($path) ? strtolower(basename(str_replace('\\', '/', $path))) : '';
@@ -515,7 +631,7 @@ if (!function_exists('card_image_url')) {
             return asset('frontend/images/jpg/Primary-1.jpg');
         }
 
-        return null;
+        return media_url($path);
     }
 }
 
@@ -698,8 +814,13 @@ if (!function_exists('user_avatar_url')) {
             $path = normalize_profile_image_path(data_get($user, 'avatar'));
         }
 
-        if ($path !== null && local_media_exists($path)) {
-            return media_url($path) ?: asset($path);
+        if ($path !== null) {
+            restore_public_upload_if_missing($path);
+            $url = media_url($path);
+
+            if ($url) {
+                return $url;
+            }
         }
 
         foreach (['images/profiles/user.png', 'admin/images/logo.png'] as $fallback) {
