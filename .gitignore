@@ -51,17 +51,20 @@ user-behavior/
 database/live-to-sublive-content-sync.sql
 *.sqlite
 *.sqlite3
-# Uploaded course/profile media (Hostinger git deploy must not track these)
-/public/admin/courses/**/*.jpg
-/public/admin/courses/**/*.jpeg
-/public/admin/courses/**/*.png
-/public/admin/courses/**/*.webp
-/public/admin/courses/**/*.gif
+# User-uploaded media — do not push these. Hostinger git deploy overwrites
+# tracked files and git-clean deletes untracked ones. Keep uploads only on
+# the server (and in ../persistent-uploads), not in GitHub.
+# Do NOT ignore all of /public — CSS, JS, and frontend assets must still deploy.
+/public/admin/courses/**
+!/public/admin/courses/.gitkeep
+!/public/admin/courses/course.png
+!/public/admin/courses/cma1.jpeg
+!/public/admin/courses/cma2.jpeg
 /public/images/profiles/**
-/public/images/library/**/*.jpg
-/public/images/library/**/*.jpeg
-/public/images/library/**/*.png
-/public/images/library/**/*.webp
-/public/images/library/**/*.gif
+!/public/images/profiles/.gitkeep
+!/public/images/profiles/user.png
+/public/images/library/**
+!/public/images/library/.gitkeep
 /public/images/clients/**
+!/public/images/clients/.gitkeep
 
