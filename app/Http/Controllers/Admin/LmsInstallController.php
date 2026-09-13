@@ -11,8 +11,14 @@ class LmsInstallController extends Controller
 {
     public function show()
     {
+        if ($this->tablesReady()) {
+            return redirect()
+                ->route('admin.study-materials.folders.index')
+                ->with('success', 'LMS is already installed.');
+        }
+
         return view('admin.lms.install', [
-            'ready' => $this->tablesReady(),
+            'ready' => false,
             'tables' => $this->tableStatus(),
         ]);
     }
