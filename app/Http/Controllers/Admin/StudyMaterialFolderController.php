@@ -78,7 +78,7 @@ class StudyMaterialFolderController extends Controller
 
     public function store(Request $request)
     {
-        $request->merge(['code' => $this->normalizedFolderCode($request->code)]);
+        $request->request->remove('code');
         $validator = Validator::make($request->all(), $this->folderRules());
         if ($validator->fails()) {
             return redirect()->back()->withErrors($validator)->withInput();
@@ -94,7 +94,7 @@ class StudyMaterialFolderController extends Controller
 
         $folder = new StudyMaterialFolder();
         $folder->name = trim($request->name);
-        $folder->code = $request->code;
+        $folder->code = null;
         $folder->course_id = $request->course_id;
         $folder->fee_package_id = $packageIds[0] ?? null;
         $folder->validity_months = $validityMonths;
@@ -218,7 +218,7 @@ class StudyMaterialFolderController extends Controller
         $folder = StudyMaterialFolder::findOrFail($id);
         abort_unless($this->lms->canManageFolder($folder), 403);
 
-        $request->merge(['code' => $this->normalizedFolderCode($request->code)]);
+        $request->request->remove('code');
         $validator = Validator::make($request->all(), $this->folderRules($folder->id));
         if ($validator->fails()) {
             return redirect()->back()->withErrors($validator)->withInput();
@@ -228,7 +228,6 @@ class StudyMaterialFolderController extends Controller
         $wasActive = $folder->status === 'active';
 
         $folder->name = trim($request->name);
-        $folder->code = $request->code ?: $folder->code;
         $folder->course_id = $request->course_id;
         $folder->fee_package_id = $packageIds[0] ?? null;
         $folder->validity_months = $this->validityMonthsFromRequest($request);
@@ -455,15 +454,12 @@ class StudyMaterialFolderController extends Controller
     protected function folderRules(?int $folderId = null): array
     {
         $nameRule = 'required|string|max:255|unique:study_material_folders,name';
-        $codeRule = 'nullable|string|max:40|regex:/^[A-Za-z0-9][A-Za-z0-9\-_]*$/|unique:study_material_folders,code';
         if ($folderId) {
             $nameRule .= ',' . $folderId;
-            $codeRule .= ',' . $folderId;
         }
 
         return [
             'name' => $nameRule,
-            'code' => $codeRule,
             'course_id' => 'required|exists:courses,id',
             'fee_package_ids' => 'nullable|array',
             'fee_package_ids.*' => 'exists:course_fees,id',

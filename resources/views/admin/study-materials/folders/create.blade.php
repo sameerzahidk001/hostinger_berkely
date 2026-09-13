@@ -31,8 +31,8 @@
                     </div>
                     <div class="col-md-6 form-group">
                         <label>Folder code</label>
-                        <input type="text" name="code" class="form-control" value="{{ old('code') }}" maxlength="40" placeholder="Auto SM-0001 if left blank">
-                        <span class="help-block">Optional unique code. Letters, numbers, dash or underscore.</span>
+                        <input type="text" class="form-control" value="Auto (SM-0001…)" readonly disabled>
+                        <span class="help-block">Assigned automatically after save. Not editable.</span>
                     </div>
                     <div class="col-md-6 form-group">
                         <label>Course *</label>

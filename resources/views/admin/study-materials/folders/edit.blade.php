@@ -42,8 +42,8 @@
                     </div>
                     <div class="col-md-6 form-group">
                         <label>Folder code</label>
-                        <input type="text" name="code" class="form-control" value="{{ old('code', $folder->code) }}" maxlength="40">
-                        <span class="help-block">Unique code shown on the folders list. Created {{ $folder->created_at?->timezone(config('app.timezone'))->format('d M Y') }}.</span>
+                        <input type="text" class="form-control" value="{{ $folder->code }}" readonly disabled>
+                        <span class="help-block">Assigned automatically. Not editable. Created {{ $folder->created_at?->timezone(config('app.timezone'))->format('d M Y') }}.</span>
                     </div>
                     <div class="col-md-6 form-group">
                         <label>Course *</label>
