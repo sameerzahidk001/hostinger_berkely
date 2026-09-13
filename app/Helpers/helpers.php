@@ -1176,7 +1176,7 @@ if (!function_exists('admin_menu_allowed')) {
         ];
 
         $instructorMenus = [
-            'dashboard', 'study-materials', 'class-schedules', 'profile', 'logout',
+            'dashboard', 'study-materials', 'class-schedules', 'profile', 'history', 'logout',
         ];
 
         if ($role === 'instructor') {

@@ -26,14 +26,16 @@
             <li><a href="{{ route('user.study-materials.index') }}">Study Materials</a></li>
             <li class="active"><strong>{{ $folder->name }}</strong></li>
         </ol>
-        <p class="text-muted">
+        <p class="text-muted" style="margin-bottom:4px;">
             Course:
             @if($folder->course)
                 <a href="{{ url('/' . ($folder->course->slug ?? $folder->course_id)) }}" target="_blank" rel="noopener"><strong>{{ $folder->course->title }}</strong></a>
             @else
                 —
             @endif
-            · Instructor:
+        </p>
+        <p class="text-muted" style="margin-bottom:4px;">
+            Instructor:
             @php $instructors = $folder->displayInstructors(); @endphp
             @if($instructors->isEmpty())
                 —
@@ -42,9 +44,9 @@
                     <a href="{{ url('/instructor/' . $instructor->id) }}" target="_blank" rel="noopener"><strong>{{ $instructor->name }}</strong></a>@if(!$loop->last), @endif
                 @endforeach
             @endif
-            · Access Start: {{ optional($access->issued_at)->format('d M Y') ?: '—' }}
-            · Access Expire: {{ $access->access_till ? $access->access_till->format('d M Y') : 'No expiry' }}
         </p>
+        <p class="text-muted" style="margin-bottom:4px;">Access Start: {{ optional($access->issued_at)->format('d M Y') ?: '—' }}</p>
+        <p class="text-muted" style="margin-bottom:0;">Access Expire: {{ $access->access_till ? $access->access_till->format('d M Y') : 'No expiry' }}</p>
     </div>
 </div>
 <div class="wrapper wrapper-content">

@@ -9,13 +9,13 @@
             <h5 style="color:#fff;">{{ $folder->name }}</h5>
         </div>
         <div class="ibox-content" @if($accessDisabled) style="background:#ececec;color:#4b5563;" @endif>
-            <p>
+            <p style="margin-bottom:6px;">
                 Course:
                 @if($folder->course)
                     <a href="{{ url('/' . ($folder->course->slug ?? $folder->course_id)) }}" target="_blank" rel="noopener"><strong>{{ $folder->course->title }}</strong></a>
                 @else — @endif
             </p>
-            <p>
+            <p style="margin-bottom:6px;">
                 Instructor:
                 @if($instructors->isEmpty())
                     —
@@ -25,8 +25,8 @@
                     @endforeach
                 @endif
             </p>
-            <p style="margin-bottom:4px;">Access Start: {{ optional($access->issued_at)->format('d M Y') ?: '—' }}</p>
-            <p class="text-muted">Access Expire: {{ $access->access_till ? $access->access_till->format('d M Y') : 'No expiry' }}</p>
+            <p style="margin-bottom:6px;">Access Start: {{ optional($access->issued_at)->format('d M Y') ?: '—' }}</p>
+            <p style="margin-bottom:10px;" class="text-muted">Access Expire: {{ $access->access_till ? $access->access_till->format('d M Y') : 'No expiry' }}</p>
             @if($accessDisabled)
                 <button type="button" class="btn btn-sm" disabled style="background:#9ca3af;border-color:#9ca3af;color:#fff;cursor:not-allowed;">Access is disabled.</button>
                 <p style="margin-top:10px;margin-bottom:0;">

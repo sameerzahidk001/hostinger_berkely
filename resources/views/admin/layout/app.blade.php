@@ -203,6 +203,11 @@
                      <a href="{{ route('admin.profile') }}"><i class="fa fa-cog"></i> <span class="nav-label">Profile</span></a>
                   </li>
                   @endif
+                  @if(admin_menu_allowed('history'))
+                  <li class="{{ request()->routeIs('user.history') ? 'active' : '' }}">
+                     <a href="{{ route('user.history') }}"><i class="fa fa-history"></i> <span class="nav-label">History</span></a>
+                  </li>
+                  @endif
                   @if(admin_menu_allowed('settings'))
                   <li class="{{ request()->is('admin/homepage/edit') || request()->is('admin/menu*') || request()->is('admin/site-settings*') || request()->is('admin/widget*') || request()->is('admin/header-setting*') || request()->is('admin/footer-setting*') || request()->is('admin/smtp-settings*') || request()->is('admin/email-templates*') ? 'active show' : '' }}">
                      <a href="#"><i class="fa fa-address-card"></i> <span class="nav-label">Settings</span> <span class="fa arrow"></span></a>

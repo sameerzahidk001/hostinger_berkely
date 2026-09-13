@@ -16,14 +16,6 @@
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
 
-    <div class="row" style="margin-bottom:15px;">
-        <div class="col-lg-12" style="display:flex;gap:10px;flex-wrap:wrap;">
-            <a href="{{ route('admin.study-materials.folders.index') }}" class="btn btn-primary">Manage Folders</a>
-            <a href="{{ route('admin.class-schedules.index') }}" class="btn btn-default">Class Schedule</a>
-            <a href="{{ route('user.study-materials.index') }}" class="btn btn-default">View as portal</a>
-        </div>
-    </div>
-
     <div class="row">
         @forelse($courseAccesses as $access)
             @include('user.study-materials._folder_card', ['access' => $access])
