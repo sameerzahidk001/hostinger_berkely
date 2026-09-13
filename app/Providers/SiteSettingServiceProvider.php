@@ -23,9 +23,16 @@ class SiteSettingServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        $settings = SiteSettings::first();
-        $widgets = Widget::all();
-        $menus = Menu::with('children')->whereNull('parent_id')->orderBy('menu_order')->get();
-        View::share(['settings'=> $settings, 'menus' => $menus, 'widgets' => $widgets]);
+        View::composer('*', function ($view) {
+            static $shared = null;
+            if ($shared === null) {
+                $shared = [
+                    'settings' => SiteSettings::query()->first(),
+                    'widgets' => Widget::all(),
+                    'menus' => Menu::with('children')->whereNull('parent_id')->orderBy('menu_order')->get(),
+                ];
+            }
+            $view->with($shared);
+        });
     }
 }

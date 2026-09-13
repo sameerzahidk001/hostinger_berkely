@@ -24,6 +24,18 @@
             <div class="col-lg-12">
                 <div class="ibox">
                     <div class="ibox-content">
+                        @if(session('success'))
+                            <div class="alert alert-success">{{ session('success') }}</div>
+                        @endif
+                        @if($errors->any())
+                            <div class="alert alert-danger">
+                                <ul class="m-b-none" style="padding-left:18px;">
+                                    @foreach($errors->all() as $error)
+                                        <li>{{ $error }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        @endif
                         <div class="row">
                             <!-- Sidebar with Tab Links -->
                             <div class="col-md-3">
@@ -462,25 +474,39 @@
         const checkbox = document.getElementById('show_logo_settings');
         const logoSettings = document.getElementById('logo-settings');
 
-        checkbox.addEventListener('change', function () {
-            if (this.checked) {
-                logoSettings.style.display = 'block';
-            } else {
-                logoSettings.style.display = 'none';
-            }
-        });
+        if (checkbox && logoSettings) {
+            checkbox.addEventListener('change', function () {
+                if (this.checked) {
+                    logoSettings.style.display = 'block';
+                } else {
+                    logoSettings.style.display = 'none';
+                }
+            });
+        }
     });
     document.addEventListener('DOMContentLoaded', function () {
         const checkbox = document.getElementById('show_footerlogo_settings');
         const logoSettings = document.getElementById('logo-footer-settings');
 
-        checkbox.addEventListener('change', function () {
-            if (this.checked) {
-                logoSettings.style.display = 'block';
-            } else {
-                logoSettings.style.display = 'none';
-            }
-        });
+        if (checkbox && logoSettings) {
+            checkbox.addEventListener('change', function () {
+                if (this.checked) {
+                    logoSettings.style.display = 'block';
+                } else {
+                    logoSettings.style.display = 'none';
+                }
+            });
+        }
+    });
+    document.addEventListener('DOMContentLoaded', function () {
+        const activeTab = @json(session('active_tab'));
+        if (!activeTab) {
+            return;
+        }
+        const link = document.querySelector('.nav-tab a[href="#' + activeTab + '"]');
+        if (link && window.jQuery) {
+            window.jQuery(link).tab('show');
+        }
     });
 </script>
 @endpush

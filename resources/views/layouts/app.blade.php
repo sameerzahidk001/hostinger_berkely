@@ -303,8 +303,12 @@
     @endif
 
     <!-- Floating WhatsApp -->
-    <a href="{{ $settings->whatsapp_url ?? '#' }}" target="_blank" class="fixed bottom-20 right-2 rounded-full z-50">
-        <img src="{{ asset('images/' . $settings->whatsapp_icon ?? 'default.jpeg') }}" class="w-16 h-16">
+    @php
+        $whatsappUrl = data_get($settings, 'whatsapp_url') ?: '#';
+        $whatsappIcon = data_get($settings, 'whatsapp_icon') ?: 'default.jpeg';
+    @endphp
+    <a href="{{ $whatsappUrl }}" target="_blank" rel="noopener" class="fixed bottom-20 right-2 rounded-full z-50">
+        <img src="{{ asset('images/' . $whatsappIcon) }}" class="w-16 h-16" alt="WhatsApp">
     </a>
 
     <!-- Fixed Social Section -->
@@ -316,11 +320,11 @@
             @endphp
             @foreach ($socialMedia as $platform)
                 @php
-                    $smurl = $platform . '_url';
-                    $smicon = $platform . '_icon';
+                    $smUrl = data_get($settings, $platform . '_url') ?: '#';
+                    $smIcon = data_get($settings, $platform . '_icon') ?: 'default.jpeg';
                 @endphp
-                <a href="{{ $settings->$smurl ?? '#' }}" target="_blank" class="bg-[#000435] p-2"><img
-                        src="{{ asset('images/' . $settings->$smicon ?? 'default.jpg') }}" class="w-8 h-8"></a>
+                <a href="{{ $smUrl }}" target="_blank" rel="noopener" class="bg-[#000435] p-2"><img
+                        src="{{ asset('images/' . $smIcon) }}" class="w-8 h-8" alt="{{ ucfirst($platform) }}"></a>
             @endforeach
         </div>
         @php

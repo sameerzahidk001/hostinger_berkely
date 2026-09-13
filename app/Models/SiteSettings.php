@@ -11,14 +11,5 @@ class SiteSettings extends Model
 
     protected $table = 'site_settings';
 
-    protected $fillable = [
-        'logo',
-        'button_text',
-        'button_url',
-        'search',
-        'login',
-        'register',
-        'created_at',
-        'updated_at'
-    ];
+    protected $guarded = [];
 }

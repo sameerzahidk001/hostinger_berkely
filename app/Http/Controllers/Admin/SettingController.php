@@ -99,6 +99,19 @@ class SettingController extends Controller
 
     public function siteSettingsUpdate(Request $request)
     {
+        $socialMedia = ['facebook', 'twitter', 'instagram', 'linkedin', 'youtube', 'tiktok', 'whatsapp'];
+
+        // Empty URL inputs arrive as "" and fail Laravel's "url" rule — normalize to null.
+        $urlNormalizations = ['header_button_url' => null];
+        foreach ($socialMedia as $platform) {
+            $urlNormalizations["{$platform}_url"] = null;
+        }
+        foreach ($urlNormalizations as $field => $_) {
+            if ($request->exists($field) && trim((string) $request->input($field)) === '') {
+                $request->merge([$field => null]);
+            }
+        }
+
         // Create the validator instance
         $validator = Validator::make($request->all(), [
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
@@ -108,7 +121,7 @@ class SettingController extends Controller
             'header_menu' => 'nullable|string',
             'header_button' => 'nullable|boolean',
             'header_button_text' => 'nullable|string|max:255',
-            'header_button_url' => 'nullable|url|max:255',
+            'header_button_url' => 'nullable|url|max:500',
             'header_search' => 'nullable|boolean',
             'header_search_image' => 'nullable|image|mimes:jpeg,png,jpg,webp,svg|max:2048',
             'login' => 'nullable|boolean',
@@ -134,17 +147,19 @@ class SettingController extends Controller
         ]);
 
         // Add additional validation for social media fields
-        $socialMedia = ['facebook', 'twitter', 'instagram', 'linkedin', 'youtube', 'tiktok', 'whatsapp'];
         foreach ($socialMedia as $platform) {
             $validator->addRules([
                 "{$platform}_icon" => 'nullable|image|mimes:jpeg,png,jpg,webp,svg|max:2048',
-                "{$platform}_url" => 'nullable|url|max:255',
+                "{$platform}_url" => 'nullable|url|max:500',
             ]);
         }
 
         // Check if the validation fails
         if ($validator->fails()) {
-            return redirect()->back()->withErrors($validator)->withInput();
+            return redirect()->back()
+                ->withErrors($validator)
+                ->withInput()
+                ->with('active_tab', $request->input('active_tab', 'social-settings'));
         }
 
         // Proceed with updating the settings

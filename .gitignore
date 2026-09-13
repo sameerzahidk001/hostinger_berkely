@@ -68,3 +68,13 @@ database/live-to-sublive-content-sync.sql
 /public/images/clients/**
 !/public/images/clients/.gitkeep
 
+# Never commit newly uploaded media from admin (logos/social icons/banners).
+# Existing tracked defaults stay; Hostinger must keep live uploads on the server.
+/public/images/*_icon_*
+/public/images/logo_*
+/public/images/white_logo_*
+/public/images/favicon_*
+/public/images/banner_*
+/public/uploads/**
+!/public/uploads/.gitkeep
+
