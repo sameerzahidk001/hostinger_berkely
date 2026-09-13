@@ -39,6 +39,11 @@ use App\Http\Controllers\User\ProfileController as UserProfileController;
 use App\Http\Controllers\User\TestimonialController as UserTestimonialController;
 use App\Http\Controllers\User\HomeController as UserHomeController;
 use App\Http\Controllers\User\InstallmentController as UserInstallmentController;
+use App\Http\Controllers\User\StudyMaterialController as UserStudyMaterialController;
+use App\Http\Controllers\User\HistoryController as UserHistoryController;
+use App\Http\Controllers\Admin\StudyMaterialFolderController;
+use App\Http\Controllers\Admin\StudyMaterialAccessController;
+use App\Http\Controllers\Admin\ClassScheduleController;
 
 //student controllers starts
 use App\Http\Controllers\Student\HomeController as StudentHomeController;
@@ -174,6 +179,52 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
         Route::get('profile', [AdminController::class, 'profile'])->name('admin.profile');
         Route::post('profile/update', [AdminController::class, 'profile_update'])->name('admin.profile.update');
         Route::get('logout', [AdminController::class, 'logout'])->name('admin.logout');
+
+        // Study Materials (LMS) + Class Schedules / Zoho Meeting
+        Route::prefix('study-materials')->name('admin.study-materials.')->group(function () {
+            Route::get('/folders', [StudyMaterialFolderController::class, 'index'])->name('folders.index');
+            Route::get('/folders/create', [StudyMaterialFolderController::class, 'create'])->name('folders.create');
+            Route::post('/folders', [StudyMaterialFolderController::class, 'store'])->name('folders.store');
+            Route::get('/folders/{id}/edit', [StudyMaterialFolderController::class, 'edit'])->name('folders.edit');
+            Route::put('/folders/{id}', [StudyMaterialFolderController::class, 'update'])->name('folders.update');
+            Route::delete('/folders/{id}', [StudyMaterialFolderController::class, 'destroy'])->name('folders.destroy');
+            Route::post('/folders/{id}/subfolders', [StudyMaterialFolderController::class, 'storeSubfolder'])->name('folders.subfolders.store');
+            Route::post('/folders/{id}/files', [StudyMaterialFolderController::class, 'storeFile'])->name('folders.files.store');
+            Route::post('/folders/{id}/send-students', [StudyMaterialFolderController::class, 'sendStudents'])->name('folders.send-students');
+            Route::post('/folders/{id}/send-instructors', [StudyMaterialFolderController::class, 'sendInstructors'])->name('folders.send-instructors');
+            Route::get('/packages-by-course/{courseId}', [StudyMaterialFolderController::class, 'packagesByCourse'])->name('packages-by-course');
+            Route::put('/items/{id}', [StudyMaterialFolderController::class, 'renameItem'])->name('items.rename');
+            Route::post('/items/{id}/download', [StudyMaterialFolderController::class, 'toggleDownload'])->name('items.download');
+            Route::delete('/items/{id}', [StudyMaterialFolderController::class, 'destroyItem'])->name('items.destroy');
+
+            Route::get('/access/students', [StudyMaterialAccessController::class, 'students'])->name('access.students');
+            Route::get('/access/assign-student', [StudyMaterialAccessController::class, 'createStudent'])->name('access.assign-student');
+            Route::post('/access/assign-student', [StudyMaterialAccessController::class, 'storeStudent'])->name('access.assign-student.store');
+            Route::get('/access/student/{id}/edit', [StudyMaterialAccessController::class, 'editStudent'])->name('access.student.edit');
+            Route::put('/access/student/{id}', [StudyMaterialAccessController::class, 'updateStudent'])->name('access.student.update');
+            Route::get('/access/student/{id}/send', [StudyMaterialAccessController::class, 'sendStudent'])->name('access.student.send');
+            Route::get('/access/student/{id}/disable', [StudyMaterialAccessController::class, 'disableStudent'])->name('access.student.disable');
+
+            Route::get('/access/instructors', [StudyMaterialAccessController::class, 'instructors'])->name('access.instructors');
+            Route::get('/access/assign-instructor', [StudyMaterialAccessController::class, 'createInstructor'])->name('access.assign-instructor');
+            Route::post('/access/assign-instructor', [StudyMaterialAccessController::class, 'storeInstructor'])->name('access.assign-instructor.store');
+            Route::get('/access/instructor/{id}/edit', [StudyMaterialAccessController::class, 'editInstructor'])->name('access.instructor.edit');
+            Route::put('/access/instructor/{id}', [StudyMaterialAccessController::class, 'updateInstructor'])->name('access.instructor.update');
+            Route::get('/access/instructor/{id}/send', [StudyMaterialAccessController::class, 'sendInstructor'])->name('access.instructor.send');
+            Route::get('/access/instructor/{id}/disable', [StudyMaterialAccessController::class, 'disableInstructor'])->name('access.instructor.disable');
+        });
+
+        Route::prefix('class-schedules')->name('admin.class-schedules.')->group(function () {
+            Route::get('/', [ClassScheduleController::class, 'index'])->name('index');
+            Route::get('/create', [ClassScheduleController::class, 'create'])->name('create');
+            Route::post('/', [ClassScheduleController::class, 'store'])->name('store');
+            Route::get('/feed.ics', [ClassScheduleController::class, 'feed'])->name('feed');
+            Route::post('/zoho-embed', [ClassScheduleController::class, 'saveZohoEmbed'])->name('zoho-embed');
+            Route::get('/{id}/edit', [ClassScheduleController::class, 'edit'])->name('edit');
+            Route::put('/{id}', [ClassScheduleController::class, 'update'])->name('update');
+            Route::delete('/{id}', [ClassScheduleController::class, 'destroy'])->name('destroy');
+            Route::get('/{id}/ics', [ClassScheduleController::class, 'ics'])->name('ics');
+        });
 
         // Payment Related Sections
         Route::get('/invoices', [AdminController::class, 'invoices'])->name('admin.invoices');
@@ -460,6 +511,15 @@ Route::prefix('user')->middleware(['auth', 'approved', 'redirect.panel.from.stud
     Route::get('/cart', [CartController::class, 'index'])->name('user.cart.index');
     Route::post('/generate/rakBankPaySession', [UserHomeController::class, 'generateRakBankPaySession'])->name('user.generate.rakBankPaySession');
     Route::get('/rakbank/return', [UserHomeController::class, 'handleRakBankReturn'])->name('user.rakbank.return');
+
+    // Study Materials (LMS) + Class Schedules
+    Route::get('/study-materials', [UserStudyMaterialController::class, 'index'])->name('user.study-materials.index');
+    Route::get('/study-materials/file/{itemId}', [UserStudyMaterialController::class, 'viewFile'])->name('user.study-materials.file');
+    Route::get('/study-materials/{id}', [UserStudyMaterialController::class, 'show'])->name('user.study-materials.show');
+    Route::get('/class-schedules', [UserStudyMaterialController::class, 'schedules'])->name('user.class-schedules.index');
+    Route::get('/class-schedules.ics', [UserStudyMaterialController::class, 'schedulesIcs'])->name('user.class-schedules.ics');
+    Route::get('/class-schedules/{id}.ics', [UserStudyMaterialController::class, 'scheduleIcs'])->name('user.class-schedules.item-ics');
+    Route::get('/history', [UserHistoryController::class, 'index'])->name('user.history');
 
     // Logout
     Route::get('/logout', [App\Http\Controllers\HomeController::class, 'logout'])->name('user.logout');

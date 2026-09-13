@@ -1,0 +1,237 @@
+<?php
+
+namespace App\Http\Controllers\User;
+
+use App\Http\Controllers\Controller;
+use App\Models\ClassSchedule;
+use App\Models\StudyMaterialFolder;
+use App\Models\StudyMaterialItem;
+use App\Models\StudyMaterialStudentAccess;
+use App\Services\StudyMaterialService;
+use App\Services\ZohoLmsService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\File;
+use Symfony\Component\HttpFoundation\Response;
+
+class StudyMaterialController extends Controller
+{
+    public function __construct(
+        protected StudyMaterialService $lms,
+        protected ZohoLmsService $zoho
+    ) {
+    }
+
+    public function index()
+    {
+        $accesses = StudyMaterialStudentAccess::with([
+            'folder.course',
+            'folder.instructorAccess.instructor',
+        ])
+            ->where('student_id', Auth::id())
+            ->whereHas('folder')
+            ->where(function ($q) {
+                $q->where('status', 'disabled')
+                    ->orWhere(function ($open) {
+                        $open->where('status', 'active')
+                            ->where(function ($till) {
+                                $till->whereNull('access_till')->orWhereDate('access_till', '>=', now()->toDateString());
+                            });
+                    });
+            })
+            ->latest()
+            ->get();
+
+        return view('user.study-materials.index', compact('accesses'));
+    }
+
+    public function show($id)
+    {
+        abort_unless($this->lms->studentHasActiveAccess(Auth::id(), (int) $id), 403, 'This folder is disabled or you no longer have access.');
+
+        $folder = StudyMaterialFolder::with([
+            'course',
+            'rootItems.childrenRecursive',
+            'instructorAccess.instructor',
+        ])->findOrFail($id);
+
+        $access = StudyMaterialStudentAccess::query()
+            ->where('student_id', Auth::id())
+            ->where('folder_id', $folder->id)
+            ->first();
+
+        record_user_activity(
+            'Opened study folder',
+            $folder->name,
+            route('user.study-materials.show', $folder->id),
+            'student',
+            Auth::id()
+        );
+
+        return view('user.study-materials.show', compact('folder', 'access'));
+    }
+
+    public function viewFile(Request $request, $itemId)
+    {
+        $item = StudyMaterialItem::with('folder')->findOrFail($itemId);
+        abort_if($item->type !== 'file', 404);
+        abort_unless($this->lms->studentHasActiveAccess(Auth::id(), (int) $item->folder_id), 403, 'This folder is disabled or you no longer have access.');
+
+        $asDownload = $request->boolean('download');
+        if ($asDownload) {
+            abort_unless($item->allowsDownload(), 403);
+        }
+        if ($asDownload || $request->boolean('raw')) {
+            return $this->streamItem($request, $item, $asDownload);
+        }
+
+        return response()->view('user.study-materials.secure-frame', [
+            'item' => $item,
+            'mode' => $item->isExternal() ? 'external' : 'file',
+            'rawUrl' => $item->portalPreviewUrl(),
+            'downloadUrl' => $item->portalDownloadUrl(),
+        ]);
+    }
+
+    protected function streamItem(Request $request, StudyMaterialItem $item, bool $asDownload): Response
+    {
+        @set_time_limit(0);
+
+        $filename = $item->original_name ?: $item->name;
+        $disposition = ($asDownload ? 'attachment' : 'inline') . '; filename="' . addslashes($filename) . '"';
+        $headers = [
+            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control' => 'private, max-age=120',
+            'Content-Disposition' => $disposition,
+        ];
+        if ($asDownload) {
+            $headers['Content-Type'] = 'application/octet-stream';
+        }
+
+        $path = $item->publicPath();
+        if ($path && File::exists($path)) {
+            if (!$asDownload) {
+                $headers['Content-Type'] = $item->mime && $item->mime !== 'zoho/workdrive'
+                    ? $item->mime
+                    : (File::mimeType($path) ?: 'application/octet-stream');
+            }
+
+            return $asDownload
+                ? response()->download($path, $filename, $headers)
+                : response()->file($path, $headers);
+        }
+
+        if ($item->external_url) {
+            $info = $this->zoho->workDrivePublicFileInfo($item->external_url);
+            if ($info) {
+                $this->rememberWorkDriveMeta($item, $info);
+                if (!empty($info['name'])) {
+                    $filename = $info['name'];
+                    $headers['Content-Disposition'] = ($asDownload ? 'attachment' : 'inline') . '; filename="' . addslashes($filename) . '"';
+                }
+                if (!empty($info['extn']) && !$asDownload) {
+                    $headers['Content-Type'] = $this->zoho->mimeFromExtension($info['extn']) ?: 'application/octet-stream';
+                }
+            }
+
+            if (!empty($info['download_url'])) {
+                return $this->zoho->proxyRemoteStream(
+                    $info['download_url'],
+                    $asDownload ? null : $request->header('Range'),
+                    $headers,
+                    $asDownload
+                );
+            }
+
+            $remote = $this->zoho->fetchRemoteFile($item->external_url);
+            if (!$remote) {
+                return response()->view('user.study-materials.file-error', [
+                    'item' => $item,
+                    'downloadUrl' => $item->portalDownloadUrl(),
+                    'asDownload' => $asDownload,
+                ], 502);
+            }
+
+            $headers['Content-Type'] = $asDownload ? 'application/octet-stream' : ($remote['mime'] ?: 'application/octet-stream');
+            if (!empty($remote['path']) && is_file($remote['path'])) {
+                $response = $asDownload
+                    ? response()->download($remote['path'], $filename, $headers)
+                    : response()->file($remote['path'], $headers);
+                if (!empty($remote['delete_after'])) {
+                    $response->deleteFileAfterSend(true);
+                }
+
+                return $response;
+            }
+
+            return response($remote['body'] ?? '', 200, $headers);
+        }
+
+        abort(404);
+    }
+
+    protected function rememberWorkDriveMeta(StudyMaterialItem $item, array $info): void
+    {
+        $updates = [];
+        if (!empty($info['extn'])) {
+            $mime = $this->zoho->mimeFromExtension($info['extn']);
+            if ($mime && ($item->mime === 'zoho/workdrive' || blank($item->mime))) {
+                $updates['mime'] = $mime;
+            }
+        }
+        if (!empty($info['name']) && blank($item->original_name)) {
+            $updates['original_name'] = $info['name'];
+        }
+        if (!empty($info['size']) && empty($item->size)) {
+            $updates['size'] = $info['size'];
+        }
+        if ($updates) {
+            $item->forceFill($updates)->save();
+        }
+    }
+
+    public function schedules()
+    {
+        $schedules = $this->studentSchedules();
+        $calendarEvents = $schedules->map(fn (ClassSchedule $row) => $row->toFullCalendarEvent(
+            $row->zoho_link ?: route('user.class-schedules.index')
+        ))->values();
+
+        return view('user.study-materials.schedules', compact('schedules', 'calendarEvents'));
+    }
+
+    public function schedulesIcs()
+    {
+        return $this->icsDownload($this->studentSchedules(), 'my-class-schedule.ics');
+    }
+
+    public function scheduleIcs($id)
+    {
+        $schedule = $this->studentSchedules()->firstWhere('id', (int) $id);
+        abort_unless($schedule, 403);
+
+        return $this->icsDownload(collect([$schedule]), 'class-' . $schedule->id . '.ics');
+    }
+
+    protected function studentSchedules()
+    {
+        return ClassSchedule::with(['course', 'instructor'])
+            ->where('status', 'scheduled')
+            ->whereHas('students', fn ($q) => $q->where('users.id', Auth::id()))
+            ->orderBy('scheduled_at')
+            ->get();
+    }
+
+    protected function icsDownload($schedules, string $filename)
+    {
+        $events = collect($schedules)
+            ->map(fn (ClassSchedule $row) => $row->toIcsEvent())
+            ->implode("\r\n");
+        $ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//BerkeleyME//Class Schedule//EN\r\nCALSCALE:GREGORIAN\r\nMETHOD:PUBLISH\r\n" . $events . "\r\nEND:VCALENDAR\r\n";
+
+        return response($ics, 200, [
+            'Content-Type' => 'text/calendar; charset=utf-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
+}

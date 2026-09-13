@@ -140,6 +140,29 @@
                      <a href="{{ route('admin.clients.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Clients</span></a>
                   </li>
                   @endif
+                  @if(admin_menu_allowed('study-materials'))
+                  <li class="{{ request()->is('admin/study-materials*') ? 'active' : '' }}">
+                     <a href="javascript:void(0)"><i class="fa fa-folder-open"></i> <span class="nav-label">Study Materials</span> <span class="fa arrow"></span></a>
+                     <ul class="nav nav-second-level">
+                        <li class="{{ request()->routeIs('admin.study-materials.folders.*') ? 'active' : '' }}">
+                           <a href="{{ route('admin.study-materials.folders.index') }}">Folders</a>
+                        </li>
+                        <li class="{{ request()->routeIs('admin.study-materials.access.students', 'admin.study-materials.access.assign-student') ? 'active' : '' }}">
+                           <a href="{{ route('admin.study-materials.access.students') }}">Student Access</a>
+                        </li>
+                        @if(Auth::guard('admin')->check())
+                        <li class="{{ request()->routeIs('admin.study-materials.access.instructors', 'admin.study-materials.access.assign-instructor') ? 'active' : '' }}">
+                           <a href="{{ route('admin.study-materials.access.instructors') }}">Instructor Access</a>
+                        </li>
+                        @endif
+                     </ul>
+                  </li>
+                  @endif
+                  @if(admin_menu_allowed('class-schedules'))
+                  <li class="{{ request()->is('admin/class-schedules*') ? 'active' : '' }}">
+                     <a href="{{ route('admin.class-schedules.index') }}"><i class="fa fa-calendar"></i> <span class="nav-label">Class Schedule</span></a>
+                  </li>
+                  @endif
                   @if(admin_menu_allowed('analytics'))
                   <li class="{{ request()->is('admin/analytics*') ? 'active' : '' }}">
                      <a href="{{ route('admin.analytics') }}"><i class="fa fa-star"></i> <span class="nav-label">Analytics</span></a>
