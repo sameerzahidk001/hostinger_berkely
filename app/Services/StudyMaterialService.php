@@ -454,6 +454,31 @@ class StudyMaterialService
             ->send(new UserMail($user, $subject, $body));
     }
 
+    /**
+     * Folders shown on student Study Materials + Dashboard.
+     * Includes disabled access (grey card) so it is never silently removed.
+     */
+    public function studentPortalAccesses(int $studentId)
+    {
+        return StudyMaterialStudentAccess::with([
+            'folder.course',
+            'folder.instructorAccess.instructor',
+        ])
+            ->where('student_id', $studentId)
+            ->whereHas('folder')
+            ->where(function ($q) {
+                $q->where('status', 'disabled')
+                    ->orWhere(function ($open) {
+                        $open->where('status', 'active')
+                            ->where(function ($till) {
+                                $till->whereNull('access_till')->orWhereDate('access_till', '>=', now()->toDateString());
+                            });
+                    });
+            })
+            ->latest()
+            ->get();
+    }
+
     public function studentHasActiveAccess(int $studentId, int $folderId): bool
     {
         return StudyMaterialStudentAccess::query()

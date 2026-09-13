@@ -24,23 +24,7 @@ class StudyMaterialController extends Controller
 
     public function index()
     {
-        $accesses = StudyMaterialStudentAccess::with([
-            'folder.course',
-            'folder.instructorAccess.instructor',
-        ])
-            ->where('student_id', Auth::id())
-            ->whereHas('folder')
-            ->where(function ($q) {
-                $q->where('status', 'disabled')
-                    ->orWhere(function ($open) {
-                        $open->where('status', 'active')
-                            ->where(function ($till) {
-                                $till->whereNull('access_till')->orWhereDate('access_till', '>=', now()->toDateString());
-                            });
-                    });
-            })
-            ->latest()
-            ->get();
+        $accesses = $this->lms->studentPortalAccesses((int) Auth::id());
 
         return view('user.study-materials.index', compact('accesses'));
     }

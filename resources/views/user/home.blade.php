@@ -57,6 +57,26 @@
         </div>
     @endif
 
+    @if(isset($courseAccesses) && $courseAccesses->isNotEmpty())
+        <div class="wrapper wrapper-content animated fadeInRight" style="padding-bottom:0;">
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="ibox">
+                        <div class="ibox-title" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                            <h5 style="margin:0;">Course Access</h5>
+                            <a href="{{ route('user.study-materials.index') }}" class="btn btn-xs btn-default">All Study Materials</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                @foreach($courseAccesses as $access)
+                    @include('user.study-materials._folder_card', ['access' => $access])
+                @endforeach
+            </div>
+        </div>
+    @endif
+
     @if(auth()->user()->hasPermission('installment-list'))
         <div class="wrapper wrapper-content animated fadeInRight">
             <div class="row">

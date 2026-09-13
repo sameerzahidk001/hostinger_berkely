@@ -6,13 +6,15 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Http\Request;
 use App\Models\Installment;
 use App\Services\RakBankCheckoutService;
+use App\Services\StudyMaterialService;
 
 class HomeController extends Controller
 {
-    public function index()
+    public function index(StudyMaterialService $lms)
     {
         $data = [];
 
@@ -26,7 +28,12 @@ class HomeController extends Controller
                 ->get();
         }
 
-        return view('user.home', compact('data'));
+        $courseAccesses = collect();
+        if (Schema::hasTable('study_material_student_access')) {
+            $courseAccesses = $lms->studentPortalAccesses((int) Auth::id());
+        }
+
+        return view('user.home', compact('data', 'courseAccesses'));
     }
 
     public function generateRakBankPaySession(Request $request)
