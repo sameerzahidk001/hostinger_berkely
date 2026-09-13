@@ -12,7 +12,7 @@
             <p style="margin-bottom:6px;">
                 Course:
                 @if($folder->course)
-                    <a href="{{ url('/' . ($folder->course->slug ?? $folder->course_id)) }}" target="_blank" rel="noopener"><strong>{{ $folder->course->title }}</strong></a>
+                    <a href="{{ route('course.details', ['course' => $folder->course->slug ?? $folder->course_id]) }}" target="_blank" rel="noopener"><strong>{{ $folder->course->title }}</strong></a>
                 @else — @endif
             </p>
             <p style="margin-bottom:6px;">
