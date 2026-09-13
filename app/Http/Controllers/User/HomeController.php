@@ -36,6 +36,24 @@ class HomeController extends Controller
         return view('user.home', compact('data', 'courseAccesses'));
     }
 
+    public function payments()
+    {
+        $data = [];
+
+        if (auth()->user()->hasPermission('installment-list')
+            || auth()->user()->roles()->where('name', 'student')->exists()) {
+            $data['installments'] = Installment::with(['payment.courseFee', 'payment.course'])
+                ->where('user_id', Auth::id())
+                ->whereHas('payment', function ($query) {
+                    $query->where('status', 'Active');
+                })
+                ->orderByDesc('created_at')
+                ->get();
+        }
+
+        return view('user.payments.index', compact('data'));
+    }
+
     public function generateRakBankPaySession(Request $request)
     {
         $request->validate([

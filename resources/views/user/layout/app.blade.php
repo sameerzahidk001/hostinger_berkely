@@ -151,6 +151,12 @@
                   <a href="{{ route('user.profile') }}"><i class="fa fa-th-large"></i> <span
                         class="nav-label">Profile</span></a>
                </li>
+               @if(auth()->user()->hasPermission('installment-list') || auth()->user()->roles()->where('name', 'student')->exists())
+               <li class="{{ request()->routeIs('user.payments') ? 'active' : '' }}">
+                  <a href="{{ route('user.payments') }}"><i class="fa fa-credit-card"></i> <span
+                        class="nav-label">Payments</span></a>
+               </li>
+               @endif
                <li class="{{ request()->routeIs('user.study-materials.*') ? 'active' : '' }}">
                   <a href="{{ route('user.study-materials.index') }}">
                      <i class="fa fa-book"></i>

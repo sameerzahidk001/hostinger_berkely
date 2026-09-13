@@ -1,4 +1,4 @@
-@extends('user.layout.app')
+@extends(($forPdf ?? false) ? 'layouts.pdf' : 'user.layout.app')
 
 @section('title', 'Installment Receipt')
 
@@ -6,13 +6,13 @@
     <style>
         .receipt-box {
             background: #fff;
-            padding: 40px 30px;
-            margin: 30px auto;
-            border: 1px solid #e0e0e0;
-            box-shadow: 0 0 25px rgba(0, 0, 0, 0.06);
+            padding: {{ ($forPdf ?? false) ? '10px' : '40px 30px' }};
+            margin: {{ ($forPdf ?? false) ? '0' : '30px auto' }};
+            border: {{ ($forPdf ?? false) ? 'none' : '1px solid #e0e0e0' }};
+            box-shadow: {{ ($forPdf ?? false) ? 'none' : '0 0 25px rgba(0, 0, 0, 0.06)' }};
             font-size: 15px;
             line-height: 24px;
-            font-family: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-family: DejaVu Sans, 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif;
             color: #333;
             max-width: 800px;
         }
@@ -91,8 +91,12 @@
                 <div id="receipt-content" class="receipt-box">
                     <div style="display: table; width: 100%; margin-bottom: 30px;">
                         <div style="display: table-cell; width: 50%; vertical-align: top;">
-                            <img src="{{ asset('frontend/images/pngs/logo-color.png') }}" alt="Logo"
-                                style="width: 280px; margin-bottom: 10px;">
+                            @php $logoPath = public_path('frontend/images/pngs/logo-color.png'); @endphp
+                            @if(($forPdf ?? false) && file_exists($logoPath))
+                                <img src="{{ $logoPath }}" alt="Logo" style="width: 280px; margin-bottom: 10px;">
+                            @else
+                                <img src="{{ asset('frontend/images/pngs/logo-color.png') }}" alt="Logo" style="width: 280px; margin-bottom: 10px;">
+                            @endif
                             <p style="margin-bottom: 0;">Berkeley School of Business, Arts & Sciences</p>
                             <p style="margin-bottom: 0;">Berkeley Square, Mayfair, London, W1J, UK</p>
                             <p style="margin-bottom: 0;">Mob: +44 7306 279111</p>

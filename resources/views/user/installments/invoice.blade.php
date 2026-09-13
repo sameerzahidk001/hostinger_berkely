@@ -1,4 +1,4 @@
-@extends('user.layout.app')
+@extends(($forPdf ?? false) ? 'layouts.pdf' : 'user.layout.app')
 
 @section('title', 'Package Invoice')
 
@@ -149,8 +149,12 @@
 
                     <div class="invoice-header" style="display: table; width: 100%; margin-bottom: 15px;">
                         <div style="display: table-cell; width: 50%; vertical-align: top;">
-                            <img src="{{ asset('frontend/images/pngs/logo-color.png') }}" alt="Logo"
-                                style="width: 280px; margin-bottom: 10px;">
+                            @php $logoPath = public_path('frontend/images/pngs/logo-color.png'); @endphp
+                            @if(($forPdf ?? false) && file_exists($logoPath))
+                                <img src="{{ $logoPath }}" alt="Logo" style="width: 280px; margin-bottom: 10px;">
+                            @else
+                                <img src="{{ asset('frontend/images/pngs/logo-color.png') }}" alt="Logo" style="width: 280px; margin-bottom: 10px;">
+                            @endif
                             <p style="margin-bottom: 0;">Berkeley School of Business, Arts & Sciences</p>
                             <p style="margin-bottom: 0;">Berkeley Square, Mayfair, London, W1J, UK</p>
                             <p style="margin-bottom: 0;">Mob: +44 7306 279111</p>

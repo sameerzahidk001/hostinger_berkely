@@ -509,6 +509,7 @@ Route::prefix('user')->middleware(['auth', 'approved', 'redirect.panel.from.stud
 
     // Dashboard
     Route::get('/', [UserHomeController::class, 'index'])->name('user.home')->middleware('hasPermission:dashboard-read');
+    Route::get('/payments', [UserHomeController::class, 'payments'])->name('user.payments');
     Route::get('/cart', [CartController::class, 'index'])->name('user.cart.index');
     Route::post('/generate/rakBankPaySession', [UserHomeController::class, 'generateRakBankPaySession'])->name('user.generate.rakBankPaySession');
     Route::get('/rakbank/return', [UserHomeController::class, 'handleRakBankReturn'])->name('user.rakbank.return');
