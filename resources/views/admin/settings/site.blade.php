@@ -312,6 +312,11 @@
                                             <input type="hidden" name="active_tab" id="active_tab" value="social-settings">
                                             @php
                                                 $socialMedia = ['facebook', 'twitter', 'instagram', 'linkedin', 'youtube', 'tiktok', 'whatsapp'];
+                                                $regionalWhatsapp = [
+                                                    'whatsapp_usa_url' => 'WhatsApp USA & Canada',
+                                                    'whatsapp_uk_url' => 'WhatsApp UK & Europe',
+                                                    'whatsapp_middle_east_url' => 'WhatsApp Middle East & Africa',
+                                                ];
                                             @endphp
                                             @foreach($socialMedia as $key)
                                                 <div class="row">
@@ -327,12 +332,30 @@
                                                         </div>
                                                     </div>
                                                     <div class="col-md-6">
-                                                        <div class="form-group">                                                            
-                                                            <label for="{{ $key }}_url">{{ ucfirst($key) }} URL</label>
-                                                            <input type="text" name="{{ $key }}_url" id="{{ $key }}_url" value="{{ $settings->{$key . '_url'} ?? '' }}" class="form-control">
+                                                        <div class="form-group">
+                                                            <label for="{{ $key }}_url">{{ ucfirst($key) }} URL @if($key === 'whatsapp')(fallback)@endif</label>
+                                                            <input type="text" name="{{ $key }}_url" id="{{ $key }}_url" value="{{ $settings->{$key . '_url'} ?? '' }}" class="form-control" @if($key === 'whatsapp') placeholder="https://wa.me/..." @endif>
                                                         </div>
                                                     </div>
                                                 </div>
+                                                @if($key === 'whatsapp')
+                                                    <div class="row">
+                                                        <div class="col-md-12">
+                                                            <h4 style="margin-top:10px;">3 regional WhatsApp numbers</h4>
+                                                            <p class="text-muted">Each filled URL shows as its own floating button on the website.</p>
+                                                        </div>
+                                                    </div>
+                                                    @foreach($regionalWhatsapp as $field => $label)
+                                                        <div class="row">
+                                                            <div class="col-md-12">
+                                                                <div class="form-group">
+                                                                    <label for="{{ $field }}">{{ $label }}</label>
+                                                                    <input type="text" name="{{ $field }}" id="{{ $field }}" value="{{ $settings->{$field} ?? '' }}" class="form-control" placeholder="https://wa.me/...">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    @endforeach
+                                                @endif
                                             @endforeach
                                             <button type="submit" class="btn btn-primary">Save</button>
                                         </form>

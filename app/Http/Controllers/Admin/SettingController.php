@@ -91,6 +91,7 @@ class SettingController extends Controller
 
     public function siteSettings()
     {
+        $this->ensureRegionalWhatsappColumns();
         $settings = SiteSettings::first();
         $menus = Menu::get();
         $pages = Page::get();
@@ -100,11 +101,15 @@ class SettingController extends Controller
     public function siteSettingsUpdate(Request $request)
     {
         $socialMedia = ['facebook', 'twitter', 'instagram', 'linkedin', 'youtube', 'tiktok', 'whatsapp'];
+        $regionalWhatsappFields = ['whatsapp_usa_url', 'whatsapp_uk_url', 'whatsapp_middle_east_url'];
 
         // Empty URL inputs arrive as "" and fail Laravel's "url" rule — normalize to null.
         $urlNormalizations = ['header_button_url' => null];
         foreach ($socialMedia as $platform) {
             $urlNormalizations["{$platform}_url"] = null;
+        }
+        foreach ($regionalWhatsappFields as $field) {
+            $urlNormalizations[$field] = null;
         }
         foreach ($urlNormalizations as $field => $_) {
             if ($request->exists($field) && trim((string) $request->input($field)) === '') {
@@ -144,6 +149,9 @@ class SettingController extends Controller
             'course_perma' => 'nullable|string|max:255',
             'category_perma' => 'nullable|string|max:255',
             'school_perma' => 'nullable|string|max:255',
+            'whatsapp_usa_url' => 'nullable|url|max:500',
+            'whatsapp_uk_url' => 'nullable|url|max:500',
+            'whatsapp_middle_east_url' => 'nullable|url|max:500',
         ]);
 
         // Add additional validation for social media fields
@@ -161,6 +169,8 @@ class SettingController extends Controller
                 ->withInput()
                 ->with('active_tab', $request->input('active_tab', 'social-settings'));
         }
+
+        $this->ensureRegionalWhatsappColumns();
 
         // Proceed with updating the settings
         $settings = SiteSettings::firstOrNew([]);
@@ -212,6 +222,12 @@ class SettingController extends Controller
             $settings->$urlField = $request->input($urlField, $settings->$urlField);
         }
 
+        foreach ($regionalWhatsappFields as $field) {
+            if (\Illuminate\Support\Facades\Schema::hasColumn('site_settings', $field) && $request->exists($field)) {
+                $settings->$field = $request->input($field);
+            }
+        }
+
         // Save settings
         $settings->save();
 
@@ -220,6 +236,26 @@ class SettingController extends Controller
             'active_tab' => $request->input('active_tab')
         ]);
     }
+
+    protected function ensureRegionalWhatsappColumns(): void
+    {
+        if (! \Illuminate\Support\Facades\Schema::hasTable('site_settings')) {
+            return;
+        }
+
+        \Illuminate\Support\Facades\Schema::table('site_settings', function ($table) {
+            if (! \Illuminate\Support\Facades\Schema::hasColumn('site_settings', 'whatsapp_usa_url')) {
+                $table->string('whatsapp_usa_url')->nullable();
+            }
+            if (! \Illuminate\Support\Facades\Schema::hasColumn('site_settings', 'whatsapp_uk_url')) {
+                $table->string('whatsapp_uk_url')->nullable();
+            }
+            if (! \Illuminate\Support\Facades\Schema::hasColumn('site_settings', 'whatsapp_middle_east_url')) {
+                $table->string('whatsapp_middle_east_url')->nullable();
+            }
+        });
+    }
+
     public function getHeaderSettings()
     {
         $settings = SiteSettings::first();

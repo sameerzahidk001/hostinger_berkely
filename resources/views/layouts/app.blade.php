@@ -302,14 +302,26 @@
         </section>
     @endif
 
-    <!-- Floating WhatsApp -->
+    <!-- Floating WhatsApp (3 regional links) -->
     @php
-        $whatsappUrl = data_get($settings, 'whatsapp_url') ?: '#';
         $whatsappIcon = data_get($settings, 'whatsapp_icon') ?: 'default.jpeg';
+        $fallbackWa = data_get($settings, 'whatsapp_url');
+        $whatsappLinks = collect([
+            ['label' => 'USA & Canada', 'url' => data_get($settings, 'whatsapp_usa_url') ?: $fallbackWa],
+            ['label' => 'UK & Europe', 'url' => data_get($settings, 'whatsapp_uk_url') ?: $fallbackWa],
+            ['label' => 'Middle East & Africa', 'url' => data_get($settings, 'whatsapp_middle_east_url') ?: $fallbackWa],
+        ])->filter(fn ($row) => filled($row['url']))->unique('url')->values();
     @endphp
-    <a href="{{ $whatsappUrl }}" target="_blank" rel="noopener" class="fixed bottom-20 right-2 rounded-full z-50">
-        <img src="{{ asset('images/' . $whatsappIcon) }}" class="w-16 h-16" alt="WhatsApp">
-    </a>
+    @if($whatsappLinks->isNotEmpty())
+        <div style="position:fixed;bottom:5rem;right:10px;z-index:50;display:flex;flex-direction:column;align-items:flex-end;gap:12px;">
+            @foreach($whatsappLinks as $wa)
+                <a href="{{ $wa['url'] }}" target="_blank" rel="noopener" title="WhatsApp {{ $wa['label'] }}" style="display:flex;align-items:center;gap:8px;text-decoration:none;">
+                    <span style="display:inline-block;white-space:nowrap;background:#FFD60A;color:#000435;font-size:13px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;line-height:1.2;padding:7px 12px;border-radius:9999px;box-shadow:0 2px 8px rgba(0,0,0,.28);">{{ $wa['label'] }}</span>
+                    <img src="{{ asset('images/' . $whatsappIcon) }}" alt="WhatsApp {{ $wa['label'] }}" style="width:64px;height:64px;border-radius:9999px;object-fit:cover;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.25);">
+                </a>
+            @endforeach
+        </div>
+    @endif
 
     <!-- Fixed Social Section -->
     <div class="fixed z-50 bottom-0 w-full flex justify-end space-x-0 bg-black bg-opacity-50">
