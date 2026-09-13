@@ -163,6 +163,14 @@
                      <span class="nav-label">Class Schedule</span>
                   </a>
                </li>
+               @if(auth()->user()->roles()->where('name', 'instructor')->exists())
+               <li>
+                  <a href="{{ route('admin.study-materials.folders.index') }}">
+                     <i class="fa fa-folder-open"></i>
+                     <span class="nav-label">Manage Folders</span>
+                  </a>
+               </li>
+               @endif
                @if(auth()->user()->hasPermission('testimonial-list'))
                   <li class="{{ request()->routeIs('user.testimonial.index') ? 'active' : '' }}">
                      <a href="{{ route('user.testimonial.index') }}"><i class="fa fa-th-large"></i> <span

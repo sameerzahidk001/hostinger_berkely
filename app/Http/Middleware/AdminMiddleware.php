@@ -39,6 +39,23 @@ class AdminMiddleware
 
                 return $this->withoutAdminCaching($next($request));
             }
+
+            // Instructors manage LMS from the admin UI while logged in as a portal user.
+            if (normalize_panel_role($role) === 'instructor' && (
+                $request->is('admin/study-materials*')
+                || $request->is('admin/class-schedules*')
+                || $request->is('admin/home')
+                || $request->is('admin/profile')
+                || $request->is('admin/logout')
+                || $request->is('admin/csrf-token')
+            )) {
+                $freshUser = $user?->fresh(['roles']);
+                if ($freshUser) {
+                    Auth::setUser($freshUser);
+                }
+
+                return $this->withoutAdminCaching($next($request));
+            }
         }
 
         return redirect()->to(public_login_url());

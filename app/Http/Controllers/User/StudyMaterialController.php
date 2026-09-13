@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ClassSchedule;
 use App\Models\StudyMaterialFolder;
 use App\Models\StudyMaterialItem;
+use App\Models\StudyMaterialInstructorAccess;
 use App\Models\StudyMaterialStudentAccess;
 use App\Services\StudyMaterialService;
 use App\Services\ZohoLmsService;
@@ -24,14 +25,14 @@ class StudyMaterialController extends Controller
 
     public function index()
     {
-        $accesses = $this->lms->studentPortalAccesses((int) Auth::id());
+        $accesses = $this->lms->portalAccessesForUser(Auth::user());
 
         return view('user.study-materials.index', compact('accesses'));
     }
 
     public function show($id)
     {
-        abort_unless($this->lms->studentHasActiveAccess(Auth::id(), (int) $id), 403, 'This folder is disabled or you no longer have access.');
+        abort_unless($this->lms->userCanOpenFolder((int) Auth::id(), (int) $id), 403, 'This folder is disabled or you no longer have access.');
 
         $folder = StudyMaterialFolder::with([
             'course',
@@ -43,6 +44,13 @@ class StudyMaterialController extends Controller
             ->where('student_id', Auth::id())
             ->where('folder_id', $folder->id)
             ->first();
+
+        if (! $access) {
+            $access = StudyMaterialInstructorAccess::query()
+                ->where('instructor_id', Auth::id())
+                ->where('folder_id', $folder->id)
+                ->first();
+        }
 
         record_user_activity(
             'Opened study folder',
@@ -59,7 +67,7 @@ class StudyMaterialController extends Controller
     {
         $item = StudyMaterialItem::with('folder')->findOrFail($itemId);
         abort_if($item->type !== 'file', 404);
-        abort_unless($this->lms->studentHasActiveAccess(Auth::id(), (int) $item->folder_id), 403, 'This folder is disabled or you no longer have access.');
+        abort_unless($this->lms->userCanOpenFolder((int) Auth::id(), (int) $item->folder_id), 403, 'This folder is disabled or you no longer have access.');
 
         $asDownload = $request->boolean('download');
         if ($asDownload) {
@@ -199,11 +207,16 @@ class StudyMaterialController extends Controller
 
     protected function studentSchedules()
     {
-        return ClassSchedule::with(['course', 'instructor'])
-            ->where('status', 'scheduled')
-            ->whereHas('students', fn ($q) => $q->where('users.id', Auth::id()))
-            ->orderBy('scheduled_at')
-            ->get();
+        $query = ClassSchedule::with(['course', 'instructor'])
+            ->where('status', 'scheduled');
+
+        if (Auth::user()?->roles()->where('name', 'instructor')->exists()) {
+            $query->where('instructor_id', Auth::id());
+        } else {
+            $query->whereHas('students', fn ($q) => $q->where('users.id', Auth::id()));
+        }
+
+        return $query->orderBy('scheduled_at')->get();
     }
 
     protected function icsDownload($schedules, string $filename)

@@ -479,6 +479,44 @@ class StudyMaterialService
             ->get();
     }
 
+    /**
+     * Folders shown on instructor Dashboard + Study Materials.
+     * Includes disabled access (grey card) so it is never silently removed.
+     */
+    public function instructorPortalAccesses(int $instructorId)
+    {
+        return StudyMaterialInstructorAccess::with([
+            'folder.course',
+            'folder.instructorAccess.instructor',
+        ])
+            ->where('instructor_id', $instructorId)
+            ->whereHas('folder')
+            ->where(function ($q) {
+                $q->where('status', 'disabled')
+                    ->orWhere(function ($open) {
+                        $open->where('status', 'active')
+                            ->where(function ($till) {
+                                $till->whereNull('access_till')->orWhereDate('access_till', '>=', now()->toDateString());
+                            });
+                    });
+            })
+            ->latest()
+            ->get();
+    }
+
+    public function portalAccessesForUser($user)
+    {
+        if (! $user) {
+            return collect();
+        }
+
+        if (method_exists($user, 'roles') && $user->roles()->where('name', 'instructor')->exists()) {
+            return $this->instructorPortalAccesses((int) $user->id);
+        }
+
+        return $this->studentPortalAccesses((int) $user->id);
+    }
+
     public function studentHasActiveAccess(int $studentId, int $folderId): bool
     {
         return StudyMaterialStudentAccess::query()
@@ -492,5 +530,26 @@ class StudyMaterialService
                 $q->whereNull('access_till')->orWhereDate('access_till', '>=', now()->toDateString());
             })
             ->exists();
+    }
+
+    public function instructorHasActiveAccess(int $instructorId, int $folderId): bool
+    {
+        return StudyMaterialInstructorAccess::query()
+            ->where('instructor_id', $instructorId)
+            ->where('folder_id', $folderId)
+            ->where('status', 'active')
+            ->whereHas('folder', function ($folder) {
+                $folder->where('status', 'active');
+            })
+            ->where(function ($q) {
+                $q->whereNull('access_till')->orWhereDate('access_till', '>=', now()->toDateString());
+            })
+            ->exists();
+    }
+
+    public function userCanOpenFolder(int $userId, int $folderId): bool
+    {
+        return $this->studentHasActiveAccess($userId, $folderId)
+            || $this->instructorHasActiveAccess($userId, $folderId);
     }
 }

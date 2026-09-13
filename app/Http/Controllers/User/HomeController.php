@@ -29,8 +29,8 @@ class HomeController extends Controller
         }
 
         $courseAccesses = collect();
-        if (Schema::hasTable('study_material_student_access')) {
-            $courseAccesses = $lms->studentPortalAccesses((int) Auth::id());
+        if (Schema::hasTable('study_material_student_access') || Schema::hasTable('study_material_instructor_access')) {
+            $courseAccesses = $lms->portalAccessesForUser(Auth::user());
         }
 
         return view('user.home', compact('data', 'courseAccesses'));
