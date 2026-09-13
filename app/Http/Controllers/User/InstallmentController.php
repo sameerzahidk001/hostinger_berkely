@@ -64,7 +64,12 @@ class InstallmentController extends Controller
             ->where('user_id', Auth::id())
             ->findOrFail($id);
 
-        return view('user.installments.receipt', compact('installment'));
+        $pdf = Pdf::loadView('user.installments.receipt', [
+            'installment' => $installment,
+            'forPdf' => true,
+        ])->setPaper('a4');
+
+        return $pdf->download('receipt-RC-' . str_pad((string) $installment->id, 6, '0', STR_PAD_LEFT) . '.pdf');
     }
 
     public function viewInvoice($paymentId)
@@ -109,15 +114,19 @@ class InstallmentController extends Controller
         $payments = $payment;
         $totalPaidAmount = $installments->sum('paid_amount');
         $totalRemainingAmount = $installments->sum('remaining_amount');
+        $forPdf = true;
 
-        return view('user.installments.invoice', compact(
+        $pdf = Pdf::loadView('user.installments.invoice', compact(
             'installments',
             'user',
             'course',
             'coursefee',
             'totalPaidAmount',
             'totalRemainingAmount',
-            'payments'
-        ));
+            'payments',
+            'forPdf'
+        ))->setPaper('a4');
+
+        return $pdf->download('invoice-INV-' . str_pad((string) $payment->id, 6, '0', STR_PAD_LEFT) . '.pdf');
     }
 }

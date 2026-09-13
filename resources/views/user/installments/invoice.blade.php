@@ -136,9 +136,11 @@
 
     <div class="wrapper wrapper-content animated fadeInRight">
         <div class="print-btn text-center" style="margin-top: 20px;">
+            @unless($forPdf ?? false)
             <button class="btn btn-primary" onclick="window.print();">
                 <i class="fa fa-download"></i> Print Invoice
             </button>
+            @endunless
         </div>
         <div class="row">
             <div class="col-lg-12">

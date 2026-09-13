@@ -846,7 +846,7 @@ if (!function_exists('normalize_panel_role')) {
             return 'content_writer';
         }
 
-        return $role;
+        return $normalized;
     }
 }
 

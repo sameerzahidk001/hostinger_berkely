@@ -156,8 +156,8 @@
 
                                                         @if ($installment->status == 'paid')
                                                             <a href="{{ route('user.installments.receipt', $installment->id) }}"
-                                                                target="_blank" class="btn btn-primary btn-sm"
-                                                                style="margin-right: 5px; margin-bottom: 5px;">
+                                                                class="btn btn-primary btn-sm"
+                                                                style="margin-right: 5px; margin-bottom: 5px;" download>
                                                                 <i class="fa fa-file-text-o"></i> Receipt
                                                             </a>
                                                         @endif
@@ -170,8 +170,8 @@
 
                                                         @if ($paymentId && !in_array($paymentId, $shownPaymentIds))
                                                             <a href="{{ route('user.installments.invoice', $paymentId) }}"
-                                                                target="_blank" class="btn btn-success btn-sm"
-                                                                style="display:inline-block; margin-right:5px; margin-bottom: 5px;">
+                                                                class="btn btn-success btn-sm"
+                                                                style="display:inline-block; margin-right:5px; margin-bottom: 5px;" download>
                                                                 <i class="fa fa-file-pdf-o"></i> Invoice
                                                             </a>
                                                             @php

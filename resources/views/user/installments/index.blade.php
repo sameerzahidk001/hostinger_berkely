@@ -118,7 +118,7 @@
 
                                                     @if ($installment->status == 'paid')
                                                         <a href="{{ route('user.installments.receipt', $installment->id) }}"
-                                                            target="_blank" class="btn btn-primary btn-sm" style="margin-right: 5px; margin-bottom: 5px;">
+                                                            class="btn btn-primary btn-sm" style="margin-right: 5px; margin-bottom: 5px;" download>
                                                             <i class="fa fa-file-text-o"></i> Receipt
                                                         </a>
                                                     @endif
@@ -130,15 +130,10 @@
                                                     @endphp
 
                                                     @if ($paymentId && !in_array($paymentId, $shownPaymentIds))
-                                                        <form action="{{ route('user.installments.invoice.pdf') }}" method="POST" target="_blank" style="display:inline-block; margin-right:5px; margin-bottom: 5px;">
-                                                            @csrf
-                                                            <input type="hidden" name="course_id" value="{{ $courseId }}">
-                                                            <input type="hidden" name="user_id" value="{{ $userId }}">
-                                                            <input type="hidden" name="payment_id" value="{{ $paymentId }}">
-                                                            <button type="submit" class="btn btn-success btn-sm">
-                                                                <i class="fa fa-file-pdf-o"></i> Invoice
-                                                            </button>
-                                                        </form>
+                                                        <a href="{{ route('user.installments.invoice', $paymentId) }}"
+                                                            class="btn btn-success btn-sm" style="display:inline-block; margin-right:5px; margin-bottom: 5px;" download>
+                                                            <i class="fa fa-file-pdf-o"></i> Invoice
+                                                        </a>
                                                         @php
                                                             $shownPaymentIds[] = $paymentId;
                                                         @endphp
