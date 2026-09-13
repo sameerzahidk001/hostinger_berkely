@@ -28,6 +28,12 @@ class StudyMaterialFolderController extends Controller
 
     public function index(Request $request)
     {
+        if (! \Illuminate\Support\Facades\Schema::hasTable('study_material_folders')) {
+            return redirect()
+                ->route('admin.lms.install')
+                ->with('fail', 'LMS tables are missing. Create them here (do not use Ignition Run Migrations).');
+        }
+
         $search = trim((string) $request->get('search', ''));
         $query = $this->lms->foldersQueryForActor();
 

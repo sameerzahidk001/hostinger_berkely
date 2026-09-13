@@ -24,6 +24,12 @@ class ClassScheduleController extends Controller
 
     public function index()
     {
+        if (! Schema::hasTable('class_schedules')) {
+            return redirect()
+                ->route('admin.lms.install')
+                ->with('fail', 'LMS tables are missing. Create them here (do not use Ignition Run Migrations).');
+        }
+
         $query = ClassSchedule::with(['course', 'instructor', 'students'])->orderByDesc('scheduled_at');
 
         if ($this->lms->isInstructorActor()) {

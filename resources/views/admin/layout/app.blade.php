@@ -141,9 +141,12 @@
                   </li>
                   @endif
                   @if(admin_menu_allowed('study-materials'))
-                  <li class="{{ request()->is('admin/study-materials*') ? 'active' : '' }}">
+                  <li class="{{ request()->is('admin/study-materials*') || request()->is('admin/lms-install') ? 'active' : '' }}">
                      <a href="javascript:void(0)"><i class="fa fa-folder-open"></i> <span class="nav-label">Study Materials</span> <span class="fa arrow"></span></a>
                      <ul class="nav nav-second-level">
+                        <li class="{{ request()->routeIs('admin.lms.install') ? 'active' : '' }}">
+                           <a href="{{ route('admin.lms.install') }}">Install LMS tables</a>
+                        </li>
                         <li class="{{ request()->routeIs('admin.study-materials.folders.*') ? 'active' : '' }}">
                            <a href="{{ route('admin.study-materials.folders.index') }}">Folders</a>
                         </li>

@@ -35,6 +35,12 @@ class StudyMaterialAccessController extends Controller
 
     public function students(Request $request)
     {
+        if (! \Illuminate\Support\Facades\Schema::hasTable('study_material_folders')) {
+            return redirect()
+                ->route('admin.lms.install')
+                ->with('fail', 'LMS tables are missing. Create them here (do not use Ignition Run Migrations).');
+        }
+
         $search = $this->searchTerm($request);
         $rows = $this->studentAccessQuery($search)->paginate(20)->withQueryString();
 
