@@ -151,12 +151,26 @@
                   <a href="{{ route('user.profile') }}"><i class="fa fa-th-large"></i> <span
                         class="nav-label">Profile</span></a>
                </li>
-               <li>
-                  <a href="https://elearning.eduberkeley.com" target="_blank" rel="noopener noreferrer">
+               <li class="{{ request()->routeIs('user.study-materials.*') ? 'active' : '' }}">
+                  <a href="{{ route('user.study-materials.index') }}">
                      <i class="fa fa-book"></i>
-                     <span class="nav-label">Study Material</span>
+                     <span class="nav-label">Study Materials</span>
                   </a>
                </li>
+               <li class="{{ request()->routeIs('user.class-schedules.*') ? 'active' : '' }}">
+                  <a href="{{ route('user.class-schedules.index') }}">
+                     <i class="fa fa-calendar"></i>
+                     <span class="nav-label">Class Schedule</span>
+                  </a>
+               </li>
+               @if(auth()->user()->roles()->where('name', 'instructor')->exists())
+               <li>
+                  <a href="{{ route('admin.study-materials.folders.index') }}">
+                     <i class="fa fa-folder-open"></i>
+                     <span class="nav-label">Manage Folders</span>
+                  </a>
+               </li>
+               @endif
                @if(auth()->user()->hasPermission('testimonial-list'))
                   <li class="{{ request()->routeIs('user.testimonial.index') ? 'active' : '' }}">
                      <a href="{{ route('user.testimonial.index') }}"><i class="fa fa-th-large"></i> <span
@@ -169,6 +183,10 @@
                            class="nav-label">Cart @if(cart_item_count() > 0)({{ cart_item_count() }})@endif</span></a>
                   </li>
                @endif
+               <li class="{{ request()->routeIs('user.history') ? 'active' : '' }}">
+                  <a href="{{ route('user.history') }}"><i class="fa fa-history"></i> <span
+                        class="nav-label">History</span></a>
+               </li>
                <li>
                   <a href="{{ route('user.logout') }}"><i class="fa fa-sign-out"></i> <span
                         class="nav-label">Log out</span></a>
@@ -203,7 +221,7 @@
                      </a>
                   </li>
                   <li>
-                     <a href="{{ url('/courses') }}" target="_blank">Explore more courses</a>
+                     <a href="{{ url('/courses') }}" target="_blank" rel="noopener">Explore more courses</a>
                   </li>
                   <li>
                      <a href="{{ route('user.logout') }}">

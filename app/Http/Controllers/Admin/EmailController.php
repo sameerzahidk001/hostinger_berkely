@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Email;
+use App\Services\StudyMaterialService;
 
 class EmailController extends Controller
 {
@@ -13,6 +14,8 @@ class EmailController extends Controller
      */
     public function index()
     {
+        app(StudyMaterialService::class)->ensureEmailTemplates();
+
         $emails = Email::all();
         return view('admin.emails.index', compact('emails'));
     }

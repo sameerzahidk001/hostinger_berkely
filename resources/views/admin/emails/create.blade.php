@@ -86,6 +86,9 @@
                                     <option value="send-receipt" {{ old('name') == 'send-receipt' ? 'selected' : '' }}>Send Receipt</option>
                                     <option value="admin-user-update" {{ old('name') == 'admin-user-update' ? 'selected' : '' }}>Admin User Update</option>
                                     <option value="admin-user-password-changed" {{ old('name') == 'admin-user-password-changed' ? 'selected' : '' }}>Admin User Password Changed</option>
+                                    <option value="study-material-student-access" {{ old('name') == 'study-material-student-access' ? 'selected' : '' }}>Study Material Student Access</option>
+                                    <option value="study-material-student-disabled" {{ old('name') == 'study-material-student-disabled' ? 'selected' : '' }}>Study Material Student Disabled</option>
+                                    <option value="study-material-instructor-access" {{ old('name') == 'study-material-instructor-access' ? 'selected' : '' }}>Study Material Instructor Access</option>
                                 </select>
                                 @error('name')
                                     <p class="text-danger text-xs italic">{{ $message }}</p>
@@ -200,6 +203,12 @@
                     instructionText.innerHTML = "You can use the following placeholders in the email body:<br> <strong>{name}</strong> - User's Name <br> <strong>{email}</strong> - User's Email <br> <strong>{password}</strong> - User's Password";
                 } else if (emailSelect.value === 'password-changed') {
                     instructionText.innerHTML = "You can use the following placeholders in the email body:<br> <strong>{name}</strong> - User's Name <br> <strong>{email}</strong> - User's Email <br> <strong>{password}</strong> - User's Password";
+                } else if (emailSelect.value === 'study-material-student-access') {
+                    instructionText.innerHTML = "Folder email placeholders:<br> <strong>{name}</strong> <strong>{email}</strong> <strong>{folder_name}</strong> <strong>{course_name}</strong> <strong>{instructor_name}</strong> <strong>{validity}</strong> <strong>{access_till}</strong> <strong>{issued_at}</strong> <strong>{portal_url}</strong> <strong>{login_url}</strong>";
+                } else if (emailSelect.value === 'study-material-student-disabled') {
+                    instructionText.innerHTML = "Sent when student access is disabled or a folder is disabled/deleted:<br> <strong>{name}</strong> <strong>{email}</strong> <strong>{folder_name}</strong> <strong>{course_name}</strong> <strong>{instructor_name}</strong> <strong>{reason}</strong> <strong>{portal_url}</strong> <strong>{login_url}</strong>";
+                } else if (emailSelect.value === 'study-material-instructor-access') {
+                    instructionText.innerHTML = "Folder email placeholders:<br> <strong>{name}</strong> <strong>{email}</strong> <strong>{folder_name}</strong> <strong>{course_name}</strong> <strong>{validity}</strong> <strong>{access_till}</strong> <strong>{issued_at}</strong> <strong>{portal_url}</strong> <strong>{login_url}</strong>";
                 } else {
                     instructionText.innerHTML = "";
                 }

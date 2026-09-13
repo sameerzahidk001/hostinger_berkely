@@ -1175,6 +1175,13 @@ if (!function_exists('admin_menu_allowed')) {
             'payments', 'payment-gateway', 'profile', 'logout',
         ];
 
+        $instructorMenus = [
+            'dashboard', 'study-materials', 'class-schedules', 'profile', 'logout',
+        ];
+
+        if ($role === 'instructor') {
+            return in_array($menu, $instructorMenus, true);
+        }
         if ($role === 'content_writer') {
             if (in_array($menu, $contentWriterMenus, true)) {
                 return true;
