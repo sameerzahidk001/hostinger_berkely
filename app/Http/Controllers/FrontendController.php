@@ -119,15 +119,13 @@ class FrontendController extends Controller
 
     function optimize()
     {
+        // Clear only — do not route:cache (duplicate route names exist in this app).
         Artisan::call('config:clear');
         Artisan::call('cache:clear');
         Artisan::call('view:clear');
         Artisan::call('route:clear');
-        Artisan::call('config:cache');
-        Artisan::call('route:cache');
-        //Artisan::call('storage:link');
 
-        return response('OK — config/cache refreshed', 200)
+        return response('OK — config/cache cleared', 200)
             ->header('Content-Type', 'text/plain');
     }
 
