@@ -35,7 +35,7 @@ class ResetPasswordController extends Controller
             return route('admin.home');
         }
 
-        if ($user && $user->hasPermission('dashboard-read')) {
+        if ($user && ($user->hasPermission('dashboard-read') || $user->roles()->where('name', 'instructor')->exists())) {
             return route('user.home');
         }
 

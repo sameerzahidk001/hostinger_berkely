@@ -131,11 +131,13 @@
                         style="width:225px;height:225px;border-radius:999px;object-fit:cover;border:3px solid rgba(255,255,255,0.25);" />
                      <div style="color:#fff;line-height:1.3;">
                         <div style="font-weight:600;font-size:14px;">{{ auth()->user()->name ?? 'User' }}</div>
-                        <div style="font-size:12px;opacity:0.85;">Student Portal</div>
+                        <div style="font-size:12px;opacity:0.85;">
+                           {{ auth()->user()->roles()->where('name', 'instructor')->exists() ? 'Instructor Portal' : 'Student Portal' }}
+                        </div>
                      </div>
                   </div>
                </li>
-               @if(auth()->user()->hasPermission('dashboard-read'))
+               @if(auth()->user()->hasPermission('dashboard-read') || auth()->user()->roles()->where('name', 'instructor')->exists())
                   <li class="{{ request()->routeIs('user.home') ? 'active' : '' }}">
                      <a href="{{ route('user.home') }}"><i class="fa fa-th-large"></i> <span
                            class="nav-label">Dashboard</span></a>
@@ -151,7 +153,8 @@
                   <a href="{{ route('user.profile') }}"><i class="fa fa-th-large"></i> <span
                         class="nav-label">Profile</span></a>
                </li>
-               @if(auth()->user()->hasPermission('installment-list') || auth()->user()->roles()->where('name', 'student')->exists())
+               @if((auth()->user()->hasPermission('installment-list') || auth()->user()->roles()->where('name', 'student')->exists())
+                    && ! auth()->user()->roles()->where('name', 'instructor')->exists())
                <li class="{{ request()->routeIs('user.payments') ? 'active' : '' }}">
                   <a href="{{ route('user.payments') }}"><i class="fa fa-credit-card"></i> <span
                         class="nav-label">Payments</span></a>

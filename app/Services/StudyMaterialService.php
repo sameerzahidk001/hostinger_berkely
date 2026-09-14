@@ -350,20 +350,33 @@ class StudyMaterialService
 
         $studentId = (int) $payment->user_id;
         $packageId = (int) ($payment->package_id ?? 0);
+        $courseId = (int) ($payment->course_id ?? 0);
 
-        if ($studentId <= 0 || $packageId <= 0) {
+        if ($studentId <= 0) {
             return 0;
         }
 
-        $folders = StudyMaterialFolder::query()
-            ->where('status', 'active')
-            ->where(function ($q) use ($packageId) {
-                $q->where('fee_package_id', $packageId)
-                    ->orWhereHas('feePackages', function ($packages) use ($packageId) {
-                        $packages->where('course_fees.id', $packageId);
-                    });
-            })
-            ->get();
+        $folders = collect();
+
+        if ($packageId > 0) {
+            $folders = StudyMaterialFolder::query()
+                ->where('status', 'active')
+                ->where(function ($q) use ($packageId) {
+                    $q->where('fee_package_id', $packageId)
+                        ->orWhereHas('feePackages', function ($packages) use ($packageId) {
+                            $packages->where('course_fees.id', $packageId);
+                        });
+                })
+                ->get();
+        }
+
+        // Fallback: active folders for the paid course when package link is missing.
+        if ($folders->isEmpty() && $courseId > 0) {
+            $folders = StudyMaterialFolder::query()
+                ->where('status', 'active')
+                ->where('course_id', $courseId)
+                ->get();
+        }
 
         $granted = 0;
 
@@ -374,6 +387,7 @@ class StudyMaterialService
                 ->first();
 
             if ($access && $access->status === 'active' && $access->sent_at) {
+                $granted++;
                 continue;
             }
 
@@ -383,16 +397,38 @@ class StudyMaterialService
                 $access = StudyMaterialStudentAccess::create([
                     'folder_id' => $folder->id,
                     'student_id' => $studentId,
-                    'status' => 'disabled',
+                    'status' => 'active',
                     'issued_at' => $issued->toDateString(),
                     'access_till' => $till?->toDateString(),
                     'sent_at' => null,
                 ]);
+            } else {
+                if (! $access->issued_at) {
+                    $access->issued_at = now()->toDateString();
+                }
+                if (! $access->access_till) {
+                    $access->access_till = $this->computeAccessTill(
+                        Carbon::parse($access->issued_at),
+                        $folder->validity_months
+                    )?->toDateString();
+                }
+                $access->status = 'active';
+                $access->save();
             }
 
-            if ($this->sendStudentAccessEmail($access)) {
-                $granted++;
+            // Access is granted even if the welcome email fails (SMTP/template issues).
+            if (! $access->sent_at) {
+                try {
+                    $this->sendStudentAccessEmail($access->fresh(['folder.course', 'student', 'folder.instructorAccess.instructor']));
+                } catch (Throwable $e) {
+                    Log::warning('Folder access granted but email failed', [
+                        'access_id' => $access->id,
+                        'message' => $e->getMessage(),
+                    ]);
+                }
             }
+
+            $granted++;
         }
 
         return $granted;

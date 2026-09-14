@@ -49,7 +49,7 @@ class VerificationController extends Controller
     {
         $user = Auth::user();
 
-        if ($user && $user->hasPermission('dashboard-read')) {
+        if ($user && ($user->hasPermission('dashboard-read') || $user->roles()->where('name', 'instructor')->exists())) {
             return route('user.home');
         }
 

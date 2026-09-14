@@ -16,9 +16,16 @@ class HomeController extends Controller
 {
     public function index(StudyMaterialService $lms)
     {
+        $user = Auth::user();
+        $isInstructor = $user->roles()->where('name', 'instructor')->exists();
+
+        if (! $isInstructor && ! $user->hasPermission('dashboard-read')) {
+            return redirect()->route('user.profile');
+        }
+
         $data = [];
 
-        if (auth()->user()->hasPermission('installment-list')) {
+        if (! $isInstructor && $user->hasPermission('installment-list')) {
             $data['installments'] = Installment::with(['payment.courseFee', 'payment.course'])
                 ->where('user_id', Auth::id())
                 ->whereHas('payment', function ($query) {
@@ -30,10 +37,10 @@ class HomeController extends Controller
 
         $courseAccesses = collect();
         if (Schema::hasTable('study_material_student_access') || Schema::hasTable('study_material_instructor_access')) {
-            $courseAccesses = $lms->portalAccessesForUser(Auth::user());
+            $courseAccesses = $lms->portalAccessesForUser($user);
         }
 
-        return view('user.home', compact('data', 'courseAccesses'));
+        return view('user.home', compact('data', 'courseAccesses', 'isInstructor'));
     }
 
     public function payments()

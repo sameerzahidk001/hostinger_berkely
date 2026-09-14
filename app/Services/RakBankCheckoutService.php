@@ -172,6 +172,10 @@ class RakBankCheckoutService
             $request
         );
 
+        if ($installment->payment) {
+            app(StudyMaterialService::class)->tryGrantAccessForPaidPayment($installment->payment);
+        }
+
         return $installment->fresh(['payment.course', 'payment.courseFee']);
     }
 

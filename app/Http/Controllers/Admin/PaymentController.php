@@ -476,6 +476,10 @@ class PaymentController extends Controller
             );
         }
 
+        if ($installment->payment && in_array($installment->status, ['paid', 'partial'], true)) {
+            app(\App\Services\StudyMaterialService::class)->tryGrantAccessForPaidPayment($installment->payment);
+        }
+
         return response()->json([
             'success' => true,
             'message' => $installment->status === 'paid' ? 'Installment fully paid.' : 'Payment applied.',

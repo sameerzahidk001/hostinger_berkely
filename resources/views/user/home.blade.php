@@ -75,9 +75,22 @@
                 @endforeach
             </div>
         </div>
+    @elseif(!empty($isInstructor))
+        <div class="wrapper wrapper-content animated fadeInRight">
+            <div class="row">
+                <div class="col-lg-12">
+                    <div class="ibox">
+                        <div class="ibox-title"><h5 style="margin:0;">Course Access</h5></div>
+                        <div class="ibox-content text-center text-muted">
+                            No folders assigned yet. When admin assigns you folder access, it will appear here.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     @endif
 
-    @if(auth()->user()->hasPermission('installment-list'))
+    @if(empty($isInstructor) && auth()->user()->hasPermission('installment-list'))
         <div class="wrapper wrapper-content animated fadeInRight">
             <div class="row">
                 <div class="col-lg-12">
