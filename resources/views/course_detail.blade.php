@@ -22,10 +22,26 @@
             margin-left: 20px;
         }
 
+        .editor {
+            max-width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .table-scroll {
+            width: 100%;
+            max-width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            margin-top: 0.5rem;
+        }
+
         .editor table,
         .course-detail-table {
             width: 100%;
+            min-width: 480px;
             border-collapse: collapse;
+            table-layout: auto;
         }
 
         .editor table th,
@@ -33,13 +49,30 @@
         .course-detail-table th,
         .course-detail-table td {
             border: 1px solid #d1d5db;
-            padding: 0.5rem 1rem;
+            padding: 0.5rem 0.75rem;
             vertical-align: top;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+            white-space: normal;
         }
 
         .editor table thead th,
         .course-detail-table thead th {
             background: #f9fafb;
+        }
+
+        @media (max-width: 640px) {
+            .editor table,
+            .course-detail-table {
+                font-size: 14px;
+            }
+
+            .editor table th,
+            .editor table td,
+            .course-detail-table th,
+            .course-detail-table td {
+                padding: 0.4rem 0.5rem;
+            }
         }
         @media (min-width: 1200px) {
     .min-\[1200px\]\:px-\[72px\] {
@@ -852,9 +885,9 @@
                     <div class="bg-yellow w-[50px] h-[2px]"></div>
                 </div>
 
-                <div class="flex flex-col lg:flex-row-reverse items-center gap-x-12 gap-y-10">
+                <div class="flex flex-col lg:flex-row-reverse items-start gap-x-12 gap-y-10 w-full max-w-full">
 
-                    <div class="flex-1">
+                    <div class="flex-1 w-full min-w-0 max-w-full">
                         @if (isset($course->dynamicLabel) && $course->dynamicLabel->exam_information_section_video_url)
                             @php
 
@@ -894,7 +927,7 @@
                         <!-- <img src="{{ isset($course->dynamicLabel) && $course->dynamicLabel->exam_information_section_img ? asset($course->dynamicLabel->exam_information_section_img) : asset('admin/courses/cma1.jpeg') }}" alt=""
                             class="w-full min-h-[300px] xl:min-h-[500px] xl:min-w-[500px] object-cover"> -->
                     </div>
-                    <div class="flex-1">
+                    <div class="flex-1 w-full min-w-0 max-w-full">
                         <div class="editor pb-4">
                             {!! $course->exam_info_custom_01 !!}
                         </div>
@@ -925,6 +958,7 @@
 
 
                             @if (!$allEmpty)
+                                <div class="table-scroll">
                                 <table class="course-detail-table bg-white border border-gray-200 mt-2 w-full">
                                     <thead>
                                         <tr class="bg-gray-50">
@@ -957,6 +991,7 @@
                                         @endforeach
                                     </tbody>
                                 </table>
+                                </div>
                             @endif
                         @endif
                         @if (!empty($course->exam_dates))
