@@ -1112,19 +1112,19 @@
 
     @if ($course->success_stories == 1)
         <section id="nine" class="card-hidden px-6 min-[1200px]:px-[72px] mb-8 mt-8 show">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 items-stretch">
-                {{-- Left: image only (visible, not covered by long text) --}}
-                <div class="overflow-hidden rounded-xl bg-gray-100 min-h-[280px] lg:min-h-[420px]">
+            <div class="flex flex-col sm:flex-row sm:items-stretch gap-8 lg:gap-10">
+                {{-- Left: image --}}
+                <div class="sm:w-5/12 lg:w-1/2 shrink-0 overflow-hidden rounded-xl bg-gray-100">
                     <img src="{{ isset($course->dynamicLabel) && $course->dynamicLabel->learner_stories_img
                         ? asset($course->dynamicLabel->learner_stories_img)
                         : asset('frontend/images/jpg/sheikh.jpg') }}"
-                        class="h-full w-full object-cover object-center min-h-[280px] lg:min-h-[420px]"
+                        class="w-full h-full min-h-[320px] sm:min-h-full object-cover object-top"
                         loading="lazy" width="1200" height="800"
                         alt="{{ course_image_alt($course, 'learner_stories_img', $course->dynamicLabel?->success_stories ?? 'Learner stories') }}">
                 </div>
 
                 {{-- Right: title, quote, benefits, link --}}
-                <div class="flex flex-col gap-4 min-w-0">
+                <div class="sm:w-7/12 lg:w-1/2 flex flex-col gap-4 min-w-0">
                     <h2 class="font-canela text-[26px] md:text-[32px] lg:text-[36px] text-dark leading-tight">
                         {{ $course->dynamicLabel->success_stories ?? 'Success Stories' }}
                     </h2>
