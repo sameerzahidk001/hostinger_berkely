@@ -1,6 +1,8 @@
 @extends('user.layout.app')
 @section('title', 'Admission Information')
 
+@include('user.partials.rakbank-payment-modal')
+
 @push('style')
 <link href="{{ asset('/admin/css/plugins/dataTables/datatables.min.css') }}" rel="stylesheet">
 <style>

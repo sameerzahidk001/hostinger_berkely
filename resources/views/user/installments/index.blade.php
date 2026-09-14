@@ -1,6 +1,7 @@
 @extends('user.layout.app')
 
 @section('title', 'Installments')
+@include('user.partials.rakbank-payment-modal')
 
 @push('style')
     <link href="{{ asset('/admin/css/plugins/dataTables/datatables.min.css') }}" rel="stylesheet">
@@ -85,12 +86,34 @@
                                                 </td>
                                                 <td>
                                                     @if ($installment->status == 'pending')
-                                                        <button type="button"
+                                                        <!-- Trigger button -->
+                                                        <button type="button" 
                                                             class="btn btn-primary btn-sm payNowBtn"
                                                             style="margin-right: 5px; margin-bottom: 5px;"
+                                                            data-toggle="modal"
+                                                            data-target="#paymentModal{{ $installment->id }}"
+                                                            data-amount="{{ $installment->remaining_amount }}"
                                                             data-installment-id="{{ $installment->id }}">
                                                             <i class="fa fa-credit-card"></i> Pay Now
                                                         </button>
+
+                                                        <!-- Modal -->
+                                                        <div class="modal fade" id="paymentModal{{ $installment->id }}" tabindex="-1" role="dialog"
+                                                            aria-labelledby="paymentModalLabel{{ $installment->id }}" aria-hidden="true">
+                                                            <div class="modal-dialog modal-lg" role="document" style="max-width: 560px;">
+                                                                <div class="modal-content">
+                                                                    <button type="button" id="closeModal" class="close close-white position-absolute top-0 right-0" style="margin-top: -25px;" data-dismiss="modal" aria-label="Close">
+                                                                        <span aria-hidden="true">×</span>
+                                                                    </button>
+                                                                    <div class="modal-body" style="padding: 24px;">
+                                                                        <div id="payment-amount-display-{{ $installment->id }}" class="mb-3"></div>
+                                                                        <div id="payment-error-{{ $installment->id }}" class="alert alert-danger" style="display:none;"></div>
+                                                                        <div id="payment-loading-{{ $installment->id }}" class="text-center text-muted py-3" style="display:none;">Loading payment form...</div>
+                                                                        <div id="hco-embedded-{{ $installment->id }}" style="min-height: 360px;"></div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
                                                     @endif
 
                                                     @if ($installment->status == 'paid')
@@ -102,6 +125,8 @@
 
                                                     @php
                                                         $paymentId = $installment->payment_id ?? null;
+                                                        $courseId = $installment->payment->course->id ?? null;
+                                                        $userId = $installment->user->id ?? null;
                                                     @endphp
 
                                                     @if ($paymentId && !in_array($paymentId, $shownPaymentIds))
@@ -128,35 +153,115 @@
 
 @endsection
 @push('script')
+    {{-- <script src="https://test-rakbankpay.mtf.gateway.mastercard.com/static/checkout/checkout.min.js" data-error="errorCallback" data-cancel="cancelCallback" data-complete="completeCallback"></script> --}}
+    <script src="https://rakbankpay-nam.gateway.mastercard.com/static/checkout/checkout.min.js" data-error="errorCallback" data-cancel="cancelCallback" data-complete="completeCallback"></script>
+    <script type="text/javascript" src="https://www.simplify.com/commerce/simplify.pay.js"></script>
     <script src="{{ asset('/admin/js/plugins/dataTables/datatables.min.js') }}"></script>
-    <script>
-        $(document).on('click', '.payNowBtn', function () {
-            var $btn = $(this);
-            var installmentId = $btn.data('installment-id');
-            var originalHtml = $btn.html();
 
-            $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Redirecting...');
+    <script>
+        let currentInstallmentId = null;
+        let currentAmount = null;
+
+        function errorCallback(error) {
+            console.log(JSON.stringify(error));
+        }
+
+        function cancelCallback() {
+            console.log('Payment cancelled');
+        }
+
+        function completeCallback(response) {
+            if (!currentInstallmentId || !currentAmount) {
+                console.error("Installment or amount missing.");
+                return;
+            }
 
             $.ajax({
-                url: '{{ route("user.generate.noonCheckout") }}',
+                url: '{{ route("user.update.installment") }}',
                 method: 'POST',
-                data: {
-                    installment_id: installmentId
+                data: { 
+                    amount: currentAmount,
+                    installment_id: currentInstallmentId
                 },
                 headers: {
                     'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                 },
                 success: function (res) {
-                    if (res.success !== false && res.checkoutUrl) {
-                        window.location.href = res.checkoutUrl;
-                        return;
-                    }
+                    if (res.success == true) {
+                        clearPaymentContext();
+                        $(".modal.show").modal('hide');
 
-                    $btn.prop('disabled', false).html(originalHtml);
-                    alert(res.error || 'Payment session could not be started. Please try again.');
+                        setTimeout(function(){
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        console.error("Something went wrong", res);
+                    }
                 },
                 error: function (err) {
-                    $btn.prop('disabled', false).html(originalHtml);
+                    console.error("API error", err.responseText);
+                }
+            });
+        }
+
+        $('.payNowBtn').on('click', function () {
+            currentInstallmentId = $(this).data('installment-id');
+            currentAmount = $(this).data('amount');
+            currentCheckoutSessionId = null;
+        });
+
+        $(document).on('click', '.payment-start-btn', function () {
+            launchHostedPayment($(this).closest('.modal'));
+        });
+
+        $('[id^="paymentModal"]').on('shown.bs.modal', function () {
+            var modal = $(this);
+            var modalId = modal.attr('id');
+            var installmentId = modalId.replace('paymentModal', '');
+            var amountDisplayId = '#payment-amount-display-' + installmentId;
+            var errorDisplayId = '#payment-error-' + installmentId;
+            var loadingDisplayId = '#payment-loading-' + installmentId;
+            var startBtnId = '#payment-start-btn-' + installmentId;
+
+            currentCheckoutSessionId = null;
+            $(amountDisplayId).empty();
+            $(errorDisplayId).hide().empty();
+            $(startBtnId).hide().prop('disabled', false);
+            modal.find('.payment-secure-note').hide();
+            $(loadingDisplayId).show();
+
+            $.ajax({
+                url: '{{ route("user.generate.rakBankPaySession") }}',
+                method: 'POST',
+                data: {
+                    installment_id: installmentId,
+                    return_url: window.location.href
+                },
+                headers: {
+                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+                },
+                success: function (res) {
+                    $(loadingDisplayId).hide();
+
+                    if (res.displayAmount) {
+                        renderPaymentModalSummary(amountDisplayId, res);
+                    }
+
+                    if (res.settlingAmount) {
+                        currentAmount = res.settlingAmount;
+                    }
+
+                    if (res.success !== false && res.session && res.session.id) {
+                        currentCheckoutSessionId = res.session.id;
+                        $(startBtnId).show();
+                        modal.find('.payment-secure-note').show();
+                    } else {
+                        $(errorDisplayId).text(res.error || 'Payment session could not be started. Please try again.').show();
+                        console.error("Session creation failed", res);
+                    }
+                },
+                error: function (err) {
+                    $(loadingDisplayId).hide();
                     var message = 'Payment session could not be started. Please try again.';
                     try {
                         var body = JSON.parse(err.responseText);
@@ -164,9 +269,18 @@
                             message = body.error;
                         }
                     } catch (e) {}
-                    alert(message);
+                    $(errorDisplayId).text(message).show();
+                    console.error("API error", err.responseText);
                 }
             });
+        });
+
+        $('[id^="paymentModal"]').on('hide.bs.modal', function () {
+            currentCheckoutSessionId = null;
+        });
+
+        loadCheckoutScript(function () {
+            restorePaymentContext();
         });
 
         $(document).ready(function () {
