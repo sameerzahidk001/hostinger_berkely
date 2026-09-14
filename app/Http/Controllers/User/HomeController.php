@@ -81,7 +81,7 @@ class HomeController extends Controller
         }
 
         if (! $checkout->isConfigured()) {
-            Log::error('Noon credentials missing from config (check NOON_BUSINESS_ID / NOON_APP_ID / NOON_APP_KEY in .env).');
+            Log::error('Noon credentials missing from config (check NOON_BUSINESS_ID / NOON_APP_ID / NOON_APP_KEY or NOON_AUTH_KEY in .env, then php artisan config:clear).');
 
             return response()->json([
                 'success' => false,
