@@ -19,13 +19,40 @@
 
         .editor ul {
             list-style-type: disc;
-            margin-left: 20px;
+            margin-left: 1.25rem;
+            padding-left: 0.25rem;
+        }
+
+        /* Keep course page within the viewport on mobile */
+        #one, #three, #four, #five, #six, #eight, #nine, #ten, #eleven, #apply,
+        .card-hidden {
+            max-width: 100%;
+            overflow-x: clip;
         }
 
         .editor {
+            width: 100%;
             max-width: 100%;
+            min-width: 0;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .editor img,
+        .editor iframe,
+        .editor video {
+            max-width: 100% !important;
+            height: auto;
+        }
+
+        .editor table {
+            width: 100% !important;
+            max-width: 100%;
+            min-width: 0 !important;
+            border-collapse: collapse;
+            table-layout: auto;
         }
 
         .table-scroll {
@@ -41,20 +68,11 @@
             background: #fff;
         }
 
-        .editor table,
         .course-detail-table {
             width: max-content;
-            min-width: 100%;
+            min-width: 640px;
             border-collapse: collapse;
             table-layout: fixed;
-        }
-
-        .course-detail-table {
-            min-width: 640px;
-        }
-
-        .editor table {
-            min-width: 560px;
         }
 
         .editor table th,
@@ -144,6 +162,36 @@
 
             .exam-format-cards {
                 display: flex;
+            }
+
+            .editor table,
+            .editor table th,
+            .editor table td {
+                display: block;
+                width: 100% !important;
+            }
+
+            .editor table thead {
+                display: none;
+            }
+
+            .editor table tr {
+                display: block;
+                margin-bottom: 12px;
+                border: 1px solid #d1d5db;
+                border-radius: 0.5rem;
+                overflow: hidden;
+                background: #fff;
+            }
+
+            .editor table td {
+                border: none;
+                border-bottom: 1px solid #e5e7eb;
+                padding: 10px 14px;
+            }
+
+            .editor table td:last-child {
+                border-bottom: none;
             }
         }
         @media (min-width: 1200px) {
@@ -262,8 +310,8 @@
     @endif
 
     @if ($course->overview_section == 1)
-        <section id="one" class="card-hidden bg-[#f4f4f4] px-6 my-0 py-10  md:px-16 lg:px-[120px]">
-            <div class="flex flex-col pb-4">
+        <section id="one" class="card-hidden bg-[#f4f4f4] px-6 my-0 py-10  md:px-16 lg:px-[120px] overflow-x-hidden">
+            <div class="flex flex-col pb-4 w-full max-w-full min-w-0">
                 <div class="flex gap-3 items-center justify-center mb-6 ">
                     <div class="bg-yellow w-[50px] h-[2px]"></div>
                     <h2
@@ -271,9 +319,9 @@
                     <div class="bg-yellow w-[50px] h-[2px]"></div>
                 </div>
 
-                <div class="flex flex-col lg:flex-row-reverse items-center gap-x-24 gap-y-10">
+                <div class="flex flex-col lg:flex-row-reverse items-stretch lg:items-start gap-x-24 gap-y-10 w-full max-w-full">
 
-                    <div class="flex-1">
+                    <div class="flex-1 w-full min-w-0 max-w-full">
                         @if ($course->overview_video_url)
                             @php
 
@@ -297,7 +345,7 @@
                             @endphp
 
                             @if ($embedUrl)
-                                <iframe class="w-full min-h-[300px] xl:min-h-[500px] xl:min-w-[500px] object-cover"
+                                <iframe class="w-full max-w-full min-h-[300px] xl:min-h-[500px] object-cover"
                                     src="{{ $embedUrl }}" frameborder="0"
                                     allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
                                     allowfullscreen></iframe>
@@ -307,17 +355,17 @@
                         @elseif($course->overview_img && displayable_media_url($course->overview_img))
                             <img src="{{ displayable_media_url($course->overview_img) }}" alt="{{ course_image_alt($course, 'overview_img') }}"
                                 loading="lazy" width="1200" height="800"
-                                class="w-full min-h-[300px] xl:min-h-[500px] xl:min-w-[500px] object-cover">
+                                class="w-full max-w-full min-h-[300px] xl:min-h-[500px] object-cover">
                         @else
                             <img src="{{ asset('admin/courses/course.png') }}" alt="{{ course_image_alt($course, 'overview_img', $course->title . ' overview') }}"
                                 loading="lazy" width="1200" height="800"
-                                class="w-full min-h-[300px] xl:min-h-[500px] xl:min-w-[500px] object-cover">
+                                class="w-full max-w-full min-h-[300px] xl:min-h-[500px] object-cover">
                         @endif
                         <!-- <img src="{{ asset($course->overview_img ? $course->overview_img : 'admin/courses/course.png') }}" alt=""
-                            class="w-full min-h-[300px] xl:min-h-[500px] xl:min-w-[500px] object-cover"> -->
+                            class="w-full max-w-full min-h-[300px] xl:min-h-[500px] object-cover"> -->
                     </div>
 
-                    <div class="flex-1">
+                    <div class="flex-1 w-full min-w-0 max-w-full">
                         <div class="editor">
                             {!! $course->description !!}
                         </div>
@@ -331,7 +379,7 @@
                                         class="font-semibold section-subheading">{{ $course->dynamicLabel->offered_by ?? 'Offered by' }}</h3>
                                     <div class="bg-yellow w-[50px] h-[2px]"></div>
                                 </div>
-                                <div class="flex flex-col items-center">
+                                <div class="flex flex-col w-full min-w-0">
                                     <div class="editor">
                                         {!! optional($course->offered_by)['institute'] !!}
                                     </div>
@@ -347,7 +395,7 @@
                                         class="font-semibold section-subheading">{{ $course->dynamicLabel->head_office ?? 'Head office' }}</h3>
                                     <div class="bg-yellow w-[50px] h-[2px]"></div>
                                 </div>
-                                <div class="flex flex-col items-center">
+                                <div class="flex flex-col w-full min-w-0">
                                     <div class="editor">
                                         {!! optional($course->offered_by)['head_office'] !!}
                                     </div>
@@ -362,7 +410,7 @@
                                         class="font-semibold section-subheading">{{ $course->dynamicLabel->members ?? 'Members' }}</h3>
                                     <div class="bg-yellow w-[50px] h-[2px]"></div>
                                 </div>
-                                <div class="flex flex-col items-center">
+                                <div class="flex flex-col w-full min-w-0">
                                     <div class="editor">
                                         {!! optional($course->offered_by)['members'] !!}
                                     </div>
@@ -376,7 +424,7 @@
                                     class="font-semibold section-subheading">{{ $course->dynamicLabel->founded_in ?? 'Founded in' }}</h3>
                                 <div class="bg-yellow w-[50px] h-[2px]"></div>
                             </div>
-                            <div class="flex flex-col items-center">
+                            <div class="flex flex-col w-full min-w-0">
                                 <div class="editor">
                                     {!! optional($course->offered_by)['founded_in'] !!}
                                 </div>
@@ -396,7 +444,7 @@
                             class="font-semibold section-subheading">{{ $course->dynamicLabel->vission_mission ?? 'Vision & mission' }}</h3>
                         <div class="bg-yellow w-[50px] h-[2px]"></div>
                     </div>
-                    <div class="flex flex-col items-center">
+                    <div class="flex flex-col w-full min-w-0">
                         <div class="editor">
                             {!! $course->vision_and_mission !!}
                         </div>
@@ -436,12 +484,12 @@
                 <div class="bg-yellow w-[50px] h-[2px]"></div>
             </div>
 
-            <div class="card flex flex-col lg:flex-row items-center py-6 gap-x-16 gap-y-10">
-                <div class="flex-1">
+            <div class="card flex flex-col lg:flex-row items-stretch lg:items-start py-6 gap-x-16 gap-y-10 w-full max-w-full">
+                <div class="flex-1 w-full min-w-0 max-w-full">
                     <img src="{{ isset($course->dynamicLabel) && $course->dynamicLabel->who_can_do_img ? asset($course->dynamicLabel->who_can_do_img) : asset('/admin/courses/cma2.jpeg') }}"
                         alt="{{ course_image_alt($course, 'who_can_do_img', $course->dynamicLabel?->who_can_do ?? $course->title) }}" class="w-full object-cover min-h-[300px] xl:min-h-[400px]">
                 </div>
-                <div class="flex-1 text-white">
+                <div class="flex-1 w-full min-w-0 max-w-full text-white">
 
                     <!-- <p class="text-[16px] font-semibold mb-0">{{ $course->dynamicLabel->who_can_do_subh01 ?? 'Anyone who is interested to learn about following concepts can pursue ' . $course->title . ':' }}</p> -->
                     <div class="flex gap-3 items-center justify-center mb-0 ">
@@ -479,8 +527,8 @@
 
 
     <section id="four"
-        class="card-hidden flex items-center justify-center flex-col py-10 px-4 bg-white min-[1200px]:px-[72px] md:px-12  ">
-        <div class="flex items-center flex-col gap-2 w-full">
+        class="card-hidden flex items-stretch justify-center flex-col py-10 px-4 bg-white min-[1200px]:px-[72px] md:px-12 w-full max-w-full overflow-x-hidden">
+        <div class="flex items-stretch flex-col gap-2 w-full max-w-full min-w-0">
             @if (!$course->courseStructuresFirst->isEmpty() && $course->course_structure_section == 1)
                 <div class="flex gap-3 items-center">
                     <div class="bg-yellow w-[50px] h-[2px]"></div>
@@ -947,8 +995,8 @@
 
     @if ($course->exam_section == 1)
         <section id="six"
-            class="card-hidden flex items-center justify-center flex-col mt-12 bg-[#f5f5f5] px-6 pb-12 min-[1200px]:px-[72px] md:px-12  ">
-            <div class="flex items-center flex-col gap-2 ">
+            class="card-hidden flex items-stretch justify-center flex-col mt-12 bg-[#f5f5f5] px-6 pb-12 min-[1200px]:px-[72px] md:px-12 w-full max-w-full overflow-x-hidden">
+            <div class="flex items-stretch flex-col gap-2 w-full max-w-full">
                 <div class="flex gap-3 items-center my-8">
                     <div class="bg-yellow w-[50px] h-[2px]"></div>
                     <h3
@@ -982,7 +1030,7 @@
                             @endphp
 
                             @if ($embedUrl)
-                                <iframe class="w-full min-h-[300px] xl:min-h-[500px] xl:min-w-[500px] object-cover"
+                                <iframe class="w-full max-w-full min-h-[300px] xl:min-h-[500px] object-cover"
                                     src="{{ $embedUrl }}" frameborder="0"
                                     allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
                                     allowfullscreen></iframe>
@@ -991,13 +1039,13 @@
                             @endif
                         @elseif(isset($course->dynamicLabel) && $course->dynamicLabel->exam_information_section_img)
                             <img src="{{ asset($course->dynamicLabel->exam_information_section_img) }}" alt="{{ course_image_alt($course, 'exam_information_section_img', $course->dynamicLabel?->exam_information_section ?? $course->title) }}"
-                                class="w-full min-h-[300px] xl:min-h-[500px] xl:min-w-[500px] object-cover">
+                                class="w-full max-w-full min-h-[300px] xl:min-h-[500px] object-cover">
                         @else
                             <img src="{{ asset('admin/courses/cma1.jpeg') }}" alt="{{ course_image_alt($course, 'exam_information_section_img', $course->title . ' exam information') }}"
-                                class="w-full min-h-[300px] xl:min-h-[500px] xl:min-w-[500px] object-cover">
+                                class="w-full max-w-full min-h-[300px] xl:min-h-[500px] object-cover">
                         @endif
                         <!-- <img src="{{ isset($course->dynamicLabel) && $course->dynamicLabel->exam_information_section_img ? asset($course->dynamicLabel->exam_information_section_img) : asset('admin/courses/cma1.jpeg') }}" alt=""
-                            class="w-full min-h-[300px] xl:min-h-[500px] xl:min-w-[500px] object-cover"> -->
+                            class="w-full max-w-full min-h-[300px] xl:min-h-[500px] object-cover"> -->
                     </div>
                     <div class="flex-1 w-full min-w-0 max-w-full">
                         <div class="editor pb-4">
@@ -1314,7 +1362,7 @@
 
                 <div class="relative flex justify-center items-center py-4 xl:bg-[#f0f6ff] w-full basis-full">
                     <div
-                        class="flex-1 xl:px-8  bg-white w-full xl:py-2  min-[1340px]:py-8 my-2 xl:absolute xl:-right-20 gap-2 flex flex-col">
+                        class="flex-1 xl:px-8 bg-white w-full max-w-full min-w-0 xl:py-2 min-[1340px]:py-8 my-2 xl:relative xl:right-0 gap-2 flex flex-col">
 
                         <div class="flex gap-3 items-center">
                             <div class="bg-yellow w-[50px] h-[2px]"></div>
