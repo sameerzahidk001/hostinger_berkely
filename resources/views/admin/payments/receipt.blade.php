@@ -105,6 +105,20 @@
                         </div>
                     </div>
 
+                    <div class="receipt-section">
+                        <h4>Student Details</h4>
+                        <p><strong>Name:</strong> {{ $installment->user->name ?? 'N/A' }}</p>
+                        <p><strong>Email:</strong> {{ $installment->user->email ?? 'N/A' }}</p>
+                        <p><strong>Phone:</strong> {{ $installment->user->mobile_number ?? 'N/A' }}</p>
+                        <p><strong>Address:</strong> {{ $installment->user->address ?? 'N/A' }}</p>
+                    </div>
+
+                    <div class="receipt-section">
+                        <h4>Course Details</h4>
+                        <p><strong>Course Title:</strong> {{ $installment->payment->course->title ?? 'N/A' }}</p>
+                        <p><strong>Package Name:</strong> {{ $installment->payment->courseFee->package_name ?? 'N/A' }}</p>
+                    </div>
+
                     <div class="row" style="margin-bottom: 10px;">
                         <div class="col-xs-3 text-left">
                             <p><strong>Paid Amount:</strong><br>{!! format_payment_aed_amount_admin($installment->payment, (float) $installment->paid_amount) !!}</p>
@@ -118,19 +132,6 @@
                         <div class="col-xs-3 text-right">
                             <p><strong>Balance Due:</strong><br>{!! format_payment_aed_amount_admin($installment->payment, (float) $installment->remaining_amount) !!}</p>
                         </div>
-                    </div>
-                    <div class="receipt-section">
-                        <h4>Student Details</h4>
-                        <p><strong>Name:</strong> {{ $installment->user->name ?? 'N/A' }}</p>
-                        <p><strong>Email:</strong> {{ $installment->user->email ?? 'N/A' }}</p>
-                        <p><strong>Phone:</strong> {{ $installment->user->mobile_number ?? 'N/A' }}</p>
-                        <p><strong>Address:</strong> {{ $installment->user->address ?? 'N/A' }}</p>
-                    </div>
-
-                    <div class="receipt-section">
-                        <h4>Course Details</h4>
-                        <p><strong>Course Title:</strong> {{ $installment->payment->course->title ?? 'N/A' }}</p>
-                        <p><strong>Package Name:</strong> {{ $installment->payment->courseFee->package_name ?? 'N/A' }}</p>
                     </div>
 
                     <div class="receipt-footer">

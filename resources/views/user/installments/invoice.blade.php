@@ -165,12 +165,7 @@
                             <h1 style="margin: 0 0 4px; font-size: 28px; line-height: 1.1;">Invoice</h1>
                             <p><strong>Invoice#</strong>
                                 INV-{{ str_pad($payments->id, 6, '0', STR_PAD_LEFT) }}</p>
-                        </div>
-                    </div>
-
-                    <div class="row" style="margin-bottom: 8px;">
-                        <div class="col-xs-4 pull-right text-right">
-                            <p><strong>Balance Due:</strong><br>{{ $money($balanceDue) }}</p>
+                            <p style="margin-top: 6px;"><strong>Balance Due:</strong><br>{{ $money($balanceDue) }}</p>
                         </div>
                     </div>
 
@@ -197,7 +192,6 @@
                             <tr>
                                 <th>#</th>
                                 <th>Training Program & Description</th>
-                                <th>Tax</th>
                                 <th>Amount</th>
                             </tr>
                         </thead>
@@ -228,7 +222,6 @@
                                         @endif
                                     </ul>
                                 </td>
-                                <td>{{ number_format($taxPercentage, 2) }}%</td>
                                 <td>{{ $money($displayAmount) }}</td>
                             </tr>
                         </tbody>
@@ -236,8 +229,6 @@
 
                     <div class="summary">
                         <p><strong>Sub Total:</strong> {{ $money($summarySubtotal) }}</p>
-                        <p><strong>Tax ({{ number_format($taxPercentage, 2) }}%):</strong>
-                            {{ $money($taxAmount) }}</p>
                         <p><strong>Total:</strong> {{ $money($summaryTotal) }}</p>
                     </div>
 

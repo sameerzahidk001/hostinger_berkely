@@ -135,12 +135,13 @@
                             class="active:underline decoration-crimson underline-offset-4">{{ $menu->name }}</a>
                         @if ($menu->children->count() > 0)
                             <div
-                                class="mega-menu-two absolute left-0 top-full hidden group-hover:flex flex-col shadow-xl bg-white min-w-[240px] border-t border-primary  mega-menu-style">
-                                <ul class="list-none py-1">
+                                class="mega-menu-two absolute left-0 top-full hidden group-hover:flex flex-col shadow-xl bg-white min-w-[360px] w-max max-w-[480px] border-t border-primary mega-menu-style z-[1000]">
+                                <ul class="list-none py-2 m-0">
                                     @foreach ($menu->children->sortBy('menu_order') as $child)
                                         <li>
                                             <a href="{{ $child->link }}"
-                                                class="flex gap-2 items-center text-black transition-all delay-150 duration-150 hover:bg-navy hover:text-white sm:px-4 px-3 py-1.5">
+                                                class="flex gap-2 items-start text-black transition-all delay-150 duration-150 hover:bg-navy hover:text-white sm:px-4 px-3 py-1.5 whitespace-normal">
+                                                <span aria-hidden="true" class="shrink-0 leading-snug">•</span>
                                                 <span class="text-[14px] leading-snug font-medium">{{ $child->name }}</span>
                                             </a>
                                         </li>
@@ -242,7 +243,10 @@
                             <div id="dropdownMenu{{ $key }}"
                                 class="hidden bg-white px-3 py-2 mt-1 text-black rounded-md dropdownMenu text-[14px] leading-snug">
                                 @foreach ($menu->children as $child)
-                                    <a href="{{ $child->link }}" class="block py-1.5">{{ $child->name }}</a>
+                                    <a href="{{ $child->link }}" class="flex items-start gap-2 py-1.5">
+                                        <span aria-hidden="true" class="shrink-0">•</span>
+                                        <span>{{ $child->name }}</span>
+                                    </a>
                                 @endforeach
                             </div>
                         </div>

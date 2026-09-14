@@ -165,14 +165,7 @@
                             <h1 style="margin: 0 0 4px; font-size: 28px; line-height: 1.1;">Invoice</h1>
                             <p style="margin: 0;"><strong>Invoice#</strong>
                                 INV-{{ str_pad($payments->id, 6, '0', STR_PAD_LEFT) }}</p>
-                        </div>
-                    </div>
-
-                    <div class="row" style="margin-bottom: 8px;">
-                        <div class="col-xs-4 pull-right text-right">
-                            <p><strong>Balance
-                                    Due:</strong><br>{!! $moneyAdmin(payment_display_amount_from_aed($payments, $balanceDueAed), $balanceDueAed) !!}
-                            </p>
+                            <p style="margin: 6px 0 0;"><strong>Balance Due:</strong><br>{!! $moneyAdmin(payment_display_amount_from_aed($payments, $balanceDueAed), $balanceDueAed) !!}</p>
                         </div>
                     </div>
 
@@ -185,7 +178,7 @@
                             <p style="margin: 0px"><strong>Address:</strong> {{ $user->address }}</p>
                             <p style="margin: 0px"><strong>City/Country:</strong> {{ $user->city }}, {{ $user->country }}</p>
                         </div>
-                        <div style="display: table-cell; width: 50%; vertical-align: bottom; text-align: right;">
+                        <div style="display: table-cell; width: 50%; vertical-align: top; text-align: right;">
                             <p style="margin: 0px"><strong>Invoice Date:</strong>
                                 {{ \Carbon\Carbon::parse($payments->created_at)->format('d M Y') ?? 'N/A' }}</p>
                             <p style="margin: 0px"><strong>Due Date:</strong>
@@ -199,7 +192,6 @@
                             <tr>
                                 <th>#</th>
                                 <th>Training Program & Description</th>
-                                <th>Tax</th>
                                 <th>Amount</th>
                             </tr>
                         </thead>
@@ -230,7 +222,6 @@
                                         @endif
                                     </ul>
                                 </td>
-                                <td>{{ number_format($taxPercentage, 2) }}%</td>
                                 <td>{!! $moneyAdmin($displayAmount, $settlingAed) !!}</td>
                             </tr>
                         </tbody>
@@ -238,8 +229,6 @@
 
                     <div class="summary">
                         <p><strong>Sub Total:</strong> {!! $moneyAdmin($summarySubtotal, $settlingAed) !!}</p>
-                        <p><strong>Tax ({{ number_format($taxPercentage, 2) }}%):</strong>
-                            {!! $moneyAdmin($taxAmount, ($settlingAed * $taxPercentage) / 100) !!}</p>
                         <p><strong>Total:</strong> {!! $moneyAdmin($summaryTotal, $settlingAed + ($settlingAed * $taxPercentage) / 100) !!}</p>
                     </div>
 
