@@ -169,7 +169,7 @@
                         </div>
                     </div>
 
-                    <div class="invoice-section" style="display: table; width: 100%; margin-top: 18px; margin-bottom: 10px;">
+                    <div class="invoice-section" style="display: table; width: 100%; margin-top: 36px; margin-bottom: 10px;">
                         <div style="display: table-cell; width: 50%; vertical-align: top;">
                             <h4 style="margin: 0 0 4px;">Student Details:</h4>
                             <p><strong>Name:</strong> {{ $user->name }}</p>

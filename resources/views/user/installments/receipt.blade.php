@@ -58,7 +58,7 @@
         .receipt-header {
             display: table;
             width: 100%;
-            margin-bottom: 8px;
+            margin-bottom: 36px;
         }
 
         .receipt-meta-row {

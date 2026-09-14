@@ -88,7 +88,7 @@
         <div class="row">
             <div class="col-lg-12">
                 <div id="receipt-content" class="receipt-box">
-                    <div style="display: table; width: 100%; margin-bottom: 8px;">
+                    <div style="display: table; width: 100%; margin-bottom: 36px;">
                         <div style="display: table-cell; width: 55%; vertical-align: top;">
                             <img src="{{ asset('frontend/images/pngs/logo-color.png') }}" alt="Logo"
                                 style="width: 170px; height: auto; margin: 0 0 4px;">
