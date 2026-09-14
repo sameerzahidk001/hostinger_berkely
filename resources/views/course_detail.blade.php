@@ -541,7 +541,7 @@
         class="card-hidden flex items-stretch justify-center flex-col py-10 px-4 bg-white min-[1200px]:px-[72px] md:px-12 w-full max-w-full overflow-x-hidden">
         <div class="flex items-stretch flex-col gap-2 w-full max-w-full min-w-0">
             @if (!$course->courseStructuresFirst->isEmpty() && $course->course_structure_section == 1)
-                <div class="flex gap-3 items-center">
+                <div class="flex gap-3 items-center justify-center w-full mb-2">
                     <div class="bg-yellow w-[50px] h-[2px]"></div>
                     <h3
                         class="text-[20px] sm:text-[24px] text-dark md:text-[32px] font-canela section-heading text-center">
@@ -549,7 +549,7 @@
                     <div class="bg-yellow w-[50px] h-[2px]"></div>
                 </div>
                 @if (!empty($course->course_structure_overview_first))
-                    <div class="text-[16px] editor">
+                    <div class="text-[16px] editor text-center w-full max-w-3xl mx-auto mb-2">
                         {!! $course->course_structure_overview_first !!}
                     </div>
                 @endif
