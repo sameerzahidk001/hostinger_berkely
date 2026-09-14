@@ -23,6 +23,11 @@
                     <strong>Step 1:</strong> Create the main folder and any subfolders / sub-subfolders.
                     After saving you will add files by choosing a folder, or by linking a Zoho WorkDrive file.
                 </div>
+                @if(!$isAdmin && $courses->isEmpty())
+                    <div class="alert alert-warning">
+                        You are not assigned to any course yet. Ask admin to add you on the course instructors list before creating folders or granting student access.
+                    </div>
+                @endif
                 <div class="row">
                     <div class="col-md-6 form-group">
                         <label>Folder name *</label>
@@ -36,7 +41,7 @@
                     </div>
                     <div class="col-md-6 form-group">
                         <label>Course *</label>
-                        <select name="course_id" id="course_id" class="form-control" required>
+                        <select name="course_id" id="course_id" class="form-control" required @disabled(!$isAdmin && $courses->isEmpty())>
                             <option value="">Type to find the course</option>
                             @foreach($courses as $course)
                                 <option value="{{ $course->id }}" @selected(old('course_id') == $course->id)>{{ $course->title }}</option>

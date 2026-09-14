@@ -62,7 +62,7 @@ class StudyMaterialFolderController extends Controller
 
     public function create()
     {
-        $courses = Course::query()->where('status', 1)->orderBy('title')->get(['id', 'title']);
+        $courses = $this->lms->coursesForActor();
         $instructors = User::query()
             ->whereHas('roles', fn ($q) => $q->where('name', 'instructor'))
             ->orderBy('name')
@@ -82,6 +82,12 @@ class StudyMaterialFolderController extends Controller
         $validator = Validator::make($request->all(), $this->folderRules());
         if ($validator->fails()) {
             return redirect()->back()->withErrors($validator)->withInput();
+        }
+
+        if ($this->lms->isInstructorActor() && ! $this->lms->instructorAssignedToCourse((int) $request->course_id)) {
+            return redirect()->back()
+                ->withErrors(['course_id' => 'You can only create folders for courses assigned to you by admin.'])
+                ->withInput();
         }
 
         $status = 'disabled';
@@ -147,7 +153,7 @@ class StudyMaterialFolderController extends Controller
     public function sendStudents($id)
     {
         $folder = StudyMaterialFolder::findOrFail($id);
-        abort_unless($this->lms->canManageFolder($folder), 403);
+        abort_unless($this->lms->canAssignStudentAccess($folder), 403);
 
         $result = $this->lms->sendFolderStudentEmails($folder);
 
@@ -193,7 +199,11 @@ class StudyMaterialFolderController extends Controller
         $folder = StudyMaterialFolder::with(['rootItems.childrenRecursive', 'instructorAccess', 'studentAccess', 'items', 'feePackages'])->findOrFail($id);
         abort_unless($this->lms->canManageFolder($folder), 403);
 
-        $courses = Course::query()->where('status', 1)->orderBy('title')->get(['id', 'title']);
+        $courses = $this->lms->coursesForActor();
+        // Keep current course visible even if assignment was removed later.
+        if ($folder->course_id && ! $courses->contains('id', $folder->course_id) && $folder->course) {
+            $courses = $courses->prepend($folder->course)->unique('id')->values();
+        }
         $packages = $this->packagesForCourse($folder->course_id)->get();
         $instructors = User::query()
             ->whereHas('roles', fn ($q) => $q->where('name', 'instructor'))
@@ -222,6 +232,12 @@ class StudyMaterialFolderController extends Controller
         $validator = Validator::make($request->all(), $this->folderRules($folder->id));
         if ($validator->fails()) {
             return redirect()->back()->withErrors($validator)->withInput();
+        }
+
+        if ($this->lms->isInstructorActor() && ! $this->lms->instructorAssignedToCourse((int) $request->course_id)) {
+            return redirect()->back()
+                ->withErrors(['course_id' => 'You can only use courses assigned to you by admin.'])
+                ->withInput();
         }
 
         $packageIds = $this->packageIdsFromRequest($request);
@@ -445,6 +461,10 @@ class StudyMaterialFolderController extends Controller
 
     public function packagesByCourse($courseId)
     {
+        if ($this->lms->isInstructorActor() && ! $this->lms->instructorAssignedToCourse((int) $courseId)) {
+            abort(403, 'You can only load packages for courses assigned to you.');
+        }
+
         $packages = $this->packagesForCourse($courseId)
             ->get(['id', 'package_name', 'price', 'currency']);
 

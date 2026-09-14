@@ -103,7 +103,9 @@
                 @if (!$course->courseStructuresFirst->isEmpty())
                     <a href="#four">Course Structure</a>
                 @endif
-                <!-- <a href="#five">Lecture Plan</a> -->
+                @if (!$course->courseStructures->isEmpty() && $course->lecture_plan_section == 1)
+                    <a href="#lecture-plan">{{ $course->dynamicLabel->lecture_plan ?? 'Lecture Plan' }}</a>
+                @endif
                 @if ($course->exam_section == 1)
                     <a href="#six">Examination</a>
                 @endif
@@ -351,10 +353,10 @@
     @endif
 
 
+    @if (!$course->courseStructuresFirst->isEmpty() && $course->course_structure_section == 1)
     <section id="four"
         class="card-hidden flex items-center justify-center flex-col py-10 px-4 bg-white min-[1200px]:px-[72px] md:px-12  ">
         <div class="flex items-center flex-col gap-2 w-full">
-            @if (!$course->courseStructuresFirst->isEmpty() && $course->course_structure_section == 1)
                 <div class="flex gap-3 items-center">
                     <div class="bg-yellow w-[50px] h-[2px]"></div>
                     <h3
@@ -397,36 +399,42 @@
                         </div>
                     @endforeach
                 </div>
-            @endif
-            @if (!$course->courseStructures->isEmpty() && $course->lecture_plan_section == 1)
-                <div class="flex gap-3 items-center justify-center mb-3 mt-6">
-                    <div class="bg-yellow w-[50px] h-[2px]"></div>
-                    <h3
-                        class="text-[20px] sm:text-[24px] text-dark md:text-[32px] font-canela section-heading text-center">
-                        {{ $course->dynamicLabel->lecture_plan ?? 'Lecture plan' }}</h3>
-                    <div class="bg-yellow w-[50px] h-[2px]"></div>
-                </div>
-                @if (!empty($course->course_structure_overview))
-                    <div class="text-[16px] editor">
-                        {!! $course->course_structure_overview !!}
-                    </div>
-                @endif
-                <div
-                    class="grid grid-cols-1 
-                @if (count($course->courseStructures) == 2) md:grid-cols-2 
-                @elseif(count($course->courseStructures) == 3) md:grid-cols-3
-                @elseif(count($course->courseStructures) >= 4) md:grid-cols-4 @endif gap-4 gap-x-2 mt-4 w-full">
-                    @foreach ($course->courseStructures ?? [] as $index => $LecturePlan)
-                        <div class="flex flex-col gap-0 bg-[#f5f5f5] py-4 px-4 md:px-4 w-full max-w-[600px] mx-auto">
-                            <h2 class="text-[16px] font-semibold text-crimson leading-normal">
-                                {{ $LecturePlan->title . ' ' . $LecturePlan->heading }}
-                            </h2>
-                            <div class="pb-4">{!! demote_page_headings($LecturePlan->overview) !!}</div>
+        </div>
+    </section>
+    @endif
 
-                            <div class="accordion flex flex-col gap-2 mt-0">
-                                @foreach ($LecturePlan->subHeadings as $index => $subHeadings)
-                                    @if ($subHeadings->subHeadingsUnits()->exists())
-                                        <div class="accordion-item px-3 py-2 bg-[#ffffff]">
+    @if (!$course->courseStructures->isEmpty() && $course->lecture_plan_section == 1)
+    <section id="lecture-plan"
+        class="card-hidden flex items-center justify-center flex-col py-10 px-4 bg-white min-[1200px]:px-[72px] md:px-12  ">
+        <div class="flex items-center flex-col gap-2 w-full">
+            <div class="flex gap-3 items-center justify-center mb-3 mt-0">
+                <div class="bg-yellow w-[50px] h-[2px]"></div>
+                <h3
+                    class="text-[20px] sm:text-[24px] text-dark md:text-[32px] font-canela section-heading text-center">
+                    {{ $course->dynamicLabel->lecture_plan ?? 'Lecture plan' }}</h3>
+                <div class="bg-yellow w-[50px] h-[2px]"></div>
+            </div>
+            @if (!empty($course->course_structure_overview))
+                <div class="text-[16px] editor">
+                    {!! $course->course_structure_overview !!}
+                </div>
+            @endif
+            <div
+                class="grid grid-cols-1 
+            @if (count($course->courseStructures) == 2) md:grid-cols-2 
+            @elseif(count($course->courseStructures) == 3) md:grid-cols-3
+            @elseif(count($course->courseStructures) >= 4) md:grid-cols-4 @endif gap-4 gap-x-2 mt-4 w-full">
+                @foreach ($course->courseStructures ?? [] as $index => $LecturePlan)
+                    <div class="flex flex-col gap-0 bg-[#f5f5f5] py-4 px-4 md:px-4 w-full max-w-[600px] mx-auto">
+                        <h2 class="text-[16px] font-semibold text-crimson leading-normal">
+                            {{ $LecturePlan->title . ' ' . $LecturePlan->heading }}
+                        </h2>
+                        <div class="pb-4">{!! demote_page_headings($LecturePlan->overview) !!}</div>
+
+                        <div class="accordion flex flex-col gap-2 mt-0">
+                            @foreach ($LecturePlan->subHeadings as $index => $subHeadings)
+                                @if ($subHeadings->subHeadingsUnits()->exists())
+                                    <div class="accordion-item px-3 py-2 bg-[#ffffff]">
                                             <button
                                                 class="accordion-button hover:underline text-dark flex items-center justify-between"
                                                 aria-expanded="false">
@@ -461,10 +469,14 @@
                         </div>
                     @endforeach
                 </div>
-            @endif
+        </div>
+    </section>
+    @endif
 
-            @if ($course->custom_videos_section == 1)
-                <div class="flex gap-3 items-center justify-center mb-3 mt-6">
+    @if ($course->custom_videos_section == 1)
+    <section class="card-hidden flex items-center justify-center flex-col py-10 px-4 bg-white min-[1200px]:px-[72px] md:px-12">
+        <div class="flex items-center flex-col gap-2 w-full">
+                <div class="flex gap-3 items-center justify-center mb-3 mt-0">
                     <div class="bg-yellow w-[50px] h-[2px]"></div>
                     <h3
                         class="text-[20px] sm:text-[24px] text-dark md:text-[32px] font-canela section-heading text-center">
@@ -533,9 +545,9 @@
 
 
             @endif
-
         </div>
     </section>
+    @endif
     @if ($assignIntructors && count($assignIntructors) > 0)
         <section class="card-hidden px-6 min-[1200px]:px-[72px] mt-10 lg:pt-0 md:px-12 flex flex-col gap-16 w-full my-16">
             <div class="flex gap-3 items-center justify-center pb-4">

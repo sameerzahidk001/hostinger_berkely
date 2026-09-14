@@ -85,6 +85,112 @@ class StudyMaterialService
             ->exists();
     }
 
+    /**
+     * Courses an actor may pick when creating folders / schedules.
+     * Instructors only see courses admin assigned them to (courses.instructor_id).
+     */
+    public function coursesForActor()
+    {
+        if ($this->isAdminActor()) {
+            return \App\Models\Course::query()
+                ->where('status', 1)
+                ->orderBy('title')
+                ->get(['id', 'title', 'slug', 'instructor_id']);
+        }
+
+        if (!$this->isInstructorActor()) {
+            return collect();
+        }
+
+        return courses_for_instructor((int) $this->actorUserId())
+            ->filter(function ($course) {
+                return (int) ($course->status ?? 1) === 1;
+            })
+            ->values();
+    }
+
+    public function instructorAssignedToCourse(int $courseId): bool
+    {
+        if ($this->isAdminActor()) {
+            return true;
+        }
+
+        if (!$this->isInstructorActor() || $courseId <= 0) {
+            return false;
+        }
+
+        return $this->coursesForActor()->contains(fn ($course) => (int) $course->id === $courseId);
+    }
+
+    /**
+     * Giving student access requires manage rights AND (for instructors) course assignment.
+     */
+    public function canAssignStudentAccess(StudyMaterialFolder $folder): bool
+    {
+        if (!$this->canManageFolder($folder)) {
+            return false;
+        }
+
+        if ($this->isAdminActor()) {
+            return true;
+        }
+
+        return $this->instructorAssignedToCourse((int) $folder->course_id);
+    }
+
+    /**
+     * Students enrolled on a course via active/paid payments (not the full student directory).
+     */
+    public function studentsForCourse(?int $courseId, int $limit = 500)
+    {
+        $query = User::query()
+            ->whereHas('roles', fn ($q) => $q->where('name', 'student'))
+            ->orderBy('name');
+
+        if ($this->isAdminActor() && (!$courseId || $courseId <= 0)) {
+            return $query->limit($limit)->get(['id', 'name', 'email']);
+        }
+
+        if (!$courseId || $courseId <= 0) {
+            return collect();
+        }
+
+        if ($this->isInstructorActor() && !$this->instructorAssignedToCourse($courseId)) {
+            return collect();
+        }
+
+        return $query
+            ->whereHas('payments', function ($payments) use ($courseId) {
+                $payments->where('course_id', $courseId)
+                    ->whereIn('status', ['Active', 'active', 'Paid', 'paid', 'Partial', 'partial']);
+            })
+            ->limit($limit)
+            ->get(['id', 'name', 'email']);
+    }
+
+    public function studentBelongsToCourse(int $studentId, int $courseId): bool
+    {
+        if ($studentId <= 0 || $courseId <= 0) {
+            return false;
+        }
+
+        if ($this->isAdminActor()) {
+            return User::query()
+                ->whereKey($studentId)
+                ->whereHas('roles', fn ($q) => $q->where('name', 'student'))
+                ->exists();
+        }
+
+        return User::query()
+            ->whereKey($studentId)
+            ->whereHas('roles', fn ($q) => $q->where('name', 'student'))
+            ->whereHas('payments', function ($payments) use ($courseId) {
+                $payments->where('course_id', $courseId)
+                    ->whereIn('status', ['Active', 'active', 'Paid', 'paid', 'Partial', 'partial']);
+            })
+            ->exists();
+    }
+
     public function canEnableFolder(): bool
     {
         return $this->isAdminActor();

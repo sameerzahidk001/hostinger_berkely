@@ -1812,10 +1812,11 @@ if (!function_exists('courses_for_instructor')) {
     function courses_for_instructor(int $instructorId): \Illuminate\Support\Collection
     {
         return \App\Models\Course::query()
+            ->where('status', 1)
             ->whereNotNull('instructor_id')
             ->where('instructor_id', '!=', '')
             ->orderBy('title')
-            ->get(['id', 'title', 'slug', 'description', 'instructor_id'])
+            ->get(['id', 'title', 'slug', 'description', 'instructor_id', 'status'])
             ->filter(fn ($course) => in_array($instructorId, course_instructor_ids($course), true))
             ->values();
     }

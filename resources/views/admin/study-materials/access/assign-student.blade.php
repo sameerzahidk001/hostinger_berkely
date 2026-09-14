@@ -18,6 +18,12 @@
     <div class="ibox">
         <div class="ibox-content">
             <div class="alert alert-warning">Only <strong>Active</strong> folders. Access stays disabled until <strong>Send</strong>.</div>
+            @if(!empty($isInstructor))
+                <div class="alert alert-info">
+                    You only see courses assigned to you by admin, and students enrolled on that course.
+                    Select a folder first to load the matching student list.
+                </div>
+            @endif
             <form method="POST" action="{{ route('admin.study-materials.access.assign-student.store') }}">
                 @csrf
                 <div class="row">
@@ -36,7 +42,7 @@
                     </div>
                     <div class="col-md-6 form-group">
                         <label>Student *</label>
-                        <select name="student_id" class="form-control" required>
+                        <select name="student_id" id="student_id" class="form-control" required>
                             <option value="">Select student</option>
                             @foreach($students as $student)
                                 <option value="{{ $student->id }}" @selected(old('student_id') == $student->id)>{{ $student->name }} ({{ $student->email }})</option>
@@ -64,8 +70,12 @@
 <script>
 (function () {
     const folder = document.getElementById('folder_id');
+    const student = document.getElementById('student_id');
     const issued = document.getElementById('issued_at');
     const till = document.getElementById('access_till');
+    const studentsUrl = @json(url('/admin/study-materials/students-by-folder'));
+    const selectedStudent = @json((string) old('student_id', ''));
+
     function recalc() {
         const opt = folder.options[folder.selectedIndex];
         const months = parseInt(opt?.dataset?.months || '0', 10);
@@ -77,7 +87,35 @@
         d.setMonth(d.getMonth() + months);
         till.value = d.toISOString().slice(0, 10);
     }
-    folder.addEventListener('change', recalc);
+
+    function loadStudents() {
+        const folderId = folder.value;
+        student.innerHTML = '<option value="">Select student</option>';
+        if (!folderId) {
+            return;
+        }
+        fetch(studentsUrl + '/' + folderId, {
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(function (res) { return res.ok ? res.json() : []; })
+            .then(function (rows) {
+                (rows || []).forEach(function (row) {
+                    const opt = document.createElement('option');
+                    opt.value = row.id;
+                    opt.textContent = row.name + ' (' + row.email + ')';
+                    if (String(row.id) === String(selectedStudent)) {
+                        opt.selected = true;
+                    }
+                    student.appendChild(opt);
+                });
+            })
+            .catch(function () {});
+    }
+
+    folder.addEventListener('change', function () {
+        recalc();
+        loadStudents();
+    });
     issued.addEventListener('change', recalc);
 })();
 </script>

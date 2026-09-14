@@ -48,22 +48,21 @@ class ClassScheduleController extends Controller
 
     public function create()
     {
-        $courses = Course::query()->where('status', 1)->orderBy('title')->get(['id', 'title']);
+        $courses = $this->lms->coursesForActor();
         $instructors = User::query()
             ->whereHas('roles', fn ($q) => $q->where('name', 'instructor'))
             ->orderBy('name')
             ->get(['id', 'name']);
-        $students = User::query()
-            ->whereHas('roles', fn ($q) => $q->where('name', 'student'))
-            ->orderBy('name')
-            ->limit(500)
-            ->get(['id', 'name', 'email']);
+        $students = $this->lms->isAdminActor()
+            ? $this->lms->studentsForCourse(null)
+            : collect();
 
         return view('admin.study-materials.schedules.create', [
             'courses' => $courses,
             'instructors' => $instructors,
             'students' => $students,
             'zohoMeetingReady' => $this->zoho->isMeetingReady(),
+            'isInstructor' => $this->lms->isInstructorActor(),
         ]);
     }
 
@@ -86,6 +85,12 @@ class ClassScheduleController extends Controller
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
+        if ($this->lms->isInstructorActor() && ! $this->lms->instructorAssignedToCourse((int) $request->course_id)) {
+            return redirect()->back()
+                ->withErrors(['course_id' => 'You can only schedule classes for courses assigned to you.'])
+                ->withInput();
+        }
+
         $schedule = new ClassSchedule();
         $schedule->fill($request->only([
             'batch_name', 'course_id', 'instructor_id', 'scheduled_at', 'duration_minutes', 'zoho_link', 'title', 'notes',
@@ -103,7 +108,13 @@ class ClassScheduleController extends Controller
         }
 
         $schedule->save();
-        $schedule->students()->sync($request->input('student_ids', []));
+
+        $studentIds = collect($request->input('student_ids', []))
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $this->lms->studentBelongsToCourse($id, (int) $schedule->course_id))
+            ->values()
+            ->all();
+        $schedule->students()->sync($studentIds);
 
         $zohoStatus = $this->zoho->attachIntegrations($schedule);
 
@@ -119,16 +130,15 @@ class ClassScheduleController extends Controller
             abort(403);
         }
 
-        $courses = Course::query()->where('status', 1)->orderBy('title')->get(['id', 'title']);
+        $courses = $this->lms->coursesForActor();
+        if ($schedule->course_id && ! $courses->contains('id', $schedule->course_id) && $schedule->course) {
+            $courses = $courses->prepend($schedule->course)->unique('id')->values();
+        }
         $instructors = User::query()
             ->whereHas('roles', fn ($q) => $q->where('name', 'instructor'))
             ->orderBy('name')
             ->get(['id', 'name']);
-        $students = User::query()
-            ->whereHas('roles', fn ($q) => $q->where('name', 'student'))
-            ->orderBy('name')
-            ->limit(500)
-            ->get(['id', 'name', 'email']);
+        $students = $this->lms->studentsForCourse((int) $schedule->course_id);
 
         return view('admin.study-materials.schedules.edit', [
             'schedule' => $schedule,
@@ -136,6 +146,7 @@ class ClassScheduleController extends Controller
             'instructors' => $instructors,
             'students' => $students,
             'zohoMeetingReady' => $this->zoho->isMeetingReady(),
+            'isInstructor' => $this->lms->isInstructorActor(),
         ]);
     }
 
@@ -164,12 +175,24 @@ class ClassScheduleController extends Controller
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
+        if ($this->lms->isInstructorActor() && ! $this->lms->instructorAssignedToCourse((int) $request->course_id)) {
+            return redirect()->back()
+                ->withErrors(['course_id' => 'You can only schedule classes for courses assigned to you.'])
+                ->withInput();
+        }
+
         $schedule->fill($request->only([
             'batch_name', 'course_id', 'instructor_id', 'scheduled_at', 'duration_minutes', 'zoho_link', 'title', 'notes', 'status',
         ]));
         $schedule->duration_minutes = (int) ($request->input('duration_minutes') ?: 60);
         $schedule->save();
-        $schedule->students()->sync($request->input('student_ids', []));
+
+        $studentIds = collect($request->input('student_ids', []))
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $this->lms->studentBelongsToCourse($id, (int) $schedule->course_id))
+            ->values()
+            ->all();
+        $schedule->students()->sync($studentIds);
 
         $zohoStatus = $this->zoho->attachIntegrations($schedule);
 

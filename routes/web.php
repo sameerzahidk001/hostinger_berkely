@@ -194,6 +194,7 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
             Route::post('/folders/{id}/send-students', [StudyMaterialFolderController::class, 'sendStudents'])->name('folders.send-students');
             Route::post('/folders/{id}/send-instructors', [StudyMaterialFolderController::class, 'sendInstructors'])->name('folders.send-instructors');
             Route::get('/packages-by-course/{courseId}', [StudyMaterialFolderController::class, 'packagesByCourse'])->name('packages-by-course');
+            Route::get('/students-by-folder/{folderId}', [StudyMaterialAccessController::class, 'studentsByFolder'])->name('students-by-folder');
             Route::put('/items/{id}', [StudyMaterialFolderController::class, 'renameItem'])->name('items.rename');
             Route::post('/items/{id}/download', [StudyMaterialFolderController::class, 'toggleDownload'])->name('items.download');
             Route::delete('/items/{id}', [StudyMaterialFolderController::class, 'destroyItem'])->name('items.destroy');

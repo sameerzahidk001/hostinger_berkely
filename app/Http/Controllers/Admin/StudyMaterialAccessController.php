@@ -197,25 +197,35 @@ class StudyMaterialAccessController extends Controller
             ->orderBy('name')
             ->get();
 
-        $students = User::query()
-            ->whereHas('roles', fn ($q) => $q->where('name', 'student'))
-            ->orderBy('name')
-            ->limit(500)
-            ->get(['id', 'name', 'email']);
+        if ($this->lms->isInstructorActor()) {
+            $folders = $folders->filter(function ($folder) {
+                return $this->lms->instructorAssignedToCourse((int) $folder->course_id);
+            })->values();
+        }
 
-        $selectedFolder = $request->get('folder_id');
+        $selectedFolder = $request->get('folder_id') ?: old('folder_id');
         $folder = $selectedFolder ? StudyMaterialFolder::find($selectedFolder) : null;
+        if ($folder && ! $this->lms->canAssignStudentAccess($folder)) {
+            $folder = null;
+            $selectedFolder = null;
+        }
+
+        $students = $folder
+            ? $this->lms->studentsForCourse((int) $folder->course_id)
+            : ($this->lms->isAdminActor() ? $this->lms->studentsForCourse(null) : collect());
+
         $defaultTill = null;
         if ($folder && !$folder->hasUnlimitedValidity()) {
             $defaultTill = $this->lms->computeAccessTill(now(), $folder->validity_months)?->format('Y-m-d');
         }
 
-        return view('admin.study-materials.access.assign-student', compact(
-            'folders',
-            'students',
-            'selectedFolder',
-            'defaultTill'
-        ));
+        return view('admin.study-materials.access.assign-student', [
+            'folders' => $folders,
+            'students' => $students,
+            'selectedFolder' => $selectedFolder,
+            'defaultTill' => $defaultTill,
+            'isInstructor' => $this->lms->isInstructorActor(),
+        ]);
     }
 
     public function storeStudent(Request $request)
@@ -232,8 +242,14 @@ class StudyMaterialAccessController extends Controller
         }
 
         $folder = StudyMaterialFolder::findOrFail($request->folder_id);
-        abort_unless($this->lms->canManageFolder($folder), 403);
+        abort_unless($this->lms->canAssignStudentAccess($folder), 403);
         abort_unless($folder->status === 'active', 422, 'Only active folders can be assigned to students.');
+
+        if (! $this->lms->studentBelongsToCourse((int) $request->student_id, (int) $folder->course_id)) {
+            return redirect()->back()
+                ->withErrors(['student_id' => 'You can only assign students enrolled in this course.'])
+                ->withInput();
+        }
 
         $issued = $request->filled('issued_at') ? Carbon::parse($request->issued_at) : now();
         $till = $request->filled('access_till')
@@ -261,7 +277,7 @@ class StudyMaterialAccessController extends Controller
     public function sendStudent($id)
     {
         $access = StudyMaterialStudentAccess::with('folder')->findOrFail($id);
-        abort_unless($this->lms->canManageFolder($access->folder), 403);
+        abort_unless($this->lms->canAssignStudentAccess($access->folder), 403);
 
         $sent = $this->lms->sendStudentAccessEmail($access);
 
@@ -278,7 +294,7 @@ class StudyMaterialAccessController extends Controller
     public function editStudent($id)
     {
         $access = StudyMaterialStudentAccess::with(['folder.course', 'student'])->findOrFail($id);
-        abort_unless($this->lms->canManageFolder($access->folder), 403);
+        abort_unless($this->lms->canAssignStudentAccess($access->folder), 403);
 
         $folders = $this->lms->foldersQueryForActor()
             ->where(function ($q) use ($access) {
@@ -288,19 +304,29 @@ class StudyMaterialAccessController extends Controller
             ->orderBy('name')
             ->get();
 
-        $students = User::query()
-            ->whereHas('roles', fn ($q) => $q->where('name', 'student'))
-            ->orderBy('name')
-            ->limit(500)
-            ->get(['id', 'name', 'email']);
+        if ($this->lms->isInstructorActor()) {
+            $folders = $folders->filter(function ($folder) {
+                return $this->lms->instructorAssignedToCourse((int) $folder->course_id);
+            })->values();
+        }
 
-        return view('admin.study-materials.access.edit-student', compact('access', 'folders', 'students'));
+        $students = $this->lms->studentsForCourse((int) $access->folder->course_id);
+        if ($access->student && ! $students->contains('id', $access->student_id)) {
+            $students = $students->prepend($access->student)->unique('id')->values();
+        }
+
+        return view('admin.study-materials.access.edit-student', [
+            'access' => $access,
+            'folders' => $folders,
+            'students' => $students,
+            'isInstructor' => $this->lms->isInstructorActor(),
+        ]);
     }
 
     public function updateStudent(Request $request, $id)
     {
         $access = StudyMaterialStudentAccess::with('folder')->findOrFail($id);
-        abort_unless($this->lms->canManageFolder($access->folder), 403);
+        abort_unless($this->lms->canAssignStudentAccess($access->folder), 403);
 
         $validator = Validator::make($request->all(), [
             'folder_id' => 'required|exists:study_material_folders,id',
@@ -321,7 +347,13 @@ class StudyMaterialAccessController extends Controller
         }
 
         $folder = StudyMaterialFolder::findOrFail($request->folder_id);
-        abort_unless($this->lms->canManageFolder($folder), 403);
+        abort_unless($this->lms->canAssignStudentAccess($folder), 403);
+
+        if (! $this->lms->studentBelongsToCourse((int) $request->student_id, (int) $folder->course_id)) {
+            return redirect()->back()
+                ->withErrors(['student_id' => 'You can only assign students enrolled in this course.'])
+                ->withInput();
+        }
 
         $identityChanged = (int) $access->folder_id !== (int) $folder->id
             || (int) $access->student_id !== (int) $request->student_id;
@@ -365,7 +397,7 @@ class StudyMaterialAccessController extends Controller
     public function disableStudent($id)
     {
         $access = StudyMaterialStudentAccess::with(['folder', 'student', 'folder.course', 'folder.instructorAccess.instructor'])->findOrFail($id);
-        abort_unless($this->lms->canManageFolder($access->folder), 403);
+        abort_unless($this->lms->canAssignStudentAccess($access->folder), 403);
 
         if ($access->status === 'disabled') {
             return redirect()->back()->with('success', 'Student access is already disabled.');
@@ -376,6 +408,22 @@ class StudyMaterialAccessController extends Controller
         $this->lms->sendStudentDisabledEmail($access, 'disabled');
 
         return redirect()->back()->with('success', 'Student access disabled.');
+    }
+
+    public function studentsByFolder($folderId)
+    {
+        $folder = StudyMaterialFolder::findOrFail($folderId);
+        abort_unless($this->lms->canAssignStudentAccess($folder), 403);
+
+        $students = $this->lms->studentsForCourse((int) $folder->course_id);
+
+        return response()->json(
+            $students->map(fn ($s) => [
+                'id' => $s->id,
+                'name' => $s->name,
+                'email' => $s->email,
+            ])->values()
+        );
     }
 
     protected function searchTerm(Request $request): string

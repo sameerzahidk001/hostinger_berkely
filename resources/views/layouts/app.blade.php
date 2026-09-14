@@ -177,22 +177,22 @@
                             </a>
                         @endif
 
-                        {{-- Auth Buttons --}}
+                        {{-- Auth Buttons: desktop/tablet in header; mobile uses drawer --}}
                         @guest
                             @if($settings->login == '1')
                                 <a href="{{ route('login') }}"
-                                    class="items-center py-2 gap-3 text-lg font-medium active:underline decoration-crimson underline-offset-4 font-ghothic text-[19px]">
+                                    class="hidden sm:inline-flex items-center py-2 gap-3 text-lg font-medium active:underline decoration-crimson underline-offset-4 font-ghothic text-[19px]">
                                     {{ $settings->login_text ?? 'Login' }}
                                 </a>
                             @endif
                             @if($settings->register == '1')
                                 <a href="{{ route('register') }}"
-                                    class="items-center py-2 gap-3 text-lg font-medium active:underline decoration-crimson underline-offset-4 font-ghothic text-[19px]">
+                                    class="hidden sm:inline-flex items-center py-2 gap-3 text-lg font-medium active:underline decoration-crimson underline-offset-4 font-ghothic text-[19px]">
                                     {{ $settings->register_text ?? 'Register' }}
                                 </a>
                             @endif
                         @else
-                            <div class="flex items-center gap-4">
+                            <div class="hidden sm:flex items-center gap-4">
                                 <a href="{{ route('user.home') }}"
                                     class="items-center py-2 gap-3 text-lg font-medium underline decoration-crimson underline-offset-4 font-ghothic text-[19px]">
                                     {{ auth()->user()->name }}
@@ -260,6 +260,17 @@
                     <a href="{{ $settings->header_button_url }}"
                         class="text-white py-2">{{ $settings->header_button_text }}</a>
                 @endif
+                @guest
+                    @if($settings && $settings->login == '1')
+                        <a href="{{ route('login') }}" class="text-white py-2">{{ $settings->login_text ?? 'Login' }}</a>
+                    @endif
+                    @if($settings && $settings->register == '1')
+                        <a href="{{ route('register') }}" class="text-white py-2">{{ $settings->register_text ?? 'Register' }}</a>
+                    @endif
+                @else
+                    <a href="{{ route('user.home') }}" class="text-white py-2">{{ auth()->user()->name }}</a>
+                    <a href="{{ route('cart.index') }}" class="text-white py-2">Cart ({{ cart_item_count() }})</a>
+                @endguest
             </div>
         </div>
 
