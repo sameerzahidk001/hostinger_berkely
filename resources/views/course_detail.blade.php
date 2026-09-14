@@ -29,19 +29,32 @@
         }
 
         .table-scroll {
+            display: block;
             width: 100%;
             max-width: 100%;
             overflow-x: auto;
+            overflow-y: hidden;
             -webkit-overflow-scrolling: touch;
             margin-top: 0.5rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            background: #fff;
         }
 
         .editor table,
         .course-detail-table {
-            width: 100%;
-            min-width: 480px;
+            width: max-content;
+            min-width: 100%;
             border-collapse: collapse;
-            table-layout: auto;
+            table-layout: fixed;
+        }
+
+        .course-detail-table {
+            min-width: 640px;
+        }
+
+        .editor table {
+            min-width: 560px;
         }
 
         .editor table th,
@@ -49,11 +62,36 @@
         .course-detail-table th,
         .course-detail-table td {
             border: 1px solid #d1d5db;
-            padding: 0.5rem 0.75rem;
+            padding: 12px 14px;
             vertical-align: top;
-            word-break: break-word;
-            overflow-wrap: anywhere;
+            word-break: normal;
+            overflow-wrap: break-word;
             white-space: normal;
+            hyphens: none;
+        }
+
+        .course-detail-table th:nth-child(1),
+        .course-detail-table td:nth-child(1) {
+            width: 28%;
+            min-width: 160px;
+        }
+
+        .course-detail-table th:nth-child(2),
+        .course-detail-table td:nth-child(2) {
+            width: 52%;
+            min-width: 280px;
+        }
+
+        .course-detail-table th:nth-child(3),
+        .course-detail-table td:nth-child(3) {
+            width: 20%;
+            min-width: 110px;
+            white-space: nowrap;
+        }
+
+        .course-detail-table .editor {
+            overflow: visible;
+            max-width: none;
         }
 
         .editor table thead th,
@@ -61,17 +99,51 @@
             background: #f9fafb;
         }
 
-        @media (max-width: 640px) {
-            .editor table,
-            .course-detail-table {
-                font-size: 14px;
+        .exam-format-cards {
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 0.5rem;
+            width: 100%;
+        }
+
+        .exam-format-card {
+            background: #fff;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            padding: 14px 16px;
+        }
+
+        .exam-format-card__label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            margin-bottom: 4px;
+        }
+
+        .exam-format-card__title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #111827;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .exam-format-card__block + .exam-format-card__block {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        @media (max-width: 767px) {
+            .table-scroll-desktop {
+                display: none !important;
             }
 
-            .editor table th,
-            .editor table td,
-            .course-detail-table th,
-            .course-detail-table td {
-                padding: 0.4rem 0.5rem;
+            .exam-format-cards {
+                display: flex;
             }
         }
         @media (min-width: 1200px) {
@@ -958,7 +1030,7 @@
 
 
                             @if (!$allEmpty)
-                                <div class="table-scroll">
+                                <div class="table-scroll table-scroll-desktop">
                                 <table class="course-detail-table bg-white border border-gray-200 mt-2 w-full">
                                     <thead>
                                         <tr class="bg-gray-50">
@@ -991,6 +1063,30 @@
                                         @endforeach
                                     </tbody>
                                 </table>
+                                </div>
+
+                                <div class="exam-format-cards">
+                                    @foreach ($course->courseStructuresFirst ?? [] as $index => $courseStructure)
+                                        @if (empty($courseStructure->exam_format) && empty($courseStructure->exam_duration))
+                                            @continue
+                                        @endif
+                                        <div class="exam-format-card">
+                                            <div class="exam-format-card__label">{{ $course->dynamicLabel->exam_format_duration_01 ?? 'Part/Module' }}</div>
+                                            <div class="exam-format-card__title">{{ $courseStructure->title . ' ' . $courseStructure->heading }}</div>
+                                            @if (!empty($courseStructure->exam_format))
+                                                <div class="exam-format-card__block">
+                                                    <div class="exam-format-card__label">{{ $course->dynamicLabel->exam_format_duration_02 ?? 'Exam format' }}</div>
+                                                    <div class="text-[15px] leading-relaxed editor">{!! $courseStructure->exam_format !!}</div>
+                                                </div>
+                                            @endif
+                                            @if (!empty($courseStructure->exam_duration))
+                                                <div class="exam-format-card__block">
+                                                    <div class="exam-format-card__label">{{ $course->dynamicLabel->exam_format_duration_03 ?? 'Exam duration' }}</div>
+                                                    <div class="text-[15px] leading-relaxed editor">{!! $courseStructure->exam_duration !!}</div>
+                                                </div>
+                                            @endif
+                                        </div>
+                                    @endforeach
                                 </div>
                             @endif
                         @endif
