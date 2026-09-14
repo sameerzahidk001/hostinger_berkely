@@ -1,6 +1,5 @@
 @extends('user.layout.app')
 @section('title', 'Dashboard')
-@include('user.partials.rakbank-payment-modal')
 
 @push('style')
 <link href="{{ asset('/admin/css/plugins/dataTables/datatables.min.css') }}" rel="stylesheet">
@@ -139,8 +138,6 @@
 
                                                         @php
                                                             $paymentId = $installment->payment_id ?? null;
-                                                            $courseId = $installment->payment->course->id ?? null;
-                                                            $userId = $installment->user->id ?? null;
                                                         @endphp
 
                                                         @if ($paymentId && !in_array($paymentId, $shownPaymentIds))
@@ -166,25 +163,6 @@
             </div>
         </div>
     @endif
-        <div class="modal fade" id="paymentModal" tabindex="-1" role="dialog" aria-hidden="true">
-            <div class="modal-dialog modal-lg" role="document" style="max-width: 560px;">
-                <div class="modal-content">
-                    <button type="button" class="close close-white position-absolute top-0 right-0"
-                        style="margin-top: -25px; margin-right: 10px;" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                    <div class="modal-body" style="padding: 24px;">
-                        <div id="payment-amount-display" class="mb-3"></div>
-                        <div id="payment-loading" class="text-center py-4" style="display: none;">
-                            <i class="fa fa-spinner fa-spin fa-2x"></i>
-                            <p class="mt-2 mb-0">Loading payment form...</p>
-                        </div>
-                        <div id="payment-error" class="alert alert-danger text-center" style="display: none;"></div>
-                        <div id="hco-embedded" style="min-height: 360px;"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
 @endsection
 
 @push('script')
@@ -192,193 +170,33 @@
         <script src="{{ asset('/admin/js/plugins/dataTables/datatables.min.js') }}"></script>
 
         <script>
-            let currentInstallmentId = null;
-            let currentSettlingAmount = null;
-            let currentOrderId = null;
-            let checkoutScriptLoaded = false;
-
-            function storePendingPaymentContext() {
-                if (!currentInstallmentId || !currentSettlingAmount) {
-                    return;
-                }
-
-                sessionStorage.setItem('rakbank_pending', JSON.stringify({
-                    installment_id: currentInstallmentId,
-                    amount: currentSettlingAmount,
-                    order_id: currentOrderId || null,
-                }));
-            }
-
-            function readPendingPaymentContext() {
-                if (currentInstallmentId && currentSettlingAmount) {
-                    return {
-                        installment_id: currentInstallmentId,
-                        amount: currentSettlingAmount,
-                        order_id: currentOrderId || null,
-                    };
-                }
-
-                try {
-                    return JSON.parse(sessionStorage.getItem('rakbank_pending') || '{}');
-                } catch (e) {
-                    return {};
-                }
-            }
-
-            function clearPendingPaymentContext() {
-                sessionStorage.removeItem('rakbank_pending');
-            }
-
-            function resetPaymentModal() {
-                $('#payment-amount-display').empty();
-                $('#hco-embedded').empty();
-                $('#payment-error').hide().empty();
-                $('#payment-loading').hide();
-            }
-
-            function loadCheckoutScript(callback) {
-                if (typeof Checkout !== 'undefined') {
-                    callback();
-                    return;
-                }
-
-                if (checkoutScriptLoaded) {
-                    const waitForCheckout = setInterval(function () {
-                        if (typeof Checkout !== 'undefined') {
-                            clearInterval(waitForCheckout);
-                            callback();
-                        }
-                    }, 50);
-                    return;
-                }
-
-                checkoutScriptLoaded = true;
-                const script = document.createElement('script');
-                script.src = 'https://rakbankpay-nam.gateway.mastercard.com/static/checkout/checkout.min.js';
-                script.setAttribute('data-error', 'errorCallback');
-                script.setAttribute('data-cancel', 'cancelCallback');
-                script.setAttribute('data-complete', 'completeCallback');
-                script.onload = callback;
-                script.onerror = function () {
-                    checkoutScriptLoaded = false;
-                    $('#payment-loading').hide();
-                    console.error('Failed to load payment checkout script.');
-                };
-                document.head.appendChild(script);
-            }
-
-            function errorCallback(error) {
-                console.log(JSON.stringify(error));
-            }
-
-            function cancelCallback() {
-                console.log('Payment cancelled');
-            }
-
-            function completeCallback(response) {
-                const pending = readPendingPaymentContext();
-
-                if (!pending.installment_id || !pending.amount) {
-                    console.error("Installment or amount missing.", response);
-                    return;
-                }
-
-                $.ajax({
-                    url: '{{ route("user.update.installment") }}',
-                    method: 'POST',
-                    data: {
-                        amount: pending.amount,
-                        installment_id: pending.installment_id,
-                        order_id: pending.order_id || null,
-                    },
-                    headers: {
-                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-                    },
-                    success: function (res) {
-                        if (res.success == true) {
-                            clearPendingPaymentContext();
-                            $(".modal.show").modal('hide');
-
-                            if (res.receipt_url) {
-                                window.location.href = res.receipt_url;
-                                return;
-                            }
-
-                            setTimeout(function () {
-                                window.location.reload();
-                            }, 1000);
-                        } else {
-                            console.error("Something went wrong", res);
-                        }
-                    },
-                    error: function (err) {
-                        console.error("API error", err.responseText);
-                        alert('Payment was taken but receipt could not be created automatically. Please refresh the page or contact support.');
-                    }
-                });
-            }
-
-            function loadEmbeddedCheckout(sessionId) {
-                loadCheckoutScript(function () {
-                    try {
-                        Checkout.configure({
-                            session: { id: sessionId },
-                        });
-                        $('#payment-loading').hide();
-                        Checkout.showEmbeddedPage('#hco-embedded');
-                        if (typeof schedulePayButtonCleanup === 'function') {
-                            schedulePayButtonCleanup('#hco-embedded');
-                        } else if (typeof normalizeEmbeddedPayButtons === 'function') {
-                            normalizeEmbeddedPayButtons('#hco-embedded');
-                        }
-                    } catch (error) {
-                        $('#payment-loading').hide();
-                        $('#payment-error').text('Unable to load payment form. Please try again.').show();
-                        console.error("RakBank checkout init failed:", error);
-                    }
-                });
-            }
-
             $(document).on('click', '.payNowBtn', function () {
-                currentInstallmentId = $(this).data('installment-id');
-                resetPaymentModal();
-                $('#paymentModal').modal('show');
-            });
+                var $btn = $(this);
+                var installmentId = $btn.data('installment-id');
+                var originalHtml = $btn.html();
 
-            $('#paymentModal').on('shown.bs.modal', function () {
-                resetPaymentModal();
-                $('#payment-loading').show();
+                $btn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Redirecting...');
 
                 $.ajax({
-                    url: '{{ route("user.generate.rakBankPaySession") }}',
+                    url: '{{ route("user.generate.noonCheckout") }}',
                     method: 'POST',
                     data: {
-                        installment_id: currentInstallmentId,
-                        return_url: window.location.href
+                        installment_id: installmentId
                     },
                     headers: {
                         'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
                     },
                     success: function (res) {
-                        $('#payment-loading').hide();
-
-                        if (res.displayAmount) {
-                            renderPaymentModalSummary('#payment-amount-display', res);
+                        if (res.success !== false && res.checkoutUrl) {
+                            window.location.href = res.checkoutUrl;
+                            return;
                         }
 
-                        currentSettlingAmount = res.settlingAmount || null;
-                        currentOrderId = res.orderId || null;
-                        storePendingPaymentContext();
-
-                        if (res.success !== false && res.session && res.session.id) {
-                            loadEmbeddedCheckout(res.session.id);
-                        } else {
-                            $('#payment-error').text(res.error || 'Payment session could not be started. Please try again.').show();
-                            console.error("Session creation failed", res);
-                        }
+                        $btn.prop('disabled', false).html(originalHtml);
+                        alert(res.error || 'Payment session could not be started. Please try again.');
                     },
                     error: function (err) {
-                        $('#payment-loading').hide();
+                        $btn.prop('disabled', false).html(originalHtml);
                         var message = 'Payment session could not be started. Please try again.';
                         try {
                             var body = JSON.parse(err.responseText);
@@ -386,17 +204,9 @@
                                 message = body.error;
                             }
                         } catch (e) {}
-                        $('#payment-error').text(message).show();
-                        console.error("API error", err.responseText);
+                        alert(message);
                     }
                 });
-            });
-
-            $('#paymentModal').on('hidden.bs.modal', function () {
-                if (typeof stopPayButtonCleanup === 'function') {
-                    stopPayButtonCleanup();
-                }
-                resetPaymentModal();
             });
         </script>
     @endif

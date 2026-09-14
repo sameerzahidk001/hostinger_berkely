@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Http\Request;
 use App\Models\Installment;
+use App\Services\NoonCheckoutService;
 use App\Services\RakBankCheckoutService;
 
 class HomeController extends Controller
@@ -27,6 +28,103 @@ class HomeController extends Controller
         }
 
         return view('user.home', compact('data'));
+    }
+
+    public function generateNoonCheckout(Request $request, NoonCheckoutService $checkout)
+    {
+        $request->validate([
+            'installment_id' => 'required|exists:installments,id',
+        ]);
+
+        $installment = Installment::with(['payment.course', 'payment.courseFee', 'user'])
+            ->where('user_id', Auth::id())
+            ->findOrFail($request->installment_id);
+
+        $settlingAed = round((float) $installment->remaining_amount, 2);
+        if ($settlingAed <= 0) {
+            return response()->json([
+                'success' => false,
+                'error' => 'This installment has no remaining balance.',
+            ], 422);
+        }
+
+        if (! $checkout->isConfigured()) {
+            Log::error('Noon credentials missing from config (check NOON_BUSINESS_ID / NOON_APP_ID / NOON_APP_KEY in .env).');
+
+            return response()->json([
+                'success' => false,
+                'error' => 'Online payment is not configured. Please contact support.',
+            ], 503);
+        }
+
+        $chargeAmount = number_format($settlingAed, 2, '.', '');
+        $returnUrl = route('user.noon.return');
+
+        try {
+            $session = $checkout->initiateCheckout($installment, $chargeAmount, $returnUrl, $request);
+        } catch (\Throwable $e) {
+            Log::error('Noon checkout initiate failed: ' . $e->getMessage(), [
+                'installment_id' => $installment->id,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage() ?: 'Payment session could not be started. Please try again.',
+            ], 502);
+        }
+
+        return response()->json([
+            'success' => true,
+            'checkoutUrl' => $session['checkout_url'],
+            'orderId' => $session['order_id'],
+            'displayAmount' => format_payment_aed_amount($installment->payment, $settlingAed),
+        ]);
+    }
+
+    public function handleNoonReturn(Request $request, NoonCheckoutService $checkout)
+    {
+        $orderId = $checkout->normalizeOrderId((string) $request->query('orderId', $request->query('order_id', '')));
+        $orderData = $orderId !== '' ? $checkout->fetchOrder($orderId) : null;
+        $reportedStatus = $checkout->orderStatus($orderData);
+
+        if (in_array($reportedStatus, ['CANCELLED', 'CANCELED', 'FAILED', 'EXPIRED', 'REJECTED'], true)) {
+            $checkout->clearPendingCheckout($orderId ?: null);
+
+            $message = $reportedStatus === 'CANCELLED' || $reportedStatus === 'CANCELED'
+                ? 'Payment was cancelled. No charge was made.'
+                : 'Payment was not completed. Please try again.';
+
+            return redirect()
+                ->route('user.home')
+                ->with('error', $message);
+        }
+
+        if ($orderId !== '') {
+            $installment = $checkout->completePendingCheckout($request, $orderId);
+
+            if ($installment) {
+                return redirect()
+                    ->route('user.installments.receipt', $installment->id)
+                    ->with('success', 'Payment received. Your receipt is ready.');
+            }
+        }
+
+        $pending = $checkout->pendingCheckout();
+        if ($pending) {
+            $installment = $checkout->completePendingCheckout($request, (string) ($pending['order_id'] ?? ''));
+
+            if ($installment) {
+                return redirect()
+                    ->route('user.installments.receipt', $installment->id)
+                    ->with('success', 'Payment received. Your receipt is ready.');
+            }
+        }
+
+        $checkout->clearPendingCheckout($orderId ?: null);
+
+        return redirect()
+            ->route('user.home')
+            ->with('error', 'Payment could not be confirmed automatically. If your card was charged, please contact support with your bank reference.');
     }
 
     public function generateRakBankPaySession(Request $request)
