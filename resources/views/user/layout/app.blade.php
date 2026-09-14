@@ -299,6 +299,7 @@
    </script>
 
    @include('admin.layout.partials.flash_messages')
+   @include('partials.idle_session_timeout', ['logoutUrl' => route('user.logout')])
 
    @stack('script')
 </body>
