@@ -119,11 +119,16 @@ class FrontendController extends Controller
 
     function optimize()
     {
-
+        Artisan::call('config:clear');
+        Artisan::call('cache:clear');
         Artisan::call('view:clear');
         Artisan::call('route:clear');
+        Artisan::call('config:cache');
         Artisan::call('route:cache');
         //Artisan::call('storage:link');
+
+        return response('OK — config/cache refreshed', 200)
+            ->header('Content-Type', 'text/plain');
     }
 
 

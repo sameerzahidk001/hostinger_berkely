@@ -42,6 +42,33 @@ if [ ! -f .env ]; then
   exit 1
 fi
 
+echo "==> Ensure Noon live keys exist in .env (fill missing/empty only)"
+if [ -f .env ]; then
+  upsert_env() {
+    key="$1"
+    val="$2"
+    if grep -q "^${key}=" .env; then
+      current="$(grep "^${key}=" .env | head -n1 | cut -d= -f2-)"
+      if [ -z "$current" ]; then
+        sed -i "s|^${key}=.*|${key}=${val}|" .env
+      fi
+    else
+      echo "${key}=${val}" >> .env
+    fi
+  }
+  upsert_env NOON_BUSINESS_ID berkeley
+  upsert_env NOON_APP_ID BerkeleyWeb
+  upsert_env NOON_APP_KEY 5e69b96acdd84164bc28fd4e5dad0bff
+  upsert_env NOON_AUTH_SCHEME Key_Live
+  upsert_env NOON_MODE live
+  upsert_env NOON_API_URL https://api.noonpayments.com/payment/v1
+  upsert_env NOON_ORDER_CATEGORY pay
+  upsert_env NOON_CHANNEL web
+  upsert_env NOON_CURRENCY AED
+  upsert_env NOON_PAYMENT_ACTION SALE
+  upsert_env NOON_WEBHOOK_SECRET d3aa6de3-2653-4c6f-851e-51794d1dc32b
+fi
+
 echo "==> Laravel setup"
 php artisan storage:link --force || true
 chmod -R 775 storage bootstrap/cache
