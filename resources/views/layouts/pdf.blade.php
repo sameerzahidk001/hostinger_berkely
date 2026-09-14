@@ -6,11 +6,11 @@
     <style>
         body {
             margin: 0;
-            padding: 16px;
+            padding: 8px;
             font-family: DejaVu Sans, Helvetica, Arial, sans-serif;
             color: #333;
-            font-size: 13px;
-            line-height: 1.45;
+            font-size: 12px;
+            line-height: 1.35;
             background: #fff;
         }
         a { color: #333; text-decoration: none; }

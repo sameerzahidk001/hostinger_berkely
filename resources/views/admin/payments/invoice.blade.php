@@ -36,19 +36,19 @@
 
         .invoice-container {
             background: #fff;
-            padding: 40px 30px;
-            margin: 30px auto;
+            padding: 24px 20px;
+            margin: 20px auto;
             border: 1px solid #e0e0e0;
             box-shadow: 0 0 25px rgba(0, 0, 0, 0.06);
-            font-size: 15px;
-            line-height: 24px;
+            font-size: 14px;
+            line-height: 20px;
             font-family: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif;
             color: #333;
             max-width: 800px;
         }
 
         .invoice-section {
-            margin-bottom: 30px;
+            margin-bottom: 12px;
         }
 
         .invoice-section h4 {
@@ -152,23 +152,23 @@
                 <div class="invoice-container">
                     <!-- Your invoice content starts -->
 
-                    <div class="invoice-header" style="display: table; width: 100%; margin-bottom: 15px;">
-                        <div style="display: table-cell; width: 50%; vertical-align: top;">
+                    <div class="invoice-header" style="display: table; width: 100%; margin-bottom: 8px;">
+                        <div style="display: table-cell; width: 55%; vertical-align: top;">
                             <img src="{{ asset('frontend/images/pngs/logo-color.png') }}" alt="Logo"
-                                style="width: 280px; margin-bottom: 10px;">
-                            <p style="margin-bottom: 0;">Berkeley School of Business, Arts & Sciences</p>
-                            <p style="margin-bottom: 0;">Berkeley Square, Mayfair, London, W1J, UK</p>
-                            <p style="margin-bottom: 0;">Mob: +44 7306 279111</p>
-                            <p>Email: {{ invoice_header_email() }}</p>
+                                style="width: 170px; height: auto; margin: 0 0 4px;">
+                            <p style="margin: 0 0 2px;"><strong>Berkeley School of Business, Arts & Sciences</strong></p>
+                            <p style="margin: 0 0 2px;">Berkeley Square, Mayfair, London, W1J, UK</p>
+                            <p style="margin: 0 0 2px;">Mob: +44 7306 279111</p>
+                            <p style="margin: 0;">Email: {{ invoice_header_email() }}</p>
                         </div>
-                        <div style="display: table-cell; width: 50%; vertical-align: bottom; text-align: right;">
-                            <h1 style="margin-top: 0;">Invoice</h1>
+                        <div style="display: table-cell; width: 45%; vertical-align: top; text-align: right;">
+                            <h1 style="margin: 0 0 4px; font-size: 28px; line-height: 1.1;">Invoice</h1>
                             <p style="margin: 0;"><strong>Invoice#</strong>
                                 INV-{{ str_pad($payments->id, 6, '0', STR_PAD_LEFT) }}</p>
                         </div>
                     </div>
 
-                    <div class="row" style="margin-bottom: 15px;">
+                    <div class="row" style="margin-bottom: 8px;">
                         <div class="col-xs-4 pull-right text-right">
                             <p><strong>Balance
                                     Due:</strong><br>{!! $moneyAdmin(payment_display_amount_from_aed($payments, $balanceDueAed), $balanceDueAed) !!}
@@ -176,7 +176,7 @@
                         </div>
                     </div>
 
-                    <div class="invoice-section" style="display: table; width: 100%; margin-bottom: 15px;">
+                    <div class="invoice-section" style="display: table; width: 100%; margin-bottom: 10px;">
                         <div style="display: table-cell; width: 50%; vertical-align: top;">
                             <h4 style="margin: 0px">Student Details:</h4>
                             <p style="margin: 0px"><strong>Name:</strong> {{ $user->name }}</p>

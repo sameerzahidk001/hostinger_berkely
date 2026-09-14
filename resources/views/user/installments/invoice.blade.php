@@ -3,11 +3,12 @@
 @section('title', 'Package Invoice')
 
 @section('content')
+    @php $isPdf = (bool) ($forPdf ?? false); @endphp
     <style>
         @media print {
             @page {
                 size: A4;
-                margin: 0;
+                margin: 10mm;
             }
 
             body {
@@ -25,7 +26,6 @@
                 max-width: 100%;
                 box-shadow: none !important;
                 border: none !important;
-                page-break-after: auto;
             }
 
             .print-btn {
@@ -33,78 +33,81 @@
             }
         }
 
-
         .invoice-container {
             background: #fff;
-            padding: 40px 30px;
-            margin: 30px auto;
-            border: 1px solid #e0e0e0;
-            box-shadow: 0 0 25px rgba(0, 0, 0, 0.06);
-            font-size: 15px;
-            line-height: 24px;
+            padding: {{ $isPdf ? '8px 12px' : '24px 20px' }};
+            margin: {{ $isPdf ? '0' : '20px auto' }};
+            border: {{ $isPdf ? 'none' : '1px solid #e0e0e0' }};
+            box-shadow: {{ $isPdf ? 'none' : '0 0 25px rgba(0, 0, 0, 0.06)' }};
+            font-size: {{ $isPdf ? '12px' : '14px' }};
+            line-height: {{ $isPdf ? '16px' : '20px' }};
             font-family: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif;
             color: #333;
             max-width: 800px;
         }
 
+        .invoice-container p {
+            margin: 0 0 2px;
+        }
+
         .invoice-section {
-            margin-bottom: 30px;
+            margin-bottom: 10px;
+            page-break-inside: avoid;
         }
 
         .invoice-section h4 {
-            font-size: 18px;
-            margin-bottom: 12px;
-            padding-bottom: 6px;
+            font-size: 14px;
+            margin: 0 0 6px;
+            padding-bottom: 2px;
             color: #555;
-        }
-
-        .invoice-section p {
-            margin-bottom: 8px;
         }
 
         .invoice-footer {
             border-top: 1px solid #eee;
-            padding-top: 15px;
-            margin-top: 15px;
-            font-size: 12px;
+            padding-top: 8px;
+            margin-top: 10px;
+            font-size: 10px;
+            line-height: 14px;
             text-align: center;
             color: #777;
+            page-break-inside: avoid;
         }
 
         .summary {
             text-align: right;
-            font-size: 13px;
-            margin: 10px 0;
+            font-size: 12px;
+            margin: 6px 0;
         }
 
         .summary p {
-            margin: 2px 0;
+            margin: 1px 0;
         }
 
         .words {
             font-style: italic;
             text-align: right;
-            font-size: 13px;
-            margin-top: 10px;
+            font-size: 12px;
+            margin-top: 6px;
         }
 
         .print-btn {
             text-align: center;
-            margin-top: 30px;
+            margin-top: 20px;
         }
 
         table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 10px;
-            font-size: 12.5px;
+            margin-bottom: 8px;
+            font-size: 11.5px;
         }
 
         th,
         td {
-            padding: 8px 10px;
+            padding: 5px 8px;
             border: 1px solid #ccc;
             text-align: left;
+            vertical-align: top;
         }
 
         th {
@@ -136,7 +139,7 @@
 
     <div class="wrapper wrapper-content animated fadeInRight">
         <div class="print-btn text-center" style="margin-top: 20px;">
-            @unless($forPdf ?? false)
+            @unless($isPdf)
             <button class="btn btn-primary" onclick="window.print();">
                 <i class="fa fa-download"></i> Print Invoice
             </button>
@@ -145,49 +148,45 @@
         <div class="row">
             <div class="col-lg-12">
                 <div class="invoice-container">
-                    <!-- Your invoice content starts -->
-
-                    <div class="invoice-header" style="display: table; width: 100%; margin-bottom: 15px;">
-                        <div style="display: table-cell; width: 50%; vertical-align: top;">
+                    <div class="invoice-header" style="display: table; width: 100%; margin-bottom: 8px;">
+                        <div style="display: table-cell; width: 55%; vertical-align: top;">
                             @php $logoPath = public_path('frontend/images/pngs/logo-color.png'); @endphp
-                            @if(($forPdf ?? false) && file_exists($logoPath))
-                                <img src="{{ $logoPath }}" alt="Logo" style="width: 280px; margin-bottom: 10px;">
+                            @if($isPdf && file_exists($logoPath))
+                                <img src="{{ $logoPath }}" alt="Logo" style="width: 170px; height: auto; margin: 0 0 4px;">
                             @else
-                                <img src="{{ asset('frontend/images/pngs/logo-color.png') }}" alt="Logo" style="width: 280px; margin-bottom: 10px;">
+                                <img src="{{ asset('frontend/images/pngs/logo-color.png') }}" alt="Logo" style="width: 170px; height: auto; margin: 0 0 4px;">
                             @endif
-                            <p style="margin-bottom: 0;">Berkeley School of Business, Arts & Sciences</p>
-                            <p style="margin-bottom: 0;">Berkeley Square, Mayfair, London, W1J, UK</p>
-                            <p style="margin-bottom: 0;">Mob: +44 7306 279111</p>
+                            <p><strong>Berkeley School of Business, Arts & Sciences</strong></p>
+                            <p>Berkeley Square, Mayfair, London, W1J, UK</p>
+                            <p>Mob: +44 7306 279111</p>
                             <p>Email: {{ invoice_header_email() }}</p>
                         </div>
-                        <div style="display: table-cell; width: 50%; vertical-align: bottom; text-align: right;">
-                            <h1 style="margin-top: 0;">Invoice</h1>
-                            <p style="margin: 0;"><strong>Invoice#</strong>
+                        <div style="display: table-cell; width: 45%; vertical-align: top; text-align: right;">
+                            <h1 style="margin: 0 0 4px; font-size: 28px; line-height: 1.1;">Invoice</h1>
+                            <p><strong>Invoice#</strong>
                                 INV-{{ str_pad($payments->id, 6, '0', STR_PAD_LEFT) }}</p>
                         </div>
                     </div>
 
-                    <div class="row" style="margin-bottom: 15px;">
+                    <div class="row" style="margin-bottom: 8px;">
                         <div class="col-xs-4 pull-right text-right">
-                            <p><strong>Balance
-                                    Due:</strong><br>{{ $money($balanceDue) }}
-                            </p>
+                            <p><strong>Balance Due:</strong><br>{{ $money($balanceDue) }}</p>
                         </div>
                     </div>
 
-                    <div class="invoice-section" style="display: table; width: 100%; margin-bottom: 15px;">
+                    <div class="invoice-section" style="display: table; width: 100%; margin-bottom: 10px;">
                         <div style="display: table-cell; width: 50%; vertical-align: top;">
-                            <h4 style="margin: 0px">Student Details:</h4>
-                            <p style="margin: 0px"><strong>Name:</strong> {{ $user->name }}</p>
-                            <p style="margin: 0px"><strong>Email:</strong> {{ $user->email }}</p>
-                            <p style="margin: 0px"><strong>Phone:</strong> {{ $user->mobile_number }}</p>
-                            <p style="margin: 0px"><strong>Address:</strong> {{ $user->address }}</p>
-                            <p style="margin: 0px"><strong>City/Country:</strong> {{ $user->city }}, {{ $user->country }}</p>
+                            <h4 style="margin: 0 0 4px;">Student Details:</h4>
+                            <p><strong>Name:</strong> {{ $user->name }}</p>
+                            <p><strong>Email:</strong> {{ $user->email }}</p>
+                            <p><strong>Phone:</strong> {{ $user->mobile_number }}</p>
+                            <p><strong>Address:</strong> {{ $user->address }}</p>
+                            <p><strong>City/Country:</strong> {{ $user->city }}, {{ $user->country }}</p>
                         </div>
-                        <div style="display: table-cell; width: 50%; vertical-align: bottom; text-align: right;">
-                            <p style="margin: 0px"><strong>Invoice Date:</strong>
+                        <div style="display: table-cell; width: 50%; vertical-align: top; text-align: right;">
+                            <p><strong>Invoice Date:</strong>
                                 {{ \Carbon\Carbon::parse($payments->created_at)->format('d M Y') ?? 'N/A' }}</p>
-                            <p style="margin: 0px"><strong>Due Date:</strong>
+                            <p><strong>Due Date:</strong>
                                 {{ \Carbon\Carbon::parse($installments->last()->due_date)->format('d M Y') ?? 'N/A' }}
                             </p>
                         </div>
@@ -221,7 +220,7 @@
                                     @if ($coursefee->package_includes)
                                         {{ $coursefee->package_includes ?? '' }}
                                     @endif
-                                    <ul style="list-style: none; margin: 5px 0 0 15px; padding: 0;">
+                                    <ul style="list-style: none; margin: 4px 0 0 12px; padding: 0;">
                                         @if(!empty($coursefee->package_feature))
                                             @foreach ($coursefee->package_feature as $feature)
                                                 <li>{{ $feature }}</li>
@@ -288,7 +287,7 @@
                         </table>
                     @endif
 
-                    <div class="invoice-section" style="margin-top: 30px;">
+                    <div class="invoice-section" style="margin-top: 12px;">
                         <div class="footer-text">
                             {!! $payments->terms_conditions !!}
                         </div>
