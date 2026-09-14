@@ -1417,14 +1417,14 @@
                     'You will get a certificate of completion, which is highly reputed and accepted by
                             employers.' !!}</p>
             <div class="max-w-[900px]">
-                <div class="flex flex-col lg:flex-row gap-16 pt-6">
-                    <div class="flex items-center justify-center md:justify-start">
+                <div class="flex flex-col lg:flex-row gap-8 lg:gap-16 pt-6 w-full max-w-full">
+                    <div class="flex items-center justify-center md:justify-start shrink-0">
                         <img src="{{ isset($course->dynamicLabel) && $course->dynamicLabel->what_you_earn_img ? asset($course->dynamicLabel->what_you_earn_img) : asset('frontend/images/jpg/Berkeley-Square-School-of-Arts-Certificate.jpg') }}"
                             alt="{{ course_image_alt($course, 'what_you_earn_img', $course->dynamicLabel?->what_you_earn ?? 'Certificate') }}"
-                            class="w-[275px] h-[350px] transition-all hover:scale-110 ease-in duration-200 delay-100">
+                            class="w-full max-w-[275px] h-auto max-h-[350px] object-contain transition-all hover:scale-110 ease-in duration-200 delay-100">
                     </div>
 
-                    <div class="flex-1">
+                    <div class="flex-1 w-full min-w-0 max-w-full">
                         <div class="flex flex-col gap-2">
                             @foreach ($course->benifits ?? [] as $index => $data)
                                 <div class="flex flex-row justify-between gap-4">
