@@ -21,6 +21,26 @@
             list-style-type: disc;
             margin-left: 20px;
         }
+
+        .editor table,
+        .course-detail-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .editor table th,
+        .editor table td,
+        .course-detail-table th,
+        .course-detail-table td {
+            border: 1px solid #d1d5db;
+            padding: 0.5rem 1rem;
+            vertical-align: top;
+        }
+
+        .editor table thead th,
+        .course-detail-table thead th {
+            background: #f9fafb;
+        }
         @media (min-width: 1200px) {
     .min-\[1200px\]\:px-\[72px\] {
         padding-left: 72px;
@@ -905,7 +925,7 @@
 
 
                             @if (!$allEmpty)
-                                <table class=" bg-white border border-gray-200 mt-2">
+                                <table class="course-detail-table bg-white border border-gray-200 mt-2 w-full">
                                     <thead>
                                         <tr class="bg-gray-50">
                                             <th class="p-2 border-b">
@@ -1091,81 +1111,65 @@
     @endif
 
     @if ($course->success_stories == 1)
-        <section id="nine" class="card-hidden px-6 min-[1200px]:px-[72px] mb-8 mt-8  show">
-            <div class="card grid grid-cols-1 sm:grid-cols-2 gap-10">
-                <div class="relative overflow-hidden group min-h-[500px] rounded-xl bg-primary">
+        <section id="nine" class="card-hidden px-6 min-[1200px]:px-[72px] mb-8 mt-8 show">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10 items-stretch">
+                {{-- Left: image only (visible, not covered by long text) --}}
+                <div class="overflow-hidden rounded-xl bg-gray-100 min-h-[280px] lg:min-h-[420px]">
                     <img src="{{ isset($course->dynamicLabel) && $course->dynamicLabel->learner_stories_img
                         ? asset($course->dynamicLabel->learner_stories_img)
                         : asset('frontend/images/jpg/sheikh.jpg') }}"
-                        class="h-full w-full absolute object-cover transition-all duration-500 ease-in-out group-hover:scale-105"
+                        class="h-full w-full object-cover object-center min-h-[280px] lg:min-h-[420px]"
                         loading="lazy" width="1200" height="800"
                         alt="{{ course_image_alt($course, 'learner_stories_img', $course->dynamicLabel?->success_stories ?? 'Learner stories') }}">
-
-                    <div class="absolute inset-0 bg-gradient-to-b from-transparent to-black"></div>
-
-                    <div class="absolute p-8 z-50 flex flex-col justify-end h-full w-full">
-
-                        <h2 class="font-canela text-white text-[26px] md:text-[36px] lg:text-[44px]">
-                            {{ $course->dynamicLabel->success_stories ?? 'Success Stories' }}
-                        </h2>
-
-                        <p class="font-semibold text-white text-[18px] mt-3">
-                            {{ strip_tags($course->dynamicLabel->alumni_benefits) }}
-                        </p>
-                        <a href="{{ $course->dynamicLabel->success_stories_link ?? 'javascript:void(0)' }}" class="flex items-center gap-2 mt-4" target="_blank">
-                            <div
-                                class="flex justify-center items-center rounded-full bg-white/20 backdrop-blur-md min-h-10 min-w-10 group-hover:bg-secondary transition">
-                                <img src="{{ asset('frontend/images/svgs/arrow-right.svg') }}"
-                                    class="w-[28px] h-4 invert">
-                            </div>
-
-                            <span class="font-bold text-[18px] text-white">
-                                {{ $course->dynamicLabel->success_stories_link_text ?? 'Success Stories Link' }}
-                            </span>
-                        </a>
-
-                    </div>
                 </div>
 
-                <div class="relative flex-1 gap-2 flex flex-col">
-                    @if (empty($course->alumni_benefits_description))
-                        <div class="flex flex-col flex-1 gap-3 justify-start mt-2">
-                            <div class="flex items-center gap-2">
-                                <img src="{{ asset('frontend/images/svgs/tick.svg') }}" class="max-w-8 h-8"
-                                    alt="" />
-                                <p>Exclusive Networking Events: Access invitations to industry-leading events and
-                                    thought-leadership gatherings featuring renowned speakers.</p>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <img src="{{ asset('frontend/images/svgs/tick.svg') }}" class="max-w-8 h-8"
-                                    alt="" />
-                                <p>Monthly Updates: Stay informed with a newsletter highlighting the latest research,
-                                    events, and activities from the school.</p>
-                            </div>
+                {{-- Right: title, quote, benefits, link --}}
+                <div class="flex flex-col gap-4 min-w-0">
+                    <h2 class="font-canela text-[26px] md:text-[32px] lg:text-[36px] text-dark leading-tight">
+                        {{ $course->dynamicLabel->success_stories ?? 'Success Stories' }}
+                    </h2>
 
-                            <div class="flex items-center gap-2">
-                                <img src="{{ asset('frontend/images/svgs/tick.svg') }}" class="max-w-8 h-8"
-                                    alt="" />
-                                <p>LinkedIn Community Access: Join the Executive Education LinkedIn group for networking and
-                                    professional development opportunities.</p>
+                    @if (!empty($course->dynamicLabel?->alumni_benefits))
+                        <div class="editor text-[16px] leading-relaxed text-gray-800 border-l-4 border-primary_orange pl-4">
+                            {!! $course->dynamicLabel->alumni_benefits !!}
+                        </div>
+                    @endif
+
+                    @if (empty($course->alumni_benefits_description))
+                        <div class="flex flex-col gap-3">
+                            <h3 class="font-semibold text-[18px] text-dark">Alumni Benefits</h3>
+                            <div class="flex items-start gap-3">
+                                <img src="{{ asset('frontend/images/svgs/tick.svg') }}" class="w-8 h-8 shrink-0 mt-0.5" alt="" />
+                                <p class="text-[16px] leading-relaxed min-w-0">Exclusive Networking Events: Access invitations to industry-leading events and thought-leadership gatherings featuring renowned speakers.</p>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <img src="{{ asset('frontend/images/svgs/tick.svg') }}" class="max-w-8 h-8"
-                                    alt="" />
-                                <p>Educational Discounts: Enjoy a 20% discount on open-enrollment programs and access to
-                                    workshops focused on emerging trends.</p>
+                            <div class="flex items-start gap-3">
+                                <img src="{{ asset('frontend/images/svgs/tick.svg') }}" class="w-8 h-8 shrink-0 mt-0.5" alt="" />
+                                <p class="text-[16px] leading-relaxed min-w-0">Monthly Updates: Stay informed with a newsletter highlighting the latest research, events, and activities from the school.</p>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <img src="{{ asset('frontend/images/svgs/tick.svg') }}" class="max-w-8 h-8"
-                                    alt="" />
-                                <p>Global Alumni Network: Connect with a diverse alumni community through the Berkeley
-                                    School’s online network and engage in country and interest groups.</p>
+                            <div class="flex items-start gap-3">
+                                <img src="{{ asset('frontend/images/svgs/tick.svg') }}" class="w-8 h-8 shrink-0 mt-0.5" alt="" />
+                                <p class="text-[16px] leading-relaxed min-w-0">LinkedIn Community Access: Join the Executive Education LinkedIn group for networking and professional development opportunities.</p>
+                            </div>
+                            <div class="flex items-start gap-3">
+                                <img src="{{ asset('frontend/images/svgs/tick.svg') }}" class="w-8 h-8 shrink-0 mt-0.5" alt="" />
+                                <p class="text-[16px] leading-relaxed min-w-0">Educational Discounts: Enjoy a 20% discount on open-enrollment programs and access to workshops focused on emerging trends.</p>
+                            </div>
+                            <div class="flex items-start gap-3">
+                                <img src="{{ asset('frontend/images/svgs/tick.svg') }}" class="w-8 h-8 shrink-0 mt-0.5" alt="" />
+                                <p class="text-[16px] leading-relaxed min-w-0">Global Alumni Network: Connect with a diverse alumni community through the Berkeley School’s online network and engage in country and interest groups.</p>
                             </div>
                         </div>
                     @else
-                        <blockquote class="editor border-l-4 border-primary_orange pl-4">
+                        <div class="editor text-[16px] leading-relaxed min-w-0">
                             {!! $course->alumni_benefits_description !!}
-                        </blockquote>
+                        </div>
+                    @endif
+
+                    @if (!empty($course->dynamicLabel?->success_stories_link) && $course->dynamicLabel->success_stories_link !== 'javascript:void(0)')
+                        <a href="{{ $course->dynamicLabel->success_stories_link }}" class="inline-flex items-center gap-2 mt-2 text-primary font-semibold hover:underline" target="_blank" rel="noopener">
+                            <span>{{ $course->dynamicLabel->success_stories_link_text ?? 'Visit our Alumni' }}</span>
+                            <img src="{{ asset('frontend/images/svgs/arrow-right.svg') }}" class="w-5 h-3" alt="">
+                        </a>
                     @endif
                 </div>
             </div>
