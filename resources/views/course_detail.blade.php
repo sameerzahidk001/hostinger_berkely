@@ -40,6 +40,13 @@
             overflow-wrap: break-word;
         }
 
+        .editor.text-center,
+        .editor.text-center p,
+        .editor.text-center div,
+        .editor.text-center li {
+            text-align: center;
+        }
+
         .editor img,
         .editor iframe,
         .editor video {
@@ -372,15 +379,15 @@
 
 
                         @if (!empty($course->offered_by['institute']))
-                            <div class="flex flex-col pb-4">
+                            <div class="flex flex-col pb-4 items-center text-center">
                                 <div class="flex gap-3 items-center justify-center mb-3 mt-3">
                                     <div class="bg-yellow w-[50px] h-[2px]"></div>
                                     <h3
                                         class="font-semibold section-subheading">{{ $course->dynamicLabel->offered_by ?? 'Offered by' }}</h3>
                                     <div class="bg-yellow w-[50px] h-[2px]"></div>
                                 </div>
-                                <div class="flex flex-col w-full min-w-0">
-                                    <div class="editor">
+                                <div class="flex flex-col w-full min-w-0 items-center text-center">
+                                    <div class="editor text-center">
                                         {!! optional($course->offered_by)['institute'] !!}
                                     </div>
                                 </div>
@@ -388,46 +395,48 @@
                         @endif
 
                         @if (!empty($course->offered_by['head_office']))
-                            <div class="flex flex-col pb-4">
+                            <div class="flex flex-col pb-4 items-center text-center">
                                 <div class="flex gap-3 items-center justify-center mb-3 ">
                                     <div class="bg-yellow w-[50px] h-[2px]"></div>
                                     <h3
                                         class="font-semibold section-subheading">{{ $course->dynamicLabel->head_office ?? 'Head office' }}</h3>
                                     <div class="bg-yellow w-[50px] h-[2px]"></div>
                                 </div>
-                                <div class="flex flex-col w-full min-w-0">
-                                    <div class="editor">
+                                <div class="flex flex-col w-full min-w-0 items-center text-center">
+                                    <div class="editor text-center">
                                         {!! optional($course->offered_by)['head_office'] !!}
                                     </div>
                                 </div>
                             </div>
                         @endif
                         @if (!empty($course->offered_by['members']))
-                            <div class="flex flex-col pb-4">
+                            <div class="flex flex-col pb-4 items-center text-center">
                                 <div class="flex gap-3 items-center justify-center mb-3 ">
                                     <div class="bg-yellow w-[50px] h-[2px]"></div>
                                     <h3
                                         class="font-semibold section-subheading">{{ $course->dynamicLabel->members ?? 'Members' }}</h3>
                                     <div class="bg-yellow w-[50px] h-[2px]"></div>
                                 </div>
-                                <div class="flex flex-col w-full min-w-0">
-                                    <div class="editor">
+                                <div class="flex flex-col w-full min-w-0 items-center text-center">
+                                    <div class="editor text-center">
                                         {!! optional($course->offered_by)['members'] !!}
                                     </div>
                                 </div>
                             </div>
                         @endif
                         @if (!empty($course->offered_by['founded_in']))
+                            <div class="flex flex-col pb-4 items-center text-center">
                             <div class="flex gap-3 items-center justify-center mb-3 ">
                                 <div class="bg-yellow w-[50px] h-[2px]"></div>
                                 <h3
                                     class="font-semibold section-subheading">{{ $course->dynamicLabel->founded_in ?? 'Founded in' }}</h3>
                                 <div class="bg-yellow w-[50px] h-[2px]"></div>
                             </div>
-                            <div class="flex flex-col w-full min-w-0">
-                                <div class="editor">
+                            <div class="flex flex-col w-full min-w-0 items-center text-center">
+                                <div class="editor text-center">
                                     {!! optional($course->offered_by)['founded_in'] !!}
                                 </div>
+                            </div>
                             </div>
                         @endif
 
@@ -438,16 +447,18 @@
                 </div>
 
                 @if (!empty($course->vision_and_mission))
-                    <div class="flex gap-3 items-center justify-center mt-6 mb-3 ">
+                    <div class="flex flex-col items-center text-center mt-6">
+                    <div class="flex gap-3 items-center justify-center mb-3 ">
                         <div class="bg-yellow w-[50px] h-[2px]"></div>
                         <h3
                             class="font-semibold section-subheading">{{ $course->dynamicLabel->vission_mission ?? 'Vision & mission' }}</h3>
                         <div class="bg-yellow w-[50px] h-[2px]"></div>
                     </div>
-                    <div class="flex flex-col w-full min-w-0">
-                        <div class="editor">
+                    <div class="flex flex-col w-full min-w-0 items-center text-center">
+                        <div class="editor text-center">
                             {!! $course->vision_and_mission !!}
                         </div>
+                    </div>
                     </div>
                 @endif
 
@@ -1066,11 +1077,10 @@
                             !$allEmpty ||
                                 (!empty($course->course_exam_format_duration_overview) &&
                                     $course->course_exam_format_duration_overview !== null))
-                            <div class="flex gap-3 items-center justify-center">
+                            <div class="flex gap-3 items-center justify-start">
                                 <div class="bg-yellow w-[50px] h-[2px]"></div>
                                 <span
-                                    class="font-semibold section-subheading text-center">{{ $course->dynamicLabel->exam_format_duration ?? 'Exam format & duration' }}</span>
-                                <div class="bg-yellow w-[50px] h-[2px]"></div>
+                                    class="font-semibold section-subheading text-left">{{ $course->dynamicLabel->exam_format_duration ?? 'Exam format & duration' }}</span>
                             </div>
                             <div class="text-[16px] mt-4 editor">
                                 {!! $course->course_exam_format_duration_overview !!}
@@ -1139,21 +1149,19 @@
                             @endif
                         @endif
                         @if (!empty($course->exam_dates))
-                            <div class="flex gap-3 items-center justify-center  mt-10">
+                            <div class="flex gap-3 items-center justify-start mt-10">
                                 <div class="bg-yellow w-[50px] h-[2px]"></div>
                                 <span
-                                    class="font-semibold section-subheading">{{ $course->dynamicLabel->exam_dates ?? 'exam dates' }}</span>
-                                <div class="bg-yellow w-[50px] h-[2px]"></div>
+                                    class="font-semibold section-subheading text-left">{{ $course->dynamicLabel->exam_dates ?? 'exam dates' }}</span>
                             </div>
                             <div class="text-[16px] pt-4 editor">{!! $course->exam_dates !!}</div>
                         @endif
 
                         @if (!empty($course->exam_reg_deadline))
-                            <div class="flex gap-3 items-center justify-center  mt-10">
+                            <div class="flex gap-3 items-center justify-start mt-10">
                                 <div class="bg-yellow w-[50px] h-[2px]"></div>
                                 <span
-                                    class="font-semibold section-subheading">{{ $course->dynamicLabel->exam_dates_registration ?? 'Exam registration deadline' }}</span>
-                                <div class="bg-yellow w-[50px] h-[2px]"></div>
+                                    class="font-semibold section-subheading text-left">{{ $course->dynamicLabel->exam_dates_registration ?? 'Exam registration deadline' }}</span>
                             </div>
                             <div class="text-[16px] pt-4 editor">{!! $course->exam_reg_deadline !!}</div>
                         @endif
@@ -1164,21 +1172,19 @@
 
 
                 @if (!empty($course->exam_passing_criteria))
-                    <div class="flex gap-3 items-center mt-8">
+                    <div class="flex gap-3 items-center justify-start mt-8">
                         <div class="bg-yellow w-[50px] h-[2px]"></div>
                         <span
-                            class="font-semibold section-subheading">{{ $course->dynamicLabel->passing_criteria ?? 'Passing criteria' }}</span>
-                        <div class="bg-yellow w-[50px] h-[2px]"></div>
+                            class="font-semibold section-subheading text-left">{{ $course->dynamicLabel->passing_criteria ?? 'Passing criteria' }}</span>
                     </div>
                     <span class="text-[16px] mt-0 mb-4 editor">{!! $course->exam_passing_criteria !!}</span>
                 @endif
 
                 @if (!empty($course->exam_location_paragraph) || !empty($course->exam_location))
-                    <div class="flex gap-3 items-center pt-[16px]">
+                    <div class="flex gap-3 items-center justify-start pt-[16px]">
                         <div class="bg-yellow w-[50px] h-[2px]"></div>
                         <span
-                            class="font-semibold section-subheading">{{ $course->dynamicLabel->exam_location ?? 'Exam locations' }}</span>
-                        <div class="bg-yellow w-[50px] h-[2px]"></div>
+                            class="font-semibold section-subheading text-left">{{ $course->dynamicLabel->exam_location ?? 'Exam locations' }}</span>
                     </div>
 
                     <div class="text-[16px] mb-2 editor">

@@ -135,13 +135,13 @@
                             class="active:underline decoration-crimson underline-offset-4">{{ $menu->name }}</a>
                         @if ($menu->children->count() > 0)
                             <div
-                                class="mega-menu-two absolute left-0 top-full hidden group-hover:flex flex-col shadow-xl bg-white min-w-[260px] border-t border-primary  mega-menu-style">
-                                <ul class="list-none">
+                                class="mega-menu-two absolute left-0 top-full hidden group-hover:flex flex-col shadow-xl bg-white min-w-[240px] border-t border-primary  mega-menu-style">
+                                <ul class="list-none py-1">
                                     @foreach ($menu->children->sortBy('menu_order') as $child)
                                         <li>
                                             <a href="{{ $child->link }}"
-                                                class="flex gap-2 items-center text-black transition-all delay-150 duration-150 hover:bg-navy hover:text-white sm:px-6 px-4 py-3">
-                                                <span class="text-[18px] font-medium">{{ $child->name }}</span>
+                                                class="flex gap-2 items-center text-black transition-all delay-150 duration-150 hover:bg-navy hover:text-white sm:px-4 px-3 py-1.5">
+                                                <span class="text-[14px] leading-snug font-medium">{{ $child->name }}</span>
                                             </a>
                                         </li>
                                     @endforeach
@@ -224,18 +224,12 @@
         <!-- Mobile Side Menu -->
         <div id="mobileMenu"
             class="fixed top-[70px] right-0 w-3/4 max-w-xs bg-[#000435] h-full transform translate-x-full transition-transform duration-300 ease-in-out z-[999] overflow-y-auto max-h-screen">
-            <div class="flex justify-between items-center flex-wrap gap-4 w-full mt-4 px-4">
-                <a href="{{ url('/') }}">
-                    <img src="{{ asset('images/' . ($settings->header_logo == 'logo' ? $settings->logo : $settings->white_logo)) }}"
-                        class="max-w-[160px] self-center  min-h-[55px] sm:min-h-[70px] sm:min-w-[200px] lg:min-w-[280px] lg:min-h-[90px]"
-                        alt="">
-                </a>
-
-                <button id="closeMenu" class="text-white">
-                    <img src="{{ asset('frontend/images/svgs/cross.svg') }}" class="w-8 h-8" alt="">
+            <div class="flex justify-end items-center w-full mt-3 px-4">
+                <button id="closeMenu" class="text-white p-1" aria-label="Close menu">
+                    <img src="{{ asset('frontend/images/svgs/cross.svg') }}" class="w-7 h-7" alt="Close">
                 </button>
             </div>
-            <div class="flex flex-col px-6 mb-20 text-[20px]">
+            <div class="flex flex-col px-5 mb-20 text-[16px] leading-snug">
                 @php
                     $filteredMenus = collect($menus)->where('menu_group', $settings->header_menu)->values();
                 @endphp
@@ -244,32 +238,32 @@
                     @if ($menu->children->count() > 0)
                         <div class="relative">
                             <button id="dropdownButton{{ $key }}"
-                                class="text-white py-2 w-full text-left dropdownButton">{{ $menu->name }}</button>
+                                class="text-white py-1.5 w-full text-left dropdownButton">{{ $menu->name }}</button>
                             <div id="dropdownMenu{{ $key }}"
-                                class="hidden bg-white p-4 mt-2 text-black rounded-md dropdownMenu">
+                                class="hidden bg-white px-3 py-2 mt-1 text-black rounded-md dropdownMenu text-[14px] leading-snug">
                                 @foreach ($menu->children as $child)
-                                    <a href="{{ $child->link }}" class="block py-2">{{ $child->name }}</a>
+                                    <a href="{{ $child->link }}" class="block py-1.5">{{ $child->name }}</a>
                                 @endforeach
                             </div>
                         </div>
                     @else
-                        <a href="{{ $menu->link }}" class="text-white py-2">{{ $menu->name }}</a>
+                        <a href="{{ $menu->link }}" class="text-white py-1.5">{{ $menu->name }}</a>
                     @endif
                 @endforeach
                 @if($settings && $settings->header_button)
                     <a href="{{ $settings->header_button_url }}"
-                        class="text-white py-2">{{ $settings->header_button_text }}</a>
+                        class="text-white py-1.5">{{ $settings->header_button_text }}</a>
                 @endif
                 @guest
                     @if($settings && $settings->login == '1')
-                        <a href="{{ route('login') }}" class="text-white py-2">{{ $settings->login_text ?? 'Login' }}</a>
+                        <a href="{{ route('login') }}" class="text-white py-1.5">{{ $settings->login_text ?? 'Login' }}</a>
                     @endif
                     @if($settings && $settings->register == '1')
-                        <a href="{{ route('register') }}" class="text-white py-2">{{ $settings->register_text ?? 'Register' }}</a>
+                        <a href="{{ route('register') }}" class="text-white py-1.5">{{ $settings->register_text ?? 'Register' }}</a>
                     @endif
                 @else
-                    <a href="{{ route('user.home') }}" class="text-white py-2">{{ auth()->user()->name }}</a>
-                    <a href="{{ route('cart.index') }}" class="text-white py-2">Cart ({{ cart_item_count() }})</a>
+                    <a href="{{ route('user.home') }}" class="text-white py-1.5">{{ auth()->user()->name }}</a>
+                    <a href="{{ route('cart.index') }}" class="text-white py-1.5">Cart ({{ cart_item_count() }})</a>
                 @endguest
             </div>
         </div>
@@ -388,23 +382,28 @@
 
         <div class="grid w-full gap-4 {{ $gridClass }} place-items-start">
             @foreach ($limitedWidgets as $widget)
-                <div class="flex flex-1 w-full flex-col justify-center items-center md:items-start gap-2">
+                <div class="flex flex-1 w-full flex-col justify-start items-start gap-2 text-left">
                     <span class="font-bold text-[18px] leading-[27px]"
                         style="color: {{ $footerTitle }}">{{ $widget->title ?? 'Title' }}</span>
                     @if ($widget->description != null)
-                        <div class="mt-2" style="color: {{ $footerText }}">{!! $widget->description !!}</div>
+                        <div class="mt-2 w-full text-left" style="color: {{ $footerText }}">{!! $widget->description !!}</div>
                     @endif
                     @if ($widget->menu != null)
                         @php
                             $filteredMenus = collect($menus)->where('menu_group', $widget->menu)->values();
                         @endphp
-                        @foreach ($filteredMenus as $menu)
-                            <a href="{{ $menu->link }}"
-                                class="font-bold text-[16px] leading-[27px] hover:underline transition-all ease-in duration-200 delay-100 underline-offset-4"
-                                style="color: {{ $footerText }}">
-                                {{ $menu->name }}
-                            </a>
-                        @endforeach
+                        <ul class="list-none m-0 p-0 w-full flex flex-col gap-1.5 items-start text-left">
+                            @foreach ($filteredMenus as $menu)
+                                <li class="w-full">
+                                    <a href="{{ $menu->link }}"
+                                        class="inline-flex items-start gap-2 font-bold text-[16px] leading-[24px] hover:underline transition-all ease-in duration-200 delay-100 underline-offset-4 text-left"
+                                        style="color: {{ $footerText }}">
+                                        <span aria-hidden="true" class="shrink-0 leading-[24px]">•</span>
+                                        <span>{{ $menu->name }}</span>
+                                    </a>
+                                </li>
+                            @endforeach
+                        </ul>
                     @endif
                 </div>
             @endforeach
