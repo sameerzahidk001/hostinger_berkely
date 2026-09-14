@@ -38,6 +38,7 @@ use App\Http\Controllers\User\ProfileController as UserProfileController;
 use App\Http\Controllers\User\TestimonialController as UserTestimonialController;
 use App\Http\Controllers\User\HomeController as UserHomeController;
 use App\Http\Controllers\User\InstallmentController as UserInstallmentController;
+use App\Http\Controllers\NoonWebhookController;
 use App\Http\Controllers\User\StudyMaterialController as UserStudyMaterialController;
 use App\Http\Controllers\User\HistoryController as UserHistoryController;
 use App\Http\Controllers\Admin\StudyMaterialFolderController;
@@ -506,12 +507,16 @@ Route::get('/delete-temp-files', function (Illuminate\Http\Request $request) {
 
 Auth::routes(['verify' => true]);
 
+Route::post('/noon/webhook', [NoonWebhookController::class, 'handle'])->name('noon.webhook');
+
 Route::prefix('user')->middleware(['auth', 'approved', 'redirect.panel.from.student'])->group(function () {
 
     // Dashboard
     Route::get('/', [UserHomeController::class, 'index'])->name('user.home');
     Route::get('/payments', [UserHomeController::class, 'payments'])->name('user.payments');
     Route::get('/cart', [CartController::class, 'index'])->name('user.cart.index');
+    Route::post('/generate/noonCheckout', [UserHomeController::class, 'generateNoonCheckout'])->name('user.generate.noonCheckout');
+    Route::get('/noon/return', [UserHomeController::class, 'handleNoonReturn'])->name('user.noon.return');
     Route::post('/generate/rakBankPaySession', [UserHomeController::class, 'generateRakBankPaySession'])->name('user.generate.rakBankPaySession');
     Route::get('/rakbank/return', [UserHomeController::class, 'handleRakBankReturn'])->name('user.rakbank.return');
 

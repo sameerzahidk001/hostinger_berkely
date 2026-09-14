@@ -14,11 +14,12 @@ use App\Models\Payment;
 use App\Models\Country;
 use App\Mail\UserMail;
 use App\Models\Email;
+use App\Services\NoonCheckoutService;
 use App\Services\RakBankCheckoutService;
 
 class InstallmentController extends Controller
 {
-    public function updateInstallment(Request $request, RakBankCheckoutService $checkout)
+    public function updateInstallment(Request $request, NoonCheckoutService $checkout)
     {
         $request->validate([
             'installment_id' => 'required|exists:installments,id',
