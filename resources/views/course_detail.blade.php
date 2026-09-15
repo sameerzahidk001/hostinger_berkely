@@ -815,7 +815,6 @@
                     <h3
                         class="text-[20px] sm:text-[24px] text-dark md:text-[32px] font-canela section-heading text-center">
                         {{ $course->dynamicLabel->exam_information ?? 'what are the exam information?' }}</h3>
-                    <div class="bg-yellow w-[50px] h-[2px]"></div>
                 </div>
 
                 <div class="flex flex-col lg:flex-row-reverse items-center gap-x-12 gap-y-10">
