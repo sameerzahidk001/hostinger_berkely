@@ -62,6 +62,7 @@ class ClassScheduleController extends Controller
             'instructors' => $instructors,
             'students' => $students,
             'zohoMeetingReady' => $this->zoho->isMeetingReady(),
+            'zohoHostEmail' => $this->zoho->hostAccountEmail(),
             'isInstructor' => $this->lms->isInstructorActor(),
         ]);
     }
@@ -136,6 +137,7 @@ class ClassScheduleController extends Controller
             'instructors' => $instructors,
             'students' => $students,
             'zohoMeetingReady' => $this->zoho->isMeetingReady(),
+            'zohoHostEmail' => $this->zoho->hostAccountEmail(),
             'isInstructor' => $this->lms->isInstructorActor(),
         ]);
     }
@@ -322,10 +324,10 @@ class ClassScheduleController extends Controller
 
         $parts = [$base];
         $meetingNote = match ($meetingStatus) {
-            'created' => 'Zoho Meeting link was created automatically — students can Join Zoho.',
+            'created' => 'Zoho Meeting link was created automatically under ' . $this->zoho->hostAccountEmail() . ' — students can Join Zoho.',
             'existing' => 'Existing Zoho Meeting link was kept.',
-            'not_configured' => 'Zoho OAuth is not connected, so the meeting link could not be auto-created.',
-            default => 'Zoho Meeting link was not created automatically. Check Zoho Meeting permissions / presenter.',
+            'not_configured' => 'Zoho OAuth is not connected as ' . $this->zoho->hostAccountEmail() . ', so the meeting link could not be auto-created.',
+            default => 'Zoho Meeting link was not created automatically. Confirm OAuth is connected as ' . $this->zoho->hostAccountEmail() . '.',
         };
         if ($meetingNote) {
             $parts[] = $meetingNote;

@@ -105,9 +105,11 @@ class ZohoLmsService
     {
         $schedule->loadMissing(['course', 'instructor', 'students']);
         $orgId = $this->orgId();
-        $presenter = config('zoho.presenter_zuid') ?: $this->currentUserZuid();
-        if (!$orgId || !$presenter) {
-            Log::warning('Zoho Meeting missing org or presenter id');
+        $host = $this->resolveMeetingHost();
+        if (!$orgId || !$host) {
+            Log::warning('Zoho Meeting missing org or host presenter', [
+                'expected_email' => config('zoho.account_email'),
+            ]);
             return null;
         }
 
@@ -119,6 +121,7 @@ class ZohoLmsService
             ->pluck('email')
             ->filter()
             ->unique()
+            ->reject(fn ($email) => strcasecmp((string) $email, (string) $host['email']) === 0)
             ->map(fn ($email) => ['email' => $email])
             ->values()
             ->all();
@@ -127,7 +130,7 @@ class ZohoLmsService
             'session' => [
                 'topic' => $schedule->calendarTitle(),
                 'agenda' => trim(($schedule->course->title ?? '') . "\n" . ($schedule->notes ?? '')),
-                'presenter' => (int) $presenter,
+                'presenter' => (int) $host['zuid'],
                 'startTime' => $start,
                 'duration' => $schedule->durationMinutes() * 60 * 1000,
                 'timezone' => config('zoho.timezone'),
@@ -136,7 +139,11 @@ class ZohoLmsService
         ]);
 
         if (!$response->successful()) {
-            Log::error('Zoho Meeting create failed', ['status' => $response->status(), 'body' => $response->body()]);
+            Log::error('Zoho Meeting create failed', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+                'host_email' => $host['email'],
+            ]);
             return null;
         }
 
@@ -146,6 +153,7 @@ class ZohoLmsService
             'join_link' => $session['joinLink'] ?? null,
             'start_link' => $session['startLink'] ?? null,
             'meeting_key' => $session['meetingKey'] ?? null,
+            'host_email' => $host['email'],
         ];
     }
 
@@ -639,6 +647,7 @@ class ZohoLmsService
         $status = [
             'configured' => $this->isConfigured(),
             'account_email' => config('zoho.account_email'),
+            'connected_email' => null,
             'org_id' => config('zoho.org_id'),
             'presenter_zuid' => config('zoho.presenter_zuid'),
             'workdrive_folder_id' => config('zoho.workdrive_folder_id'),
@@ -657,6 +666,13 @@ class ZohoLmsService
             $status['meeting_user'] = $user;
             $status['org_id'] = $status['org_id'] ?: (string) ($user['zsoid'] ?? '');
             $status['presenter_zuid'] = $status['presenter_zuid'] ?: (string) ($user['zuid'] ?? '');
+            $status['connected_email'] = $this->userEmail($user);
+            $expected = strtolower((string) config('zoho.account_email', 'bdm@berkeleyme.com'));
+            if ($status['connected_email'] && strcasecmp($status['connected_email'], $expected) !== 0) {
+                $status['error'] = 'Zoho is connected as ' . $status['connected_email']
+                    . '. Reconnect OAuth while logged in as ' . $expected
+                    . ' so meeting links are hosted on that account.';
+            }
         } catch (Throwable $e) {
             $status['error'] = $e->getMessage();
         }
@@ -788,15 +804,65 @@ class ZohoLmsService
         return !empty($user['zsoid']) ? (string) $user['zsoid'] : null;
     }
 
-    protected function currentUserZuid(): ?string
+    /**
+     * Meetings must be hosted by ZOHO_ACCOUNT_EMAIL (default bdm@berkeleyme.com).
+     * Presenter ZUID comes from config, else from the OAuth user — only if email matches.
+     */
+    protected function resolveMeetingHost(): ?array
     {
-        if (filled(config('zoho.presenter_zuid'))) {
-            return (string) config('zoho.presenter_zuid');
+        $expected = strtolower(trim((string) config('zoho.account_email', 'bdm@berkeleyme.com')));
+        $user = $this->currentUser();
+        $email = $this->userEmail($user);
+        $zuid = filled(config('zoho.presenter_zuid'))
+            ? (string) config('zoho.presenter_zuid')
+            : (string) ($user['zuid'] ?? '');
+
+        if ($zuid === '' || $email === '') {
+            return null;
         }
 
-        $user = $this->currentUser();
+        if (strcasecmp($email, $expected) !== 0) {
+            Log::error('Zoho Meeting host email mismatch', [
+                'connected' => $email,
+                'expected' => $expected,
+            ]);
 
-        return !empty($user['zuid']) ? (string) $user['zuid'] : null;
+            return null;
+        }
+
+        return [
+            'email' => $email,
+            'zuid' => $zuid,
+        ];
+    }
+
+    public function hostAccountEmail(): string
+    {
+        return (string) config('zoho.account_email', 'bdm@berkeleyme.com');
+    }
+
+    protected function userEmail(array $user): string
+    {
+        foreach (['email', 'primaryEmail', 'loginName', 'displayName'] as $key) {
+            $value = trim((string) ($user[$key] ?? ''));
+            if ($value !== '' && filter_var($value, FILTER_VALIDATE_EMAIL)) {
+                return strtolower($value);
+            }
+        }
+
+        return '';
+    }
+
+    protected function currentUserZuid(): ?string
+    {
+        $host = null;
+        try {
+            $host = $this->resolveMeetingHost();
+        } catch (Throwable $e) {
+            Log::warning('Zoho host resolve failed: ' . $e->getMessage());
+        }
+
+        return $host['zuid'] ?? null;
     }
 
     protected function currentUser(): array

@@ -59,7 +59,10 @@ class ZohoConnectCommand extends Command
         $status = $zoho->connectionStatus();
         $this->persistDetectedIds($status);
 
-        $this->line('Account: ' . ($status['account_email'] ?: 'bdm@berkeleyme.com'));
+        $this->line('Account (host): ' . ($status['account_email'] ?: 'bdm@berkeleyme.com'));
+        if (!empty($status['connected_email'])) {
+            $this->line('OAuth connected as: ' . $status['connected_email']);
+        }
         $this->line('OAuth configured: ' . ($status['configured'] ? 'yes' : 'no'));
         if ($status['org_id']) {
             $this->line('Meeting org (zsoid): ' . $status['org_id']);
@@ -73,8 +76,8 @@ class ZohoConnectCommand extends Command
         if ($status['calendar_uid']) {
             $this->line('Calendar UID: ' . $status['calendar_uid']);
         }
-        if ($status['meeting_user']['primaryEmail'] ?? null) {
-            $this->info('Meeting API OK as ' . $status['meeting_user']['primaryEmail']);
+        if ($status['meeting_user']['primaryEmail'] ?? $status['meeting_user']['email'] ?? null) {
+            $this->info('Meeting API OK as ' . ($status['meeting_user']['primaryEmail'] ?? $status['meeting_user']['email']));
         }
         if ($status['error']) {
             $this->warn($status['error']);
@@ -95,6 +98,9 @@ class ZohoConnectCommand extends Command
 
     protected function persistDetectedIds(array $status): void
     {
+        $this->writeEnv('ZOHO_ACCOUNT_EMAIL', 'bdm@berkeleyme.com');
+        config(['zoho.account_email' => 'bdm@berkeleyme.com']);
+
         $map = [
             'org_id' => 'ZOHO_ORG_ID',
             'presenter_zuid' => 'ZOHO_PRESENTER_ZUID',

@@ -54,12 +54,13 @@
                         @if($zohoMeetingReady ?? false)
                             <div class="meeting-auto-box">
                                 <strong>Auto-create</strong><br>
-                                Zoho Meeting link is created from this schedule. No paste needed.<br>
+                                Zoho Meeting link is created from this schedule under<br>
+                                <strong>{{ $zohoHostEmail ?? 'bdm@berkeleyme.com' }}</strong>. No paste needed.<br>
                                 The same link is added to Zoho Calendar for the class.
                             </div>
                         @else
                             <input type="url" name="zoho_link" class="form-control" value="{{ old('zoho_link') }}" placeholder="https://meeting.zoho.com/...">
-                            <span class="help-block">Connect Zoho OAuth to auto-create the meeting + calendar event. Until then you can paste a Meeting Lab link.</span>
+                            <span class="help-block">Connect Zoho OAuth as {{ $zohoHostEmail ?? 'bdm@berkeleyme.com' }} to auto-create the meeting + calendar event. Until then you can paste a Meeting Lab link.</span>
                         @endif
                     </div>
 
