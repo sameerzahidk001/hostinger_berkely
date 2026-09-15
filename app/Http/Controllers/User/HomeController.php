@@ -90,7 +90,8 @@ class HomeController extends Controller
         }
 
         $chargeAmount = number_format($settlingAed, 2, '.', '');
-        $returnUrl = route('user.noon.return');
+        // Noon forbids query strings on returnUrl; use the live host the student is on.
+        $returnUrl = rtrim($request->getSchemeAndHttpHost(), '/') . '/user/noon/return';
 
         try {
             $session = $checkout->initiateCheckout($installment, $chargeAmount, $returnUrl, $request);
@@ -136,8 +137,8 @@ class HomeController extends Controller
 
             if ($installment) {
                 return redirect()
-                    ->route('user.installments.receipt', $installment->id)
-                    ->with('success', 'Payment received. Your receipt is ready.');
+                    ->route('user.home')
+                    ->with('success', 'Payment received successfully. Your installment is updated.');
             }
         }
 
@@ -147,8 +148,8 @@ class HomeController extends Controller
 
             if ($installment) {
                 return redirect()
-                    ->route('user.installments.receipt', $installment->id)
-                    ->with('success', 'Payment received. Your receipt is ready.');
+                    ->route('user.home')
+                    ->with('success', 'Payment received successfully. Your installment is updated.');
             }
         }
 
