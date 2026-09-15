@@ -185,7 +185,7 @@ class StudyMaterialController extends Controller
     public function schedules()
     {
         $schedules = $this->studentSchedules();
-        $calendarEvents = $schedules->map(fn (ClassSchedule $row) => $row->toFullCalendarEvent(
+        $calendarEvents = $schedules->flatMap(fn (ClassSchedule $row) => $row->toFullCalendarEvent(
             $row->zoho_link ?: route('user.class-schedules.index')
         ))->values();
 

@@ -23,6 +23,7 @@ class LmsInstallCommand extends Command
             'database/migrations/2026_09_11_000004_add_zoho_calendar_event_uid_to_class_schedules.php',
             'database/migrations/2026_09_12_000001_add_allow_download_to_study_material_items.php',
             'database/migrations/2026_09_12_000002_add_code_to_study_material_folders.php',
+            'database/migrations/2026_09_15_000001_add_recurrence_and_reminders_to_class_schedules.php',
         ];
 
         foreach ($paths as $path) {

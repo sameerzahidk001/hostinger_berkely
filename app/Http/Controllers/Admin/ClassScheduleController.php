@@ -39,7 +39,7 @@ class ClassScheduleController extends Controller
         $schedules = $query->paginate(20);
         $calendarEvents = $this->calendarQuery()
             ->get()
-            ->map(fn (ClassSchedule $row) => $row->toFullCalendarEvent(route('admin.class-schedules.edit', $row->id)))
+            ->flatMap(fn (ClassSchedule $row) => $row->toFullCalendarEvent(route('admin.class-schedules.edit', $row->id)))
             ->values();
         $zohoEmbed = $this->zohoCalendarEmbedUrl();
 
@@ -68,18 +68,7 @@ class ClassScheduleController extends Controller
 
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'batch_name' => 'required|string|max:255',
-            'course_id' => 'required|exists:courses,id',
-            'instructor_id' => 'nullable|exists:users,id',
-            'scheduled_at' => 'required|date',
-            'duration_minutes' => 'nullable|integer|min:15|max:480',
-            'zoho_link' => 'nullable|url|max:500',
-            'title' => 'nullable|string|max:255',
-            'notes' => 'nullable|string',
-            'student_ids' => 'nullable|array',
-            'student_ids.*' => 'exists:users,id',
-        ]);
+        $validator = Validator::make($request->all(), $this->scheduleRules());
 
         if ($validator->fails()) {
             return redirect()->back()->withErrors($validator)->withInput();
@@ -97,6 +86,7 @@ class ClassScheduleController extends Controller
         ]));
         $schedule->duration_minutes = (int) ($request->input('duration_minutes') ?: 60);
         $schedule->status = 'scheduled';
+        $this->applyRecurrenceAndReminders($schedule, $request);
 
         if ($this->lms->isAdminActor()) {
             $schedule->created_by_admin_id = Auth::guard('admin')->id();
@@ -157,19 +147,9 @@ class ClassScheduleController extends Controller
             abort(403);
         }
 
-        $validator = Validator::make($request->all(), [
-            'batch_name' => 'required|string|max:255',
-            'course_id' => 'required|exists:courses,id',
-            'instructor_id' => 'nullable|exists:users,id',
-            'scheduled_at' => 'required|date',
-            'duration_minutes' => 'nullable|integer|min:15|max:480',
-            'zoho_link' => 'nullable|url|max:500',
-            'title' => 'nullable|string|max:255',
-            'notes' => 'nullable|string',
+        $validator = Validator::make($request->all(), array_merge($this->scheduleRules(), [
             'status' => 'required|in:scheduled,completed,cancelled',
-            'student_ids' => 'nullable|array',
-            'student_ids.*' => 'exists:users,id',
-        ]);
+        ]));
 
         if ($validator->fails()) {
             return redirect()->back()->withErrors($validator)->withInput();
@@ -185,6 +165,7 @@ class ClassScheduleController extends Controller
             'batch_name', 'course_id', 'instructor_id', 'scheduled_at', 'duration_minutes', 'zoho_link', 'title', 'notes', 'status',
         ]));
         $schedule->duration_minutes = (int) ($request->input('duration_minutes') ?: 60);
+        $this->applyRecurrenceAndReminders($schedule, $request);
         $schedule->save();
 
         $studentIds = collect($request->input('student_ids', []))
@@ -251,6 +232,75 @@ class ClassScheduleController extends Controller
         $settings->save();
 
         return redirect()->route('admin.class-schedules.index')->with('success', 'Zoho Calendar embed saved.');
+    }
+
+    protected function scheduleRules(): array
+    {
+        return [
+            'batch_name' => 'required|string|max:255',
+            'course_id' => 'required|exists:courses,id',
+            'instructor_id' => 'nullable|exists:users,id',
+            'scheduled_at' => 'required|date',
+            'duration_minutes' => 'nullable|integer|min:15|max:480',
+            'zoho_link' => 'nullable|url|max:500',
+            'title' => 'nullable|string|max:255',
+            'notes' => 'nullable|string',
+            'student_ids' => 'nullable|array',
+            'student_ids.*' => 'exists:users,id',
+            'recurrence_type' => 'nullable|in:none,daily,weekly,weekdays',
+            'recurrence_days' => 'nullable|array',
+            'recurrence_days.*' => 'in:MO,TU,WE,TH,FR,SA,SU',
+            'recurrence_count' => 'nullable|integer|min:1|max:52',
+            'recurrence_until' => 'nullable|date|after_or_equal:scheduled_at',
+            'reminders' => 'nullable|array|max:8',
+            'reminders.*.action' => 'nullable|in:email,popup,notification',
+            'reminders.*.amount' => 'nullable|integer|min:1|max:60',
+            'reminders.*.unit' => 'nullable|in:minutes,hours,days',
+        ];
+    }
+
+    protected function applyRecurrenceAndReminders(ClassSchedule $schedule, Request $request): void
+    {
+        if (! ClassSchedule::supportsRecurrenceColumns()) {
+            return;
+        }
+
+        $type = (string) $request->input('recurrence_type', ClassSchedule::RECURRENCE_NONE);
+        $schedule->recurrence_type = $type ?: ClassSchedule::RECURRENCE_NONE;
+        $schedule->recurrence_days = $type === ClassSchedule::RECURRENCE_WEEKLY
+            ? array_values(array_unique($request->input('recurrence_days', [])))
+            : null;
+        $schedule->recurrence_count = $request->filled('recurrence_until')
+            ? null
+            : (int) ($request->input('recurrence_count') ?: ($type === ClassSchedule::RECURRENCE_NONE ? null : 12));
+        $schedule->recurrence_until = $request->input('recurrence_until') ?: null;
+
+        if ($type === ClassSchedule::RECURRENCE_NONE) {
+            $schedule->recurrence_days = null;
+            $schedule->recurrence_count = null;
+            $schedule->recurrence_until = null;
+        }
+
+        $reminders = [];
+        foreach ((array) $request->input('reminders', []) as $row) {
+            $action = strtolower((string) ($row['action'] ?? ''));
+            $amount = (int) ($row['amount'] ?? 0);
+            $unit = strtolower((string) ($row['unit'] ?? 'days'));
+            if (! in_array($action, ['email', 'popup', 'notification'], true) || $amount < 1) {
+                continue;
+            }
+            $minutes = match ($unit) {
+                'minutes' => $amount,
+                'hours' => $amount * 60,
+                default => $amount * 1440,
+            };
+            $reminders[] = [
+                'action' => $action,
+                'minutes' => -$minutes,
+            ];
+        }
+
+        $schedule->reminders = $reminders !== [] ? $reminders : ClassSchedule::defaultReminders();
     }
 
     protected function scheduleSavedMessage(string $action, array $zohoStatus): string

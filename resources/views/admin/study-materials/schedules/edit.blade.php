@@ -40,7 +40,7 @@
                         </select>
                     </div>
                     <div class="col-md-3 form-group">
-                        <label>Scheduled at *</label>
+                        <label>Start date &amp; time *</label>
                         <input type="datetime-local" name="scheduled_at" class="form-control" value="{{ old('scheduled_at', optional($schedule->scheduled_at)->format('Y-m-d\TH:i')) }}" required>
                     </div>
                     <div class="col-md-3 form-group">
@@ -62,6 +62,9 @@
                             <span class="help-block">Leave blank to auto-create the Meeting Lab session and a Zoho Calendar event for this batch.</span>
                         @endif
                     </div>
+
+                    @include('admin.study-materials.schedules._recurrence_fields', ['schedule' => $schedule])
+
                     <div class="col-md-12 form-group">
                         <label>Assign students</label>
                         @php $selected = old('student_ids', $schedule->students->pluck('id')->all()); @endphp
@@ -90,6 +93,7 @@
 @endpush
 @push('script')
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+@include('admin.study-materials.schedules._recurrence_script')
 <script>
 $(function () {
     $('#course_id').select2({ placeholder: 'Type to find the course', allowClear: true, width: '100%' });

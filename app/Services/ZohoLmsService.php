@@ -192,12 +192,13 @@ class ZohoLmsService
                 ($schedule->zoho_link ? 'Join: ' . $schedule->zoho_link : '')
             ),
             'url' => $schedule->zoho_link ?: config('app.url'),
-            'reminders' => [
-                ['action' => 'popup', 'minutes' => -15],
-                ['action' => 'email', 'minutes' => -60],
-            ],
+            'reminders' => $schedule->reminderList(),
             'notify_attendee' => $attendees ? 1 : 0,
         ];
+
+        if ($rrule = $schedule->zohoRrule()) {
+            $eventdata['rrule'] = $rrule;
+        }
 
         if ($attendees) {
             $eventdata['attendees'] = $attendees;

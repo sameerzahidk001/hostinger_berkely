@@ -42,7 +42,7 @@
                         </select>
                     </div>
                     <div class="col-md-4 form-group">
-                        <label>Scheduled at *</label>
+                        <label>Start date &amp; time *</label>
                         <input type="datetime-local" name="scheduled_at" class="form-control" value="{{ old('scheduled_at') }}" required>
                     </div>
                     <div class="col-md-4 form-group">
@@ -58,6 +58,9 @@
                             <span class="help-block">Paste the join link from meetinglab.zoho.com until Zoho OAuth is connected.</span>
                         @endif
                     </div>
+
+                    @include('admin.study-materials.schedules._recurrence_fields', ['schedule' => new \App\Models\ClassSchedule()])
+
                     <div class="col-md-12 form-group">
                         <label>Assign students</label>
                         <select name="student_ids[]" id="student_ids" class="form-control" multiple>
@@ -84,6 +87,7 @@
 @endpush
 @push('script')
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+@include('admin.study-materials.schedules._recurrence_script')
 <script>
 $(function () {
     $('#course_id').select2({ placeholder: 'Type to find the course', allowClear: true, width: '100%' });
