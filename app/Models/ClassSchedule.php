@@ -290,7 +290,7 @@ class ClassSchedule extends Model
         $summary = $this->escapeIcs($this->calendarTitle());
         $description = $this->escapeIcs(trim(
             ($this->course->title ?? '') . "\n" .
-            ($this->instructor->name ? 'Instructor: ' . $this->instructor->name : '') . "\n" .
+            ($this->instructor?->name ? 'Instructor: ' . $this->instructor->name : '') . "\n" .
             ($this->notes ?: '') . "\n" .
             ($this->zoho_link ? 'Join: ' . $this->zoho_link : '')
         ));

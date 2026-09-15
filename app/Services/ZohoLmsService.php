@@ -195,7 +195,7 @@ class ZohoLmsService
             'isallday' => false,
             'description' => trim(
                 ($schedule->course->title ?? '') . "\n" .
-                ($schedule->instructor->name ? 'Instructor: ' . $schedule->instructor->name : '') . "\n" .
+                ($schedule->instructor?->name ? 'Instructor: ' . $schedule->instructor->name : '') . "\n" .
                 ($schedule->notes ?: '') . "\n" .
                 ($schedule->zoho_link ? 'Join: ' . $schedule->zoho_link : '')
             ),
