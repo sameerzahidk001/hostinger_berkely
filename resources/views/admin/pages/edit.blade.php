@@ -202,48 +202,48 @@
                                         <h5>Add Sections</h5>
                                     </div>
                                     <div class="ibox-content">
-                                        <button type="button" class="btn btn-light" style="width: 100%;"
-                                            onclick="editSections('heroBanner')">Hero Banner</button>
-                                        <button type="button" class="btn btn-light" style="width: 100%;"
-                                            onclick="editSections('banner')">Banner Section</button>
-                                        <button type="button" class="btn btn-light" style="width: 100%;"
-                                            onclick="editSections('category')">Category</button>
-                                        <button type="button" class="btn btn-light" style="width: 100%;"
-                                            onclick="editSections('school-category')">School Category</button>
-                                        <button type="button" class="btn btn-light" style="width: 100%;"
-                                            onclick="editSections('cards')">Cards</button>
-                                        <button type="button" class="btn btn-light" style="width: 100%;"
-                                            onclick="editSections('titleSection')">Title Section</button>
-                                        <button type="button" class="btn btn-light" style="width: 100%;"
-                                            onclick="editSections('mediaSection')">Media Section</button>
-                                        <button type="button" class="btn btn-light" style="width: 100%;"
-                                            onclick="editSections('clients')">Clients</button>
-                                        <button type="button" class="btn btn-light" style="width: 100%;"
-                                            onclick="editSections('gridCards')">Grid Cards</button>
-                                        <button type="button" class="btn btn-light" style="width: 100%;"
-                                            onclick="editSections('list')">List Section</button>
-                                        <button type="button" class="btn btn-light" style="width: 100%;"
-                                            onclick="editSections('separator')">Separator Section</button>
-                                        <button type="button" class="btn btn-light" style="width: 100%;"
-                                            onclick="editSections('certificate')">Certificate Section</button>
-                                        <button type="button" class="btn btn-light" style="width: 100%;"
-                                            onclick="editSections('contactus')">Contact Us Section</button>
-                                        <button type="button" class="btn btn-light" style="width: 100%;"
-                                            onclick="editSections('programmes')">Programmes</button>
-                                        <button type="button" class="btn btn-light" style="width: 100%;"
-                                            onclick="editSections('filterCourses')">Filter Courses</button>
-                                        <button type="button" class="btn btn-light" style="width: 100%;"
-                                            onclick="editSections('course-agendas')">Training Calendar</button>
-                                        <button type="button" class="btn btn-light" style="width: 100%;"
-                                            onclick="editSections('content')">Content</button>
-                                        <button type="button" class="btn btn-light" style="width: 100%;"
-                                            onclick="editSections('testimonials')">Testimonials</button>
-                                        <button type="button" class="btn btn-light" style="width: 100%;"
-                                            onclick="editSections('career')">Career</button>
-                                        <button type="button" class="btn btn-light" style="width: 100%;"
-                                            onclick="editSections('search-bar')">Search Bar</button>
-                                        <button type="button" class="btn btn-light" style="width: 100%;"
-                                            onclick="editSections('instructors')">Instructors</button>
+                                        <button type="button" class="btn btn-light js-edit-section" style="width: 100%;"
+                                            data-section="heroBanner">Hero Banner</button>
+                                        <button type="button" class="btn btn-light js-edit-section" style="width: 100%;"
+                                            data-section="banner">Banner Section</button>
+                                        <button type="button" class="btn btn-light js-edit-section" style="width: 100%;"
+                                            data-section="category">Category</button>
+                                        <button type="button" class="btn btn-light js-edit-section" style="width: 100%;"
+                                            data-section="school-category">School Category</button>
+                                        <button type="button" class="btn btn-light js-edit-section" style="width: 100%;"
+                                            data-section="cards">Cards</button>
+                                        <button type="button" class="btn btn-light js-edit-section" style="width: 100%;"
+                                            data-section="titleSection">Title Section</button>
+                                        <button type="button" class="btn btn-light js-edit-section" style="width: 100%;"
+                                            data-section="mediaSection">Media Section</button>
+                                        <button type="button" class="btn btn-light js-edit-section" style="width: 100%;"
+                                            data-section="clients">Clients</button>
+                                        <button type="button" class="btn btn-light js-edit-section" style="width: 100%;"
+                                            data-section="gridCards">Grid Cards</button>
+                                        <button type="button" class="btn btn-light js-edit-section" style="width: 100%;"
+                                            data-section="list">List Section</button>
+                                        <button type="button" class="btn btn-light js-edit-section" style="width: 100%;"
+                                            data-section="separator">Separator Section</button>
+                                        <button type="button" class="btn btn-light js-edit-section" style="width: 100%;"
+                                            data-section="certificate">Certificate Section</button>
+                                        <button type="button" class="btn btn-light js-edit-section" style="width: 100%;"
+                                            data-section="contactus">Contact Us Section</button>
+                                        <button type="button" class="btn btn-light js-edit-section" style="width: 100%;"
+                                            data-section="programmes">Programmes</button>
+                                        <button type="button" class="btn btn-light js-edit-section" style="width: 100%;"
+                                            data-section="filterCourses">Filter Courses</button>
+                                        <button type="button" class="btn btn-light js-edit-section" style="width: 100%;"
+                                            data-section="course-agendas">Training Calendar</button>
+                                        <button type="button" class="btn btn-light js-edit-section" style="width: 100%;"
+                                            data-section="content">Content</button>
+                                        <button type="button" class="btn btn-light js-edit-section" style="width: 100%;"
+                                            data-section="testimonials">Testimonials</button>
+                                        <button type="button" class="btn btn-light js-edit-section" style="width: 100%;"
+                                            data-section="career">Career</button>
+                                        <button type="button" class="btn btn-light js-edit-section" style="width: 100%;"
+                                            data-section="search-bar">Search Bar</button>
+                                        <button type="button" class="btn btn-light js-edit-section" style="width: 100%;"
+                                            data-section="instructors">Instructors</button>
                                     </div>
                                 </div>
                             </div>
@@ -3239,6 +3239,17 @@
                     this.classList.add("summernote-initialized");
                 }
             });
+
+            // Bind Add Section buttons here so they never rely on inline onclick globals.
+            $(document).on('click', '.js-edit-section', function (e) {
+                e.preventDefault();
+                const section = $(this).data('section');
+                if (typeof window.editSections === 'function') {
+                    window.editSections(section);
+                } else {
+                    console.error('editSections is not available');
+                }
+            });
         });
 
         function generateCareer(sectionCount, careerCount) {
@@ -5360,6 +5371,26 @@
                 }
             }
         });
+
+        // Expose builders/helpers for dynamic HTML onclick attributes and Add Section buttons.
+        window.editSections = editSections;
+        window.addCard = addCard;
+        window.addCareer = addCareer;
+        window.addIconCard = addIconCard;
+        window.addListItem = addListItem;
+        window.removeCard = removeCard;
+        window.removeListItem = removeListItem;
+        window.toggleTransparent = toggleTransparent;
+        window.toggleDisable = toggleDisable;
+        window.triggerFileInput = triggerFileInput;
+        window.triggerFileInputCard = triggerFileInputCard;
+        window.triggerFileInputItem = triggerFileInputItem;
+        window.handleFileChange = handleFileChange;
+        window.handleCardFileChange = handleCardFileChange;
+        window.handleItemFileChange = handleItemFileChange;
+        window.openLibraryModal = openLibraryModal;
+        window.openLibraryModalCard = openLibraryModalCard;
+        window.openLibraryModalItem = openLibraryModalItem;
 
     </script>
 @endpush
