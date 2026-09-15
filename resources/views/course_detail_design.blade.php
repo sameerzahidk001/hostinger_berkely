@@ -93,9 +93,7 @@
 <section id="key-concept"
     class="flex flex-col    bg-[#f4f4f4] justify-between items-center px-6 gap-6 my-0 py-0 pt-10 min-[920px]:gap-[110px] md:px-16 lg:px-[120px] min-h-[310px]">
     <div class="flex gap-3 items-center">
-        <div class="bg-yellow w-[50px] h-[2px]"></div>
         <span class="font-semibold">KEY CONCEPT</span>
-        <div class="bg-yellow w-[50px] h-[2px]"></div>
     </div>
     <div class="flex flex-col sm:flex-row gap-4 gap-x-12">
         <div class="flex  flex-col flex-1 gap-3">
@@ -148,11 +146,9 @@
 <section class="bg-[#f4f4f4]  ">
     <div class="flex items-center justify-center flex-col pb-12   container mx-auto">
         <div class="flex gap-3 items-center pt-10">
-            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <span class="font-semibold">
                 WHO WILL BENEFIT
             </span>
-            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
         <div class="flex flex-col items-center pt-8 gap-8">
             <div class="flex gap-4">
@@ -212,11 +208,9 @@
 <section
     class="flex items-center justify-center flex-col py-12 bg-[#eeeeee] min-h-[174px]  px-4 md:px-8 lg:px-[120px] mt-4">
     <div class="flex gap-3 items-center">
-        <div class="bg-yellow w-[50px] h-[2px]"></div>
         <span class="font-semibold">
             WHAT YOU EARN
         </span>
-        <div class="bg-yellow w-[50px] h-[2px]"></div>
     </div>
 
     <div class="flex flex-1 w-full flex-col sm:flex-row gap-20  justify-center items-center  pt-10">
@@ -339,9 +333,7 @@
                     <div
                         class="flex flex-col bg-[#f4f4f4] justify-between items-center px-6 my-0  py-4  md:px-16 lg:px-[120px] gap-8">
                         <div class="flex gap-3 items-center">
-                            <div class="bg-yellow w-[50px] h-[2px]"></div>
                             <span class="font-semibold">KEY CONCEPT</span>
-                            <div class="bg-yellow w-[50px] h-[2px]"></div>
                         </div>
                         <div class="flex flex-col sm:flex-row gap-4 gap-x-12">
                             <div class="flex  flex-col flex-1 gap-3">
@@ -459,9 +451,7 @@
                     <div
                         class="flex flex-col bg-[#f4f4f4] justify-between items-center px-6 my-0  py-4  md:px-16 lg:px-[120px] gap-8">
                         <div class="flex gap-3 items-center">
-                            <div class="bg-yellow w-[50px] h-[2px]"></div>
                             <span class="font-semibold">KEY CONCEPT</span>
-                            <div class="bg-yellow w-[50px] h-[2px]"></div>
                         </div>
                         <div class="flex flex-col sm:flex-row gap-4 gap-x-12">
                             <div class="flex  flex-col flex-1 gap-3">
@@ -580,9 +570,7 @@
                     <div
                         class="flex flex-col bg-[#f4f4f4] justify-between items-center px-6 my-0  py-4  md:px-16 lg:px-[120px] gap-8">
                         <div class="flex gap-3 items-center">
-                            <div class="bg-yellow w-[50px] h-[2px]"></div>
                             <span class="font-semibold">KEY CONCEPT</span>
-                            <div class="bg-yellow w-[50px] h-[2px]"></div>
                         </div>
                         <div class="flex flex-col sm:flex-row gap-4 gap-x-12">
                             <div class="flex  flex-col flex-1 gap-3">
@@ -712,11 +700,9 @@
 <section class="flex gap-10 items-center justify-center  px-4 md:px-8 lg:px-[120px] py-[48px] bg-[#F4F4F4]">
     <div class="flex items-center flex-col max-w-[394px]">
         <div class="flex gap-3 items-center">
-            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <span class="font-semibold text-[17px]">
                 ABOUT THE PROFESSOR
             </span>
-            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
         <div class="flex items-center flex-col ">
             <img src="https://cloudinary.hbs.edu/hbsit/image/upload/s--wzKOzL2h--/f_auto,c_fill,g_face:auto,h_120,w_120,/v20200101/C6F64EBD226C400791DAA4E3C17F0BB3.jpg"
@@ -764,7 +750,6 @@
                 <span class="text-[32px] font-medium leading-[40px]">MAY</span>
                 <span class="text-[32px] font-medium leading-[40px]">01</span>
             </div>
-            <div class="w-10 bg-yellow h-[2px] my-10"></div>
             <p class="text-[15px] font-medium text-center"><span class="font-normal">5 Weeks</span> $1,750 +
                 applicable
                 international taxes</p>
@@ -784,7 +769,6 @@
                 <span class="text-[32px] font-medium leading-[40px]">MAY</span>
                 <span class="text-[32px] font-medium leading-[40px]">01</span>
             </div>
-            <div class="w-10 bg-yellow h-[2px] my-10"></div>
             <p class="text-[15px] font-medium text-center"><span class="font-normal">5 Weeks</span> $1,750 +
                 applicable
                 international taxes</p>
@@ -804,7 +788,6 @@
                 <span class="text-[32px] font-medium leading-[40px]">MAY</span>
                 <span class="text-[32px] font-medium leading-[40px]">01</span>
             </div>
-            <div class="w-10 bg-yellow h-[2px] my-10"></div>
             <p class="text-[15px] font-medium text-center"><span class="font-normal">5 Weeks</span> $1,750 +
                 applicable
                 international taxes</p>
@@ -1053,12 +1036,10 @@
 <!-- Section Fourteen start -->
 <section class="mt-8 flex mb-[18px] py-0 z-20  flex-1 gap-4 lg:px-[121px] px-4 md:px-10 flex-col items-centers">
     <div class="flex 100 justify-center gap-3 items-center mb-12">
-        <div class="bg-yellow w-[50px] h-[2px]"></div>
         <span class="font-semibold text-primary ">
             RELATED PROGRAMS
 
         </span>
-        <div class="bg-yellow w-[50px] h-[2px]"></div>
     </div>
     <div class="">
         <div class="flex gap-3 overflow-x-scroll pb-2">

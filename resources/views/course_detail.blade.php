@@ -320,10 +320,8 @@
         <section id="one" class="card-hidden bg-[#f4f4f4] px-6 my-0 py-10  md:px-16 lg:px-[120px] overflow-x-hidden">
             <div class="flex flex-col pb-4 w-full max-w-full min-w-0">
                 <div class="flex gap-3 items-center justify-center mb-6 ">
-                    <div class="bg-yellow w-[50px] h-[2px]"></div>
                     <h2
                         class="text-[20px] sm:text-[24px] text-dark md:text-[32px] font-canela  text-center section-heading">{{ $course->dynamicLabel->overview ?? 'overview' }}</h2>
-                    <div class="bg-yellow w-[50px] h-[2px]"></div>
                 </div>
 
                 <div class="flex flex-col lg:flex-row-reverse items-stretch lg:items-start gap-x-24 gap-y-10 w-full max-w-full">
@@ -381,10 +379,8 @@
                         @if (!empty($course->offered_by['institute']))
                             <div class="flex flex-col pb-4 items-center text-center">
                                 <div class="flex gap-3 items-center justify-center mb-3 mt-3">
-                                    <div class="bg-yellow w-[50px] h-[2px]"></div>
                                     <h3
                                         class="font-semibold section-subheading">{{ $course->dynamicLabel->offered_by ?? 'Offered by' }}</h3>
-                                    <div class="bg-yellow w-[50px] h-[2px]"></div>
                                 </div>
                                 <div class="flex flex-col w-full min-w-0 items-center text-center">
                                     <div class="editor text-center">
@@ -397,10 +393,8 @@
                         @if (!empty($course->offered_by['head_office']))
                             <div class="flex flex-col pb-4 items-center text-center">
                                 <div class="flex gap-3 items-center justify-center mb-3 ">
-                                    <div class="bg-yellow w-[50px] h-[2px]"></div>
                                     <h3
                                         class="font-semibold section-subheading">{{ $course->dynamicLabel->head_office ?? 'Head office' }}</h3>
-                                    <div class="bg-yellow w-[50px] h-[2px]"></div>
                                 </div>
                                 <div class="flex flex-col w-full min-w-0 items-center text-center">
                                     <div class="editor text-center">
@@ -412,10 +406,8 @@
                         @if (!empty($course->offered_by['members']))
                             <div class="flex flex-col pb-4 items-center text-center">
                                 <div class="flex gap-3 items-center justify-center mb-3 ">
-                                    <div class="bg-yellow w-[50px] h-[2px]"></div>
                                     <h3
                                         class="font-semibold section-subheading">{{ $course->dynamicLabel->members ?? 'Members' }}</h3>
-                                    <div class="bg-yellow w-[50px] h-[2px]"></div>
                                 </div>
                                 <div class="flex flex-col w-full min-w-0 items-center text-center">
                                     <div class="editor text-center">
@@ -427,10 +419,8 @@
                         @if (!empty($course->offered_by['founded_in']))
                             <div class="flex flex-col pb-4 items-center text-center">
                             <div class="flex gap-3 items-center justify-center mb-3 ">
-                                <div class="bg-yellow w-[50px] h-[2px]"></div>
                                 <h3
                                     class="font-semibold section-subheading">{{ $course->dynamicLabel->founded_in ?? 'Founded in' }}</h3>
-                                <div class="bg-yellow w-[50px] h-[2px]"></div>
                             </div>
                             <div class="flex flex-col w-full min-w-0 items-center text-center">
                                 <div class="editor text-center">
@@ -449,10 +439,8 @@
                 @if (!empty($course->vision_and_mission))
                     <div class="flex flex-col items-center text-center mt-6">
                     <div class="flex gap-3 items-center justify-center mb-3 ">
-                        <div class="bg-yellow w-[50px] h-[2px]"></div>
                         <h3
                             class="font-semibold section-subheading">{{ $course->dynamicLabel->vission_mission ?? 'Vision & mission' }}</h3>
-                        <div class="bg-yellow w-[50px] h-[2px]"></div>
                     </div>
                     <div class="flex flex-col w-full min-w-0 items-center text-center">
                         <div class="editor text-center">
@@ -469,10 +457,8 @@
     @if (!empty($course->eligibility) && $course->eligibility_section === 1)
         <section id="three" class="card-hidden bg-white px-6 my-0 py-10  md:px-16 lg:px-[120px]">
             <div class="flex gap-3 items-center justify-center mb-4 ">
-                <div class="bg-yellow w-[50px] h-[2px]"></div>
                 <h2
                     class="text-[20px] sm:text-[24px] text-dark md:text-[32px] font-canela section-heading text-center">{{ $course->dynamicLabel->eligibility ?? 'Eligibility' }}</h2>
-                <div class="bg-yellow w-[50px] h-[2px]"></div>
             </div>
 
             <div class="text-left">
@@ -489,10 +475,8 @@
             $course->who_can_do_section === 1)
         <section class="card-hidden bg-[#000435] px-6 pb-0 py-8 mb-12 md:px-16 lg:px-[72px]">
             <div class="flex gap-3 items-center justify-center mb-3 ">
-                <div class="bg-yellow w-[50px] h-[2px]"></div>
                 <h2
                     class="text-[20px] sm:text-[24px] md:text-[32px] font-canela text-white section-heading text-center">{{ $course->dynamicLabel->who_can_do ?? 'Who can do?' }}</h2>
-                <div class="bg-yellow w-[50px] h-[2px]"></div>
             </div>
 
             <div class="card flex flex-col lg:flex-row items-stretch lg:items-start py-6 gap-x-16 gap-y-10 w-full max-w-full">
@@ -504,10 +488,8 @@
 
                     <!-- <p class="text-[16px] font-semibold mb-0">{{ $course->dynamicLabel->who_can_do_subh01 ?? 'Anyone who is interested to learn about following concepts can pursue ' . $course->title . ':' }}</p> -->
                     <div class="flex gap-3 items-center justify-center mb-0 ">
-                        <div class="bg-yellow w-[50px] h-[2px]"></div>
                         <span
                             class="text-[18px] sm:text-[18px] font-canela text-white  text-center section-subheading">{{ $course->dynamicLabel->who_can_do_subh01 ?? 'anyone who is interested to learn about following concepts can pursue ' . $course->title . ':' }}</span>
-                        <div class="bg-yellow w-[50px] h-[2px]"></div>
                     </div>
                     @if (!empty($course->who_can_do['interested_to_learn']))
                         @foreach ($course->who_can_do['interested_to_learn'] ?? [] as $index => $fields)
@@ -518,10 +500,8 @@
                     @endif
                     <!-- <p class="text-[16px] font-semibold mt-5 mb-0">{{ $course->dynamicLabel->who_can_do_subh02 ?? 'Individuals with the following occupations or designations:' }}</p> -->
                     <div class="flex gap-3 items-center justify-center mt-8 mb-0">
-                        <div class="bg-yellow w-[50px] h-[2px]"></div>
                         <span
                             class="text-[18px] sm:text-[18px] font-canela text-white  text-center section-subheading">{{ $course->dynamicLabel->who_can_do_subh02 ?? 'individuals with the following designations:' }}</span>
-                        <div class="bg-yellow w-[50px] h-[2px]"></div>
                     </div>
                     @if (!empty($course->who_can_do['designation']))
                         @foreach ($course->who_can_do['designation'] ?? [] as $index => $data)
@@ -542,11 +522,9 @@
         <div class="flex items-stretch flex-col gap-2 w-full max-w-full min-w-0">
             @if (!$course->courseStructuresFirst->isEmpty() && $course->course_structure_section == 1)
                 <div class="flex gap-3 items-center justify-center w-full mb-2">
-                    <div class="bg-yellow w-[50px] h-[2px]"></div>
                     <h3
                         class="text-[20px] sm:text-[24px] text-dark md:text-[32px] font-canela section-heading text-center">
                         {{ $course->dynamicLabel->course_structure ?? 'Course structure' }}</h3>
-                    <div class="bg-yellow w-[50px] h-[2px]"></div>
                 </div>
                 @if (!empty($course->course_structure_overview_first))
                     <div class="text-[16px] editor text-center w-full max-w-3xl mx-auto mb-2">
@@ -587,11 +565,9 @@
             @if (!$course->courseStructures->isEmpty() && $course->lecture_plan_section == 1)
                 <div id="lecture-plan" class="w-full">
                     <div class="flex gap-3 items-center justify-center mb-3 mt-6">
-                        <div class="bg-yellow w-[50px] h-[2px]"></div>
                         <h3
                             class="text-[20px] sm:text-[24px] text-dark md:text-[32px] font-canela section-heading text-center">
                             {{ $course->dynamicLabel->lecture_plan ?? 'Lecture plan' }}</h3>
-                        <div class="bg-yellow w-[50px] h-[2px]"></div>
                     </div>
                     @if (!empty($course->course_structure_overview))
                         <div class="text-[16px] editor">
@@ -653,11 +629,9 @@
 
             @if ($course->custom_videos_section == 1)
                 <div class="flex gap-3 items-center justify-center mb-3 mt-6">
-                    <div class="bg-yellow w-[50px] h-[2px]"></div>
                     <h3
                         class="text-[20px] sm:text-[24px] text-dark md:text-[32px] font-canela section-heading text-center">
                         {{ $course->dynamicLabel?->custom_videos_heading ?? 'Videos' }}</h3>
-                    <div class="bg-yellow w-[50px] h-[2px]"></div>
                 </div>
                 @if (!empty($course->custom_videos_desc))
                     <div class="text-[16px] editor">
@@ -674,10 +648,8 @@
 
                                 <div class="flex gap-2 items-center justify-center mb-2 mt-2 shrink-0"
                                     style="min-height: 4.75rem; height: 4.75rem;">
-                                    <div class="bg-yellow w-[16px] sm:w-[24px] h-[2px] shrink-0"></div>
                                     <span class="font-semibold section-subheading text-center text-[13px] sm:text-sm leading-snug"
                                         style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">{{ $video['title'] }}</span>
-                                    <div class="bg-yellow w-[16px] sm:w-[24px] h-[2px] shrink-0"></div>
                                 </div>
                                 @php
 
@@ -727,10 +699,8 @@
     @if ($assignIntructors && count($assignIntructors) > 0)
         <section class="card-hidden px-6 min-[1200px]:px-[72px] mt-10 lg:pt-0 md:px-12 flex flex-col gap-16 w-full my-16">
             <div class="flex gap-3 items-center justify-center pb-4">
-                <div class="bg-yellow w-[50px] h-[2px]"></div>
                 <h3 class="text-[20px] sm:text-[24px] text-dark md:text-[32px] font-canela section-heading text-center">
                     Instructors</h3>
-                <div class="bg-yellow w-[50px] h-[2px]"></div>
             </div>
 
             @php $instructorCount = count($assignIntructors); @endphp
@@ -767,10 +737,8 @@
     <section id="five" class="card-hidden px-4 min-[1200px]:px-[72px] md:px-12 w-full">
 
         <div class="flex gap-3 items-center justify-center pb-4">
-            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <h3 class="text-[20px] sm:text-[24px] text-dark md:text-[32px] font-canela section-heading text-center">
                 {{ $course->dynamicLabel->learning_methodology ?? 'Learning methodology' }}</h3>
-            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
         <div class="text-left pb-6 editor">
             {!! $course->dynamicLabel->learning_methodology_overview ?? '' !!}
@@ -956,10 +924,8 @@
     @if ($course->performance_standard_section === 1)
         <section class="card-hidden px-6 lg:px-[72px] bg-crimson mb-8 mt-8 py-8">
             <div class="flex gap-3 items-center justify-center pb-4">
-                <div class="bg-yellow w-[50px] h-[2px]"></div>
                 <h3 class="text-[20px] sm:text-[24px] text-white md:text-[32px] font-canela section-heading text-center">
                     {{ $course->performance_standard_heading ?? "berkeley's performance standards" }}</h3>
-                <div class="bg-yellow w-[50px] h-[2px]"></div>
             </div>
             @if ($course->performance_standard_description)
                 <div class="text-left pb-6 text-white editor">
@@ -1009,7 +975,6 @@
             class="card-hidden flex items-stretch justify-center flex-col mt-12 bg-[#f5f5f5] px-6 pb-12 min-[1200px]:px-[72px] md:px-12 w-full max-w-full overflow-x-hidden">
             <div class="flex items-stretch flex-col gap-2 w-full max-w-full">
                 <div class="flex gap-3 items-center my-8">
-                    <div class="bg-yellow w-[50px] h-[2px]"></div>
                     <h3
                         class="text-[20px] sm:text-[24px] text-dark md:text-[32px] font-canela section-heading text-center">
                         {{ $course->dynamicLabel->exam_information ?? 'what are the exam information?' }}</h3>
@@ -1077,7 +1042,6 @@
                                 (!empty($course->course_exam_format_duration_overview) &&
                                     $course->course_exam_format_duration_overview !== null))
                             <div class="flex gap-3 items-center justify-start">
-                                <div class="bg-yellow w-[50px] h-[2px]"></div>
                                 <span
                                     class="font-semibold section-subheading text-left">{{ $course->dynamicLabel->exam_format_duration ?? 'Exam format & duration' }}</span>
                             </div>
@@ -1149,7 +1113,6 @@
                         @endif
                         @if (!empty($course->exam_dates))
                             <div class="flex gap-3 items-center justify-start mt-10">
-                                <div class="bg-yellow w-[50px] h-[2px]"></div>
                                 <span
                                     class="font-semibold section-subheading text-left">{{ $course->dynamicLabel->exam_dates ?? 'exam dates' }}</span>
                             </div>
@@ -1158,7 +1121,6 @@
 
                         @if (!empty($course->exam_reg_deadline))
                             <div class="flex gap-3 items-center justify-start mt-10">
-                                <div class="bg-yellow w-[50px] h-[2px]"></div>
                                 <span
                                     class="font-semibold section-subheading text-left">{{ $course->dynamicLabel->exam_dates_registration ?? 'Exam registration deadline' }}</span>
                             </div>
@@ -1172,7 +1134,6 @@
 
                 @if (!empty($course->exam_passing_criteria))
                     <div class="flex gap-3 items-center justify-start mt-8">
-                        <div class="bg-yellow w-[50px] h-[2px]"></div>
                         <span
                             class="font-semibold section-subheading text-left">{{ $course->dynamicLabel->passing_criteria ?? 'Passing criteria' }}</span>
                     </div>
@@ -1181,7 +1142,6 @@
 
                 @if (!empty($course->exam_location_paragraph) || !empty($course->exam_location))
                     <div class="flex gap-3 items-center justify-start pt-[16px]">
-                        <div class="bg-yellow w-[50px] h-[2px]"></div>
                         <span
                             class="font-semibold section-subheading text-left">{{ $course->dynamicLabel->exam_location ?? 'Exam locations' }}</span>
                     </div>
@@ -1212,11 +1172,9 @@
             <!-- Section Heading -->
             <div class="flex flex-col items-center gap-2 mb-10">
                 <div class="flex gap-3 items-center">
-                    <div class="bg-yellow w-12 h-[2px]"></div>
                     <span class="text-[22px] sm:text-[28px] md:text-[34px] text-white font-canela tracking-wide">
                         {{ $course->dynamicLabel?->fee_strucutre ?? 'Fee Structure' }}
                     </span>
-                    <div class="bg-yellow w-12 h-[2px]"></div>
                 </div>
             </div>
 
@@ -1259,7 +1217,6 @@
                             @endif
 
                             <!-- Divider -->
-                            <div class="w-full h-[2px] bg-yellow mb-3"></div>
 
                             <!-- Features -->
                             @if ($package->package_feature)
@@ -1370,12 +1327,10 @@
                         class="flex-1 xl:px-8 bg-white w-full max-w-full min-w-0 xl:py-2 min-[1340px]:py-8 my-2 xl:relative xl:right-0 gap-2 flex flex-col">
 
                         <div class="flex gap-3 items-center">
-                            <div class="bg-yellow w-[50px] h-[2px]"></div>
                             <h3
                                 class="text-[20px] sm:text-[24px] text-dark md:text-[32px] font-canela section-heading text-center sm:text-left">
                                 {{ $course->dynamicLabel->career_path_heading ?? 'how the ' . $course->title . ' serves your career path' }}
                             </h3>
-                            <div class="bg-yellow w-[50px] h-[2px]"></div>
                         </div>
                         <div class="flex flex-col gap-2">
                             <p class="text-[16px] mb-0 editor">{!! $course->career_path !!}</p>
@@ -1394,10 +1349,8 @@
     @if ($course->custom_section_01 == 1)
         <section class="card-hidden px-6 lg:px-[72px] bg-crimson mb-0 mt-8 py-8">
             <div class="flex gap-3 items-center justify-center pb-4">
-                <div class="bg-yellow w-[50px] h-[2px]"></div>
                 <h3 class="text-[20px] sm:text-[24px] text-white md:text-[32px] font-canela section-heading text-center">
                     {{ $course->dynamicLabel->custom_section_01 ?? 'custom section 01' }}</h3>
-                <div class="bg-yellow w-[50px] h-[2px]"></div>
             </div>
 
             <div class="text-left pb-6 text-white editor">
@@ -1411,11 +1364,9 @@
         <section id="ten"
             class="card-hidden flex items-center justify-center flex-col py-12  bg-[#f5f5f5] px-4 md:px-8 lg:px-[140px]">
             <div class="flex gap-3 items-center">
-                <div class="bg-yellow w-[50px] h-[2px]"></div>
                 <h3 class="text-[20px] sm:text-[24px] text-dark md:text-[32px] font-canela section-heading">
                     {{ $course->dynamicLabel->what_you_earn ?? 'what you earn' }}
                 </h3>
-                <div class="bg-yellow w-[50px] h-[2px]"></div>
             </div>
             <p class="text-[16px] mt-3">
                 {!! $course->dynamicLabel->what_you_earn_des ??
@@ -1436,7 +1387,6 @@
                                     <div class="flex gap-2 flex-col">
                                         <div class="flex gap-1 flex-col">
                                             <h3 class="font-semibold">{!! $data['title'] !!}</h3>
-                                            <div class="w-[80px] h-[2px] bg-yellow"></div>
                                             <div class="text-[16px] editor">{!! $data['description'] !!}</div>
                                         </div>
                                     </div>
@@ -1457,10 +1407,8 @@
         <section class="card-hidden px-4 bg-[#eeeeee]   py-[44px] min-[1200px]:px-[72px]">
 
             <div class="flex gap-3 items-center w-full justify-center">
-                <div class="bg-yellow w-[50px] h-[2px]"></div>
                 <h3 class="text-[20px] sm:text-[24px] text-dark md:text-[32px] font-canela section-heading">
                     {{ $course->dynamicLabel?->related_courses ?? 'Related courses' }}</h3>
-                <div class="bg-yellow w-[50px] h-[2px]"></div>
             </div>
 
             <div
@@ -1473,7 +1421,6 @@
                             <a href="{{ route('course.details', $related_course->slug) }}"
                                 class=" text-[20px] capitalize min-h-[52px]"
                                 target="_blank">{{ $related_course->title }}</a>
-                            <div class="bg-yellow w-[50px] h-[2px]"></div>
                             <div class="text-[16px] min-h-[195px] max-h-[195px]" style="overflow:hidden;">
                                 {!! $related_course->short_description !!}</div>
                             <a href="{{ route('course.details', $related_course->slug) }}"

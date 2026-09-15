@@ -53,8 +53,6 @@
 @foreach($subjects as $index => $data)
     <!-- Section Two Start -->
     <section class="mt-8 flex  m-0 py-0 z-20  flex-1 flex-col justify-center gap-4 lg:px-[121px] px-4 md:px-10">
-        <div class="w-[50px] h-[2px] bg-yellow">
-        </div>
         <div class="flex flex-col items-start sm:flex-row gap-y-4 gap-x-12 sm:items-center ">
             <div class="flex flex-col ">
                 <a href="" class="text-[24px] text-crimson hover:text-dark_light font-bold">{{ $data->name }}</a>

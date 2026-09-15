@@ -1,8 +1,6 @@
 <section id="section-{{$id}}" class="card-hidden show px-4 min-[1200px]:px-[72px] md:px-12 mt-3 mb-0 py-12 relative min-h-[230px] bg-[{{ $background }}]" id="our_clients">
     <div class="flex gap-3 items-center justify-center">
-        <div class="bg-yellow w-[50px] h-[2px]"></div>
         <span class="font-semibold">{{ $title }}</span>
-        <div class="bg-yellow w-[50px] h-[2px]"></div>
     </div>
     <p class="text-center my-4">
         {!! $description !!}
