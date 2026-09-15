@@ -124,9 +124,18 @@ class NoonCheckoutService
                 'response' => $data,
             ]);
 
-            throw new \RuntimeException(
-                (string) (data_get($data, 'message') ?: data_get($data, 'result.description') ?: 'Payment session could not be started.')
+            $apiMessage = (string) (
+                data_get($data, 'message')
+                ?: data_get($data, 'result.description')
+                ?: data_get($data, 'resultCodeMessage')
+                ?: 'Payment session could not be started.'
             );
+
+            if ((int) $resultCode === 1505 || stripos($apiMessage, 'not authorized') !== false) {
+                $apiMessage = 'Noon rejected payment credentials (error 1505). Check live Application roles include order INITIATE/SALE, and that NOON_* keys match the live portal.';
+            }
+
+            throw new \RuntimeException($apiMessage);
         }
 
         $this->storePendingCheckout(
@@ -389,11 +398,12 @@ class NoonCheckoutService
 
     protected function authorizationHeader(): string
     {
-        $scheme = trim((string) config('services.noon.auth_scheme', ''));
-
-        if ($scheme === '') {
-            $mode = strtolower((string) config('services.noon.mode', 'test'));
-            $scheme = $mode === 'live' ? 'Key_Live' : 'Key_Test';
+        // Official Noon docs: Authorization = "Key " + Base64(BusinessId.AppId:AppKey)
+        // Environment is selected by API URL (api vs api-test), not by Key_Live/Key_Test.
+        // Legacy Key_Live / Key_Test schemes cause error 1505 on INITIATE.
+        $scheme = trim((string) config('services.noon.auth_scheme', 'Key'));
+        if ($scheme === '' || preg_match('/^Key([_-]|$)/i', $scheme)) {
+            $scheme = 'Key';
         }
 
         return $scheme . ' ' . $this->authKey();

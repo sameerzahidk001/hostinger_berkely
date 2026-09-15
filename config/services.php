@@ -44,7 +44,7 @@ return [
         'app_id' => env('NOON_APP_ID', 'BerkeleyWeb'),
         'app_key' => env('NOON_APP_KEY', '5e69b96acdd84164bc28fd4e5dad0bff'),
         'auth_key' => env('NOON_AUTH_KEY'),
-        'auth_scheme' => env('NOON_AUTH_SCHEME', 'Key_Live'),
+        'auth_scheme' => env('NOON_AUTH_SCHEME', 'Key'),
         'mode' => env('NOON_MODE', 'live'),
         'api_url' => env('NOON_API_URL', 'https://api.noonpayments.com/payment/v1'),
         'category' => env('NOON_ORDER_CATEGORY', 'pay'),
