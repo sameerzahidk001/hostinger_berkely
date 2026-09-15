@@ -122,7 +122,7 @@
                     class="max-w-[220px] self-center object-fill min-h-[48px] sm:min-h-[48px] sm:min-w-[200px] lg:min-w-[240px] lg:min-h-[48px]"
                     alt="">
             </a>
-            <ul class="hidden list-none min-[980px]:flex font-ghothic text-[19px] gap-4 items-stretch">
+            <ul class="hidden list-none min-[980px]:flex font-ghothic text-[19px] gap-4">
                 @php
                     $filteredMenus = collect($menus)->where('menu_group', $settings->header_menu)->values();
                 @endphp
@@ -134,14 +134,15 @@
                         <a href="{{ $menu->link }}"
                             class="active:underline decoration-crimson underline-offset-4">{{ $menu->name }}</a>
                         @if ($menu->children->count() > 0)
+                            {{-- True 100vw dropdown panel under the fixed header --}}
                             <div
-                                class="mega-menu-two absolute left-0 right-0 top-full hidden group-hover:block w-full bg-white shadow-xl border-t border-primary mega-menu-style z-[1000]">
-                                <div class="px-4 md:px-8 lg:px-[30px] py-5">
-                                    <ul class="list-none m-0 p-0 grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-1">
+                                class="mega-menu-two pointer-events-none group-hover:pointer-events-auto fixed left-0 right-0 top-[70px] z-[1000] hidden w-screen group-hover:block bg-white shadow-[0_8px_24px_rgba(0,0,0,0.12)] border-t border-primary">
+                                <div class="w-full px-4 md:px-8 lg:px-[30px] py-6">
+                                    <ul class="list-none m-0 p-0 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-1">
                                         @foreach ($menu->children->sortBy('menu_order') as $child)
                                             <li>
                                                 <a href="{{ $child->link }}"
-                                                    class="flex gap-2 items-start text-black transition-colors duration-150 hover:bg-navy hover:text-white px-3 py-2 rounded-sm whitespace-normal">
+                                                    class="flex gap-2 items-start text-black transition-colors duration-150 hover:bg-navy hover:text-white px-3 py-2 whitespace-normal">
                                                     <span aria-hidden="true" class="shrink-0 leading-snug">•</span>
                                                     <span class="text-[15px] leading-snug font-medium">{{ $child->name }}</span>
                                                 </a>
@@ -154,37 +155,20 @@
                     </li>
                 @endforeach
 
-                @if($settings && $settings->header_button == '1')
-                    <li class="list-none flex items-center justify-center">
+                <li class="list-none relative flex items-center justify-center">
+                    @if($settings && $settings->header_button == '1')
                         <a href="{{ $settings->header_button_url }}"
                             class="border px-4 py-1 w-full border-[{{ $settings->header_button_bg }}] bg-[{{ $settings->header_button_bg }}] transition-all delay-300 duration-300 content-center rounded uppercase"
                             style="color: {{ $settings->header_button_color }}">
                             {{ $settings->header_button_text }}
                         </a>
-                    </li>
-                @endif
-
-                @if($settings && $settings->login == '1')
-                    <li class="list-none flex items-center justify-center">
-                        @guest
-                            <a href="{{ route('login') }}"
-                                class="inline-flex items-center py-2 font-semibold text-[#000435] hover:underline decoration-crimson underline-offset-4 whitespace-nowrap">
-                                My Account
-                            </a>
-                        @else
-                            <a href="{{ route('user.home') }}"
-                                class="inline-flex items-center py-2 font-semibold text-[#000435] hover:underline decoration-crimson underline-offset-4 whitespace-nowrap"
-                                title="{{ auth()->user()->name }}">
-                                My Account
-                            </a>
-                        @endguest
-                    </li>
-                @endif
+                    @endif
+                </li>
             </ul>
 
             <div class="flex min-[918px]:self-stretch gap-2 sm:gap-4 items-center">
-                @if($settings && ($settings->header_search == '1' || $settings->register == '1' || auth()->check()))
-                    <div class="flex items-center gap-2 sm:gap-4">
+                @if($settings && ($settings->header_search == '1' || $settings->login == '1' || $settings->register == '1'))
+                    <div class="flex items-center gap-2 sm:gap-4 font-ghothic text-[19px]">
 
                         {{-- Header Search --}}
                         @if(optional($settings)->header_search == '1' && !empty($settings->header_search_url))
@@ -198,18 +182,31 @@
                         @endif
 
                         @guest
+                            @if($settings->login == '1')
+                                <a href="{{ route('login') }}"
+                                    class="hidden sm:inline-flex items-center py-2 active:underline decoration-crimson underline-offset-4">
+                                    My Account
+                                </a>
+                            @endif
                             @if($settings->register == '1')
                                 <a href="{{ route('register') }}"
-                                    class="hidden sm:inline-flex items-center py-2 gap-3 text-lg font-medium text-[#000435] hover:underline decoration-crimson underline-offset-4 font-ghothic text-[19px]">
+                                    class="hidden sm:inline-flex items-center py-2 active:underline decoration-crimson underline-offset-4">
                                     {{ $settings->register_text ?? 'Register' }}
                                 </a>
                             @endif
                         @else
-                            <a href="{{ route('cart.index') }}"
-                                class="hidden sm:flex items-center gap-2 py-2 text-lg font-medium text-[#000435] font-ghothic text-[19px] hover:underline decoration-crimson underline-offset-4">
-                                <img src="{{ asset('frontend/images/svgs/shopping-cart.svg') }}" class="w-6 h-6" alt="Cart">
-                                <span>Cart ({{ cart_item_count() }})</span>
-                            </a>
+                            <div class="hidden sm:flex items-center gap-4">
+                                <a href="{{ route('user.home') }}"
+                                    class="inline-flex items-center py-2 active:underline decoration-crimson underline-offset-4"
+                                    title="{{ auth()->user()->name }}">
+                                    My Account
+                                </a>
+                                <a href="{{ route('cart.index') }}"
+                                    class="flex items-center gap-2 py-2 hover:underline decoration-crimson underline-offset-4">
+                                    <img src="{{ asset('frontend/images/svgs/shopping-cart.svg') }}" class="w-6 h-6" alt="Cart">
+                                    <span>Cart ({{ cart_item_count() }})</span>
+                                </a>
+                            </div>
                         @endguest
 
                     </div>
@@ -266,13 +263,13 @@
                 @endif
                 @guest
                     @if($settings && $settings->login == '1')
-                        <a href="{{ route('login') }}" class="text-white py-1.5 font-semibold">My Account</a>
+                        <a href="{{ route('login') }}" class="text-white py-1.5">My Account</a>
                     @endif
                     @if($settings && $settings->register == '1')
                         <a href="{{ route('register') }}" class="text-white py-1.5">{{ $settings->register_text ?? 'Register' }}</a>
                     @endif
                 @else
-                    <a href="{{ route('user.home') }}" class="text-white py-1.5 font-semibold">My Account</a>
+                    <a href="{{ route('user.home') }}" class="text-white py-1.5">My Account</a>
                     <a href="{{ route('cart.index') }}" class="text-white py-1.5">Cart ({{ cart_item_count() }})</a>
                 @endguest
             </div>
