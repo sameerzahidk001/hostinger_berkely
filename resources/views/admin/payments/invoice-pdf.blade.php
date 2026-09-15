@@ -157,6 +157,33 @@
             text-align: center;
         }
 
+        .feature-list {
+            list-style: none;
+            margin: 5px 0 0 0;
+            padding: 0;
+        }
+
+        .feature-list li {
+            margin: 0 0 2px 0;
+            padding: 0;
+        }
+
+        .payment-terms {
+            page-break-inside: avoid;
+            break-inside: avoid;
+            margin-top: 12px;
+        }
+
+        .payment-terms h1,
+        .payment-terms h2,
+        .payment-terms h3,
+        .payment-terms h4,
+        .payment-terms p,
+        .payment-terms strong {
+            page-break-after: avoid;
+            break-after: avoid;
+        }
+
         /* Logo image in PDF – keep it small */
         .logo {
             width: 220px;
@@ -223,20 +250,11 @@
                 </div>
             </div>
             <div class="right text-right" style="width:45%;">
-                <h1>Invoice</h1>
-                <div><strong>{{ $invoiceNo }}</strong></div>
+                <h1 style="margin: 0 0 4px;">Invoice</h1>
+                <div><strong>Invoice#</strong> {{ $invoiceNo }}</div>
+                <div style="margin-top: 6px;"><strong>Balance Due:</strong><br>{{ $money($balanceDue) }}</div>
             </div>
         </div>
-
-        <div class="meta-row mb-15">
-            <div class="col"></div>
-            <div class="col"></div>
-            <div class="col text-right">
-                <strong>Balance Due:</strong><br>
-                {{ $money($balanceDue) }}
-            </div>
-        </div>
-
 
         {{-- Student / Bill-to --}}
         <div class="clearfix mb-20">
@@ -260,7 +278,6 @@
                 <tr>
                     <th style="width:40px;">#</th>
                     <th>Training Program & Description</th>
-                    <th style="width:90px;">Tax</th>
                     <th style="width:110px;">Amount</th>
                 </tr>
             </thead>
@@ -277,18 +294,20 @@
                             {{ $coursefee->key_point }}<br>
                         @endif
                         @if (!empty($coursefee?->package_includes))
-                            {{ $coursefee->package_includes }}
+                            <strong>{{ $coursefee->package_includes }}</strong>
                         @endif
 
                         @if (!empty($coursefee?->package_feature) && is_array($coursefee->package_feature))
-                            <ul>
+                            <ul class="feature-list">
                                 @foreach ($coursefee->package_feature as $feature)
-                                    <li>{{ $feature }}</li>
+                                    @php $featureText = trim(strip_tags((string) $feature)); @endphp
+                                    @if ($featureText !== '')
+                                        <li>• {{ $featureText }}</li>
+                                    @endif
                                 @endforeach
                             </ul>
                         @endif
                     </td>
-                    <td>{{ number_format($taxPercentage, 2) }}%</td>
                     <td>{{ $money($lineAmount) }}</td>
                 </tr>
             </tbody>
@@ -296,7 +315,6 @@
 
         <div class="summary">
             <p><strong>Sub Total:</strong> {{ $money($summarySubtotal) }}</p>
-            <p><strong>Tax ({{ number_format($taxPercentage, 2) }}%):</strong> {{ $money($taxAmount) }}</p>
             <p><strong>Total:</strong> {{ $money($summaryTotal) }}</p>
         </div>
 
@@ -342,9 +360,9 @@
             </table>
         @endif
 
-        {{-- Terms & Conditions --}}
+        {{-- Payment instructions / terms (keep heading + bank details together) --}}
         @if(!empty($payments->terms_conditions))
-            <div class="mb-15">
+            <div class="payment-terms">
                 {!! $payments->terms_conditions !!}
             </div>
         @endif

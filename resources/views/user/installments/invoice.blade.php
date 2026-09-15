@@ -212,12 +212,15 @@
                                         {{ $coursefee->key_point ?? '' }}<br>
                                     @endif
                                     @if ($coursefee->package_includes)
-                                        {{ $coursefee->package_includes ?? '' }}
+                                        <strong>{{ $coursefee->package_includes }}</strong>
                                     @endif
-                                    <ul style="list-style: none; margin: 4px 0 0 12px; padding: 0;">
+                                    <ul style="list-style: none; margin: 4px 0 0 0; padding: 0;">
                                         @if(!empty($coursefee->package_feature))
                                             @foreach ($coursefee->package_feature as $feature)
-                                                <li>{{ $feature }}</li>
+                                                @php $featureText = trim(strip_tags((string) $feature)); @endphp
+                                                @if ($featureText !== '')
+                                                    <li style="margin: 0 0 2px;">• {{ $featureText }}</li>
+                                                @endif
                                             @endforeach
                                         @endif
                                     </ul>
@@ -278,7 +281,7 @@
                         </table>
                     @endif
 
-                    <div class="invoice-section" style="margin-top: 12px;">
+                    <div class="invoice-section payment-terms" style="margin-top: 12px; page-break-inside: avoid;">
                         <div class="footer-text">
                             {!! $payments->terms_conditions !!}
                         </div>
