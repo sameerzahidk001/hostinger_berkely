@@ -182,24 +182,25 @@
                         @guest
                             @if($settings->login == '1')
                                 <a href="{{ route('login') }}"
-                                    class="hidden sm:inline-flex items-center py-2 gap-3 text-lg font-medium active:underline decoration-crimson underline-offset-4 font-ghothic text-[19px]">
-                                    {{ $settings->login_text ?? 'Login' }}
+                                    class="hidden sm:inline-flex items-center py-2 gap-3 text-lg font-semibold text-[#000435] hover:underline decoration-crimson underline-offset-4 font-ghothic text-[19px]">
+                                    My Account
                                 </a>
                             @endif
                             @if($settings->register == '1')
                                 <a href="{{ route('register') }}"
-                                    class="hidden sm:inline-flex items-center py-2 gap-3 text-lg font-medium active:underline decoration-crimson underline-offset-4 font-ghothic text-[19px]">
+                                    class="hidden sm:inline-flex items-center py-2 gap-3 text-lg font-medium text-[#000435] hover:underline decoration-crimson underline-offset-4 font-ghothic text-[19px]">
                                     {{ $settings->register_text ?? 'Register' }}
                                 </a>
                             @endif
                         @else
                             <div class="hidden sm:flex items-center gap-4">
                                 <a href="{{ route('user.home') }}"
-                                    class="items-center py-2 gap-3 text-lg font-medium underline decoration-crimson underline-offset-4 font-ghothic text-[19px]">
-                                    {{ auth()->user()->name }}
+                                    class="inline-flex items-center py-2 gap-3 text-lg font-semibold text-[#000435] hover:underline decoration-crimson underline-offset-4 font-ghothic text-[19px]"
+                                    title="{{ auth()->user()->name }}">
+                                    My Account
                                 </a>
                                 <a href="{{ route('cart.index') }}"
-                                    class="flex items-center gap-2 py-2 text-lg font-medium font-ghothic text-[19px] hover:underline decoration-crimson underline-offset-4">
+                                    class="flex items-center gap-2 py-2 text-lg font-medium text-[#000435] font-ghothic text-[19px] hover:underline decoration-crimson underline-offset-4">
                                     <img src="{{ asset('frontend/images/svgs/shopping-cart.svg') }}" class="w-6 h-6" alt="Cart">
                                     <span>Cart ({{ cart_item_count() }})</span>
                                 </a>
@@ -260,13 +261,13 @@
                 @endif
                 @guest
                     @if($settings && $settings->login == '1')
-                        <a href="{{ route('login') }}" class="text-white py-1.5">{{ $settings->login_text ?? 'Login' }}</a>
+                        <a href="{{ route('login') }}" class="text-white py-1.5 font-semibold">My Account</a>
                     @endif
                     @if($settings && $settings->register == '1')
                         <a href="{{ route('register') }}" class="text-white py-1.5">{{ $settings->register_text ?? 'Register' }}</a>
                     @endif
                 @else
-                    <a href="{{ route('user.home') }}" class="text-white py-1.5">{{ auth()->user()->name }}</a>
+                    <a href="{{ route('user.home') }}" class="text-white py-1.5 font-semibold">My Account</a>
                     <a href="{{ route('cart.index') }}" class="text-white py-1.5">Cart ({{ cart_item_count() }})</a>
                 @endguest
             </div>
