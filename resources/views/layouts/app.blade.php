@@ -127,29 +127,27 @@
                     $filteredMenus = collect($menus)->where('menu_group', $settings->header_menu)->values();
                 @endphp
                 @foreach($filteredMenus as $menu)
-                    <li class="static group flex items-center justify-center">
+                    <li class="relative group flex items-center justify-center">
                         @php
                             $cleanLink = Str::replace(['/course', '/diploma'], '', $menu->link);
                         @endphp
                         <a href="{{ $menu->link }}"
                             class="active:underline decoration-crimson underline-offset-4">{{ $menu->name }}</a>
                         @if ($menu->children->count() > 0)
-                            {{-- True 100vw dropdown panel under the fixed header --}}
+                            {{-- Classic dropdown panel under the parent item --}}
                             <div
-                                class="mega-menu-two pointer-events-none group-hover:pointer-events-auto fixed left-0 right-0 top-[70px] z-[1000] hidden w-screen group-hover:block bg-white shadow-[0_8px_24px_rgba(0,0,0,0.12)] border-t border-primary">
-                                <div class="w-full px-4 md:px-8 lg:px-[30px] py-6">
-                                    <ul class="list-none m-0 p-0 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-1">
-                                        @foreach ($menu->children->sortBy('menu_order') as $child)
-                                            <li>
-                                                <a href="{{ $child->link }}"
-                                                    class="flex gap-2 items-start text-black transition-colors duration-150 hover:bg-navy hover:text-white px-3 py-2 whitespace-normal">
-                                                    <span aria-hidden="true" class="shrink-0 leading-snug">•</span>
-                                                    <span class="text-[15px] leading-snug font-medium">{{ $child->name }}</span>
-                                                </a>
-                                            </li>
-                                        @endforeach
-                                    </ul>
-                                </div>
+                                class="mega-menu-two absolute left-0 top-full z-[1000] hidden min-w-[280px] w-max max-w-[420px] group-hover:block bg-white shadow-lg border border-gray-100 border-t-2 border-t-primary">
+                                <ul class="list-none m-0 p-0 py-2">
+                                    @foreach ($menu->children->sortBy('menu_order') as $child)
+                                        <li>
+                                            <a href="{{ $child->link }}"
+                                                class="flex gap-2 items-start text-black transition-colors duration-150 hover:bg-navy hover:text-white px-4 py-2 whitespace-normal">
+                                                <span aria-hidden="true" class="shrink-0 leading-snug">•</span>
+                                                <span class="text-[15px] leading-snug font-medium">{{ $child->name }}</span>
+                                            </a>
+                                        </li>
+                                    @endforeach
+                                </ul>
                             </div>
                         @endif
                     </li>
@@ -166,51 +164,51 @@
                 </li>
             </ul>
 
-            <div class="flex min-[918px]:self-stretch gap-2 sm:gap-4 items-center">
-                @if($settings && ($settings->header_search == '1' || $settings->login == '1' || $settings->register == '1'))
-                    <div class="flex items-center gap-2 sm:gap-4 font-ghothic text-[19px]">
+            <div class="flex min-[918px]:self-stretch gap-2 sm:gap-4 items-center shrink-0">
+                <div class="flex items-center gap-3 sm:gap-4 font-ghothic text-[19px]">
 
-                        {{-- Header Search --}}
-                        @if(optional($settings)->header_search == '1' && !empty($settings->header_search_url))
-                            <a href="{{ url($settings->header_search_url) }}"
-                                class="flex cursor-pointer no-underline justify-center items-center py-2 gap-3 text-lg font-medium">
-                                @if(!empty($settings->header_search_image))
-                                    <img src="{{ asset('images/' . $settings->header_search_image) }}" class="w-6 h-6 md:w-8 md:h-8"
-                                        alt="Search Icon">
-                                @endif
+                    @if(optional($settings)->header_search == '1' && !empty($settings->header_search_url))
+                        <a href="{{ url($settings->header_search_url) }}"
+                            class="flex cursor-pointer no-underline justify-center items-center py-2 gap-3 text-lg font-medium">
+                            @if(!empty($settings->header_search_image))
+                                <img src="{{ asset('images/' . $settings->header_search_image) }}" class="w-6 h-6 md:w-8 md:h-8"
+                                    alt="Search Icon">
+                            @endif
+                        </a>
+                    @endif
+
+                    {{-- Always visible on all screen sizes --}}
+                    @if(!$settings || $settings->login == '1')
+                        @guest
+                            <a href="{{ route('login') }}"
+                                class="inline-flex items-center py-2 whitespace-nowrap active:underline decoration-crimson underline-offset-4">
+                                My Account
+                            </a>
+                        @else
+                            <a href="{{ route('user.home') }}"
+                                class="inline-flex items-center py-2 whitespace-nowrap active:underline decoration-crimson underline-offset-4"
+                                title="{{ auth()->user()->name }}">
+                                My Account
+                            </a>
+                        @endguest
+                    @endif
+
+                    @guest
+                        @if($settings && $settings->register == '1')
+                            <a href="{{ route('register') }}"
+                                class="hidden min-[980px]:inline-flex items-center py-2 active:underline decoration-crimson underline-offset-4">
+                                {{ $settings->register_text ?? 'Register' }}
                             </a>
                         @endif
+                    @else
+                        <a href="{{ route('cart.index') }}"
+                            class="hidden min-[980px]:flex items-center gap-2 py-2 hover:underline decoration-crimson underline-offset-4">
+                            <img src="{{ asset('frontend/images/svgs/shopping-cart.svg') }}" class="w-6 h-6" alt="Cart">
+                            <span>Cart ({{ cart_item_count() }})</span>
+                        </a>
+                    @endguest
 
-                        @guest
-                            @if($settings->login == '1')
-                                <a href="{{ route('login') }}"
-                                    class="hidden sm:inline-flex items-center py-2 active:underline decoration-crimson underline-offset-4">
-                                    My Account
-                                </a>
-                            @endif
-                            @if($settings->register == '1')
-                                <a href="{{ route('register') }}"
-                                    class="hidden sm:inline-flex items-center py-2 active:underline decoration-crimson underline-offset-4">
-                                    {{ $settings->register_text ?? 'Register' }}
-                                </a>
-                            @endif
-                        @else
-                            <div class="hidden sm:flex items-center gap-4">
-                                <a href="{{ route('user.home') }}"
-                                    class="inline-flex items-center py-2 active:underline decoration-crimson underline-offset-4"
-                                    title="{{ auth()->user()->name }}">
-                                    My Account
-                                </a>
-                                <a href="{{ route('cart.index') }}"
-                                    class="flex items-center gap-2 py-2 hover:underline decoration-crimson underline-offset-4">
-                                    <img src="{{ asset('frontend/images/svgs/shopping-cart.svg') }}" class="w-6 h-6" alt="Cart">
-                                    <span>Cart ({{ cart_item_count() }})</span>
-                                </a>
-                            </div>
-                        @endguest
-
-                    </div>
-                @endif
+                </div>
 
                 <!-- mobile button -->
                 <button id="menuButton"
