@@ -42,7 +42,7 @@ return [
     'noon' => [
         'business_id' => env('NOON_BUSINESS_ID', 'berkeley'),
         'app_id' => env('NOON_APP_ID', 'BerkeleyWeb'),
-        'app_key' => env('NOON_APP_KEY', '5e69b96acdd84164bc28fd4e5dad0bff'),
+        'app_key' => env('NOON_APP_KEY', '706e59eb4057482b9a8172880f327351'),
         'auth_key' => env('NOON_AUTH_KEY'),
         'auth_scheme' => env('NOON_AUTH_SCHEME', 'Key'),
         'mode' => env('NOON_MODE', 'live'),

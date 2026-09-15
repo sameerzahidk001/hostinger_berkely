@@ -58,7 +58,7 @@ if [ -f .env ]; then
   }
   upsert_env NOON_BUSINESS_ID berkeley
   upsert_env NOON_APP_ID BerkeleyWeb
-  upsert_env NOON_APP_KEY 5e69b96acdd84164bc28fd4e5dad0bff
+  upsert_env NOON_APP_KEY 706e59eb4057482b9a8172880f327351
   upsert_env NOON_AUTH_SCHEME Key
   upsert_env NOON_MODE live
   upsert_env NOON_API_URL https://api.noonpayments.com/payment/v1
