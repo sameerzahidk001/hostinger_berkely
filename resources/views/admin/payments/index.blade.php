@@ -193,12 +193,12 @@
                                             </button>
                                             @endif
                                             @if ($payment->id && !in_array($payment->id, $shownPaymentIds))
-                                            <form action="{{ route('admin.installments.invoice.pdf') }}" method="POST" target="_blank">
+                                            <form action="{{ route('admin.installments.invoice.pdf') }}" method="POST">
                                                 @csrf
                                                 <input type="hidden" name="course_id" value="{{ $payment->course?->id ?? '' }}">
                                                 <input type="hidden" name="user_id" value="{{ $payment->user?->id ?? '' }}">
                                                 <input type="hidden" name="payment_id" value="{{ $payment->id }}">
-                                                <button type="submit" class="btn btn-primary btn-sm"> <i class="fa fa-file-pdf-o"></i> Invoice</button>
+                                                <button type="submit" class="btn btn-primary btn-sm"> <i class="fa fa-download"></i> Invoice</button>
                                             </form>
                                             @php
                                             $shownPaymentIds[] = $payment->id;
@@ -585,9 +585,8 @@
                                 `
                                 : `
                                     <a href="/admin/installments/receipt/${installment.id}" 
-                                        target="_blank" 
                                         class="btn btn-success btn-sm" style="margin-right: 4px; margin-bottom: 4px;">
-                                        <i class="fa fa-file-text-o"></i> Receipt
+                                        <i class="fa fa-download"></i> Receipt
                                     </a>
                                     <a href="/admin/payments/send-receipt/${installment.id}" 
                                         class="btn btn-success btn-sm"><i class="fa fa-send"></i> Send

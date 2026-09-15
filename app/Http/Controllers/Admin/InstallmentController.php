@@ -10,7 +10,6 @@ use Illuminate\Http\Request;
 use Stripe\Checkout\Session;
 use App\Models\Installment;
 use Stripe\StripeClient;
-use App\Models\Country;
 use App\Models\Payment;
 use Stripe\Stripe;
 
@@ -175,22 +174,17 @@ class InstallmentController extends Controller
     public function receipt($id)
     {
         $installment = Installment::with(['user', 'payment.course', 'payment.courseFee'])->findOrFail($id);
-        return view('admin.payments.receipt', compact('installment'));
+
+        $pdf = Pdf::loadView('admin.payments.receipt-pdf', compact('installment'))
+            ->setPaper('a4');
+
+        return $pdf->download('receipt-RC-' . str_pad((string) $installment->id, 6, '0', STR_PAD_LEFT) . '.pdf');
     }
 
     public function generateInvoice(Request $request)
     {
-        // Function call from helper
-        $location = getUserLocation();
-        $countryCode = $location['country'] ?? 'US';
-
-        // Get the currency for the detected country
-        $country = Country::where('iso_code', $countryCode)->first();
-        
-        $currency = $country->currency ? $country->currency->code : 'USD';
-
         $course_id = $request->course_id;
-        $installments = Installment::with(['payment.course', 'payment.courseFee'])
+        $installments = Installment::with(['payment.course', 'payment.courseFee', 'user'])
             ->where('user_id', $request->user_id)
             ->where('payment_id', $request->payment_id)
             ->whereHas('payment', function ($query) use ($course_id) {
@@ -207,24 +201,19 @@ class InstallmentController extends Controller
         $course = $installments->first()->payment->course;
         $coursefee = $installments->first()->payment->courseFee;
         $payments = $installments->first()->payment;
-
-        // Sum Paid Amount and Remaining Amount
         $totalPaidAmount = $installments->sum('paid_amount');
         $totalRemainingAmount = $installments->sum('remaining_amount');
 
-        return view('admin.payments.invoice', compact('installments', 'user', 'course', 'coursefee', 'totalPaidAmount', 'totalRemainingAmount', 'payments', 'currency'));
+        $pdf = Pdf::loadView('admin.payments.invoice-pdf', compact(
+            'installments',
+            'user',
+            'course',
+            'coursefee',
+            'totalPaidAmount',
+            'totalRemainingAmount',
+            'payments'
+        ))->setPaper('a4');
 
-        // $pdf = PDF::loadView('admin.payments.pdf', compact(
-        //     'installments',
-        //     'user',
-        //     'course',
-        //     'coursefee',
-        //     'totalPaidAmount',
-        //     'totalRemainingAmount',
-        //     'payments',
-        //     'currency'
-        // ));
-
-        // return $pdf->download('invoice.pdf');
+        return $pdf->download('invoice-INV-' . str_pad((string) $payments->id, 6, '0', STR_PAD_LEFT) . '.pdf');
     }
 }

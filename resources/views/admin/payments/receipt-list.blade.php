@@ -164,9 +164,8 @@
                                         </a>
                                         @endif
                                         <a href="{{ route('admin.installments.receipt', $installment->id) }}"
-                                            target="_blank"
                                             class="btn btn-success btn-sm" style="margin-right: 4px; margin-bottom: 4px;">
-                                            <i class="fa fa-file-text-o"></i> Receipt
+                                            <i class="fa fa-download"></i> Receipt
                                         </a>
                                         <a href="{{ route('admin.payments.send-receipt', $installment->id) }}"
                                             class="btn btn-success btn-sm"><i class="fa fa-send"></i> Send
