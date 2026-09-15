@@ -50,12 +50,16 @@
                         <input type="number" name="duration_minutes" class="form-control" min="15" max="480" step="15" value="{{ old('duration_minutes', 60) }}">
                     </div>
                     <div class="col-md-4 form-group">
-                        <label>Zoho meeting link</label>
-                        <input type="url" name="zoho_link" class="form-control" value="{{ old('zoho_link') }}" placeholder="https://meeting.zoho.com/...">
+                        <label>Meeting link</label>
                         @if($zohoMeetingReady ?? false)
-                            <span class="help-block">Leave blank to auto-create the Meeting Lab session and a Zoho Calendar event. Assigned students will see Join Zoho.</span>
+                            <div class="meeting-auto-box">
+                                <strong>Auto-create</strong><br>
+                                Zoho Meeting link is created from this schedule. No paste needed.<br>
+                                The same link is added to Zoho Calendar for the class.
+                            </div>
                         @else
-                            <span class="help-block">Paste the join link from meetinglab.zoho.com until Zoho OAuth is connected.</span>
+                            <input type="url" name="zoho_link" class="form-control" value="{{ old('zoho_link') }}" placeholder="https://meeting.zoho.com/...">
+                            <span class="help-block">Connect Zoho OAuth to auto-create the meeting + calendar event. Until then you can paste a Meeting Lab link.</span>
                         @endif
                     </div>
 

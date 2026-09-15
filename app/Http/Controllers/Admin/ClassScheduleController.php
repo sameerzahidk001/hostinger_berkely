@@ -250,8 +250,9 @@ class ClassScheduleController extends Controller
             'recurrence_type' => 'nullable|in:none,daily,weekly,weekdays',
             'recurrence_days' => 'nullable|array',
             'recurrence_days.*' => 'in:MO,TU,WE,TH,FR,SA,SU',
+            'recurrence_end' => 'nullable|in:never,on,after',
             'recurrence_count' => 'nullable|integer|min:1|max:52',
-            'recurrence_until' => 'nullable|date|after_or_equal:scheduled_at',
+            'recurrence_until' => 'nullable|date',
             'reminders' => 'nullable|array|max:8',
             'reminders.*.action' => 'nullable|in:email,popup,notification',
             'reminders.*.amount' => 'nullable|integer|min:1|max:60',
@@ -267,17 +268,27 @@ class ClassScheduleController extends Controller
 
         $type = (string) $request->input('recurrence_type', ClassSchedule::RECURRENCE_NONE);
         $schedule->recurrence_type = $type ?: ClassSchedule::RECURRENCE_NONE;
-        $schedule->recurrence_days = $type === ClassSchedule::RECURRENCE_WEEKLY
+        $schedule->recurrence_days = in_array($type, [ClassSchedule::RECURRENCE_WEEKLY, ClassSchedule::RECURRENCE_WEEKDAYS], true)
             ? array_values(array_unique($request->input('recurrence_days', [])))
             : null;
-        $schedule->recurrence_count = $request->filled('recurrence_until')
-            ? null
-            : (int) ($request->input('recurrence_count') ?: ($type === ClassSchedule::RECURRENCE_NONE ? null : 12));
-        $schedule->recurrence_until = $request->input('recurrence_until') ?: null;
 
+        if ($type === ClassSchedule::RECURRENCE_WEEKDAYS) {
+            $schedule->recurrence_days = ['MO', 'TU', 'WE', 'TH', 'FR'];
+        }
+
+        $endMode = (string) $request->input('recurrence_end', 'after');
         if ($type === ClassSchedule::RECURRENCE_NONE) {
             $schedule->recurrence_days = null;
             $schedule->recurrence_count = null;
+            $schedule->recurrence_until = null;
+        } elseif ($endMode === 'never') {
+            $schedule->recurrence_count = null;
+            $schedule->recurrence_until = null;
+        } elseif ($endMode === 'on') {
+            $schedule->recurrence_until = $request->input('recurrence_until') ?: null;
+            $schedule->recurrence_count = null;
+        } else {
+            $schedule->recurrence_count = max(1, min(52, (int) ($request->input('recurrence_count') ?: 13)));
             $schedule->recurrence_until = null;
         }
 
@@ -311,19 +322,23 @@ class ClassScheduleController extends Controller
 
         $parts = [$base];
         $meetingNote = match ($meetingStatus) {
-            'created' => 'Zoho Meeting was created and assigned students will see Join Zoho.',
-            'existing' => null,
-            'not_configured' => 'Paste a Meeting Lab join link, or connect Zoho OAuth to auto-create sessions.',
-            default => 'Zoho Meeting was not created — paste the join link from meetinglab.zoho.com.',
+            'created' => 'Zoho Meeting link was created automatically — students can Join Zoho.',
+            'existing' => 'Existing Zoho Meeting link was kept.',
+            'not_configured' => 'Zoho OAuth is not connected, so the meeting link could not be auto-created.',
+            default => 'Zoho Meeting link was not created automatically. Check Zoho Meeting permissions / presenter.',
         };
         if ($meetingNote) {
             $parts[] = $meetingNote;
         }
 
         if ($calendarStatus === 'created') {
-            $parts[] = 'The class was also added to Zoho Calendar.';
+            $parts[] = 'The meeting was also added to Zoho Calendar with the join link.';
+        } elseif ($calendarStatus === 'existing') {
+            $parts[] = 'Zoho Calendar event already exists.';
         } elseif ($meetingStatus === 'created' && $calendarStatus === 'failed') {
             $parts[] = 'Zoho Calendar event was not created — import the .ics if needed.';
+        } elseif ($calendarStatus === 'not_configured') {
+            $parts[] = 'Connect Zoho Calendar to auto-add the class to the calendar.';
         }
 
         return implode(' ', $parts);

@@ -56,10 +56,18 @@
                         </select>
                     </div>
                     <div class="col-md-3 form-group">
-                        <label>Zoho meeting link</label>
-                        <input type="url" name="zoho_link" class="form-control" value="{{ old('zoho_link', $schedule->zoho_link) }}">
-                        @if(empty($schedule->zoho_link) && ($zohoMeetingReady ?? false))
-                            <span class="help-block">Leave blank to auto-create the Meeting Lab session and a Zoho Calendar event for this batch.</span>
+                        <label>Meeting link</label>
+                        @if(!empty($schedule->zoho_link))
+                            <input type="url" name="zoho_link" class="form-control" value="{{ old('zoho_link', $schedule->zoho_link) }}">
+                            <span class="help-block">Existing auto-created link. Leave as-is unless you need to replace it.</span>
+                        @elseif($zohoMeetingReady ?? false)
+                            <div class="meeting-auto-box">
+                                <strong>Auto-create</strong><br>
+                                Save to create the Zoho Meeting link and add it to Zoho Calendar. No paste needed.
+                            </div>
+                        @else
+                            <input type="url" name="zoho_link" class="form-control" value="{{ old('zoho_link', $schedule->zoho_link) }}">
+                            <span class="help-block">Connect Zoho OAuth to auto-create the meeting + calendar event.</span>
                         @endif
                     </div>
 

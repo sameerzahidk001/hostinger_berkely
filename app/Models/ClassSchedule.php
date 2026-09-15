@@ -188,10 +188,11 @@ class ClassSchedule extends Model
         if ($this->recurrence_until) {
             $until = Carbon::parse($this->recurrence_until)->endOfDay()->utc()->format('Ymd\THis\Z');
             $parts[] = 'UNTIL=' . $until;
-        } else {
-            $count = max(1, min(52, (int) ($this->recurrence_count ?: 12)));
+        } elseif ($this->recurrence_count) {
+            $count = max(1, min(52, (int) $this->recurrence_count));
             $parts[] = 'COUNT=' . $count;
         }
+        // "Never" ends: omit COUNT/UNTIL (Zoho infinite recurrence)
 
         return implode(';', $parts);
     }
@@ -213,12 +214,14 @@ class ClassSchedule extends Model
 
         $starts = [];
         $cursor = $this->scheduled_at->copy()->startOfDay();
-        $endBoundary = $this->recurrence_until
+        $hasUntil = (bool) $this->recurrence_until;
+        $hasCount = (int) ($this->recurrence_count ?: 0) > 0;
+        $endBoundary = $hasUntil
             ? Carbon::parse($this->recurrence_until)->endOfDay()
             : $this->scheduled_at->copy()->addYear();
-        $limit = $this->recurrence_until
+        $limit = $hasUntil
             ? $max
-            : max(1, min($max, (int) ($this->recurrence_count ?: 12)));
+            : ($hasCount ? max(1, min($max, (int) $this->recurrence_count)) : min($max, 52));
 
         $allowedDays = $this->recurrenceType() === self::RECURRENCE_DAILY
             ? null

@@ -2,6 +2,23 @@
     $supportsRecurrence = \App\Models\ClassSchedule::supportsRecurrenceColumns();
     $recurrenceType = old('recurrence_type', $schedule->recurrence_type ?? 'none');
     $selectedDays = collect(old('recurrence_days', $schedule->recurrence_days ?? []))->map(fn ($d) => strtoupper((string) $d))->all();
+    if ($recurrenceType === 'weekly' && $selectedDays === [] && !empty($schedule->scheduled_at)) {
+        $map = [1 => 'MO', 2 => 'TU', 3 => 'WE', 4 => 'TH', 5 => 'FR', 6 => 'SA', 7 => 'SU'];
+        $selectedDays = [$map[$schedule->scheduled_at->dayOfWeekIso] ?? 'MO'];
+    }
+    $endMode = old('recurrence_end');
+    if (! $endMode) {
+        if (!empty($schedule->recurrence_until)) {
+            $endMode = 'on';
+        } elseif (!empty($schedule->recurrence_count)) {
+            $endMode = 'after';
+        } elseif (($schedule->recurrence_type ?? 'none') !== 'none') {
+            $endMode = 'never';
+        } else {
+            $endMode = 'after';
+        }
+    }
+    $dayLetters = ['SU' => 'S', 'MO' => 'M', 'TU' => 'T', 'WE' => 'W', 'TH' => 'T', 'FR' => 'F', 'SA' => 'S'];
     $defaultReminders = [
         ['action' => 'email', 'amount' => 1, 'unit' => 'days'],
         ['action' => 'email', 'amount' => 2, 'unit' => 'days'],
@@ -32,44 +49,61 @@
 @if($supportsRecurrence)
     <div class="col-md-12">
         <hr>
-        <h4 style="margin-top:0;">Days, recurrence &amp; reminders</h4>
-        <p class="help-block">Same options as Zoho Calendar when the class is synced: choose whether it repeats, on which days, and when to remind students.</p>
+        <h4 style="margin-top:0;">Custom recurrence</h4>
+        <p class="help-block">Pick multiple weekdays (like Zoho), then choose when the series ends.</p>
     </div>
 
-    <div class="col-md-4 form-group">
-        <label>Repeat</label>
-        <select name="recurrence_type" id="recurrence_type" class="form-control">
-            <option value="none" @selected($recurrenceType === 'none')>Does not repeat</option>
-            <option value="daily" @selected($recurrenceType === 'daily')>Daily</option>
-            <option value="weekdays" @selected($recurrenceType === 'weekdays')>Every weekday (Mon–Fri)</option>
-            <option value="weekly" @selected($recurrenceType === 'weekly')>Weekly on selected days</option>
-        </select>
-    </div>
-    <div class="col-md-4 form-group">
-        <label>Ends after (classes)</label>
-        <input type="number" name="recurrence_count" id="recurrence_count" class="form-control" min="1" max="52"
-            value="{{ old('recurrence_count', $schedule->recurrence_count ?? 12) }}"
-            @disabled($recurrenceType === 'none')>
-        <span class="help-block">Used when no end date is set.</span>
-    </div>
-    <div class="col-md-4 form-group">
-        <label>Or end date</label>
-        <input type="date" name="recurrence_until" id="recurrence_until" class="form-control"
-            value="{{ old('recurrence_until', optional($schedule->recurrence_until ?? null)->format('Y-m-d')) }}"
-            @disabled($recurrenceType === 'none')>
+    <div class="col-md-12 form-group">
+        <div class="btn-group recurrence-tabs" role="group">
+            <label class="btn btn-default {{ $recurrenceType === 'none' ? 'active' : '' }}">
+                <input type="radio" name="recurrence_type" value="none" autocomplete="off" @checked($recurrenceType === 'none')> Does not repeat
+            </label>
+            <label class="btn btn-default {{ $recurrenceType === 'daily' ? 'active' : '' }}">
+                <input type="radio" name="recurrence_type" value="daily" autocomplete="off" @checked($recurrenceType === 'daily')> Day
+            </label>
+            <label class="btn btn-default {{ in_array($recurrenceType, ['weekly','weekdays'], true) ? 'active' : '' }}">
+                <input type="radio" name="recurrence_type" value="weekly" autocomplete="off" @checked(in_array($recurrenceType, ['weekly','weekdays'], true))> Week
+            </label>
+        </div>
     </div>
 
-    <div class="col-md-12 form-group" id="recurrence_days_wrap" style="{{ $recurrenceType === 'weekly' ? '' : 'display:none;' }}">
-        <label>Repeat on</label>
-        <div class="row">
-            @foreach(\App\Models\ClassSchedule::DAY_CODES as $code => $label)
-                <div class="col-xs-6 col-sm-3 col-md-1" style="margin-bottom:6px;">
-                    <label class="checkbox-inline" style="padding-left:0;">
-                        <input type="checkbox" name="recurrence_days[]" value="{{ $code }}" @checked(in_array($code, $selectedDays, true))>
-                        {{ $label }}
-                    </label>
-                </div>
+    <div class="col-md-12 form-group" id="recurrence_days_wrap" style="{{ in_array($recurrenceType, ['weekly','weekdays'], true) ? '' : 'display:none;' }}">
+        <label>Repeats on <span class="text-muted">(select multiple days)</span></label>
+        <div class="weekday-circles">
+            @foreach($dayLetters as $code => $letter)
+                <label class="weekday-circle {{ in_array($code, $selectedDays, true) ? 'is-on' : '' }}" title="{{ \App\Models\ClassSchedule::DAY_CODES[$code] }}">
+                    <input type="checkbox" name="recurrence_days[]" value="{{ $code }}" @checked(in_array($code, $selectedDays, true))>
+                    <span>{{ $letter }}</span>
+                </label>
             @endforeach
+        </div>
+        <div id="recurrence_summary" class="recurrence-summary">Weekly on selected days</div>
+    </div>
+
+    <div class="col-md-12 form-group recurrence-ends" id="recurrence_ends_wrap" style="{{ $recurrenceType === 'none' ? 'display:none;' : '' }}">
+        <label>Ends</label>
+        <div class="radio">
+            <label>
+                <input type="radio" name="recurrence_end" value="never" @checked($endMode === 'never')>
+                Never
+            </label>
+        </div>
+        <div class="radio" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <label style="margin:0;">
+                <input type="radio" name="recurrence_end" value="on" @checked($endMode === 'on')>
+                On
+            </label>
+            <input type="date" name="recurrence_until" id="recurrence_until" class="form-control" style="width:auto; display:inline-block;"
+                value="{{ old('recurrence_until', optional($schedule->recurrence_until ?? null)->format('Y-m-d') ?: now()->addMonths(3)->format('Y-m-d')) }}">
+        </div>
+        <div class="radio" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:6px;">
+            <label style="margin:0;">
+                <input type="radio" name="recurrence_end" value="after" @checked($endMode === 'after')>
+                After
+            </label>
+            <input type="number" name="recurrence_count" id="recurrence_count" class="form-control" style="width:90px; display:inline-block;" min="1" max="52"
+                value="{{ old('recurrence_count', $schedule->recurrence_count ?? 13) }}">
+            <span>Occurrences</span>
         </div>
     </div>
 

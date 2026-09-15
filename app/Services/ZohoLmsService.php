@@ -194,6 +194,7 @@ class ZohoLmsService
             'url' => $schedule->zoho_link ?: config('app.url'),
             'reminders' => $schedule->reminderList(),
             'notify_attendee' => $attendees ? 1 : 0,
+            'conference' => 'zmeeting',
         ];
 
         if ($rrule = $schedule->zohoRrule()) {
