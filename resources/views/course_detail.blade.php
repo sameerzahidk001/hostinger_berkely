@@ -1081,6 +1081,7 @@
                                 <div class="bg-yellow w-[50px] h-[2px]"></div>
                                 <span
                                     class="font-semibold section-subheading text-left">{{ $course->dynamicLabel->exam_format_duration ?? 'Exam format & duration' }}</span>
+                                <div class="bg-yellow w-[50px] h-[2px]"></div>
                             </div>
                             <div class="text-[16px] mt-4 editor">
                                 {!! $course->course_exam_format_duration_overview !!}
@@ -1153,6 +1154,7 @@
                                 <div class="bg-yellow w-[50px] h-[2px]"></div>
                                 <span
                                     class="font-semibold section-subheading text-left">{{ $course->dynamicLabel->exam_dates ?? 'exam dates' }}</span>
+                                <div class="bg-yellow w-[50px] h-[2px]"></div>
                             </div>
                             <div class="text-[16px] pt-4 editor">{!! $course->exam_dates !!}</div>
                         @endif
@@ -1162,6 +1164,7 @@
                                 <div class="bg-yellow w-[50px] h-[2px]"></div>
                                 <span
                                     class="font-semibold section-subheading text-left">{{ $course->dynamicLabel->exam_dates_registration ?? 'Exam registration deadline' }}</span>
+                                <div class="bg-yellow w-[50px] h-[2px]"></div>
                             </div>
                             <div class="text-[16px] pt-4 editor">{!! $course->exam_reg_deadline !!}</div>
                         @endif
@@ -1176,6 +1179,7 @@
                         <div class="bg-yellow w-[50px] h-[2px]"></div>
                         <span
                             class="font-semibold section-subheading text-left">{{ $course->dynamicLabel->passing_criteria ?? 'Passing criteria' }}</span>
+                        <div class="bg-yellow w-[50px] h-[2px]"></div>
                     </div>
                     <span class="text-[16px] mt-0 mb-4 editor">{!! $course->exam_passing_criteria !!}</span>
                 @endif
@@ -1185,6 +1189,7 @@
                         <div class="bg-yellow w-[50px] h-[2px]"></div>
                         <span
                             class="font-semibold section-subheading text-left">{{ $course->dynamicLabel->exam_location ?? 'Exam locations' }}</span>
+                        <div class="bg-yellow w-[50px] h-[2px]"></div>
                     </div>
 
                     <div class="text-[16px] mb-2 editor">
@@ -1495,10 +1500,12 @@
         <section id="eleven"
             class="card-hidden faq flex flex-col px-4 bg-[#000435] py-[44px] items-center min-[1200px]:px-[72px]" style="margin-bottom: 0px !important;">
             <div class="max-w-[900px]">
-                <div class="flex justify-between border-white border-b pb-3 w-full">
+                <div class="flex gap-3 items-center justify-center border-white border-b pb-3 w-full">
+                    <div class="bg-yellow w-[50px] h-[2px]"></div>
                     <h2
                         class="text-[20px] sm:text-[24px] text-white md:text-[32px] font-canela section-heading text-center">
                         {{ $course->dynamicLabel?->faq_heading ?? 'FAQ: ' . $course->title }}</h2>
+                    <div class="bg-yellow w-[50px] h-[2px]"></div>
                     <!-- <a href="#" class="text-[24px] text-white hover:underline">All FAQs</a> -->
                 </div>
                 <div class="accordion flex flex-col gap-3">
