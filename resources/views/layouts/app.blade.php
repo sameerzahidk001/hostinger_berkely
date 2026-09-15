@@ -153,13 +153,27 @@
                     </li>
                 @endforeach
 
-                <li class="list-none relative flex items-center justify-center">
+                <li class="list-none relative flex items-center justify-center gap-3">
                     @if($settings && $settings->header_button == '1')
                         <a href="{{ $settings->header_button_url }}"
                             class="border px-4 py-1 w-full border-[{{ $settings->header_button_bg }}] bg-[{{ $settings->header_button_bg }}] transition-all delay-300 duration-300 content-center rounded uppercase"
                             style="color: {{ $settings->header_button_color }}">
                             {{ $settings->header_button_text }}
                         </a>
+                    @endif
+                    @if(!$settings || $settings->login == '1')
+                        @guest
+                            <a href="{{ route('login') }}"
+                                class="inline-flex items-center py-2 whitespace-nowrap active:underline decoration-crimson underline-offset-4">
+                                My Account
+                            </a>
+                        @else
+                            <a href="{{ route('user.home') }}"
+                                class="inline-flex items-center py-2 whitespace-nowrap active:underline decoration-crimson underline-offset-4"
+                                title="{{ auth()->user()->name }}">
+                                My Account
+                            </a>
+                        @endguest
                     @endif
                 </li>
             </ul>
@@ -177,21 +191,30 @@
                         </a>
                     @endif
 
-                    {{-- Always visible on all screen sizes --}}
-                    @if(!$settings || $settings->login == '1')
-                        @guest
-                            <a href="{{ route('login') }}"
-                                class="inline-flex items-center py-2 whitespace-nowrap active:underline decoration-crimson underline-offset-4">
-                                My Account
+                    {{-- Mobile/tablet: Enquire + My Account sit together (desktop versions live in the nav ul) --}}
+                    <div class="flex min-[980px]:hidden items-center gap-3">
+                        @if($settings && $settings->header_button == '1')
+                            <a href="{{ $settings->header_button_url }}"
+                                class="border px-3 py-1 border-[{{ $settings->header_button_bg }}] bg-[{{ $settings->header_button_bg }}] rounded uppercase text-sm"
+                                style="color: {{ $settings->header_button_color }}">
+                                {{ $settings->header_button_text }}
                             </a>
-                        @else
-                            <a href="{{ route('user.home') }}"
-                                class="inline-flex items-center py-2 whitespace-nowrap active:underline decoration-crimson underline-offset-4"
-                                title="{{ auth()->user()->name }}">
-                                My Account
-                            </a>
-                        @endguest
-                    @endif
+                        @endif
+                        @if(!$settings || $settings->login == '1')
+                            @guest
+                                <a href="{{ route('login') }}"
+                                    class="inline-flex items-center py-2 whitespace-nowrap active:underline decoration-crimson underline-offset-4">
+                                    My Account
+                                </a>
+                            @else
+                                <a href="{{ route('user.home') }}"
+                                    class="inline-flex items-center py-2 whitespace-nowrap active:underline decoration-crimson underline-offset-4"
+                                    title="{{ auth()->user()->name }}">
+                                    My Account
+                                </a>
+                            @endguest
+                        @endif
+                    </div>
 
                     @guest
                         @if($settings && $settings->register == '1')
