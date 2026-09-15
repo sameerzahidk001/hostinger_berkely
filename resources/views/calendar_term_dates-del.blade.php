@@ -58,6 +58,7 @@
             <section class="font-mono flex flex-col gap-4">
                 <!-- <span class="text-[18px] font-semibold">School Time Table</span> -->
                 <h1 id="section5" class="text-2xl font-semibold font-canela mb-2">School Time Table</h1>
+                <div class="w-[80px] h-[2px] bg-yellow"></div>
                 <div class="w-full mb-8 overflow-hidden rounded-lg shadow-lg">
                     <div class="w-full overflow-x-auto">
                         <table class="w-full">

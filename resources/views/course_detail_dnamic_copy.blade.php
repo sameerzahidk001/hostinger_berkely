@@ -103,7 +103,9 @@
     @if( !empty($course->description) )
     <div class="flex flex-col pb-4">
         <div class="flex gap-3 items-center justify-center mb-6 ">
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <span class="text-[20px] sm:text-[24px] text-dark md:text-[32px] font-canela">Overview</span>
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
         <!-- <div class="flex flex-col items-center">
                 {!! $course->description !!}
@@ -121,7 +123,9 @@
                 @if(!empty($course->offered_by['institute']))
                 <div class="flex flex-col pb-4">
                     <div class="flex gap-3 items-center justify-center mb-3 mt-3">
+                        <div class="bg-yellow w-[50px] h-[2px]"></div>
                         <span class="font-semibold uppercase">Offered By</span>
+                        <div class="bg-yellow w-[50px] h-[2px]"></div>
                     </div>
                     <div class="flex flex-col items-center">
                             {!! optional($course->offered_by)['institute'] !!}
@@ -132,7 +136,9 @@
                 @if(!empty($course->offered_by['head_office']))
                     <div class="flex flex-col pb-4">
                         <div class="flex gap-3 items-center justify-center mb-3 ">
+                            <div class="bg-yellow w-[50px] h-[2px]"></div>
                             <span class="font-semibold uppercase">Head Office</span>
+                            <div class="bg-yellow w-[50px] h-[2px]"></div>
                         </div>
                         <div class="flex flex-col items-center">
                                 {!! optional($course->offered_by)['head_office'] !!}
@@ -142,7 +148,9 @@
                 @if(!empty($course->offered_by['members']))
                     <div class="flex flex-col pb-4">
                         <div class="flex gap-3 items-center justify-center mb-3 ">
+                            <div class="bg-yellow w-[50px] h-[2px]"></div>
                             <span class="font-semibold uppercase">Members</span>
+                            <div class="bg-yellow w-[50px] h-[2px]"></div>
                         </div>
                         <div class="flex flex-col items-center">
                                 {!! optional($course->offered_by)['members'] !!}
@@ -151,7 +159,9 @@
                 @endif
                 @if(!empty($course->offered_by['founded_in']))
                     <div class="flex gap-3 items-center justify-center mb-3 ">
+                        <div class="bg-yellow w-[50px] h-[2px]"></div>
                         <span class="font-semibold uppercase">Founded In</span>
+                        <div class="bg-yellow w-[50px] h-[2px]"></div>
                     </div>
                     <div class="flex flex-col items-center">
                             {!! optional($course->offered_by)['founded_in'] !!}
@@ -169,7 +179,9 @@
 
         @if( !empty($course->vision_and_mission) )
             <div class="flex gap-3 items-center justify-center my-3 ">
+                <div class="bg-yellow w-[50px] h-[2px]"></div>
                 <span class="font-semibold uppercase">Vision & Mission</span>
+                <div class="bg-yellow w-[50px] h-[2px]"></div>
             </div>
             <div class="flex flex-col items-center font-semibold">
                     {!! $course->vision_and_mission !!}
@@ -181,7 +193,9 @@
     {{--@if(!empty($course->offered_by['institute']))
     <div class="flex flex-col pb-4">
         <div class="flex gap-3 items-center justify-center mb-3 mt-3">
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <span class="font-semibold uppercase">Offered By</span>
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
         <div class="flex flex-col items-center">
                 {!! optional($course->offered_by)['institute'] !!}
@@ -191,7 +205,9 @@
     @if(!empty($course->offered_by['head_office']))
     <div class="flex flex-col pb-4">
         <div class="flex gap-3 items-center justify-center mb-3 ">
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <span class="font-semibold uppercase">Head Office</span>
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
         <div class="flex flex-col items-center">
                 {!! optional($course->offered_by)['head_office'] !!}
@@ -201,7 +217,9 @@
     @if(!empty($course->offered_by['members']))
     <div class="flex flex-col pb-4">
         <div class="flex gap-3 items-center justify-center mb-3 ">
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <span class="font-semibold uppercase">Members</span>
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
         <div class="flex flex-col items-center">
                 {!! optional($course->offered_by)['members'] !!}
@@ -210,7 +228,9 @@
     @endif
     @if(!empty($course->offered_by['founded_in']))
     <div class="flex gap-3 items-center justify-center mb-3 ">
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
         <span class="font-semibold uppercase">Founded In</span>
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
     </div>
     <div class="flex flex-col items-center">
             {!! optional($course->offered_by)['founded_in'] !!}
@@ -220,7 +240,9 @@
 {{--@if( !empty($course->vision_and_mission) )
 <section  class="bg-white px-6 my-0 pt-10  md:px-16 lg:px-[120px]">
     <div class="flex gap-3 items-center justify-center mb-3 ">
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
         <span class="font-semibold uppercase">Vision & Mission</span>
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
     </div>
     <div class="flex flex-col items-center">
             {!! $course->vision_and_mission !!}
@@ -230,7 +252,9 @@
 {{--<section  class="bg-[#f4f4f4] px-6 my-0 pt-10  md:px-16 lg:px-[120px]">
     @foreach($course->benifits ?? [] as $index => $data)
         <div class="flex gap-3 items-center justify-center mb-3 ">
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <span class="font-semibold uppercase">{!! $data['title'] !!}</span>
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
         <div class="flex flex-col items-center pb-10">
             {!! $data['description'] !!}
@@ -240,10 +264,14 @@
 @if( !empty($course->eligibility) )
     <section id="three"  class="bg-white px-6 my-0 py-10  md:px-16 lg:px-[120px]">
         <div class="flex gap-3 items-center justify-center mb-4 ">
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <span class="text-[20px] sm:text-[24px] text-dark md:text-[32px] font-canela capitalize">Eligibility</span>
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
         <div class="flex gap-3 items-center justify-center mb-3 ">
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <span class="font-semibold uppercase">WHO IS ELIGIBILE TO REGISTER FOR EXAMAMINATION?</span>
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
         <div class="flex flex-col items-center">
                 {!! $course->eligibility !!}
@@ -253,7 +281,9 @@
 @if(!empty($course->who_can_do['interested_to_learn']) && !empty($course->who_can_do['designation']) )
 <section  class="bg-[#f5f5f5] px-6 pb-10 py-8 mb-12 md:px-16 lg:px-[120px]">
     <div class="flex gap-3 items-center justify-center mb-3 ">
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
         <span class="text-[20px] sm:text-[24px] text-dark md:text-[32px] font-canela capitalize">Who can do?</span>
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
     </div>
     
     <div class="card flex flex-col lg:flex-row items-center py-6 gap-x-24 gap-y-10">
@@ -287,7 +317,9 @@
     class="flex items-center justify-center flex-col pb-10 px-0 bg-white min-[1200px]:px-[72px] md:px-12  ">
     <div class="flex items-center flex-col gap-2 w-full">
         <div class="flex gap-3 items-center">
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <span class="text-[20px] sm:text-[24px] text-dark md:text-[32px] font-canela capitalize">Course Structure (Lecture Plan)</span>
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 gap-x-8 mt-4 w-full">
             @foreach($course->courseStructures ?? [] as $index => $courseStructure)
@@ -350,7 +382,9 @@
 <section id="five" class="card-hidden px-6 min-[1200px]:px-[72px] md:px-12 w-full">
     <!-- <div class="flex items-center flex-col gap-2 ">
         <div class="flex gap-3 items-center my-8">
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <span class="text-[20px] sm:text-[24px] text-dark md:text-[32px] font-canela capitalize">Lecture Plan</span>
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
     </div> -->
     <div class="grid grid-cols-1 place-content-center md:grid-cols-3 gap-10 xl:grid-cols-3">
@@ -421,7 +455,9 @@
         class="flex items-center justify-center flex-col mt-12 bg-[#f5f5f5] px-6 pb-12 min-[1200px]:px-[72px] md:px-12  ">
         <div class="flex items-center flex-col gap-2 ">
             <div class="flex gap-3 items-center my-8">
+                <div class="bg-yellow w-[50px] h-[2px]"></div>
                 <span class="text-[20px] sm:text-[24px] text-dark md:text-[32px] font-canela capitalize">What Are The Exam Information?</span>
+                <div class="bg-yellow w-[50px] h-[2px]"></div>
             </div>
 
             <div class="flex flex-col lg:flex-row-reverse items-center gap-x-12 gap-y-10">
@@ -432,7 +468,9 @@
                 </div>
                 <div class="flex-1">
                     <div class="flex gap-3 items-center justify-center">
+                        <div class="bg-yellow w-[50px] h-[2px]"></div>
                         <span class="font-semibold uppercase">Exam Format & Duration</span>
+                        <div class="bg-yellow w-[50px] h-[2px]"></div>
                     </div>
 
                     <table class=" bg-white border border-gray-200 mt-6">
@@ -456,14 +494,18 @@
 
                     @if(!empty($course->exam_dates))
                     <div class="flex gap-3 items-center justify-center  mt-10">
+                        <div class="bg-yellow w-[50px] h-[2px]"></div>
                         <span class="font-semibold uppercase">exam dates</span>
+                        <div class="bg-yellow w-[50px] h-[2px]"></div>
                     </div>
                     <div class="text-[18px] pt-4">{!! $course->exam_dates  !!}</div>
                     @endif
 
                     @if(!empty($course->exam_reg_deadline))
                     <div class="flex gap-3 items-center justify-center  mt-10">
+                        <div class="bg-yellow w-[50px] h-[2px]"></div>
                         <span class="font-semibold uppercase">Exam Registration Deadline</span>
+                        <div class="bg-yellow w-[50px] h-[2px]"></div>
                     </div>
                     <div class="text-[18px] pt-4">{!! $course->exam_reg_deadline  !!}</div>
                     @endif
@@ -473,7 +515,9 @@
             </div>
             {{--@if($filteredCourseStructureExamFormat->isNotEmpty())
             <div class="flex gap-3 items-center">
+                <div class="bg-yellow w-[50px] h-[2px]"></div>
                 <span class="font-semibold uppercase">Exam Format</span>
+                <div class="bg-yellow w-[50px] h-[2px]"></div>
             </div>
             
             <div class="flex flex-row gap-4 gap-y-2 gap-x-16 my-4">
@@ -491,7 +535,9 @@
             
             @if($filteredCourseExamDuration->isNotEmpty())
             <div class="flex gap-3 items-center ">
+                <div class="bg-yellow w-[50px] h-[2px]"></div>
                 <span class="font-semibold uppercase">Exam Duration</span>
+                <div class="bg-yellow w-[50px] h-[2px]"></div>
             </div>
             <div class="flex flex-row gap-4 gap-y-2 gap-x-16 my-4">
                 @foreach($course->courseStructures ?? [] as $index => $courseStructure)
@@ -508,25 +554,33 @@
             
             @if(!empty($course->exam_dates))
             <div class="flex gap-3 items-center">
+                <div class="bg-yellow w-[50px] h-[2px]"></div>
                 <span class="font-semibold uppercase">exam dates</span>
+                <div class="bg-yellow w-[50px] h-[2px]"></div>
             </div>
             <span class="text-[18px] my-4">{!! $course->exam_dates  !!}</span>
             @endif
             @if(!empty($course->exam_reg_deadline))
             <div class="flex gap-3 items-center">
+                <div class="bg-yellow w-[50px] h-[2px]"></div>
                 <span class="font-semibold uppercase">Exam Registration Deadline</span>
+                <div class="bg-yellow w-[50px] h-[2px]"></div>
             </div>
             <span class="text-[18px] my-4">{!! $course->exam_reg_deadline  !!}</span>
             @endif
             @if(!empty($course->exam_passing_criteria))
             <div class="flex gap-3 items-center">
+                <div class="bg-yellow w-[50px] h-[2px]"></div>
                 <span class="font-semibold uppercase">Passing Criteria</span>
+                <div class="bg-yellow w-[50px] h-[2px]"></div>
             </div>
             <span class="text-[18px] my-4">{!! $course->exam_passing_criteria  !!}</span>
             @endif
             @if(!empty($course->exam_location))
             <div class="flex gap-3 items-center">
+                <div class="bg-yellow w-[50px] h-[2px]"></div>
                 <span class="font-semibold uppercase">EXAM LOCATIONS</span>
+                <div class="bg-yellow w-[50px] h-[2px]"></div>
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-3  xl:grid-cols-5 gap-y-0">
@@ -541,13 +595,17 @@
 
             @if(!empty($course->exam_passing_criteria))
             <div class="flex gap-3 items-center mt-8">
+                <div class="bg-yellow w-[50px] h-[2px]"></div>
                 <span class="font-semibold uppercase">Passing Criteria</span>
+                <div class="bg-yellow w-[50px] h-[2px]"></div>
             </div>
             <span class="text-[18px] my-4">{!! $course->exam_passing_criteria  !!}</span>
             @endif
             @if(!empty($course->exam_location))
             <div class="flex gap-3 items-center">
+                <div class="bg-yellow w-[50px] h-[2px]"></div>
                 <span class="font-semibold uppercase">EXAM LOCATIONS</span>
+                <div class="bg-yellow w-[50px] h-[2px]"></div>
             </div>
             
             <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-y-4">
@@ -570,7 +628,9 @@
     <!-- <h1 class="text-[24px] text-white">Dates & Eligibilty</h1> -->
     <div class="flex items-center flex-col gap-2 mb-6">
         <div class="flex gap-3 items-center">
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <span class="text-[20px] sm:text-[24px] text-dark md:text-[32px] font-canela capitalize">Fee Structure</span>
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
     </div>
     <!-- Pricing cards start -->
@@ -920,9 +980,11 @@
 <section id="ten"
     class="flex items-center justify-center flex-col py-12 bg-[#eeeeee]  px-4 md:px-8 lg:px-[140px]">
     <div class="flex gap-3 items-center">
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
         <span class="text-[20px] sm:text-[24px] text-dark md:text-[32px] font-canela capitalize">
             What You Earn
         </span>
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
     </div>
     <p class="text-[17px] mt-3">You will get a certificate of completion, which is highly reputed and accepted by
         employers.</p>
@@ -954,6 +1016,7 @@
                     <div class="flex gap-2 flex-col">
                         <div class="flex gap-1 flex-col">
                             <h3 class="font-semibold">{!! $data['title'] !!}</h3>
+                            <div class="w-[80px] h-[2px] bg-yellow"></div>
                             <p>{!! $data['description'] !!}</p>
                         </div>
                     </div>

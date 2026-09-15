@@ -78,6 +78,7 @@
             @foreach($subjects as $index => $data) 
                 <div class="bg-white p-8 self-start felx flex-col  ">
                     <a href="{{ route('subject.details', ['name' => $data->slug]) }}" class="hover:underline underline-offset-2 text-[22px] text-dark font-canela">{{ $data->name }}</a>
+                    <div class="w-[80px] h-[3px] bg-yellow mt-3"></div>
                     <p class="mt-6 text-[18px] font-canela text-dark mb-10">
                         {{ $data->description }}
                     </p>

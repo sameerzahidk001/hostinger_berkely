@@ -79,6 +79,7 @@
             @foreach($categories as $index => $data) 
                 <div class="bg-white p-8 self-start felx flex-col">
                     <a href="{{ route('subject.details', ['name' => $data->slug]) }}" target="_blank" class="hover:underline underline-offset-2 text-[20px] text-dark font-canela capitalize">{{ $data->name }}</a>
+                    <div class="w-[80px] h-[3px] bg-yellow mt-3"></div>
                     <p class="mt-6 text-[14px] leading-[20px] font-normal font-ghothic text-dark mb-10 min-h-[136px]">
                         {{ $data->description }}
                     </p>

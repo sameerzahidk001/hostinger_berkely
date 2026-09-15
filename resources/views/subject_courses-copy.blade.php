@@ -170,9 +170,11 @@
     <section
         class="flex items-center justify-center flex-col py-12 bg-[#eeeeee] min-h-[174px]  px-4 md:px-8 lg:px-[120px] mt-4">
         <div class="flex gap-3 items-center">
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <span class="font-semibold">
                 WHAT YOU EARN
             </span>
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
 
         <div class="flex flex-1 w-full flex-col sm:flex-row gap-20  justify-center items-center  pt-10">
@@ -254,9 +256,11 @@
     <!-- Box Section Added start -->
     <section class="bg-[#f4f4f4] py-[44px]   min-[1200px]:px-[72px] ">
         <div class="flex justify-center gap-3 items-center">
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <span class="font-semibold">
                 You May Also Be Interested In
             </span>
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
 
         <div class="flex flex-wrap pt-10 px-6 gap-3 font-bold justify-center text-[#A41034] text-[17px] font-ghothic items-stretch">

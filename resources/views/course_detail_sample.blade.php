@@ -102,7 +102,9 @@
 <section id="one"
     class="flex flex-col  bg-[#f4f4f4]  items-center px-6 gap-6 my-0 py-0 pt-10 min-[920px]:gap-[40px] md:px-16 lg:px-[120px] min-h-[310px]">
     <div class="flex gap-3 items-center">
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
         <span class="font-semibold uppercase">Offered By</span>
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
     </div>
 
     <div class="flex flex-col gap-4 gap-y-2 gap-x-3">
@@ -115,7 +117,9 @@
         </p> -->
     </div>
     <div class="flex gap-3 items-center">
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
         <span class="font-semibold uppercase">Head Office</span>
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
     </div>
     <div class="flex flex-col gap-4 gap-y-2 gap-x-3">
 
@@ -124,7 +128,9 @@
         </p>
     </div>
     <div class="flex gap-3 items-center">
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
         <span class="font-semibold uppercase">Members</span>
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
     </div>
     <div class="flex flex-col gap-4 gap-y-2 gap-x-3">
 
@@ -134,7 +140,9 @@
         </p>
     </div>
     <div class="flex gap-3 items-center">
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
         <span class="font-semibold uppercase">Founded In</span>
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
     </div>
     <div class="flex flex-col gap-4 gap-y-2 gap-x-3">
 
@@ -143,7 +151,9 @@
         </p>
     </div>
     <div class="flex gap-3 items-center">
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
         <span class="font-semibold uppercase">Vision & Mission</span>
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
     </div>
     <div class="flex flex-col gap-4 gap-y-2 gap-x-3">
 
@@ -154,21 +164,29 @@
         </p>
     </div>
     <div class="flex gap-3 items-center">
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
         <span class="font-semibold uppercase">Be in Demand</span>
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
     </div>
     <p>Employers, recruiters, and the leaders of your company know that CMAs don't just bring skills to the table, they
         bring strategies.</p>
     <div class="flex gap-3 items-center">
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
         <span class="font-semibold uppercase">Earn More</span>
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
     </div>
     <p>The IMA 2023 Salary Survey shows CMAs earn 21% more in median total compensation compared to non-CMAs.</p>
     <div class="flex gap-3 items-center">
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
         <span class="font-semibold uppercase">Global Recognition</span>
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
     </div>
     <p>The CMA opens doors to exciting career opportunities, including high level positions at multinational
         corporations. </p>
     <div class="flex gap-3 items-center">
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
         <span class="font-semibold uppercase">Powerful Network</span>
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
     </div>
     <p>Becoming a CMA connects you to IMA’s global network of about 140,000 accounting and finance professionals. </p>
 </section>
@@ -177,7 +195,9 @@
     class="flex flex-col  bg-[#f4f4f4]  items-center px-6 gap-6 my-0 py-10  min-[920px]:gap-[40px] md:px-16 lg:px-[120px] min-h-[100px]">
     
     <div class="flex gap-3 items-center">
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
         <span class="font-semibold uppercase">Who can do?</span>
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
     </div>
     <div class="flex  gap-4 gap-y-2 gap-x-3">
         <p class="text-[17px</p>
@@ -187,7 +207,9 @@
 <section id="three"
     class="flex flex-col  bg-[#f4f4f4]  items-center px-6 gap-6 my-0 py-10  min-[920px]:gap-[40px] md:px-16 lg:px-[120px] min-h-[100px]">
     <div class="flex gap-3 items-center">
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
         <span class="font-semibold uppercase">Eligibility</span>
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
     </div>
 
     <!-- <div class="flex  gap-4 gap-y-2 gap-x-3">
@@ -230,13 +252,17 @@
 
     </div> -->
     <div class="flex gap-3 items-center">
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
         <span class="font-semibold uppercase">Who is eligibile to register for Examamination?</span>
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
     </div>
     <p class="text-[17px]">{!! $course->eligibility !!}</p>
     <!-- <p class="mx-auto my-2 text-[17px] font-semibold">Anyone who is interested to learn about following concepts can do CMA-USA</p> -->
 
     <div class="flex gap-3 items-center">
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
         <span class="font-normal uppercase">Who can do?</span>
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
     </div>
     <!-- <div class="flex  gap-4 gap-y-2 gap-x-3">
         <p class="text-[17px]"></p>
@@ -255,7 +281,9 @@
 
     </div>
     <div class="flex gap-3 items-center">
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
         <span class="font-normal uppercase">Which designations pursue?</span>
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
     </div>
     <p class="text-[17px]">who can do details</p>
 
@@ -266,7 +294,9 @@
     class="flex items-center justify-center flex-col py-10 bg-[#ffff] min-h-[174px] lg:px-[120px]  px-4 md:px-8  ">
     <div class="flex items-center flex-col gap-2">
         <div class="flex gap-3 items-center">
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <span class="font-semibold uppercase">Course Structure</span>
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
         <div class="flex flex-row gap-4 gap-y-2 gap-x-3 mt-6">
 
@@ -295,7 +325,9 @@
 
     <div class="flex items-center flex-col gap-2 ">
         <div class="flex gap-3 items-center my-8">
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <span class="font-semibold uppercase">Gallery</span>
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
     </div>
 
@@ -353,7 +385,9 @@
     class="flex items-center justify-center flex-col pb-10 bg-[#ffff] min-h-[174px] lg:px-[120px]  px-4 md:px-8  ">
     <div class="flex items-center flex-col gap-2 ">
         <div class="flex gap-3 items-center my-8">
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <span class="font-semibold uppercase">Gallery</span>
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
     </div>
     
@@ -363,7 +397,9 @@
     class="flex items-center justify-center flex-col pb-10 bg-[#ffff] min-h-[174px] lg:px-[120px]  px-4 md:px-8  ">
     <div class="flex items-center flex-col gap-2 ">
         <div class="flex gap-3 items-center my-8">
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <span class="font-semibold uppercase">Lecture Plan</span>
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
     </div>
     
@@ -372,7 +408,9 @@
 <section id="five" class="card-hidden px-6 min-[1200px]:px-[72px] md:px-12 w-full mt-16">
     <div class="flex items-center flex-col gap-2 ">
         <div class="flex gap-3 items-center my-8">
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <span class="font-semibold uppercase">Lecture Plan</span>
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
     </div>
     <div class="grid grid-cols-1 place-content-center md:grid-cols-2 gap-10 xl:grid-cols-3">
@@ -460,13 +498,17 @@
     class="flex items-center justify-center flex-col pb-10 bg-[#ffff] min-h-[174px] lg:px-[120px]  px-4 md:px-8  ">
     <div class="flex items-center flex-col gap-2 ">
         <div class="flex gap-3 items-center my-8">
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <span class="font-semibold uppercase">WHAT ARE THE EXAM INFORMATION?</span>
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
 
         <!-- <span class="text-[15px]">{!! $course->exam_information !!}</span> -->
         <!-- <h3 class="text-[22px] font-semibold">What is the structure and format of the exam?</h3> -->
         <div class="flex gap-3 items-center my-8">
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <span class="font-semibold uppercase">Exam Format</span>
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
         <div class="flex gap-3 items-center my-4">
             <div>
@@ -485,7 +527,9 @@
         <!-- <p class="text-[18px]">A total of 100 multiple-choice questions along with two essay prompts.</p> -->
 
         <div class="flex gap-3 items-center my-8">
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <span class="font-semibold uppercase">Exam Duration</span>
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
         <div class="flex gap-3 items-center my-4">
             <div>
@@ -505,25 +549,33 @@
 
         <!-- <h3 class="text-[22px] font-semibold">When are the exam dates scheduled?</h3> -->
         <div class="flex gap-3 items-center my-8">
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <span class="font-semibold uppercase">exam dates</span>
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
         <p class="text-[18px]">Exams are offered in yearly 3 exam windows: January – February / May – June / September –
             October.
             <br>Any date in these months. You can choose based on your availability.
         </p>
         <div class="flex gap-3 items-center my-8">
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <span class="font-semibold uppercase">Exam Registration Deadline</span>
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
         <p class="text-[18px]">For exam registration, students are required to fill out the online form available on the
             website and submit it before the specified deadline.</p>
         <!-- <h3 class="text-[22px] font-semibold">How does the process of scaling work for the exams?</h3> -->
         <div class="flex gap-3 items-center my-8">
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <span class="font-semibold uppercase">Passing Criteria</span>
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
         <p class="text-[18px]">You need 360 score to pass the examination.</p>
 
         <div class="flex gap-3 items-center my-8">
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <span class="font-semibold uppercase">EXAM LOCATIONS</span>
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
         <span class="text-[15px]">{!! $course->exam_location !!}</span>
 
@@ -569,7 +621,9 @@
 
         <div class="flex items-center flex-col gap-2">
             <div class="flex gap-3 items-center mt-8">
+                <div class="bg-yellow w-[50px] h-[2px]"></div>
                 <span class="font-semibold uppercase">Our differences</span>
+                <div class="bg-yellow w-[50px] h-[2px]"></div>
             </div>
             <p class="text-[17px]">The most engaging, interactive way to master business analytics.</p>
             <span class="text-[15px] mt-8">{!! $course->other_benifits !!}</span>
@@ -610,9 +664,11 @@
 <!-- <section id="seven" class="flex gap-10 items-center justify-center  px-4 md:px-8 lg:px-[120px] py-[48px] bg-[#F4F4F4]">
     <div class="flex items-center flex-col max-w-[394px]">
         <div class="flex gap-3 items-center">
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <span class="font-semibold text-[17px]">
                 ABOUT THE PROFESSOR
             </span>
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
         <div class="flex items-center flex-col ">
             <img src="https://cloudinary.hbs.edu/hbsit/image/upload/s--wzKOzL2h--/f_auto,c_fill,g_face:auto,h_120,w_120,/v20200101/C6F64EBD226C400791DAA4E3C17F0BB3.jpg"
@@ -648,7 +704,9 @@
     class="flex items-center justify-center flex-col pb-10 bg-[#ffff] min-h-[174px] lg:px-[120px]  px-4 md:px-8  ">
     <div class="flex items-center flex-col gap-2 ">
         <div class="flex gap-3 items-center my-8">
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <span class="font-semibold uppercase">Fee Structure</span>
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
     </div>
 </section> -->
@@ -657,7 +715,9 @@
     <!-- <h1 class="text-[24px] text-white">Dates & Eligibilty</h1> -->
     <div class="flex items-center flex-col gap-2">
         <div class="flex gap-3 items-center">
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
             <span class="font-semibold uppercase text-dark">Fee Structure</span>
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
 
 
@@ -679,6 +739,7 @@
                         <!-- <span class="text-[32px] font-medium leading-[40px] text-white">{!! $courseEnrollments->starting_date->format('d') !!}</span> -->
                     @endif
                 </div>
+                <div class="w-10 bg-yellow h-[2px] my-10"></div>
                 <!-- <p class="text-[15px] font-medium text-center text-white"><span class="font-normal">{{ $courseEnrollments->discount }}% Early Bird Discount</span> {{ $course->currency . '' . $course->price }} +
                                                                                                                                                                                     applicable
                                                                                                                                                                                     international taxes</p> -->
@@ -791,9 +852,11 @@
 <section id="ten"
     class="flex items-center justify-center flex-col py-12 bg-[#eeeeee] min-h-[174px]  px-4 md:px-8 lg:px-[120px]">
     <div class="flex gap-3 items-center">
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
         <span class="font-semibold">
             WHAT YOU EARN
         </span>
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
     </div>
     <p class="text-[17px] mt-3">You will get a certificate of completion, which is highly reputed and accepted by
         employers.</p>
@@ -822,7 +885,9 @@
 
     <div class="flex items-center flex-col gap-2">
         <div class="flex flex-col gap-3 items-center my-8">
+            <!-- <div class="bg-yellow w-[50px] h-[2px]"></div> -->
             <span class="font-normal uppercase">OTHER BENEFITS</span>
+            <div class="bg-yellow w-[50px] h-[2px]"></div>
         </div>
 
         <span class="text-[15px]">{!! $course->other_benifits !!}</span>
@@ -858,10 +923,12 @@
 <!-- Section Fourteen start -->
 <section class="mt-8 flex mb-[18px] py-0 z-20  flex-1 gap-4 lg:px-[121px] px-4 md:px-10 flex-col items-centers">
     <div class="flex 100 justify-center gap-3 items-center mb-6">
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
         <span class="font-semibold text-primary ">
             RELATED PROGRAMS
 
         </span>
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
     </div>
     <!-- <div class="">
         <div class="flex gap-3 flex-wrap pb-2">
@@ -877,6 +944,7 @@
                         <h2
                             class="text-[18px] font-semibold  sm:min-h-auto sm:max-h-auto md:min-h-[53px] md:max-h-[53px] overflow-hidden">
                             CMA USA - Certified Management Accountant-{{$i}}</h2>
+                        <div class="w-[80px] h-[3px] bg-yellow mt-2"></div>
                         <p class="text-[15px] ">The best course combines practical skills, expert insights, and hands-on
                             experience for comprehensive professional development.</p>
 
@@ -1011,6 +1079,7 @@ $dummyCourseEnrollments = [
                 <span class="text-[15px] leading-[25px] font-semibold text-white">Study Option</span>
                 <span class="text-[32px] font-medium leading-[40px] text-white">{{ $courseEnrollment['type'] }}</span>
             </div>
+            <div class="w-10 bg-yellow h-[2px] my-10"></div>
             <button class="bg-primary_orange text-white font-ghothic rounded-[5px] shadow px-6 py-3 text-[23px] mt-10">
                 Enroll Now
             </button>

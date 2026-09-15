@@ -47,6 +47,7 @@
         
         <h2 class="text-[18px] font-semibold font-canela">Courses ({{ $subject->courses->count() }})</h2>
         <!-- <div class="w-[100%] h-[1px] bg-gray-200"></div> -->
+        <div class="bg-yellow w-[100%] h-[2px]"></div>
         
     </section>
     <!-- Section Two End -->
@@ -68,6 +69,7 @@
                     <!-- text content start -->
                     <div class="flex flex-col gap-1">
                         <h2 class="text-[18px] font-semibold  sm:min-h-auto sm:max-h-auto md:min-h-[53px] md:max-h-[53px] overflow-hidden">{{ $course->title }}</h2>
+                        <div class="w-[80px] h-[3px] bg-yellow mt-2"></div>
                         <!-- <p class="text-[14px] font-ghothic text-gray_one">Professor Janice Hammond</p> -->
                         <p class="text-[15px] ">The best course combines practical skills, expert insights, and hands-on experience for comprehensive professional development.</p>
 

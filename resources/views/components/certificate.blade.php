@@ -1,9 +1,11 @@
 <section
     class="flex items-center justify-center flex-col py-12 bg-[#eeeeee] min-h-[174px]  px-4 md:px-8 lg:px-[120px]">
     <div class="flex gap-3 items-center">
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
         <span class="font-semibold">
             WHAT YOU EARN
         </span>
+        <div class="bg-yellow w-[50px] h-[2px]"></div>
     </div>
     <p class="text-[17px] mt-3">You will get a certificate of completion, which is highly reputed and accepted by employers.</p>
 
