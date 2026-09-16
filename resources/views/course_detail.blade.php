@@ -1225,9 +1225,6 @@
                     </span>
                     <div class="bg-yellow w-12 h-[2px]"></div>
                 </div>
-                <p class="text-gray-600 text-center text-sm sm:text-base max-w-3xl">
-                    Upcoming start dates for this course. Only future intakes are shown.
-                </p>
             </div>
 
             <div class="w-full max-w-[1400px] overflow-x-auto">
@@ -1271,18 +1268,10 @@
                                                 Enroll
                                             </a>
                                         @endif
-                                        @if ($agenda->inquiry)
-                                            <button type="button"
-                                                    class="course-agenda-inquire border px-4 py-1 border-[#000435] bg-white text-[#000435] rounded uppercase text-xs font-semibold"
-                                                    data-form="{!! htmlentities($agenda->inquiry, ENT_QUOTES) !!}">
-                                                Enquire
-                                            </button>
-                                        @else
-                                            <a href="{{ route('contact') }}"
-                                               class="border px-4 py-1 border-[#000435] bg-white text-[#000435] rounded uppercase text-center text-xs font-semibold">
-                                                Enquire
-                                            </a>
-                                        @endif
+                                        <a href="{{ $course->contact_us_section == 1 ? '#apply' : route('contact') }}"
+                                           class="border px-4 py-1 border-[#000435] bg-white text-[#000435] rounded uppercase text-center text-xs font-semibold">
+                                            Enquire
+                                        </a>
                                     </div>
                                 </td>
                             </tr>
@@ -1292,41 +1281,6 @@
             </div>
         </section>
 
-        <div id="course-agenda-inquiry-modal" class="fixed inset-0 z-50 bg-black bg-opacity-50 hidden flex justify-center items-center">
-            <div class="bg-white rounded-lg w-full max-w-md mx-auto relative p-2">
-                <button type="button" id="course-agenda-inquiry-close"
-                        class="absolute top-0 right-2 text-gray-500 hover:text-red-500 text-2xl"
-                        style="margin-top:-25px;">&times;</button>
-                <div id="course-agenda-inquiry-form"></div>
-            </div>
-        </div>
-        <script>
-            document.addEventListener('DOMContentLoaded', function () {
-                var modal = document.getElementById('course-agenda-inquiry-modal');
-                var formBox = document.getElementById('course-agenda-inquiry-form');
-                var closeBtn = document.getElementById('course-agenda-inquiry-close');
-                document.querySelectorAll('.course-agenda-inquire').forEach(function (btn) {
-                    btn.addEventListener('click', function () {
-                        formBox.innerHTML = btn.getAttribute('data-form') || '';
-                        modal.classList.remove('hidden');
-                    });
-                });
-                if (closeBtn) {
-                    closeBtn.addEventListener('click', function () {
-                        modal.classList.add('hidden');
-                        formBox.innerHTML = '';
-                    });
-                }
-                if (modal) {
-                    modal.addEventListener('click', function (e) {
-                        if (e.target === modal) {
-                            modal.classList.add('hidden');
-                            formBox.innerHTML = '';
-                        }
-                    });
-                }
-            });
-        </script>
     @endif
 
     @if (!$course->courseFeePackages->isEmpty() && $course->fee_visibility == 1)

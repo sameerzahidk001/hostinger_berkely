@@ -191,13 +191,10 @@
                                                     class="border px-4 py-1 w-full border-[#000435] bg-[#000435] text-white transition-all delay-300 duration-300 content-center rounded uppercase text-center text-xs font-semibold">
                                                     Enroll
                                                 </a>
-                                                @if ($course_agenda->inquiry)
-                                                    <button type="button"
-                                                        class="border px-4 py-1 w-full border-[#000435] bg-white text-[#000435] transition-all delay-300 duration-300 content-center rounded uppercase text-xs font-semibold"
-                                                        data-form="{!! htmlentities($course_agenda->inquiry, ENT_QUOTES) !!}">
-                                                        Inquire
-                                                    </button>
-                                                @endif
+                                                <a href="{{ route('course.details', ['course' => $course_agenda->course->slug]) }}#apply"
+                                                    class="border px-4 py-1 w-full border-[#000435] bg-white text-[#000435] transition-all delay-300 duration-300 content-center rounded uppercase text-center text-xs font-semibold">
+                                                    Inquire
+                                                </a>
                                             </div>
                                         </td>
                                     </tr>
