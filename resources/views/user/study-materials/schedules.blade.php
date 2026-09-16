@@ -11,83 +11,112 @@
 </div>
 <div class="wrapper wrapper-content">
     <div class="ibox">
-        <div class="ibox-title"><h5>Upcoming classes</h5></div>
+        <div class="ibox-title"><h5>Schedule</h5></div>
         <div class="ibox-content">
-            @forelse($schedules as $row)
-                <div style="display:flex;justify-content:space-between;gap:16px;align-items:center;padding:14px 0;border-bottom:1px solid #eee;">
-                    <div>
-                        <strong>{{ $row->title ?: $row->batch_name }}</strong>
-                        <div class="text-muted">
-                            {{ $row->scheduled_at?->format('d M Y H:i') }}
-                            · {{ $row->durationMinutes() }} min
-                            · {{ $row->course->title ?? '' }}
-                            · Head of Faculty: {{ $row->headOfFaculty->name ?? '—' }}
-                            · Instructor: {{ $row->instructor->name ?? '—' }}
-                        </div>
-                    </div>
-                    <div>
-                        <a class="btn btn-default btn-sm" href="{{ route('user.class-schedules.item-ics', $row->id) }}">.ics</a>
-                        @if($row->zoho_link)
-                            <a class="btn btn-primary btn-sm" href="{{ $row->zoho_link }}" target="_blank" rel="noopener" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;">Join Now</a>
-                        @else
-                            <span class="label label-default">Link soon</span>
-                        @endif
+            <ul class="nav nav-tabs" role="tablist" style="margin-bottom:20px;">
+                <li class="active" role="presentation">
+                    <a href="#schedule-upcoming" aria-controls="schedule-upcoming" role="tab" data-toggle="tab">Upcoming</a>
+                </li>
+                <li role="presentation">
+                    <a href="#schedule-batches" aria-controls="schedule-batches" role="tab" data-toggle="tab">Your Batch</a>
+                </li>
+                <li role="presentation">
+                    <a href="#schedule-calendar-tab" aria-controls="schedule-calendar-tab" role="tab" data-toggle="tab">Calendar</a>
+                </li>
+            </ul>
+
+            <div class="tab-content">
+                <div role="tabpanel" class="tab-pane active" id="schedule-upcoming">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>When</th>
+                                    <th>Batch / Title</th>
+                                    <th>Course</th>
+                                    <th>Head of Faculty</th>
+                                    <th>Instructor</th>
+                                    <th>Duration</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @forelse($schedules as $row)
+                                    <tr>
+                                        <td>{{ $row->scheduled_at?->format('d M Y H:i') }}</td>
+                                        <td>{{ $row->title ?: $row->batch_name }}</td>
+                                        <td>{{ $row->course->title ?? '—' }}</td>
+                                        <td>{{ $row->headOfFaculty->name ?? '—' }}</td>
+                                        <td>{{ $row->instructor->name ?? '—' }}</td>
+                                        <td>{{ $row->durationMinutes() }} min</td>
+                                        <td>
+                                            <a class="btn btn-default btn-sm" href="{{ route('user.class-schedules.item-ics', $row->id) }}">.ics</a>
+                                            @if($row->zoho_link)
+                                                <a class="btn btn-primary btn-sm" href="{{ $row->zoho_link }}" target="_blank" rel="noopener" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;">Join Now</a>
+                                            @else
+                                                <span class="label label-default">Link soon</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @empty
+                                    <tr><td colspan="7" class="text-center text-muted">No upcoming classes assigned.</td></tr>
+                                @endforelse
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-            @empty
-                <p class="text-center text-muted">No upcoming classes assigned.</p>
-            @endforelse
-        </div>
-    </div>
 
-    <div class="ibox">
-        <div class="ibox-title"><h5>Your Batch</h5></div>
-        <div class="ibox-content">
-            @forelse($batches as $batch)
-                <div style="padding:16px 0;border-bottom:1px solid #eee;">
-                    <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap;">
-                        <div>
-                            <strong style="font-size:16px;">{{ $batch['batch_name'] }}</strong>
-                            <div class="text-muted" style="margin-top:4px;">
-                                {{ $batch['course']->title ?? '' }}
-                                · Head of Faculty: <strong>{{ $batch['head_of_faculty']->name ?? '—' }}</strong>
-                                · Instructor: <strong>{{ $batch['instructor']->name ?? '—' }}</strong>
+                <div role="tabpanel" class="tab-pane" id="schedule-batches">
+                    @forelse($batches as $batch)
+                        <div style="margin-bottom:22px;">
+                            <div style="margin-bottom:10px;">
+                                <strong style="font-size:16px;">{{ $batch['batch_name'] }}</strong>
+                                <div class="text-muted" style="margin-top:4px;">
+                                    {{ $batch['course']->title ?? '' }}
+                                    · Head of Faculty: <strong>{{ $batch['head_of_faculty']->name ?? '—' }}</strong>
+                                    · Instructor: <strong>{{ $batch['instructor']->name ?? '—' }}</strong>
+                                </div>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table table-striped table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>When</th>
+                                            <th>Title</th>
+                                            <th>Duration</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($batch['sessions'] as $row)
+                                            <tr>
+                                                <td>{{ $row->scheduled_at?->format('d M Y H:i') }}</td>
+                                                <td>{{ $row->title && $row->title !== $batch['batch_name'] ? $row->title : '—' }}</td>
+                                                <td>{{ $row->durationMinutes() }} min</td>
+                                                <td>
+                                                    <a class="btn btn-default btn-sm" href="{{ route('user.class-schedules.item-ics', $row->id) }}">.ics</a>
+                                                    @if($row->zoho_link)
+                                                        <a class="btn btn-primary btn-sm" href="{{ $row->zoho_link }}" target="_blank" rel="noopener" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;">Join Now</a>
+                                                    @else
+                                                        <span class="label label-default">Link soon</span>
+                                                    @endif
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
-                    </div>
-                    <ul class="list-unstyled" style="margin:12px 0 0;">
-                        @foreach($batch['sessions'] as $row)
-                            <li style="display:flex;justify-content:space-between;gap:16px;align-items:center;padding:10px 0;border-top:1px solid #f5f5f5;flex-wrap:wrap;">
-                                <div>
-                                    <strong>{{ $row->scheduled_at?->format('d M Y H:i') }}</strong>
-                                    · {{ $row->durationMinutes() }} min
-                                    @if($row->title && $row->title !== $batch['batch_name'])
-                                        · {{ $row->title }}
-                                    @endif
-                                </div>
-                                <div>
-                                    <a class="btn btn-default btn-sm" href="{{ route('user.class-schedules.item-ics', $row->id) }}">.ics</a>
-                                    @if($row->zoho_link)
-                                        <a class="btn btn-primary btn-sm" href="{{ $row->zoho_link }}" target="_blank" rel="noopener" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;">Join Now</a>
-                                    @else
-                                        <span class="label label-default">Link soon</span>
-                                    @endif
-                                </div>
-                            </li>
-                        @endforeach
-                    </ul>
+                    @empty
+                        <p class="text-center text-muted">No batches assigned yet.</p>
+                    @endforelse
                 </div>
-            @empty
-                <p class="text-center text-muted">No batches assigned yet.</p>
-            @endforelse
-        </div>
-    </div>
 
-    <div class="ibox">
-        <div class="ibox-title"><h5>Calendar</h5></div>
-        <div class="ibox-content">
-            <p class="help-block">Download the calendar file and import it into Zoho Calendar (Settings → Import / Subscribe).</p>
-            @include('admin.study-materials.schedules._calendar', ['calendarEvents' => $calendarEvents])
+                <div role="tabpanel" class="tab-pane" id="schedule-calendar-tab">
+                    <p class="help-block">Download the calendar file and import it into Zoho Calendar (Settings → Import / Subscribe).</p>
+                    @include('admin.study-materials.schedules._calendar', ['calendarEvents' => $calendarEvents])
+                </div>
+            </div>
         </div>
     </div>
 </div>

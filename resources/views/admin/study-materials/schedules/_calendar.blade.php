@@ -12,13 +12,19 @@
 <script>
 (function () {
     var events = @json($calendarEvents ?? []);
-    $('#class-calendar').fullCalendar({
+    var $cal = $('#class-calendar');
+    $cal.fullCalendar({
         header: { left: 'prev,next today', center: 'title', right: 'month,agendaWeek,agendaDay' },
         defaultView: 'month',
         editable: false,
         eventLimit: true,
         timeFormat: 'H:mm',
         events: events
+    });
+
+    // Re-render when Calendar tab becomes visible (hidden tabs have 0 width).
+    $(document).on('shown.bs.tab', 'a[data-toggle="tab"][href="#schedule-calendar-tab"]', function () {
+        $cal.fullCalendar('render');
     });
 })();
 </script>
