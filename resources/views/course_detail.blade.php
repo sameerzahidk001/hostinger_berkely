@@ -738,27 +738,27 @@
 
             @php $instructorCount = count($assignIntructors); @endphp
             <div
-                class="{{ $instructorCount === 1 ? 'flex justify-center w-full' : 'grid gap-10 md:grid-cols-2 lg:grid-cols-4' }}">
+                class="{{ $instructorCount === 1 ? 'flex justify-center w-full' : 'grid gap-10 md:grid-cols-2 lg:grid-cols-2' }}">
                 @foreach ($assignIntructors as $instructor)
                     <div
-                        class="flex flex-col bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100 {{ $instructorCount === 1 ? 'w-full max-w-[280px] md:max-w-[300px] lg:w-1/4 lg:max-w-[25%]' : 'w-full' }}">
-                        <div class="w-full aspect-[4/3] overflow-hidden bg-gray-100">
+                        class="flex flex-col sm:flex-row bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100 {{ $instructorCount === 1 ? 'w-full max-w-4xl' : 'w-full' }}">
+                        <div class="w-full sm:w-[280px] sm:min-w-[280px] sm:max-w-[280px] aspect-[4/3] sm:aspect-auto sm:h-auto overflow-hidden bg-gray-100">
                             <img src="{{ displayable_media_url($instructor->image) ?? media_url('/images/profiles/user.png') ?? asset('/images/profiles/user.png') }}"
                                 alt="{{ $instructor->name }}"
-                                class="w-full h-full object-cover object-top">
+                                class="w-full h-full object-cover object-top min-h-[220px] sm:min-h-full">
                         </div>
-                        <div class="p-4 flex flex-col gap-3 text-left">
-                            <h3 class="text-lg font-bold text-[#000435]">{{ $instructor->name }}</h3>
+                        <div class="p-5 sm:p-6 flex flex-col gap-3 text-left flex-1 justify-center">
+                            <h3 class="text-xl font-bold text-[#000435]">{{ $instructor->name }}</h3>
 
                             @if ($instructor->short_description)
-                                <div class="text-gray-600 text-sm leading-relaxed line-clamp-6">
+                                <div class="text-gray-600 text-sm leading-relaxed">
                                     {!! $instructor->short_description !!}
                                 </div>
                             @endif
 
                             <a href="{{ url('/instructor/' . $instructor->id) }}"
                                 target="_blank" rel="noopener"
-                                class="mt-2 inline-block text-center py-2 px-4 bg-[#000435] text-white rounded-lg text-sm font-semibold hover:opacity-90 transition w-full">
+                                class="mt-2 inline-block text-center py-2 px-4 bg-[#000435] text-white rounded-lg text-sm font-semibold hover:opacity-90 transition w-full sm:w-auto sm:self-start">
                                 View detailed profile
                             </a>
                         </div>
