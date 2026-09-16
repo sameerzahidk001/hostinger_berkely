@@ -738,16 +738,16 @@
 
             @php $instructorCount = count($assignIntructors); @endphp
             <div
-                class="{{ $instructorCount === 1 ? 'flex justify-center w-full' : 'grid gap-10 md:grid-cols-2 lg:grid-cols-2' }}">
+                class="{{ $instructorCount === 1 ? 'flex justify-center w-full' : 'grid gap-8 md:grid-cols-2' }}">
                 @foreach ($assignIntructors as $instructor)
                     <div
-                        class="flex flex-col sm:flex-row bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100 {{ $instructorCount === 1 ? 'w-full max-w-4xl' : 'w-full' }}">
-                        <div class="w-full sm:w-[280px] sm:min-w-[280px] sm:max-w-[280px] aspect-[4/3] sm:aspect-auto sm:h-auto overflow-hidden bg-gray-100">
+                        class="flex flex-col sm:flex-row bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100 w-full {{ $instructorCount === 1 ? 'md:max-w-[50%]' : '' }}">
+                        <div class="w-full sm:w-1/2 shrink-0 overflow-hidden bg-gray-100">
                             <img src="{{ displayable_media_url($instructor->image) ?? media_url('/images/profiles/user.png') ?? asset('/images/profiles/user.png') }}"
                                 alt="{{ $instructor->name }}"
-                                class="w-full h-full object-cover object-top min-h-[220px] sm:min-h-full">
+                                class="w-full h-full object-cover object-top min-h-[240px] sm:min-h-[280px]">
                         </div>
-                        <div class="p-5 sm:p-6 flex flex-col gap-3 text-left flex-1 justify-center">
+                        <div class="w-full sm:w-1/2 p-5 sm:p-6 flex flex-col gap-3 text-left justify-center">
                             <h3 class="text-xl font-bold text-[#000435]">{{ $instructor->name }}</h3>
 
                             @if ($instructor->short_description)
