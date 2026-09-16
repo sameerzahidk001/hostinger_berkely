@@ -55,9 +55,7 @@ class ClassScheduleController extends Controller
             ->whereHas('roles', fn ($q) => $q->where('name', 'instructor'))
             ->orderBy('name')
             ->get(['id', 'name']);
-        $students = $this->lms->isAdminActor()
-            ? $this->lms->studentsForCourse(null)
-            : collect();
+        $students = $this->studentsForScheduleForm((int) old('course_id', 0));
 
         return view('admin.study-materials.schedules.create', [
             'courses' => $courses,
@@ -133,7 +131,10 @@ class ClassScheduleController extends Controller
             ->whereHas('roles', fn ($q) => $q->where('name', 'instructor'))
             ->orderBy('name')
             ->get(['id', 'name']);
-        $students = $this->lms->studentsForCourse((int) $schedule->course_id);
+        $students = $this->studentsForScheduleForm(
+            (int) old('course_id', $schedule->course_id),
+            $schedule->students
+        );
 
         return view('admin.study-materials.schedules.edit', [
             'schedule' => $schedule,
@@ -143,6 +144,28 @@ class ClassScheduleController extends Controller
             'zohoMeetingReady' => $this->zoho->isMeetingReady(),
             'zohoHostEmail' => $this->zoho->hostAccountEmail(),
             'isInstructor' => $this->lms->isInstructorActor(),
+        ]);
+    }
+
+    public function students(Request $request)
+    {
+        $courseId = (int) $request->query('course_id', 0);
+        $keepIds = collect(explode(',', (string) $request->query('keep', '')))
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->values();
+
+        $assigned = $keepIds->isEmpty()
+            ? collect()
+            : User::query()->whereIn('id', $keepIds)->get(['id', 'name', 'email']);
+
+        $students = $this->studentsForScheduleForm($courseId, $assigned);
+
+        return response()->json([
+            'students' => $students->map(fn ($s) => [
+                'id' => $s->id,
+                'text' => $s->name . ' (' . $s->email . ')',
+            ])->values(),
         ]);
     }
 
@@ -348,6 +371,23 @@ class ClassScheduleController extends Controller
         }
 
         return implode(' ', $parts);
+    }
+
+    /**
+     * Options for Assign students: admins see all students; instructors see course-enrolled.
+     * Always merge already-assigned so edit never drops selected people from the dropdown.
+     */
+    protected function studentsForScheduleForm(int $courseId, $assignedStudents = null)
+    {
+        $students = $this->lms->isAdminActor()
+            ? $this->lms->studentsForCourse(null)
+            : $this->lms->studentsForCourse($courseId > 0 ? $courseId : null);
+
+        if ($assignedStudents) {
+            $students = $students->merge(collect($assignedStudents))->unique('id');
+        }
+
+        return $students->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)->values();
     }
 
     protected function calendarQuery()

@@ -1,4 +1,5 @@
 @php
+    \App\Models\ClassSchedule::ensureRecurrenceColumns();
     $supportsRecurrence = \App\Models\ClassSchedule::supportsRecurrenceColumns();
     $recurrenceType = old('recurrence_type', $schedule->recurrence_type ?? 'none');
     $selectedDays = collect(old('recurrence_days', $schedule->recurrence_days ?? []))->map(fn ($d) => strtoupper((string) $d))->all();
@@ -139,5 +140,12 @@
             @endforeach
         </div>
         <button type="button" class="btn btn-default btn-sm" id="add-reminder">+ Add reminder</button>
+    </div>
+@else
+    <div class="col-md-12">
+        <div class="alert alert-warning">
+            Recurrence / reminders columns are missing on this server. Open this page once after deploy
+            (it auto-creates them), or run the class_schedules recurrence migration.
+        </div>
     </div>
 @endif

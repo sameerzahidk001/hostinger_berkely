@@ -52,15 +52,19 @@
                     <div class="col-md-4 form-group">
                         <label>Meeting link</label>
                         @if($zohoMeetingReady ?? false)
-                            <div class="meeting-auto-box">
-                                <strong>Auto-create</strong><br>
-                                Zoho Meeting link is created from this schedule under<br>
-                                <strong>{{ $zohoHostEmail ?? 'bdm@berkeleyme.com' }}</strong>. No paste needed.<br>
-                                The same link is added to Zoho Calendar for the class.
+                            <div class="alert alert-info" style="margin-bottom:0;">
+                                <strong>Auto-create on Save</strong><br>
+                                Zoho Meeting link is created under
+                                <strong>{{ $zohoHostEmail ?? 'bdm@berkeleyme.com' }}</strong>
+                                and added to Zoho Calendar. No paste needed.
                             </div>
                         @else
                             <input type="url" name="zoho_link" class="form-control" value="{{ old('zoho_link') }}" placeholder="https://meeting.zoho.com/...">
-                            <span class="help-block">Connect Zoho OAuth as {{ $zohoHostEmail ?? 'bdm@berkeleyme.com' }} to auto-create the meeting + calendar event. Until then you can paste a Meeting Lab link.</span>
+                            <div class="alert alert-warning" style="margin-top:8px; margin-bottom:0;">
+                                <strong>Auto meeting link is off.</strong>
+                                Connect Zoho OAuth as <strong>{{ $zohoHostEmail ?? 'bdm@berkeleyme.com' }}</strong>,
+                                then save again — or paste a Meeting link here.
+                            </div>
                         @endif
                     </div>
 
@@ -95,8 +99,28 @@
 @include('admin.study-materials.schedules._recurrence_script')
 <script>
 $(function () {
-    $('#course_id').select2({ placeholder: 'Type to find the course', allowClear: true, width: '100%' });
-    $('#student_ids').select2({ placeholder: 'Type to find students', width: '100%' });
+    var $course = $('#course_id');
+    var $students = $('#student_ids');
+
+    $course.select2({ placeholder: 'Type to find the course', allowClear: true, width: '100%' });
+    $students.select2({ placeholder: 'Type to find students', width: '100%', closeOnSelect: false });
+
+    function reloadStudents() {
+        var courseId = $course.val() || '';
+        var keep = $students.val() || [];
+        $.getJSON(@json(route('admin.class-schedules.students')), { course_id: courseId, keep: (keep || []).join(',') })
+            .done(function (res) {
+                var selected = keep.map(String);
+                $students.empty();
+                (res.students || []).forEach(function (row) {
+                    var opt = new Option(row.text, row.id, false, selected.indexOf(String(row.id)) !== -1);
+                    $students.append(opt);
+                });
+                $students.trigger('change');
+            });
+    }
+
+    $course.on('change', reloadStudents);
 });
 </script>
 @endpush

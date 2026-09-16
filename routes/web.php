@@ -222,6 +222,7 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
             Route::get('/create', [ClassScheduleController::class, 'create'])->name('create');
             Route::post('/', [ClassScheduleController::class, 'store'])->name('store');
             Route::get('/feed.ics', [ClassScheduleController::class, 'feed'])->name('feed');
+            Route::get('/students', [ClassScheduleController::class, 'students'])->name('students');
             Route::post('/zoho-embed', [ClassScheduleController::class, 'saveZohoEmbed'])->name('zoho-embed');
             Route::get('/{id}/edit', [ClassScheduleController::class, 'edit'])->name('edit');
             Route::put('/{id}', [ClassScheduleController::class, 'update'])->name('update');

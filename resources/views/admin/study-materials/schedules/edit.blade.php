@@ -61,15 +61,19 @@
                             <input type="url" name="zoho_link" class="form-control" value="{{ old('zoho_link', $schedule->zoho_link) }}">
                             <span class="help-block">Existing auto-created link. Leave as-is unless you need to replace it.</span>
                         @elseif($zohoMeetingReady ?? false)
-                            <div class="meeting-auto-box">
-                                <strong>Auto-create</strong><br>
-                                Save to create the Zoho Meeting link under<br>
+                            <div class="alert alert-info" style="margin-bottom:0;">
+                                <strong>Auto-create on Update</strong><br>
+                                Zoho Meeting will be created under
                                 <strong>{{ $zohoHostEmail ?? 'bdm@berkeleyme.com' }}</strong>
-                                and add it to Zoho Calendar. No paste needed.
+                                and added to Zoho Calendar. No paste needed.
                             </div>
                         @else
-                            <input type="url" name="zoho_link" class="form-control" value="{{ old('zoho_link', $schedule->zoho_link) }}">
-                            <span class="help-block">Connect Zoho OAuth as {{ $zohoHostEmail ?? 'bdm@berkeleyme.com' }} to auto-create the meeting + calendar event.</span>
+                            <input type="url" name="zoho_link" class="form-control" value="{{ old('zoho_link', $schedule->zoho_link) }}" placeholder="https://meeting.zoho.com/...">
+                            <div class="alert alert-warning" style="margin-top:8px; margin-bottom:0;">
+                                <strong>Auto meeting link is off.</strong>
+                                Connect Zoho OAuth as <strong>{{ $zohoHostEmail ?? 'bdm@berkeleyme.com' }}</strong>
+                                (Admin → Zoho / LMS settings), then save again — or paste a Meeting link here.
+                            </div>
                         @endif
                     </div>
 
@@ -77,12 +81,13 @@
 
                     <div class="col-md-12 form-group">
                         <label>Assign students</label>
-                        @php $selected = old('student_ids', $schedule->students->pluck('id')->all()); @endphp
-                        <select name="student_ids[]" id="student_ids" class="form-control" multiple>
+                        @php $selected = collect(old('student_ids', $schedule->students->pluck('id')->all()))->map(fn ($id) => (int) $id)->all(); @endphp
+                        <select name="student_ids[]" id="student_ids" class="form-control" multiple data-keep="{{ implode(',', $selected) }}">
                             @foreach($students as $student)
-                                <option value="{{ $student->id }}" @selected(in_array($student->id, $selected))>{{ $student->name }} ({{ $student->email }})</option>
+                                <option value="{{ $student->id }}" @selected(in_array((int) $student->id, $selected, true))>{{ $student->name }} ({{ $student->email }})</option>
                             @endforeach
                         </select>
+                        <span class="help-block">Type to search. You can select multiple students.</span>
                     </div>
                     <div class="col-md-12 form-group">
                         <label>Notes</label>
@@ -106,8 +111,28 @@
 @include('admin.study-materials.schedules._recurrence_script')
 <script>
 $(function () {
-    $('#course_id').select2({ placeholder: 'Type to find the course', allowClear: true, width: '100%' });
-    $('#student_ids').select2({ placeholder: 'Type to find students', width: '100%' });
+    var $course = $('#course_id');
+    var $students = $('#student_ids');
+
+    $course.select2({ placeholder: 'Type to find the course', allowClear: true, width: '100%' });
+    $students.select2({ placeholder: 'Type to find students', width: '100%', closeOnSelect: false });
+
+    function reloadStudents() {
+        var courseId = $course.val() || '';
+        var keep = $students.val() || ($students.data('keep') ? String($students.data('keep')).split(',') : []);
+        $.getJSON(@json(route('admin.class-schedules.students')), { course_id: courseId, keep: (keep || []).join(',') })
+            .done(function (res) {
+                var selected = keep.map(String);
+                $students.empty();
+                (res.students || []).forEach(function (row) {
+                    var opt = new Option(row.text, row.id, false, selected.indexOf(String(row.id)) !== -1);
+                    $students.append(opt);
+                });
+                $students.trigger('change');
+            });
+    }
+
+    $course.on('change', reloadStudents);
 });
 </script>
 @endpush
