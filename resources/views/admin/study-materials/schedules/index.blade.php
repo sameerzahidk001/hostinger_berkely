@@ -82,11 +82,17 @@
                                             @if($session->title && $session->title !== $batch['batch_name'])
                                                 · {{ $session->title }}
                                             @endif
-                                            <div style="margin-top:4px;">
+                                            <div style="margin-top:6px;">
                                                 @if($session->zoho_link)
-                                                    <a href="{{ $session->zoho_link }}" target="_blank" rel="noopener">Join Zoho</a>
-                                                    ·
+                                                    <a href="{{ $session->zoho_link }}" target="_blank" rel="noopener"
+                                                       style="font-weight:700;color:#1ab394;">Join Now</a>
+                                                    <span class="text-muted"> · </span>
+                                                    <a href="{{ $session->zoho_link }}" target="_blank" rel="noopener"
+                                                       style="word-break:break-all;">{{ $session->zoho_link }}</a>
+                                                @else
+                                                    <span class="text-muted">No meeting link yet</span>
                                                 @endif
+                                                <span class="text-muted"> · </span>
                                                 <a href="{{ route('admin.class-schedules.edit', $session->id) }}">Edit</a>
                                             </div>
                                         </li>
@@ -141,7 +147,7 @@
                             <td>{{ $row->students->count() }}</td>
                             <td>
                                 @if($row->zoho_link)
-                                    <a href="{{ $row->zoho_link }}" target="_blank" rel="noopener">Open</a>
+                                    <a href="{{ $row->zoho_link }}" target="_blank" rel="noopener" style="font-weight:700;">Join Now</a>
                                 @else — @endif
                             </td>
                             <td>{{ ucfirst($row->status) }}</td>
