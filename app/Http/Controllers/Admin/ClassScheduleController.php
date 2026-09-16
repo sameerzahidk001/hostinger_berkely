@@ -43,7 +43,15 @@ class ClassScheduleController extends Controller
             ->values();
         $zohoEmbed = $this->zohoCalendarEmbedUrl();
 
-        return view('admin.study-materials.schedules.index', compact('schedules', 'calendarEvents', 'zohoEmbed'));
+        $batchQuery = ClassSchedule::with(['course', 'instructor', 'students'])
+            ->orderBy('batch_name')
+            ->orderBy('scheduled_at');
+        if ($this->lms->isInstructorActor()) {
+            $batchQuery->where('instructor_id', Auth::id());
+        }
+        $batches = $this->batchListGroups($batchQuery->get());
+
+        return view('admin.study-materials.schedules.index', compact('schedules', 'calendarEvents', 'zohoEmbed', 'batches'));
     }
 
     public function create()
@@ -424,6 +432,42 @@ class ClassScheduleController extends Controller
         }
 
         return $value;
+    }
+
+    /**
+     * Group schedules into batch cards for the Batch list UI.
+     *
+     * @param  \Illuminate\Support\Collection<int, ClassSchedule>  $rows
+     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     */
+    protected function batchListGroups($rows)
+    {
+        return collect($rows)
+            ->groupBy(function (ClassSchedule $row) {
+                $name = trim((string) ($row->batch_name ?: $row->title ?: 'Untitled batch'));
+
+                return mb_strtolower($name) . '|' . (int) $row->course_id;
+            })
+            ->map(function ($sessions) {
+                /** @var \Illuminate\Support\Collection<int, ClassSchedule> $sessions */
+                $first = $sessions->sortBy('scheduled_at')->first();
+                $students = $sessions
+                    ->flatMap(fn (ClassSchedule $row) => $row->students)
+                    ->unique('id')
+                    ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
+                    ->values();
+
+                return [
+                    'batch_name' => $first->batch_name ?: ($first->title ?: 'Untitled batch'),
+                    'course' => $first->course,
+                    'instructor' => $first->instructor,
+                    'sessions' => $sessions->sortBy('scheduled_at')->values(),
+                    'students' => $students,
+                    'primary' => $sessions->sortByDesc('scheduled_at')->first(),
+                ];
+            })
+            ->sortBy(fn ($batch) => mb_strtolower((string) $batch['batch_name']), SORT_NATURAL)
+            ->values();
     }
 
     protected function icsResponse($schedules, string $filename)

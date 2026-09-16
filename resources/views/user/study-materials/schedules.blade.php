@@ -17,6 +17,49 @@
             @include('admin.study-materials.schedules._calendar', ['calendarEvents' => $calendarEvents])
         </div>
     </div>
+
+    <div class="ibox">
+        <div class="ibox-title"><h5>Batch list</h5></div>
+        <div class="ibox-content">
+            @forelse($batches as $batch)
+                <div style="padding:16px 0;border-bottom:1px solid #eee;">
+                    <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap;">
+                        <div>
+                            <strong style="font-size:16px;">{{ $batch['batch_name'] }}</strong>
+                            <div class="text-muted" style="margin-top:4px;">
+                                {{ $batch['course']->title ?? '' }}
+                                · Instructor: <strong>{{ $batch['instructor']->name ?? '—' }}</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <ul class="list-unstyled" style="margin:12px 0 0;">
+                        @foreach($batch['sessions'] as $row)
+                            <li style="display:flex;justify-content:space-between;gap:16px;align-items:center;padding:10px 0;border-top:1px solid #f5f5f5;flex-wrap:wrap;">
+                                <div>
+                                    <strong>{{ $row->scheduled_at?->format('d M Y H:i') }}</strong>
+                                    · {{ $row->durationMinutes() }} min
+                                    @if($row->title && $row->title !== $batch['batch_name'])
+                                        · {{ $row->title }}
+                                    @endif
+                                </div>
+                                <div>
+                                    <a class="btn btn-default btn-sm" href="{{ route('user.class-schedules.item-ics', $row->id) }}">.ics</a>
+                                    @if($row->zoho_link)
+                                        <a class="btn btn-primary btn-sm" href="{{ $row->zoho_link }}" target="_blank" rel="noopener" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;">Join Zoho</a>
+                                    @else
+                                        <span class="label label-default">Link soon</span>
+                                    @endif
+                                </div>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @empty
+                <p class="text-center text-muted">No batches assigned yet.</p>
+            @endforelse
+        </div>
+    </div>
+
     <div class="ibox">
         <div class="ibox-title"><h5>Upcoming classes</h5></div>
         <div class="ibox-content">
@@ -28,7 +71,7 @@
                             {{ $row->scheduled_at?->format('d M Y H:i') }}
                             · {{ $row->durationMinutes() }} min
                             · {{ $row->course->title ?? '' }}
-                            · {{ $row->instructor->name ?? '' }}
+                            · Instructor: {{ $row->instructor->name ?? '—' }}
                         </div>
                     </div>
                     <div>

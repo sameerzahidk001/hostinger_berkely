@@ -51,6 +51,78 @@
     @endif
 
     <div class="ibox">
+        <div class="ibox-title"><h5>Batch list</h5></div>
+        <div class="ibox-content">
+            <p class="help-block">Batches grouped from class schedules. Each batch shows the selected instructor, sessions, and students.</p>
+            @forelse($batches as $batch)
+                <div class="panel panel-default" style="margin-bottom:16px;">
+                    <div class="panel-heading" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
+                        <div>
+                            <strong style="font-size:16px;">{{ $batch['batch_name'] }}</strong>
+                            <div class="text-muted" style="margin-top:2px;">
+                                {{ $batch['course']->title ?? 'No course' }}
+                                · Instructor: <strong>{{ $batch['instructor']->name ?? '—' }}</strong>
+                                · {{ $batch['students']->count() }} student{{ $batch['students']->count() === 1 ? '' : 's' }}
+                            </div>
+                        </div>
+                        @if(!empty($batch['primary']))
+                            <a class="btn btn-xs btn-primary" href="{{ route('admin.class-schedules.edit', $batch['primary']->id) }}">Edit schedule</a>
+                        @endif
+                    </div>
+                    <div class="panel-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h5 style="margin-top:0;">Schedule</h5>
+                                <ul class="list-unstyled" style="margin-bottom:0;">
+                                    @foreach($batch['sessions'] as $session)
+                                        <li style="padding:8px 0;border-bottom:1px solid #f0f0f0;">
+                                            <strong>{{ $session->scheduled_at?->format('d M Y H:i') }}</strong>
+                                            · {{ $session->durationMinutes() }} min
+                                            · {{ ucfirst($session->status) }}
+                                            @if($session->title && $session->title !== $batch['batch_name'])
+                                                · {{ $session->title }}
+                                            @endif
+                                            <div style="margin-top:4px;">
+                                                @if($session->zoho_link)
+                                                    <a href="{{ $session->zoho_link }}" target="_blank" rel="noopener">Join Zoho</a>
+                                                    ·
+                                                @endif
+                                                <a href="{{ route('admin.class-schedules.edit', $session->id) }}">Edit</a>
+                                            </div>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <h5 style="margin-top:0;">Students</h5>
+                                @if($batch['students']->isEmpty())
+                                    <p class="text-muted" style="margin-bottom:0;">No students assigned to this batch yet.</p>
+                                @else
+                                    <ul class="list-unstyled" style="margin-bottom:0;">
+                                        @foreach($batch['students'] as $student)
+                                            <li style="padding:6px 0;border-bottom:1px solid #f0f0f0;">
+                                                <strong>{{ $student->name }}</strong>
+                                                <div class="text-muted">{{ $student->email }}</div>
+                                                <div class="text-muted" style="font-size:12px;margin-top:2px;">
+                                                    Batch schedule:
+                                                    {{ $batch['sessions']->pluck('scheduled_at')->filter()->map(fn ($d) => $d->format('d M Y H:i'))->implode(', ') ?: '—' }}
+                                                    · Instructor: {{ $batch['instructor']->name ?? '—' }}
+                                                </div>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @empty
+                <p class="text-center text-muted" style="margin-bottom:0;">No batches yet. Create a class schedule to start a batch list.</p>
+            @endforelse
+        </div>
+    </div>
+
+    <div class="ibox">
         <div class="ibox-title"><h5>All classes</h5></div>
         <div class="ibox-content table-responsive">
             <table class="table table-striped table-bordered">

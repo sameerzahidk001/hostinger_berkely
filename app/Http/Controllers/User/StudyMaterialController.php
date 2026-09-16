@@ -188,8 +188,26 @@ class StudyMaterialController extends Controller
         $calendarEvents = $schedules->flatMap(fn (ClassSchedule $row) => $row->toFullCalendarEvent(
             $row->zoho_link ?: route('user.class-schedules.index')
         ))->values();
+        $batches = $schedules
+            ->groupBy(function (ClassSchedule $row) {
+                $name = trim((string) ($row->batch_name ?: $row->title ?: 'My batch'));
 
-        return view('user.study-materials.schedules', compact('schedules', 'calendarEvents'));
+                return mb_strtolower($name) . '|' . (int) $row->course_id;
+            })
+            ->map(function ($sessions) {
+                $first = $sessions->sortBy('scheduled_at')->first();
+
+                return [
+                    'batch_name' => $first->batch_name ?: ($first->title ?: 'My batch'),
+                    'course' => $first->course,
+                    'instructor' => $first->instructor,
+                    'sessions' => $sessions->sortBy('scheduled_at')->values(),
+                ];
+            })
+            ->sortBy(fn ($batch) => mb_strtolower((string) $batch['batch_name']), SORT_NATURAL)
+            ->values();
+
+        return view('user.study-materials.schedules', compact('schedules', 'calendarEvents', 'batches'));
     }
 
     public function schedulesIcs()
