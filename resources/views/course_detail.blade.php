@@ -737,11 +737,11 @@
             </div>
 
             @php $instructorCount = count($assignIntructors); @endphp
-            <div
-                class="{{ $instructorCount === 1 ? 'flex justify-center w-full' : 'grid gap-8 md:grid-cols-2' }}">
+            <div class="grid gap-8 {{ $instructorCount === 1 ? 'grid-cols-1' : 'md:grid-cols-2' }}">
                 @foreach ($assignIntructors as $instructor)
-                    <div
-                        class="flex flex-col sm:flex-row bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100 w-full {{ $instructorCount === 1 ? 'md:max-w-[50%]' : '' }}">
+                    <div class="flex flex-col sm:flex-row bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100 w-full">
+                        {{-- 1 instructor: 50% image / 50% content of full row.
+                             2 instructors: each card is half row, so image/content = 25% / 25% of full row. --}}
                         <div class="w-full sm:w-1/2 shrink-0 overflow-hidden bg-gray-100">
                             <img src="{{ displayable_media_url($instructor->image) ?? media_url('/images/profiles/user.png') ?? asset('/images/profiles/user.png') }}"
                                 alt="{{ $instructor->name }}"
