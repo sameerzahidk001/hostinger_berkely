@@ -757,6 +757,7 @@
                             @endif
 
                             <a href="{{ url('/instructor/' . $instructor->id) }}"
+                                target="_blank" rel="noopener"
                                 class="mt-2 inline-block text-center py-2 px-4 bg-[#000435] text-white rounded-lg text-sm font-semibold hover:opacity-90 transition w-full">
                                 View detailed profile
                             </a>
