@@ -737,17 +737,18 @@
             </div>
 
             @php $instructorCount = count($assignIntructors); @endphp
-            <div class="grid gap-8 {{ $instructorCount === 1 ? 'grid-cols-1' : 'md:grid-cols-2' }}">
+            <div class="instructor-cards-grid" style="display:grid;gap:2rem;{{ $instructorCount === 1 ? 'grid-template-columns:1fr;' : 'grid-template-columns:repeat(2,minmax(0,1fr));' }}">
                 @foreach ($assignIntructors as $instructor)
-                    <div class="flex flex-col sm:flex-row bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100 w-full">
-                        {{-- 1 instructor: 50% image / 50% content of full row.
-                             2 instructors: each card is half row, so image/content = 25% / 25% of full row. --}}
-                        <div class="w-full sm:w-1/2 shrink-0 overflow-hidden bg-gray-100">
+                    <div class="instructor-card bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100 w-full"
+                         style="display:flex;flex-direction:row;align-items:stretch;">
+                        {{-- 1 instructor: 50% image / 50% content.
+                             2 instructors: each card half row → ~25% image + ~25% content. --}}
+                        <div class="bg-gray-100 overflow-hidden" style="width:50%;flex:0 0 50%;min-width:0;">
                             <img src="{{ displayable_media_url($instructor->image) ?? media_url('/images/profiles/user.png') ?? asset('/images/profiles/user.png') }}"
                                 alt="{{ $instructor->name }}"
-                                class="w-full h-full object-cover object-top min-h-[240px] sm:min-h-[280px]">
+                                style="width:100%;height:100%;min-height:280px;object-fit:cover;object-position:top;">
                         </div>
-                        <div class="w-full sm:w-1/2 p-5 sm:p-6 flex flex-col gap-3 text-left justify-center">
+                        <div class="flex flex-col gap-3 text-left justify-center" style="width:50%;flex:0 0 50%;min-width:0;padding:1.25rem 1.5rem;">
                             <h3 class="text-xl font-bold text-[#000435]">{{ $instructor->name }}</h3>
 
                             @if ($instructor->short_description)
@@ -758,13 +759,28 @@
 
                             <a href="{{ url('/instructor/' . $instructor->id) }}"
                                 target="_blank" rel="noopener"
-                                class="mt-2 inline-block text-center py-2 px-4 bg-[#000435] text-white rounded-lg text-sm font-semibold hover:opacity-90 transition w-full sm:w-auto sm:self-start">
+                                class="mt-2 inline-block text-center py-2 px-4 bg-[#000435] text-white rounded-lg text-sm font-semibold hover:opacity-90 transition"
+                                style="align-self:flex-start;">
                                 View detailed profile
                             </a>
                         </div>
                     </div>
                 @endforeach
             </div>
+            <style>
+                @media (max-width: 767px) {
+                    .instructor-cards-grid {
+                        grid-template-columns: 1fr !important;
+                    }
+                    .instructor-card {
+                        flex-direction: column !important;
+                    }
+                    .instructor-card > div {
+                        width: 100% !important;
+                        flex: 1 1 auto !important;
+                    }
+                }
+            </style>
         </section>
     @endif
 
