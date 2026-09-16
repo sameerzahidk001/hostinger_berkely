@@ -290,6 +290,9 @@
                     <a href="#six">Examination</a>
                 @endif
                 <!-- <a href="#seven">Faculty</a> -->
+                @if (!empty($upcomingAgendas) && $upcomingAgendas->isNotEmpty())
+                    <a href="#training-calendar">Training Calendar</a>
+                @endif
                 @if (!$course->courseFeePackages->isEmpty() && $course->fee_visibility == 1)
                     <a href="#eight">Fee</a>
                 @endif
@@ -1210,6 +1213,120 @@
 
 
         </section>
+    @endif
+
+    @if (!empty($upcomingAgendas) && $upcomingAgendas->isNotEmpty())
+        <section id="training-calendar" class="flex flex-col items-center py-12 px-6 sm:px-12 lg:px-16 bg-white">
+            <div class="flex flex-col items-center gap-2 mb-8 w-full max-w-[1400px]">
+                <div class="flex gap-3 items-center">
+                    <div class="bg-yellow w-12 h-[2px]"></div>
+                    <span class="text-[22px] sm:text-[28px] md:text-[34px] text-[#000435] font-canela tracking-wide">
+                        Training Calendar
+                    </span>
+                    <div class="bg-yellow w-12 h-[2px]"></div>
+                </div>
+                <p class="text-gray-600 text-center text-sm sm:text-base max-w-3xl">
+                    Upcoming start dates for this course. Only future intakes are shown.
+                </p>
+            </div>
+
+            <div class="w-full max-w-[1400px] overflow-x-auto">
+                <table class="w-full text-sm text-left text-gray-700">
+                    <thead class="text-xs uppercase bg-gray-100 text-gray-600">
+                        <tr>
+                            <th class="px-4 py-3 font-semibold">Subject</th>
+                            <th class="px-4 py-3 font-semibold">Delivery</th>
+                            <th class="px-4 py-3 font-semibold">Location</th>
+                            <th class="px-4 py-3 font-semibold text-right">Dates</th>
+                            <th class="px-4 py-3 font-semibold text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white">
+                        @foreach ($upcomingAgendas as $agenda)
+                            <tr class="{{ !$loop->last ? 'border-b border-gray-200' : '' }}">
+                                <td class="px-4 py-3">
+                                    <span class="font-semibold text-[#000435]">{{ $agenda->subject ?: $course->title }}</span>
+                                    @if ($agenda->description)
+                                        <div class="text-gray-600 mt-1">{!! $agenda->description !!}</div>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3">
+                                    {{ $agenda->delivery_type ?: 'Virtual & Classroom' }}
+                                </td>
+                                <td class="px-4 py-3">
+                                    {{ $agenda->country?->name ?: 'International' }}
+                                    @if ($agenda->city)
+                                        <br><span class="text-gray-500">{{ $agenda->city }}</span>
+                                    @endif
+                                </td>
+                                <td class="px-4 py-3 text-right text-gray-600 whitespace-nowrap">
+                                    <strong>Start:</strong> {{ \Carbon\Carbon::parse($agenda->from)->format('d M Y') }}<br>
+                                    <strong>End:</strong> {{ \Carbon\Carbon::parse($agenda->to)->format('d M Y') }}
+                                </td>
+                                <td class="px-4 py-3 text-right">
+                                    <div class="flex flex-col gap-2 min-w-[120px] items-stretch">
+                                        @if (!$course->courseFeePackages->isEmpty() && $course->fee_visibility == 1)
+                                            <a href="#eight"
+                                               class="border px-4 py-1 border-[#000435] bg-[#000435] text-white rounded uppercase text-center text-xs font-semibold">
+                                                Enroll
+                                            </a>
+                                        @endif
+                                        @if ($agenda->inquiry)
+                                            <button type="button"
+                                                    class="course-agenda-inquire border px-4 py-1 border-[#000435] bg-white text-[#000435] rounded uppercase text-xs font-semibold"
+                                                    data-form="{!! htmlentities($agenda->inquiry, ENT_QUOTES) !!}">
+                                                Enquire
+                                            </button>
+                                        @else
+                                            <a href="{{ route('contact') }}"
+                                               class="border px-4 py-1 border-[#000435] bg-white text-[#000435] rounded uppercase text-center text-xs font-semibold">
+                                                Enquire
+                                            </a>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <div id="course-agenda-inquiry-modal" class="fixed inset-0 z-50 bg-black bg-opacity-50 hidden flex justify-center items-center">
+            <div class="bg-white rounded-lg w-full max-w-md mx-auto relative p-2">
+                <button type="button" id="course-agenda-inquiry-close"
+                        class="absolute top-0 right-2 text-gray-500 hover:text-red-500 text-2xl"
+                        style="margin-top:-25px;">&times;</button>
+                <div id="course-agenda-inquiry-form"></div>
+            </div>
+        </div>
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                var modal = document.getElementById('course-agenda-inquiry-modal');
+                var formBox = document.getElementById('course-agenda-inquiry-form');
+                var closeBtn = document.getElementById('course-agenda-inquiry-close');
+                document.querySelectorAll('.course-agenda-inquire').forEach(function (btn) {
+                    btn.addEventListener('click', function () {
+                        formBox.innerHTML = btn.getAttribute('data-form') || '';
+                        modal.classList.remove('hidden');
+                    });
+                });
+                if (closeBtn) {
+                    closeBtn.addEventListener('click', function () {
+                        modal.classList.add('hidden');
+                        formBox.innerHTML = '';
+                    });
+                }
+                if (modal) {
+                    modal.addEventListener('click', function (e) {
+                        if (e.target === modal) {
+                            modal.classList.add('hidden');
+                            formBox.innerHTML = '';
+                        }
+                    });
+                }
+            });
+        </script>
     @endif
 
     @if (!$course->courseFeePackages->isEmpty() && $course->fee_visibility == 1)

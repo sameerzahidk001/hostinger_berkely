@@ -36,7 +36,8 @@
                     <label>Paste Zoho Calendar embed URL or iframe code</label>
                     <textarea name="zoho_calendar_embed_url" class="form-control" rows="3" placeholder="https://calendar.zoho.com/...">{{ $zohoEmbed }}</textarea>
                     <span class="help-block">
-                        In Zoho Calendar: calendar settings → Public access → Embed Calendar → copy the URL or iframe.
+                        Optional: show a live Zoho Calendar iframe on this Class Schedule admin page only
+                        (not the public Training Calendar). In Zoho Calendar: settings → Public access → Embed Calendar → paste URL/iframe here.
                     </span>
                 </div>
                 <button type="submit" class="btn btn-primary">Save embed</button>

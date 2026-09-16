@@ -106,13 +106,19 @@ class FrontendController extends Controller
             'courseFaq',
             'courseFeePackages',
             'dynamicLabel',
-            'relatedCourses:id,title,slug,short_description,thumbnail'
+            'relatedCourses:id,title,slug,short_description,thumbnail',
+            'agendas' => function ($query) {
+                $query->with('country:id,name')
+                    ->whereDate('from', '>=', now()->toDateString())
+                    ->orderBy('from');
+            },
         ])->where('slug', $slug)->firstOrFail();
 
         $instructorIds = course_instructor_ids($data['course']);
 
         // Fetch assigned instructor users
         $data['assignIntructors'] = User::whereIn('id', $instructorIds)->get();
+        $data['upcomingAgendas'] = $data['course']->agendas;
 
         return view('course_detail', $data);
     }

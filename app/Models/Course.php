@@ -169,6 +169,11 @@ class Course extends Model
         return $this->hasMany(CourseFee::class, 'courses_id', 'id');
     }
 
+    public function agendas()
+    {
+        return $this->hasMany(CourseAgenda::class, 'course_id', 'id');
+    }
+
     public function courseStructuresFirst()
     {
         return $this->hasMany(CourseStructureFirst::class, 'courses_id', 'id');
