@@ -67,6 +67,29 @@ if [ -f .env ]; then
   upsert_env NOON_CURRENCY AED
   upsert_env NOON_PAYMENT_ACTION SALE
   upsert_env NOON_WEBHOOK_SECRET d3aa6de3-2653-4c6f-851e-51794d1dc32b
+
+  # Zoho Meeting Lab + WorkDrive + Calendar (bdm@berkeleyme.com OAuth)
+  # Force-write so a blank/stale token on Hostinger is replaced.
+  force_env() {
+    key="$1"
+    val="$2"
+    if grep -q "^${key}=" .env; then
+      sed -i "s|^${key}=.*|${key}=${val}|" .env
+    else
+      echo "${key}=${val}" >> .env
+    fi
+  }
+  force_env ZOHO_ACCOUNT_EMAIL bdm@berkeleyme.com
+  force_env ZOHO_ACCOUNTS_URL https://accounts.zoho.com
+  force_env ZOHO_MEETING_URL https://meeting.zoho.com
+  force_env ZOHO_CLIENT_ID 1000.WW01EMQ73P97FDWYKHPPPL46PLCG4F
+  force_env ZOHO_CLIENT_SECRET df268c77655674d5c29009939053e5a8f929ab1890
+  force_env ZOHO_REFRESH_TOKEN 1000.621d0b7d565917edf2fa28a26ca07c9c.fd6eeb269a175580907d41c10ead466e
+  force_env ZOHO_ORG_ID 667841096
+  force_env ZOHO_PRESENTER_ZUID 813723220
+  force_env ZOHO_WORKDRIVE_FOLDER_ID spuntc5376892cd29487691e0c9d20e212f62
+  force_env ZOHO_CALENDAR_UID a911f7d47515486dadb3ef2e6a0bcb34
+  force_env ZOHO_TIMEZONE Asia/Dubai
 fi
 
 echo "==> Laravel setup"

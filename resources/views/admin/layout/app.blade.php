@@ -162,6 +162,9 @@
                   <li class="{{ request()->is('admin/class-schedules*') ? 'active' : '' }}">
                      <a href="{{ route('admin.class-schedules.index') }}"><i class="fa fa-calendar"></i> <span class="nav-label">Class Schedule</span></a>
                   </li>
+                  <li class="{{ request()->is('admin/zoho-settings*') ? 'active' : '' }}">
+                     <a href="{{ route('admin.zoho.settings') }}"><i class="fa fa-video-camera"></i> <span class="nav-label">Zoho LMS</span></a>
+                  </li>
                   @endif
                   @if(admin_menu_allowed('analytics'))
                   <li class="{{ request()->is('admin/analytics*') ? 'active' : '' }}">

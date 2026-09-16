@@ -45,6 +45,7 @@ use App\Http\Controllers\Admin\StudyMaterialFolderController;
 use App\Http\Controllers\Admin\StudyMaterialAccessController;
 use App\Http\Controllers\Admin\ClassScheduleController;
 use App\Http\Controllers\Admin\LmsInstallController;
+use App\Http\Controllers\Admin\ZohoSettingsController;
 
 //student controllers starts
 use App\Http\Controllers\Student\HomeController as StudentHomeController;
@@ -182,6 +183,8 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
         // Study Materials (LMS) + Class Schedules / Zoho Meeting
         Route::get('/lms-install', [LmsInstallController::class, 'show'])->name('admin.lms.install');
         Route::post('/lms-install', [LmsInstallController::class, 'run'])->name('admin.lms.install.run');
+        Route::get('/zoho-settings', [ZohoSettingsController::class, 'show'])->name('admin.zoho.settings');
+        Route::post('/zoho-settings', [ZohoSettingsController::class, 'save'])->name('admin.zoho.settings.save');
 
         Route::prefix('study-materials')->name('admin.study-materials.')->group(function () {
             Route::get('/folders', [StudyMaterialFolderController::class, 'index'])->name('folders.index');
