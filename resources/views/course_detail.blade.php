@@ -738,26 +738,26 @@
 
             @php $instructorCount = count($assignIntructors); @endphp
             <div
-                class="{{ $instructorCount === 1 ? 'flex justify-center' : 'grid gap-10 md:grid-cols-2 lg:grid-cols-3' }}">
+                class="{{ $instructorCount === 1 ? 'flex justify-center w-full' : 'grid gap-10 md:grid-cols-2 lg:grid-cols-4' }}">
                 @foreach ($assignIntructors as $instructor)
                     <div
-                        class="flex flex-col bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100 {{ $instructorCount === 1 ? 'w-full max-w-[380px]' : '' }}">
-                        <div class="w-full h-[280px] overflow-hidden bg-gray-100">
+                        class="flex flex-col bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100 {{ $instructorCount === 1 ? 'w-full max-w-[280px] md:max-w-[300px] lg:w-1/4 lg:max-w-[25%]' : 'w-full' }}">
+                        <div class="w-full aspect-[4/3] overflow-hidden bg-gray-100">
                             <img src="{{ displayable_media_url($instructor->image) ?? media_url('/images/profiles/user.png') ?? asset('/images/profiles/user.png') }}"
                                 alt="{{ $instructor->name }}"
                                 class="w-full h-full object-cover object-top">
                         </div>
-                        <div class="p-5 flex flex-col gap-3 text-left">
-                            <h3 class="text-xl font-bold text-[#000435]">{{ $instructor->name }}</h3>
+                        <div class="p-4 flex flex-col gap-3 text-left">
+                            <h3 class="text-lg font-bold text-[#000435]">{{ $instructor->name }}</h3>
 
                             @if ($instructor->short_description)
-                                <div class="text-gray-600 text-sm leading-relaxed">
+                                <div class="text-gray-600 text-sm leading-relaxed line-clamp-6">
                                     {!! $instructor->short_description !!}
                                 </div>
                             @endif
 
                             <a href="{{ url('/instructor/' . $instructor->id) }}"
-                                class="mt-2 inline-block text-center py-2 px-4 bg-[#000435] text-white rounded-lg text-sm font-semibold hover:opacity-90 transition">
+                                class="mt-2 inline-block text-center py-2 px-4 bg-[#000435] text-white rounded-lg text-sm font-semibold hover:opacity-90 transition w-full">
                                 View detailed profile
                             </a>
                         </div>
