@@ -114,10 +114,13 @@ class FrontendController extends Controller
             },
         ])->where('slug', $slug)->firstOrFail();
 
-        $instructorIds = course_instructor_ids($data['course']);
+        $instructorIds = array_slice(course_instructor_ids($data['course']), 0, 2);
 
-        // Fetch assigned instructor users
-        $data['assignIntructors'] = User::whereIn('id', $instructorIds)->get();
+        // Keep Head of Faculty first, Instructor second
+        $data['assignIntructors'] = collect($instructorIds)
+            ->map(fn ($id) => User::find($id))
+            ->filter()
+            ->values();
         $data['upcomingAgendas'] = $data['course']->agendas;
 
         return view('course_detail', $data);

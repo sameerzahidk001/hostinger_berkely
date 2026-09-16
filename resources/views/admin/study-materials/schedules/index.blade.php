@@ -24,7 +24,7 @@
             <table class="table table-striped table-bordered">
                 <thead>
                     <tr>
-                        <th>Batch</th><th>Course</th><th>Instructor</th><th>When</th><th>Students</th><th>Zoho Meeting</th><th>Status</th><th>Actions</th>
+                        <th>Batch</th><th>Course</th><th>Head of Faculty</th><th>Instructor</th><th>When</th><th>Students</th><th>Zoho Meeting</th><th>Status</th><th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -32,6 +32,7 @@
                         <tr>
                             <td>{{ $row->batch_name }}</td>
                             <td>{{ $row->course->title ?? '—' }}</td>
+                            <td>{{ $row->headOfFaculty->name ?? '—' }}</td>
                             <td>{{ $row->instructor->name ?? '—' }}</td>
                             <td>{{ $row->scheduled_at?->format('d M Y H:i') }}</td>
                             <td>{{ $row->students->count() }}</td>
@@ -53,7 +54,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="8" class="text-center">No schedules yet.</td></tr>
+                        <tr><td colspan="9" class="text-center">No schedules yet.</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -72,6 +73,7 @@
                             <strong style="font-size:16px;">{{ $batch['batch_name'] }}</strong>
                             <div class="text-muted" style="margin-top:2px;">
                                 {{ $batch['course']->title ?? 'No course' }}
+                                · Head of Faculty: <strong>{{ $batch['head_of_faculty']->name ?? '—' }}</strong>
                                 · Instructor: <strong>{{ $batch['instructor']->name ?? '—' }}</strong>
                                 · {{ $batch['students']->count() }} student{{ $batch['students']->count() === 1 ? '' : 's' }}
                             </div>

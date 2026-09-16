@@ -130,6 +130,22 @@ class StudyMaterialFolderController extends Controller
                 'access_till' => $accessTill?->toDateString(),
                 'sent_at' => now(),
             ]);
+        } elseif ($request->filled('head_of_faculty_id') || $request->filled('instructor_id')) {
+            $facultyIds = collect([
+                $request->input('head_of_faculty_id'),
+                $request->input('instructor_id'),
+            ])->filter()->map(fn ($id) => (int) $id)->unique()->values();
+
+            foreach ($facultyIds as $instructorId) {
+                $folder->instructorAccess()->firstOrCreate(
+                    ['instructor_id' => $instructorId],
+                    [
+                        'status' => 'disabled',
+                        'issued_at' => now()->toDateString(),
+                        'access_till' => $accessTill?->toDateString(),
+                    ]
+                );
+            }
         } elseif ($request->filled('instructor_ids')) {
             foreach ((array) $request->instructor_ids as $instructorId) {
                 $folder->instructorAccess()->firstOrCreate(
@@ -487,6 +503,8 @@ class StudyMaterialFolderController extends Controller
             'status' => 'nullable|in:disabled,active',
             'instructor_ids' => 'nullable|array',
             'instructor_ids.*' => 'exists:users,id',
+            'head_of_faculty_id' => 'nullable|exists:users,id',
+            'instructor_id' => 'nullable|exists:users,id',
             'structure' => 'nullable|array',
             'structure.*.name' => 'nullable|string|max:255',
         ];

@@ -111,6 +111,7 @@ php artisan berkely:ensure-seo-focus-keyword-column
 php artisan migrate --path=database/migrations/2026_06_20_000001_add_status_to_pages_table.php --force
 php artisan migrate --path=database/migrations/2026_06_22_000001_add_image_to_admins_table.php --force
 php artisan migrate --path=database/migrations/2026_06_23_000001_add_focus_keyword_to_pages_seo_table.php --force
+php artisan migrate --path=database/migrations/2026_09_16_000001_add_head_of_faculty_to_class_schedules.php --force
 
 php artisan config:clear
 php artisan cache:clear

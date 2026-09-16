@@ -30,7 +30,7 @@ class ClassScheduleController extends Controller
                 ->with('fail', 'LMS tables are missing. Create them here (do not use Ignition Run Migrations).');
         }
 
-        $query = ClassSchedule::with(['course', 'instructor', 'students'])->orderByDesc('scheduled_at');
+        $query = ClassSchedule::with(['course', 'instructor', 'headOfFaculty', 'students'])->orderByDesc('scheduled_at');
 
         if ($this->lms->isInstructorActor()) {
             $query->where('instructor_id', Auth::id());
@@ -43,7 +43,7 @@ class ClassScheduleController extends Controller
             ->values();
         $zohoEmbed = $this->zohoCalendarEmbedUrl();
 
-        $batchQuery = ClassSchedule::with(['course', 'instructor', 'students'])
+        $batchQuery = ClassSchedule::with(['course', 'instructor', 'headOfFaculty', 'students'])
             ->orderBy('batch_name')
             ->orderBy('scheduled_at');
         if ($this->lms->isInstructorActor()) {
@@ -91,7 +91,7 @@ class ClassScheduleController extends Controller
 
         $schedule = new ClassSchedule();
         $schedule->fill($request->only([
-            'batch_name', 'course_id', 'instructor_id', 'scheduled_at', 'duration_minutes', 'zoho_link', 'title', 'notes',
+            'batch_name', 'course_id', 'instructor_id', 'head_of_faculty_id', 'scheduled_at', 'duration_minutes', 'zoho_link', 'title', 'notes',
         ]));
         $schedule->duration_minutes = (int) ($request->input('duration_minutes') ?: 60);
         $schedule->status = 'scheduled';
@@ -199,7 +199,7 @@ class ClassScheduleController extends Controller
         }
 
         $schedule->fill($request->only([
-            'batch_name', 'course_id', 'instructor_id', 'scheduled_at', 'duration_minutes', 'zoho_link', 'title', 'notes', 'status',
+            'batch_name', 'course_id', 'instructor_id', 'head_of_faculty_id', 'scheduled_at', 'duration_minutes', 'zoho_link', 'title', 'notes', 'status',
         ]));
         $schedule->duration_minutes = (int) ($request->input('duration_minutes') ?: 60);
         $this->applyRecurrenceAndReminders($schedule, $request);
@@ -277,6 +277,7 @@ class ClassScheduleController extends Controller
             'batch_name' => 'required|string|max:255',
             'course_id' => 'required|exists:courses,id',
             'instructor_id' => 'nullable|exists:users,id',
+            'head_of_faculty_id' => 'nullable|exists:users,id',
             'scheduled_at' => 'required|date',
             'duration_minutes' => 'nullable|integer|min:15|max:480',
             'zoho_link' => 'nullable|url|max:500',
@@ -461,6 +462,7 @@ class ClassScheduleController extends Controller
                     'batch_name' => $first->batch_name ?: ($first->title ?: 'Untitled batch'),
                     'course' => $first->course,
                     'instructor' => $first->instructor,
+                    'head_of_faculty' => $first->headOfFaculty,
                     'sessions' => $sessions->sortBy('scheduled_at')->values(),
                     'students' => $students,
                     'primary' => $sessions->sortByDesc('scheduled_at')->first(),

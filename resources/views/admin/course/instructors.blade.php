@@ -21,7 +21,6 @@
 
 @endpush
 @section('content')
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <div class="row wrapper border-bottom white-bg page-heading">
         <div class="col-lg-10">
             <h2>Instructor</h2>
@@ -63,16 +62,31 @@
                             @csrf
                             <input type="hidden" value="{{ $course->id }}" name="course_id">
                             <div class="row">
-                                <div class="col-lg-12">
-                                    <label for="instructor_select">Select Instructors (for update)</label>
-                                    <select name="instructor_id[]" id="instructor_select" class="form-control" multiple>
+                                <div class="col-md-6 mb">
+                                    <label for="head_of_faculty_id">Head of the Faculty</label>
+                                    <select name="head_of_faculty_id" id="head_of_faculty_id" class="form-control">
+                                        <option value="">—</option>
                                         @foreach ($instructors as $instructor)
-                                            <option value="{{ $instructor->id }}">
+                                            <option value="{{ $instructor->id }}" @selected(old('head_of_faculty_id', $headOfFacultyId ?? null) == $instructor->id)>
                                                 {{ $instructor->name }}
                                             </option>
                                         @endforeach
                                     </select>
-                                    <button type="submit" class="btn btn-primary" style="float: right;margin-top: 15px;">Add Instructor</button>
+                                </div>
+                                <div class="col-md-6 mb">
+                                    <label for="instructor_id">Instructor</label>
+                                    <select name="instructor_id" id="instructor_id" class="form-control">
+                                        <option value="">—</option>
+                                        @foreach ($instructors as $instructor)
+                                            <option value="{{ $instructor->id }}" @selected(old('instructor_id', $courseInstructorId ?? null) == $instructor->id)>
+                                                {{ $instructor->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    <span class="help-block">Max 2 people: Head of the Faculty + Instructor. These show on the course page.</span>
+                                </div>
+                                <div class="col-lg-12">
+                                    <button type="submit" class="btn btn-primary" style="float: right;margin-top: 15px;">Save Faculty</button>
                                 </div>
                             </div>
                         </form>
@@ -156,15 +170,7 @@
 
 @push('script')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script>
-        $(document).ready(function () {
-            $('#instructor_select').select2({
-                placeholder: "Select instructors",
-                allowClear: true
-            });
-        });
-
         function confirmDelete(id) {
             Swal.fire({
                 title: 'Are you sure?',

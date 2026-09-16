@@ -103,15 +103,20 @@ class CourseController extends Controller
             $q->where('role_id', 2);
         })->get();
 
-        $instructorIds = course_instructor_ids($course);
+        $instructorIds = array_slice(course_instructor_ids($course), 0, 2);
 
-        // Fetch assigned instructor users
-        $assignIntructors = User::whereIn('id', $instructorIds)->get();
+        // Keep Head of Faculty first, Instructor second
+        $assignIntructors = collect($instructorIds)
+            ->map(fn ($id) => User::find($id))
+            ->filter()
+            ->values();
 
         return view('admin.course.instructors', [
             'course' => $course,
             'instructors' => $instructors,
             'assignIntructors' => $assignIntructors,
+            'headOfFacultyId' => $instructorIds[0] ?? null,
+            'courseInstructorId' => $instructorIds[1] ?? null,
         ]);
     }
     
@@ -264,29 +269,24 @@ class CourseController extends Controller
 
     public function addInstructor(Request $request)
     {
-        $course_id = $request->input('course_id');
-        $newInstructorIds = $request->input('instructor_id');
+        $request->validate([
+            'course_id' => 'required|exists:courses,id',
+            'head_of_faculty_id' => 'nullable|exists:users,id',
+            'instructor_id' => 'nullable|exists:users,id',
+        ]);
 
-        // Always work with array
-        $newInstructorIds = is_array($newInstructorIds) ? $newInstructorIds : [$newInstructorIds];
+        $course = Course::findOrFail($request->input('course_id'));
 
-        // Fetch the course
-        $course = Course::findOrFail($course_id);
+        // Ordered: Head of Faculty first, Instructor second (max 2 unique)
+        $ids = collect([
+            $request->input('head_of_faculty_id'),
+            $request->input('instructor_id'),
+        ])->filter()->map(fn ($id) => (int) $id)->unique()->take(2)->values()->all();
 
-        // Convert existing instructor_ids to array
-        $existingIds = course_instructor_ids($course);
-
-        // Merge and remove duplicates
-        $allInstructorIds = array_values(array_unique(array_merge(
-            $existingIds,
-            array_map('intval', $newInstructorIds)
-        )));
-
-        // Save updated instructor list (stored as JSON array via model cast)
-        $course->instructor_id = $allInstructorIds;
+        $course->instructor_id = $ids;
         $course->save();
 
-        return back()->with('success', 'Instructors updated successfully!');
+        return back()->with('success', 'Head of Faculty and Instructor saved. These appear on the course page.');
     }
 
     public function deleteInstructor(Request $request, $id)

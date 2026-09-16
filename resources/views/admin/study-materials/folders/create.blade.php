@@ -75,10 +75,20 @@
                         </select>
                     </div>
                     <div class="col-md-6 form-group">
-                        <label>Instructors (optional)</label>
-                        <select name="instructor_ids[]" class="form-control" multiple size="5">
+                        <label>Head of the Faculty</label>
+                        <select name="head_of_faculty_id" class="form-control">
+                            <option value="">—</option>
                             @foreach($instructors as $ins)
-                                <option value="{{ $ins->id }}" @selected(collect(old('instructor_ids'))->contains($ins->id))>{{ $ins->name }}</option>
+                                <option value="{{ $ins->id }}" @selected(old('head_of_faculty_id') == $ins->id)>{{ $ins->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-6 form-group">
+                        <label>Instructor</label>
+                        <select name="instructor_id" class="form-control">
+                            <option value="">—</option>
+                            @foreach($instructors as $ins)
+                                <option value="{{ $ins->id }}" @selected(old('instructor_id') == $ins->id)>{{ $ins->name }}</option>
                             @endforeach
                         </select>
                         <span class="help-block">Access stays disabled until you Send from Access list.</span>

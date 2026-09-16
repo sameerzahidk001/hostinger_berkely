@@ -33,6 +33,15 @@
                         </select>
                     </div>
                     <div class="col-md-6 form-group">
+                        <label>Head of the Faculty</label>
+                        <select name="head_of_faculty_id" class="form-control">
+                            <option value="">—</option>
+                            @foreach($instructors as $ins)
+                                <option value="{{ $ins->id }}" @selected(old('head_of_faculty_id') == $ins->id)>{{ $ins->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-6 form-group">
                         <label>Instructor</label>
                         <select name="instructor_id" class="form-control">
                             <option value="">—</option>

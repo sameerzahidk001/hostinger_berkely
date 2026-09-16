@@ -31,6 +31,7 @@ class ClassSchedule extends Model
         'batch_name',
         'course_id',
         'instructor_id',
+        'head_of_faculty_id',
         'scheduled_at',
         'duration_minutes',
         'recurrence_type',
@@ -62,6 +63,11 @@ class ClassSchedule extends Model
     public function instructor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'instructor_id');
+    }
+
+    public function headOfFaculty(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'head_of_faculty_id');
     }
 
     public function students(): BelongsToMany
