@@ -28,19 +28,6 @@ use App\Http\Controllers\UserBehaviorController;
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\Admin\HomepageController;
-use App\Services\ZohoLmsService;
-
-Route::get('/zoho-health', function (ZohoLmsService $zoho) {
-    $status = $zoho->connectionStatus();
-
-    return response()->json([
-        'configured' => (bool) ($status['configured'] ?? false),
-        'connected_email' => $status['connected_email'] ?? null,
-        'org_id' => $status['org_id'] ?? null,
-        'ok' => ! empty($status['configured']) && empty($status['error']),
-        'error' => $status['error'] ?? null,
-    ]);
-});
 use App\Http\Controllers\Admin\PaymentGatewayController;
 use App\Http\Controllers\Admin\ClientController;
 use App\Http\Controllers\MenuController;
