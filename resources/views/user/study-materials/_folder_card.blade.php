@@ -15,14 +15,26 @@
                     <a href="{{ route('course.details', ['course' => $folder->course->slug ?? $folder->course_id]) }}" target="_blank" rel="noopener"><strong>{{ $folder->course->title }}</strong></a>
                 @else — @endif
             </p>
+            @php
+                $courseInstructorIds = course_instructor_ids($folder->course ?? null);
+                $headOfFaculty = $instructors->firstWhere('id', $courseInstructorIds[0] ?? null) ?: ($instructors->count() > 1 ? $instructors->get(0) : null);
+                $primaryInstructor = $instructors->firstWhere('id', $courseInstructorIds[1] ?? null)
+                    ?: ($instructors->count() > 1 ? $instructors->get(1) : $instructors->first());
+            @endphp
+            <p style="margin-bottom:6px;">
+                Head of Faculty:
+                @if($headOfFaculty)
+                    <a href="{{ url('/instructor/' . $headOfFaculty->id) }}" target="_blank" rel="noopener"><strong>{{ $headOfFaculty->name }}</strong></a>
+                @else
+                    —
+                @endif
+            </p>
             <p style="margin-bottom:6px;">
                 Instructor:
-                @if($instructors->isEmpty())
-                    —
+                @if($primaryInstructor)
+                    <a href="{{ url('/instructor/' . $primaryInstructor->id) }}" target="_blank" rel="noopener"><strong>{{ $primaryInstructor->name }}</strong></a>
                 @else
-                    @foreach($instructors as $instructor)
-                        <a href="{{ url('/instructor/' . $instructor->id) }}" target="_blank" rel="noopener"><strong>{{ $instructor->name }}</strong></a>@if(!$loop->last), @endif
-                    @endforeach
+                    —
                 @endif
             </p>
             <p style="margin-bottom:6px;">Access Start: {{ optional($access->issued_at)->format('d M Y') ?: '—' }}</p>

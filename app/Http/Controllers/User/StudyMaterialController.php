@@ -201,6 +201,7 @@ class StudyMaterialController extends Controller
                     'batch_name' => $first->batch_name ?: ($first->title ?: 'My batch'),
                     'course' => $first->course,
                     'instructor' => $first->instructor,
+                    'head_of_faculty' => $first->headOfFaculty,
                     'sessions' => $sessions->sortBy('scheduled_at')->values(),
                 ];
             })
@@ -225,11 +226,14 @@ class StudyMaterialController extends Controller
 
     protected function studentSchedules()
     {
-        $query = ClassSchedule::with(['course', 'instructor'])
+        $query = ClassSchedule::with(['course', 'instructor', 'headOfFaculty'])
             ->where('status', 'scheduled');
 
         if (Auth::user()?->roles()->where('name', 'instructor')->exists()) {
-            $query->where('instructor_id', Auth::id());
+            $query->where(function ($q) {
+                $q->where('instructor_id', Auth::id())
+                    ->orWhere('head_of_faculty_id', Auth::id());
+            });
         } else {
             $query->whereHas('students', fn ($q) => $q->where('users.id', Auth::id()));
         }

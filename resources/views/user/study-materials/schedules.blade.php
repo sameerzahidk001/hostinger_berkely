@@ -21,6 +21,7 @@
                             {{ $row->scheduled_at?->format('d M Y H:i') }}
                             · {{ $row->durationMinutes() }} min
                             · {{ $row->course->title ?? '' }}
+                            · Head of Faculty: {{ $row->headOfFaculty->name ?? '—' }}
                             · Instructor: {{ $row->instructor->name ?? '—' }}
                         </div>
                     </div>
@@ -49,6 +50,7 @@
                             <strong style="font-size:16px;">{{ $batch['batch_name'] }}</strong>
                             <div class="text-muted" style="margin-top:4px;">
                                 {{ $batch['course']->title ?? '' }}
+                                · Head of Faculty: <strong>{{ $batch['head_of_faculty']->name ?? '—' }}</strong>
                                 · Instructor: <strong>{{ $batch['instructor']->name ?? '—' }}</strong>
                             </div>
                         </div>

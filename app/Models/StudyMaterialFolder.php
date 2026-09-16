@@ -202,15 +202,24 @@ class StudyMaterialFolder extends Model
             ->unique('id')
             ->values();
 
-        if ($fromFolder->isNotEmpty()) {
+        // Prefer course order: [0] Head of Faculty, [1] Instructor — then any extras from folder access.
+        $orderedIds = course_instructor_ids($this->course);
+        foreach ($fromFolder as $user) {
+            $id = (int) $user->id;
+            if ($id && ! in_array($id, $orderedIds, true)) {
+                $orderedIds[] = $id;
+            }
+        }
+
+        if ($orderedIds === []) {
             return $fromFolder;
         }
 
-        $ids = course_instructor_ids($this->course);
-        if ($ids === []) {
-            return collect();
-        }
+        $users = User::query()->whereIn('id', $orderedIds)->get()->keyBy('id');
 
-        return User::query()->whereIn('id', $ids)->orderBy('name')->get();
+        return collect($orderedIds)
+            ->map(fn ($id) => $users->get($id))
+            ->filter()
+            ->values();
     }
 }
