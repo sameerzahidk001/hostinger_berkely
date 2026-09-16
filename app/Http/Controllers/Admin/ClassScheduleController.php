@@ -48,6 +48,8 @@ class ClassScheduleController extends Controller
 
     public function create()
     {
+        ClassSchedule::ensureRecurrenceColumns();
+
         $courses = $this->lms->coursesForActor();
         $instructors = User::query()
             ->whereHas('roles', fn ($q) => $q->where('name', 'instructor'))
@@ -116,6 +118,8 @@ class ClassScheduleController extends Controller
 
     public function edit($id)
     {
+        ClassSchedule::ensureRecurrenceColumns();
+
         $schedule = ClassSchedule::with('students')->findOrFail($id);
         if ($this->lms->isInstructorActor() && (int) $schedule->instructor_id !== (int) Auth::id()) {
             abort(403);
