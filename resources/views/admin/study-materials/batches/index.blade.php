@@ -13,6 +13,12 @@
     <div class="col-lg-4 text-right" style="padding-top:20px;">
         <a href="{{ route('admin.class-schedules.index') }}" class="btn btn-default">Schedules</a>
         @if($isAdmin)
+            <form action="{{ route('admin.class-batches.backfill') }}" method="POST" style="display:inline;">
+                @csrf
+                <button type="submit" class="btn btn-default" onclick="return confirm('Link old schedules (by batch name + course) into Batches?');">
+                    Link legacy schedules
+                </button>
+            </form>
             <a href="{{ route('admin.class-batches.create') }}" class="btn btn-primary">Create Batch</a>
         @endif
     </div>
@@ -27,6 +33,7 @@
             <p class="help-block">
                 Admin creates batches (unique code), assigns Head of Faculty + instructors, and students.
                 Instructors create schedules using an assigned batch from the dropdown.
+                Use <strong>Link legacy schedules</strong> once if older sessions still have only a batch name.
             </p>
             <table class="table table-striped table-bordered">
                 <thead>

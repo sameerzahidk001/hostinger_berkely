@@ -18,6 +18,26 @@
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if(session('fail'))<div class="alert alert-danger">{{ session('fail') }}</div>@endif
 
+    @php
+        $hasZoom = collect($accounts)->contains(fn ($a) => $a->provider === 'zoom' && $a->is_active);
+        $hasZoho = collect($accounts)->contains(fn ($a) => $a->provider === 'zoho' && $a->is_active);
+    @endphp
+
+    @unless($hasZoom)
+        <div class="alert alert-info">
+            <strong>Zoom not set up yet.</strong>
+            Click <strong>Add Zoom account</strong> and paste Zoom Server-to-Server OAuth details
+            (Account ID, Client ID, Client Secret) from the Zoom App Marketplace.
+            After that, Zoom appears in the Class Schedule “Meeting account” dropdown.
+        </div>
+    @endunless
+    @unless($hasZoho)
+        <div class="alert alert-warning">
+            <strong>No active Zoho account.</strong>
+            Add a Zoho account (Client ID, Secret, Refresh Token) so schedules can auto-create Join links.
+        </div>
+    @endunless
+
     <div class="ibox">
         <div class="ibox-title"><h5>Zoho &amp; Zoom accounts for Class Schedule</h5></div>
         <div class="ibox-content table-responsive">
@@ -30,6 +50,7 @@
                         <th>Host email</th>
                         <th>Default</th>
                         <th>Active</th>
+                        <th>Ready</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -46,6 +67,13 @@
                                 </span>
                             </td>
                             <td>
+                                @if($account->hasRequiredCredentials())
+                                    <span class="label label-primary">Credentials OK</span>
+                                @else
+                                    <span class="label label-warning">Missing credentials</span>
+                                @endif
+                            </td>
+                            <td>
                                 <a class="btn btn-xs btn-primary" href="{{ route('admin.meeting-accounts.edit', $account->id) }}">Edit</a>
                                 <form action="{{ route('admin.meeting-accounts.destroy', $account->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this meeting account?');">
                                     @csrf @method('DELETE')
@@ -54,7 +82,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" class="text-center">No meeting accounts yet. Add a Zoho or Zoom account.</td></tr>
+                        <tr><td colspan="7" class="text-center">No meeting accounts yet. Add a Zoho or Zoom account.</td></tr>
                     @endforelse
                 </tbody>
             </table>

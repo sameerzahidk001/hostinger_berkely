@@ -237,6 +237,7 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
             Route::get('/', [ClassBatchController::class, 'index'])->name('index');
             Route::get('/create', [ClassBatchController::class, 'create'])->name('create');
             Route::post('/', [ClassBatchController::class, 'store'])->name('store');
+            Route::post('/backfill-legacy', [ClassBatchController::class, 'backfill'])->name('backfill');
             Route::get('/{id}/edit', [ClassBatchController::class, 'edit'])->name('edit');
             Route::put('/{id}', [ClassBatchController::class, 'update'])->name('update');
             Route::delete('/{id}', [ClassBatchController::class, 'destroy'])->name('destroy');
