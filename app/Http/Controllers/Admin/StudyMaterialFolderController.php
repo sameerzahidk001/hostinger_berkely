@@ -130,33 +130,8 @@ class StudyMaterialFolderController extends Controller
                 'access_till' => $accessTill?->toDateString(),
                 'sent_at' => now(),
             ]);
-        } elseif ($request->filled('head_of_faculty_id') || $request->filled('instructor_id')) {
-            $facultyIds = collect([
-                $request->input('head_of_faculty_id'),
-                $request->input('instructor_id'),
-            ])->filter()->map(fn ($id) => (int) $id)->unique()->values();
-
-            foreach ($facultyIds as $instructorId) {
-                $folder->instructorAccess()->firstOrCreate(
-                    ['instructor_id' => $instructorId],
-                    [
-                        'status' => 'disabled',
-                        'issued_at' => now()->toDateString(),
-                        'access_till' => $accessTill?->toDateString(),
-                    ]
-                );
-            }
-        } elseif ($request->filled('instructor_ids')) {
-            foreach ((array) $request->instructor_ids as $instructorId) {
-                $folder->instructorAccess()->firstOrCreate(
-                    ['instructor_id' => $instructorId],
-                    [
-                        'status' => 'disabled',
-                        'issued_at' => now()->toDateString(),
-                        'access_till' => $accessTill?->toDateString(),
-                    ]
-                );
-            }
+        } elseif ($this->lms->isAdminActor()) {
+            $this->syncFolderFacultyAccess($folder, $request, $accessTill);
         }
 
         $this->storeStructure((array) $request->input('structure', []), $folder, null, 0);
@@ -234,6 +209,7 @@ class StudyMaterialFolderController extends Controller
             'isAdmin' => $this->lms->isAdminActor(),
             'lockedInstructor' => $folder->owner_type === 'instructor',
             'selectedPackageIds' => old('fee_package_ids', $folder->selectedPackageIds()),
+            'selectedInstructorIds' => old('instructor_ids', $folder->instructorAccess->pluck('instructor_id')->map(fn ($id) => (int) $id)->values()->all()),
             'folderOptions' => $folder->folderTreeOptions(),
             'zohoWorkDriveReady' => $this->zoho->isWorkDriveReady(),
         ]);
@@ -273,6 +249,10 @@ class StudyMaterialFolderController extends Controller
         $folder->save();
         $folder->ensureCode();
         $folder->feePackages()->sync($packageIds);
+
+        if ($this->lms->isAdminActor()) {
+            $this->syncFolderFacultyAccess($folder, $request);
+        }
 
         if ($wasActive && $folder->status === 'disabled') {
             $this->lms->notifyAssignedStudentsDisabled($folder, 'folder_disabled');
@@ -485,6 +465,38 @@ class StudyMaterialFolderController extends Controller
             ->get(['id', 'package_name', 'price', 'currency']);
 
         return response()->json($packages);
+    }
+
+    protected function syncFolderFacultyAccess(StudyMaterialFolder $folder, Request $request, $accessTill = null): void
+    {
+        $facultyIds = collect([
+            $request->input('head_of_faculty_id'),
+            $request->input('instructor_id'),
+        ])
+            ->merge((array) $request->input('instructor_ids', []))
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        if ($facultyIds->isEmpty()) {
+            return;
+        }
+
+        if (! $accessTill) {
+            $accessTill = $this->lms->computeAccessTill(now(), $folder->validity_months);
+        }
+
+        foreach ($facultyIds as $instructorId) {
+            $folder->instructorAccess()->firstOrCreate(
+                ['instructor_id' => $instructorId],
+                [
+                    'status' => 'disabled',
+                    'issued_at' => now()->toDateString(),
+                    'access_till' => $accessTill?->toDateString(),
+                ]
+            );
+        }
     }
 
     protected function folderRules(?int $folderId = null): array

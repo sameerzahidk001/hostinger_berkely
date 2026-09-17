@@ -101,6 +101,26 @@
                         @endif
                     </div>
                     @endif
+                    @if($isAdmin)
+                    <div class="col-md-6 form-group">
+                        <label>Head of the Faculty</label>
+                        <select name="head_of_faculty_id" class="form-control">
+                            <option value="">—</option>
+                            @foreach($instructors as $ins)
+                                <option value="{{ $ins->id }}" @selected((string) old('head_of_faculty_id', $selectedInstructorIds[0] ?? '') === (string) $ins->id)>{{ $ins->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-6 form-group">
+                        <label>Instructors</label>
+                        <select name="instructor_ids[]" class="form-control" multiple size="6">
+                            @foreach($instructors as $ins)
+                                <option value="{{ $ins->id }}" @selected(collect($selectedInstructorIds ?? [])->contains($ins->id))>{{ $ins->name }}</option>
+                            @endforeach
+                        </select>
+                        <span class="help-block">Hold Ctrl/Cmd to select multiple. Access stays disabled until you Send from Access list or Send to instructors.</span>
+                    </div>
+                    @endif
                 </div>
                 <button type="submit" class="btn btn-primary">Save details</button>
             </form>

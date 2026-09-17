@@ -103,9 +103,9 @@ class CourseController extends Controller
             $q->where('role_id', 2);
         })->get();
 
-        $instructorIds = array_slice(course_instructor_ids($course), 0, 2);
+        $instructorIds = course_instructor_ids($course);
 
-        // Keep Head of Faculty first, Instructor second
+        // Keep Head of Faculty first, then other instructors
         $assignIntructors = collect($instructorIds)
             ->map(fn ($id) => User::find($id))
             ->filter()
@@ -116,7 +116,7 @@ class CourseController extends Controller
             'instructors' => $instructors,
             'assignIntructors' => $assignIntructors,
             'headOfFacultyId' => $instructorIds[0] ?? null,
-            'courseInstructorId' => $instructorIds[1] ?? null,
+            'selectedInstructorIds' => array_slice($instructorIds, 1),
         ]);
     }
     
@@ -272,21 +272,27 @@ class CourseController extends Controller
         $request->validate([
             'course_id' => 'required|exists:courses,id',
             'head_of_faculty_id' => 'nullable|exists:users,id',
+            'instructor_ids' => 'nullable|array',
+            'instructor_ids.*' => 'exists:users,id',
             'instructor_id' => 'nullable|exists:users,id',
         ]);
 
         $course = Course::findOrFail($request->input('course_id'));
 
-        // Ordered: Head of Faculty first, Instructor second (max 2 unique)
-        $ids = collect([
-            $request->input('head_of_faculty_id'),
-            $request->input('instructor_id'),
-        ])->filter()->map(fn ($id) => (int) $id)->unique()->take(2)->values()->all();
+        // Ordered: Head of Faculty first, then multi-selected instructors
+        $ids = collect([$request->input('head_of_faculty_id')])
+            ->merge((array) $request->input('instructor_ids', []))
+            ->push($request->input('instructor_id'))
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
 
         $course->instructor_id = $ids;
         $course->save();
 
-        return back()->with('success', 'Head of Faculty and Instructor saved. These appear on the course page.');
+        return back()->with('success', 'Faculty saved. They appear on the course page (2 per row on large screens).');
     }
 
     public function deleteInstructor(Request $request, $id)

@@ -114,9 +114,9 @@ class FrontendController extends Controller
             },
         ])->where('slug', $slug)->firstOrFail();
 
-        $instructorIds = array_slice(course_instructor_ids($data['course']), 0, 2);
+        $instructorIds = course_instructor_ids($data['course']);
 
-        // Keep Head of Faculty first, Instructor second
+        // Head of Faculty first, then other instructors (shown 2 per row on large screens)
         $data['assignIntructors'] = collect($instructorIds)
             ->map(fn ($id) => User::find($id))
             ->filter()

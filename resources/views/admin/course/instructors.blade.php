@@ -2,9 +2,6 @@
 @section('title', 'Add Instructor')
 @push('style')
     <style>
-        /* form > .row > [class^="col-"] {
-            margin-bottom: 16px;
-        } */
         .mb {
             margin-bottom: 1.5rem;
         }
@@ -17,6 +14,10 @@
         .card img {
             border-bottom: 1px solid #ddd;
         }
+
+        .course-instructors-grid > [class*="col-"] {
+            margin-bottom: 1.5rem;
+        }
     </style>
 
 @endpush
@@ -26,7 +27,7 @@
             <h2>Instructor</h2>
             <ol class="breadcrumb">
                 <li>
-                    <a href="index.html">Home</a>
+                    <a href="{{ route('admin.home') }}">Home</a>
                 </li>
                 <li>
                     <a>Instructor</a>
@@ -45,9 +46,6 @@
                     <div class="ibox-title">
                         <h5>Add New Instructors</h5>
                         <div class="ibox-tools">
-                            <!-- <a data-toggle="modal" href="#AddSyllabusModal" data-item-id="">
-                                <i class="fa fa-chevron-circle-right"></i>
-                            </a> -->
                             <a class="collapse-link">
                                 <i class="fa fa-chevron-up"></i>
                             </a>
@@ -58,6 +56,9 @@
                         </div>
                     </div>
                     <div class="ibox-content">
+                        @if(session('success'))
+                            <div class="alert alert-success">{{ session('success') }}</div>
+                        @endif
                         <form role="form" action="{{ route('admin.courses.instructors.update', ['id' => $course->id]) }}" method="POST">
                             @csrf
                             <input type="hidden" value="{{ $course->id }}" name="course_id">
@@ -74,16 +75,15 @@
                                     </select>
                                 </div>
                                 <div class="col-md-6 mb">
-                                    <label for="instructor_id">Instructor</label>
-                                    <select name="instructor_id" id="instructor_id" class="form-control">
-                                        <option value="">—</option>
+                                    <label for="instructor_ids">Instructors</label>
+                                    <select name="instructor_ids[]" id="instructor_ids" class="form-control" multiple size="8">
                                         @foreach ($instructors as $instructor)
-                                            <option value="{{ $instructor->id }}" @selected(old('instructor_id', $courseInstructorId ?? null) == $instructor->id)>
+                                            <option value="{{ $instructor->id }}" @selected(collect(old('instructor_ids', $selectedInstructorIds ?? []))->contains($instructor->id))>
                                                 {{ $instructor->name }}
                                             </option>
                                         @endforeach
                                     </select>
-                                    <span class="help-block">Max 2 people: Head of the Faculty + Instructor. These show on the course page.</span>
+                                    <span class="help-block">Hold Ctrl/Cmd to select multiple instructors. They show on the course page, 2 per row on large screens.</span>
                                 </div>
                                 <div class="col-lg-12">
                                     <button type="submit" class="btn btn-primary" style="float: right;margin-top: 15px;">Save Faculty</button>
@@ -103,9 +103,6 @@
                     <div class="ibox-title">
                         <h5>Course Instructors List</h5>
                         <div class="ibox-tools">
-                            <!-- <a data-toggle="modal" href="#AddSyllabusModal" data-item-id="">
-                                <i class="fa fa-chevron-circle-right"></i>
-                            </a> -->
                             <a class="collapse-link">
                                 <i class="fa fa-chevron-up"></i>
                             </a>
@@ -116,9 +113,9 @@
                         </div>
                     </div>
                     <div class="ibox-content">
-                        <div class="row mt-4">
-                            @foreach ($assignIntructors as $assignIntructor)
-                                <div class="col-md-3 mb-4">
+                        <div class="row mt-4 course-instructors-grid">
+                            @forelse ($assignIntructors as $assignIntructor)
+                                <div class="col-md-6">
                                     <div class="card" style="border: 1px solid #f0f0f0; border-radius: 8px; overflow: hidden; position: relative;">
                                         <form id="delete-form-{{ $assignIntructor->id }}" action="{{ route('admin.courses.instructors.delete', ['id' => $course->id]) }}" method="POST">
                                             @csrf
@@ -129,15 +126,18 @@
                                             </button>
                                         </form>
 
-                                        <!-- Instructor Image -->
                                         <img src="{{ asset($assignIntructor->image) }}"
                                             class="card-img-top"
                                             alt="{{ $assignIntructor->name }}"
                                             style="height: 180px; width: 100%; object-fit: cover;">
 
-                                        <!-- Card Body -->
                                         <div class="card-body text-center">
-                                            <h5 class="card-title font-weight-bold mb-2">{{ $assignIntructor->name }}</h5>
+                                            <h5 class="card-title font-weight-bold mb-2">
+                                                {{ $assignIntructor->name }}
+                                                @if($loop->first)
+                                                    <small class="text-muted">(Head of Faculty)</small>
+                                                @endif
+                                            </h5>
                                             <p class="text-muted mb-2" style="font-size: 14px;">
                                                 {{ $assignIntructor->experience ?? 'No experience info' }}
                                             </p>
@@ -158,7 +158,11 @@
                                         </div>
                                     </div>
                                 </div>
-                            @endforeach
+                            @empty
+                                <div class="col-md-12">
+                                    <p class="text-muted text-center">No instructors assigned yet.</p>
+                                </div>
+                            @endforelse
                         </div>
                     </div>
                 </div>
