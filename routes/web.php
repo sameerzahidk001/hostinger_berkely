@@ -44,6 +44,7 @@ use App\Http\Controllers\User\HistoryController as UserHistoryController;
 use App\Http\Controllers\Admin\StudyMaterialFolderController;
 use App\Http\Controllers\Admin\StudyMaterialAccessController;
 use App\Http\Controllers\Admin\ClassScheduleController;
+use App\Http\Controllers\Admin\ClassBatchController;
 use App\Http\Controllers\Admin\LmsInstallController;
 use App\Http\Controllers\Admin\ZohoSettingsController;
 use App\Http\Controllers\Admin\MeetingAccountController;
@@ -232,12 +233,22 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
             Route::get('/access/instructor/{id}/disable', [StudyMaterialAccessController::class, 'disableInstructor'])->name('access.instructor.disable');
         });
 
+        Route::prefix('class-batches')->name('admin.class-batches.')->group(function () {
+            Route::get('/', [ClassBatchController::class, 'index'])->name('index');
+            Route::get('/create', [ClassBatchController::class, 'create'])->name('create');
+            Route::post('/', [ClassBatchController::class, 'store'])->name('store');
+            Route::get('/{id}/edit', [ClassBatchController::class, 'edit'])->name('edit');
+            Route::put('/{id}', [ClassBatchController::class, 'update'])->name('update');
+            Route::delete('/{id}', [ClassBatchController::class, 'destroy'])->name('destroy');
+        });
+
         Route::prefix('class-schedules')->name('admin.class-schedules.')->group(function () {
             Route::get('/', [ClassScheduleController::class, 'index'])->name('index');
             Route::get('/create', [ClassScheduleController::class, 'create'])->name('create');
             Route::post('/', [ClassScheduleController::class, 'store'])->name('store');
             Route::get('/feed.ics', [ClassScheduleController::class, 'feed'])->name('feed');
             Route::get('/students', [ClassScheduleController::class, 'students'])->name('students');
+            Route::get('/batch-meta', [ClassScheduleController::class, 'batchMeta'])->name('batch-meta');
             Route::post('/zoho-embed', [ClassScheduleController::class, 'saveZohoEmbed'])->name('zoho-embed');
             Route::get('/{id}/edit', [ClassScheduleController::class, 'edit'])->name('edit');
             Route::put('/{id}', [ClassScheduleController::class, 'update'])->name('update');

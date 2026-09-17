@@ -29,6 +29,7 @@ class ClassSchedule extends Model
 
     protected $fillable = [
         'batch_name',
+        'batch_id',
         'course_id',
         'instructor_id',
         'head_of_faculty_id',
@@ -59,6 +60,11 @@ class ClassSchedule extends Model
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);
+    }
+
+    public function batch(): BelongsTo
+    {
+        return $this->belongsTo(ClassBatch::class, 'batch_id');
     }
 
     public function instructor(): BelongsTo

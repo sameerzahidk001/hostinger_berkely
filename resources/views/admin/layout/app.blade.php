@@ -159,8 +159,16 @@
                   </li>
                   @endif
                   @if(admin_menu_allowed('class-schedules'))
-                  <li class="{{ request()->is('admin/class-schedules*') ? 'active' : '' }}">
-                     <a href="{{ route('admin.class-schedules.index') }}"><i class="fa fa-calendar"></i> <span class="nav-label">Class Schedule</span></a>
+                  <li class="{{ request()->is('admin/class-schedules*') || request()->is('admin/class-batches*') ? 'active' : '' }}">
+                     <a href="javascript:void(0)"><i class="fa fa-calendar"></i> <span class="nav-label">Class Schedule</span> <span class="fa arrow"></span></a>
+                     <ul class="nav nav-second-level">
+                        <li class="{{ request()->is('admin/class-batches*') ? 'active' : '' }}">
+                           <a href="{{ route('admin.class-batches.index') }}">Batches</a>
+                        </li>
+                        <li class="{{ request()->is('admin/class-schedules*') ? 'active' : '' }}">
+                           <a href="{{ route('admin.class-schedules.index') }}">Schedules</a>
+                        </li>
+                     </ul>
                   </li>
                   @endif
                   {{-- Meeting Accounts (Zoho / Zoom) — admin only --}}

@@ -44,6 +44,7 @@ class AdminMiddleware
             if (normalize_panel_role($role) === 'instructor' && (
                 $request->is('admin/study-materials*')
                 || $request->is('admin/class-schedules*')
+                || $request->is('admin/class-batches*')
                 || $request->is('admin/home')
                 || $request->is('admin/profile')
                 || $request->is('admin/logout')

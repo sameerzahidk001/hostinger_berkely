@@ -10,8 +10,12 @@
         </ol>
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
+        <a href="{{ route('admin.class-batches.index') }}" class="btn btn-default">Batches</a>
         <a href="{{ route('admin.class-schedules.feed') }}" class="btn btn-default">Add to Zoho Calendar (.ics)</a>
         <a href="{{ route('admin.class-schedules.create') }}" class="btn btn-primary">Create Schedule</a>
+        @if($isAdmin ?? Auth::guard('admin')->check())
+            <a href="{{ route('admin.class-batches.create') }}" class="btn btn-primary">Create Batch</a>
+        @endif
     </div>
 </div>
 <div class="wrapper wrapper-content">
@@ -23,7 +27,7 @@
         <div class="ibox-content">
             <ul class="nav nav-tabs" role="tablist" style="margin-bottom:20px;">
                 <li class="active" role="presentation">
-                    <a href="#schedule-batches" aria-controls="schedule-batches" role="tab" data-toggle="tab">Batches</a>
+                    <a href="#schedule-batches" aria-controls="schedule-batches" role="tab" data-toggle="tab">Sessions by batch</a>
                 </li>
                 <li role="presentation">
                     <a href="#schedule-calendar-tab" aria-controls="schedule-calendar-tab" role="tab" data-toggle="tab">Calendar</a>
@@ -32,7 +36,10 @@
 
             <div class="tab-content">
                 <div role="tabpanel" class="tab-pane active" id="schedule-batches">
-                    <p class="help-block">Schedules grouped batch-wise for a clearer view.</p>
+                    <p class="help-block">
+                        Manage batch master data under <a href="{{ route('admin.class-batches.index') }}"><strong>Batches</strong></a>.
+                        Below: scheduled sessions grouped by batch.
+                    </p>
                     @forelse($batches as $batch)
                         <div class="panel panel-default" style="margin-bottom:18px;">
                             <div class="panel-heading" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">

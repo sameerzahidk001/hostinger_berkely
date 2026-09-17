@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\ClassBatch;
 use App\Models\ClassSchedule;
 use App\Models\Course;
 use App\Models\MeetingAccount;
@@ -55,29 +56,46 @@ class ClassScheduleController extends Controller
         }
         $batches = $this->batchListGroups($batchQuery->get());
 
-        return view('admin.study-materials.schedules.index', compact('schedules', 'calendarEvents', 'zohoEmbed', 'batches'));
+        return view('admin.study-materials.schedules.index', [
+            'schedules' => $schedules,
+            'calendarEvents' => $calendarEvents,
+            'zohoEmbed' => $zohoEmbed,
+            'batches' => $batches,
+            'isAdmin' => $this->lms->isAdminActor(),
+        ]);
     }
 
-    public function create()
+    public function create(Request $request)
     {
         ClassSchedule::ensureRecurrenceColumns();
+
+        $batchId = (int) old('batch_id', $request->query('batch_id', 0));
+        $batch = $batchId ? ClassBatch::with(['instructors', 'students', 'course'])->find($batchId) : null;
+        if ($batch) {
+            $this->assertCanUseBatch($batch);
+        }
 
         $courses = $this->lms->coursesForActor();
         $instructors = User::query()
             ->whereHas('roles', fn ($q) => $q->where('name', 'instructor'))
             ->orderBy('name')
             ->get(['id', 'name']);
-        $students = $this->studentsForScheduleForm((int) old('course_id', 0));
+        $students = $batch
+            ? $batch->students
+            : $this->studentsForScheduleForm((int) old('course_id', 0));
 
         return view('admin.study-materials.schedules.create', [
             'courses' => $courses,
             'instructors' => $instructors,
             'students' => $students,
+            'classBatches' => $this->batchesForActor(),
+            'selectedBatch' => $batch,
             'meetingAccounts' => MeetingAccount::activeForDropdown(),
             'defaultMeetingAccountId' => MeetingAccount::defaultId(),
             'zohoMeetingReady' => $this->zoho->isMeetingReady(),
             'zohoHostEmail' => $this->zoho->hostAccountEmail(),
             'isInstructor' => $this->lms->isInstructorActor(),
+            'isAdmin' => $this->lms->isAdminActor(),
         ]);
     }
 
@@ -89,17 +107,29 @@ class ClassScheduleController extends Controller
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
-        if ($this->lms->isInstructorActor() && ! $this->lms->instructorAssignedToCourse((int) $request->course_id)) {
+        $batch = ClassBatch::with(['students', 'instructors'])->findOrFail((int) $request->input('batch_id'));
+        $this->assertCanUseBatch($batch);
+
+        if ($this->lms->isInstructorActor() && ! $this->lms->instructorAssignedToCourse((int) $batch->course_id)) {
             return redirect()->back()
-                ->withErrors(['course_id' => 'You can only schedule classes for courses assigned to you.'])
+                ->withErrors(['batch_id' => 'You can only schedule classes for courses/batches assigned to you.'])
                 ->withInput();
         }
 
         $schedule = new ClassSchedule();
         $schedule->fill($request->only([
-            'batch_name', 'course_id', 'instructor_id', 'head_of_faculty_id', 'meeting_account_id',
+            'instructor_id', 'head_of_faculty_id', 'meeting_account_id',
             'scheduled_at', 'duration_minutes', 'zoho_link', 'title', 'notes',
         ]));
+        $schedule->batch_id = $batch->id;
+        $schedule->batch_name = $batch->name;
+        $schedule->course_id = $batch->course_id;
+        if (! $schedule->head_of_faculty_id) {
+            $schedule->head_of_faculty_id = $batch->head_of_faculty_id;
+        }
+        if (! $schedule->instructor_id) {
+            $schedule->instructor_id = $batch->primaryInstructorId() ?: Auth::id();
+        }
         $schedule->duration_minutes = (int) ($request->input('duration_minutes') ?: 60);
         $schedule->status = 'scheduled';
         $this->applyRecurrenceAndReminders($schedule, $request);
@@ -108,18 +138,14 @@ class ClassScheduleController extends Controller
             $schedule->created_by_admin_id = Auth::guard('admin')->id();
         } else {
             $schedule->created_by_user_id = Auth::id();
-            if (!$schedule->instructor_id) {
+            if (! $schedule->instructor_id) {
                 $schedule->instructor_id = Auth::id();
             }
         }
 
         $schedule->save();
 
-        $studentIds = collect($request->input('student_ids', []))
-            ->map(fn ($id) => (int) $id)
-            ->filter(fn ($id) => $this->lms->studentBelongsToCourse($id, (int) $schedule->course_id))
-            ->values()
-            ->all();
+        $studentIds = $this->resolveScheduleStudentIds($request, $batch);
         $schedule->students()->sync($studentIds);
 
         $zohoStatus = $this->meetings->attachIntegrations($schedule);
@@ -133,7 +159,7 @@ class ClassScheduleController extends Controller
     {
         ClassSchedule::ensureRecurrenceColumns();
 
-        $schedule = ClassSchedule::with('students')->findOrFail($id);
+        $schedule = ClassSchedule::with(['students', 'batch.students', 'batch.instructors'])->findOrFail($id);
         if ($this->lms->isInstructorActor() && (int) $schedule->instructor_id !== (int) Auth::id()) {
             abort(403);
         }
@@ -146,21 +172,27 @@ class ClassScheduleController extends Controller
             ->whereHas('roles', fn ($q) => $q->where('name', 'instructor'))
             ->orderBy('name')
             ->get(['id', 'name']);
-        $students = $this->studentsForScheduleForm(
-            (int) old('course_id', $schedule->course_id),
-            $schedule->students
-        );
+        $batch = $schedule->batch;
+        $students = $batch
+            ? $batch->students->merge($schedule->students)->unique('id')->values()
+            : $this->studentsForScheduleForm(
+                (int) old('course_id', $schedule->course_id),
+                $schedule->students
+            );
 
         return view('admin.study-materials.schedules.edit', [
             'schedule' => $schedule,
             'courses' => $courses,
             'instructors' => $instructors,
             'students' => $students,
+            'classBatches' => $this->batchesForActor(),
+            'selectedBatch' => $batch,
             'meetingAccounts' => MeetingAccount::activeForDropdown(),
             'defaultMeetingAccountId' => MeetingAccount::defaultId(),
             'zohoMeetingReady' => $this->zoho->isMeetingReady(),
             'zohoHostEmail' => $this->zoho->hostAccountEmail(),
             'isInstructor' => $this->lms->isInstructorActor(),
+            'isAdmin' => $this->lms->isAdminActor(),
         ]);
     }
 
@@ -201,25 +233,27 @@ class ClassScheduleController extends Controller
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
-        if ($this->lms->isInstructorActor() && ! $this->lms->instructorAssignedToCourse((int) $request->course_id)) {
+        if ($this->lms->isInstructorActor() && ! $this->lms->instructorAssignedToCourse((int) $request->course_id ?: (int) optional(ClassBatch::find($request->batch_id))->course_id)) {
             return redirect()->back()
-                ->withErrors(['course_id' => 'You can only schedule classes for courses assigned to you.'])
+                ->withErrors(['batch_id' => 'You can only schedule classes for courses/batches assigned to you.'])
                 ->withInput();
         }
 
+        $batch = ClassBatch::with('students')->findOrFail((int) $request->input('batch_id'));
+        $this->assertCanUseBatch($batch);
+
         $schedule->fill($request->only([
-            'batch_name', 'course_id', 'instructor_id', 'head_of_faculty_id', 'meeting_account_id',
+            'instructor_id', 'head_of_faculty_id', 'meeting_account_id',
             'scheduled_at', 'duration_minutes', 'zoho_link', 'title', 'notes', 'status',
         ]));
+        $schedule->batch_id = $batch->id;
+        $schedule->batch_name = $batch->name;
+        $schedule->course_id = $batch->course_id;
         $schedule->duration_minutes = (int) ($request->input('duration_minutes') ?: 60);
         $this->applyRecurrenceAndReminders($schedule, $request);
         $schedule->save();
 
-        $studentIds = collect($request->input('student_ids', []))
-            ->map(fn ($id) => (int) $id)
-            ->filter(fn ($id) => $this->lms->studentBelongsToCourse($id, (int) $schedule->course_id))
-            ->values()
-            ->all();
+        $studentIds = $this->resolveScheduleStudentIds($request, $batch);
         $schedule->students()->sync($studentIds);
 
         $zohoStatus = $this->meetings->attachIntegrations($schedule);
@@ -281,11 +315,35 @@ class ClassScheduleController extends Controller
         return redirect()->route('admin.class-schedules.index')->with('success', 'Zoho Calendar embed saved.');
     }
 
+    public function batchMeta(Request $request)
+    {
+        $batch = ClassBatch::with(['course', 'headOfFaculty', 'instructors', 'students'])
+            ->findOrFail((int) $request->query('batch_id', 0));
+        $this->assertCanUseBatch($batch);
+
+        return response()->json([
+            'id' => $batch->id,
+            'name' => $batch->name,
+            'code' => $batch->code,
+            'course_id' => $batch->course_id,
+            'course_title' => $batch->course->title ?? '',
+            'head_of_faculty_id' => $batch->head_of_faculty_id,
+            'instructor_ids' => $batch->instructors->pluck('id')->values(),
+            'primary_instructor_id' => $batch->primaryInstructorId(),
+            'students' => $batch->students->map(fn ($s) => [
+                'id' => $s->id,
+                'text' => $s->name . ' (' . $s->email . ')',
+            ])->values(),
+        ]);
+    }
+
     protected function scheduleRules(): array
     {
         return [
-            'batch_name' => 'required|string|max:255',
-            'course_id' => 'required|exists:courses,id',
+            'batch_id' => [
+                'required',
+                Rule::exists('class_batches', 'id')->where(fn ($q) => $q->where('status', 'active')),
+            ],
             'instructor_id' => 'nullable|exists:users,id',
             'head_of_faculty_id' => 'nullable|exists:users,id',
             'meeting_account_id' => [
@@ -310,6 +368,61 @@ class ClassScheduleController extends Controller
             'reminders.*.amount' => 'nullable|integer|min:1|max:60',
             'reminders.*.unit' => 'nullable|in:minutes,hours,days',
         ];
+    }
+
+    protected function batchesForActor()
+    {
+        if (! Schema::hasTable('class_batches')) {
+            return collect();
+        }
+
+        $query = ClassBatch::with(['course', 'instructors'])
+            ->where('status', 'active')
+            ->orderBy('name');
+
+        if ($this->lms->isInstructorActor()) {
+            $uid = Auth::id();
+            $query->where(function ($q) use ($uid) {
+                $q->whereHas('instructors', fn ($q2) => $q2->where('users.id', $uid))
+                    ->orWhere('head_of_faculty_id', $uid);
+            });
+        }
+
+        return $query->get();
+    }
+
+    protected function assertCanUseBatch(ClassBatch $batch): void
+    {
+        if ($this->lms->isAdminActor()) {
+            return;
+        }
+
+        $uid = (int) Auth::id();
+        $ok = (int) $batch->head_of_faculty_id === $uid
+            || $batch->instructors()->where('users.id', $uid)->exists();
+        abort_unless($ok, 403);
+    }
+
+    protected function resolveScheduleStudentIds(Request $request, ClassBatch $batch): array
+    {
+        if ($this->lms->isInstructorActor()) {
+            return $batch->students->pluck('id')->map(fn ($id) => (int) $id)->values()->all();
+        }
+
+        $requested = collect($request->input('student_ids', []))
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->values();
+
+        if ($requested->isEmpty()) {
+            return $batch->students->pluck('id')->map(fn ($id) => (int) $id)->values()->all();
+        }
+
+        return $requested
+            ->filter(fn ($id) => $this->lms->studentBelongsToCourse($id, (int) $batch->course_id))
+            ->unique()
+            ->values()
+            ->all();
     }
 
     protected function applyRecurrenceAndReminders(ClassSchedule $schedule, Request $request): void

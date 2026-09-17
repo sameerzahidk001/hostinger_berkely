@@ -14,25 +14,27 @@
                 @csrf @method('PUT')
                 <div class="row">
                     <div class="col-md-6 form-group">
-                        <label>Batch name *</label>
-                        <input type="text" name="batch_name" class="form-control" value="{{ old('batch_name', $schedule->batch_name) }}" required>
+                        <label>Batch *</label>
+                        <select name="batch_id" id="batch_id" class="form-control" required>
+                            <option value="">Select batch</option>
+                            @foreach(($classBatches ?? []) as $b)
+                                <option value="{{ $b->id }}" @selected((string) old('batch_id', $schedule->batch_id) === (string) $b->id)>
+                                    {{ $b->displayLabel() }} — {{ $b->course->title ?? '' }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="col-md-6 form-group">
                         <label>Title</label>
                         <input type="text" name="title" class="form-control" value="{{ old('title', $schedule->title) }}">
                     </div>
                     <div class="col-md-6 form-group">
-                        <label>Course *</label>
-                        <select name="course_id" id="course_id" class="form-control" required>
-                            <option value="">Type to find the course</option>
-                            @foreach($courses as $course)
-                                <option value="{{ $course->id }}" @selected(old('course_id', $schedule->course_id) == $course->id)>{{ $course->title }}</option>
-                            @endforeach
-                        </select>
+                        <label>Course</label>
+                        <input type="text" id="course_title" class="form-control" value="{{ $schedule->course->title ?? optional($selectedBatch?->course)->title }}" readonly>
                     </div>
                     <div class="col-md-6 form-group">
                         <label>Head of the Faculty</label>
-                        <select name="head_of_faculty_id" class="form-control">
+                        <select name="head_of_faculty_id" id="head_of_faculty_id" class="form-control">
                             <option value="">—</option>
                             @foreach($instructors as $ins)
                                 <option value="{{ $ins->id }}" @selected(old('head_of_faculty_id', $schedule->head_of_faculty_id) == $ins->id)>{{ $ins->name }}</option>
@@ -41,7 +43,7 @@
                     </div>
                     <div class="col-md-6 form-group">
                         <label>Instructor</label>
-                        <select name="instructor_id" class="form-control">
+                        <select name="instructor_id" id="instructor_id" class="form-control">
                             <option value="">—</option>
                             @foreach($instructors as $ins)
                                 <option value="{{ $ins->id }}" @selected(old('instructor_id', $schedule->instructor_id) == $ins->id)>{{ $ins->name }}</option>
@@ -58,7 +60,6 @@
                                 </option>
                             @endforeach
                         </select>
-                        <span class="help-block">Join link is created/kept with this account.</span>
                     </div>
                     <div class="col-md-3 form-group">
                         <label>Start date &amp; time *</label>
@@ -79,20 +80,23 @@
                     <div class="col-md-3 form-group">
                         <label>Meeting link</label>
                         <input type="url" name="zoho_link" class="form-control" value="{{ old('zoho_link', $schedule->zoho_link) }}" placeholder="Leave blank to auto-create">
-                        <span class="help-block">{{ filled($schedule->zoho_link) ? 'Existing link. Leave as-is unless replacing.' : 'Leave blank to auto-create from selected account.' }}</span>
                     </div>
 
                     @include('admin.study-materials.schedules._recurrence_fields', ['schedule' => $schedule])
 
                     <div class="col-md-12 form-group">
-                        <label>Assign students</label>
+                        <label>Students {{ ($isAdmin ?? false) ? '' : '(from batch — view only)' }}</label>
                         @php $selected = collect(old('student_ids', $schedule->students->pluck('id')->all()))->map(fn ($id) => (int) $id)->all(); @endphp
-                        <select name="student_ids[]" id="student_ids" class="form-control" multiple data-keep="{{ implode(',', $selected) }}">
+                        <select name="student_ids[]" id="student_ids" class="form-control" multiple @disabled(!($isAdmin ?? false))>
                             @foreach($students as $student)
                                 <option value="{{ $student->id }}" @selected(in_array((int) $student->id, $selected, true))>{{ $student->name }} ({{ $student->email }})</option>
                             @endforeach
                         </select>
-                        <span class="help-block">Type to search. You can select multiple students.</span>
+                        @unless($isAdmin ?? false)
+                            @foreach($schedule->students as $student)
+                                <input type="hidden" name="student_ids[]" value="{{ $student->id }}">
+                            @endforeach
+                        @endunless
                     </div>
                     <div class="col-md-12 form-group">
                         <label>Notes</label>
@@ -116,28 +120,25 @@
 @include('admin.study-materials.schedules._recurrence_script')
 <script>
 $(function () {
-    var $course = $('#course_id');
+    var $batch = $('#batch_id');
     var $students = $('#student_ids');
-
-    $course.select2({ placeholder: 'Type to find the course', allowClear: true, width: '100%' });
-    $students.select2({ placeholder: 'Type to find students', width: '100%', closeOnSelect: false });
-
-    function reloadStudents() {
-        var courseId = $course.val() || '';
-        var keep = $students.val() || ($students.data('keep') ? String($students.data('keep')).split(',') : []);
-        $.getJSON(@json(route('admin.class-schedules.students')), { course_id: courseId, keep: (keep || []).join(',') })
+    $batch.select2({ placeholder: 'Select batch', allowClear: true, width: '100%' });
+    $students.select2({ placeholder: 'Students', width: '100%', closeOnSelect: false });
+    $batch.on('change', function () {
+        var id = $batch.val();
+        if (!id) return;
+        $.getJSON(@json(route('admin.class-schedules.batch-meta')), { batch_id: id })
             .done(function (res) {
-                var selected = keep.map(String);
+                $('#course_title').val(res.course_title || '');
+                if (res.head_of_faculty_id) $('#head_of_faculty_id').val(String(res.head_of_faculty_id));
+                if (res.primary_instructor_id) $('#instructor_id').val(String(res.primary_instructor_id));
                 $students.empty();
                 (res.students || []).forEach(function (row) {
-                    var opt = new Option(row.text, row.id, false, selected.indexOf(String(row.id)) !== -1);
-                    $students.append(opt);
+                    $students.append(new Option(row.text, row.id, true, true));
                 });
                 $students.trigger('change');
             });
-    }
-
-    $course.on('change', reloadStudents);
+    });
 });
 </script>
 @endpush
