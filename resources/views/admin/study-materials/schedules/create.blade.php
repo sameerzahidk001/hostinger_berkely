@@ -50,6 +50,23 @@
                             @endforeach
                         </select>
                     </div>
+                    <div class="col-md-6 form-group">
+                        <label>Meeting account *</label>
+                        <select name="meeting_account_id" class="form-control" required>
+                            <option value="">Select Zoho or Zoom account</option>
+                            @foreach(($meetingAccounts ?? []) as $account)
+                                <option value="{{ $account->id }}" @selected((string) old('meeting_account_id', $defaultMeetingAccountId) === (string) $account->id)>
+                                    {{ $account->dropdownLabel() }}
+                                </option>
+                            @endforeach
+                        </select>
+                        <span class="help-block">Join link is created with this account on Save.</span>
+                        @if(($meetingAccounts ?? collect())->isEmpty())
+                            <div class="alert alert-warning" style="margin-top:8px;margin-bottom:0;">
+                                No active meeting accounts. Admin must add Zoho/Zoom under <strong>Meeting Accounts</strong>.
+                            </div>
+                        @endif
+                    </div>
                     <div class="col-md-4 form-group">
                         <label>Start date &amp; time *</label>
                         <input type="datetime-local" name="scheduled_at" class="form-control" value="{{ old('scheduled_at') }}" required>
@@ -59,22 +76,9 @@
                         <input type="number" name="duration_minutes" class="form-control" min="15" max="480" step="15" value="{{ old('duration_minutes', 60) }}">
                     </div>
                     <div class="col-md-4 form-group">
-                        <label>Meeting link</label>
-                        @if($zohoMeetingReady ?? false)
-                            <div class="alert alert-info" style="margin-bottom:0;">
-                                <strong>Auto-create on Save</strong><br>
-                                Zoho Meeting link is created under
-                                <strong>{{ $zohoHostEmail ?? 'bdm@berkeleyme.com' }}</strong>
-                                and added to Zoho Calendar. No paste needed.
-                            </div>
-                        @else
-                            <input type="url" name="zoho_link" class="form-control" value="{{ old('zoho_link') }}" placeholder="https://meeting.zoho.com/...">
-                            <div class="alert alert-warning" style="margin-top:8px; margin-bottom:0;">
-                                <strong>Auto meeting link is off.</strong>
-                                Connect Zoho OAuth as <strong>{{ $zohoHostEmail ?? 'bdm@berkeleyme.com' }}</strong>,
-                                then save again — or paste a Meeting link here.
-                            </div>
-                        @endif
+                        <label>Meeting link (optional override)</label>
+                        <input type="url" name="zoho_link" class="form-control" value="{{ old('zoho_link') }}" placeholder="Leave blank to auto-create">
+                        <span class="help-block">Leave blank unless you need to paste a custom link.</span>
                     </div>
 
                     @include('admin.study-materials.schedules._recurrence_fields', ['schedule' => new \App\Models\ClassSchedule()])

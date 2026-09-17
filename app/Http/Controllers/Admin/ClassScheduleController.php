@@ -5,20 +5,24 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ClassSchedule;
 use App\Models\Course;
+use App\Models\MeetingAccount;
 use App\Models\SiteSettings;
 use App\Models\User;
+use App\Services\MeetingLinkService;
 use App\Services\StudyMaterialService;
 use App\Services\ZohoLmsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class ClassScheduleController extends Controller
 {
     public function __construct(
         protected StudyMaterialService $lms,
-        protected ZohoLmsService $zoho
+        protected ZohoLmsService $zoho,
+        protected MeetingLinkService $meetings
     ) {
     }
 
@@ -69,6 +73,8 @@ class ClassScheduleController extends Controller
             'courses' => $courses,
             'instructors' => $instructors,
             'students' => $students,
+            'meetingAccounts' => MeetingAccount::activeForDropdown(),
+            'defaultMeetingAccountId' => MeetingAccount::defaultId(),
             'zohoMeetingReady' => $this->zoho->isMeetingReady(),
             'zohoHostEmail' => $this->zoho->hostAccountEmail(),
             'isInstructor' => $this->lms->isInstructorActor(),
@@ -91,7 +97,8 @@ class ClassScheduleController extends Controller
 
         $schedule = new ClassSchedule();
         $schedule->fill($request->only([
-            'batch_name', 'course_id', 'instructor_id', 'head_of_faculty_id', 'scheduled_at', 'duration_minutes', 'zoho_link', 'title', 'notes',
+            'batch_name', 'course_id', 'instructor_id', 'head_of_faculty_id', 'meeting_account_id',
+            'scheduled_at', 'duration_minutes', 'zoho_link', 'title', 'notes',
         ]));
         $schedule->duration_minutes = (int) ($request->input('duration_minutes') ?: 60);
         $schedule->status = 'scheduled';
@@ -115,7 +122,7 @@ class ClassScheduleController extends Controller
             ->all();
         $schedule->students()->sync($studentIds);
 
-        $zohoStatus = $this->zoho->attachIntegrations($schedule);
+        $zohoStatus = $this->meetings->attachIntegrations($schedule);
 
         return redirect()
             ->route('admin.class-schedules.index')
@@ -149,6 +156,8 @@ class ClassScheduleController extends Controller
             'courses' => $courses,
             'instructors' => $instructors,
             'students' => $students,
+            'meetingAccounts' => MeetingAccount::activeForDropdown(),
+            'defaultMeetingAccountId' => MeetingAccount::defaultId(),
             'zohoMeetingReady' => $this->zoho->isMeetingReady(),
             'zohoHostEmail' => $this->zoho->hostAccountEmail(),
             'isInstructor' => $this->lms->isInstructorActor(),
@@ -199,7 +208,8 @@ class ClassScheduleController extends Controller
         }
 
         $schedule->fill($request->only([
-            'batch_name', 'course_id', 'instructor_id', 'head_of_faculty_id', 'scheduled_at', 'duration_minutes', 'zoho_link', 'title', 'notes', 'status',
+            'batch_name', 'course_id', 'instructor_id', 'head_of_faculty_id', 'meeting_account_id',
+            'scheduled_at', 'duration_minutes', 'zoho_link', 'title', 'notes', 'status',
         ]));
         $schedule->duration_minutes = (int) ($request->input('duration_minutes') ?: 60);
         $this->applyRecurrenceAndReminders($schedule, $request);
@@ -212,7 +222,7 @@ class ClassScheduleController extends Controller
             ->all();
         $schedule->students()->sync($studentIds);
 
-        $zohoStatus = $this->zoho->attachIntegrations($schedule);
+        $zohoStatus = $this->meetings->attachIntegrations($schedule);
 
         return redirect()
             ->route('admin.class-schedules.index')
@@ -278,6 +288,10 @@ class ClassScheduleController extends Controller
             'course_id' => 'required|exists:courses,id',
             'instructor_id' => 'nullable|exists:users,id',
             'head_of_faculty_id' => 'nullable|exists:users,id',
+            'meeting_account_id' => [
+                'required',
+                Rule::exists('meeting_accounts', 'id')->where(fn ($q) => $q->where('is_active', true)),
+            ],
             'scheduled_at' => 'required|date',
             'duration_minutes' => 'nullable|integer|min:15|max:480',
             'zoho_link' => 'nullable|url|max:500',
@@ -360,10 +374,10 @@ class ClassScheduleController extends Controller
 
         $parts = [$base];
         $meetingNote = match ($meetingStatus) {
-            'created' => 'Zoho Meeting link was created automatically under ' . $this->zoho->hostAccountEmail() . ' — students can Join Zoho.',
-            'existing' => 'Existing Zoho Meeting link was kept.',
-            'not_configured' => 'Zoho OAuth is not connected as ' . $this->zoho->hostAccountEmail() . ', so the meeting link could not be auto-created.',
-            default => 'Zoho Meeting link was not created automatically. Confirm OAuth is connected as ' . $this->zoho->hostAccountEmail() . '.',
+            'created' => 'Meeting Join link was created automatically from the selected account.',
+            'existing' => 'Existing meeting Join link was kept.',
+            'not_configured' => 'Selected meeting account is missing or not ready, so the Join link could not be auto-created.',
+            default => 'Meeting Join link was not created automatically. Check the selected Zoho/Zoom account credentials.',
         };
         if ($meetingNote) {
             $parts[] = $meetingNote;
@@ -376,7 +390,7 @@ class ClassScheduleController extends Controller
         } elseif ($meetingStatus === 'created' && $calendarStatus === 'failed') {
             $parts[] = 'Zoho Calendar event was not created — import the .ics if needed.';
         } elseif ($calendarStatus === 'not_configured') {
-            $parts[] = 'Connect Zoho Calendar to auto-add the class to the calendar.';
+            $parts[] = 'Connect Zoho Calendar on the meeting account to auto-add the class to the calendar.';
         }
 
         return implode(' ', $parts);

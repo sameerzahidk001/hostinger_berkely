@@ -35,26 +35,30 @@ class ZohoLmsService
         return $this->isConfigured();
     }
 
-    public function attachIntegrations(ClassSchedule $schedule): array
+    public function attachIntegrations(ClassSchedule $schedule, ?\App\Models\MeetingAccount $account = null): array
     {
         return [
-            'meeting' => $this->attachMeetingIfNeeded($schedule),
-            'calendar' => $this->attachCalendarIfNeeded($schedule),
+            'meeting' => $this->attachMeetingIfNeeded($schedule, $account),
+            'calendar' => $this->attachCalendarIfNeeded($schedule, $account),
         ];
     }
 
-    public function attachMeetingIfNeeded(ClassSchedule $schedule): string
+    public function attachMeetingIfNeeded(ClassSchedule $schedule, ?\App\Models\MeetingAccount $account = null): string
     {
         if (filled($schedule->zoho_link)) {
             return 'existing';
         }
 
-        if (!$this->isMeetingReady()) {
+        if ($account) {
+            if (! $account->isZoho() || ! $account->is_active || ! $account->hasRequiredCredentials()) {
+                return 'not_configured';
+            }
+        } elseif (! $this->isMeetingReady()) {
             return 'not_configured';
         }
 
         try {
-            $meeting = $this->createMeetingForSchedule($schedule);
+            $meeting = $this->createMeetingForSchedule($schedule, $account);
         } catch (Throwable $e) {
             Log::error('Zoho Meeting create threw', ['message' => $e->getMessage()]);
             return 'failed';
@@ -65,12 +69,15 @@ class ZohoLmsService
         }
 
         $schedule->zoho_link = $meeting['join_link'];
+        if ($account) {
+            $schedule->meeting_account_id = $account->id;
+        }
         $schedule->save();
 
         return 'created';
     }
 
-    public function attachCalendarIfNeeded(ClassSchedule $schedule): string
+    public function attachCalendarIfNeeded(ClassSchedule $schedule, ?\App\Models\MeetingAccount $account = null): string
     {
         if (!$this->calendarEventColumnExists()) {
             return 'skipped';
@@ -80,12 +87,16 @@ class ZohoLmsService
             return 'existing';
         }
 
-        if (!$this->isCalendarReady()) {
+        if ($account) {
+            if (! $account->isZoho() || ! $account->hasRequiredCredentials()) {
+                return 'not_configured';
+            }
+        } elseif (!$this->isCalendarReady()) {
             return 'not_configured';
         }
 
         try {
-            $event = $this->createCalendarEventForSchedule($schedule);
+            $event = $this->createCalendarEventForSchedule($schedule, $account);
         } catch (Throwable $e) {
             Log::error('Zoho Calendar create threw', ['message' => $e->getMessage()]);
             return 'failed';
@@ -101,20 +112,22 @@ class ZohoLmsService
         return 'created';
     }
 
-    public function createMeetingForSchedule(ClassSchedule $schedule): ?array
+    public function createMeetingForSchedule(ClassSchedule $schedule, ?\App\Models\MeetingAccount $account = null): ?array
     {
         $schedule->loadMissing(['course', 'instructor', 'students']);
-        $orgId = $this->orgId();
-        $host = $this->resolveMeetingHost();
+        $orgId = $this->orgId($account);
+        $host = $this->resolveMeetingHost($account);
+        $timezone = $this->timezone($account);
         if (!$orgId || !$host) {
             Log::warning('Zoho Meeting missing org or host presenter', [
-                'expected_email' => config('zoho.account_email'),
+                'expected_email' => $this->hostAccountEmail($account),
+                'account_id' => $account?->id,
             ]);
             return null;
         }
 
         $start = $schedule->scheduled_at
-            ->timezone(config('zoho.timezone'))
+            ->timezone($timezone)
             ->format('M j, Y h:i A');
 
         $participants = $schedule->students
@@ -126,14 +139,14 @@ class ZohoLmsService
             ->values()
             ->all();
 
-        $response = $this->meetingClient()->post('/api/v2/' . $orgId . '/sessions.json', [
+        $response = $this->meetingClient($account)->post('/api/v2/' . $orgId . '/sessions.json', [
             'session' => [
                 'topic' => $schedule->calendarTitle(),
                 'agenda' => trim(($schedule->course->title ?? '') . "\n" . ($schedule->notes ?? '')),
                 'presenter' => (int) $host['zuid'],
                 'startTime' => $start,
                 'duration' => $schedule->durationMinutes() * 60 * 1000,
-                'timezone' => config('zoho.timezone'),
+                'timezone' => $timezone,
                 'participants' => $participants,
             ],
         ]);
@@ -143,6 +156,7 @@ class ZohoLmsService
                 'status' => $response->status(),
                 'body' => $response->body(),
                 'host_email' => $host['email'],
+                'account_id' => $account?->id,
             ]);
             return null;
         }
@@ -157,16 +171,16 @@ class ZohoLmsService
         ];
     }
 
-    public function createCalendarEventForSchedule(ClassSchedule $schedule): ?array
+    public function createCalendarEventForSchedule(ClassSchedule $schedule, ?\App\Models\MeetingAccount $account = null): ?array
     {
         $schedule->loadMissing(['course', 'instructor', 'students']);
-        $calendarUid = $this->calendarUid();
+        $calendarUid = $this->calendarUid($account);
         if (!$calendarUid) {
             Log::warning('Zoho Calendar uid missing');
             return null;
         }
 
-        $timezone = (string) config('zoho.timezone', 'Asia/Dubai');
+        $timezone = $this->timezone($account);
         $start = $schedule->scheduled_at?->copy()->timezone('UTC');
         $end = $schedule->endsAt()?->copy()->timezone('UTC');
         if (!$start || !$end) {
@@ -215,7 +229,7 @@ class ZohoLmsService
 
         $url = rtrim(config('zoho.calendar_url'), '/') . '/calendars/' . rawurlencode($calendarUid) . '/events';
         $response = $this->http()
-            ->withToken($this->accessToken(), 'Zoho-oauthtoken')
+            ->withToken($this->accessToken($account), 'Zoho-oauthtoken')
             ->acceptJson()
             ->withQueryParameters([
                 'eventdata' => json_encode($eventdata),
@@ -766,14 +780,21 @@ class ZohoLmsService
         });
     }
 
-    protected function calendarUid(): ?string
+    protected function calendarUid(?\App\Models\MeetingAccount $account = null): ?string
     {
+        $fromAccount = $account?->credential('calendar_uid');
+        if (filled($fromAccount)) {
+            return (string) $fromAccount;
+        }
+
         if (filled(config('zoho.calendar_uid'))) {
             return (string) config('zoho.calendar_uid');
         }
 
-        return Cache::remember('zoho_calendar_uid', 3600, function () {
-            $response = $this->authedJson()->get(rtrim(config('zoho.calendar_url'), '/') . '/calendars', [
+        $cacheKey = 'zoho_calendar_uid' . ($account ? ('_' . $account->id) : '');
+
+        return Cache::remember($cacheKey, 3600, function () use ($account) {
+            $response = $this->authedJson($account)->get(rtrim(config('zoho.calendar_url'), '/') . '/calendars', [
                 'category' => 'own',
             ]);
 
@@ -793,28 +814,34 @@ class ZohoLmsService
         });
     }
 
-    protected function orgId(): ?string
+    protected function orgId(?\App\Models\MeetingAccount $account = null): ?string
     {
+        $fromAccount = $account?->credential('org_id');
+        if (filled($fromAccount)) {
+            return (string) $fromAccount;
+        }
+
         if (filled(config('zoho.org_id'))) {
             return (string) config('zoho.org_id');
         }
 
-        $user = $this->currentUser();
+        $user = $this->currentUser($account);
 
         return !empty($user['zsoid']) ? (string) $user['zsoid'] : null;
     }
 
     /**
-     * Meetings must be hosted by ZOHO_ACCOUNT_EMAIL (default bdm@berkeleyme.com).
-     * Presenter ZUID comes from config, else from the OAuth user — only if email matches.
+     * Meetings must be hosted by the account email.
+     * Presenter ZUID comes from account/config, else from the OAuth user — only if email matches.
      */
-    protected function resolveMeetingHost(): ?array
+    protected function resolveMeetingHost(?\App\Models\MeetingAccount $account = null): ?array
     {
-        $expected = strtolower(trim((string) config('zoho.account_email', 'bdm@berkeleyme.com')));
-        $user = $this->currentUser();
+        $expected = strtolower(trim($this->hostAccountEmail($account)));
+        $user = $this->currentUser($account);
         $email = $this->userEmail($user);
-        $zuid = filled(config('zoho.presenter_zuid'))
-            ? (string) config('zoho.presenter_zuid')
+        $presenter = $account?->credential('presenter_zuid') ?: config('zoho.presenter_zuid');
+        $zuid = filled($presenter)
+            ? (string) $presenter
             : (string) ($user['zuid'] ?? '');
 
         if ($zuid === '' || $email === '') {
@@ -825,6 +852,7 @@ class ZohoLmsService
             Log::error('Zoho Meeting host email mismatch', [
                 'connected' => $email,
                 'expected' => $expected,
+                'account_id' => $account?->id,
             ]);
 
             return null;
@@ -836,9 +864,22 @@ class ZohoLmsService
         ];
     }
 
-    public function hostAccountEmail(): string
+    public function hostAccountEmail(?\App\Models\MeetingAccount $account = null): string
     {
+        if ($account && filled($account->host_email)) {
+            return (string) $account->host_email;
+        }
+
         return (string) config('zoho.account_email', 'bdm@berkeleyme.com');
+    }
+
+    protected function timezone(?\App\Models\MeetingAccount $account = null): string
+    {
+        if ($account && filled($account->timezone)) {
+            return (string) $account->timezone;
+        }
+
+        return (string) config('zoho.timezone', 'Asia/Dubai');
     }
 
     protected function userEmail(array $user): string
@@ -853,11 +894,11 @@ class ZohoLmsService
         return '';
     }
 
-    protected function currentUserZuid(): ?string
+    protected function currentUserZuid(?\App\Models\MeetingAccount $account = null): ?string
     {
         $host = null;
         try {
-            $host = $this->resolveMeetingHost();
+            $host = $this->resolveMeetingHost($account);
         } catch (Throwable $e) {
             Log::warning('Zoho host resolve failed: ' . $e->getMessage());
         }
@@ -865,9 +906,9 @@ class ZohoLmsService
         return $host['zuid'] ?? null;
     }
 
-    protected function currentUser(): array
+    protected function currentUser(?\App\Models\MeetingAccount $account = null): array
     {
-        $response = $this->meetingClient()->get('/api/v2/user.json');
+        $response = $this->meetingClient($account)->get('/api/v2/user.json');
         if (!$response->successful()) {
             throw new \RuntimeException('Zoho Meeting user lookup failed: ' . $response->body());
         }
@@ -875,31 +916,43 @@ class ZohoLmsService
         return $response->json('userDetails') ?? $response->json() ?? [];
     }
 
-    protected function meetingClient()
+    protected function meetingClient(?\App\Models\MeetingAccount $account = null)
     {
-        return $this->authedJson()->baseUrl(rtrim(config('zoho.meeting_url'), '/'));
+        $base = $account?->credential('meeting_url') ?: config('zoho.meeting_url');
+
+        return $this->authedJson($account)->baseUrl(rtrim((string) $base, '/'));
     }
 
-    protected function authedJson()
+    protected function authedJson(?\App\Models\MeetingAccount $account = null)
     {
         return $this->http()
-            ->withToken($this->accessToken(), 'Zoho-oauthtoken')
+            ->withToken($this->accessToken($account), 'Zoho-oauthtoken')
             ->acceptJson()
             ->asJson();
     }
 
-    protected function accessToken(): string
+    protected function accessToken(?\App\Models\MeetingAccount $account = null): string
     {
-        return Cache::remember('zoho_lms_access_token', 50 * 60, function () {
-            $response = $this->http()->asForm()->post(rtrim(config('zoho.accounts_url'), '/') . '/oauth/v2/token', [
-                'refresh_token' => config('zoho.refresh_token'),
-                'client_id' => config('zoho.client_id'),
-                'client_secret' => config('zoho.client_secret'),
+        $cacheKey = 'zoho_lms_access_token' . ($account ? ('_acct_' . $account->id) : '');
+
+        return Cache::remember($cacheKey, 50 * 60, function () use ($account) {
+            $clientId = $account?->credential('client_id') ?: config('zoho.client_id');
+            $clientSecret = $account?->credential('client_secret') ?: config('zoho.client_secret');
+            $refreshToken = $account?->credential('refresh_token') ?: config('zoho.refresh_token');
+            $accountsUrl = $account?->credential('accounts_url') ?: config('zoho.accounts_url');
+
+            $response = $this->http()->asForm()->post(rtrim((string) $accountsUrl, '/') . '/oauth/v2/token', [
+                'refresh_token' => $refreshToken,
+                'client_id' => $clientId,
+                'client_secret' => $clientSecret,
                 'grant_type' => 'refresh_token',
             ]);
 
             if (!$response->successful() || empty($response->json('access_token'))) {
-                Log::error('Zoho token refresh failed', ['body' => $response->body()]);
+                Log::error('Zoho token refresh failed', [
+                    'body' => $response->body(),
+                    'account_id' => $account?->id,
+                ]);
                 throw new \RuntimeException('Zoho OAuth token refresh failed.');
             }
 
@@ -924,3 +977,4 @@ class ZohoLmsService
             && Schema::hasColumn('class_schedules', 'zoho_calendar_event_uid');
     }
 }
+

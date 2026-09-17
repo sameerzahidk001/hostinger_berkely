@@ -46,6 +46,7 @@ use App\Http\Controllers\Admin\StudyMaterialAccessController;
 use App\Http\Controllers\Admin\ClassScheduleController;
 use App\Http\Controllers\Admin\LmsInstallController;
 use App\Http\Controllers\Admin\ZohoSettingsController;
+use App\Http\Controllers\Admin\MeetingAccountController;
 
 //student controllers starts
 use App\Http\Controllers\Student\HomeController as StudentHomeController;
@@ -183,8 +184,19 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
         // Study Materials (LMS) + Class Schedules / Zoho Meeting
         Route::get('/lms-install', [LmsInstallController::class, 'show'])->name('admin.lms.install');
         Route::post('/lms-install', [LmsInstallController::class, 'run'])->name('admin.lms.install.run');
-        Route::get('/zoho-settings', [ZohoSettingsController::class, 'show'])->name('admin.zoho.settings');
+        Route::get('/zoho-settings', function () {
+            return redirect()->route('admin.meeting-accounts.index');
+        })->name('admin.zoho.settings');
         Route::post('/zoho-settings', [ZohoSettingsController::class, 'save'])->name('admin.zoho.settings.save');
+
+        Route::prefix('meeting-accounts')->name('admin.meeting-accounts.')->group(function () {
+            Route::get('/', [MeetingAccountController::class, 'index'])->name('index');
+            Route::get('/create', [MeetingAccountController::class, 'create'])->name('create');
+            Route::post('/', [MeetingAccountController::class, 'store'])->name('store');
+            Route::get('/{id}/edit', [MeetingAccountController::class, 'edit'])->name('edit');
+            Route::put('/{id}', [MeetingAccountController::class, 'update'])->name('update');
+            Route::delete('/{id}', [MeetingAccountController::class, 'destroy'])->name('destroy');
+        });
 
         Route::prefix('study-materials')->name('admin.study-materials.')->group(function () {
             Route::get('/folders', [StudyMaterialFolderController::class, 'index'])->name('folders.index');

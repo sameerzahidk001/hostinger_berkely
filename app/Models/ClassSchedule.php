@@ -32,6 +32,7 @@ class ClassSchedule extends Model
         'course_id',
         'instructor_id',
         'head_of_faculty_id',
+        'meeting_account_id',
         'scheduled_at',
         'duration_minutes',
         'recurrence_type',
@@ -68,6 +69,11 @@ class ClassSchedule extends Model
     public function headOfFaculty(): BelongsTo
     {
         return $this->belongsTo(User::class, 'head_of_faculty_id');
+    }
+
+    public function meetingAccount(): BelongsTo
+    {
+        return $this->belongsTo(MeetingAccount::class, 'meeting_account_id');
     }
 
     public function students(): BelongsToMany
