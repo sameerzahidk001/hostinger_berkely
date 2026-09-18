@@ -26,22 +26,25 @@
     @unless($hasZoom)
         <div class="alert alert-info">
             <strong>Zoom not set up yet.</strong>
-            Click <strong>Add Zoom account</strong> and paste Zoom Server-to-Server OAuth details
-            (Account ID, Client ID, Client Secret) from the Zoom App Marketplace.
-            After that, Zoom appears in the Class Schedule “Meeting account” dropdown.
+            Click <strong>Add Zoom account</strong>, enter a label (credentials optional), then on Class Schedule
+            choose that Zoom account and <strong>paste the Zoom Join link manually</strong>.
         </div>
     @endunless
     @unless($hasZoho)
         <div class="alert alert-warning">
             <strong>No active Zoho account.</strong>
-            Add a Zoho account (Client ID, Secret, Refresh Token) so schedules can auto-create Join links.
+            Add a Zoho account (Client ID, Secret, Refresh Token) so schedules can <strong>auto-create</strong> Join links.
         </div>
     @endunless
 
     <div class="ibox">
         <div class="ibox-title"><h5>Zoho &amp; Zoom accounts for Class Schedule</h5></div>
         <div class="ibox-content table-responsive">
-            <p class="help-block">When creating a Class Schedule, Admin/Instructor picks one of these accounts. The Join link is created with that account.</p>
+            <p class="help-block">
+                On Class Schedule: pick a meeting account.
+                <strong>Zoho</strong> — Join link is created automatically.
+                <strong>Zoom</strong> — paste the Join link manually (no auto-create).
+            </p>
             <table class="table table-striped table-bordered">
                 <thead>
                     <tr>
@@ -67,7 +70,9 @@
                                 </span>
                             </td>
                             <td>
-                                @if($account->hasRequiredCredentials())
+                                @if($account->isZoom())
+                                    <span class="label label-primary">Manual Join link</span>
+                                @elseif($account->hasRequiredCredentials())
                                     <span class="label label-primary">Credentials OK</span>
                                 @else
                                     <span class="label label-warning">Missing credentials</span>

@@ -43,12 +43,13 @@ class MeetingLinkService
             return 'not_configured';
         }
 
+        // Zoom: join link is pasted manually — do not auto-create via API.
+        if ($account->isZoom()) {
+            return 'manual_required';
+        }
+
         try {
-            if ($account->isZoom()) {
-                $meeting = $this->zoom->createMeetingForSchedule($schedule, $account);
-            } else {
-                $meeting = $this->zoho->createMeetingForSchedule($schedule, $account);
-            }
+            $meeting = $this->zoho->createMeetingForSchedule($schedule, $account);
         } catch (Throwable $e) {
             Log::error('Meeting create threw', [
                 'provider' => $account->provider,

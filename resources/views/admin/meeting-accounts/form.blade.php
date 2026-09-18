@@ -50,18 +50,26 @@
                     </div>
 
                     @if($provider === 'zoom')
-                        <div class="col-md-12"><hr><h4>Zoom Server-to-Server OAuth</h4></div>
-                        <div class="col-md-4 form-group">
-                            <label>Account ID *</label>
-                            <input type="text" name="account_id" class="form-control" value="{{ old('account_id', $credentials['account_id'] ?? '') }}" @required(!$account->exists)>
+                        <div class="col-md-12">
+                            <hr>
+                            <h4>Zoom (manual Join link)</h4>
+                            <p class="help-block">
+                                Zoom meetings are not created by the LMS. Add a label here so Zoom appears in
+                                Class Schedule, then paste the Zoom Join URL on each schedule.
+                                OAuth fields below are optional (only if you later want API create).
+                            </p>
                         </div>
                         <div class="col-md-4 form-group">
-                            <label>Client ID *</label>
-                            <input type="text" name="client_id" class="form-control" value="{{ old('client_id', $credentials['client_id'] ?? '') }}" @required(!$account->exists)>
+                            <label>Account ID</label>
+                            <input type="text" name="account_id" class="form-control" value="{{ old('account_id', $credentials['account_id'] ?? '') }}">
                         </div>
                         <div class="col-md-4 form-group">
-                            <label>Client Secret *</label>
-                            <input type="text" name="client_secret" class="form-control" value="{{ old('client_secret', '') }}" placeholder="{{ $account->exists ? 'Leave blank to keep current' : '' }}" @required(!$account->exists)>
+                            <label>Client ID</label>
+                            <input type="text" name="client_id" class="form-control" value="{{ old('client_id', $credentials['client_id'] ?? '') }}">
+                        </div>
+                        <div class="col-md-4 form-group">
+                            <label>Client Secret</label>
+                            <input type="text" name="client_secret" class="form-control" value="{{ old('client_secret', '') }}" placeholder="{{ $account->exists ? 'Leave blank to keep current' : 'Optional' }}">
                         </div>
                     @else
                         <div class="col-md-12"><hr><h4>Zoho OAuth credentials</h4></div>

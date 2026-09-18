@@ -117,9 +117,10 @@ class MeetingAccountController extends Controller
         ];
 
         if ($provider === MeetingAccount::PROVIDER_ZOOM) {
-            $rules['account_id'] = $required . '|string|max:255';
-            $rules['client_id'] = $required . '|string|max:255';
-            $rules['client_secret'] = $required . '|string|max:255';
+            // Zoom Join links are pasted on the schedule — OAuth credentials are optional.
+            $rules['account_id'] = 'nullable|string|max:255';
+            $rules['client_id'] = 'nullable|string|max:255';
+            $rules['client_secret'] = 'nullable|string|max:255';
         } else {
             $rules['client_id'] = $required . '|string|max:255';
             $rules['client_secret'] = $required . '|string|max:255';

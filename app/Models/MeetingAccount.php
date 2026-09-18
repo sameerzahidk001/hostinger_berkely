@@ -83,10 +83,9 @@ class MeetingAccount extends Model
 
     public function hasRequiredCredentials(): bool
     {
+        // Zoom: Join link is pasted on Class Schedule — label-only accounts are fine.
         if ($this->isZoom()) {
-            return filled($this->credential('account_id'))
-                && filled($this->credential('client_id'))
-                && filled($this->credential('client_secret'));
+            return true;
         }
 
         return filled($this->credential('client_id'))

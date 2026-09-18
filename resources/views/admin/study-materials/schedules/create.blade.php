@@ -64,14 +64,19 @@
                     </div>
                     <div class="col-md-6 form-group">
                         <label>Meeting account *</label>
-                        <select name="meeting_account_id" class="form-control" required>
+                        <select name="meeting_account_id" id="meeting_account_id" class="form-control" required>
                             <option value="">Select Zoho or Zoom account</option>
                             @foreach(($meetingAccounts ?? []) as $account)
-                                <option value="{{ $account->id }}" @selected((string) old('meeting_account_id', $defaultMeetingAccountId) === (string) $account->id)>
+                                <option value="{{ $account->id }}"
+                                    data-provider="{{ $account->provider }}"
+                                    @selected((string) old('meeting_account_id', $defaultMeetingAccountId) === (string) $account->id)>
                                     {{ $account->dropdownLabel() }}
                                 </option>
                             @endforeach
                         </select>
+                        <span class="help-block" id="meeting-account-help">
+                            Zoho = Join link auto-created. Zoom = paste Join link manually.
+                        </span>
                     </div>
                     <div class="col-md-4 form-group">
                         <label>Start date &amp; time *</label>
@@ -82,8 +87,9 @@
                         <input type="number" name="duration_minutes" class="form-control" min="15" max="480" step="15" value="{{ old('duration_minutes', 60) }}">
                     </div>
                     <div class="col-md-4 form-group">
-                        <label>Meeting link (optional override)</label>
-                        <input type="url" name="zoho_link" class="form-control" value="{{ old('zoho_link') }}" placeholder="Leave blank to auto-create">
+                        <label id="meeting-link-label">Meeting link</label>
+                        <input type="url" name="zoho_link" id="zoho_link" class="form-control" value="{{ old('zoho_link') }}" placeholder="https://...">
+                        <span class="help-block" id="meeting-link-help">Leave blank for Zoho auto-create.</span>
                     </div>
 
                     @include('admin.study-materials.schedules._recurrence_fields', ['schedule' => new \App\Models\ClassSchedule()])
@@ -146,6 +152,22 @@ $(function () {
             });
     }
     $batch.on('change', loadBatch);
+
+    function syncMeetingLinkUi() {
+        var $opt = $('#meeting_account_id option:selected');
+        var provider = ($opt.data('provider') || '').toString().toLowerCase();
+        var isZoom = provider === 'zoom';
+        $('#zoho_link').prop('required', isZoom);
+        $('#meeting-link-label').text(isZoom ? 'Zoom meeting link *' : 'Meeting link');
+        $('#meeting-link-help').text(isZoom
+            ? 'Paste the Zoom Join URL manually (required for Zoom).'
+            : 'Leave blank — Zoho Join link is created automatically on Save.');
+        $('#meeting-account-help').text(isZoom
+            ? 'Zoom selected: paste the Join link below.'
+            : 'Zoho selected: Join link will be created automatically.');
+    }
+    $('#meeting_account_id').on('change', syncMeetingLinkUi);
+    syncMeetingLinkUi();
 });
 </script>
 @endpush

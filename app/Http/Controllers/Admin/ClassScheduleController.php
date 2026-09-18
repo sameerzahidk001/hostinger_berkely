@@ -92,6 +92,7 @@ class ClassScheduleController extends Controller
             'selectedBatch' => $batch,
             'meetingAccounts' => MeetingAccount::activeForDropdown(),
             'defaultMeetingAccountId' => MeetingAccount::defaultId(),
+            'meetingAccountProviders' => MeetingAccount::activeForDropdown()->mapWithKeys(fn ($a) => [$a->id => $a->provider]),
             'zohoMeetingReady' => $this->zoho->isMeetingReady(),
             'zohoHostEmail' => $this->zoho->hostAccountEmail(),
             'isInstructor' => $this->lms->isInstructorActor(),
@@ -101,7 +102,7 @@ class ClassScheduleController extends Controller
 
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), $this->scheduleRules());
+        $validator = Validator::make($request->all(), $this->scheduleRules($request));
 
         if ($validator->fails()) {
             return redirect()->back()->withErrors($validator)->withInput();
@@ -189,6 +190,7 @@ class ClassScheduleController extends Controller
             'selectedBatch' => $batch,
             'meetingAccounts' => MeetingAccount::activeForDropdown(),
             'defaultMeetingAccountId' => MeetingAccount::defaultId(),
+            'meetingAccountProviders' => MeetingAccount::activeForDropdown()->mapWithKeys(fn ($a) => [$a->id => $a->provider]),
             'zohoMeetingReady' => $this->zoho->isMeetingReady(),
             'zohoHostEmail' => $this->zoho->hostAccountEmail(),
             'isInstructor' => $this->lms->isInstructorActor(),
@@ -225,7 +227,7 @@ class ClassScheduleController extends Controller
             abort(403);
         }
 
-        $validator = Validator::make($request->all(), array_merge($this->scheduleRules(), [
+        $validator = Validator::make($request->all(), array_merge($this->scheduleRules($request), [
             'status' => 'required|in:scheduled,completed,cancelled',
         ]));
 
@@ -337,8 +339,15 @@ class ClassScheduleController extends Controller
         ]);
     }
 
-    protected function scheduleRules(): array
+    protected function scheduleRules(?Request $request = null): array
     {
+        $request = $request ?: request();
+        $accountId = (int) $request->input('meeting_account_id');
+        $account = $accountId
+            ? MeetingAccount::query()->whereKey($accountId)->first()
+            : null;
+        $isZoom = $account && $account->isZoom();
+
         return [
             'batch_id' => [
                 'required',
@@ -352,7 +361,8 @@ class ClassScheduleController extends Controller
             ],
             'scheduled_at' => 'required|date',
             'duration_minutes' => 'nullable|integer|min:15|max:480',
-            'zoho_link' => 'nullable|url|max:500',
+            // Zoom: paste Join link manually. Zoho: optional (auto-created on save).
+            'zoho_link' => ($isZoom ? 'required' : 'nullable') . '|url|max:500',
             'title' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
             'student_ids' => 'nullable|array',
@@ -487,10 +497,11 @@ class ClassScheduleController extends Controller
 
         $parts = [$base];
         $meetingNote = match ($meetingStatus) {
-            'created' => 'Meeting Join link was created automatically from the selected account.',
-            'existing' => 'Existing meeting Join link was kept.',
+            'created' => 'Zoho Meeting Join link was created automatically.',
+            'existing' => 'Meeting Join link was saved.',
+            'manual_required' => 'Zoom selected — paste the Zoom Join link in Meeting link (required).',
             'not_configured' => 'Selected meeting account is missing or not ready, so the Join link could not be auto-created.',
-            default => 'Meeting Join link was not created automatically. Check the selected Zoho/Zoom account credentials.',
+            default => 'Meeting Join link was not created automatically. For Zoho check credentials; for Zoom paste the link manually.',
         };
         if ($meetingNote) {
             $parts[] = $meetingNote;
