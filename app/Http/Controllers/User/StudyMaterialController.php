@@ -214,6 +214,7 @@ class StudyMaterialController extends Controller
                                 'zoho_link' => $schedule->zoho_link,
                                 'duration_minutes' => $schedule->durationMinutes(),
                                 'notes' => $schedule->notes,
+                                'status' => $schedule->status ?: 'scheduled',
                             ];
                         });
                     })
@@ -260,7 +261,7 @@ class StudyMaterialController extends Controller
             'batch.course',
             'batch.headOfFaculty',
             'batch.instructors',
-        ])->where('status', 'scheduled');
+        ])->whereIn('status', ['scheduled', 'completed', 'cancelled']);
 
         if (Auth::user()?->roles()->where('name', 'instructor')->exists()) {
             $query->where(function ($q) {

@@ -24,9 +24,19 @@
 
             <div class="tab-content">
                 <div role="tabpanel" class="tab-pane active" id="schedule-batches">
-                    <p class="help-block" style="margin-top:0;">Each batch shows its full list of scheduled sessions with dates and Join. Past sessions have Join disabled.</p>
+                    <p class="help-block" style="margin-top:0;">
+                        All sessions stay visible (Scheduled, Completed, Cancelled). Only deleted sessions are removed. Past / cancelled sessions have Join disabled.
+                    </p>
 
                     @forelse($batches as $batch)
+                        @php
+                            $course = $batch['course'] ?? null;
+                            $hof = $batch['head_of_faculty'] ?? null;
+                            $ins = $batch['instructor'] ?? null;
+                            $courseHref = $course
+                                ? url('/course/' . ($course->slug ?: $course->id))
+                                : null;
+                        @endphp
                         <div class="panel panel-default" style="margin-bottom:20px;">
                             <div class="panel-heading">
                                 <strong style="font-size:16px;">
@@ -36,20 +46,20 @@
                                     {{ $batch['batch_name'] }}
                                 </strong>
                                 <div class="text-muted" style="margin-top:4px;">
-                                    @if(!empty($batch['course']->id))
-                                        <a href="{{ route('course.details', ['course' => $batch['course']->slug ?? $batch['course']->id]) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;"><strong>{{ $batch['course']->title }}</strong></a>
+                                    @if($courseHref)
+                                        <a href="{{ $courseHref }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;"><strong>{{ $course->title }}</strong></a>
                                     @else
                                         —
                                     @endif
                                     · Head of Faculty:
-                                    @if(!empty($batch['head_of_faculty']->id))
-                                        <a href="{{ url('/instructor/' . $batch['head_of_faculty']->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;"><strong>{{ $batch['head_of_faculty']->name }}</strong></a>
+                                    @if($hof && !empty($hof->id))
+                                        <a href="{{ url('/instructor/' . $hof->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;"><strong>{{ $hof->name }}</strong></a>
                                     @else
                                         <strong>—</strong>
                                     @endif
                                     · Instructor:
-                                    @if(!empty($batch['instructor']->id))
-                                        <a href="{{ url('/instructor/' . $batch['instructor']->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;"><strong>{{ $batch['instructor']->name }}</strong></a>
+                                    @if($ins && !empty($ins->id))
+                                        <a href="{{ url('/instructor/' . $ins->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;"><strong>{{ $ins->name }}</strong></a>
                                     @else
                                         <strong>—</strong>
                                     @endif
@@ -67,16 +77,29 @@
                                                 <th>Time</th>
                                                 <th>Duration</th>
                                                 <th>Description</th>
+                                                <th>Status</th>
                                                 <th style="min-width:120px;">Join</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             @forelse($batch['sessions'] as $row)
                                                 @php
+                                                    $status = strtolower((string) ($row->status ?? 'scheduled'));
                                                     $endsAt = $row->scheduled_at
                                                         ? $row->scheduled_at->copy()->addMinutes((int) ($row->duration_minutes ?? 60))
                                                         : null;
                                                     $isPast = $endsAt && $endsAt->isPast();
+                                                    $joinDisabled = $isPast || in_array($status, ['cancelled', 'completed'], true);
+                                                    $statusLabel = match ($status) {
+                                                        'completed' => 'Completed',
+                                                        'cancelled' => 'Cancelled',
+                                                        default => 'Scheduled',
+                                                    };
+                                                    $statusClass = match ($status) {
+                                                        'completed' => 'label-primary',
+                                                        'cancelled' => 'label-danger',
+                                                        default => 'label-success',
+                                                    };
                                                 @endphp
                                                 <tr>
                                                     <td>{{ $loop->iteration }}</td>
@@ -85,12 +108,19 @@
                                                     <td>{{ $row->scheduled_at?->format('H:i') ?? '—' }}</td>
                                                     <td>{{ $row->duration_minutes ?? 60 }} min</td>
                                                     <td>{{ $row->notes ?: '—' }}</td>
+                                                    <td><span class="label {{ $statusClass }}">{{ $statusLabel }}</span></td>
                                                     <td>
-                                                        @if($row->zoho_link && ! $isPast)
+                                                        @if($row->zoho_link && ! $joinDisabled)
                                                             <a class="btn btn-primary btn-sm" href="{{ $row->zoho_link }}" target="_blank" rel="noopener" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;font-weight:700;">Join Now</a>
-                                                        @elseif($row->zoho_link && $isPast)
-                                                            <button type="button" class="btn btn-default btn-sm" disabled title="This session date has passed">Join Now</button>
-                                                            <span class="label label-default" style="margin-left:4px;">Ended</span>
+                                                        @elseif($row->zoho_link && $joinDisabled)
+                                                            <button type="button" class="btn btn-default btn-sm" disabled>Join Now</button>
+                                                            @if($status === 'cancelled')
+                                                                <span class="label label-danger" style="margin-left:4px;">Cancelled</span>
+                                                            @elseif($status === 'completed')
+                                                                <span class="label label-primary" style="margin-left:4px;">Completed</span>
+                                                            @else
+                                                                <span class="label label-default" style="margin-left:4px;">Ended</span>
+                                                            @endif
                                                         @else
                                                             <span class="label label-default">Link soon</span>
                                                         @endif
@@ -99,7 +129,7 @@
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="7" class="text-center text-muted">No sessions in this batch yet.</td>
+                                                    <td colspan="8" class="text-center text-muted">No sessions in this batch yet.</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>
