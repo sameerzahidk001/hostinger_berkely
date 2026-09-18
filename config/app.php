@@ -15,7 +15,7 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'BERKELEY SCHOOL OF BUSINESS, ARTS & SCIENCES'),
+    'name' => env('APP_NAME', 'Berkeley School of Business'),
 
     /*
     |--------------------------------------------------------------------------
