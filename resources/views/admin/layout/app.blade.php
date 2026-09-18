@@ -159,7 +159,7 @@
                   </li>
                   @endif
                   @if(admin_menu_allowed('class-schedules'))
-                  <li class="{{ request()->is('admin/class-schedules*') || request()->is('admin/class-batches*') ? 'active' : '' }}">
+                  <li class="{{ request()->is('admin/class-schedules*') || request()->is('admin/class-batches*') || request()->is('admin/meeting-accounts*') || request()->is('admin/zoho-settings*') ? 'active' : '' }}">
                      <a href="javascript:void(0)"><i class="fa fa-calendar"></i> <span class="nav-label">Class Schedule</span> <span class="fa arrow"></span></a>
                      <ul class="nav nav-second-level">
                         <li class="{{ request()->is('admin/class-batches*') ? 'active' : '' }}">
@@ -168,13 +168,12 @@
                         <li class="{{ request()->is('admin/class-schedules*') ? 'active' : '' }}">
                            <a href="{{ route('admin.class-schedules.index') }}">Schedules</a>
                         </li>
+                        @if(Auth::guard('admin')->check())
+                        <li class="{{ request()->is('admin/meeting-accounts*') || request()->is('admin/zoho-settings*') ? 'active' : '' }}">
+                           <a href="{{ route('admin.meeting-accounts.index') }}">Meeting Accounts</a>
+                        </li>
+                        @endif
                      </ul>
-                  </li>
-                  @endif
-                  {{-- Meeting Accounts (Zoho / Zoom) — admin only --}}
-                  @if(Auth::guard('admin')->check() && admin_menu_allowed('class-schedules'))
-                  <li class="{{ request()->is('admin/meeting-accounts*') || request()->is('admin/zoho-settings*') ? 'active' : '' }}">
-                     <a href="{{ route('admin.meeting-accounts.index') }}"><i class="fa fa-video-camera"></i> <span class="nav-label">Meeting Accounts</span></a>
                   </li>
                   @endif
                   @if(admin_menu_allowed('analytics'))
