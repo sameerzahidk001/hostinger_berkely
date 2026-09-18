@@ -15,7 +15,15 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Berkeley School of Business'),
+    'name' => (static function () {
+        $name = trim((string) env('APP_NAME', 'Berkeley School of Business'));
+        // Live Hostinger may still have APP_NAME=BERKELEYME — treat that as the full brand name.
+        if ($name === '' || strcasecmp($name, 'BERKELEYME') === 0) {
+            return 'Berkeley School of Business';
+        }
+
+        return $name;
+    })(),
 
     /*
     |--------------------------------------------------------------------------

@@ -1,12 +1,37 @@
 @extends('user.layout.app')
 @section('title', 'Class Schedule')
+@push('style')
+<style>
+.page-heading.class-schedule-heading {
+    background: #7a1212 !important;
+    border-bottom-color: #5c0e0e !important;
+    padding: 18px 20px;
+    margin: 0;
+}
+.page-heading.class-schedule-heading h2 {
+    color: #fff !important;
+    font-size: 28px;
+    font-weight: 700;
+    margin: 8px 0;
+}
+.page-heading.class-schedule-heading .btn-default {
+    background: rgba(255,255,255,.15);
+    border-color: rgba(255,255,255,.35);
+    color: #fff;
+}
+.page-heading.class-schedule-heading .btn-default:hover {
+    background: rgba(255,255,255,.28);
+    color: #fff;
+}
+</style>
+@endpush
 @section('content')
 @php $isInstructor = !empty($isInstructor); @endphp
-<div class="row wrapper border-bottom white-bg page-heading">
+<div class="row wrapper border-bottom page-heading class-schedule-heading">
     <div class="col-lg-8">
         <h2>{{ $isInstructor ? 'Class Schedule' : 'My Class Schedule' }}</h2>
     </div>
-    <div class="col-lg-4 text-right" style="padding-top:20px;">
+    <div class="col-lg-4 text-right" style="padding-top:12px;">
         @if($isInstructor)
             <a href="{{ route('admin.class-schedules.index') }}" class="btn btn-default">Manage schedules</a>
             <a href="{{ route('admin.class-schedules.create') }}" class="btn btn-primary">Add session</a>
