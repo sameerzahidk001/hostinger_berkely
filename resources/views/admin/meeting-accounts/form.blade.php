@@ -73,10 +73,12 @@
                     </div>
                     <div class="col-md-3 form-group">
                         <label>Default</label>
+                        @php $defaultVal = (string) old('is_default', $account->is_default ? '1' : '0'); @endphp
                         <select name="is_default" class="form-control">
-                            <option value="0" @selected(! old('is_default', $account->is_default))>No</option>
-                            <option value="1" @selected(old('is_default', $account->is_default))>Yes</option>
+                            <option value="0" @selected($defaultVal === '0')>No</option>
+                            <option value="1" @selected($defaultVal === '1')>Yes</option>
                         </select>
+                        <span class="help-block">Default account is pre-selected on Create Schedule.</span>
                     </div>
 
                     @if($provider === 'zoom')

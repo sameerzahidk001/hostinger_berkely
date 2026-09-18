@@ -125,11 +125,31 @@ class MeetingAccount extends Model
 
     public function makeDefault(): void
     {
-        static::query()->where('provider', $this->provider)->update(['is_default' => false]);
         // Only one global default across providers for schedule prefill.
         static::query()->update(['is_default' => false]);
-        $this->is_default = true;
-        $this->save();
+        $this->forceFill(['is_default' => true])->save();
+        $this->refresh();
+    }
+
+    /**
+     * If no account is marked default, promote the first active one.
+     */
+    public static function ensureOneDefault(): void
+    {
+        if (! Schema::hasTable('meeting_accounts')) {
+            return;
+        }
+
+        if (static::query()->where('is_default', true)->exists()) {
+            return;
+        }
+
+        $first = static::query()->where('is_active', true)->orderBy('id')->first()
+            ?: static::query()->orderBy('id')->first();
+
+        if ($first) {
+            $first->makeDefault();
+        }
     }
 
     /**
@@ -142,6 +162,8 @@ class MeetingAccount extends Model
         }
 
         if (static::query()->where('provider', self::PROVIDER_ZOHO)->exists()) {
+            static::ensureOneDefault();
+
             return;
         }
 

@@ -49,10 +49,7 @@ class MeetingAccountController extends Controller
         $account = new MeetingAccount();
         $this->fillAccount($account, $request);
         $account->save();
-
-        if ($request->boolean('is_default')) {
-            $account->makeDefault();
-        }
+        $this->syncDefaultFlag($account, $request);
 
         return redirect()
             ->route('admin.meeting-accounts.index')
@@ -82,10 +79,7 @@ class MeetingAccountController extends Controller
 
         $this->fillAccount($account, $request, true);
         $account->save();
-
-        if ($request->boolean('is_default')) {
-            $account->makeDefault();
-        }
+        $this->syncDefaultFlag($account, $request);
 
         return redirect()
             ->route('admin.meeting-accounts.index')
@@ -141,9 +135,6 @@ class MeetingAccountController extends Controller
         $account->host_email = $request->input('host_email') ?: null;
         $account->timezone = $request->input('timezone') ?: 'Asia/Dubai';
         $account->is_active = $request->boolean('is_active', true);
-        if (! $isUpdate) {
-            $account->is_default = $request->boolean('is_default');
-        }
 
         $existing = $account->exists ? $account->credentials() : [];
         if ($account->provider === MeetingAccount::PROVIDER_ZOOM) {
@@ -167,5 +158,23 @@ class MeetingAccountController extends Controller
         }
 
         $account->setCredentials($creds);
+    }
+
+    protected function syncDefaultFlag(MeetingAccount $account, Request $request): void
+    {
+        if ($request->boolean('is_default')) {
+            $account->makeDefault();
+
+            return;
+        }
+
+        // Explicitly turn off default when user selects No.
+        if ($account->is_default) {
+            $account->is_default = false;
+            $account->save();
+        }
+
+        // Keep one default if none left.
+        MeetingAccount::ensureOneDefault();
     }
 }

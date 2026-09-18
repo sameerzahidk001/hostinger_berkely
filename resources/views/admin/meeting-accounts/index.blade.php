@@ -63,7 +63,13 @@
                             <td><strong>{{ strtoupper($account->provider) }}</strong></td>
                             <td>{{ $account->label }}</td>
                             <td>{{ $account->host_email ?: '—' }}</td>
-                            <td>{{ $account->is_default ? 'Yes' : '—' }}</td>
+                            <td>
+                                @if($account->is_default)
+                                    <span class="label label-primary">Yes</span>
+                                @else
+                                    <span class="label label-default">No</span>
+                                @endif
+                            </td>
                             <td>
                                 <span class="label {{ $account->is_active ? 'label-primary' : 'label-default' }}">
                                     {{ $account->is_active ? 'Active' : 'Inactive' }}
