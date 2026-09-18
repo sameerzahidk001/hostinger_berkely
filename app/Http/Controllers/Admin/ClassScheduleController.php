@@ -671,7 +671,10 @@ class ClassScheduleController extends Controller
             return 0;
         }
 
-        $starts = $schedule->occurrenceStarts();
+        $starts = collect($schedule->occurrenceStarts())
+            ->unique(fn ($start) => $start->format('Y-m-d H:i'))
+            ->values()
+            ->all();
         if ($starts === []) {
             return 0;
         }
@@ -685,8 +688,21 @@ class ClassScheduleController extends Controller
 
         $created = 0;
         foreach (array_slice($starts, 1) as $start) {
+            // Never recreate a day that already exists on this batch.
+            $exists = ClassSchedule::query()
+                ->where('batch_id', $schedule->batch_id)
+                ->where('scheduled_at', $start->format('Y-m-d H:i:s'))
+                ->exists();
+            if ($exists) {
+                continue;
+            }
+
             $copy = $schedule->replicate();
             $copy->scheduled_at = $start;
+            $copy->recurrence_type = ClassSchedule::RECURRENCE_NONE;
+            $copy->recurrence_days = null;
+            $copy->recurrence_count = null;
+            $copy->recurrence_until = null;
             $copy->save();
             if ($studentIds !== []) {
                 $copy->students()->sync($studentIds);
@@ -695,6 +711,18 @@ class ClassScheduleController extends Controller
         }
 
         return $created;
+    }
+
+    public function clearBatch($batchId)
+    {
+        $batch = ClassBatch::findOrFail((int) $batchId);
+        $this->assertCanUseBatch($batch);
+
+        $deleted = ClassSchedule::query()->where('batch_id', $batch->id)->delete();
+
+        return redirect()
+            ->route('admin.class-schedules.batch', $batch->id)
+            ->with('success', 'Removed ' . $deleted . ' session(s) from this batch. They will not come back unless you create them again.');
     }
 
     protected function batchListGroups($rows)

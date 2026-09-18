@@ -25,20 +25,6 @@ class ClassBatchController extends Controller
                 ->with('fail', 'Batches table is missing. Run the meeting/batches migration first.');
         }
 
-        // Auto-link any leftover legacy schedules (batch_name only, no batch_id).
-        if ($this->lms->isAdminActor() && Schema::hasColumn('class_schedules', 'batch_id')) {
-            $orphanCount = \App\Models\ClassSchedule::query()->whereNull('batch_id')->whereNotNull('course_id')->count();
-            if ($orphanCount > 0) {
-                $stats = ClassBatch::backfillFromLegacySchedules();
-                if ($stats['batches_created'] > 0 || $stats['schedules_linked'] > 0) {
-                    session()->flash(
-                        'success',
-                        'Legacy schedules linked: ' . $stats['schedules_linked'] . ' session(s), ' . $stats['batches_created'] . ' batch(es) created.'
-                    );
-                }
-            }
-        }
-
         $query = ClassBatch::with(['course', 'headOfFaculty', 'instructors', 'students'])
             ->withCount(['schedules', 'students', 'instructors'])
             ->orderByDesc('id');
