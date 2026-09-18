@@ -88,7 +88,7 @@
                         <span class="help-block" id="meeting-link-help">Leave blank for Zoho auto-create.</span>
                     </div>
 
-                    @include('admin.study-materials.schedules._recurrence_fields', ['schedule' => $schedule])
+                    @include('admin.study-materials.schedules._recurrence_fields', ['schedule' => $schedule, 'singleDayEdit' => true])
 
                     <div class="col-md-12 form-group">
                         <label>Students {{ ($isAdmin ?? false) ? '' : '(from batch — view only)' }}</label>

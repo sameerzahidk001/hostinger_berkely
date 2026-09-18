@@ -271,6 +271,8 @@ class ClassScheduleController extends Controller
         $schedule->batch_name = $batch->name;
         $schedule->course_id = $batch->course_id;
         $schedule->duration_minutes = (int) ($request->input('duration_minutes') ?: 60);
+        // Edit updates THIS day only — never recreate / expand a recurring series.
+        $request->merge(['recurrence_type' => ClassSchedule::RECURRENCE_NONE]);
         $this->applyRecurrenceAndReminders($schedule, $request);
         $schedule->save();
 
@@ -278,16 +280,10 @@ class ClassScheduleController extends Controller
         $schedule->students()->sync($studentIds);
 
         $zohoStatus = $this->meetings->attachIntegrations($schedule);
-        $extraDays = $this->materializeRecurringSessions($schedule, $studentIds);
-
-        $message = $this->scheduleSavedMessage('updated', $zohoStatus);
-        if ($extraDays > 0) {
-            $message .= ' Split into ' . ($extraDays + 1) . ' separate session days.';
-        }
 
         return redirect()
             ->route('admin.class-schedules.index')
-            ->with('success', $message);
+            ->with('success', $this->scheduleSavedMessage('updated', $zohoStatus));
     }
 
     public function destroy($id)
@@ -669,6 +665,7 @@ class ClassScheduleController extends Controller
                     ->values();
 
                 return [
+                    'batch_id' => $batchModel?->id ?: $first->batch_id,
                     'batch_code' => $batchModel?->code,
                     'batch_name' => $batchModel?->name ?: ($first->batch_name ?: ($first->title ?: 'Untitled batch')),
                     'course' => $batchModel?->course ?: $first->course,

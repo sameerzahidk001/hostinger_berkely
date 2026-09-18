@@ -52,9 +52,26 @@
                                     </strong>
                                     <div class="text-muted" style="margin-top:2px;">
                                         {{ $batch['course']->title ?? 'No course' }}
-                                        · Head of Faculty: <strong>{{ $batch['head_of_faculty']->name ?? '—' }}</strong>
-                                        · Instructor: <strong>{{ $batch['instructor']->name ?? '—' }}</strong>
-                                        · {{ $batch['students']->count() }} student{{ $batch['students']->count() === 1 ? '' : 's' }}
+                                        · Head of Faculty:
+                                        @if(!empty($batch['head_of_faculty']?->id) && Route::has('users.edit'))
+                                            <a href="{{ route('users.edit', $batch['head_of_faculty']->id) }}"><strong>{{ $batch['head_of_faculty']->name }}</strong></a>
+                                        @else
+                                            <strong>{{ $batch['head_of_faculty']->name ?? '—' }}</strong>
+                                        @endif
+                                        · Instructor:
+                                        @if(!empty($batch['instructor']?->id) && Route::has('users.edit'))
+                                            <a href="{{ route('users.edit', $batch['instructor']->id) }}"><strong>{{ $batch['instructor']->name }}</strong></a>
+                                        @else
+                                            <strong>{{ $batch['instructor']->name ?? '—' }}</strong>
+                                        @endif
+                                        ·
+                                        @if(!empty($batch['batch_id']))
+                                            <a href="{{ route('admin.class-batches.edit', $batch['batch_id']) }}#student_ids">
+                                                <strong>{{ $batch['students']->count() }} student{{ $batch['students']->count() === 1 ? '' : 's' }}</strong>
+                                            </a>
+                                        @else
+                                            {{ $batch['students']->count() }} student{{ $batch['students']->count() === 1 ? '' : 's' }}
+                                        @endif
                                     </div>
                                 </div>
                                 @if(!empty($batch['primary']))

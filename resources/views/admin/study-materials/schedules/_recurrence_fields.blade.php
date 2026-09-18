@@ -1,7 +1,8 @@
 @php
     \App\Models\ClassSchedule::ensureRecurrenceColumns();
     $supportsRecurrence = \App\Models\ClassSchedule::supportsRecurrenceColumns();
-    $recurrenceType = old('recurrence_type', $schedule->recurrence_type ?? 'none');
+    $singleDayEdit = !empty($singleDayEdit);
+    $recurrenceType = $singleDayEdit ? 'none' : old('recurrence_type', $schedule->recurrence_type ?? 'none');
     $selectedDays = collect(old('recurrence_days', $schedule->recurrence_days ?? []))->map(fn ($d) => strtoupper((string) $d))->all();
     if ($recurrenceType === 'weekly' && $selectedDays === [] && !empty($schedule->scheduled_at)) {
         $map = [1 => 'MO', 2 => 'TU', 3 => 'WE', 4 => 'TH', 5 => 'FR', 6 => 'SA', 7 => 'SU'];
@@ -48,10 +49,19 @@
 @endphp
 
 @if($supportsRecurrence)
+    @if($singleDayEdit)
+        <input type="hidden" name="recurrence_type" value="none">
+        <div class="col-md-12">
+            <div class="alert alert-info" style="margin-bottom:12px;">
+                You are editing <strong>one session day</strong> only (link, time, description).
+                To add more days, use <strong>Create Schedule</strong> with recurrence — Edit will not create extra sessions.
+            </div>
+        </div>
+    @else
     <div class="col-md-12">
         <hr>
         <h4 style="margin-top:0;">Custom recurrence</h4>
-        <p class="help-block">Pick multiple weekdays (like Zoho), then choose when the series ends.</p>
+        <p class="help-block">Pick multiple weekdays (like Zoho), then choose when the series ends. Each day is saved as its own editable session.</p>
     </div>
 
     <div class="col-md-12 form-group">
@@ -107,6 +117,7 @@
             <span>Occurrences</span>
         </div>
     </div>
+    @endif
 
     <div class="col-md-12 form-group">
         <label>Reminders</label>
