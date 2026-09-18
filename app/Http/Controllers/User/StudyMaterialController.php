@@ -13,6 +13,7 @@ use App\Services\ZohoLmsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
 use Symfony\Component\HttpFoundation\Response;
 
 class StudyMaterialController extends Controller
@@ -188,21 +189,44 @@ class StudyMaterialController extends Controller
         $calendarEvents = $schedules->flatMap(fn (ClassSchedule $row) => $row->toFullCalendarEvent(
             $row->zoho_link ?: route('user.class-schedules.index')
         ))->values();
+
         $batches = $schedules
             ->groupBy(function (ClassSchedule $row) {
+                if ($row->batch_id) {
+                    return 'batch:' . $row->batch_id;
+                }
+
                 $name = trim((string) ($row->batch_name ?: $row->title ?: 'My batch'));
 
-                return mb_strtolower($name) . '|' . (int) $row->course_id;
+                return 'name:' . mb_strtolower($name) . '|' . (int) $row->course_id;
             })
-            ->map(function ($sessions) {
-                $first = $sessions->sortBy('scheduled_at')->first();
+            ->map(function ($group) {
+                $first = $group->sortBy('scheduled_at')->first();
+                $batchModel = $first->batch;
+
+                // Expand recurring schedules into one row per class date.
+                $sessions = $group
+                    ->flatMap(function (ClassSchedule $schedule) {
+                        return collect($schedule->occurrenceStarts())->map(function ($start) use ($schedule) {
+                            return (object) [
+                                'id' => $schedule->id,
+                                'scheduled_at' => $start,
+                                'zoho_link' => $schedule->zoho_link,
+                                'duration_minutes' => $schedule->durationMinutes(),
+                            ];
+                        });
+                    })
+                    ->sortBy(fn ($row) => $row->scheduled_at?->timestamp ?? 0)
+                    ->values();
 
                 return [
-                    'batch_name' => $first->batch_name ?: ($first->title ?: 'My batch'),
-                    'course' => $first->course,
-                    'instructor' => $first->instructor,
-                    'head_of_faculty' => $first->headOfFaculty,
-                    'sessions' => $sessions->sortBy('scheduled_at')->values(),
+                    'batch_name' => $batchModel?->name
+                        ?: ($first->batch_name ?: ($first->title ?: 'My batch')),
+                    'course' => $batchModel?->course ?: $first->course,
+                    'instructor' => $first->instructor
+                        ?: $batchModel?->instructors?->first(),
+                    'head_of_faculty' => $batchModel?->headOfFaculty ?: $first->headOfFaculty,
+                    'sessions' => $sessions,
                 ];
             })
             ->sortBy(fn ($batch) => mb_strtolower((string) $batch['batch_name']), SORT_NATURAL)
@@ -226,8 +250,14 @@ class StudyMaterialController extends Controller
 
     protected function studentSchedules()
     {
-        $query = ClassSchedule::with(['course', 'instructor', 'headOfFaculty'])
-            ->where('status', 'scheduled');
+        $query = ClassSchedule::with([
+            'course',
+            'instructor',
+            'headOfFaculty',
+            'batch.course',
+            'batch.headOfFaculty',
+            'batch.instructors',
+        ])->where('status', 'scheduled');
 
         if (Auth::user()?->roles()->where('name', 'instructor')->exists()) {
             $query->where(function ($q) {
@@ -235,7 +265,17 @@ class StudyMaterialController extends Controller
                     ->orWhere('head_of_faculty_id', Auth::id());
             });
         } else {
-            $query->whereHas('students', fn ($q) => $q->where('users.id', Auth::id()));
+            $userId = (int) Auth::id();
+            // Show schedules assigned to the student OR any session in a batch they belong to.
+            $query->where(function ($q) use ($userId) {
+                $q->whereHas('students', fn ($s) => $s->where('users.id', $userId));
+
+                if (Schema::hasTable('class_batches')
+                    && Schema::hasTable('class_batch_student')
+                    && Schema::hasColumn('class_schedules', 'batch_id')) {
+                    $q->orWhereHas('batch.students', fn ($s) => $s->where('users.id', $userId));
+                }
+            });
         }
 
         return $query->orderBy('scheduled_at')->get();

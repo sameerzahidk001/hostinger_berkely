@@ -57,7 +57,7 @@
                                                     <td><strong>{{ $row->scheduled_at?->format('d M Y') ?? '—' }}</strong></td>
                                                     <td>{{ $row->scheduled_at?->format('l') ?? '—' }}</td>
                                                     <td>{{ $row->scheduled_at?->format('H:i') ?? '—' }}</td>
-                                                    <td>{{ $row->durationMinutes() }} min</td>
+                                                    <td>{{ $row->duration_minutes ?? 60 }} min</td>
                                                     <td>
                                                         @if($row->zoho_link)
                                                             <a class="btn btn-primary btn-sm" href="{{ $row->zoho_link }}" target="_blank" rel="noopener" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;font-weight:700;">Join Now</a>
