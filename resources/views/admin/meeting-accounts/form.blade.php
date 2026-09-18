@@ -32,7 +32,37 @@
                     </div>
                     <div class="col-md-6 form-group">
                         <label>Timezone</label>
-                        <input type="text" name="timezone" class="form-control" value="{{ old('timezone', $account->timezone ?: 'Asia/Dubai') }}">
+                        @php
+                            $timezoneOptions = [
+                                'Asia/Dubai' => 'Asia/Dubai (UAE)',
+                                'Asia/Karachi' => 'Asia/Karachi (Pakistan)',
+                                'Asia/Kolkata' => 'Asia/Kolkata (India)',
+                                'Asia/Riyadh' => 'Asia/Riyadh (Saudi Arabia)',
+                                'Asia/Qatar' => 'Asia/Qatar',
+                                'Asia/Bahrain' => 'Asia/Bahrain',
+                                'Asia/Kuwait' => 'Asia/Kuwait',
+                                'Asia/Muscat' => 'Asia/Muscat (Oman)',
+                                'Europe/London' => 'Europe/London (UK)',
+                                'Europe/Paris' => 'Europe/Paris',
+                                'Africa/Cairo' => 'Africa/Cairo (Egypt)',
+                                'Africa/Johannesburg' => 'Africa/Johannesburg',
+                                'America/New_York' => 'America/New_York (US East)',
+                                'America/Chicago' => 'America/Chicago (US Central)',
+                                'America/Denver' => 'America/Denver (US Mountain)',
+                                'America/Los_Angeles' => 'America/Los_Angeles (US West)',
+                                'UTC' => 'UTC',
+                            ];
+                            $selectedTz = old('timezone', $account->timezone ?: 'Asia/Dubai');
+                            if ($selectedTz && ! array_key_exists($selectedTz, $timezoneOptions)) {
+                                $timezoneOptions = [$selectedTz => $selectedTz] + $timezoneOptions;
+                            }
+                        @endphp
+                        <select name="timezone" class="form-control">
+                            @foreach($timezoneOptions as $value => $label)
+                                <option value="{{ $value }}" @selected($selectedTz === $value)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        <span class="help-block">Pick from the list — no need to type.</span>
                     </div>
                     <div class="col-md-3 form-group">
                         <label>Active</label>
