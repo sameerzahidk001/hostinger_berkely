@@ -105,8 +105,9 @@
                         @endunless
                     </div>
                     <div class="col-md-12 form-group">
-                        <label>Notes</label>
-                        <textarea name="notes" class="form-control" rows="3">{{ old('notes', $schedule->notes) }}</textarea>
+                        <label>Description</label>
+                        <textarea name="notes" class="form-control" rows="3" placeholder="Shown to students on the schedule (topic, homework, etc.)">{{ old('notes', $schedule->notes) }}</textarea>
+                        <span class="help-block">Admin and Instructor can edit description and the Join link for this day.</span>
                     </div>
                 </div>
                 <button type="submit" class="btn btn-primary">Update</button>

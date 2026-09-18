@@ -44,7 +44,12 @@
                         <div class="panel panel-default" style="margin-bottom:18px;">
                             <div class="panel-heading" style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;">
                                 <div>
-                                    <strong style="font-size:16px;">{{ $batch['batch_name'] }}</strong>
+                                    <strong style="font-size:16px;">
+                                        @if(!empty($batch['batch_code']))
+                                            <span class="label label-primary">{{ $batch['batch_code'] }}</span>
+                                        @endif
+                                        {{ $batch['batch_name'] }}
+                                    </strong>
                                     <div class="text-muted" style="margin-top:2px;">
                                         {{ $batch['course']->title ?? 'No course' }}
                                         · Head of Faculty: <strong>{{ $batch['head_of_faculty']->name ?? '—' }}</strong>
@@ -64,8 +69,9 @@
                                                 <th>When</th>
                                                 <th>Duration</th>
                                                 <th>Title</th>
+                                                <th>Description</th>
                                                 <th>Students</th>
-                                                <th>Zoho Meeting</th>
+                                                <th>Meeting link</th>
                                                 <th>Status</th>
                                                 <th>Actions</th>
                                             </tr>
@@ -76,6 +82,7 @@
                                                     <td>{{ $session->scheduled_at?->format('d M Y H:i') }}</td>
                                                     <td>{{ $session->durationMinutes() }} min</td>
                                                     <td>{{ $session->title && $session->title !== $batch['batch_name'] ? $session->title : '—' }}</td>
+                                                    <td>{{ \Illuminate\Support\Str::limit($session->notes ?: '—', 60) }}</td>
                                                     <td>{{ $session->students->count() }}</td>
                                                     <td>
                                                         @if($session->zoho_link)
@@ -88,12 +95,10 @@
                                                     <td>
                                                         <a class="btn btn-xs btn-primary" href="{{ route('admin.class-schedules.edit', $session->id) }}">Edit</a>
                                                         <a class="btn btn-xs btn-default" href="{{ route('admin.class-schedules.ics', $session->id) }}">.ics</a>
-                                                        @if(Auth::guard('admin')->check())
-                                                            <form action="{{ route('admin.class-schedules.destroy', $session->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete?');">
-                                                                @csrf @method('DELETE')
-                                                                <button class="btn btn-xs btn-danger" type="submit">Delete</button>
-                                                            </form>
-                                                        @endif
+                                                        <form action="{{ route('admin.class-schedules.destroy', $session->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this scheduled day?');">
+                                                            @csrf @method('DELETE')
+                                                            <button class="btn btn-xs btn-danger" type="submit">Delete</button>
+                                                        </form>
                                                     </td>
                                                 </tr>
                                             @endforeach

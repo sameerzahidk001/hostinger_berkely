@@ -24,12 +24,17 @@
 
             <div class="tab-content">
                 <div role="tabpanel" class="tab-pane active" id="schedule-batches">
-                    <p class="help-block" style="margin-top:0;">Each batch shows its full list of scheduled sessions with dates and Join.</p>
+                    <p class="help-block" style="margin-top:0;">Each batch shows its full list of scheduled sessions with dates and Join. Past sessions have Join disabled.</p>
 
                     @forelse($batches as $batch)
                         <div class="panel panel-default" style="margin-bottom:20px;">
                             <div class="panel-heading">
-                                <strong style="font-size:16px;">{{ $batch['batch_name'] }}</strong>
+                                <strong style="font-size:16px;">
+                                    @if(!empty($batch['batch_code']))
+                                        <span class="label label-primary" style="font-size:12px;vertical-align:middle;">{{ $batch['batch_code'] }}</span>
+                                    @endif
+                                    {{ $batch['batch_name'] }}
+                                </strong>
                                 <div class="text-muted" style="margin-top:4px;">
                                     {{ $batch['course']->title ?? '—' }}
                                     · Head of Faculty: <strong>{{ $batch['head_of_faculty']->name ?? '—' }}</strong>
@@ -47,20 +52,31 @@
                                                 <th>Day</th>
                                                 <th>Time</th>
                                                 <th>Duration</th>
+                                                <th>Description</th>
                                                 <th style="min-width:120px;">Join</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             @forelse($batch['sessions'] as $row)
+                                                @php
+                                                    $endsAt = $row->scheduled_at
+                                                        ? $row->scheduled_at->copy()->addMinutes((int) ($row->duration_minutes ?? 60))
+                                                        : null;
+                                                    $isPast = $endsAt && $endsAt->isPast();
+                                                @endphp
                                                 <tr>
                                                     <td>{{ $loop->iteration }}</td>
                                                     <td><strong>{{ $row->scheduled_at?->format('d M Y') ?? '—' }}</strong></td>
                                                     <td>{{ $row->scheduled_at?->format('l') ?? '—' }}</td>
                                                     <td>{{ $row->scheduled_at?->format('H:i') ?? '—' }}</td>
                                                     <td>{{ $row->duration_minutes ?? 60 }} min</td>
+                                                    <td>{{ $row->notes ?: '—' }}</td>
                                                     <td>
-                                                        @if($row->zoho_link)
+                                                        @if($row->zoho_link && ! $isPast)
                                                             <a class="btn btn-primary btn-sm" href="{{ $row->zoho_link }}" target="_blank" rel="noopener" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;font-weight:700;">Join Now</a>
+                                                        @elseif($row->zoho_link && $isPast)
+                                                            <button type="button" class="btn btn-default btn-sm" disabled title="This session date has passed">Join Now</button>
+                                                            <span class="label label-default" style="margin-left:4px;">Ended</span>
                                                         @else
                                                             <span class="label label-default">Link soon</span>
                                                         @endif
@@ -69,7 +85,7 @@
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="6" class="text-center text-muted">No sessions in this batch yet.</td>
+                                                    <td colspan="7" class="text-center text-muted">No sessions in this batch yet.</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>

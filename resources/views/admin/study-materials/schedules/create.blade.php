@@ -110,8 +110,8 @@
                         @endunless
                     </div>
                     <div class="col-md-12 form-group">
-                        <label>Notes</label>
-                        <textarea name="notes" class="form-control" rows="3">{{ old('notes') }}</textarea>
+                        <label>Description</label>
+                        <textarea name="notes" class="form-control" rows="3" placeholder="Shown to students on the schedule (topic, homework, etc.)">{{ old('notes') }}</textarea>
                     </div>
                 </div>
                 <button type="submit" class="btn btn-primary">Save</button>

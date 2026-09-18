@@ -48,7 +48,7 @@ class ClassScheduleController extends Controller
             ->values();
         $zohoEmbed = $this->zohoCalendarEmbedUrl();
 
-        $batchQuery = ClassSchedule::with(['course', 'instructor', 'headOfFaculty', 'students'])
+        $batchQuery = ClassSchedule::with(['course', 'instructor', 'headOfFaculty', 'students', 'batch.course', 'batch.headOfFaculty'])
             ->orderBy('batch_name')
             ->orderBy('scheduled_at');
         if ($this->lms->isInstructorActor()) {
@@ -150,10 +150,16 @@ class ClassScheduleController extends Controller
         $schedule->students()->sync($studentIds);
 
         $zohoStatus = $this->meetings->attachIntegrations($schedule);
+        $extraDays = $this->materializeRecurringSessions($schedule, $studentIds);
+
+        $message = $this->scheduleSavedMessage('created', $zohoStatus);
+        if ($extraDays > 0) {
+            $message .= ' Split into ' . ($extraDays + 1) . ' separate session days — edit or delete each day as needed.';
+        }
 
         return redirect()
             ->route('admin.class-schedules.index')
-            ->with('success', $this->scheduleSavedMessage('created', $zohoStatus));
+            ->with('success', $message);
     }
 
     public function edit($id)
@@ -163,6 +169,19 @@ class ClassScheduleController extends Controller
         $schedule = ClassSchedule::with(['students', 'batch.students', 'batch.instructors'])->findOrFail($id);
         if ($this->lms->isInstructorActor() && (int) $schedule->instructor_id !== (int) Auth::id()) {
             abort(403);
+        }
+
+        // Existing recurring series → split into individual days so link/description can be edited per day.
+        if ($schedule->isRecurring()) {
+            $studentIds = $schedule->students()->pluck('id')->map(fn ($id) => (int) $id)->all();
+            $extra = $this->materializeRecurringSessions($schedule, $studentIds);
+
+            return redirect()
+                ->route('admin.class-schedules.index')
+                ->with(
+                    'success',
+                    'Recurring series split into ' . ($extra + 1) . ' editable session days. Use Edit to change the Join link or description, or Delete for one day.'
+                );
         }
 
         $courses = $this->lms->coursesForActor();
@@ -259,18 +278,30 @@ class ClassScheduleController extends Controller
         $schedule->students()->sync($studentIds);
 
         $zohoStatus = $this->meetings->attachIntegrations($schedule);
+        $extraDays = $this->materializeRecurringSessions($schedule, $studentIds);
+
+        $message = $this->scheduleSavedMessage('updated', $zohoStatus);
+        if ($extraDays > 0) {
+            $message .= ' Split into ' . ($extraDays + 1) . ' separate session days.';
+        }
 
         return redirect()
             ->route('admin.class-schedules.index')
-            ->with('success', $this->scheduleSavedMessage('updated', $zohoStatus));
+            ->with('success', $message);
     }
 
     public function destroy($id)
     {
-        abort_unless($this->lms->isAdminActor(), 403);
-        ClassSchedule::findOrFail($id)->delete();
+        $schedule = ClassSchedule::findOrFail($id);
+        if ($this->lms->isInstructorActor()) {
+            abort_unless((int) $schedule->instructor_id === (int) Auth::id(), 403);
+        } else {
+            abort_unless($this->lms->isAdminActor(), 403);
+        }
 
-        return redirect()->route('admin.class-schedules.index')->with('success', 'Schedule deleted.');
+        $schedule->delete();
+
+        return redirect()->route('admin.class-schedules.index')->with('success', 'Scheduled day deleted.');
     }
 
     public function ics($id)
@@ -579,17 +610,58 @@ class ClassScheduleController extends Controller
      * @param  \Illuminate\Support\Collection<int, ClassSchedule>  $rows
      * @return \Illuminate\Support\Collection<int, array<string, mixed>>
      */
+    /**
+     * Turn a recurring series into individual ClassSchedule rows (one per class day)
+     * so Admin/Instructor can edit the Join link / description or delete a single day.
+     */
+    protected function materializeRecurringSessions(ClassSchedule $schedule, array $studentIds): int
+    {
+        if (! $schedule->isRecurring()) {
+            return 0;
+        }
+
+        $starts = $schedule->occurrenceStarts();
+        if ($starts === []) {
+            return 0;
+        }
+
+        $schedule->scheduled_at = $starts[0];
+        $schedule->recurrence_type = ClassSchedule::RECURRENCE_NONE;
+        $schedule->recurrence_days = null;
+        $schedule->recurrence_count = null;
+        $schedule->recurrence_until = null;
+        $schedule->save();
+
+        $created = 0;
+        foreach (array_slice($starts, 1) as $start) {
+            $copy = $schedule->replicate();
+            $copy->scheduled_at = $start;
+            $copy->save();
+            if ($studentIds !== []) {
+                $copy->students()->sync($studentIds);
+            }
+            $created++;
+        }
+
+        return $created;
+    }
+
     protected function batchListGroups($rows)
     {
         return collect($rows)
             ->groupBy(function (ClassSchedule $row) {
+                if ($row->batch_id) {
+                    return 'batch:' . $row->batch_id;
+                }
+
                 $name = trim((string) ($row->batch_name ?: $row->title ?: 'Untitled batch'));
 
-                return mb_strtolower($name) . '|' . (int) $row->course_id;
+                return 'name:' . mb_strtolower($name) . '|' . (int) $row->course_id;
             })
             ->map(function ($sessions) {
                 /** @var \Illuminate\Support\Collection<int, ClassSchedule> $sessions */
                 $first = $sessions->sortBy('scheduled_at')->first();
+                $batchModel = $first->relationLoaded('batch') ? $first->batch : $first->batch()->with('course')->first();
                 $students = $sessions
                     ->flatMap(fn (ClassSchedule $row) => $row->students)
                     ->unique('id')
@@ -597,16 +669,18 @@ class ClassScheduleController extends Controller
                     ->values();
 
                 return [
-                    'batch_name' => $first->batch_name ?: ($first->title ?: 'Untitled batch'),
-                    'course' => $first->course,
+                    'batch_code' => $batchModel?->code,
+                    'batch_name' => $batchModel?->name ?: ($first->batch_name ?: ($first->title ?: 'Untitled batch')),
+                    'course' => $batchModel?->course ?: $first->course,
                     'instructor' => $first->instructor,
-                    'head_of_faculty' => $first->headOfFaculty,
+                    'head_of_faculty' => $batchModel?->headOfFaculty ?: $first->headOfFaculty,
                     'sessions' => $sessions->sortBy('scheduled_at')->values(),
                     'students' => $students,
                     'primary' => $sessions->sortByDesc('scheduled_at')->first(),
+                    'latest_at' => $sessions->max(fn (ClassSchedule $row) => $row->scheduled_at?->timestamp ?? 0),
                 ];
             })
-            ->sortBy(fn ($batch) => mb_strtolower((string) $batch['batch_name']), SORT_NATURAL)
+            ->sortByDesc(fn ($batch) => (int) ($batch['latest_at'] ?? 0))
             ->values();
     }
 

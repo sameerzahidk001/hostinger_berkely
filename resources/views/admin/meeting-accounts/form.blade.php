@@ -54,25 +54,50 @@
                             <hr>
                             <h4>Zoom (manual Join link)</h4>
                             <p class="help-block">
-                                Zoom meetings are not created by the LMS. Add a label here so Zoom appears in
-                                Class Schedule, then paste the Zoom Join URL on each schedule.
-                                OAuth fields below are optional (only if you later want API create).
+                                <strong>You do not need Account ID / Client ID / Client Secret.</strong>
+                                Only fill Label (+ optional host email), Save, then on Class Schedule pick this Zoom account
+                                and paste the Zoom Join URL. OAuth fields below are optional (future API use only).
                             </p>
                         </div>
                         <div class="col-md-4 form-group">
-                            <label>Account ID</label>
+                            <label>Account ID <span class="text-muted">(optional)</span></label>
                             <input type="text" name="account_id" class="form-control" value="{{ old('account_id', $credentials['account_id'] ?? '') }}">
                         </div>
                         <div class="col-md-4 form-group">
-                            <label>Client ID</label>
+                            <label>Client ID <span class="text-muted">(optional)</span></label>
                             <input type="text" name="client_id" class="form-control" value="{{ old('client_id', $credentials['client_id'] ?? '') }}">
                         </div>
                         <div class="col-md-4 form-group">
-                            <label>Client Secret</label>
+                            <label>Client Secret <span class="text-muted">(optional)</span></label>
                             <input type="text" name="client_secret" class="form-control" value="{{ old('client_secret', '') }}" placeholder="{{ $account->exists ? 'Leave blank to keep current' : 'Optional' }}">
                         </div>
                     @else
-                        <div class="col-md-12"><hr><h4>Zoho OAuth credentials</h4></div>
+                        <div class="col-md-12">
+                            <hr>
+                            <h4>Zoho OAuth credentials</h4>
+                            <div class="alert alert-info" style="margin-bottom:15px;">
+                                <strong>How to get Refresh Token (Self Client)</strong>
+                                <ol style="margin:8px 0 0;padding-left:18px;">
+                                    <li>Open <a href="https://api-console.zoho.com/" target="_blank" rel="noopener">Zoho API Console</a> → your Self Client.</li>
+                                    <li>Generate Code with scopes (example):
+                                        <code style="display:block;margin-top:4px;white-space:pre-wrap;">ZohoMeeting.meeting.ALL,ZohoMeeting.recording.READ,ZohoCalendar.calendar.ALL,ZohoCalendar.event.ALL,WorkDrive.files.ALL</code>
+                                    </li>
+                                    <li>Copy the <em>code</em>, then open a browser or Postman and call:
+                                        <code style="display:block;margin-top:4px;white-space:pre-wrap;">POST https://accounts.zoho.com/oauth/v2/token
+grant_type=authorization_code
+&amp;client_id=YOUR_CLIENT_ID
+&amp;client_secret=YOUR_CLIENT_SECRET
+&amp;code=THE_CODE</code>
+                                    </li>
+                                    <li>Response JSON includes <code>refresh_token</code> — paste that here. Keep it secret.</li>
+                                </ol>
+                                <p style="margin:10px 0 0;">
+                                    <strong>Org ID / Presenter ZUID / Calendar UID / WorkDrive Folder ID</strong> are optional for basic Join-link create.
+                                    Org ID: Zoho Meeting admin URL or API. Presenter ZUID: user’s Zoho profile id.
+                                    Calendar UID: from Zoho Calendar settings. WorkDrive folder: from folder URL/API.
+                                </p>
+                            </div>
+                        </div>
                         <div class="col-md-4 form-group">
                             <label>Client ID *</label>
                             <input type="text" name="client_id" class="form-control" value="{{ old('client_id', $credentials['client_id'] ?? '') }}" @required(!$account->exists)>
@@ -83,22 +108,22 @@
                         </div>
                         <div class="col-md-4 form-group">
                             <label>Refresh Token *</label>
-                            <input type="text" name="refresh_token" class="form-control" value="{{ old('refresh_token', '') }}" placeholder="{{ $account->exists ? 'Leave blank to keep current' : '' }}" @required(!$account->exists)>
+                            <input type="text" name="refresh_token" class="form-control" value="{{ old('refresh_token', '') }}" placeholder="{{ $account->exists ? 'Leave blank to keep current' : 'From Self Client code exchange' }}" @required(!$account->exists)>
                         </div>
                         <div class="col-md-4 form-group">
-                            <label>Org ID</label>
+                            <label>Org ID <span class="text-muted">(optional)</span></label>
                             <input type="text" name="org_id" class="form-control" value="{{ old('org_id', $credentials['org_id'] ?? '') }}">
                         </div>
                         <div class="col-md-4 form-group">
-                            <label>Presenter ZUID</label>
+                            <label>Presenter ZUID <span class="text-muted">(optional)</span></label>
                             <input type="text" name="presenter_zuid" class="form-control" value="{{ old('presenter_zuid', $credentials['presenter_zuid'] ?? '') }}">
                         </div>
                         <div class="col-md-4 form-group">
-                            <label>Calendar UID</label>
+                            <label>Calendar UID <span class="text-muted">(optional)</span></label>
                             <input type="text" name="calendar_uid" class="form-control" value="{{ old('calendar_uid', $credentials['calendar_uid'] ?? '') }}">
                         </div>
                         <div class="col-md-6 form-group">
-                            <label>WorkDrive Folder ID</label>
+                            <label>WorkDrive Folder ID <span class="text-muted">(optional)</span></label>
                             <input type="text" name="workdrive_folder_id" class="form-control" value="{{ old('workdrive_folder_id', $credentials['workdrive_folder_id'] ?? '') }}">
                         </div>
                     @endif

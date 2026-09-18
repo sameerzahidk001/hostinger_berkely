@@ -213,6 +213,7 @@ class StudyMaterialController extends Controller
                                 'scheduled_at' => $start,
                                 'zoho_link' => $schedule->zoho_link,
                                 'duration_minutes' => $schedule->durationMinutes(),
+                                'notes' => $schedule->notes,
                             ];
                         });
                     })
@@ -220,6 +221,7 @@ class StudyMaterialController extends Controller
                     ->values();
 
                 return [
+                    'batch_code' => $batchModel?->code,
                     'batch_name' => $batchModel?->name
                         ?: ($first->batch_name ?: ($first->title ?: 'My batch')),
                     'course' => $batchModel?->course ?: $first->course,
@@ -227,9 +229,10 @@ class StudyMaterialController extends Controller
                         ?: $batchModel?->instructors?->first(),
                     'head_of_faculty' => $batchModel?->headOfFaculty ?: $first->headOfFaculty,
                     'sessions' => $sessions,
+                    'latest_at' => $sessions->max(fn ($row) => $row->scheduled_at?->timestamp ?? 0),
                 ];
             })
-            ->sortBy(fn ($batch) => mb_strtolower((string) $batch['batch_name']), SORT_NATURAL)
+            ->sortByDesc(fn ($batch) => (int) ($batch['latest_at'] ?? 0))
             ->values();
 
         return view('user.study-materials.schedules', compact('schedules', 'calendarEvents', 'batches'));
