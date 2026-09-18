@@ -6,6 +6,8 @@
     $hof = $batch['head_of_faculty'] ?? null;
     $ins = $batch['instructor'] ?? null;
     $courseHref = $course ? url('/course/' . ($course->slug ?: $course->id)) : null;
+    $canManage = !empty($canManageSessions);
+    $batchId = $batch['batch_id'] ?? null;
 @endphp
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">
@@ -18,10 +20,15 @@
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
         <a href="{{ route('user.class-schedules.index') }}" class="btn btn-default">All batches</a>
+        @if($canManage && $batchId)
+            <a href="{{ route('admin.class-schedules.create', ['batch_id' => $batchId]) }}" class="btn btn-primary">Add session</a>
+        @endif
         <a href="{{ route('user.class-schedules.ics') }}" class="btn btn-primary" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;">Add to Zoho Calendar</a>
     </div>
 </div>
 <div class="wrapper wrapper-content">
+    @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
+    @if(session('fail'))<div class="alert alert-danger">{{ session('fail') }}</div>@endif
     <div class="ibox">
         <div class="ibox-content">
             <p class="help-block" style="margin-top:0;">
@@ -43,7 +50,7 @@
                 · {{ $batch['session_count'] }} session{{ $batch['session_count'] === 1 ? '' : 's' }}
             </p>
             <p class="help-block">All sessions stay visible (Scheduled, Completed, Cancelled). Only deleted sessions are removed.</p>
-            @include('admin.study-materials.schedules._sessions_table', ['batch' => $batch, 'isAdminView' => false])
+            @include('admin.study-materials.schedules._sessions_table', ['batch' => $batch, 'isAdminView' => $canManage])
         </div>
     </div>
 

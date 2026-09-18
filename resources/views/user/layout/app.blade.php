@@ -174,6 +174,12 @@
                </li>
                @if(auth()->user()->roles()->where('name', 'instructor')->exists())
                <li>
+                  <a href="{{ route('admin.class-schedules.index') }}">
+                     <i class="fa fa-calendar-plus-o"></i>
+                     <span class="nav-label">Manage Schedules</span>
+                  </a>
+               </li>
+               <li>
                   <a href="{{ route('admin.study-materials.folders.index') }}">
                      <i class="fa fa-folder-open"></i>
                      <span class="nav-label">Manage Folders</span>

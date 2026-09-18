@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Models\ClassBatch;
 use App\Models\ClassSchedule;
 use App\Models\StudyMaterialFolder;
 use App\Models\StudyMaterialItem;
@@ -185,11 +186,13 @@ class StudyMaterialController extends Controller
 
     public function schedules()
     {
+        $isInstructor = Auth::user()?->roles()->where('name', 'instructor')->exists() ?? false;
         $batches = $this->studentBatchSummaries();
 
         return view('user.study-materials.schedules', [
             'batches' => $batches,
             'calendarEvents' => collect(),
+            'isInstructor' => $isInstructor,
         ]);
     }
 
@@ -211,9 +214,12 @@ class StudyMaterialController extends Controller
             ))
             ->values();
 
+        $canManage = $this->instructorCanManageBatch($batch);
+
         return view('user.study-materials.schedule-batch', [
             'batch' => $batch,
             'calendarEvents' => $calendarEvents,
+            'canManageSessions' => $canManage,
         ]);
     }
 
@@ -307,9 +313,18 @@ class StudyMaterialController extends Controller
         ])->whereIn('status', ['scheduled', 'completed', 'cancelled']);
 
         if (Auth::user()?->roles()->where('name', 'instructor')->exists()) {
-            $query->where(function ($q) {
-                $q->where('instructor_id', Auth::id())
-                    ->orWhere('head_of_faculty_id', Auth::id());
+            $uid = (int) Auth::id();
+            $query->where(function ($q) use ($uid) {
+                $q->where('instructor_id', $uid)
+                    ->orWhere('head_of_faculty_id', $uid);
+
+                if (Schema::hasTable('class_batches')
+                    && Schema::hasColumn('class_schedules', 'batch_id')) {
+                    $q->orWhereHas('batch', function ($b) use ($uid) {
+                        $b->where('head_of_faculty_id', $uid)
+                            ->orWhereHas('instructors', fn ($i) => $i->where('users.id', $uid));
+                    });
+                }
             });
         } else {
             $userId = (int) Auth::id();
@@ -326,6 +341,42 @@ class StudyMaterialController extends Controller
         }
 
         return $query->orderBy('scheduled_at')->get();
+    }
+
+    /**
+     * Instructors assigned to the batch (or listed on sessions) can edit/add from the portal view.
+     */
+    protected function instructorCanManageBatch(array $batch): bool
+    {
+        $user = Auth::user();
+        if (! $user || ! $user->roles()->where('name', 'instructor')->exists()) {
+            return false;
+        }
+
+        $uid = (int) $user->id;
+        $hofId = (int) ($batch['head_of_faculty']->id ?? 0);
+        $insId = (int) ($batch['instructor']->id ?? 0);
+        if ($uid === $hofId || $uid === $insId) {
+            return true;
+        }
+
+        $batchId = (int) ($batch['batch_id'] ?? 0);
+        if ($batchId > 0 && Schema::hasTable('class_batches')) {
+            $model = ClassBatch::with('instructors')->find($batchId);
+            if ($model) {
+                if ((int) $model->head_of_faculty_id === $uid) {
+                    return true;
+                }
+                if ($model->instructors->contains('id', $uid)) {
+                    return true;
+                }
+            }
+        }
+
+        return collect($batch['session_models'] ?? [])->contains(function ($row) use ($uid) {
+            return (int) ($row->instructor_id ?? 0) === $uid
+                || (int) ($row->head_of_faculty_id ?? 0) === $uid;
+        });
     }
 
     protected function icsDownload($schedules, string $filename)

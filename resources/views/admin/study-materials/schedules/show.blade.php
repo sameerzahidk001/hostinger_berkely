@@ -24,6 +24,10 @@
     <div class="col-lg-4 text-right" style="padding-top:20px;">
         <a href="{{ route('admin.class-schedules.index') }}" class="btn btn-default">All batches</a>
         <a href="{{ route('admin.class-schedules.create', ['batch_id' => $batch['batch_id'] ?? $batchModel->id]) }}" class="btn btn-primary">Add session</a>
+        <form action="{{ route('admin.class-schedules.batch.clear', $batchModel->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete ALL sessions in this batch? This cannot be undone.');">
+            @csrf @method('DELETE')
+            <button type="submit" class="btn btn-danger">Clear all sessions</button>
+        </form>
     </div>
 </div>
 <div class="wrapper wrapper-content">

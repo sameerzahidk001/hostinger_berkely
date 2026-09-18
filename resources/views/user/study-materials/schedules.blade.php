@@ -1,11 +1,16 @@
 @extends('user.layout.app')
 @section('title', 'Class Schedule')
 @section('content')
+@php $isInstructor = !empty($isInstructor); @endphp
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">
-        <h2>My Class Schedule</h2>
+        <h2>{{ $isInstructor ? 'Class Schedule' : 'My Class Schedule' }}</h2>
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
+        @if($isInstructor)
+            <a href="{{ route('admin.class-schedules.index') }}" class="btn btn-default">Manage schedules</a>
+            <a href="{{ route('admin.class-schedules.create') }}" class="btn btn-primary">Add session</a>
+        @endif
         <a href="{{ route('user.class-schedules.ics') }}" class="btn btn-primary" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;">Add to Zoho Calendar</a>
     </div>
 </div>
@@ -13,7 +18,13 @@
     <div class="ibox">
         <div class="ibox-title"><h5>Your batches</h5></div>
         <div class="ibox-content">
-            <p class="help-block" style="margin-top:0;">Open a batch to see its full session schedule (Scheduled, Completed, Cancelled).</p>
+            <p class="help-block" style="margin-top:0;">
+                @if($isInstructor)
+                    Open a batch to edit sessions, or use <strong>Add session</strong> to create a new class.
+                @else
+                    Open a batch to see its full session schedule (Scheduled, Completed, Cancelled).
+                @endif
+            </p>
             <div class="table-responsive">
                 <table class="table table-striped table-bordered">
                     <thead>
@@ -68,6 +79,9 @@
                                 <td>{{ optional($batch['next_at'])->format('d M Y H:i') ?: '—' }}</td>
                                 <td>
                                     <a class="btn btn-primary btn-sm" href="{{ route('user.class-schedules.batch', $openKey) }}" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;">Open schedule</a>
+                                    @if($isInstructor && !empty($batch['batch_id']))
+                                        <a class="btn btn-default btn-sm" href="{{ route('admin.class-schedules.create', ['batch_id' => $batch['batch_id']]) }}">Add session</a>
+                                    @endif
                                 </td>
                             </tr>
                         @empty
