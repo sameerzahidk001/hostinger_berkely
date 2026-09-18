@@ -53,24 +53,26 @@
                                     <div class="text-muted" style="margin-top:2px;">
                                         {{ $batch['course']->title ?? 'No course' }}
                                         · Head of Faculty:
-                                        @if(!empty($batch['head_of_faculty']?->id) && Route::has('users.edit'))
-                                            <a href="{{ route('users.edit', $batch['head_of_faculty']->id) }}"><strong>{{ $batch['head_of_faculty']->name }}</strong></a>
+                                        @php $hof = $batch['head_of_faculty'] ?? null; @endphp
+                                        @if($hof && !empty($hof->id))
+                                            <a href="{{ url('/instructor/' . $hof->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;"><strong>{{ $hof->name }}</strong></a>
                                         @else
-                                            <strong>{{ $batch['head_of_faculty']->name ?? '—' }}</strong>
+                                            <strong>—</strong>
                                         @endif
                                         · Instructor:
-                                        @if(!empty($batch['instructor']?->id) && Route::has('users.edit'))
-                                            <a href="{{ route('users.edit', $batch['instructor']->id) }}"><strong>{{ $batch['instructor']->name }}</strong></a>
+                                        @php $ins = $batch['instructor'] ?? null; @endphp
+                                        @if($ins && !empty($ins->id))
+                                            <a href="{{ url('/instructor/' . $ins->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;"><strong>{{ $ins->name }}</strong></a>
                                         @else
-                                            <strong>{{ $batch['instructor']->name ?? '—' }}</strong>
+                                            <strong>—</strong>
                                         @endif
                                         ·
                                         @if(!empty($batch['batch_id']))
-                                            <a href="{{ route('admin.class-batches.edit', $batch['batch_id']) }}#student_ids">
+                                            <a href="{{ route('admin.class-batches.edit', $batch['batch_id']) }}#student_ids" style="color:#1c84c6;text-decoration:underline;">
                                                 <strong>{{ $batch['students']->count() }} student{{ $batch['students']->count() === 1 ? '' : 's' }}</strong>
                                             </a>
                                         @else
-                                            {{ $batch['students']->count() }} student{{ $batch['students']->count() === 1 ? '' : 's' }}
+                                            <strong>{{ $batch['students']->count() }} student{{ $batch['students']->count() === 1 ? '' : 's' }}</strong>
                                         @endif
                                     </div>
                                 </div>

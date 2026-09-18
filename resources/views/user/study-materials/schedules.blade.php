@@ -37,8 +37,18 @@
                                 </strong>
                                 <div class="text-muted" style="margin-top:4px;">
                                     {{ $batch['course']->title ?? '—' }}
-                                    · Head of Faculty: <strong>{{ $batch['head_of_faculty']->name ?? '—' }}</strong>
-                                    · Instructor: <strong>{{ $batch['instructor']->name ?? '—' }}</strong>
+                                    · Head of Faculty:
+                                    @if(!empty($batch['head_of_faculty']->id))
+                                        <a href="{{ url('/instructor/' . $batch['head_of_faculty']->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;"><strong>{{ $batch['head_of_faculty']->name }}</strong></a>
+                                    @else
+                                        <strong>—</strong>
+                                    @endif
+                                    · Instructor:
+                                    @if(!empty($batch['instructor']->id))
+                                        <a href="{{ url('/instructor/' . $batch['instructor']->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;"><strong>{{ $batch['instructor']->name }}</strong></a>
+                                    @else
+                                        <strong>—</strong>
+                                    @endif
                                     · {{ $batch['sessions']->count() }} session{{ $batch['sessions']->count() === 1 ? '' : 's' }}
                                 </div>
                             </div>
