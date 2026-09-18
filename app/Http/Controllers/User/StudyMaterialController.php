@@ -286,8 +286,12 @@ class StudyMaterialController extends Controller
                     'head_of_faculty' => $batchModel?->headOfFaculty ?: $first->headOfFaculty,
                     'session_count' => $sessions->count(),
                     'latest_at' => $sessions->max(fn ($s) => $s->scheduled_at?->timestamp ?? 0),
-                    'next_at' => optional($sessions->first(fn ($s) => $s->scheduled_at && $s->scheduled_at->isFuture()))->scheduled_at
-                        ?: optional($sessions->first())->scheduled_at,
+                    // Next upcoming session only — do not fall back to the batch start date.
+                    'next_at' => optional(
+                        $sessions->first(fn ($s) => $s->scheduled_at
+                            && $s->scheduled_at->isFuture()
+                            && ! in_array(strtolower((string) ($s->status ?? '')), ['cancelled', 'completed'], true))
+                    )->scheduled_at,
                 ];
 
                 if ($withSessions) {

@@ -101,7 +101,7 @@
                                     @endif
                                 </td>
                                 <td>{{ $batch['session_count'] }}</td>
-                                <td>{{ optional($batch['next_at'])->format('d M Y H:i') ?: '—' }}</td>
+                                <td>{{ optional($batch['next_at'])->format('d M Y H:i') ?: 'No upcoming' }}</td>
                                 <td>
                                     <a class="btn btn-primary btn-sm" href="{{ route('user.class-schedules.batch', $openKey) }}" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;">Open schedule</a>
                                     @if($isInstructor && !empty($batch['batch_id']))
