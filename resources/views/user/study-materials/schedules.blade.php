@@ -36,7 +36,11 @@
                                     {{ $batch['batch_name'] }}
                                 </strong>
                                 <div class="text-muted" style="margin-top:4px;">
-                                    {{ $batch['course']->title ?? '—' }}
+                                    @if(!empty($batch['course']->id))
+                                        <a href="{{ route('course.details', ['course' => $batch['course']->slug ?? $batch['course']->id]) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;"><strong>{{ $batch['course']->title }}</strong></a>
+                                    @else
+                                        —
+                                    @endif
                                     · Head of Faculty:
                                     @if(!empty($batch['head_of_faculty']->id))
                                         <a href="{{ url('/instructor/' . $batch['head_of_faculty']->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;"><strong>{{ $batch['head_of_faculty']->name }}</strong></a>

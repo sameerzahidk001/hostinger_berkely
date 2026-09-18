@@ -51,7 +51,12 @@
                                         {{ $batch['batch_name'] }}
                                     </strong>
                                     <div class="text-muted" style="margin-top:2px;">
-                                        {{ $batch['course']->title ?? 'No course' }}
+                                        @php $course = $batch['course'] ?? null; @endphp
+                                        @if($course && !empty($course->id))
+                                            <a href="{{ route('course.details', ['course' => $course->slug ?? $course->id]) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;"><strong>{{ $course->title }}</strong></a>
+                                        @else
+                                            <strong>No course</strong>
+                                        @endif
                                         · Head of Faculty:
                                         @php $hof = $batch['head_of_faculty'] ?? null; @endphp
                                         @if($hof && !empty($hof->id))
