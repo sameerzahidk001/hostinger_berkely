@@ -95,19 +95,15 @@
                     @include('admin.study-materials.schedules._recurrence_fields', ['schedule' => new \App\Models\ClassSchedule()])
 
                     <div class="col-md-12 form-group">
-                        <label>Students {{ ($isAdmin ?? false) ? '' : '(from batch — view only)' }}</label>
-                        <select name="student_ids[]" id="student_ids" class="form-control" multiple @disabled(!($isAdmin ?? false))>
+                        <label>Students</label>
+                        <select name="student_ids[]" id="student_ids" class="form-control" multiple>
                             @foreach($students as $student)
                                 <option value="{{ $student->id }}" @selected(collect(old('student_ids', optional($selectedBatch)?->students?->pluck('id')->all() ?? []))->contains($student->id))>
                                     {{ $student->name }} ({{ $student->email }})
                                 </option>
                             @endforeach
                         </select>
-                        @unless($isAdmin ?? false)
-                            @foreach(($selectedBatch?->students ?? []) as $student)
-                                <input type="hidden" name="student_ids[]" value="{{ $student->id }}">
-                            @endforeach
-                        @endunless
+                        <span class="help-block">Select students for this session. Defaults to batch students when you pick a batch.</span>
                     </div>
                     <div class="col-md-12 form-group">
                         <label>Description</label>
@@ -146,7 +142,8 @@ $(function () {
                 if (res.primary_instructor_id) $('#instructor_id').val(String(res.primary_instructor_id)).trigger('change');
                 $students.empty();
                 (res.students || []).forEach(function (row) {
-                    $students.append(new Option(row.text, row.id, true, true));
+                    var selected = row.selected !== false;
+                    $students.append(new Option(row.text, row.id, selected, selected));
                 });
                 $students.trigger('change');
             });

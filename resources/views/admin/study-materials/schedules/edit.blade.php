@@ -91,18 +91,14 @@
                     @include('admin.study-materials.schedules._recurrence_fields', ['schedule' => $schedule, 'singleDayEdit' => true])
 
                     <div class="col-md-12 form-group">
-                        <label>Students {{ ($isAdmin ?? false) ? '' : '(from batch — view only)' }}</label>
+                        <label>Students</label>
                         @php $selected = collect(old('student_ids', $schedule->students->pluck('id')->all()))->map(fn ($id) => (int) $id)->all(); @endphp
-                        <select name="student_ids[]" id="student_ids" class="form-control" multiple @disabled(!($isAdmin ?? false))>
+                        <select name="student_ids[]" id="student_ids" class="form-control" multiple>
                             @foreach($students as $student)
                                 <option value="{{ $student->id }}" @selected(in_array((int) $student->id, $selected, true))>{{ $student->name }} ({{ $student->email }})</option>
                             @endforeach
                         </select>
-                        @unless($isAdmin ?? false)
-                            @foreach($schedule->students as $student)
-                                <input type="hidden" name="student_ids[]" value="{{ $student->id }}">
-                            @endforeach
-                        @endunless
+                        <span class="help-block">Admin and Instructor can add or remove students for this session.</span>
                     </div>
                     <div class="col-md-12 form-group">
                         <label>Description</label>

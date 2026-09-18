@@ -185,12 +185,59 @@ class StudyMaterialController extends Controller
 
     public function schedules()
     {
-        $schedules = $this->studentSchedules();
-        $calendarEvents = $schedules->flatMap(fn (ClassSchedule $row) => $row->toFullCalendarEvent(
-            $row->zoho_link ?: route('user.class-schedules.index')
-        ))->values();
+        $batches = $this->studentBatchSummaries();
 
-        $batches = $schedules
+        return view('user.study-materials.schedules', [
+            'batches' => $batches,
+            'calendarEvents' => collect(),
+        ]);
+    }
+
+    public function scheduleBatch($batchKey)
+    {
+        $batches = $this->studentBatchSummaries(true);
+        $batch = $batches->first(function ($row) use ($batchKey) {
+            if (is_numeric($batchKey) && ! empty($row['batch_id'])) {
+                return (int) $row['batch_id'] === (int) $batchKey;
+            }
+
+            return ($row['key'] ?? '') === (string) $batchKey;
+        });
+        abort_unless($batch, 404);
+
+        $calendarEvents = collect($batch['session_models'] ?? [])
+            ->flatMap(fn (ClassSchedule $row) => $row->toFullCalendarEvent(
+                $row->zoho_link ?: route('user.class-schedules.index')
+            ))
+            ->values();
+
+        return view('user.study-materials.schedule-batch', [
+            'batch' => $batch,
+            'calendarEvents' => $calendarEvents,
+        ]);
+    }
+
+    public function schedulesIcs()
+    {
+        return $this->icsDownload($this->studentSchedules(), 'my-class-schedule.ics');
+    }
+
+    public function scheduleIcs($id)
+    {
+        $schedule = $this->studentSchedules()->firstWhere('id', (int) $id);
+        abort_unless($schedule, 403);
+
+        return $this->icsDownload(collect([$schedule]), 'class-' . $schedule->id . '.ics');
+    }
+
+    /**
+     * @param  bool  $withSessions  Include expanded session rows + models for detail page.
+     */
+    protected function studentBatchSummaries(bool $withSessions = false)
+    {
+        $schedules = $this->studentSchedules();
+
+        return $schedules
             ->groupBy(function (ClassSchedule $row) {
                 if ($row->batch_id) {
                     return 'batch:' . $row->batch_id;
@@ -200,11 +247,10 @@ class StudyMaterialController extends Controller
 
                 return 'name:' . mb_strtolower($name) . '|' . (int) $row->course_id;
             })
-            ->map(function ($group) {
+            ->map(function ($group, $key) use ($withSessions) {
                 $first = $group->sortBy('scheduled_at')->first();
                 $batchModel = $first->batch;
 
-                // Expand recurring schedules into one row per class date.
                 $sessions = $group
                     ->flatMap(function (ClassSchedule $schedule) {
                         return collect($schedule->occurrenceStarts())->map(function ($start) use ($schedule) {
@@ -222,7 +268,9 @@ class StudyMaterialController extends Controller
                     ->sortBy(fn ($row) => $row->scheduled_at?->timestamp ?? 0)
                     ->values();
 
-                return [
+                $row = [
+                    'key' => $key,
+                    'batch_id' => $batchModel?->id ?: $first->batch_id,
                     'batch_code' => $batchModel?->code,
                     'batch_name' => $batchModel?->name
                         ?: ($first->batch_name ?: ($first->title ?: 'My batch')),
@@ -230,27 +278,21 @@ class StudyMaterialController extends Controller
                     'instructor' => $first->instructor
                         ?: $batchModel?->instructors?->first(),
                     'head_of_faculty' => $batchModel?->headOfFaculty ?: $first->headOfFaculty,
-                    'sessions' => $sessions,
-                    'latest_at' => $sessions->max(fn ($row) => $row->scheduled_at?->timestamp ?? 0),
+                    'session_count' => $sessions->count(),
+                    'latest_at' => $sessions->max(fn ($s) => $s->scheduled_at?->timestamp ?? 0),
+                    'next_at' => optional($sessions->first(fn ($s) => $s->scheduled_at && $s->scheduled_at->isFuture()))->scheduled_at
+                        ?: optional($sessions->first())->scheduled_at,
                 ];
+
+                if ($withSessions) {
+                    $row['sessions'] = $sessions;
+                    $row['session_models'] = $group->values();
+                }
+
+                return $row;
             })
             ->sortByDesc(fn ($batch) => (int) ($batch['latest_at'] ?? 0))
             ->values();
-
-        return view('user.study-materials.schedules', compact('schedules', 'calendarEvents', 'batches'));
-    }
-
-    public function schedulesIcs()
-    {
-        return $this->icsDownload($this->studentSchedules(), 'my-class-schedule.ics');
-    }
-
-    public function scheduleIcs($id)
-    {
-        $schedule = $this->studentSchedules()->firstWhere('id', (int) $id);
-        abort_unless($schedule, 403);
-
-        return $this->icsDownload(collect([$schedule]), 'class-' . $schedule->id . '.ics');
     }
 
     protected function studentSchedules()

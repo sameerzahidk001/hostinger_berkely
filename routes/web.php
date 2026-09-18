@@ -250,6 +250,7 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
             Route::get('/feed.ics', [ClassScheduleController::class, 'feed'])->name('feed');
             Route::get('/students', [ClassScheduleController::class, 'students'])->name('students');
             Route::get('/batch-meta', [ClassScheduleController::class, 'batchMeta'])->name('batch-meta');
+            Route::get('/batch/{batchId}', [ClassScheduleController::class, 'showBatch'])->name('batch');
             Route::post('/zoho-embed', [ClassScheduleController::class, 'saveZohoEmbed'])->name('zoho-embed');
             Route::get('/{id}/edit', [ClassScheduleController::class, 'edit'])->name('edit');
             Route::put('/{id}', [ClassScheduleController::class, 'update'])->name('update');
@@ -553,6 +554,7 @@ Route::prefix('user')->middleware(['auth', 'approved', 'redirect.panel.from.stud
     Route::get('/study-materials/file/{itemId}', [UserStudyMaterialController::class, 'viewFile'])->name('user.study-materials.file');
     Route::get('/study-materials/{id}', [UserStudyMaterialController::class, 'show'])->name('user.study-materials.show');
     Route::get('/class-schedules', [UserStudyMaterialController::class, 'schedules'])->name('user.class-schedules.index');
+    Route::get('/class-schedules/batch/{batchKey}', [UserStudyMaterialController::class, 'scheduleBatch'])->name('user.class-schedules.batch');
     Route::get('/class-schedules.ics', [UserStudyMaterialController::class, 'schedulesIcs'])->name('user.class-schedules.ics');
     Route::get('/class-schedules/{id}.ics', [UserStudyMaterialController::class, 'scheduleIcs'])->name('user.class-schedules.item-ics');
     Route::get('/history', [UserHistoryController::class, 'index'])->name('user.history');

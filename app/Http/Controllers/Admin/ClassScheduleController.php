@@ -35,32 +35,57 @@ class ClassScheduleController extends Controller
                 ->with('fail', 'LMS tables are missing. Create them here (do not use Ignition Run Migrations).');
         }
 
-        $query = ClassSchedule::with(['course', 'instructor', 'headOfFaculty', 'students'])->orderByDesc('scheduled_at');
+        $batchList = $this->batchesForActor()
+            ->load(['course', 'headOfFaculty', 'instructors'])
+            ->loadCount(['schedules', 'students']);
 
-        if ($this->lms->isInstructorActor()) {
-            $query->where('instructor_id', Auth::id());
-        }
-
-        $schedules = $query->paginate(20);
         $calendarEvents = $this->calendarQuery()
             ->get()
             ->flatMap(fn (ClassSchedule $row) => $row->toFullCalendarEvent(route('admin.class-schedules.edit', $row->id)))
             ->values();
         $zohoEmbed = $this->zohoCalendarEmbedUrl();
 
-        $batchQuery = ClassSchedule::with(['course', 'instructor', 'headOfFaculty', 'students', 'batch.course', 'batch.headOfFaculty'])
-            ->orderBy('batch_name')
-            ->orderBy('scheduled_at');
-        if ($this->lms->isInstructorActor()) {
-            $batchQuery->where('instructor_id', Auth::id());
-        }
-        $batches = $this->batchListGroups($batchQuery->get());
-
         return view('admin.study-materials.schedules.index', [
-            'schedules' => $schedules,
+            'batchList' => $batchList,
             'calendarEvents' => $calendarEvents,
             'zohoEmbed' => $zohoEmbed,
-            'batches' => $batches,
+            'isAdmin' => $this->lms->isAdminActor(),
+        ]);
+    }
+
+    public function showBatch($batchId)
+    {
+        if (! Schema::hasTable('class_schedules')) {
+            return redirect()->route('admin.lms.install');
+        }
+
+        $batchModel = ClassBatch::with(['course', 'headOfFaculty', 'instructors', 'students'])->findOrFail((int) $batchId);
+        $this->assertCanUseBatch($batchModel);
+
+        $sessions = ClassSchedule::with(['course', 'instructor', 'headOfFaculty', 'students', 'batch.course', 'batch.headOfFaculty'])
+            ->where('batch_id', $batchModel->id)
+            ->orderBy('scheduled_at')
+            ->get();
+
+        $group = $this->batchListGroups($sessions)->first();
+        if (! $group) {
+            $group = [
+                'batch_id' => $batchModel->id,
+                'batch_code' => $batchModel->code,
+                'batch_name' => $batchModel->name,
+                'course' => $batchModel->course,
+                'instructor' => $batchModel->instructors->first(),
+                'head_of_faculty' => $batchModel->headOfFaculty,
+                'sessions' => collect(),
+                'students' => $batchModel->students,
+                'primary' => null,
+                'latest_at' => 0,
+            ];
+        }
+
+        return view('admin.study-materials.schedules.show', [
+            'batch' => $group,
+            'batchModel' => $batchModel,
             'isAdmin' => $this->lms->isAdminActor(),
         ]);
     }
@@ -81,7 +106,7 @@ class ClassScheduleController extends Controller
             ->orderBy('name')
             ->get(['id', 'name']);
         $students = $batch
-            ? $batch->students
+            ? $this->studentsForScheduleForm((int) $batch->course_id, $batch->students)
             : $this->studentsForScheduleForm((int) old('course_id', 0));
 
         return view('admin.study-materials.schedules.create', [
@@ -158,7 +183,7 @@ class ClassScheduleController extends Controller
         }
 
         return redirect()
-            ->route('admin.class-schedules.index')
+            ->route('admin.class-schedules.batch', $batch->id)
             ->with('success', $message);
     }
 
@@ -167,9 +192,7 @@ class ClassScheduleController extends Controller
         ClassSchedule::ensureRecurrenceColumns();
 
         $schedule = ClassSchedule::with(['students', 'batch.students', 'batch.instructors'])->findOrFail($id);
-        if ($this->lms->isInstructorActor() && (int) $schedule->instructor_id !== (int) Auth::id()) {
-            abort(403);
-        }
+        $this->assertCanManageSchedule($schedule);
 
         // Existing recurring series → split into individual days so link/description can be edited per day.
         if ($schedule->isRecurring()) {
@@ -177,7 +200,7 @@ class ClassScheduleController extends Controller
             $extra = $this->materializeRecurringSessions($schedule, $studentIds);
 
             return redirect()
-                ->route('admin.class-schedules.index')
+                ->route('admin.class-schedules.batch', $schedule->batch_id ?: $schedule->id)
                 ->with(
                     'success',
                     'Recurring series split into ' . ($extra + 1) . ' editable session days. Use Edit to change the Join link or description, or Delete for one day.'
@@ -194,7 +217,10 @@ class ClassScheduleController extends Controller
             ->get(['id', 'name']);
         $batch = $schedule->batch;
         $students = $batch
-            ? $batch->students->merge($schedule->students)->unique('id')->values()
+            ? $this->studentsForScheduleForm(
+                (int) old('course_id', $schedule->course_id),
+                $batch->students->merge($schedule->students)
+            )
             : $this->studentsForScheduleForm(
                 (int) old('course_id', $schedule->course_id),
                 $schedule->students
@@ -241,10 +267,8 @@ class ClassScheduleController extends Controller
 
     public function update(Request $request, $id)
     {
-        $schedule = ClassSchedule::findOrFail($id);
-        if ($this->lms->isInstructorActor() && (int) $schedule->instructor_id !== (int) Auth::id()) {
-            abort(403);
-        }
+        $schedule = ClassSchedule::with('batch')->findOrFail($id);
+        $this->assertCanManageSchedule($schedule);
 
         $validator = Validator::make($request->all(), array_merge($this->scheduleRules($request), [
             'status' => 'required|in:scheduled,completed,cancelled',
@@ -252,12 +276,6 @@ class ClassScheduleController extends Controller
 
         if ($validator->fails()) {
             return redirect()->back()->withErrors($validator)->withInput();
-        }
-
-        if ($this->lms->isInstructorActor() && ! $this->lms->instructorAssignedToCourse((int) $request->course_id ?: (int) optional(ClassBatch::find($request->batch_id))->course_id)) {
-            return redirect()->back()
-                ->withErrors(['batch_id' => 'You can only schedule classes for courses/batches assigned to you.'])
-                ->withInput();
         }
 
         $batch = ClassBatch::with('students')->findOrFail((int) $request->input('batch_id'));
@@ -282,30 +300,30 @@ class ClassScheduleController extends Controller
         $zohoStatus = $this->meetings->attachIntegrations($schedule);
 
         return redirect()
-            ->route('admin.class-schedules.index')
+            ->route('admin.class-schedules.batch', $batch->id)
             ->with('success', $this->scheduleSavedMessage('updated', $zohoStatus));
     }
 
     public function destroy($id)
     {
-        $schedule = ClassSchedule::findOrFail($id);
-        if ($this->lms->isInstructorActor()) {
-            abort_unless((int) $schedule->instructor_id === (int) Auth::id(), 403);
-        } else {
-            abort_unless($this->lms->isAdminActor(), 403);
-        }
-
+        $schedule = ClassSchedule::with('batch')->findOrFail($id);
+        $this->assertCanManageSchedule($schedule);
+        $batchId = $schedule->batch_id;
         $schedule->delete();
+
+        if ($batchId) {
+            return redirect()
+                ->route('admin.class-schedules.batch', $batchId)
+                ->with('success', 'Scheduled day deleted.');
+        }
 
         return redirect()->route('admin.class-schedules.index')->with('success', 'Scheduled day deleted.');
     }
 
     public function ics($id)
     {
-        $schedule = ClassSchedule::with(['course', 'instructor'])->findOrFail($id);
-        if ($this->lms->isInstructorActor() && (int) $schedule->instructor_id !== (int) Auth::id()) {
-            abort(403);
-        }
+        $schedule = ClassSchedule::with(['course', 'instructor', 'batch'])->findOrFail($id);
+        $this->assertCanManageSchedule($schedule);
 
         return $this->icsResponse(
             [$schedule],
@@ -359,10 +377,13 @@ class ClassScheduleController extends Controller
             'head_of_faculty_id' => $batch->head_of_faculty_id,
             'instructor_ids' => $batch->instructors->pluck('id')->values(),
             'primary_instructor_id' => $batch->primaryInstructorId(),
-            'students' => $batch->students->map(fn ($s) => [
-                'id' => $s->id,
-                'text' => $s->name . ' (' . $s->email . ')',
-            ])->values(),
+            'students' => $this->studentsForScheduleForm((int) $batch->course_id, $batch->students)->map(function ($s) use ($batch) {
+                return [
+                    'id' => $s->id,
+                    'text' => $s->name . ' (' . $s->email . ')',
+                    'selected' => $batch->students->contains('id', $s->id),
+                ];
+            })->values(),
         ]);
     }
 
@@ -440,12 +461,29 @@ class ClassScheduleController extends Controller
         abort_unless($ok, 403);
     }
 
-    protected function resolveScheduleStudentIds(Request $request, ClassBatch $batch): array
+    protected function assertCanManageSchedule(ClassSchedule $schedule): void
     {
-        if ($this->lms->isInstructorActor()) {
-            return $batch->students->pluck('id')->map(fn ($id) => (int) $id)->values()->all();
+        if ($this->lms->isAdminActor()) {
+            return;
         }
 
+        abort_unless($this->lms->isInstructorActor(), 403);
+
+        if ($schedule->batch) {
+            $this->assertCanUseBatch($schedule->batch);
+
+            return;
+        }
+
+        abort_unless(
+            (int) $schedule->instructor_id === (int) Auth::id()
+            || (int) $schedule->head_of_faculty_id === (int) Auth::id(),
+            403
+        );
+    }
+
+    protected function resolveScheduleStudentIds(Request $request, ClassBatch $batch): array
+    {
         $requested = collect($request->input('student_ids', []))
             ->map(fn ($id) => (int) $id)
             ->filter()
@@ -455,8 +493,17 @@ class ClassScheduleController extends Controller
             return $batch->students->pluck('id')->map(fn ($id) => (int) $id)->values()->all();
         }
 
+        // Admin + Instructor can pick students (batch roster or course-enrolled).
+        $batchStudentIds = $batch->students->pluck('id')->map(fn ($id) => (int) $id)->all();
+
         return $requested
-            ->filter(fn ($id) => $this->lms->studentBelongsToCourse($id, (int) $batch->course_id))
+            ->filter(function ($id) use ($batch, $batchStudentIds) {
+                if (in_array($id, $batchStudentIds, true)) {
+                    return true;
+                }
+
+                return $this->lms->studentBelongsToCourse($id, (int) $batch->course_id);
+            })
             ->unique()
             ->values()
             ->all();
@@ -566,9 +613,17 @@ class ClassScheduleController extends Controller
 
     protected function calendarQuery()
     {
-        $query = ClassSchedule::with(['course', 'instructor'])->orderBy('scheduled_at');
+        $query = ClassSchedule::with(['course', 'instructor', 'batch'])->orderBy('scheduled_at');
         if ($this->lms->isInstructorActor()) {
-            $query->where('instructor_id', Auth::id());
+            $uid = (int) Auth::id();
+            $query->where(function ($q) use ($uid) {
+                $q->where('instructor_id', $uid)
+                    ->orWhere('head_of_faculty_id', $uid)
+                    ->orWhereHas('batch', function ($b) use ($uid) {
+                        $b->where('head_of_faculty_id', $uid)
+                            ->orWhereHas('instructors', fn ($i) => $i->where('users.id', $uid));
+                    });
+            });
         }
 
         return $query;
