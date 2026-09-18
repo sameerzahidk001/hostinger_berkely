@@ -29,11 +29,20 @@
 <div class="wrapper wrapper-content">
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if(session('fail'))<div class="alert alert-danger">{{ session('fail') }}</div>@endif
-    <div class="ibox">
-        <div class="ibox-content">
+
+    <ul class="nav nav-tabs" style="margin-bottom:0;">
+        <li class="active"><a data-toggle="tab" href="#batch-sessions">Sessions</a></li>
+        <li><a data-toggle="tab" href="#batch-calendar">Calendar</a></li>
+    </ul>
+
+    <div class="tab-content" style="background:#fff;border:1px solid #ddd;border-top:0;padding:16px;">
+        <div id="batch-sessions" class="tab-pane active">
             <p class="help-block" style="margin-top:0;">
+                Course Name:
                 @if($courseHref)
                     <a href="{{ $courseHref }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;"><strong>{{ $course->title }}</strong></a>
+                @else
+                    <strong>—</strong>
                 @endif
                 · Head of Faculty:
                 @if($hof && !empty($hof->id))
@@ -52,11 +61,7 @@
             <p class="help-block">All sessions stay visible (Scheduled, Completed, Cancelled). Only deleted sessions are removed.</p>
             @include('admin.study-materials.schedules._sessions_table', ['batch' => $batch, 'isAdminView' => $canManage])
         </div>
-    </div>
-
-    <div class="ibox">
-        <div class="ibox-title"><h5>Calendar</h5></div>
-        <div class="ibox-content">
+        <div id="batch-calendar" class="tab-pane">
             @include('admin.study-materials.schedules._calendar', ['calendarEvents' => $calendarEvents])
         </div>
     </div>

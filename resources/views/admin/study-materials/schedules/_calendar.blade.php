@@ -23,8 +23,11 @@
     });
 
     // Re-render when Calendar tab becomes visible (hidden tabs have 0 width).
-    $(document).on('shown.bs.tab', 'a[data-toggle="tab"][href="#schedule-calendar-tab"]', function () {
-        $cal.fullCalendar('render');
+    $(document).on('shown.bs.tab', 'a[data-toggle="tab"]', function (e) {
+        var target = $(e.target).attr('href') || '';
+        if (target.indexOf('calendar') !== -1) {
+            $cal.fullCalendar('render');
+        }
     });
 })();
 </script>

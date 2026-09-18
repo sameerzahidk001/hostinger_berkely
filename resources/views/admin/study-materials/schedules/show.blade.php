@@ -6,6 +6,7 @@
     $courseHref = $course ? url('/course/' . ($course->slug ?: $course->id)) : null;
     $hof = $batch['head_of_faculty'] ?? null;
     $ins = $batch['instructor'] ?? null;
+    $studentCount = ($batch['students'] ?? collect())->count();
 @endphp
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">
@@ -35,19 +36,14 @@
     @if(session('fail'))<div class="alert alert-danger">{{ session('fail') }}</div>@endif
 
     <div class="ibox">
-        <div class="ibox-title">
-            <h5>
-                @if($courseHref)
-                    <a href="{{ $courseHref }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ $course->title }}</a>
-                @else
-                    Schedule
-                @endif
-            </h5>
-        </div>
+        <div class="ibox-title"><h5>Sessions</h5></div>
         <div class="ibox-content">
             <p class="help-block" style="margin-top:0;">
+                Course Name:
                 @if($courseHref)
                     <a href="{{ $courseHref }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;"><strong>{{ $course->title }}</strong></a>
+                @else
+                    <strong>—</strong>
                 @endif
                 · Head of Faculty:
                 @if($hof && !empty($hof->id))
@@ -63,7 +59,7 @@
                 @endif
                 ·
                 <a href="{{ route('admin.class-batches.edit', $batchModel->id) }}#student_ids" style="color:#1c84c6;text-decoration:underline;">
-                    <strong>{{ ($batch['students'] ?? collect())->count() }} student{{ ($batch['students'] ?? collect())->count() === 1 ? '' : 's' }}</strong>
+                    <strong>{{ $studentCount }} student{{ $studentCount === 1 ? '' : 's' }}</strong>
                 </a>
             </p>
             <p class="help-block">All sessions stay visible (Scheduled, Completed, Cancelled). Only deleted sessions are removed.</p>

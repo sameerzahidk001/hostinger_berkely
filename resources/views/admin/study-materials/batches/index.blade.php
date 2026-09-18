@@ -53,10 +53,30 @@
                     @forelse($batches as $batch)
                         <tr>
                             <td><strong>{{ $batch->code }}</strong></td>
-                            <td>{{ $batch->name }}</td>
-                            <td>{{ $batch->course->title ?? '—' }}</td>
-                            <td>{{ $batch->headOfFaculty->name ?? '—' }}</td>
-                            <td>{{ $batch->instructors->pluck('name')->implode(', ') ?: '—' }}</td>
+                            <td>
+                                <a href="{{ route('admin.class-schedules.batch', $batch->id) }}" style="color:#1c84c6;text-decoration:underline;"><strong>{{ $batch->name }}</strong></a>
+                            </td>
+                            <td>
+                                @if($batch->course)
+                                    <a href="{{ url('/course/' . ($batch->course->slug ?: $batch->course->id)) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ $batch->course->title }}</a>
+                                @else
+                                    —
+                                @endif
+                            </td>
+                            <td>
+                                @if($batch->headOfFaculty)
+                                    <a href="{{ url('/instructor/' . $batch->headOfFaculty->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ $batch->headOfFaculty->name }}</a>
+                                @else
+                                    —
+                                @endif
+                            </td>
+                            <td>
+                                @forelse($batch->instructors as $ins)
+                                    <a href="{{ url('/instructor/' . $ins->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ $ins->name }}</a>@if(! $loop->last), @endif
+                                @empty
+                                    —
+                                @endforelse
+                            </td>
                             <td>{{ $batch->students_count }}</td>
                             <td>{{ $batch->schedules_count }}</td>
                             <td>{{ ucfirst($batch->status) }}</td>

@@ -22,9 +22,13 @@
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if(session('fail'))<div class="alert alert-danger">{{ session('fail') }}</div>@endif
 
-    <div class="ibox">
-        <div class="ibox-title"><h5>Select a batch</h5></div>
-        <div class="ibox-content">
+    <ul class="nav nav-tabs" style="margin-bottom:0;">
+        <li class="active"><a data-toggle="tab" href="#schedules-batches">Batches</a></li>
+        <li><a data-toggle="tab" href="#schedules-calendar">Calendar</a></li>
+    </ul>
+
+    <div class="tab-content" style="background:#fff;border:1px solid #ddd;border-top:0;padding:16px;">
+        <div id="schedules-batches" class="tab-pane active">
             <p class="help-block" style="margin-top:0;">
                 Open a batch to view / edit its session schedule.
                 @unless($isAdmin ?? false)
@@ -49,7 +53,9 @@
                         @forelse($batchList as $b)
                             <tr>
                                 <td><span class="label label-primary">{{ $b->code }}</span></td>
-                                <td><strong>{{ $b->name }}</strong></td>
+                                <td>
+                                    <a href="{{ route('admin.class-schedules.batch', $b->id) }}" style="color:#1c84c6;text-decoration:underline;"><strong>{{ $b->name }}</strong></a>
+                                </td>
                                 <td>
                                     @if($b->course)
                                         <a href="{{ url('/course/' . ($b->course->slug ?: $b->course->id)) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ $b->course->title }}</a>
@@ -88,11 +94,8 @@
                 </table>
             </div>
         </div>
-    </div>
 
-    <div class="ibox">
-        <div class="ibox-title"><h5>Calendar</h5></div>
-        <div class="ibox-content">
+        <div id="schedules-calendar" class="tab-pane">
             @include('admin.study-materials.schedules._calendar', ['calendarEvents' => $calendarEvents])
             @if(Auth::guard('admin')->check())
                 <hr>
