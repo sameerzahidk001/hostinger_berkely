@@ -213,6 +213,7 @@ class StudyMaterialController extends Controller
                                 'scheduled_at' => $start,
                                 'zoho_link' => $schedule->zoho_link,
                                 'duration_minutes' => $schedule->durationMinutes(),
+                                'title' => $schedule->title,
                                 'notes' => $schedule->notes,
                                 'status' => $schedule->status ?: 'scheduled',
                             ];

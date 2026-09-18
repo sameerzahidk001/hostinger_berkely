@@ -76,6 +76,7 @@
                                                 <th>Day</th>
                                                 <th>Time</th>
                                                 <th>Duration</th>
+                                                <th>Title</th>
                                                 <th>Description</th>
                                                 <th>Status</th>
                                                 <th style="min-width:120px;">Join</th>
@@ -100,6 +101,10 @@
                                                         'cancelled' => 'label-danger',
                                                         default => 'label-success',
                                                     };
+                                                    $title = trim((string) ($row->title ?? ''));
+                                                    if ($title !== '' && strcasecmp($title, (string) ($batch['batch_name'] ?? '')) === 0) {
+                                                        $title = '';
+                                                    }
                                                 @endphp
                                                 <tr>
                                                     <td>{{ $loop->iteration }}</td>
@@ -107,6 +112,7 @@
                                                     <td>{{ $row->scheduled_at?->format('l') ?? '—' }}</td>
                                                     <td>{{ $row->scheduled_at?->format('H:i') ?? '—' }}</td>
                                                     <td>{{ $row->duration_minutes ?? 60 }} min</td>
+                                                    <td>{{ $title !== '' ? $title : '—' }}</td>
                                                     <td>{{ $row->notes ?: '—' }}</td>
                                                     <td><span class="label {{ $statusClass }}">{{ $statusLabel }}</span></td>
                                                     <td>
@@ -129,7 +135,7 @@
                                                 </tr>
                                             @empty
                                                 <tr>
-                                                    <td colspan="8" class="text-center text-muted">No sessions in this batch yet.</td>
+                                                    <td colspan="9" class="text-center text-muted">No sessions in this batch yet.</td>
                                                 </tr>
                                             @endforelse
                                         </tbody>
