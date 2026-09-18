@@ -166,9 +166,16 @@ class ClassBatchController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'email']);
 
+        // Admin can assign any student (same as Class Schedule). Instructors only see batch roster.
         $students = $this->lms->isAdminActor()
-            ? $this->lms->studentsForCourse((int) ($batch->course_id ?: 0))
+            ? $this->lms->studentsForCourse(null)
             : $batch->students;
+
+        if ($batch->relationLoaded('students') && $batch->students->isNotEmpty()) {
+            $students = $students->merge($batch->students)->unique('id')
+                ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
+                ->values();
+        }
 
         return [
             'batch' => $batch,

@@ -68,6 +68,9 @@
                                 </option>
                             @endforeach
                         </select>
+                        @if($isAdmin)
+                            <span class="help-block">Type to search — all students are listed. Select multiple as needed.</span>
+                        @endif
                     </div>
                     @if($isAdmin)
                     <div class="col-md-4 form-group">
