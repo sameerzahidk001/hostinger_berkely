@@ -25,7 +25,7 @@
             <div class="tab-content">
                 <div role="tabpanel" class="tab-pane active" id="schedule-batches">
                     <p class="help-block" style="margin-top:0;">
-                        All sessions stay visible (Scheduled, Completed, Cancelled). Only deleted sessions are removed. Past / cancelled sessions have Join disabled.
+                        All sessions stay visible (Scheduled, Completed, Cancelled). Only deleted sessions are removed. Past / cancelled / completed sessions have Join disabled.
                     </p>
 
                     @forelse($batches as $batch)
@@ -67,80 +67,7 @@
                                 </div>
                             </div>
                             <div class="panel-body" style="padding:0;">
-                                <div class="table-responsive">
-                                    <table class="table table-striped table-bordered" style="margin-bottom:0;">
-                                        <thead>
-                                            <tr>
-                                                <th>#</th>
-                                                <th>Date</th>
-                                                <th>Day</th>
-                                                <th>Time</th>
-                                                <th>Duration</th>
-                                                <th>Title</th>
-                                                <th>Description</th>
-                                                <th>Status</th>
-                                                <th style="min-width:120px;">Join</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @forelse($batch['sessions'] as $row)
-                                                @php
-                                                    $status = strtolower((string) ($row->status ?? 'scheduled'));
-                                                    $endsAt = $row->scheduled_at
-                                                        ? $row->scheduled_at->copy()->addMinutes((int) ($row->duration_minutes ?? 60))
-                                                        : null;
-                                                    $isPast = $endsAt && $endsAt->isPast();
-                                                    $joinDisabled = $isPast || in_array($status, ['cancelled', 'completed'], true);
-                                                    $statusLabel = match ($status) {
-                                                        'completed' => 'Completed',
-                                                        'cancelled' => 'Cancelled',
-                                                        default => 'Scheduled',
-                                                    };
-                                                    $statusClass = match ($status) {
-                                                        'completed' => 'label-primary',
-                                                        'cancelled' => 'label-danger',
-                                                        default => 'label-success',
-                                                    };
-                                                    $title = trim((string) ($row->title ?? ''));
-                                                    if ($title !== '' && strcasecmp($title, (string) ($batch['batch_name'] ?? '')) === 0) {
-                                                        $title = '';
-                                                    }
-                                                @endphp
-                                                <tr>
-                                                    <td>{{ $loop->iteration }}</td>
-                                                    <td><strong>{{ $row->scheduled_at?->format('d M Y') ?? '—' }}</strong></td>
-                                                    <td>{{ $row->scheduled_at?->format('l') ?? '—' }}</td>
-                                                    <td>{{ $row->scheduled_at?->format('H:i') ?? '—' }}</td>
-                                                    <td>{{ $row->duration_minutes ?? 60 }} min</td>
-                                                    <td>{{ $title !== '' ? $title : '—' }}</td>
-                                                    <td>{{ $row->notes ?: '—' }}</td>
-                                                    <td><span class="label {{ $statusClass }}">{{ $statusLabel }}</span></td>
-                                                    <td>
-                                                        @if($row->zoho_link && ! $joinDisabled)
-                                                            <a class="btn btn-primary btn-sm" href="{{ $row->zoho_link }}" target="_blank" rel="noopener" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;font-weight:700;">Join Now</a>
-                                                        @elseif($row->zoho_link && $joinDisabled)
-                                                            <button type="button" class="btn btn-default btn-sm" disabled>Join Now</button>
-                                                            @if($status === 'cancelled')
-                                                                <span class="label label-danger" style="margin-left:4px;">Cancelled</span>
-                                                            @elseif($status === 'completed')
-                                                                <span class="label label-primary" style="margin-left:4px;">Completed</span>
-                                                            @else
-                                                                <span class="label label-default" style="margin-left:4px;">Ended</span>
-                                                            @endif
-                                                        @else
-                                                            <span class="label label-default">Link soon</span>
-                                                        @endif
-                                                        <a class="btn btn-default btn-xs" href="{{ route('user.class-schedules.item-ics', $row->id) }}" style="margin-left:4px;">.ics</a>
-                                                    </td>
-                                                </tr>
-                                            @empty
-                                                <tr>
-                                                    <td colspan="9" class="text-center text-muted">No sessions in this batch yet.</td>
-                                                </tr>
-                                            @endforelse
-                                        </tbody>
-                                    </table>
-                                </div>
+                                @include('admin.study-materials.schedules._sessions_table', ['batch' => $batch, 'isAdminView' => false])
                             </div>
                         </div>
                     @empty

@@ -89,49 +89,7 @@
                                 @endif
                             </div>
                             <div class="panel-body" style="padding:0;">
-                                <div class="table-responsive">
-                                    <table class="table table-striped table-bordered" style="margin-bottom:0;">
-                                        <thead>
-                                            <tr>
-                                                <th>When</th>
-                                                <th>Duration</th>
-                                                <th>Title</th>
-                                                <th>Description</th>
-                                                <th>Students</th>
-                                                <th>Meeting link</th>
-                                                <th>Status</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach($batch['sessions'] as $session)
-                                                <tr>
-                                                    <td>{{ $session->scheduled_at?->format('d M Y H:i') }}</td>
-                                                    <td>{{ $session->durationMinutes() }} min</td>
-                                                    <td>{{ $session->title && $session->title !== $batch['batch_name'] ? $session->title : '—' }}</td>
-                                                    <td>{{ \Illuminate\Support\Str::limit($session->notes ?: '—', 60) }}</td>
-                                                    <td>{{ $session->students->count() }}</td>
-                                                    <td>
-                                                        @if($session->zoho_link)
-                                                            <a href="{{ $session->zoho_link }}" target="_blank" rel="noopener" style="font-weight:700;">Join Now</a>
-                                                        @else
-                                                            —
-                                                        @endif
-                                                    </td>
-                                                    <td>{{ ucfirst($session->status) }}</td>
-                                                    <td>
-                                                        <a class="btn btn-xs btn-primary" href="{{ route('admin.class-schedules.edit', $session->id) }}">Edit</a>
-                                                        <a class="btn btn-xs btn-default" href="{{ route('admin.class-schedules.ics', $session->id) }}">.ics</a>
-                                                        <form action="{{ route('admin.class-schedules.destroy', $session->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this scheduled day?');">
-                                                            @csrf @method('DELETE')
-                                                            <button class="btn btn-xs btn-danger" type="submit">Delete</button>
-                                                        </form>
-                                                    </td>
-                                                </tr>
-                                            @endforeach
-                                        </tbody>
-                                    </table>
-                                </div>
+                                @include('admin.study-materials.schedules._sessions_table', ['batch' => $batch, 'isAdminView' => true])
                                 @if(!$batch['students']->isEmpty())
                                     <div style="padding:12px 15px;border-top:1px solid #e7eaec;">
                                         <strong style="display:block;margin-bottom:8px;">Students in this batch</strong>
