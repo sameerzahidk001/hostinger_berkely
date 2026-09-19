@@ -18,6 +18,42 @@
    <link href="{{ asset('/admin/css/style.css') }}" rel="stylesheet">
    <link href="{{ asset('/admin/css/plugins/sweetalert/sweetalert.css') }}" rel="stylesheet">
    <style>
+      /* Top bar: name, cart, logout */
+      #page-wrapper > .row.border-bottom {
+         background: #7a1212;
+         border-bottom-color: #5c0e0e !important;
+      }
+      #page-wrapper .navbar.navbar-static-top {
+         background: #7a1212 !important;
+         margin-bottom: 0;
+         min-height: 56px;
+      }
+      #page-wrapper .navbar-top-links.navbar-right > li > a,
+      #page-wrapper .navbar-top-links.navbar-right .welcome-message {
+         color: #fff !important;
+         font-size: 16px;
+         font-weight: 600;
+      }
+      #page-wrapper .navbar-top-links.navbar-right > li > a:hover,
+      #page-wrapper .navbar-top-links.navbar-right > li > a:focus {
+         background: rgba(255,255,255,.12);
+         color: #fff !important;
+      }
+      #page-wrapper .navbar-top-links.navbar-right .welcome-message {
+         display: inline-block;
+         padding: 18px 12px;
+         font-size: 17px;
+      }
+      #page-wrapper .navbar-top-links.navbar-right .fa {
+         font-size: 18px;
+         color: #fff;
+      }
+      #page-wrapper .navbar-header .btn-primary {
+         background: #f8961f;
+         border-color: #f8961f;
+         color: #1e1e1e;
+      }
+
       @media (max-width: 768px) {
          .table-responsive,
          .ibox-content,
@@ -109,7 +145,8 @@
             margin-right: 0 !important;
          }
          .navbar-top-links.navbar-right .welcome-message {
-            display: none;
+            display: inline-block !important;
+            padding: 15px 8px;
          }
       }
    </style>
