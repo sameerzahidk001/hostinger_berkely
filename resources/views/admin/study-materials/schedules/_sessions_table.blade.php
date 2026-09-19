@@ -2,7 +2,21 @@
     $isAdminView = !empty($isAdminView);
     $batchName = (string) ($batch['batch_name'] ?? '');
     $sessions = $batch['sessions'] ?? collect();
+    $tzLabel = null;
+    foreach ($sessions as $s) {
+        if (is_object($s) && method_exists($s, 'relationLoaded') && $s->relationLoaded('meetingAccount') && $s->meetingAccount) {
+            $tzLabel = $s->meetingAccount->timezoneLabel();
+            break;
+        }
+        if (is_object($s) && ! empty($s->timezone_label)) {
+            $tzLabel = $s->timezone_label;
+            break;
+        }
+    }
 @endphp
+@if($tzLabel)
+    <p class="help-block" style="margin-top:0;">Session times are in <strong>{{ $tzLabel }}</strong> (meeting account timezone).</p>
+@endif
 <div class="table-responsive">
     <table class="table table-striped table-bordered" style="margin-bottom:0;">
         <thead>
@@ -10,7 +24,7 @@
                 <th>#</th>
                 <th>Date</th>
                 <th>Day</th>
-                <th>Time</th>
+                <th>Time{{ $tzLabel ? ' (' . $tzLabel . ')' : '' }}</th>
                 <th>Duration</th>
                 <th>Title</th>
                 <th>Description</th>

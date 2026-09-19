@@ -57,6 +57,7 @@
                             @foreach(($meetingAccounts ?? []) as $account)
                                 <option value="{{ $account->id }}"
                                     data-provider="{{ $account->provider }}"
+                                    data-timezone="{{ $account->timezone ?: 'Asia/Dubai' }}"
                                     @selected((string) old('meeting_account_id', $schedule->meeting_account_id ?: $defaultMeetingAccountId) === (string) $account->id)>
                                     {{ $account->dropdownLabel() }}
                                 </option>
@@ -68,7 +69,8 @@
                     </div>
                     <div class="col-md-3 form-group">
                         <label>Start date &amp; time *</label>
-                        <input type="datetime-local" name="scheduled_at" class="form-control" value="{{ old('scheduled_at', optional($schedule->scheduled_at)->format('Y-m-d\TH:i')) }}" required>
+                        <input type="datetime-local" name="scheduled_at" id="scheduled_at" class="form-control" value="{{ old('scheduled_at', optional($schedule->scheduled_at)->format('Y-m-d\TH:i')) }}" required>
+                        <span class="help-block" id="scheduled-timezone-help">Timezone: from meeting account</span>
                     </div>
                     <div class="col-md-3 form-group">
                         <label>Duration (minutes)</label>
@@ -146,6 +148,7 @@ $(function () {
     function syncMeetingLinkUi() {
         var $opt = $('#meeting_account_id option:selected');
         var provider = ($opt.data('provider') || '').toString().toLowerCase();
+        var tz = ($opt.data('timezone') || 'Asia/Dubai').toString();
         var isZoom = provider === 'zoom';
         $('#zoho_link').prop('required', isZoom);
         $('#meeting-link-label').text(isZoom ? 'Zoom meeting link *' : 'Meeting link');
@@ -155,9 +158,15 @@ $(function () {
         $('#meeting-account-help').text(isZoom
             ? 'Zoom selected: paste the Join link below.'
             : 'Zoho selected: Join link will be created automatically.');
+        $('#scheduled-timezone-help').html('Timezone: <strong>' + tz + '</strong> (from meeting account). Enter time in this timezone.');
     }
     $('#meeting_account_id').on('change', syncMeetingLinkUi);
     syncMeetingLinkUi();
+
+    $('form').on('submit', function () {
+        var $btn = $(this).find('button[type="submit"]');
+        $btn.prop('disabled', true).text('Saving…');
+    });
 });
 </script>
 @endpush

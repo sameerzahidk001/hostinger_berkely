@@ -45,8 +45,21 @@ class MeetingAccount extends Model
     public function dropdownLabel(): string
     {
         $provider = $this->isZoom() ? 'Zoom' : 'Zoho';
+        $tz = $this->timezone ?: 'Asia/Dubai';
 
-        return $provider . ' — ' . $this->label;
+        return $provider . ' — ' . $this->label . ' (' . $tz . ')';
+    }
+
+    public function timezoneLabel(): string
+    {
+        $tz = $this->timezone ?: config('app.timezone', 'Asia/Dubai');
+        try {
+            $abbr = now($tz)->format('T');
+        } catch (\Throwable $e) {
+            $abbr = '';
+        }
+
+        return trim($tz . ($abbr !== '' && $abbr !== $tz ? ' · ' . $abbr : ''));
     }
 
     public function credentials(): array

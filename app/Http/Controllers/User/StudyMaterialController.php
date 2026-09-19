@@ -268,6 +268,8 @@ class StudyMaterialController extends Controller
                                 'title' => $schedule->title,
                                 'notes' => $schedule->notes,
                                 'status' => $schedule->status ?: 'scheduled',
+                                'timezone_label' => $schedule->meetingAccount?->timezoneLabel()
+                                    ?: config('app.timezone', 'Asia/Dubai'),
                             ];
                         });
                     })
@@ -311,6 +313,7 @@ class StudyMaterialController extends Controller
             'course',
             'instructor',
             'headOfFaculty',
+            'meetingAccount',
             'batch.course',
             'batch.headOfFaculty',
             'batch.instructors',

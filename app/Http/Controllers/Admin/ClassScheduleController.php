@@ -62,7 +62,7 @@ class ClassScheduleController extends Controller
         $batchModel = ClassBatch::with(['course', 'headOfFaculty', 'instructors', 'students'])->findOrFail((int) $batchId);
         $this->assertCanUseBatch($batchModel);
 
-        $sessions = ClassSchedule::with(['course', 'instructor', 'headOfFaculty', 'students', 'batch.course', 'batch.headOfFaculty'])
+        $sessions = ClassSchedule::with(['course', 'instructor', 'headOfFaculty', 'students', 'meetingAccount', 'batch.course', 'batch.headOfFaculty'])
             ->where('batch_id', $batchModel->id)
             ->orderBy('scheduled_at')
             ->get();
@@ -171,11 +171,12 @@ class ClassScheduleController extends Controller
 
         $schedule->save();
 
+        // Split recurrence first so Zoho Calendar does not get an RRULE (and extra sessions).
         $studentIds = $this->resolveScheduleStudentIds($request, $batch);
         $schedule->students()->sync($studentIds);
-
-        $zohoStatus = $this->meetings->attachIntegrations($schedule);
         $extraDays = $this->materializeRecurringSessions($schedule, $studentIds);
+
+        $zohoStatus = $this->meetings->attachIntegrations($schedule->fresh(['meetingAccount', 'course', 'instructor', 'students']));
 
         $message = $this->scheduleSavedMessage('created', $zohoStatus);
         if ($extraDays > 0) {

@@ -126,8 +126,10 @@ class ZohoLmsService
             return null;
         }
 
+        // Keep the wall-clock time the user typed; apply the meeting-account timezone label.
         $start = $schedule->scheduled_at
-            ->timezone($timezone)
+            ->copy()
+            ->shiftTimezone($timezone)
             ->format('M j, Y h:i A');
 
         $participants = $schedule->students
@@ -181,8 +183,9 @@ class ZohoLmsService
         }
 
         $timezone = $this->timezone($account);
-        $start = $schedule->scheduled_at?->copy()->timezone('UTC');
-        $end = $schedule->endsAt()?->copy()->timezone('UTC');
+        // Treat stored wall-clock as the meeting-account timezone, then send UTC to Calendar API.
+        $start = $schedule->scheduled_at?->copy()->shiftTimezone($timezone)->utc();
+        $end = $schedule->endsAt()?->copy()->shiftTimezone($timezone)->utc();
         if (!$start || !$end) {
             return null;
         }
@@ -216,7 +219,8 @@ class ZohoLmsService
             'url' => $schedule->zoho_link ?: config('app.url'),
             'reminders' => $schedule->reminderList(),
             'notify_attendee' => $attendees ? 1 : 0,
-            'conference' => 'zmeeting',
+            // Do NOT set conference=zmeeting here — MeetingLinkService already creates
+            // one Zoho Meeting session. Adding conference would duplicate the meeting in Zoho.
         ];
 
         if ($rrule = $schedule->zohoRrule()) {

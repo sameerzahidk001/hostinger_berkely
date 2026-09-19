@@ -48,27 +48,43 @@ class MeetingLinkService
             return 'manual_required';
         }
 
+        // Prevent double-create on double-submit / parallel requests.
+        $lockKey = 'zoho-meeting-create-' . (int) $schedule->id;
+        $lock = cache()->lock($lockKey, 30);
+        if (! $lock->get()) {
+            return 'existing';
+        }
+
         try {
-            $meeting = $this->zoho->createMeetingForSchedule($schedule, $account);
-        } catch (Throwable $e) {
-            Log::error('Meeting create threw', [
-                'provider' => $account->provider,
-                'account_id' => $account->id,
-                'message' => $e->getMessage(),
-            ]);
+            $schedule->refresh();
+            if (filled($schedule->zoho_link)) {
+                return 'existing';
+            }
 
-            return 'failed';
+            try {
+                $meeting = $this->zoho->createMeetingForSchedule($schedule, $account);
+            } catch (Throwable $e) {
+                Log::error('Meeting create threw', [
+                    'provider' => $account->provider,
+                    'account_id' => $account->id,
+                    'message' => $e->getMessage(),
+                ]);
+
+                return 'failed';
+            }
+
+            if (! $meeting || empty($meeting['join_link'])) {
+                return 'failed';
+            }
+
+            $schedule->zoho_link = $meeting['join_link'];
+            $schedule->meeting_account_id = $account->id;
+            $schedule->save();
+
+            return 'created';
+        } finally {
+            optional($lock)->release();
         }
-
-        if (! $meeting || empty($meeting['join_link'])) {
-            return 'failed';
-        }
-
-        $schedule->zoho_link = $meeting['join_link'];
-        $schedule->meeting_account_id = $account->id;
-        $schedule->save();
-
-        return 'created';
     }
 
     public function resolveAccount(ClassSchedule $schedule): ?MeetingAccount
