@@ -70,7 +70,18 @@
                     <div class="col-md-3 form-group">
                         <label>Start date &amp; time *</label>
                         <input type="datetime-local" name="scheduled_at" id="scheduled_at" class="form-control" value="{{ old('scheduled_at', optional($schedule->scheduled_at)->format('Y-m-d\TH:i')) }}" required>
-                        <span class="help-block" id="scheduled-timezone-help">Timezone: from meeting account</span>
+                        <span class="help-block">Local time for the timezone below.</span>
+                    </div>
+                    <div class="col-md-3 form-group">
+                        <label>Timezone *</label>
+                        @php
+                            $editTz = old('timezone', $schedule->timezone ?: ($schedule->meetingAccount->timezone ?? config('app.timezone', 'Asia/Dubai')));
+                        @endphp
+                        <select name="timezone" id="timezone" class="form-control" required>
+                            @foreach(($timezoneOptions ?? \App\Models\ClassSchedule::timezoneOptions()) as $tzValue => $tzLabel)
+                                <option value="{{ $tzValue }}" @selected($editTz === $tzValue)>{{ $tzLabel }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="col-md-3 form-group">
                         <label>Duration (minutes)</label>
@@ -84,7 +95,7 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-3 form-group">
+                    <div class="col-md-12 form-group">
                         <label id="meeting-link-label">Meeting link</label>
                         <input type="url" name="zoho_link" id="zoho_link" class="form-control" value="{{ old('zoho_link', $schedule->zoho_link) }}" placeholder="https://...">
                         <span class="help-block" id="meeting-link-help">Leave blank for Zoho auto-create.</span>
@@ -148,7 +159,6 @@ $(function () {
     function syncMeetingLinkUi() {
         var $opt = $('#meeting_account_id option:selected');
         var provider = ($opt.data('provider') || '').toString().toLowerCase();
-        var tz = ($opt.data('timezone') || 'Asia/Dubai').toString();
         var isZoom = provider === 'zoom';
         $('#zoho_link').prop('required', isZoom);
         $('#meeting-link-label').text(isZoom ? 'Zoom meeting link *' : 'Meeting link');
@@ -158,7 +168,6 @@ $(function () {
         $('#meeting-account-help').text(isZoom
             ? 'Zoom selected: paste the Join link below.'
             : 'Zoho selected: Join link will be created automatically.');
-        $('#scheduled-timezone-help').html('Timezone: <strong>' + tz + '</strong> (from meeting account). Enter time in this timezone.');
     }
     $('#meeting_account_id').on('change', syncMeetingLinkUi);
     syncMeetingLinkUi();

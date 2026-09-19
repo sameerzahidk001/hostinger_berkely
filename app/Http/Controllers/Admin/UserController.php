@@ -15,6 +15,7 @@ use App\Models\Installment;
 use Exception;
 use App\Mail\UserMail;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str; // ✅ This fixes the "Class not found" error
@@ -209,9 +210,8 @@ class UserController extends Controller
             $placeholders = ['{name}', '{email}', '{password}'];
             $values = [$user->name, $user->email, $request->password];
         } else {
-            $validator = Validator::make($request->all(), [
+            $rules = [
                 'name' => 'required|string|max:255',
-                'email' => 'required|email|unique:users,email,' . $id,
                 'approved' => 'nullable|boolean',
                 'image_path' => 'nullable|string',
                 'local_file_input' => 'nullable|file|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
@@ -220,7 +220,11 @@ class UserController extends Controller
                 'long_description' => 'nullable|string',
                 'experience' => 'nullable|string|max:255',
                 'date_of_birth' => 'nullable|date',
-            ]);
+            ];
+            if (Auth::guard('admin')->check()) {
+                $rules['email'] = 'required|email|unique:users,email,' . $id;
+            }
+            $validator = Validator::make($request->all(), $rules);
             if ($validator->fails()) {
                 return back()->withErrors($validator)->withInput();
             }
@@ -228,7 +232,9 @@ class UserController extends Controller
             apply_profile_image_from_request($user, $request, 'local_file_input');
 
             $user->name = $request->input('name');
-            $user->email = $request->input('email');
+            if (Auth::guard('admin')->check()) {
+                $user->email = $request->input('email');
+            }
             $user->approved = $request->boolean('approved');
             $user->mobile_number = $request->input('mobile_number');
             $user->gender = $request->input('gender');

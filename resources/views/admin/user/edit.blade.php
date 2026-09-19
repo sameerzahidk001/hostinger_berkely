@@ -95,9 +95,14 @@
                                 <!-- Email -->
                                 <div class="col-md-6">
                                     <div class="form-group">
+                                        @php $canEditEmail = \Illuminate\Support\Facades\Auth::guard('admin')->check(); @endphp
                                         <label for="email">Email</label>
                                         <input type="email" name="email" id="email" class="form-control"
-                                            value="{{ old('email', $user->email) }}" ReadOnly>
+                                            value="{{ old('email', $user->email) }}"
+                                            @if($canEditEmail) required @else readonly @endif>
+                                        @unless($canEditEmail)
+                                            <span class="help-block">Only super admin can change email addresses.</span>
+                                        @endunless
                                         @error('email')
                                             <p class="text-danger text-xs italic">{{ $message }}</p>
                                         @enderror

@@ -93,6 +93,7 @@ class ClassScheduleController extends Controller
     public function create(Request $request)
     {
         ClassSchedule::ensureRecurrenceColumns();
+        ClassSchedule::ensureTimezoneColumn();
 
         $batchId = (int) old('batch_id', $request->query('batch_id', 0));
         $batch = $batchId ? ClassBatch::with(['instructors', 'students', 'course'])->find($batchId) : null;
@@ -118,6 +119,7 @@ class ClassScheduleController extends Controller
             'meetingAccounts' => MeetingAccount::activeForDropdown(),
             'defaultMeetingAccountId' => MeetingAccount::defaultId(),
             'meetingAccountProviders' => MeetingAccount::activeForDropdown()->mapWithKeys(fn ($a) => [$a->id => $a->provider]),
+            'timezoneOptions' => ClassSchedule::timezoneOptions(),
             'zohoMeetingReady' => $this->zoho->isMeetingReady(),
             'zohoHostEmail' => $this->zoho->hostAccountEmail(),
             'isInstructor' => $this->lms->isInstructorActor(),
@@ -127,6 +129,9 @@ class ClassScheduleController extends Controller
 
     public function store(Request $request)
     {
+        ClassSchedule::ensureRecurrenceColumns();
+        ClassSchedule::ensureTimezoneColumn();
+
         $validator = Validator::make($request->all(), $this->scheduleRules($request));
 
         if ($validator->fails()) {
@@ -145,8 +150,12 @@ class ClassScheduleController extends Controller
         $schedule = new ClassSchedule();
         $schedule->fill($request->only([
             'instructor_id', 'head_of_faculty_id', 'meeting_account_id',
-            'scheduled_at', 'duration_minutes', 'zoho_link', 'title', 'notes',
+            'scheduled_at', 'timezone', 'duration_minutes', 'zoho_link', 'title', 'notes',
         ]));
+        if (! filled($schedule->timezone)) {
+            $acct = MeetingAccount::query()->find((int) $request->input('meeting_account_id'));
+            $schedule->timezone = $acct?->timezone ?: config('app.timezone', 'Asia/Dubai');
+        }
         $schedule->batch_id = $batch->id;
         $schedule->batch_name = $batch->name;
         $schedule->course_id = $batch->course_id;
@@ -227,6 +236,9 @@ class ClassScheduleController extends Controller
                 $schedule->students
             );
 
+        ClassSchedule::ensureRecurrenceColumns();
+        ClassSchedule::ensureTimezoneColumn();
+
         return view('admin.study-materials.schedules.edit', [
             'schedule' => $schedule,
             'courses' => $courses,
@@ -237,6 +249,7 @@ class ClassScheduleController extends Controller
             'meetingAccounts' => MeetingAccount::activeForDropdown(),
             'defaultMeetingAccountId' => MeetingAccount::defaultId(),
             'meetingAccountProviders' => MeetingAccount::activeForDropdown()->mapWithKeys(fn ($a) => [$a->id => $a->provider]),
+            'timezoneOptions' => ClassSchedule::timezoneOptions(),
             'zohoMeetingReady' => $this->zoho->isMeetingReady(),
             'zohoHostEmail' => $this->zoho->hostAccountEmail(),
             'isInstructor' => $this->lms->isInstructorActor(),
@@ -268,6 +281,9 @@ class ClassScheduleController extends Controller
 
     public function update(Request $request, $id)
     {
+        ClassSchedule::ensureRecurrenceColumns();
+        ClassSchedule::ensureTimezoneColumn();
+
         $schedule = ClassSchedule::with('batch')->findOrFail($id);
         $this->assertCanManageSchedule($schedule);
 
@@ -284,8 +300,12 @@ class ClassScheduleController extends Controller
 
         $schedule->fill($request->only([
             'instructor_id', 'head_of_faculty_id', 'meeting_account_id',
-            'scheduled_at', 'duration_minutes', 'zoho_link', 'title', 'notes', 'status',
+            'scheduled_at', 'timezone', 'duration_minutes', 'zoho_link', 'title', 'notes', 'status',
         ]));
+        if (! filled($schedule->timezone)) {
+            $acct = MeetingAccount::query()->find((int) $request->input('meeting_account_id'));
+            $schedule->timezone = $acct?->timezone ?: config('app.timezone', 'Asia/Dubai');
+        }
         $schedule->batch_id = $batch->id;
         $schedule->batch_name = $batch->name;
         $schedule->course_id = $batch->course_id;
@@ -409,6 +429,7 @@ class ClassScheduleController extends Controller
                 Rule::exists('meeting_accounts', 'id')->where(fn ($q) => $q->where('is_active', true)),
             ],
             'scheduled_at' => 'required|date',
+            'timezone' => 'nullable|string|max:64',
             'duration_minutes' => 'nullable|integer|min:15|max:480',
             // Zoom: paste Join link manually. Zoho: optional (auto-created on save).
             'zoho_link' => ($isZoom ? 'required' : 'nullable') . '|url|max:500',
@@ -700,6 +721,7 @@ class ClassScheduleController extends Controller
 
             $copy = $schedule->replicate();
             $copy->scheduled_at = $start;
+            $copy->timezone = $schedule->timezone;
             $copy->recurrence_type = ClassSchedule::RECURRENCE_NONE;
             $copy->recurrence_days = null;
             $copy->recurrence_count = null;

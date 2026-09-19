@@ -196,6 +196,11 @@ class StudyMaterialController extends Controller
         ]);
     }
 
+    public function batchSummariesForActor(bool $withSessions = false)
+    {
+        return $this->studentBatchSummaries($withSessions);
+    }
+
     public function scheduleBatch($batchKey)
     {
         $batches = $this->studentBatchSummaries(true);
@@ -268,8 +273,9 @@ class StudyMaterialController extends Controller
                                 'title' => $schedule->title,
                                 'notes' => $schedule->notes,
                                 'status' => $schedule->status ?: 'scheduled',
-                                'timezone_label' => $schedule->meetingAccount?->timezoneLabel()
-                                    ?: config('app.timezone', 'Asia/Dubai'),
+                                'timezone_label' => method_exists($schedule, 'timezoneLabel')
+                                    ? $schedule->timezoneLabel()
+                                    : (string) ($schedule->timezone ?: config('app.timezone', 'Asia/Dubai')),
                             ];
                         });
                     })

@@ -82,7 +82,23 @@
                     <div class="col-md-4 form-group">
                         <label>Start date &amp; time *</label>
                         <input type="datetime-local" name="scheduled_at" id="scheduled_at" class="form-control" value="{{ old('scheduled_at') }}" required>
-                        <span class="help-block" id="scheduled-timezone-help">Timezone: from meeting account</span>
+                        <span class="help-block">Enter the local time for the timezone you select below.</span>
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Timezone *</label>
+                        @php
+                            $defaultTz = old('timezone');
+                            if (! $defaultTz) {
+                                $defAcct = ($meetingAccounts ?? collect())->firstWhere('id', $defaultMeetingAccountId);
+                                $defaultTz = $defAcct->timezone ?? config('app.timezone', 'Asia/Dubai');
+                            }
+                        @endphp
+                        <select name="timezone" id="timezone" class="form-control" required>
+                            @foreach(($timezoneOptions ?? \App\Models\ClassSchedule::timezoneOptions()) as $tzValue => $tzLabel)
+                                <option value="{{ $tzValue }}" @selected($defaultTz === $tzValue)>{{ $tzLabel }}</option>
+                            @endforeach
+                        </select>
+                        <span class="help-block" id="scheduled-timezone-help">Shown with the time on all schedule tables.</span>
                     </div>
                     <div class="col-md-4 form-group">
                         <label>Duration (minutes)</label>
@@ -155,7 +171,7 @@ $(function () {
     function syncMeetingLinkUi() {
         var $opt = $('#meeting_account_id option:selected');
         var provider = ($opt.data('provider') || '').toString().toLowerCase();
-        var tz = ($opt.data('timezone') || 'Asia/Dubai').toString();
+        var tz = ($opt.data('timezone') || '').toString();
         var isZoom = provider === 'zoom';
         $('#zoho_link').prop('required', isZoom);
         $('#meeting-link-label').text(isZoom ? 'Zoom meeting link *' : 'Meeting link');
@@ -165,7 +181,10 @@ $(function () {
         $('#meeting-account-help').text(isZoom
             ? 'Zoom selected: paste the Join link below.'
             : 'Zoho selected: Join link will be created automatically.');
-        $('#scheduled-timezone-help').html('Timezone: <strong>' + tz + '</strong> (from meeting account). Enter time in this timezone.');
+        // Suggest meeting-account timezone only when user hasn't picked one yet / on account change.
+        if (tz && $('#timezone option[value="' + tz + '"]').length) {
+            $('#timezone').val(tz);
+        }
     }
     $('#meeting_account_id').on('change', syncMeetingLinkUi);
     syncMeetingLinkUi();

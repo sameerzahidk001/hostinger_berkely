@@ -35,6 +35,7 @@ class ClassSchedule extends Model
         'head_of_faculty_id',
         'meeting_account_id',
         'scheduled_at',
+        'timezone',
         'duration_minutes',
         'recurrence_type',
         'recurrence_days',
@@ -105,6 +106,57 @@ class ClassSchedule extends Model
     public function calendarTitle(): string
     {
         return $this->title ?: $this->batch_name;
+    }
+
+    public function timezoneName(): string
+    {
+        $tz = trim((string) ($this->timezone ?: ''));
+        if ($tz === '') {
+            $tz = (string) ($this->meetingAccount?->timezone ?: config('app.timezone', 'Asia/Dubai'));
+        }
+
+        return $tz !== '' ? $tz : 'Asia/Dubai';
+    }
+
+    public function timezoneLabel(): string
+    {
+        $tz = $this->timezoneName();
+        try {
+            $abbr = now($tz)->format('T');
+        } catch (\Throwable $e) {
+            $abbr = '';
+        }
+
+        return trim($tz . ($abbr !== '' && $abbr !== $tz ? ' · ' . $abbr : ''));
+    }
+
+    public static function timezoneOptions(): array
+    {
+        return [
+            'Asia/Dubai' => 'Asia/Dubai (UAE)',
+            'Asia/Karachi' => 'Asia/Karachi (Pakistan)',
+            'Asia/Kolkata' => 'Asia/Kolkata (India)',
+            'Europe/London' => 'Europe/London (UK)',
+            'America/New_York' => 'America/New_York (US East)',
+            'UTC' => 'UTC',
+        ];
+    }
+
+    public static function ensureTimezoneColumn(): bool
+    {
+        if (! Schema::hasTable('class_schedules')) {
+            return false;
+        }
+
+        if (Schema::hasColumn('class_schedules', 'timezone')) {
+            return true;
+        }
+
+        Schema::table('class_schedules', function (Blueprint $table) {
+            $table->string('timezone', 64)->nullable()->after('scheduled_at');
+        });
+
+        return Schema::hasColumn('class_schedules', 'timezone');
     }
 
     public function recurrenceType(): string

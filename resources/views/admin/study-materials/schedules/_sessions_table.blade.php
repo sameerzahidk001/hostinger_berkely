@@ -2,21 +2,7 @@
     $isAdminView = !empty($isAdminView);
     $batchName = (string) ($batch['batch_name'] ?? '');
     $sessions = $batch['sessions'] ?? collect();
-    $tzLabel = null;
-    foreach ($sessions as $s) {
-        if (is_object($s) && method_exists($s, 'relationLoaded') && $s->relationLoaded('meetingAccount') && $s->meetingAccount) {
-            $tzLabel = $s->meetingAccount->timezoneLabel();
-            break;
-        }
-        if (is_object($s) && ! empty($s->timezone_label)) {
-            $tzLabel = $s->timezone_label;
-            break;
-        }
-    }
 @endphp
-@if($tzLabel)
-    <p class="help-block" style="margin-top:0;">Session times are in <strong>{{ $tzLabel }}</strong> (meeting account timezone).</p>
-@endif
 <div class="table-responsive">
     <table class="table table-striped table-bordered" style="margin-bottom:0;">
         <thead>
@@ -24,7 +10,8 @@
                 <th>#</th>
                 <th>Date</th>
                 <th>Day</th>
-                <th>Time{{ $tzLabel ? ' (' . $tzLabel . ')' : '' }}</th>
+                <th>Time</th>
+                <th>Timezone</th>
                 <th>Duration</th>
                 <th>Title</th>
                 <th>Description</th>
@@ -62,6 +49,9 @@
                         $title = '';
                     }
                     $notes = trim((string) ($row->notes ?? ''));
+                    $tzLabel = method_exists($row, 'timezoneLabel')
+                        ? $row->timezoneLabel()
+                        : (string) ($row->timezone_label ?? '—');
                     $icsRoute = $isAdminView
                         ? route('admin.class-schedules.ics', $row->id)
                         : route('user.class-schedules.item-ics', $row->id);
@@ -71,6 +61,7 @@
                     <td><strong>{{ $row->scheduled_at?->format('d M Y') ?? '—' }}</strong></td>
                     <td>{{ $row->scheduled_at?->format('l') ?? '—' }}</td>
                     <td>{{ $row->scheduled_at?->format('H:i') ?? '—' }}</td>
+                    <td><small>{{ $tzLabel }}</small></td>
                     <td>{{ $duration }} min</td>
                     <td>{{ $title !== '' ? $title : '—' }}</td>
                     <td>{{ $notes !== '' ? $notes : '—' }}</td>
@@ -107,7 +98,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="{{ $isAdminView ? 10 : 9 }}" class="text-center text-muted">No sessions in this batch yet.</td>
+                    <td colspan="{{ $isAdminView ? 11 : 10 }}" class="text-center text-muted">No sessions in this batch yet.</td>
                 </tr>
             @endforelse
         </tbody>

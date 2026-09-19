@@ -117,7 +117,7 @@ class ZohoLmsService
         $schedule->loadMissing(['course', 'instructor', 'students']);
         $orgId = $this->orgId($account);
         $host = $this->resolveMeetingHost($account);
-        $timezone = $this->timezone($account);
+        $timezone = $schedule->timezoneName();
         if (!$orgId || !$host) {
             Log::warning('Zoho Meeting missing org or host presenter', [
                 'expected_email' => $this->hostAccountEmail($account),
@@ -182,8 +182,8 @@ class ZohoLmsService
             return null;
         }
 
-        $timezone = $this->timezone($account);
-        // Treat stored wall-clock as the meeting-account timezone, then send UTC to Calendar API.
+        $timezone = $schedule->timezoneName();
+        // Treat stored wall-clock as the selected schedule timezone, then send UTC to Calendar API.
         $start = $schedule->scheduled_at?->copy()->shiftTimezone($timezone)->utc();
         $end = $schedule->endsAt()?->copy()->shiftTimezone($timezone)->utc();
         if (!$start || !$end) {

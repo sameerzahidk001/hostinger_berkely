@@ -12,6 +12,7 @@ use App\Models\Installment;
 use App\Services\NoonCheckoutService;
 use App\Services\RakBankCheckoutService;
 use App\Services\StudyMaterialService;
+use App\Http\Controllers\User\StudyMaterialController;
 
 class HomeController extends Controller
 {
@@ -41,7 +42,12 @@ class HomeController extends Controller
             $courseAccesses = $lms->portalAccessesForUser($user);
         }
 
-        return view('user.home', compact('data', 'courseAccesses', 'isInstructor'));
+        $scheduleBatches = collect();
+        if ($isInstructor && Schema::hasTable('class_schedules')) {
+            $scheduleBatches = app(StudyMaterialController::class)->batchSummariesForActor();
+        }
+
+        return view('user.home', compact('data', 'courseAccesses', 'isInstructor', 'scheduleBatches'));
     }
 
     public function payments()
