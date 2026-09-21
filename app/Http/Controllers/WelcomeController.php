@@ -405,7 +405,10 @@ class WelcomeController extends Controller
         User::ensureInstructorExtraColumns();
         User::ensureLatLngColumns();
 
-        $search = $request->only(['course', 'country', 'city', 'keyword', 'distance_km', 'lat', 'lng']);
+        $search = $request->only([
+            'course', 'country', 'city', 'name', 'education', 'specialisation',
+            'keyword', 'distance_km', 'lat', 'lng',
+        ]);
 
         $query = User::with('countryarray:iso_code,name')
             ->where('approved', 1)
@@ -430,7 +433,27 @@ class WelcomeController extends Controller
             $query->where('country', $search['country']);
         }
 
-        // Keyword Search (name, city, country, education, expertise)
+        if ($request->filled('name')) {
+            $name = trim((string) $request->input('name'));
+            $query->where('name', 'like', "%{$name}%");
+        }
+
+        if ($request->filled('city')) {
+            $city = trim((string) $request->input('city'));
+            $query->where('city', 'like', "%{$city}%");
+        }
+
+        if ($request->filled('education')) {
+            $education = trim((string) $request->input('education'));
+            $query->where('education', 'like', "%{$education}%");
+        }
+
+        if ($request->filled('specialisation')) {
+            $specialisation = trim((string) $request->input('specialisation'));
+            $query->where('expertise', 'like', "%{$specialisation}%");
+        }
+
+        // Legacy combined keyword (kept for older bookmarks / forms)
         if ($request->filled('keyword')) {
             $keyword = $request->keyword;
             $countryCodes = Country::query()

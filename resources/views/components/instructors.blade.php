@@ -19,22 +19,25 @@
     }
 
     .instructor-list {
-        display: flex;
-        flex-direction: column;
-        gap: 30px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 24px;
     }
 
     .instructor-card {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         justify-content: space-between;
-        flex-wrap: wrap;
+        flex-direction: column;
+        gap: 16px;
         background-color: {{ card_bg_color($cardBackground, false, '#ffffff') }};
         color: {{ section_color($cardColor, '#222222') }};
         border: 1px solid #e0e0e0;
         border-radius: 16px;
-        padding: 20px 30px;
+        padding: 20px 24px;
         transition: all 0.3s ease;
+        min-width: 0;
+        height: 100%;
     }
 
     .instructor-card:hover {
@@ -165,6 +168,12 @@
     }
 
     /* Responsive Design */
+    @media (max-width: 900px) {
+        .instructor-list {
+            grid-template-columns: 1fr;
+        }
+    }
+
     @media (max-width: 768px) {
         .instructor-card {
             flex-direction: column;
@@ -183,6 +192,7 @@
 
         .instructor-action {
             margin-top: 15px;
+            width: 100%;
         }
     }
 
@@ -264,26 +274,32 @@
         <div class="description cms-html">{!! render_cms_html($description) !!}</div>
     @endif
     <form id="instructors-search-form">
-        <div class="mb-4">
-            <label class="block text-sm font-semibold mb-1" for="keyword">Search by name, city, country, education, expertise</label>
-            <input type="text" name="keyword" id="keyword"
-                placeholder="Type a name, city, country, education, or expertise…"
-                class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-[#f8961f] focus:ring-[#f8961f]">
-        </div>
-        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+        @php
+            $facultyCourses = DB::table('courses')->orderBy('title')->get(['id', 'title']);
+            $specialisationOptions = collect($instructors ?? [])
+                ->flatMap(function ($instructor) {
+                    return method_exists($instructor, 'expertiseList') ? $instructor->expertiseList() : [];
+                })
+                ->map(fn ($v) => trim((string) $v))
+                ->filter()
+                ->unique(fn ($v) => mb_strtolower($v))
+                ->sort()
+                ->values();
+        @endphp
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
             <div>
-                <label class="" for="course">Course</label>
-                <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm" name="course">
-                    <option value="">All Courses</option>
-                    @php $courses = DB::table('courses')->get(); @endphp
-                    @foreach ($courses as $course)
-                        <option value="{{ $course->id }}">{{ $course->title }}</option>
-                    @endforeach
-                </select>
+                <label class="block text-sm font-semibold mb-1" for="name">Name</label>
+                <input type="text" name="name" id="name" placeholder="Search by name…"
+                    class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-[#f8961f] focus:ring-[#f8961f]">
             </div>
             <div>
-                <label class="" for="country">Location</label>
-                <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm" name="country">
+                <label class="block text-sm font-semibold mb-1" for="city">City</label>
+                <input type="text" name="city" id="city" placeholder="Search by city…"
+                    class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-[#f8961f] focus:ring-[#f8961f]">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold mb-1" for="country">Country</label>
+                <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm js-faculty-select" name="country" id="country" data-placeholder="All Countries">
                     <option value="0">All Countries</option>
                     @foreach ($countries as $country)
                         <option value="{{ $country->iso_code }}">{{ $country->name }}</option>
@@ -291,7 +307,32 @@
                 </select>
             </div>
             <div>
-                <label for="distance_km">Within distance</label>
+                <label class="block text-sm font-semibold mb-1" for="education">Education</label>
+                <input type="text" name="education" id="education" placeholder="Search by education…"
+                    class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-[#f8961f] focus:ring-[#f8961f]">
+            </div>
+            <div>
+                <label class="block text-sm font-semibold mb-1" for="specialisation">Specialisation</label>
+                <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm js-faculty-select" name="specialisation" id="specialisation" data-placeholder="Type to find specialisation">
+                    <option value="">All Specialisations</option>
+                    @foreach ($specialisationOptions as $spec)
+                        <option value="{{ $spec }}">{{ $spec }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold mb-1" for="course">Course</label>
+                <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm js-faculty-select" name="course" id="course" data-placeholder="Type to find course">
+                    <option value="">All Courses</option>
+                    @foreach ($facultyCourses as $course)
+                        <option value="{{ $course->id }}">{{ $course->title }}</option>
+                    @endforeach
+                </select>
+            </div>
+        </div>
+        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <div>
+                <label class="block text-sm font-semibold mb-1" for="distance_km">Within distance</label>
                 <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm" name="distance_km" id="distance_km">
                     <option value="">Any distance</option>
                     <option value="5">5 km</option>
@@ -301,7 +342,7 @@
                     <option value="100">100 km</option>
                 </select>
             </div>
-            <div class="flex gap-2 items-end">
+            <div class="flex gap-2 items-end md:col-span-1 lg:col-span-1">
                 <button type="button" id="use-my-location"
                     class="border px-3 py-2 w-full border-[#000435] text-[#000435] rounded text-sm">
                     Use my location
@@ -379,8 +420,34 @@
 </section>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+    #instructors-search-form .select2-container { width: 100% !important; }
+    #instructors-search-form .select2-container .select2-selection--single {
+        height: 38px;
+        border: 1px solid #d1d5db;
+        border-radius: 0.25rem;
+    }
+    #instructors-search-form .select2-container .select2-selection--single .select2-selection__rendered {
+        line-height: 36px;
+        padding-left: 12px;
+    }
+    #instructors-search-form .select2-container .select2-selection--single .select2-selection__arrow {
+        height: 36px;
+    }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
     $(document).ready(function() {
+        $('.js-faculty-select').each(function () {
+            var $el = $(this);
+            $el.select2({
+                width: '100%',
+                allowClear: true,
+                placeholder: $el.data('placeholder') || 'Select…'
+            });
+        });
+
         $('#use-my-location').on('click', function () {
             var $btn = $(this);
             var $status = $('#nearby-status');
