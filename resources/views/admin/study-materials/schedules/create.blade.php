@@ -70,13 +70,14 @@
                                 <option value="{{ $account->id }}"
                                     data-provider="{{ $account->provider }}"
                                     data-timezone="{{ $account->timezone ?: 'Asia/Dubai' }}"
+                                    data-auto-ready="{{ $account->hasRequiredCredentials() ? '1' : '0' }}"
                                     @selected((string) old('meeting_account_id', $defaultMeetingAccountId) === (string) $account->id)>
                                     {{ $account->dropdownLabel() }}
                                 </option>
                             @endforeach
                         </select>
                         <span class="help-block" id="meeting-account-help">
-                            Zoho = Join link auto-created. Zoom = paste Join link manually.
+                            Zoho = Join link auto-created. Zoom with API credentials = auto; otherwise paste Join link.
                         </span>
                     </div>
                     <div class="col-md-4 form-group">
@@ -176,14 +177,20 @@ $(function () {
         var provider = ($opt.data('provider') || '').toString().toLowerCase();
         var tz = ($opt.data('timezone') || '').toString();
         var isZoom = provider === 'zoom';
-        $('#zoho_link').prop('required', isZoom);
-        $('#meeting-link-label').text(isZoom ? 'Zoom meeting link *' : 'Meeting link');
-        $('#meeting-link-help').text(isZoom
-            ? 'Paste the Zoom Join URL manually (required for Zoom).'
-            : 'Leave blank — Zoho Join link is created automatically on Save.');
-        $('#meeting-account-help').text(isZoom
-            ? 'Zoom selected: paste the Join link below.'
-            : 'Zoho selected: Join link will be created automatically.');
+        var autoReady = String($opt.data('auto-ready') || '0') === '1';
+        var needPaste = isZoom && !autoReady;
+        $('#zoho_link').prop('required', needPaste);
+        $('#meeting-link-label').text(needPaste ? 'Zoom meeting link *' : 'Meeting link');
+        if (isZoom && autoReady) {
+            $('#meeting-link-help').text('Leave blank — Zoom Join link is created automatically when API credentials are configured.');
+            $('#meeting-account-help').text('Zoom selected with API credentials: Join link will be created automatically.');
+        } else if (isZoom) {
+            $('#meeting-link-help').text('Paste the Zoom Join URL manually (required). Or add Zoom Server-to-Server OAuth on Meeting Accounts for auto-create.');
+            $('#meeting-account-help').text('Zoom selected without API credentials: paste the Join link below.');
+        } else {
+            $('#meeting-link-help').text('Leave blank — Zoho Join link is created automatically on Save.');
+            $('#meeting-account-help').text('Zoho selected: Join link will be created automatically.');
+        }
         // Suggest meeting-account timezone only when user hasn't picked one yet / on account change.
         if (tz && $('#timezone option[value="' + tz + '"]').length) {
             $('#timezone').val(tz);

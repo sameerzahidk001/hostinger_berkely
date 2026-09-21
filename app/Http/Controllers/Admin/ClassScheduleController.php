@@ -183,9 +183,23 @@ class ClassScheduleController extends Controller
         // Split recurrence first so Zoho Calendar does not get an RRULE (and extra sessions).
         $studentIds = $this->resolveScheduleStudentIds($request, $batch);
         $schedule->students()->sync($studentIds);
-        $extraDays = $this->materializeRecurringSessions($schedule, $studentIds);
+        $siblingIds = $this->materializeRecurringSessions($schedule, $studentIds);
+        $extraDays = count($siblingIds);
 
-        $zohoStatus = $this->meetings->attachIntegrations($schedule->fresh(['meetingAccount', 'course', 'instructor', 'students']));
+        // Create a Join link for every day in the series (primary + split days).
+        $seriesIds = array_values(array_unique(array_merge([(int) $schedule->id], $siblingIds)));
+        $zohoStatus = ['meeting' => 'failed', 'calendar' => 'skipped'];
+        foreach ($seriesIds as $sid) {
+            $row = ClassSchedule::with(['meetingAccount', 'course', 'instructor', 'students'])->find($sid);
+            if (! $row) {
+                continue;
+            }
+            $status = $this->meetings->attachIntegrations($row);
+            if (in_array($status['meeting'] ?? '', ['created', 'existing', 'manual_required'], true)
+                || ($zohoStatus['meeting'] ?? '') === 'failed') {
+                $zohoStatus = $status;
+            }
+        }
 
         $message = $this->scheduleSavedMessage('created', $zohoStatus);
         if ($extraDays > 0) {
@@ -208,12 +222,19 @@ class ClassScheduleController extends Controller
         if ($schedule->isRecurring()) {
             $studentIds = $schedule->students()->pluck('id')->map(fn ($id) => (int) $id)->all();
             $extra = $this->materializeRecurringSessions($schedule, $studentIds);
+            $seriesIds = array_values(array_unique(array_merge([(int) $schedule->id], $extra)));
+            foreach ($seriesIds as $sid) {
+                $row = ClassSchedule::with(['meetingAccount', 'course', 'instructor', 'students'])->find($sid);
+                if ($row) {
+                    $this->meetings->attachIntegrations($row);
+                }
+            }
 
             return redirect()
                 ->route('admin.class-schedules.batch', $schedule->batch_id ?: $schedule->id)
                 ->with(
                     'success',
-                    'Recurring series split into ' . ($extra + 1) . ' editable session days. Use Edit to change the Join link or description, or Delete for one day.'
+                    'Recurring series split into ' . (count($extra) + 1) . ' editable session days. Use Edit to change the Join link or description, or Delete for one day.'
                 );
         }
 
@@ -416,6 +437,7 @@ class ClassScheduleController extends Controller
             ? MeetingAccount::query()->whereKey($accountId)->first()
             : null;
         $isZoom = $account && $account->isZoom();
+        $zoomAutoReady = $isZoom && $account->hasRequiredCredentials();
 
         return [
             'batch_id' => [
@@ -431,8 +453,8 @@ class ClassScheduleController extends Controller
             'scheduled_at' => 'required|date',
             'timezone' => 'nullable|string|max:64',
             'duration_minutes' => 'nullable|integer|min:15|max:480',
-            // Zoom: paste Join link manually. Zoho: optional (auto-created on save).
-            'zoho_link' => ($isZoom ? 'required' : 'nullable') . '|url|max:500',
+            // Zoom without API credentials: paste Join link. Zoho / Zoom-with-API: optional auto-create.
+            'zoho_link' => ($isZoom && ! $zoomAutoReady ? 'required' : 'nullable') . '|url|max:500',
             'title' => 'nullable|string|max:255',
             'notes' => 'nullable|string',
             'student_ids' => 'nullable|array',
@@ -593,11 +615,12 @@ class ClassScheduleController extends Controller
 
         $parts = [$base];
         $meetingNote = match ($meetingStatus) {
-            'created' => 'Zoho Meeting Join link was created automatically.',
+            'created' => 'Meeting Join link was created automatically.',
             'existing' => 'Meeting Join link was saved.',
-            'manual_required' => 'Zoom selected — paste the Zoom Join link in Meeting link (required).',
-            'not_configured' => 'Selected meeting account is missing or not ready, so the Join link could not be auto-created.',
-            default => 'Meeting Join link was not created automatically. For Zoho check credentials; for Zoom paste the link manually.',
+            'manual_required' => 'Zoom selected — paste the Zoom Join URL in Meeting link (required), or add Zoom Server-to-Server OAuth credentials on the Meeting Account to auto-create.',
+            'not_configured' => 'Selected meeting account is missing or not ready, so the Join link could not be auto-created. Check Meeting Accounts.',
+            'failed' => 'Meeting Join link was not created automatically. For Zoho, verify the Meeting Account credentials are live and valid. For Zoom without API credentials, paste the Join link manually.',
+            default => 'Meeting Join link was not created automatically. For Zoho check credentials; for Zoom paste the link manually or configure Zoom API credentials.',
         };
         if ($meetingNote) {
             $parts[] = $meetingNote;
@@ -686,11 +709,13 @@ class ClassScheduleController extends Controller
     /**
      * Turn a recurring series into individual ClassSchedule rows (one per class day)
      * so Admin/Instructor can edit the Join link / description or delete a single day.
+     *
+     * @return array<int, int> IDs of newly created sibling session days (not including the primary).
      */
-    protected function materializeRecurringSessions(ClassSchedule $schedule, array $studentIds): int
+    protected function materializeRecurringSessions(ClassSchedule $schedule, array $studentIds): array
     {
         if (! $schedule->isRecurring()) {
-            return 0;
+            return [];
         }
 
         $starts = collect($schedule->occurrenceStarts())
@@ -698,7 +723,7 @@ class ClassScheduleController extends Controller
             ->values()
             ->all();
         if ($starts === []) {
-            return 0;
+            return [];
         }
 
         $schedule->scheduled_at = $starts[0];
@@ -706,9 +731,12 @@ class ClassScheduleController extends Controller
         $schedule->recurrence_days = null;
         $schedule->recurrence_count = null;
         $schedule->recurrence_until = null;
+        // Clear link before split — each day gets its own meeting after materialize.
+        $schedule->zoho_link = null;
+        $schedule->zoho_calendar_event_uid = null;
         $schedule->save();
 
-        $created = 0;
+        $createdIds = [];
         foreach (array_slice($starts, 1) as $start) {
             // Never recreate a day that already exists on this batch.
             $exists = ClassSchedule::query()
@@ -726,14 +754,16 @@ class ClassScheduleController extends Controller
             $copy->recurrence_days = null;
             $copy->recurrence_count = null;
             $copy->recurrence_until = null;
+            $copy->zoho_link = null;
+            $copy->zoho_calendar_event_uid = null;
             $copy->save();
             if ($studentIds !== []) {
                 $copy->students()->sync($studentIds);
             }
-            $created++;
+            $createdIds[] = (int) $copy->id;
         }
 
-        return $created;
+        return $createdIds;
     }
 
     public function clearBatch($batchId)

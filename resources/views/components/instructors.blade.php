@@ -264,13 +264,13 @@
         <div class="description cms-html">{!! render_cms_html($description) !!}</div>
     @endif
     <form id="instructors-search-form">
-        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-
-            <div>
-                <label class="" for="keyword">Search</label>
-                <input type="text" name="keyword" id="keyword" placeholder="Search by name, city, country, education, expertise..."
-                    class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-[#f8961f] focus:ring-[#f8961f]">
-            </div>
+        <div class="mb-4">
+            <label class="block text-sm font-semibold mb-1" for="keyword">Search by name, city, country, education, expertise</label>
+            <input type="text" name="keyword" id="keyword"
+                placeholder="Type a name, city, country, education, or expertise…"
+                class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-[#f8961f] focus:ring-[#f8961f]">
+        </div>
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
 
             <div>
                 <label class="" for="course">Course</label>
@@ -302,12 +302,12 @@
                 </select>
             </div> --}}
 
-            <div class="flex gap-2">
+            <div class="flex gap-2 items-end">
                 <button
-                    class="border px-4 py-1 w-full border-[#000435] bg-[#000435] transition-all delay-300 duration-300 content-center rounded uppercase text-white"
+                    class="border px-4 py-2 w-full border-[#000435] bg-[#000435] transition-all delay-300 duration-300 content-center rounded uppercase text-white"
                     type="submit">Search</button>
                 <button type="button" id="reset"
-                    class="hidden group-hover:bg-primary bg-secondary px-4 py-1 w-full transition-all delay-300 duration-300 content-center rounded uppercase text-white">
+                    class="hidden group-hover:bg-primary bg-secondary px-4 py-2 w-full transition-all delay-300 duration-300 content-center rounded uppercase text-white">
                     Reset
                 </button>
             </div>

@@ -96,14 +96,22 @@ class MeetingAccount extends Model
 
     public function hasRequiredCredentials(): bool
     {
-        // Zoom: Join link is pasted on Class Schedule — label-only accounts are fine.
         if ($this->isZoom()) {
-            return true;
+            // Prefer Server-to-Server OAuth for auto Join links; label-only still allowed for manual paste.
+            return filled($this->credential('account_id'))
+                && filled($this->credential('client_id'))
+                && filled($this->credential('client_secret'));
         }
 
         return filled($this->credential('client_id'))
             && filled($this->credential('client_secret'))
             && filled($this->credential('refresh_token'));
+    }
+
+    /** Zoom accounts without API keys are still usable if the Join link is pasted on the schedule. */
+    public function allowsManualJoinLink(): bool
+    {
+        return $this->isZoom();
     }
 
     public static function activeForDropdown()

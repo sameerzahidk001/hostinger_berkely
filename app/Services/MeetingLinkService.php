@@ -43,9 +43,48 @@ class MeetingLinkService
             return 'not_configured';
         }
 
-        // Zoom: join link is pasted manually — do not auto-create via API.
+        // Zoom: auto-create when Server-to-Server OAuth credentials are present;
+        // otherwise require a pasted Join link on the schedule form.
         if ($account->isZoom()) {
-            return 'manual_required';
+            if (! $this->zoom->isReady($account)) {
+                return 'manual_required';
+            }
+
+            $lockKey = 'zoom-meeting-create-' . (int) $schedule->id;
+            $lock = cache()->lock($lockKey, 30);
+            if (! $lock->get()) {
+                return 'existing';
+            }
+
+            try {
+                $schedule->refresh();
+                if (filled($schedule->zoho_link)) {
+                    return 'existing';
+                }
+
+                try {
+                    $meeting = $this->zoom->createMeetingForSchedule($schedule, $account);
+                } catch (Throwable $e) {
+                    Log::error('Zoom Meeting create threw', [
+                        'account_id' => $account->id,
+                        'message' => $e->getMessage(),
+                    ]);
+
+                    return 'failed';
+                }
+
+                if (! $meeting || empty($meeting['join_link'])) {
+                    return 'failed';
+                }
+
+                $schedule->zoho_link = $meeting['join_link'];
+                $schedule->meeting_account_id = $account->id;
+                $schedule->save();
+
+                return 'created';
+            } finally {
+                optional($lock)->release();
+            }
         }
 
         // Prevent double-create on double-submit / parallel requests.

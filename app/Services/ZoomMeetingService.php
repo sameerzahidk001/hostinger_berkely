@@ -52,7 +52,10 @@ class ZoomMeetingService
             ],
         ];
 
-        $userId = rawurlencode((string) $account->credential('account_id'));
+        $userId = (string) ($account->credential('user_id')
+            ?: $account->host_email
+            ?: 'me');
+        $userId = rawurlencode($userId);
         $response = $this->http()
             ->withToken($token)
             ->acceptJson()
