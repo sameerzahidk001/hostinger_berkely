@@ -115,7 +115,7 @@
                                 <div>{!! $user->corporate_training !!}</div>
                             @endif
                             @if($expertiseList !== [])
-                                <p><strong>Areas of Expertise:</strong> {{ implode(', ', $expertiseList) }}</p>
+                                <p><strong>Professional &amp; Academic Specialisations:</strong> {{ implode(', ', $expertiseList) }}</p>
                             @endif
                             @if(\App\Models\User::hasRichTextContent($user->institutions ?? null))
                                 <p><strong>Institutions &amp; Organisations:</strong></p>
@@ -360,7 +360,7 @@
     $('#add-expertise-btn').on('click', function () {
         $('#expertise-wrapper').append(`
             <div class="form-group mb-2 expertise-group">
-                <input type="text" name="expertise[]" class="form-control" placeholder="Enter area of expertise">
+                <input type="text" name="expertise[]" class="form-control" placeholder="Enter specialisation">
                 <button type="button" class="btn btn-danger btn-sm remove-expertise" style="margin-left:10px;float:right;margin-top:10px;">Remove</button>
             </div>
         `);

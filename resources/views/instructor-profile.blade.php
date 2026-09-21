@@ -358,7 +358,7 @@
                         <p class="hero-meta"><strong>Academic Qualifications:</strong> {{ implode(', ', $educationList) }}</p>
                     @endif
                     @if($expertiseList !== [])
-                        <p class="hero-meta"><strong>Areas of Expertise:</strong> {{ implode(', ', $expertiseList) }}</p>
+                        <p class="hero-meta"><strong>Professional &amp; Academic Specialisations:</strong> {{ implode(', ', $expertiseList) }}</p>
                     @endif
                 </div>
             </div>
@@ -442,7 +442,7 @@
 
             @if($expertiseList !== [])
                 <div class="profile-section">
-                    <h3>Areas of Expertise</h3>
+                    <h3>Professional &amp; Academic Specialisations</h3>
                     <div class="section-body">{{ implode(', ', $expertiseList) }}</div>
                 </div>
             @endif

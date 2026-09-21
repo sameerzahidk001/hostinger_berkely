@@ -353,7 +353,7 @@
                                     <p><strong>Academic Qualifications:</strong> {{ implode(', ', $cardEducation) }}</p>
                                 @endif
                                 @if($cardExpertise !== [])
-                                    <p><strong>Areas of Expertise:</strong> {{ implode(', ', $cardExpertise) }}</p>
+                                    <p><strong>Professional &amp; Academic Specialisations:</strong> {{ implode(', ', $cardExpertise) }}</p>
                                 @endif
                             </div>
                         </div>

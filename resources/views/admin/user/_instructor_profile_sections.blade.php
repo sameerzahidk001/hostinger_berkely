@@ -96,7 +96,7 @@
         placeholder="Describe corporate and executive training experience…">{!! old('corporate_training', $user->corporate_training) !!}</textarea>
 </div>
 
-<h3 class="profile-section-heading">Areas of Expertise</h3>
+<h3 class="profile-section-heading">Professional &amp; Academic Specialisations</h3>
 @php
     $expertiseRows = old('expertise', $user->expertiseList());
     if ($expertiseRows === []) {
@@ -104,11 +104,11 @@
     }
 @endphp
 <div class="form-group">
-    <label for="expertise[]">Areas of Expertise</label>
+    <label for="expertise[]">Professional &amp; Academic Specialisations</label>
     <div id="expertise-wrapper">
         @foreach($expertiseRows as $i => $item)
             <div class="form-group mb-2 expertise-group">
-                <input type="text" name="expertise[]" class="form-control" placeholder="Enter area of expertise" value="{{ $item }}">
+                <input type="text" name="expertise[]" class="form-control" placeholder="Enter specialisation" value="{{ $item }}">
                 @if($i > 0)
                     <button type="button" class="btn btn-danger btn-sm remove-expertise" style="margin-left:10px;float:right;margin-top:10px;">Remove</button>
                 @endif
