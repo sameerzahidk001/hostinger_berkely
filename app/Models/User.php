@@ -271,17 +271,69 @@ class User extends Authenticatable implements MustVerifyEmail
         return json_encode($clean);
     }
 
+    public static function teachingAvailabilitySlots(): array
+    {
+        return [
+            'before_work' => 'Before Work',
+            'morning' => 'Morning',
+            'afternoon' => 'Afternoon',
+            'after_work' => 'After Work',
+            'evening' => 'Evening',
+            'overnight' => 'Overnight',
+        ];
+    }
+
+    public static function teachingAvailabilityDays(): array
+    {
+        return [
+            'MO' => 'Mon',
+            'TU' => 'Tue',
+            'WE' => 'Wed',
+            'TH' => 'Thu',
+            'FR' => 'Fri',
+            'SA' => 'Sat',
+            'SU' => 'Sun',
+        ];
+    }
+
     public static function encodeAvailabilityField(?array $data): string
     {
         $data = $data ?? [];
+        $flexible = in_array($data['flexible'] ?? 'no', [true, 1, '1', 'yes', 'Yes'], true) ? 'yes' : 'no';
+        $slotKeys = array_keys(self::teachingAvailabilitySlots());
+        $dayKeys = array_keys(self::teachingAvailabilityDays());
+        $grid = [];
+        $rawGrid = is_array($data['grid'] ?? null) ? $data['grid'] : [];
+
+        foreach ($dayKeys as $day) {
+            $dayData = is_array($rawGrid[$day] ?? null) ? $rawGrid[$day] : [];
+            $row = [];
+            foreach ($slotKeys as $slot) {
+                $on = in_array($dayData[$slot] ?? null, [true, 1, '1', 'on', 'yes'], true);
+                if ($on) {
+                    $row[$slot] = true;
+                }
+            }
+            if ($row !== []) {
+                $grid[$day] = $row;
+            }
+        }
+
+        // Prefer new grid when posted; keep legacy fields only if no grid posted.
+        if ($grid !== [] || ($data['type'] ?? '') === 'grid' || array_key_exists('grid', $data)) {
+            return json_encode([
+                'type' => 'grid',
+                'grid' => $grid,
+                'flexible' => $flexible,
+            ]);
+        }
+
         $frequency = ($data['frequency'] ?? 'particular') === 'daily' ? 'daily' : 'particular';
         $days = array_values(array_filter(array_map('strval', (array) ($data['days'] ?? []))));
-        $allowedDays = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
-        $days = array_values(array_intersect($days, $allowedDays));
+        $days = array_values(array_intersect($days, $dayKeys));
         if ($frequency === 'daily') {
             $days = [];
         }
-        $flexible = in_array($data['flexible'] ?? 'no', [true, 1, '1', 'yes', 'Yes'], true) ? 'yes' : 'no';
 
         $daySlots = [];
         $rawSlots = is_array($data['day_slots'] ?? null) ? $data['day_slots'] : [];
@@ -315,7 +367,70 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * Human-readable availability lines for public / view profile.
+     * Day × period availability matrix for the Teaching Availability table.
+     *
+     * @return array<string, array<string, bool>>
+     */
+    public function availabilityGrid(): array
+    {
+        $availability = $this->availabilityData();
+        $slotKeys = array_keys(self::teachingAvailabilitySlots());
+        $dayKeys = array_keys(self::teachingAvailabilityDays());
+        $matrix = [];
+        foreach ($dayKeys as $day) {
+            $matrix[$day] = array_fill_keys($slotKeys, false);
+        }
+
+        $grid = is_array($availability['grid'] ?? null) ? $availability['grid'] : null;
+        if ($grid) {
+            foreach ($dayKeys as $day) {
+                $row = is_array($grid[$day] ?? null) ? $grid[$day] : [];
+                foreach ($slotKeys as $slot) {
+                    $matrix[$day][$slot] = in_array($row[$slot] ?? false, [true, 1, '1', 'on', 'yes'], true);
+                }
+            }
+
+            return $matrix;
+        }
+
+        // Legacy: map old day/time availability into coarse slots.
+        $days = $availability['days'] ?? [];
+        if (($availability['frequency'] ?? '') === 'daily') {
+            $days = $dayKeys;
+        }
+        $legacySlots = is_array($availability['day_slots'] ?? null) ? $availability['day_slots'] : [];
+        foreach ((array) $days as $day) {
+            $day = (string) $day;
+            if (! isset($matrix[$day])) {
+                continue;
+            }
+            $slot = is_array($legacySlots[$day] ?? null) ? $legacySlots[$day] : [];
+            $hasTime = filled($slot['start_time'] ?? null) || filled($slot['end_time'] ?? null)
+                || filled($availability['start_time'] ?? null) || filled($availability['end_time'] ?? null);
+            if ($hasTime || $days !== []) {
+                $matrix[$day]['morning'] = true;
+                $matrix[$day]['afternoon'] = true;
+            }
+        }
+
+        return $matrix;
+    }
+
+    public function hasAvailabilityGrid(): bool
+    {
+        foreach ($this->availabilityGrid() as $row) {
+            foreach ($row as $on) {
+                if ($on) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Human-readable availability lines for public / view profile (legacy + grid summary).
      *
      * @return list<string>
      */
@@ -326,7 +441,32 @@ class User extends Authenticatable implements MustVerifyEmail
             return [];
         }
 
-        $dayCodes = ['MO' => 'Mon', 'TU' => 'Tue', 'WE' => 'Wed', 'TH' => 'Thu', 'FR' => 'Fri', 'SA' => 'Sat', 'SU' => 'Sun'];
+        if (($availability['type'] ?? '') === 'grid' || isset($availability['grid'])) {
+            if (! $this->hasAvailabilityGrid()) {
+                return [];
+            }
+            $days = self::teachingAvailabilityDays();
+            $slots = self::teachingAvailabilitySlots();
+            $lines = [];
+            foreach ($this->availabilityGrid() as $day => $row) {
+                $on = [];
+                foreach ($row as $slot => $active) {
+                    if ($active) {
+                        $on[] = $slots[$slot] ?? $slot;
+                    }
+                }
+                if ($on !== []) {
+                    $lines[] = ($days[$day] ?? $day) . ': ' . implode(', ', $on);
+                }
+            }
+            if (in_array($availability['flexible'] ?? 'no', ['yes', true, 1, '1'], true) && $lines !== []) {
+                $lines[count($lines) - 1] .= ' · Flexible';
+            }
+
+            return $lines;
+        }
+
+        $dayCodes = self::teachingAvailabilityDays();
         $flexible = in_array($availability['flexible'] ?? 'no', ['yes', true, 1, '1'], true);
         $lines = [];
 

@@ -333,7 +333,7 @@
                         $expertiseList = method_exists($instructor, 'expertiseList') ? $instructor->expertiseList() : [];
                         $methodList = method_exists($instructor, 'teachingMethodologyList') ? $instructor->teachingMethodologyList() : [];
                         $methodLabels = array_values(array_intersect_key(\App\Models\User::teachingMethodologyOptions(), array_flip($methodList)));
-                        $availLines = method_exists($instructor, 'availabilityDisplayLines') ? $instructor->availabilityDisplayLines() : [];
+                        $hasAvailGrid = method_exists($instructor, 'hasAvailabilityGrid') && $instructor->hasAvailabilityGrid();
                         $hasProfessional = \App\Models\User::hasRichTextContent($instructor->short_description ?? null);
                         $hasExecutive = \App\Models\User::hasRichTextContent($instructor->executive_experience ?? null);
                         $hasTeaching = \App\Models\User::hasRichTextContent($instructor->experience ?? null);
@@ -447,20 +447,16 @@
                 </div>
             @endif
 
-            @if($availLines !== [])
+            @if($hasAvailGrid)
                 <div class="profile-section">
-                    <h3>Availability</h3>
+                    <h3>Teaching Availability</h3>
                     <div class="section-body">
-                        <ul>
-                            @foreach($availLines as $line)
-                                <li>{{ $line }}</li>
-                            @endforeach
-                        </ul>
+                        @include('admin.user._availability_grid_display', ['user' => $instructor])
                     </div>
                 </div>
             @endif
 
-            @if(! $hasProfessional && $educationList === [] && $proQualList === [] && ! $hasExecutive && ! $hasTeaching && ! $hasTraining && ! $hasCorporate && $expertiseList === [] && ! $hasInstitutions && $methodLabels === [] && $availLines === [])
+            @if(! $hasProfessional && $educationList === [] && $proQualList === [] && ! $hasExecutive && ! $hasTeaching && ! $hasTraining && ! $hasCorporate && $expertiseList === [] && ! $hasInstitutions && $methodLabels === [] && ! $hasAvailGrid)
                 <div class="profile-section">
                     <h3>Professional Profile</h3>
                     <div class="section-body"><p>This instructor has not added profile details yet.</p></div>

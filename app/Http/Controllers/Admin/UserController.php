@@ -110,6 +110,9 @@ class UserController extends Controller
             'teaching_methodology' => 'nullable|array',
             'teaching_methodology.*' => 'nullable|string|max:100',
             'availability' => 'nullable|array',
+            'availability.type' => 'nullable|in:grid',
+            'availability.grid' => 'nullable|array',
+            'availability.flexible' => 'nullable|in:yes,no',
         ]);
 
         if ($validator->fails()) {
@@ -262,6 +265,9 @@ class UserController extends Controller
                 'teaching_methodology' => 'nullable|array',
                 'teaching_methodology.*' => 'nullable|string|max:100',
                 'availability' => 'nullable|array',
+                'availability.type' => 'nullable|in:grid',
+                'availability.grid' => 'nullable|array',
+                'availability.flexible' => 'nullable|in:yes,no',
             ];
             if (Auth::guard('admin')->check()) {
                 $rules['email'] = 'required|email|unique:users,email,' . $id;

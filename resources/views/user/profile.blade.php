@@ -41,7 +41,9 @@
     }
 </style>
 <div class="wrapper wrapper-content">
+    @php $isInstructorProfile = optional($user->roles->first())->name === 'instructor'; @endphp
     <div class="row animated fadeInRight">
+        @if(! $isInstructorProfile)
         <div class="col-md-4">
             <div class="ibox float-e-margins">
                 <div class="ibox-title">
@@ -149,9 +151,10 @@
                 </div>
             </div>
         </div>
+        @endif
 
         {{-- ================= Right Column (Edit Form) ================= --}}
-        <div class="col-md-8">
+        <div class="{{ $isInstructorProfile ? 'col-md-12' : 'col-md-8' }}">
             <div class="ibox float-e-margins">
                 <div class="ibox-title">
                     <h5>Edit Profile</h5>
@@ -277,7 +280,7 @@
                                                 value="{{ old('linkedin', $user->linkedin) }}">
                                         </div>
 
-                                        <h3 class="profile-section-heading">Availability &amp; methodology</h3>
+                                        
                                         @include('admin.user._instructor_extra_fields', ['user' => $user])
                                     </div>
                                 @endif
@@ -332,7 +335,7 @@
     function addEducationInput() {
         $('#education-wrapper').append(`
             <div class="form-group mb-2 education-group">
-                <input type="text" name="education[]" class="form-control" placeholder="e.g. MBA, MSc…">
+                <input type="text" name="education[]" class="form-control" placeholder="e.g. MBA, MSc?">
                 <button type="button" class="btn btn-danger btn-sm remove-education"
                     style="margin-left: 10px; float: right; margin-top: 10px;">Remove</button>
             </div>
@@ -345,7 +348,7 @@
     $('#add-pro-qual-btn').on('click', function () {
         $('#pro-qual-wrapper').append(`
             <div class="form-group mb-2 pro-qual-group">
-                <input type="text" name="professional_qualifications[]" class="form-control" placeholder="e.g. CFA, ACCA, PMP…">
+                <input type="text" name="professional_qualifications[]" class="form-control" placeholder="e.g. CFA, ACCA, PMP?">
                 <button type="button" class="btn btn-danger btn-sm remove-pro-qual" style="margin-left:10px;float:right;margin-top:10px;">Remove</button>
             </div>
         `);
@@ -362,16 +365,6 @@
             </div>
         `);
     });
-    $(document).on('change', 'input[name="availability[frequency]"]', function () {
-        var particular = $(this).val() === 'particular';
-        $('#availability-days-wrap').toggle(particular);
-        $('#availability-daily-times').toggle(!particular);
-    });
-    $(document).on('change', '.js-avail-day', function () {
-        var day = $(this).data('day');
-        $('.js-avail-day-times[data-day="' + day + '"]').toggle(this.checked);
-    });
-
     function plainTextLength(html) {
         var tmp = document.createElement('div');
         tmp.innerHTML = html || '';

@@ -294,7 +294,6 @@
                                             <input type="url" name="linkedin" id="linkedin" class="form-control"
                                                 placeholder="https://www.linkedin.com/in/username" value="{{ old('linkedin', $user->linkedin) }}">
                                         </div>
-                                        <h3 class="profile-section-heading">Availability &amp; methodology</h3>
                                         @include('admin.user._instructor_extra_fields', ['user' => $user])
                                     </div>
                                 @endif
@@ -456,16 +455,6 @@
                 </div>
             `);
         });
-        $(document).on('change', 'input[name="availability[frequency]"]', function () {
-            var particular = $(this).val() === 'particular';
-            $('#availability-days-wrap').toggle(particular);
-            $('#availability-daily-times').toggle(!particular);
-        });
-        $(document).on('change', '.js-avail-day', function () {
-            var day = $(this).data('day');
-            $('.js-avail-day-times[data-day="' + day + '"]').toggle(this.checked);
-        });
-
         function plainTextLength(html) {
             var tmp = document.createElement('div');
             tmp.innerHTML = html || '';
