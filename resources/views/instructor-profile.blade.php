@@ -77,29 +77,35 @@
             min-width: 300px;
         }
 
+        .hero-kicker {
+            font-size: 18px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: #fff;
+            margin: 0 0 8px;
+            opacity: 0.95;
+        }
+
         .hero-info h3 {
             font-size: 42px;
             font-weight: 700;
-            margin-bottom: 10px;
+            margin-bottom: 14px;
             color: #fff;
             display: flex;
             align-items: center;
             gap: 5px;
         }
 
-        .hero-info p {
+        .hero-meta {
             font-size: 16px;
-            margin: 4px 0;
-            opacity: 0.9;
+            margin: 6px 0;
+            opacity: 0.95;
+            line-height: 1.5;
         }
 
-        .hero-highlight {
-            display: inline-block;
-            background-color: rgba(255, 255, 255, 0.15);
-            padding: 6px 14px;
-            border-radius: 8px;
-            font-weight: 500;
-            margin-bottom: 12px;
+        .hero-meta strong {
+            font-weight: 700;
         }
 
         /* ======= LinkedIn link professional style ======= */
@@ -128,73 +134,48 @@
             z-index: 10;
         }
 
-        .instructor-about h2 {
-            color: #00435a;
-            font-size: 28px;
-            font-weight: 700;
-            margin-bottom: 20px;
-            text-align: center;
-            border-bottom: 3px solid #e6a60b;
-            display: inline-block;
-            padding-bottom: 6px;
-        }
-
-        .about-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 25px;
-            margin-top: 30px;
-        }
-
-        .about-item {
+        .profile-section {
             background: #f9f9f9;
             border-radius: 12px;
-            padding: 20px;
+            padding: 20px 24px;
             border-left: 6px solid #e6a60b;
-            transition: all 0.3s ease;
+            margin-bottom: 20px;
         }
 
-        .about-item:hover {
-            transform: translateY(-6px);
-            background: #fff;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+        .profile-section:last-child {
+            margin-bottom: 0;
         }
 
-        .about-item strong {
+        .profile-section h3 {
             color: #bc1701;
-            display: block;
             font-size: 14px;
-            margin-bottom: 6px;
+            font-weight: 700;
+            margin: 0 0 10px;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
-        .about-item span {
+        .profile-section .section-body {
             font-size: 16px;
             color: #00435a;
-            font-weight: 600;
+            font-weight: 500;
+            line-height: 1.7;
         }
 
-        .bio-box {
-            background: linear-gradient(90deg, rgba(230, 166, 11, 0.1), rgba(188, 23, 1, 0.08));
-            padding: 25px 30px;
-            border-radius: 14px;
-            margin-top: 40px;
-            border-left: 6px solid #e6a60b;
-        }
-
-        .bio-box h3 {
-            font-size: 20px;
-            font-weight: 600;
-            color: #bc1701;
-            margin-bottom: 10px;
-        }
-
-        .bio-box p {
+        .profile-section .section-body p {
+            margin: 0 0 0.75em;
             color: #222;
-            font-size: 15px;
-            line-height: 1.8;
+            font-weight: 400;
+        }
+
+        .profile-section .section-body p:last-child {
+            margin-bottom: 0;
+        }
+
+        .profile-section ul {
             margin: 0;
+            padding-left: 1.2em;
+            color: #00435a;
         }
 
         /* ======= COURSES SECTION ======= */
@@ -345,6 +326,18 @@
                 </div>
 
                 <div class="hero-info">
+                    @php
+                        \App\Models\User::ensureInstructorExtraColumns();
+                        $educationList = method_exists($instructor, 'educationList') ? $instructor->educationList() : [];
+                        $expertiseList = method_exists($instructor, 'expertiseList') ? $instructor->expertiseList() : [];
+                        $methodList = method_exists($instructor, 'teachingMethodologyList') ? $instructor->teachingMethodologyList() : [];
+                        $methodLabels = array_values(array_intersect_key(\App\Models\User::teachingMethodologyOptions(), array_flip($methodList)));
+                        $availLines = method_exists($instructor, 'availabilityDisplayLines') ? $instructor->availabilityDisplayLines() : [];
+                        $hasShort = !empty(trim(strip_tags((string) ($instructor->short_description ?? ''))));
+                        $hasExperience = !empty(trim(strip_tags((string) ($instructor->experience ?? ''))));
+                        $hasBio = !empty(trim(strip_tags((string) ($instructor->long_description ?? ''))));
+                    @endphp
+                    <p class="hero-kicker">Trainer Profile</p>
                     <h3>{{ $instructor->name }}
                         @if ($instructor->linkedin)
                             <a href="{{ $instructor->linkedin ?? '' }}" target="_blank" class="linkedin-link"
@@ -356,65 +349,65 @@
                             </a>
                         @endif
                     </h3>
-                    @php
-                        \App\Models\User::ensureInstructorExtraColumns();
-                        $educationList = method_exists($instructor, 'educationList') ? $instructor->educationList() : [];
-                        $expertiseList = method_exists($instructor, 'expertiseList') ? $instructor->expertiseList() : [];
-                        $methodList = method_exists($instructor, 'teachingMethodologyList') ? $instructor->teachingMethodologyList() : [];
-                        $methodLabels = array_values(array_intersect_key(\App\Models\User::teachingMethodologyOptions(), array_flip($methodList)));
-                        $availLines = method_exists($instructor, 'availabilityDisplayLines') ? $instructor->availabilityDisplayLines() : [];
-                    @endphp
-                    @if(!empty($instructor->short_description))
-                        <div class="hero-short">{!! $instructor->short_description !!}</div>
-                    @endif
                     @if($educationList !== [])
-                        <p><strong>Education:</strong> {{ implode(', ', $educationList) }}</p>
+                        <p class="hero-meta"><strong>Education:</strong> {{ implode(', ', $educationList) }}</p>
                     @endif
                     @if($expertiseList !== [])
-                        <p><strong>Expertise:</strong> {{ implode(', ', $expertiseList) }}</p>
-                    @endif
-                    @if($methodLabels !== [])
-                        <p><strong>Teaching Methodology:</strong> {{ implode(', ', $methodLabels) }}</p>
-                    @endif
-                    @if($availLines !== [])
-                        <p>
-                            <strong>Availability:</strong>
-                            @foreach($availLines as $i => $line)
-                                @if($i > 0)<br>@endif{{ $line }}
-                            @endforeach
-                        </p>
-                    @endif
-                    @if(!empty($instructor->experience))
-                        <div>{!! $instructor->experience !!}</div>
+                        <p class="hero-meta"><strong>Expertise:</strong> {{ implode(', ', $expertiseList) }}</p>
                     @endif
                 </div>
             </div>
         </div>
 
-        <!-- ABOUT SECTION -->
+        <!-- DETAILS SECTION -->
         <div class="instructor-about">
-            <h2>Trainer Profile</h2>
-
-            @if($educationList !== [] || $expertiseList !== [] || $methodLabels !== [] || $availLines !== [])
-                <div class="about-grid" style="margin-bottom:24px;">
-                    @if($educationList !== [])
-                        <div class="about-item"><strong>Education</strong><span>{{ implode(', ', $educationList) }}</span></div>
-                    @endif
-                    @if($expertiseList !== [])
-                        <div class="about-item"><strong>Expertise</strong><span>{{ implode(', ', $expertiseList) }}</span></div>
-                    @endif
-                    @if($methodLabels !== [])
-                        <div class="about-item"><strong>Teaching Methodology</strong><span>{{ implode(', ', $methodLabels) }}</span></div>
-                    @endif
-                    @if($availLines !== [])
-                        <div class="about-item"><strong>Availability</strong><span>{!! implode('<br>', array_map('e', $availLines)) !!}</span></div>
-                    @endif
+            @if($hasShort)
+                <div class="profile-section">
+                    <h3>Short Profile</h3>
+                    <div class="section-body">{!! $instructor->short_description !!}</div>
                 </div>
             @endif
 
-            <div class="bio-box">
-                <div>{!! $instructor->long_description ?? '<p>This instructor has not added a biography yet.</p>' !!}</div>
-            </div>
+            @if($methodLabels !== [])
+                <div class="profile-section">
+                    <h3>Teaching Methodology</h3>
+                    <div class="section-body">{{ implode(', ', $methodLabels) }}</div>
+                </div>
+            @endif
+
+            @if($availLines !== [])
+                <div class="profile-section">
+                    <h3>Availability</h3>
+                    <div class="section-body">
+                        <ul>
+                            @foreach($availLines as $line)
+                                <li>{{ $line }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                </div>
+            @endif
+
+            @if($hasExperience)
+                <div class="profile-section">
+                    <h3>Experience</h3>
+                    <div class="section-body">{!! $instructor->experience !!}</div>
+                </div>
+            @endif
+
+            @if($hasBio)
+                <div class="profile-section">
+                    <h3>Biography</h3>
+                    <div class="section-body">{!! $instructor->long_description !!}</div>
+                </div>
+            @endif
+
+            @if(! $hasShort && $methodLabels === [] && $availLines === [] && ! $hasExperience && ! $hasBio)
+                <div class="profile-section">
+                    <h3>Biography</h3>
+                    <div class="section-body"><p>This instructor has not added profile details yet.</p></div>
+                </div>
+            @endif
         </div>
 
         <!-- COURSES SECTION -->
