@@ -27,9 +27,9 @@
     .instructor-card {
         display: flex;
         align-items: flex-start;
-        justify-content: space-between;
+        justify-content: flex-start;
         flex-direction: column;
-        gap: 16px;
+        gap: 12px;
         background-color: {{ card_bg_color($cardBackground, false, '#ffffff') }};
         color: {{ section_color($cardColor, '#222222') }};
         border: 1px solid #e0e0e0;
@@ -37,7 +37,7 @@
         padding: 20px 24px;
         transition: all 0.3s ease;
         min-width: 0;
-        height: 100%;
+        height: auto;
     }
 
     .instructor-card:hover {
@@ -47,28 +47,34 @@
 
     .instructor-left {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         flex: 1;
         min-width: 250px;
+        width: 100%;
+        gap: 16px;
     }
 
     .instructor-image {
         flex-shrink: 0;
-        width: 100px;
-        height: 100px;
-        border-radius: 50%;
+        width: 148px;
+        height: 148px;
+        border-radius: 8px;
         overflow: hidden;
-        border: 2px solid #ddd;
+        border: 1px solid #ddd;
+        background: #f3f4f6;
     }
 
     .instructor-image img {
         width: 100%;
         height: 100%;
         object-fit: cover;
+        display: block;
     }
 
     .instructor-info {
-        margin-left: 20px;
+        margin-left: 0;
+        flex: 1;
+        min-width: 0;
     }
 
     .instructor-info h3 {
@@ -105,7 +111,7 @@
     }
 
     .instructor-action {
-        margin-top: 10px;
+        margin-top: 4px;
     }
 
     .instructor-btn {
