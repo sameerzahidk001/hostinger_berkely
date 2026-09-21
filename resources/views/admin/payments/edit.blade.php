@@ -179,6 +179,7 @@
 
 @endsection
 
+@include('admin.partials.type-find-selects')
 @push('script')
     <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote.min.js"></script>
     <script>
@@ -208,21 +209,23 @@
                 }
             });
 
+            function filterPackagesByCourse(selectedCourseId, preferPackageId) {
+                const $package = $('#package');
+                $package.find('option').each(function () {
+                    const $opt = $(this);
+                    if (!$opt.val()) { $opt.prop('disabled', false); return; }
+                    const match = selectedCourseId && String($opt.data('courseid')) === String(selectedCourseId);
+                    $opt.prop('disabled', !match);
+                });
+                if (preferPackageId && $package.find('option[value="' + preferPackageId + '"]:not(:disabled)').length) {
+                    $package.val(String(preferPackageId));
+                }
+                $package.trigger('change.select2');
+            }
+
             $('#course').on('change', function () {
-                const selectedCourseId = $(this).val();
-                const packageSelect = $('#package');
-                // packageSelect.val('');
-                // $('#total_amount').val('');
-
-                packageSelect.find('option').hide();
-                packageSelect.find('option[value=""]').show();
-
-                if (selectedCourseId) {
-                    packageSelect.find('option').each(function () {
-                        if ($(this).data('courseid') == selectedCourseId) {
-                            $(this).show();
-                        }
-                    });
+                filterPackagesByCourse($(this).val(), null);
+            });
                 }
             });
 
@@ -272,10 +275,7 @@
             const preselectedCourse = $('#course').val();
             const preselectedPackage = '{{ $payment->package_id }}';
             if (preselectedCourse) {
-                $('#course').trigger('change');
-                if (preselectedPackage) {
-                    $('#package').val(preselectedPackage);
-                }
+                filterPackagesByCourse(preselectedCourse, preselectedPackage);
             }
         });
     </script>
