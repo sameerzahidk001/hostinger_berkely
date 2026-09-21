@@ -108,16 +108,21 @@
             font-weight: 700;
         }
 
-        .hero-meta-list {
-            list-style: none;
-            margin: 4px 0 10px;
-            padding: 0;
+        .hero-professional {
+            font-size: 16px;
+            line-height: 1.55;
+            opacity: 0.96;
+            margin-top: 8px;
+            max-width: 720px;
         }
 
-        .hero-meta-list li {
-            margin: 2px 0;
-            line-height: 1.45;
-            opacity: 0.95;
+        .hero-professional p {
+            margin: 0 0 8px;
+            color: #fff;
+        }
+
+        .hero-professional p:last-child {
+            margin-bottom: 0;
         }
 
         /* ======= LinkedIn link professional style ======= */
@@ -366,13 +371,8 @@
                             </a>
                         @endif
                     </h3>
-                    @if($educationList !== [])
-                        <p class="hero-meta"><strong>Academic Qualifications:</strong></p>
-                        <ul class="hero-meta-list">
-                            @foreach($educationList as $item)
-                                <li>{{ $item }}</li>
-                            @endforeach
-                        </ul>
+                    @if($hasProfessional)
+                        <div class="hero-professional">{!! $instructor->short_description !!}</div>
                     @endif
                 </div>
             </div>
@@ -380,10 +380,16 @@
 
         <!-- DETAILS SECTION -->
         <div class="instructor-about">
-            @if($hasProfessional)
+            @if($educationList !== [])
                 <div class="profile-section">
-                    <h3>Professional Profile</h3>
-                    <div class="section-body">{!! $instructor->short_description !!}</div>
+                    <h3>Academic Qualifications</h3>
+                    <div class="section-body">
+                        <ul>
+                            @foreach($educationList as $item)
+                                <li>{{ $item }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
                 </div>
             @endif
 
