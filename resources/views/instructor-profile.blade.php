@@ -380,6 +380,13 @@
 
         <!-- DETAILS SECTION -->
         <div class="instructor-about">
+            @if($hasProfessional)
+                <div class="profile-section">
+                    <h3>Professional Profile</h3>
+                    <div class="section-body">{!! $instructor->short_description !!}</div>
+                </div>
+            @endif
+
             @if($educationList !== [])
                 <div class="profile-section">
                     <h3>Academic Qualifications</h3>
