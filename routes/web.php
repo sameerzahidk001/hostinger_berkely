@@ -536,6 +536,8 @@ Route::get('/delete-temp-files', function (Illuminate\Http\Request $request) {
 });
 
 Auth::routes(['verify' => true]);
+Route::get('/login/captcha', [\App\Http\Controllers\Auth\LoginController::class, 'captchaImage'])
+    ->name('login.captcha');
 
 Route::post('/noon/webhook', [NoonWebhookController::class, 'handle'])->name('noon.webhook');
 

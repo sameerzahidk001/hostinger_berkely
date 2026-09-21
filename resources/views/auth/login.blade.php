@@ -217,25 +217,26 @@ a {
                                     <p class="text-danger text-xs italic">{{ $message }}</p>
                                 @enderror
                             </div>
-                            <div class="row px-3">
+                            <div class="row px-3 mb-3">
                                 <label class="mb-1"><h6 class="mb-0 text-sm">Password</h6></label>
                                 <input id="password" type="password" placeholder="Enter password" name="password" required autocomplete="current-password">
                                 @error('password')
                                     <p class="text-danger text-xs italic">{{ $message }}</p>
                                 @enderror
                             </div>
-                            @php
-                                $captchaA = (int) session('login_captcha_a', 0);
-                                $captchaB = (int) session('login_captcha_b', 0);
-                            @endphp
-                            <div class="row px-3">
-                                <label class="mb-1"><h6 class="mb-0 text-sm">Captcha</h6></label>
-                                <div class="d-flex align-items-center mb-2" style="gap:10px;">
-                                    <span class="text-sm font-weight-bold" style="white-space:nowrap;">{{ $captchaA }} + {{ $captchaB }} =</span>
-                                    <input class="mb-0 @error('captcha') border-danger @enderror" style="max-width:120px;" type="number" name="captcha" inputmode="numeric" placeholder="?" required autocomplete="off">
+                            <div class="row px-3 mb-3" style="margin-top:18px;">
+                                <label class="mb-2"><h6 class="mb-0 text-sm">Captcha</h6></label>
+                                <div class="d-flex align-items-center flex-wrap" style="gap:12px;">
+                                    <img id="login-captcha-img" src="{{ route('login.captcha') }}?t={{ time() }}" alt="Captcha" width="160" height="48"
+                                        style="border:1px solid #ced4da;border-radius:4px;background:#f5f7fa;display:block;">
+                                    <button type="button" id="login-captcha-refresh" class="btn btn-sm btn-outline-secondary" title="Refresh captcha"
+                                        style="border:1px solid #ced4da;background:#fff;padding:6px 10px;cursor:pointer;">↻</button>
+                                    <input class="mb-0 @error('captcha') border-danger @enderror" style="max-width:160px;flex:1;min-width:120px;"
+                                        type="text" name="captcha" maxlength="8" placeholder="Enter code" required autocomplete="off" autocapitalize="characters">
                                 </div>
+                                <small class="text-muted d-block mt-2">Type the characters shown in the image.</small>
                                 @error('captcha')
-                                    <p class="text-danger text-xs italic">{{ $message }}</p>
+                                    <p class="text-danger text-xs italic mb-0 mt-1">{{ $message }}</p>
                                 @enderror
                             </div>
                             <div class="row px-3 my-4">
@@ -261,5 +262,15 @@ a {
         </div>
     </div>
 
+    <script>
+        (function () {
+            var img = document.getElementById('login-captcha-img');
+            var btn = document.getElementById('login-captcha-refresh');
+            if (!img || !btn) return;
+            btn.addEventListener('click', function () {
+                img.src = @json(route('login.captcha')) + '?refresh=1&t=' + Date.now();
+            });
+        })();
+    </script>
 </body>
 </html>

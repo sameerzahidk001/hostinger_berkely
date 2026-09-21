@@ -37,19 +37,80 @@ class LoginController extends Controller
     }
 
     /**
-     * @return array{0:int,1:int}
+     * Issue a new alphanumeric login captcha code.
      */
-    protected function issueLoginCaptcha(): array
+    protected function issueLoginCaptcha(): string
     {
-        $captchaA = random_int(1, 9);
-        $captchaB = random_int(1, 9);
-        session([
-            'login_captcha_answer' => $captchaA + $captchaB,
-            'login_captcha_a' => $captchaA,
-            'login_captcha_b' => $captchaB,
-        ]);
+        $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        $code = '';
+        for ($i = 0; $i < 5; $i++) {
+            $code .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+        }
 
-        return [$captchaA, $captchaB];
+        session(['login_captcha_answer' => $code]);
+        session()->forget(['login_captcha_a', 'login_captcha_b']);
+
+        return $code;
+    }
+
+    /**
+     * Render captcha as a distorted image (not a math question).
+     */
+    public function captchaImage()
+    {
+        if (! session()->has('login_captcha_answer') || request()->boolean('refresh')) {
+            $this->issueLoginCaptcha();
+        }
+
+        $code = (string) session('login_captcha_answer', 'ERROR');
+        $width = 160;
+        $height = 48;
+
+        if (! function_exists('imagecreatetruecolor')) {
+            return response($code, 200, [
+                'Content-Type' => 'text/plain; charset=UTF-8',
+                'Cache-Control' => 'no-store, no-cache, must-revalidate',
+            ]);
+        }
+
+        $img = imagecreatetruecolor($width, $height);
+        $bg = imagecolorallocate($img, 245, 247, 250);
+        $textColor = imagecolorallocate($img, 20, 40, 80);
+        $noise = imagecolorallocate($img, 180, 190, 210);
+        imagefilledrectangle($img, 0, 0, $width, $height, $bg);
+
+        for ($i = 0; $i < 60; $i++) {
+            imagesetpixel($img, random_int(0, $width - 1), random_int(0, $height - 1), $noise);
+        }
+        for ($i = 0; $i < 4; $i++) {
+            imageline(
+                $img,
+                random_int(0, $width),
+                random_int(0, $height),
+                random_int(0, $width),
+                random_int(0, $height),
+                $noise
+            );
+        }
+
+        $font = 5;
+        $charWidth = imagefontwidth($font);
+        $charHeight = imagefontheight($font);
+        $totalWidth = $charWidth * strlen($code);
+        $x = (int) (($width - $totalWidth) / 2);
+        $y = (int) (($height - $charHeight) / 2);
+        imagestring($img, $font, $x, $y, $code, $textColor);
+
+        ob_start();
+        imagepng($img);
+        $png = ob_get_clean();
+        imagedestroy($img);
+
+        return response($png, 200, [
+            'Content-Type' => 'image/png',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
+        ]);
     }
 
     /**
@@ -64,15 +125,16 @@ class LoginController extends Controller
         $request->validate([
             'email' => 'required|email',
             'password' => 'required',
-            'captcha' => 'required|numeric',
+            'captcha' => 'required|string|max:12',
         ]);
 
-        $expectedCaptcha = (int) session('login_captcha_answer', -1);
-        if ((int) $request->input('captcha') !== $expectedCaptcha) {
+        $expectedCaptcha = strtoupper((string) session('login_captcha_answer', ''));
+        $givenCaptcha = strtoupper(preg_replace('/\s+/', '', (string) $request->input('captcha', '')));
+        if ($expectedCaptcha === '' || ! hash_equals($expectedCaptcha, $givenCaptcha)) {
             $this->issueLoginCaptcha();
 
             throw ValidationException::withMessages([
-                'captcha' => 'Incorrect captcha answer. Please try again.',
+                'captcha' => 'Incorrect captcha. Please try again.',
             ]);
         }
 
