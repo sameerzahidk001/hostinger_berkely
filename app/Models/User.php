@@ -39,6 +39,11 @@ class User extends Authenticatable implements MustVerifyEmail
         'experience',
         'education',
         'expertise',
+        'professional_qualifications',
+        'executive_experience',
+        'training_expertise',
+        'corporate_training',
+        'institutions',
         'teaching_methodology',
         'availability',
         'linkedin',
@@ -103,17 +108,6 @@ class User extends Authenticatable implements MustVerifyEmail
         ];
     }
 
-    public function expertiseList(): array
-    {
-        $raw = $this->expertise ?? null;
-        if (is_array($raw)) {
-            return array_values(array_filter(array_map('strval', $raw)));
-        }
-        $decoded = json_decode((string) $raw, true);
-
-        return is_array($decoded) ? array_values(array_filter(array_map('strval', $decoded))) : [];
-    }
-
     public function educationList(): array
     {
         $raw = $this->education ?? null;
@@ -127,6 +121,32 @@ class User extends Authenticatable implements MustVerifyEmail
         $plain = trim((string) $raw);
 
         return $plain !== '' ? [$plain] : [];
+    }
+
+    public function professionalQualificationsList(): array
+    {
+        $raw = $this->professional_qualifications ?? null;
+        if (is_array($raw)) {
+            return array_values(array_filter(array_map(static fn ($v) => trim((string) $v), $raw), static fn ($v) => $v !== ''));
+        }
+        $decoded = json_decode((string) $raw, true);
+        if (is_array($decoded)) {
+            return array_values(array_filter(array_map(static fn ($v) => trim((string) $v), $decoded), static fn ($v) => $v !== ''));
+        }
+        $plain = trim((string) $raw);
+
+        return $plain !== '' ? [$plain] : [];
+    }
+
+    public function expertiseList(): array
+    {
+        $raw = $this->expertise ?? null;
+        if (is_array($raw)) {
+            return array_values(array_filter(array_map('strval', $raw)));
+        }
+        $decoded = json_decode((string) $raw, true);
+
+        return is_array($decoded) ? array_values(array_filter(array_map('strval', $decoded))) : [];
     }
 
     public function teachingMethodologyList(): array
@@ -157,7 +177,17 @@ class User extends Authenticatable implements MustVerifyEmail
             return false;
         }
 
-        $needed = ['expertise', 'teaching_methodology', 'availability', 'long_description'];
+        $needed = [
+            'expertise',
+            'teaching_methodology',
+            'availability',
+            'long_description',
+            'professional_qualifications',
+            'executive_experience',
+            'training_expertise',
+            'corporate_training',
+            'institutions',
+        ];
         $missing = array_values(array_filter($needed, fn ($col) => ! Schema::hasColumn('users', $col)));
         if ($missing === []) {
             return true;
@@ -175,6 +205,21 @@ class User extends Authenticatable implements MustVerifyEmail
             }
             if (in_array('long_description', $missing, true)) {
                 $table->longText('long_description')->nullable();
+            }
+            if (in_array('professional_qualifications', $missing, true)) {
+                $table->text('professional_qualifications')->nullable();
+            }
+            if (in_array('executive_experience', $missing, true)) {
+                $table->longText('executive_experience')->nullable();
+            }
+            if (in_array('training_expertise', $missing, true)) {
+                $table->longText('training_expertise')->nullable();
+            }
+            if (in_array('corporate_training', $missing, true)) {
+                $table->longText('corporate_training')->nullable();
+            }
+            if (in_array('institutions', $missing, true)) {
+                $table->longText('institutions')->nullable();
             }
         });
 
@@ -353,6 +398,7 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         self::ensureInstructorExtraColumns();
         $this->education = self::encodeListField($request->input('education'));
+        $this->professional_qualifications = self::encodeListField($request->input('professional_qualifications'));
         $this->expertise = self::encodeListField($request->input('expertise'));
         $allowedMethods = array_keys(self::teachingMethodologyOptions());
         $methods = array_values(array_intersect(
@@ -361,5 +407,16 @@ class User extends Authenticatable implements MustVerifyEmail
         ));
         $this->teaching_methodology = json_encode($methods);
         $this->availability = self::encodeAvailabilityField($request->input('availability'));
+
+        foreach (['executive_experience', 'training_expertise', 'corporate_training', 'institutions'] as $field) {
+            if ($request->exists($field)) {
+                $this->{$field} = $request->input($field);
+            }
+        }
+    }
+
+    public static function hasRichTextContent(?string $html): bool
+    {
+        return trim(strip_tags((string) $html)) !== '';
     }
 }

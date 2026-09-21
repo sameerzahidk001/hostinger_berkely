@@ -42,9 +42,15 @@ class ProfileController extends Controller
             'experience' => 'nullable|string',
             'short_description' => 'nullable|string',
             'long_description' => 'nullable|string',
+            'executive_experience' => 'nullable|string',
+            'training_expertise' => 'nullable|string',
+            'corporate_training' => 'nullable|string',
+            'institutions' => 'nullable|string',
             'linkedin' => 'nullable|url|string|max:255',
             'education' => 'nullable|array',
             'education.*' => 'nullable|string|max:255',
+            'professional_qualifications' => 'nullable|array',
+            'professional_qualifications.*' => 'nullable|string|max:255',
             'expertise' => 'nullable|array',
             'expertise.*' => 'nullable|string|max:255',
             'teaching_methodology' => 'nullable|array',
@@ -73,11 +79,13 @@ class ProfileController extends Controller
             $validatedData['education'],
             $validatedData['expertise'],
             $validatedData['teaching_methodology'],
-            $validatedData['availability']
+            $validatedData['availability'],
+            $validatedData['professional_qualifications']
         );
 
         $user = Auth::user();
         \App\Models\User::ensureLatLngColumns();
+        \App\Models\User::ensureInstructorExtraColumns();
         $user->fill($validatedData);
         if (array_key_exists('latitude', $validatedData)) {
             $user->latitude = $validatedData['latitude'] !== null && $validatedData['latitude'] !== ''

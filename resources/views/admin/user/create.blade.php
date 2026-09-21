@@ -261,50 +261,28 @@
                             </div>
                         </div>
                         <div class="col-md-12" id="instructor-fields" style="display: none;">
-                            <div class="form-group">
-                                <label for="short_description">Short Profile Description</label>
-                                <textarea name="short_description" class="form-control" rows="3" placeholder="Define yourself shortly...">{{ old('short_description') }}</textarea>
-                                @error('short_description')
-                                    <p class="text-danger text-xs italic">{{ $message }}</p>
-                                @enderror
-                            </div>
-                            <!-- Experience (Single textarea) -->
-                            <div class="form-group">
-                                <label for="experience">Experience</label>
-                                <textarea name="experience" class="form-control" rows="3" placeholder="Describe experience...">{{ old('experience') }}</textarea>
-                                @error('experience')
-                                    <p class="text-danger text-xs italic">{{ $message }}</p>
-                                @enderror
-                            </div>
-
+                            <style>
+                                .profile-section-heading {
+                                    font-size: 22px;
+                                    font-weight: 700;
+                                    color: #1ab394;
+                                    margin: 28px 0 14px;
+                                    padding-bottom: 8px;
+                                    border-bottom: 2px solid #e7eaec;
+                                    clear: both;
+                                }
+                            </style>
+                            @include('admin.user._instructor_profile_sections', ['user' => new \App\Models\User()])
+                            <h3 class="profile-section-heading">LinkedIn</h3>
                             <div class="form-group">
                                 <label for="linkedin">LinkedIn Profile URL</label>
                                 <input type="url" name="linkedin" id="linkedin" class="form-control"
                                     placeholder="https://www.linkedin.com/in/username" value="{{ old('linkedin') }}">
-                                @error('linkedin')
-                                    <p class="text-danger text-xs italic">{{ $message }}</p>
-                                @enderror
                             </div>
-
-                            <!-- Education (Multiple input fields) -->
-                            <div class="form-group mt-3">
-                                <label for="education[]">Education</label>
-                                <div id="education-wrapper">
-                                    @foreach(old('education', ['']) as $edu)
-                                        <div class="form-group mb-2 education-group">
-                                            <input type="text" name="education[]" class="form-control" placeholder="Enter education" value="{{ $edu }}">
-                                        </div>
-                                    @endforeach
-                                </div>
-                                <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addEducationInput()">Add More</button>
-                                @error('education.*')
-                                    <p class="text-danger text-xs italic">{{ $message }}</p>
-                                @enderror
-                            </div>
-
+                            <h3 class="profile-section-heading">Availability &amp; methodology</h3>
                             @include('admin.user._instructor_extra_fields', ['user' => new \App\Models\User()])
+                            <h3 class="profile-section-heading">Map location</h3>
                             @include('admin.user._instructor_map_location', ['user' => new \App\Models\User()])
-                                
                         </div>
                         <div class="row">
                             <div class="col-lg-12" style="margin-top: 16px;text-align:right;"> 

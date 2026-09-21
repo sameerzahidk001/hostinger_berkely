@@ -75,12 +75,21 @@
                                 $methodLabels = array_values(array_intersect_key(\App\Models\User::teachingMethodologyOptions(), array_flip($methodList)));
                                 $availLines = method_exists($user, 'availabilityDisplayLines') ? $user->availabilityDisplayLines() : [];
                             @endphp
-                            <p><strong>Experience: </strong> {!! $user->experience ?? '-' !!}</p>
+                            <p><strong>Teaching &amp; Academic Experience: </strong> {!! $user->experience ?? '-' !!}</p>
                             @if($educationList !== [])
-                                <p><strong>Education:</strong></p>
+                                <p><strong>Academic Qualifications:</strong></p>
                                 <ul>
                                     @foreach($educationList as $edu)
                                         <li>{{ $edu }}</li>
+                                    @endforeach
+                                </ul>
+                            @endif
+                            @php $proQualList = method_exists($user, 'professionalQualificationsList') ? $user->professionalQualificationsList() : []; @endphp
+                            @if($proQualList !== [])
+                                <p><strong>Professional Qualifications:</strong></p>
+                                <ul>
+                                    @foreach($proQualList as $q)
+                                        <li>{{ $q }}</li>
                                     @endforeach
                                 </ul>
                             @endif
@@ -88,7 +97,7 @@
                                 <p><strong>Map location:</strong> Set (used for nearby trainer search)</p>
                             @endif
                             @if($expertiseList !== [])
-                                <p><strong>Expertise:</strong> {{ implode(', ', $expertiseList) }}</p>
+                                <p><strong>Areas of Expertise:</strong> {{ implode(', ', $expertiseList) }}</p>
                             @endif
                             @if($methodLabels !== [])
                                 <p><strong>Teaching Methodology:</strong> {{ implode(', ', $methodLabels) }}</p>
@@ -229,26 +238,7 @@
                                 {{-- Instructor Fields --}}
                                 @if(optional($user->roles->first())->name === 'instructor')
                                     <div class="col-md-12" id="instructor-fields">
-                                        <h3 class="profile-section-heading">Summary of your profile</h3>
-                                        <div class="form-group">
-                                            <label for="short_description">Short summary <span id="short_char_count" class="text-muted">(0 / 500 Characters)</span></label>
-                                            <textarea name="short_description" id="short_description" class="form-control" rows="3"
-                                                placeholder="Define yourself shortly...">{!! old('short_description', $user->short_description) !!}</textarea>
-                                        </div>
-
-                                        <h3 class="profile-section-heading">Teaching Experience</h3>
-                                        <div class="form-group">
-                                            <label for="experience">Summary about your Teaching Experience <span id="experience_char_count" class="text-muted">(0 / 1500 Characters)</span></label>
-                                            <textarea name="experience" id="experience" class="form-control" rows="3"
-                                                placeholder="Describe experience...">{!! old('experience', $user->experience)  !!}</textarea>
-                                        </div>
-
-                                        <h3 class="profile-section-heading">Detailed Profile</h3>
-                                        <div class="form-group">
-                                            <label for="long_description">Biography / detailed profile <span id="long_char_count" class="text-muted">(0 / 3000 Characters)</span></label>
-                                            <textarea name="long_description" id="long_description" class="form-control" rows="3"
-                                                placeholder="Define yourself shortly...">{!! old('long_description', $user->long_description) !!}</textarea>
-                                        </div>
+                                        @include('admin.user._instructor_profile_sections', ['user' => $user])
 
                                         <h3 class="profile-section-heading">LinkedIn</h3>
                                         <div class="form-group">
@@ -258,25 +248,7 @@
                                                 value="{{ old('linkedin', $user->linkedin) }}">
                                         </div>
 
-                                        <h3 class="profile-section-heading">Education</h3>
-                                        <div class="form-group mt-3">
-                                            <label for="education[]">Education</label>
-                                            <div id="education-wrapper">
-                                                @foreach(old('education', json_decode($user->education ?? '[]', true) ?? []) as $edu)
-                                                    <div class="form-group mb-2 education-group">
-                                                        <input type="text" name="education[]" class="form-control"
-                                                            placeholder="Enter education" value="{{ $edu }}">
-                                                        @if(!$loop->first)
-                                                            <button type="button" class="btn btn-danger btn-sm remove-education"
-                                                                style="margin-left: 10px; float: right; margin-top: 10px;">Remove</button>
-                                                        @endif
-                                                    </div>
-                                                @endforeach
-                                            </div>
-                                            <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addEducationInput()">Add More</button>
-                                        </div>
-
-                                        <h3 class="profile-section-heading">Expertise, availability &amp; methodology</h3>
+                                        <h3 class="profile-section-heading">Availability &amp; methodology</h3>
                                         @include('admin.user._instructor_extra_fields', ['user' => $user])
 
                                         <h3 class="profile-section-heading">Map location</h3>
@@ -334,12 +306,24 @@
     function addEducationInput() {
         $('#education-wrapper').append(`
             <div class="form-group mb-2 education-group">
-                <input type="text" name="education[]" class="form-control" placeholder="Enter education">
+                <input type="text" name="education[]" class="form-control" placeholder="e.g. MBA, MSc…">
                 <button type="button" class="btn btn-danger btn-sm remove-education"
                     style="margin-left: 10px; float: right; margin-top: 10px;">Remove</button>
             </div>
         `);
     }
+
+    $('#pro-qual-wrapper').on('click', '.remove-pro-qual', function () {
+        $(this).closest('.pro-qual-group').remove();
+    });
+    $('#add-pro-qual-btn').on('click', function () {
+        $('#pro-qual-wrapper').append(`
+            <div class="form-group mb-2 pro-qual-group">
+                <input type="text" name="professional_qualifications[]" class="form-control" placeholder="e.g. CFA, ACCA, PMP…">
+                <button type="button" class="btn btn-danger btn-sm remove-pro-qual" style="margin-left:10px;float:right;margin-top:10px;">Remove</button>
+            </div>
+        `);
+    });
 
     $('#expertise-wrapper').on('click', '.remove-expertise', function () {
         $(this).closest('.expertise-group').remove();
@@ -347,7 +331,7 @@
     $('#add-expertise-btn').on('click', function () {
         $('#expertise-wrapper').append(`
             <div class="form-group mb-2 expertise-group">
-                <input type="text" name="expertise[]" class="form-control" placeholder="Enter expertise">
+                <input type="text" name="expertise[]" class="form-control" placeholder="Enter area of expertise">
                 <button type="button" class="btn btn-danger btn-sm remove-expertise" style="margin-left:10px;float:right;margin-top:10px;">Remove</button>
             </div>
         `);
@@ -378,9 +362,6 @@
     }
 
     $(document).ready(function () {
-        let shortEditorElement = document.getElementById('short_description');
-        let longEditorElement = document.getElementById('long_description');
-        let experienceElement = document.getElementById('experience');
         var editorOpts = {
             toolbar: [
                 'heading', '|', 'bold', 'italic', '|',
@@ -392,23 +373,22 @@
             ],
         };
 
-        if (shortEditorElement) {
-            ClassicEditor.create(shortEditorElement, editorOpts)
-            .then(editor => { bindEditorCounter(editor, 'short_char_count', 500); })
-            .catch(error => { console.error('CKEditor initialization error:', error); });
-        }
+        var editors = [
+            { id: 'short_description', counter: 'short_char_count', max: 500 },
+            { id: 'experience', counter: 'experience_char_count', max: 2000 },
+            { id: 'executive_experience', counter: 'executive_char_count', max: 2000 },
+            { id: 'training_expertise', counter: 'training_char_count', max: 2000 },
+            { id: 'corporate_training', counter: 'corporate_char_count', max: 2000 },
+            { id: 'institutions', counter: 'institutions_char_count', max: 2000 },
+        ];
 
-        if (longEditorElement) {
-            ClassicEditor.create(longEditorElement, editorOpts)
-            .then(editor => { bindEditorCounter(editor, 'long_char_count', 3000); })
-            .catch(error => { console.error('CKEditor initialization error:', error); });
-        }
-
-        if (experienceElement) {
-            ClassicEditor.create(experienceElement, editorOpts)
-            .then(editor => { bindEditorCounter(editor, 'experience_char_count', 1500); })
-            .catch(error => { console.error('CKEditor initialization error:', error); });
-        }
+        editors.forEach(function (cfg) {
+            var el = document.getElementById(cfg.id);
+            if (!el || typeof ClassicEditor === 'undefined') return;
+            ClassicEditor.create(el, editorOpts)
+                .then(function (editor) { bindEditorCounter(editor, cfg.counter, cfg.max); })
+                .catch(function (error) { console.error('CKEditor initialization error:', error); });
+        });
     });
 </script>
 @endpush

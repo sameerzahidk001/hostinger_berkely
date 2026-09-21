@@ -1,9 +1,5 @@
 @php
     \App\Models\User::ensureInstructorExtraColumns();
-    $expertiseRows = old('expertise', $user->expertiseList());
-    if ($expertiseRows === []) {
-        $expertiseRows = [''];
-    }
     $methodOptions = \App\Models\User::teachingMethodologyOptions();
     $selectedMethods = old('teaching_methodology', $user->teachingMethodologyList());
     $availability = old('availability', $user->availabilityData());
@@ -26,21 +22,6 @@
     $dayCodes = ['MO' => 'Mon', 'TU' => 'Tue', 'WE' => 'Wed', 'TH' => 'Thu', 'FR' => 'Fri', 'SA' => 'Sat', 'SU' => 'Sun'];
     $tzOptions = \App\Models\ClassSchedule::timezoneOptions();
 @endphp
-
-<div class="form-group mt-3">
-    <label for="expertise[]">Expertise</label>
-    <div id="expertise-wrapper">
-        @foreach($expertiseRows as $i => $item)
-            <div class="form-group mb-2 expertise-group">
-                <input type="text" name="expertise[]" class="form-control" placeholder="Enter expertise" value="{{ $item }}">
-                @if($i > 0)
-                    <button type="button" class="btn btn-danger btn-sm remove-expertise" style="margin-left:10px;float:right;margin-top:10px;">Remove</button>
-                @endif
-            </div>
-        @endforeach
-    </div>
-    <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="add-expertise-btn">Add More</button>
-</div>
 
 <div class="form-group mt-4">
     <label>Instructor’s availability</label>

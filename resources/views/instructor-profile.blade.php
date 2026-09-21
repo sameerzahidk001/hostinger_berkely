@@ -329,13 +329,17 @@
                     @php
                         \App\Models\User::ensureInstructorExtraColumns();
                         $educationList = method_exists($instructor, 'educationList') ? $instructor->educationList() : [];
+                        $proQualList = method_exists($instructor, 'professionalQualificationsList') ? $instructor->professionalQualificationsList() : [];
                         $expertiseList = method_exists($instructor, 'expertiseList') ? $instructor->expertiseList() : [];
                         $methodList = method_exists($instructor, 'teachingMethodologyList') ? $instructor->teachingMethodologyList() : [];
                         $methodLabels = array_values(array_intersect_key(\App\Models\User::teachingMethodologyOptions(), array_flip($methodList)));
                         $availLines = method_exists($instructor, 'availabilityDisplayLines') ? $instructor->availabilityDisplayLines() : [];
-                        $hasShort = !empty(trim(strip_tags((string) ($instructor->short_description ?? ''))));
-                        $hasExperience = !empty(trim(strip_tags((string) ($instructor->experience ?? ''))));
-                        $hasBio = !empty(trim(strip_tags((string) ($instructor->long_description ?? ''))));
+                        $hasProfessional = \App\Models\User::hasRichTextContent($instructor->short_description ?? null);
+                        $hasExecutive = \App\Models\User::hasRichTextContent($instructor->executive_experience ?? null);
+                        $hasTeaching = \App\Models\User::hasRichTextContent($instructor->experience ?? null);
+                        $hasTraining = \App\Models\User::hasRichTextContent($instructor->training_expertise ?? null);
+                        $hasCorporate = \App\Models\User::hasRichTextContent($instructor->corporate_training ?? null);
+                        $hasInstitutions = \App\Models\User::hasRichTextContent($instructor->institutions ?? null);
                     @endphp
                     <p class="hero-kicker">Trainer Profile</p>
                     <h3>{{ $instructor->name }}
@@ -350,10 +354,10 @@
                         @endif
                     </h3>
                     @if($educationList !== [])
-                        <p class="hero-meta"><strong>Education:</strong> {{ implode(', ', $educationList) }}</p>
+                        <p class="hero-meta"><strong>Academic Qualifications:</strong> {{ implode(', ', $educationList) }}</p>
                     @endif
                     @if($expertiseList !== [])
-                        <p class="hero-meta"><strong>Expertise:</strong> {{ implode(', ', $expertiseList) }}</p>
+                        <p class="hero-meta"><strong>Areas of Expertise:</strong> {{ implode(', ', $expertiseList) }}</p>
                     @endif
                 </div>
             </div>
@@ -361,10 +365,78 @@
 
         <!-- DETAILS SECTION -->
         <div class="instructor-about">
-            @if($hasShort)
+            @if($hasProfessional)
                 <div class="profile-section">
-                    <h3>Short Profile</h3>
+                    <h3>Professional Profile</h3>
                     <div class="section-body">{!! $instructor->short_description !!}</div>
+                </div>
+            @endif
+
+            @if($educationList !== [])
+                <div class="profile-section">
+                    <h3>Academic Qualifications</h3>
+                    <div class="section-body">
+                        <ul>
+                            @foreach($educationList as $item)
+                                <li>{{ $item }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                </div>
+            @endif
+
+            @if($proQualList !== [])
+                <div class="profile-section">
+                    <h3>Professional Qualifications &amp; Certifications</h3>
+                    <div class="section-body">
+                        <ul>
+                            @foreach($proQualList as $item)
+                                <li>{{ $item }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                </div>
+            @endif
+
+            @if($hasExecutive)
+                <div class="profile-section">
+                    <h3>Executive &amp; Industry Experience</h3>
+                    <div class="section-body">{!! $instructor->executive_experience !!}</div>
+                </div>
+            @endif
+
+            @if($hasTeaching)
+                <div class="profile-section">
+                    <h3>Teaching &amp; Academic Experience</h3>
+                    <div class="section-body">{!! $instructor->experience !!}</div>
+                </div>
+            @endif
+
+            @if($hasTraining)
+                <div class="profile-section">
+                    <h3>Professional Training Expertise</h3>
+                    <div class="section-body">{!! $instructor->training_expertise !!}</div>
+                </div>
+            @endif
+
+            @if($hasCorporate)
+                <div class="profile-section">
+                    <h3>Corporate &amp; Executive Training Experience</h3>
+                    <div class="section-body">{!! $instructor->corporate_training !!}</div>
+                </div>
+            @endif
+
+            @if($expertiseList !== [])
+                <div class="profile-section">
+                    <h3>Areas of Expertise</h3>
+                    <div class="section-body">{{ implode(', ', $expertiseList) }}</div>
+                </div>
+            @endif
+
+            @if($hasInstitutions)
+                <div class="profile-section">
+                    <h3>Institutions &amp; Organisations</h3>
+                    <div class="section-body">{!! $instructor->institutions !!}</div>
                 </div>
             @endif
 
@@ -388,23 +460,9 @@
                 </div>
             @endif
 
-            @if($hasExperience)
+            @if(! $hasProfessional && $educationList === [] && $proQualList === [] && ! $hasExecutive && ! $hasTeaching && ! $hasTraining && ! $hasCorporate && $expertiseList === [] && ! $hasInstitutions && $methodLabels === [] && $availLines === [])
                 <div class="profile-section">
-                    <h3>Experience</h3>
-                    <div class="section-body">{!! $instructor->experience !!}</div>
-                </div>
-            @endif
-
-            @if($hasBio)
-                <div class="profile-section">
-                    <h3>Biography</h3>
-                    <div class="section-body">{!! $instructor->long_description !!}</div>
-                </div>
-            @endif
-
-            @if(! $hasShort && $methodLabels === [] && $availLines === [] && ! $hasExperience && ! $hasBio)
-                <div class="profile-section">
-                    <h3>Biography</h3>
+                    <h3>Professional Profile</h3>
                     <div class="section-body"><p>This instructor has not added profile details yet.</p></div>
                 </div>
             @endif
