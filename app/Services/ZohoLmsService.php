@@ -72,6 +72,10 @@ class ZohoLmsService
         if ($account) {
             $schedule->meeting_account_id = $account->id;
         }
+        if (! empty($meeting['meeting_key'])) {
+            ClassSchedule::ensureMeetingKeyColumn();
+            $schedule->meeting_key = (string) $meeting['meeting_key'];
+        }
         $schedule->save();
 
         return 'created';
@@ -180,6 +184,72 @@ class ZohoLmsService
             'meeting_key' => $session['meetingKey'] ?? null,
             'host_email' => $host['email'],
         ];
+    }
+
+    /**
+     * Update an existing Zoho Meeting session (time / duration / timezone / topic).
+     */
+    public function updateMeetingForSchedule(
+        ClassSchedule $schedule,
+        ?\App\Models\MeetingAccount $account,
+        string $meetingKey
+    ): bool {
+        $schedule->loadMissing(['course', 'instructor', 'students']);
+        $orgId = $this->orgId($account);
+        $host = $this->resolveMeetingHost($account);
+        $timezone = $schedule->timezoneName();
+        if (! $orgId || ! $host) {
+            Log::warning('Zoho Meeting update missing org or host', [
+                'account_id' => $account?->id,
+                'schedule_id' => $schedule->id,
+            ]);
+
+            return false;
+        }
+
+        $start = $schedule->scheduled_at
+            ->copy()
+            ->shiftTimezone($timezone)
+            ->format('M j, Y h:i A');
+
+        $participants = $schedule->students
+            ->pluck('email')
+            ->filter()
+            ->unique()
+            ->reject(fn ($email) => strcasecmp((string) $email, (string) $host['email']) === 0)
+            ->map(fn ($email) => ['email' => $email])
+            ->values()
+            ->all();
+
+        $payload = [
+            'session' => [
+                'topic' => $schedule->calendarTitle(),
+                'agenda' => trim(($schedule->course->title ?? '') . "\n" . ($schedule->notes ?? '')),
+                'presenter' => (int) $host['zuid'],
+                'startTime' => $start,
+                'duration' => $schedule->durationMinutes() * 60 * 1000,
+                'timezone' => $timezone,
+                'participants' => $participants,
+            ],
+        ];
+
+        $response = $this->meetingClient($account)->put(
+            '/api/v2/' . $orgId . '/sessions/' . rawurlencode($meetingKey) . '.json',
+            $payload
+        );
+
+        if (! $response->successful()) {
+            Log::error('Zoho Meeting update failed', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+                'meeting_key' => $meetingKey,
+                'schedule_id' => $schedule->id,
+            ]);
+
+            return false;
+        }
+
+        return true;
     }
 
     public function createCalendarEventForSchedule(ClassSchedule $schedule, ?\App\Models\MeetingAccount $account = null): ?array

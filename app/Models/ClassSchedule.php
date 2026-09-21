@@ -44,6 +44,7 @@ class ClassSchedule extends Model
         'reminders',
         'zoho_link',
         'zoho_calendar_event_uid',
+        'meeting_key',
         'title',
         'notes',
         'status',
@@ -157,6 +158,51 @@ class ClassSchedule extends Model
         });
 
         return Schema::hasColumn('class_schedules', 'timezone');
+    }
+
+    /**
+     * Hostinger deploys often skip artisan migrate; ensure meeting_key for reschedule APIs.
+     */
+    public static function ensureMeetingKeyColumn(): bool
+    {
+        if (! Schema::hasTable('class_schedules')) {
+            return false;
+        }
+
+        if (Schema::hasColumn('class_schedules', 'meeting_key')) {
+            return true;
+        }
+
+        Schema::table('class_schedules', function (Blueprint $table) {
+            $table->string('meeting_key', 64)->nullable()->after('zoho_link');
+        });
+
+        return Schema::hasColumn('class_schedules', 'meeting_key');
+    }
+
+    public function resolveMeetingKey(): ?string
+    {
+        $key = trim((string) ($this->meeting_key ?? ''));
+        if ($key !== '') {
+            return $key;
+        }
+
+        $link = trim((string) ($this->zoho_link ?? ''));
+        if ($link === '') {
+            return null;
+        }
+
+        if (preg_match('/[?&]key=([0-9A-Za-z_-]+)/', $link, $m)) {
+            return $m[1];
+        }
+        if (preg_match('#/j/(\d+)#', $link, $m)) {
+            return $m[1];
+        }
+        if (preg_match('#/meeting/(\d+)#', $link, $m)) {
+            return $m[1];
+        }
+
+        return null;
     }
 
     public function recurrenceType(): string

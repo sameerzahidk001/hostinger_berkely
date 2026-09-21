@@ -25,6 +25,7 @@ class MeetingLinkService
     public function attachIntegrations(ClassSchedule $schedule): array
     {
         $this->lastError = null;
+        ClassSchedule::ensureMeetingKeyColumn();
         $account = $this->resolveAccount($schedule);
 
         $meeting = $this->attachMeetingIfNeeded($schedule, $account);
@@ -34,6 +35,39 @@ class MeetingLinkService
             'calendar' => $account && $account->isZoho()
                 ? $this->zoho->attachCalendarIfNeeded($schedule, $account)
                 : 'skipped',
+            'error' => $this->lastError,
+        ];
+    }
+
+    /**
+     * After schedule edit: create link if missing, otherwise update Zoho/Zoom when time changed.
+     *
+     * @return array{meeting: string, calendar: string, error?: string|null}
+     */
+    public function syncAfterScheduleUpdate(ClassSchedule $schedule, bool $timeChanged): array
+    {
+        $this->lastError = null;
+        ClassSchedule::ensureMeetingKeyColumn();
+        $schedule->refresh();
+
+        if (! filled($schedule->zoho_link)) {
+            return $this->attachIntegrations($schedule);
+        }
+
+        if (! $timeChanged) {
+            return [
+                'meeting' => 'existing',
+                'calendar' => 'skipped',
+                'error' => null,
+            ];
+        }
+
+        $account = $this->resolveAccount($schedule);
+        $updated = $this->updateMeetingIfPossible($schedule, $account);
+
+        return [
+            'meeting' => $updated,
+            'calendar' => 'skipped',
             'error' => $this->lastError,
         ];
     }
@@ -68,6 +102,58 @@ class MeetingLinkService
             fn () => $this->zoho->createMeetingForSchedule($schedule, $account),
             'Zoho'
         );
+    }
+
+    public function updateMeetingIfPossible(ClassSchedule $schedule, ?MeetingAccount $account = null): string
+    {
+        $account = $account ?: $this->resolveAccount($schedule);
+        if (! $account || ! $account->is_active) {
+            $this->lastError = 'No active meeting account is selected for this session.';
+
+            return 'not_configured';
+        }
+
+        $meetingKey = $schedule->resolveMeetingKey();
+        if (! $meetingKey) {
+            $this->lastError = 'Cannot update remote meeting — missing meeting key. Re-create the Join link or paste a new one.';
+
+            return 'failed';
+        }
+
+        try {
+            if ($account->isZoom()) {
+                if (! $this->zoom->isReady($account)) {
+                    $this->lastError = 'Zoom account has no API credentials — update the time in Zoom manually, or paste a new Join URL.';
+
+                    return 'manual_required';
+                }
+                $ok = $this->zoom->updateMeetingForSchedule($schedule, $account, $meetingKey);
+            } else {
+                $ok = $this->zoho->updateMeetingForSchedule($schedule, $account, $meetingKey);
+            }
+        } catch (Throwable $e) {
+            Log::error('Meeting update threw', [
+                'schedule_id' => $schedule->id,
+                'message' => $e->getMessage(),
+            ]);
+            $this->lastError = 'Meeting update API error: ' . $e->getMessage();
+
+            return 'failed';
+        }
+
+        if (! $ok) {
+            $this->lastError = $this->lastError
+                ?: 'Remote meeting was not updated. Check Meeting Account credentials / host.';
+
+            return 'failed';
+        }
+
+        if (blank($schedule->meeting_key)) {
+            $schedule->meeting_key = $meetingKey;
+            $schedule->save();
+        }
+
+        return 'updated';
     }
 
     /**
@@ -128,6 +214,9 @@ class MeetingLinkService
 
             $schedule->zoho_link = $meeting['join_link'];
             $schedule->meeting_account_id = $account->id;
+            if (! empty($meeting['meeting_key'])) {
+                $schedule->meeting_key = (string) $meeting['meeting_key'];
+            }
             $schedule->save();
 
             return 'created';

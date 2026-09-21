@@ -162,6 +162,7 @@ class ClassScheduleController extends Controller
     {
         ClassSchedule::ensureRecurrenceColumns();
         ClassSchedule::ensureTimezoneColumn();
+        ClassSchedule::ensureMeetingKeyColumn();
 
         $validator = Validator::make($request->all(), $this->scheduleRules($request));
 
@@ -319,6 +320,7 @@ class ClassScheduleController extends Controller
     {
         ClassSchedule::ensureRecurrenceColumns();
         ClassSchedule::ensureTimezoneColumn();
+        ClassSchedule::ensureMeetingKeyColumn();
 
         $schedule = ClassSchedule::with('batch')->findOrFail($id);
         $this->assertCanManageSchedule($schedule);
@@ -333,6 +335,12 @@ class ClassScheduleController extends Controller
 
         $batch = ClassBatch::with('students')->findOrFail((int) $request->input('batch_id'));
         $this->assertCanUseBatch($batch);
+
+        $beforeAt = optional($schedule->scheduled_at)->format('Y-m-d H:i:s');
+        $beforeTz = (string) ($schedule->timezone ?? '');
+        $beforeDuration = (int) ($schedule->duration_minutes ?: 60);
+        $beforeTitle = (string) ($schedule->title ?? '');
+        $beforeNotes = (string) ($schedule->notes ?? '');
 
         $schedule->fill($request->only([
             'instructor_id', 'head_of_faculty_id', 'meeting_account_id',
@@ -354,7 +362,14 @@ class ClassScheduleController extends Controller
         $studentIds = $this->resolveScheduleStudentIds($request, $batch);
         $schedule->students()->sync($studentIds);
 
-        $zohoStatus = $this->meetings->attachIntegrations($schedule);
+        $afterAt = optional($schedule->scheduled_at)->format('Y-m-d H:i:s');
+        $timeChanged = $beforeAt !== $afterAt
+            || $beforeTz !== (string) ($schedule->timezone ?? '')
+            || $beforeDuration !== (int) ($schedule->duration_minutes ?: 60)
+            || $beforeTitle !== (string) ($schedule->title ?? '')
+            || $beforeNotes !== (string) ($schedule->notes ?? '');
+
+        $zohoStatus = $this->meetings->syncAfterScheduleUpdate($schedule, $timeChanged);
 
         return redirect()
             ->route('admin.class-schedules.batch', $batch->id)
@@ -631,10 +646,11 @@ class ClassScheduleController extends Controller
         $parts = [$base];
         $meetingNote = match ($meetingStatus) {
             'created' => 'Meeting Join link was created automatically.',
+            'updated' => 'Zoho/Zoom meeting time was updated to match this schedule.',
             'existing' => 'Meeting Join link was saved.',
             'manual_required' => 'Zoom selected — paste the Zoom Join URL in Meeting link (required), or add Zoom Server-to-Server OAuth credentials on the Meeting Account to auto-create.',
             'not_configured' => 'Selected meeting account is missing or not ready, so the Join link could not be auto-created. Check Meeting Accounts.',
-            'failed' => 'Meeting Join link was not created automatically.'
+            'failed' => 'Meeting Join link was not created/updated automatically.'
                 . (! empty($zohoStatus['error']) ? ' ' . $zohoStatus['error'] : ' If the host email is not the Zoho OAuth user (e.g. sk@ while OAuth is bdm@), open Meeting Accounts and set Presenter ZUID for that host.'),
             default => 'Meeting Join link was not created automatically.'
                 . (! empty($zohoStatus['error']) ? ' ' . $zohoStatus['error'] : ''),

@@ -179,19 +179,122 @@ class User extends Authenticatable implements MustVerifyEmail
         $data = $data ?? [];
         $frequency = ($data['frequency'] ?? 'particular') === 'daily' ? 'daily' : 'particular';
         $days = array_values(array_filter(array_map('strval', (array) ($data['days'] ?? []))));
+        $allowedDays = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
+        $days = array_values(array_intersect($days, $allowedDays));
         if ($frequency === 'daily') {
             $days = [];
         }
         $flexible = in_array($data['flexible'] ?? 'no', [true, 1, '1', 'yes', 'Yes'], true) ? 'yes' : 'no';
 
+        $daySlots = [];
+        $rawSlots = is_array($data['day_slots'] ?? null) ? $data['day_slots'] : [];
+        foreach ($days as $code) {
+            $slot = is_array($rawSlots[$code] ?? null) ? $rawSlots[$code] : [];
+            $start = trim((string) ($slot['start_time'] ?? ''));
+            $end = trim((string) ($slot['end_time'] ?? ''));
+            $tz = trim((string) ($slot['timezone'] ?? ($data['timezone'] ?? 'Asia/Dubai')));
+            if ($tz === '') {
+                $tz = 'Asia/Dubai';
+            }
+            if ($start === '' && $end === '') {
+                continue;
+            }
+            $daySlots[$code] = [
+                'start_time' => $start,
+                'end_time' => $end,
+                'timezone' => $tz,
+            ];
+        }
+
         return json_encode([
             'frequency' => $frequency,
             'days' => $days,
+            'day_slots' => $daySlots,
             'start_time' => (string) ($data['start_time'] ?? ''),
             'end_time' => (string) ($data['end_time'] ?? ''),
             'timezone' => (string) ($data['timezone'] ?? 'Asia/Dubai'),
             'flexible' => $flexible,
         ]);
+    }
+
+    /**
+     * Human-readable availability lines for public / view profile.
+     *
+     * @return list<string>
+     */
+    public function availabilityDisplayLines(): array
+    {
+        $availability = $this->availabilityData();
+        if ($availability === []) {
+            return [];
+        }
+
+        $dayCodes = ['MO' => 'Mon', 'TU' => 'Tue', 'WE' => 'Wed', 'TH' => 'Thu', 'FR' => 'Fri', 'SA' => 'Sat', 'SU' => 'Sun'];
+        $flexible = in_array($availability['flexible'] ?? 'no', ['yes', true, 1, '1'], true);
+        $lines = [];
+
+        if (($availability['frequency'] ?? '') === 'daily') {
+            $time = trim(($availability['start_time'] ?? '') . (($availability['start_time'] ?? '') && ($availability['end_time'] ?? '') ? ' – ' : '') . ($availability['end_time'] ?? ''));
+            $tz = trim((string) ($availability['timezone'] ?? ''));
+            $line = 'Daily';
+            if ($time !== '') {
+                $line .= ' · ' . $time;
+            }
+            if ($tz !== '') {
+                $line .= ' (' . $tz . ')';
+            }
+            if ($flexible) {
+                $line .= ' · Flexible';
+            }
+            if ($time !== '' || $tz !== '') {
+                $lines[] = $line;
+            }
+
+            return $lines;
+        }
+
+        $days = $availability['days'] ?? [];
+        $slots = is_array($availability['day_slots'] ?? null) ? $availability['day_slots'] : [];
+        $legacyStart = trim((string) ($availability['start_time'] ?? ''));
+        $legacyEnd = trim((string) ($availability['end_time'] ?? ''));
+        $legacyTz = trim((string) ($availability['timezone'] ?? ''));
+
+        foreach ((array) $days as $code) {
+            $code = (string) $code;
+            $label = $dayCodes[$code] ?? $code;
+            $slot = is_array($slots[$code] ?? null) ? $slots[$code] : [];
+            $start = trim((string) ($slot['start_time'] ?? $legacyStart));
+            $end = trim((string) ($slot['end_time'] ?? $legacyEnd));
+            $tz = trim((string) ($slot['timezone'] ?? $legacyTz));
+            $time = trim($start . ($start && $end ? ' – ' : '') . $end);
+            if ($time === '' && $tz === '') {
+                continue;
+            }
+            $line = $label;
+            if ($time !== '') {
+                $line .= ' · ' . $time;
+            }
+            if ($tz !== '') {
+                $line .= ' (' . $tz . ')';
+            }
+            $lines[] = $line;
+        }
+
+        if ($lines === [] && ($legacyStart !== '' || $legacyEnd !== '')) {
+            $time = trim($legacyStart . ($legacyStart && $legacyEnd ? ' – ' : '') . $legacyEnd);
+            $line = collect((array) $days)->map(fn ($d) => $dayCodes[$d] ?? $d)->filter()->implode(', ');
+            $line = ($line !== '' ? $line : 'Particular days') . ($time !== '' ? ' · ' . $time : '');
+            if ($legacyTz !== '') {
+                $line .= ' (' . $legacyTz . ')';
+            }
+            $lines[] = $line;
+        }
+
+        if ($flexible && $lines !== []) {
+            $lines[count($lines) - 1] .= ' · Flexible';
+        }
+
+        return $lines;
     }
 
     public function applyInstructorExtraFields(\Illuminate\Http\Request $request): void

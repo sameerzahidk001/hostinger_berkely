@@ -477,7 +477,13 @@
             `);
         });
         $(document).on('change', 'input[name="availability[frequency]"]', function () {
-            $('#availability-days-wrap').toggle($(this).val() === 'particular');
+            var particular = $(this).val() === 'particular';
+            $('#availability-days-wrap').toggle(particular);
+            $('#availability-daily-times').toggle(!particular);
+        });
+        $(document).on('change', '.js-avail-day', function () {
+            var day = $(this).data('day');
+            $('.js-avail-day-times[data-day="' + day + '"]').toggle(this.checked);
         });
     });
 </script>

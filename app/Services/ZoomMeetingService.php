@@ -82,6 +82,62 @@ class ZoomMeetingService
         ];
     }
 
+    /**
+     * Update an existing Zoom meeting (time / duration / timezone / topic).
+     */
+    public function updateMeetingForSchedule(
+        ClassSchedule $schedule,
+        MeetingAccount $account,
+        string $meetingId
+    ): bool {
+        if (! $this->isReady($account)) {
+            return false;
+        }
+
+        $schedule->loadMissing(['course', 'instructor']);
+        $token = $this->accessToken($account);
+        if (! $token) {
+            return false;
+        }
+
+        $timezone = $schedule->timezoneName();
+        $start = $schedule->scheduled_at
+            ? $schedule->scheduled_at->copy()->shiftTimezone($timezone)
+            : null;
+        if (! $start) {
+            return false;
+        }
+
+        $payload = [
+            'topic' => $schedule->calendarTitle(),
+            'type' => 2,
+            'start_time' => $start->format('Y-m-d\TH:i:s'),
+            'timezone' => $timezone,
+            'duration' => $schedule->durationMinutes(),
+            'agenda' => trim(($schedule->course->title ?? '') . "\n" . ($schedule->notes ?? '')),
+        ];
+
+        $response = $this->http()
+            ->withToken($token)
+            ->acceptJson()
+            ->asJson()
+            ->patch('https://api.zoom.us/v2/meetings/' . rawurlencode($meetingId), $payload);
+
+        if (! $response->successful()) {
+            Log::error('Zoom Meeting update failed', [
+                'status' => $response->status(),
+                'body' => $response->body(),
+                'meeting_id' => $meetingId,
+                'schedule_id' => $schedule->id,
+                'account_id' => $account->id,
+            ]);
+
+            return false;
+        }
+
+        return true;
+    }
+
     protected function accessToken(MeetingAccount $account): ?string
     {
         $cacheKey = 'zoom_s2s_token_' . $account->id;
