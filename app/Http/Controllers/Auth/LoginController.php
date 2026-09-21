@@ -31,7 +31,25 @@ class LoginController extends Controller
             return redirect()->intended($this->redirectTo());
         }
 
+        $this->issueLoginCaptcha();
+
         return view('auth.login');
+    }
+
+    /**
+     * @return array{0:int,1:int}
+     */
+    protected function issueLoginCaptcha(): array
+    {
+        $captchaA = random_int(1, 9);
+        $captchaB = random_int(1, 9);
+        session([
+            'login_captcha_answer' => $captchaA + $captchaB,
+            'login_captcha_a' => $captchaA,
+            'login_captcha_b' => $captchaB,
+        ]);
+
+        return [$captchaA, $captchaB];
     }
 
     /**
@@ -46,14 +64,25 @@ class LoginController extends Controller
         $request->validate([
             'email' => 'required|email',
             'password' => 'required',
+            'captcha' => 'required|numeric',
         ]);
+
+        $expectedCaptcha = (int) session('login_captcha_answer', -1);
+        if ((int) $request->input('captcha') !== $expectedCaptcha) {
+            $this->issueLoginCaptcha();
+
+            throw ValidationException::withMessages([
+                'captcha' => 'Incorrect captcha answer. Please try again.',
+            ]);
+        }
 
         // Attempt authentication
         $credentials = $request->only('email', 'password');
-        $remember = $request->has('remember');
+        $remember = $request->boolean('remember') || $request->has('chk');
 
         $admin = Admin::where('email', $credentials['email'])->first();
         if ($admin && Hash::check($credentials['password'], $admin->password)) {
+            $this->issueLoginCaptcha();
             throw ValidationException::withMessages([
                 'email' => 'Admin accounts must sign in at ' . admin_login_url(),
             ]);
@@ -61,6 +90,7 @@ class LoginController extends Controller
 
         if (Auth::attempt($credentials, $remember)) {
             $request->session()->regenerate();
+            session()->forget(['login_captcha_answer', 'login_captcha_a', 'login_captcha_b']);
 
             $role = Auth::user()->roles()->value('name');
             if (is_admin_login_role($role)) {
@@ -107,6 +137,8 @@ class LoginController extends Controller
             // Redirect based on role
             return redirect()->intended($this->redirectTo());
         }
+
+        $this->issueLoginCaptcha();
 
         // Throw validation error if login fails
         throw ValidationException::withMessages([

@@ -224,6 +224,20 @@ a {
                                     <p class="text-danger text-xs italic">{{ $message }}</p>
                                 @enderror
                             </div>
+                            @php
+                                $captchaA = (int) session('login_captcha_a', 0);
+                                $captchaB = (int) session('login_captcha_b', 0);
+                            @endphp
+                            <div class="row px-3">
+                                <label class="mb-1"><h6 class="mb-0 text-sm">Captcha</h6></label>
+                                <div class="d-flex align-items-center mb-2" style="gap:10px;">
+                                    <span class="text-sm font-weight-bold" style="white-space:nowrap;">{{ $captchaA }} + {{ $captchaB }} =</span>
+                                    <input class="mb-0 @error('captcha') border-danger @enderror" style="max-width:120px;" type="number" name="captcha" inputmode="numeric" placeholder="?" required autocomplete="off">
+                                </div>
+                                @error('captcha')
+                                    <p class="text-danger text-xs italic">{{ $message }}</p>
+                                @enderror
+                            </div>
                             <div class="row px-3 my-4">
                                 <div class="custom-control custom-checkbox custom-control-inline">
                                     <input id="chk1" type="checkbox" name="chk" class="custom-control-input"> 

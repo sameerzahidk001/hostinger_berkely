@@ -444,14 +444,17 @@ class WelcomeController extends Controller
             $query->where('city', 'like', "%{$city}%");
         }
 
+        if ($request->filled('specialisation')) {
+            $specialisation = trim((string) $request->input('specialisation'));
+            $query->where(function ($q) use ($specialisation) {
+                $q->where('expertise', 'like', "%{$specialisation}%")
+                    ->orWhere('education', 'like', "%{$specialisation}%");
+            });
+        }
+
         if ($request->filled('education')) {
             $education = trim((string) $request->input('education'));
             $query->where('education', 'like', "%{$education}%");
-        }
-
-        if ($request->filled('specialisation')) {
-            $specialisation = trim((string) $request->input('specialisation'));
-            $query->where('expertise', 'like', "%{$specialisation}%");
         }
 
         $availDay = trim((string) $request->input('avail_day', ''));

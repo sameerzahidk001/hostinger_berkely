@@ -273,6 +273,7 @@
     @if (isset($description))
         <div class="description cms-html">{!! render_cms_html($description) !!}</div>
     @endif
+    <h3 class="text-lg font-semibold text-[#000435] mb-3">Filter by:</h3>
     <form id="instructors-search-form">
         @php
             $facultyCourses = DB::table('courses')->orderBy('title')->get(['id', 'title']);
@@ -286,7 +287,7 @@
                 ->sort(SORT_NATURAL | SORT_FLAG_CASE)
                 ->values();
         @endphp
-        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <div>
                 <label class="block text-sm font-semibold mb-1" for="name">Name</label>
                 <input type="text" name="name" id="name" placeholder="Search by name…"
@@ -307,12 +308,7 @@
                 </select>
             </div>
             <div>
-                <label class="block text-sm font-semibold mb-1" for="education">Academic Qualifications</label>
-                <input type="text" name="education" id="education" placeholder="Search by academic qualifications…"
-                    class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-[#f8961f] focus:ring-[#f8961f]">
-            </div>
-            <div>
-                <label class="block text-sm font-semibold mb-1" for="specialisation">Professional Specialisation</label>
+                <label class="block text-sm font-semibold mb-1" for="specialisation">Professional &amp; Academic Specialisations</label>
                 <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm js-faculty-typefind" name="specialisation" id="specialisation" data-placeholder="Type to find specialisation…">
                     <option value=""></option>
                     @foreach ($specialisationOptions as $spec)
@@ -347,8 +343,6 @@
                     @endforeach
                 </select>
             </div>
-        </div>
-        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <div>
                 <label class="block text-sm font-semibold mb-1" for="distance_km">Within distance</label>
                 <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm" name="distance_km" id="distance_km">
@@ -360,16 +354,16 @@
                     <option value="100">100 km</option>
                 </select>
             </div>
-            <div class="flex gap-2 items-end md:col-span-1 lg:col-span-1">
-                <button type="button" id="use-my-location"
-                    class="border px-3 py-2 w-full border-[#000435] text-[#000435] rounded text-sm">
-                    Use my location
-                </button>
-            </div>
+        </div>
+        <div class="flex flex-wrap gap-3 items-end mb-4">
+            <button type="button" id="use-my-location"
+                class="border px-3 py-2 border-[#000435] text-[#000435] rounded text-sm">
+                Use my location
+            </button>
+            <p id="nearby-status" class="text-sm text-gray-600 mb-0">Optional: click “Use my location” to find instructors near you by distance.</p>
         </div>
         <input type="hidden" name="lat" id="search_lat" value="">
         <input type="hidden" name="lng" id="search_lng" value="">
-        <p id="nearby-status" class="text-sm text-gray-600 mb-4">Optional: click “Use my location” to find instructors near you by distance.</p>
         <div class="flex gap-2 items-end mb-8 max-w-md">
             <button
                 class="border px-4 py-2 w-full border-[#000435] bg-[#000435] transition-all delay-300 duration-300 content-center rounded uppercase text-white"
