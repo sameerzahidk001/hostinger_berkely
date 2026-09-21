@@ -65,8 +65,7 @@
                             <h5 style="margin:0;">Class Schedule</h5>
                             <div>
                                 <a href="{{ route('user.class-schedules.index') }}" class="btn btn-xs btn-default">View Schedule</a>
-                                <a href="{{ route('admin.class-schedules.index') }}" class="btn btn-xs btn-primary">Manage Schedules</a>
-                                <a href="{{ route('admin.class-schedules.create') }}" class="btn btn-xs btn-primary">Add session</a>
+                                <a href="{{ route('user.class-schedules.index') }}" class="btn btn-xs btn-primary">Add session</a>
                             </div>
                         </div>
                         <div class="ibox-content">

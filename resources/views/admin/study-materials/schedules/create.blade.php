@@ -1,6 +1,11 @@
-@extends('admin.layout.app')
+@extends((!empty($useInstructorPortal) || !empty($isInstructor)) ? 'user.layout.app' : 'admin.layout.app')
 @section('title', 'Create Class Schedule')
 @section('content')
+@php
+    $cancelUrl = (!empty($useInstructorPortal) || !empty($isInstructor))
+        ? route('user.class-schedules.index')
+        : route('admin.class-schedules.index');
+@endphp
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
         <h2>Create Class Schedule</h2>
@@ -130,7 +135,7 @@
                     </div>
                 </div>
                 <button type="submit" class="btn btn-primary">Save</button>
-                <a href="{{ route('admin.class-schedules.index') }}" class="btn btn-default">Cancel</a>
+                <a href="{{ $cancelUrl }}" class="btn btn-default">Cancel</a>
             </form>
         </div>
     </div>

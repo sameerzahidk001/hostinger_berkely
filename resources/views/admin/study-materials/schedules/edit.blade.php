@@ -1,6 +1,13 @@
-@extends('admin.layout.app')
+@extends((!empty($useInstructorPortal) || !empty($isInstructor)) ? 'user.layout.app' : 'admin.layout.app')
 @section('title', 'Edit Class Schedule')
 @section('content')
+@php
+    $cancelUrl = (!empty($useInstructorPortal) || !empty($isInstructor))
+        ? (($schedule->batch_id)
+            ? route('user.class-schedules.batch', $schedule->batch_id)
+            : route('user.class-schedules.index'))
+        : route('admin.class-schedules.index');
+@endphp
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10"><h2>Edit Class Schedule</h2></div>
 </div>
@@ -122,7 +129,7 @@
                 </div>
                 <button type="submit" class="btn btn-primary">Update</button>
                 <a href="{{ route('admin.class-schedules.ics', $schedule->id) }}" class="btn btn-default">Add to Zoho Calendar (.ics)</a>
-                <a href="{{ route('admin.class-schedules.index') }}" class="btn btn-white">Cancel</a>
+                <a href="{{ $cancelUrl }}" class="btn btn-white">Cancel</a>
             </form>
         </div>
     </div>

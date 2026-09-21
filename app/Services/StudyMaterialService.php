@@ -609,13 +609,8 @@ class StudyMaterialService
             ->where('student_id', $studentId)
             ->whereHas('folder')
             ->where(function ($q) {
-                $q->where('status', 'disabled')
-                    ->orWhere(function ($open) {
-                        $open->where('status', 'active')
-                            ->where(function ($till) {
-                                $till->whereNull('access_till')->orWhereDate('access_till', '>=', now()->toDateString());
-                            });
-                    });
+                // Keep disabled + expired rows visible (grey "Access Ended"); card decides Open Now.
+                $q->whereIn('status', ['disabled', 'active']);
             })
             ->latest()
             ->get();
@@ -634,13 +629,7 @@ class StudyMaterialService
             ->where('instructor_id', $instructorId)
             ->whereHas('folder')
             ->where(function ($q) {
-                $q->where('status', 'disabled')
-                    ->orWhere(function ($open) {
-                        $open->where('status', 'active')
-                            ->where(function ($till) {
-                                $till->whereNull('access_till')->orWhereDate('access_till', '>=', now()->toDateString());
-                            });
-                    });
+                $q->whereIn('status', ['disabled', 'active']);
             })
             ->latest()
             ->get();
@@ -665,9 +654,6 @@ class StudyMaterialService
             ->where('student_id', $studentId)
             ->where('folder_id', $folderId)
             ->where('status', 'active')
-            ->whereHas('folder', function ($folder) {
-                $folder->where('status', 'active');
-            })
             ->where(function ($q) {
                 $q->whereNull('access_till')->orWhereDate('access_till', '>=', now()->toDateString());
             })
@@ -680,9 +666,6 @@ class StudyMaterialService
             ->where('instructor_id', $instructorId)
             ->where('folder_id', $folderId)
             ->where('status', 'active')
-            ->whereHas('folder', function ($folder) {
-                $folder->where('status', 'active');
-            })
             ->where(function ($q) {
                 $q->whereNull('access_till')->orWhereDate('access_till', '>=', now()->toDateString());
             })

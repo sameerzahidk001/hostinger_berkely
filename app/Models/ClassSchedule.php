@@ -97,11 +97,46 @@ class ClassSchedule extends Model
 
     public function endsAt(?Carbon $start = null)
     {
-        $start = $start ?: $this->scheduled_at;
+        $start = $start ?: $this->scheduledAtInTimezone();
 
         return $start
             ? $start->copy()->addMinutes($this->durationMinutes())
             : null;
+    }
+
+    /**
+     * Wall-clock start in the session's own timezone (not app timezone).
+     */
+    public function scheduledAtInTimezone(): ?Carbon
+    {
+        if (! $this->scheduled_at) {
+            return null;
+        }
+
+        $tz = $this->timezoneName();
+
+        return Carbon::parse($this->scheduled_at->format('Y-m-d H:i:s'), $tz);
+    }
+
+    /**
+     * Join Now stays available until scheduled start + duration in the session timezone.
+     */
+    public function isJoinWindowOpen(?Carbon $now = null): bool
+    {
+        $status = strtolower((string) ($this->status ?? 'scheduled'));
+        if (in_array($status, ['cancelled', 'completed'], true)) {
+            return false;
+        }
+
+        $end = $this->endsAt();
+        if (! $end) {
+            return (bool) $this->zoho_link;
+        }
+
+        $tz = $this->timezoneName();
+        $now = $now ? $now->copy()->timezone($tz) : Carbon::now($tz);
+
+        return $now->lt($end);
     }
 
     public function calendarTitle(): string

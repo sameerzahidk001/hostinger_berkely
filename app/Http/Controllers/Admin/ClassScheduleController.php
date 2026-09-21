@@ -155,6 +155,7 @@ class ClassScheduleController extends Controller
             'zohoHostEmail' => $this->zoho->hostAccountEmail(),
             'isInstructor' => $this->lms->isInstructorActor(),
             'isAdmin' => $this->lms->isAdminActor(),
+            'useInstructorPortal' => $this->lms->isInstructorActor(),
         ]);
     }
 
@@ -227,9 +228,7 @@ class ClassScheduleController extends Controller
             $message .= ' Split into ' . ($extraDays + 1) . ' separate session days — edit or delete each day as needed.';
         }
 
-        return redirect()
-            ->route('admin.class-schedules.batch', $batch->id)
-            ->with('success', $message);
+        return $this->redirectToBatchSchedule($batch->id, $message);
     }
 
     public function edit($id)
@@ -246,12 +245,10 @@ class ClassScheduleController extends Controller
             $seriesIds = array_values(array_unique(array_merge([(int) $schedule->id], $extra)));
             $this->attachMeetingsForSeries($seriesIds);
 
-            return redirect()
-                ->route('admin.class-schedules.batch', $schedule->batch_id ?: $schedule->id)
-                ->with(
-                    'success',
-                    'Recurring series split into ' . (count($extra) + 1) . ' editable session days. Use Edit to change the Join link or description, or Delete for one day.'
-                );
+            return $this->redirectToBatchSchedule(
+                $schedule->batch_id ?: $schedule->id,
+                'Recurring series split into ' . (count($extra) + 1) . ' editable session days. Use Edit to change the Join link or description, or Delete for one day.'
+            );
         }
 
         $courses = $this->lms->coursesForActor();
@@ -291,6 +288,7 @@ class ClassScheduleController extends Controller
             'zohoHostEmail' => $this->zoho->hostAccountEmail(),
             'isInstructor' => $this->lms->isInstructorActor(),
             'isAdmin' => $this->lms->isAdminActor(),
+            'useInstructorPortal' => $this->lms->isInstructorActor(),
         ]);
     }
 
@@ -371,9 +369,7 @@ class ClassScheduleController extends Controller
 
         $zohoStatus = $this->meetings->syncAfterScheduleUpdate($schedule, $timeChanged);
 
-        return redirect()
-            ->route('admin.class-schedules.batch', $batch->id)
-            ->with('success', $this->scheduleSavedMessage('updated', $zohoStatus));
+        return $this->redirectToBatchSchedule($batch->id, $this->scheduleSavedMessage('updated', $zohoStatus));
     }
 
     public function destroy($id)
@@ -384,12 +380,10 @@ class ClassScheduleController extends Controller
         $schedule->delete();
 
         if ($batchId) {
-            return redirect()
-                ->route('admin.class-schedules.batch', $batchId)
-                ->with('success', 'Scheduled day deleted.');
+            return $this->redirectToBatchSchedule($batchId, 'Scheduled day deleted.');
         }
 
-        return redirect()->route('admin.class-schedules.index')->with('success', 'Scheduled day deleted.');
+        return $this->redirectToScheduleIndex('Scheduled day deleted.');
     }
 
     public function ics($id)
@@ -855,9 +849,36 @@ class ClassScheduleController extends Controller
 
         $deleted = ClassSchedule::query()->where('batch_id', $batch->id)->delete();
 
+        return $this->redirectToBatchSchedule(
+            $batch->id,
+            'Removed ' . $deleted . ' session(s) from this batch. They will not come back unless you create them again.'
+        );
+    }
+
+    protected function redirectToBatchSchedule($batchId, string $message)
+    {
+        if ($this->lms->isInstructorActor()) {
+            return redirect()
+                ->route('user.class-schedules.batch', $batchId)
+                ->with('success', $message);
+        }
+
         return redirect()
-            ->route('admin.class-schedules.batch', $batch->id)
-            ->with('success', 'Removed ' . $deleted . ' session(s) from this batch. They will not come back unless you create them again.');
+            ->route('admin.class-schedules.batch', $batchId)
+            ->with('success', $message);
+    }
+
+    protected function redirectToScheduleIndex(string $message)
+    {
+        if ($this->lms->isInstructorActor()) {
+            return redirect()
+                ->route('user.class-schedules.index')
+                ->with('success', $message);
+        }
+
+        return redirect()
+            ->route('admin.class-schedules.index')
+            ->with('success', $message);
     }
 
     protected function batchListGroups($rows)

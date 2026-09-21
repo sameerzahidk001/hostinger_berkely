@@ -1,7 +1,13 @@
 @php
     $folder = $access->folder;
     $instructors = $folder ? $folder->displayInstructors() : collect();
-    $accessDisabled = !$folder || $folder->status !== 'active' || $access->status !== 'active';
+    $expired = $access->access_till
+        && $access->access_till->toDateString() < now()->toDateString();
+    // Open when access is active and not expired (folder status alone must not grey the card).
+    $accessDisabled = ! $folder
+        || $access->status !== 'active'
+        || $expired;
+    $disabledLabel = 'Access Ended';
 @endphp
 <div class="col-md-6 col-lg-4" style="display:flex;">
     <div class="ibox sm-folder-card" style="width:100%;display:flex;flex-direction:column;@if($accessDisabled) border:1px solid #c5c5c5;@endif">
@@ -43,12 +49,12 @@
             </div>
             <div style="margin-top:auto;">
                 @if($accessDisabled)
-                    <button type="button" class="btn btn-sm" disabled style="background:#9ca3af;border-color:#9ca3af;color:#fff;cursor:not-allowed;">Access is disabled.</button>
+                    <button type="button" class="btn btn-sm" disabled style="background:#9ca3af;border-color:#9ca3af;color:#fff;cursor:not-allowed;">{{ $disabledLabel }}</button>
                     <p style="margin-top:10px;margin-bottom:0;">
                         contact <a href="mailto:admin@eduberkeley.com">admin@eduberkeley.com</a>
                     </p>
                 @else
-                    <a class="btn btn-primary btn-sm" href="{{ route('user.study-materials.show', $folder->id) }}" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;">Open folder</a>
+                    <a class="btn btn-primary btn-sm" href="{{ route('user.study-materials.show', $folder->id) }}" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;">Open Now</a>
                 @endif
             </div>
         </div>

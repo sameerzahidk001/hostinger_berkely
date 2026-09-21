@@ -8,7 +8,6 @@
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
         @if($isInstructor)
-            <a href="{{ route('admin.class-schedules.index') }}" class="btn btn-default">Manage schedules</a>
             <a href="{{ route('admin.class-schedules.create') }}" class="btn btn-primary">Add session</a>
         @endif
         <a href="{{ route('user.class-schedules.ics') }}" class="btn btn-primary" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;">Add to Zoho Calendar</a>

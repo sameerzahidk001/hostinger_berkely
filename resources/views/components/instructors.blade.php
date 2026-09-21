@@ -283,7 +283,7 @@
                 ->map(fn ($v) => trim((string) $v))
                 ->filter()
                 ->unique(fn ($v) => mb_strtolower($v))
-                ->sort()
+                ->sort(SORT_NATURAL | SORT_FLAG_CASE)
                 ->values();
         @endphp
         <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
@@ -300,7 +300,7 @@
             <div>
                 <label class="block text-sm font-semibold mb-1" for="country">Country</label>
                 <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm js-faculty-select" name="country" id="country" data-placeholder="All Countries">
-                    <option value="0">All Countries</option>
+                    <option value="">All Countries</option>
                     @foreach ($countries as $country)
                         <option value="{{ $country->iso_code }}">{{ $country->name }}</option>
                     @endforeach
@@ -313,8 +313,8 @@
             </div>
             <div>
                 <label class="block text-sm font-semibold mb-1" for="specialisation">Specialisation</label>
-                <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm js-faculty-select" name="specialisation" id="specialisation" data-placeholder="Type to find specialisation">
-                    <option value="">All Specialisations</option>
+                <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm js-faculty-typefind" name="specialisation" id="specialisation" data-placeholder="Type to find specialisation…">
+                    <option value=""></option>
                     @foreach ($specialisationOptions as $spec)
                         <option value="{{ $spec }}">{{ $spec }}</option>
                     @endforeach
@@ -322,8 +322,8 @@
             </div>
             <div>
                 <label class="block text-sm font-semibold mb-1" for="course">Course</label>
-                <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm js-faculty-select" name="course" id="course" data-placeholder="Type to find course">
-                    <option value="">All Courses</option>
+                <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm js-faculty-typefind" name="course" id="course" data-placeholder="Type to find course…">
+                    <option value=""></option>
                     @foreach ($facultyCourses as $course)
                         <option value="{{ $course->id }}">{{ $course->title }}</option>
                     @endforeach
@@ -419,7 +419,7 @@
     </div>
 </section>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+@push('style')
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <style>
     #instructors-search-form .select2-container { width: 100% !important; }
@@ -431,22 +431,59 @@
     #instructors-search-form .select2-container .select2-selection--single .select2-selection__rendered {
         line-height: 36px;
         padding-left: 12px;
+        color: #111827;
+    }
+    #instructors-search-form .select2-container .select2-selection--single .select2-selection__placeholder {
+        color: #9ca3af;
     }
     #instructors-search-form .select2-container .select2-selection--single .select2-selection__arrow {
         height: 36px;
     }
+    #instructors-search-form .select2-dropdown {
+        border-color: #d1d5db;
+    }
+    #instructors-search-form .select2-search__field {
+        outline: none !important;
+    }
 </style>
+@endpush
+
+@push('script')
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
-    $(document).ready(function() {
-        $('.js-faculty-select').each(function () {
+(function ($) {
+    function initFacultyTypeFind() {
+        $('#specialisation, #course').each(function () {
             var $el = $(this);
+            if ($el.hasClass('select2-hidden-accessible')) {
+                $el.select2('destroy');
+            }
             $el.select2({
                 width: '100%',
                 allowClear: true,
-                placeholder: $el.data('placeholder') || 'Select…'
+                placeholder: $el.data('placeholder') || 'Type to find…',
+                minimumResultsForSearch: 0,
+                dropdownParent: $(document.body)
             });
         });
+
+        $('#country').each(function () {
+            var $el = $(this);
+            if ($el.hasClass('select2-hidden-accessible')) {
+                $el.select2('destroy');
+            }
+            $el.select2({
+                width: '100%',
+                allowClear: true,
+                placeholder: $el.data('placeholder') || 'All Countries',
+                minimumResultsForSearch: 0,
+                dropdownParent: $(document.body)
+            });
+        });
+    }
+
+    $(function () {
+        initFacultyTypeFind();
 
         $('#use-my-location').on('click', function () {
             var $btn = $(this);
@@ -468,15 +505,15 @@
             }, { enableHighAccuracy: true, timeout: 15000 });
         });
 
-        $('#instructors-search-form').on('submit', function(e) {
+        $('#instructors-search-form').on('submit', function (e) {
             e.preventDefault();
 
-            let $form = $(this);
-            let $submitBtn = $form.find('button[type="submit"]');
-            let originalBtnText = $submitBtn.html();
-            let distance = $('#distance_km').val();
-            let lat = $('#search_lat').val();
-            let lng = $('#search_lng').val();
+            var $form = $(this);
+            var $submitBtn = $form.find('button[type="submit"]');
+            var originalBtnText = $submitBtn.html();
+            var distance = $('#distance_km').val();
+            var lat = $('#search_lat').val();
+            var lng = $('#search_lng').val();
 
             if (distance && (!lat || !lng)) {
                 $('#nearby-status').text('Click “Use my location” first to search within a distance.');
@@ -486,13 +523,11 @@
             $submitBtn.prop('disabled', true).html(
                 'Searching... <span class="animate-spin inline-block ml-1">&#9696;</span>');
 
-            let formData = $form.serialize();
-
             $.ajax({
-                url: '{{ route('faculty_search') }}',
+                url: @json(route('faculty_search')),
                 method: 'GET',
-                data: formData,
-                success: function(response) {
+                data: $form.serialize(),
+                success: function (response) {
                     if (response.html) {
                         $('#instructors-container').html(response.html);
                     } else {
@@ -502,21 +537,23 @@
                     }
                     $('#reset').removeClass('hidden');
                 },
-                error: function(xhr) {
-                    console.error('Error:', xhr.responseJSON?.message ||
+                error: function (xhr) {
+                    console.error('Error:', (xhr.responseJSON && xhr.responseJSON.message) ||
                         'Something went wrong.');
                     $('#instructors-container').html(
                         '<p class="col-span-full text-center text-gray-500 py-10">Failed to load faculty.</p>'
                     );
                 },
-                complete: function() {
+                complete: function () {
                     $submitBtn.prop('disabled', false).html(originalBtnText);
                 }
             });
         });
 
-        $('#reset').on('click', function() {
+        $('#reset').on('click', function () {
             location.reload();
         });
     });
+})(jQuery);
 </script>
+@endpush

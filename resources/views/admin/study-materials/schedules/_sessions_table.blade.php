@@ -29,11 +29,9 @@
                     $duration = method_exists($row, 'durationMinutes')
                         ? $row->durationMinutes()
                         : (int) ($row->duration_minutes ?? 60);
-                    $endsAt = $row->scheduled_at
-                        ? $row->scheduled_at->copy()->addMinutes($duration)
-                        : null;
-                    $isPast = $endsAt && $endsAt->isPast();
-                    $joinDisabled = $isPast || in_array($status, ['cancelled', 'completed'], true);
+                    $joinDisabled = method_exists($row, 'isJoinWindowOpen')
+                        ? ! $row->isJoinWindowOpen()
+                        : (in_array($status, ['cancelled', 'completed'], true));
                     $statusLabel = match ($status) {
                         'completed' => 'Completed',
                         'cancelled' => 'Cancelled',

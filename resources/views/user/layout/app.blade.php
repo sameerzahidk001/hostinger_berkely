@@ -150,7 +150,7 @@
                </li>
                @endif --}}
                <li class="{{ request()->routeIs('user.profile') ? 'active' : '' }}">
-                  <a href="{{ route('user.profile') }}"><i class="fa fa-th-large"></i> <span
+                  <a href="{{ route('user.profile') }}"><i class="fa fa-user"></i> <span
                         class="nav-label">Profile</span></a>
                </li>
                @if((auth()->user()->hasPermission('installment-list') || auth()->user()->roles()->where('name', 'student')->exists())
@@ -172,14 +172,6 @@
                      <span class="nav-label">Class Schedule</span>
                   </a>
                </li>
-               @if(auth()->user()->roles()->where('name', 'instructor')->exists())
-               <li>
-                  <a href="{{ route('admin.class-schedules.index') }}">
-                     <i class="fa fa-calendar-plus-o"></i>
-                     <span class="nav-label">Manage Schedules</span>
-                  </a>
-               </li>
-               @endif
                @if(auth()->user()->hasPermission('testimonial-list'))
                   <li class="{{ request()->routeIs('user.testimonial.index') ? 'active' : '' }}">
                      <a href="{{ route('user.testimonial.index') }}"><i class="fa fa-th-large"></i> <span
