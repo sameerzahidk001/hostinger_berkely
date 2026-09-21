@@ -70,12 +70,16 @@
                             @php
                                 \App\Models\User::ensureInstructorExtraColumns();
                                 $educationList = method_exists($user, 'educationList') ? $user->educationList() : [];
+                                $proQualList = method_exists($user, 'professionalQualificationsList') ? $user->professionalQualificationsList() : [];
                                 $expertiseList = method_exists($user, 'expertiseList') ? $user->expertiseList() : [];
                                 $methodList = method_exists($user, 'teachingMethodologyList') ? $user->teachingMethodologyList() : [];
                                 $methodLabels = array_values(array_intersect_key(\App\Models\User::teachingMethodologyOptions(), array_flip($methodList)));
                                 $availLines = method_exists($user, 'availabilityDisplayLines') ? $user->availabilityDisplayLines() : [];
                             @endphp
-                            <p><strong>Teaching &amp; Academic Experience: </strong> {!! $user->experience ?? '-' !!}</p>
+                            @if(\App\Models\User::hasRichTextContent($user->short_description ?? null))
+                                <p><strong>Professional Profile:</strong></p>
+                                <div>{!! $user->short_description !!}</div>
+                            @endif
                             @if($educationList !== [])
                                 <p><strong>Academic Qualifications:</strong></p>
                                 <ul>
@@ -84,20 +88,39 @@
                                     @endforeach
                                 </ul>
                             @endif
-                            @php $proQualList = method_exists($user, 'professionalQualificationsList') ? $user->professionalQualificationsList() : []; @endphp
                             @if($proQualList !== [])
-                                <p><strong>Professional Qualifications:</strong></p>
+                                <p><strong>Professional Qualifications &amp; Certifications:</strong></p>
                                 <ul>
                                     @foreach($proQualList as $q)
                                         <li>{{ $q }}</li>
                                     @endforeach
                                 </ul>
                             @endif
-                            @if(method_exists($user, 'hasMapLocation') && $user->hasMapLocation())
-                                <p><strong>Map location:</strong> Set (used for nearby trainer search)</p>
+                            @if(\App\Models\User::hasRichTextContent($user->executive_experience ?? null))
+                                <p><strong>Executive &amp; Industry Experience:</strong></p>
+                                <div>{!! $user->executive_experience !!}</div>
+                            @endif
+                            @if(\App\Models\User::hasRichTextContent($user->experience ?? null))
+                                <p><strong>Teaching &amp; Academic Experience:</strong></p>
+                                <div>{!! $user->experience !!}</div>
+                            @endif
+                            @if(\App\Models\User::hasRichTextContent($user->training_expertise ?? null))
+                                <p><strong>Professional Training Expertise:</strong></p>
+                                <div>{!! $user->training_expertise !!}</div>
+                            @endif
+                            @if(\App\Models\User::hasRichTextContent($user->corporate_training ?? null))
+                                <p><strong>Corporate &amp; Executive Training Experience:</strong></p>
+                                <div>{!! $user->corporate_training !!}</div>
                             @endif
                             @if($expertiseList !== [])
                                 <p><strong>Areas of Expertise:</strong> {{ implode(', ', $expertiseList) }}</p>
+                            @endif
+                            @if(\App\Models\User::hasRichTextContent($user->institutions ?? null))
+                                <p><strong>Institutions &amp; Organisations:</strong></p>
+                                <div>{!! $user->institutions !!}</div>
+                            @endif
+                            @if(method_exists($user, 'hasMapLocation') && $user->hasMapLocation())
+                                <p><strong>Map location:</strong> Set (used for nearby trainer search)</p>
                             @endif
                             @if($methodLabels !== [])
                                 <p><strong>Teaching Methodology:</strong> {{ implode(', ', $methodLabels) }}</p>
@@ -115,7 +138,7 @@
                                 <strong>LinkedIn: </strong>
                                 @if(!empty($user->linkedin))
                                     <a href="{{ $user->linkedin }}" target="_blank" class="text-primary" style="font-weight:600; text-decoration:none;">
-                                        View LinkedIn →
+                                        View LinkedIn ?
                                     </a>
                                 @else
                                     <span>-</span>

@@ -470,7 +470,7 @@
 
         <!-- COURSES SECTION -->
         <div class="courses-section">
-            <h2>Courses by {{ $instructor->name }}</h2>
+            <h2>Courses by the instructor</h2>
 
             @if ($instructor->courses && count($instructor->courses) > 0)
                 <div class="course-grid">

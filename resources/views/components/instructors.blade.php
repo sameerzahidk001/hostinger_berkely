@@ -350,10 +350,10 @@
                                     $cardExpertise = method_exists($instructor, 'expertiseList') ? $instructor->expertiseList() : [];
                                 @endphp
                                 @if($cardEducation !== [])
-                                    <p><strong>Education:</strong> {{ implode(', ', $cardEducation) }}</p>
+                                    <p><strong>Academic Qualifications:</strong> {{ implode(', ', $cardEducation) }}</p>
                                 @endif
                                 @if($cardExpertise !== [])
-                                    <p><strong>Expertise:</strong> {{ implode(', ', $cardExpertise) }}</p>
+                                    <p><strong>Areas of Expertise:</strong> {{ implode(', ', $cardExpertise) }}</p>
                                 @endif
                             </div>
                         </div>
