@@ -226,8 +226,6 @@
             $('#course').on('change', function () {
                 filterPackagesByCourse($(this).val(), null);
             });
-                }
-            });
 
             $('#package').on('change', function () {
                 const price = $(this).find(':selected').data('price') || 0;
