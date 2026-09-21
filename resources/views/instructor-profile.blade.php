@@ -108,6 +108,18 @@
             font-weight: 700;
         }
 
+        .hero-meta-list {
+            list-style: none;
+            margin: 4px 0 10px;
+            padding: 0;
+        }
+
+        .hero-meta-list li {
+            margin: 2px 0;
+            line-height: 1.45;
+            opacity: 0.95;
+        }
+
         /* ======= LinkedIn link professional style ======= */
         .linkedin-link svg {
             width: 32px;
@@ -342,7 +354,7 @@
                         $hasCorporate = \App\Models\User::hasRichTextContent($instructor->corporate_training ?? null);
                         $hasInstitutions = \App\Models\User::hasRichTextContent($instructor->institutions ?? null);
                     @endphp
-                    <p class="hero-kicker">Trainer Profile</p>
+                    <p class="hero-kicker">Instructor's Profile</p>
                     <h3>{{ $instructor->name }}
                         @if ($instructor->linkedin)
                             <a href="{{ $instructor->linkedin ?? '' }}" target="_blank" class="linkedin-link"
@@ -355,10 +367,12 @@
                         @endif
                     </h3>
                     @if($educationList !== [])
-                        <p class="hero-meta"><strong>Academic Qualifications:</strong> {{ implode(', ', $educationList) }}</p>
-                    @endif
-                    @if($expertiseList !== [])
-                        <p class="hero-meta"><strong>Professional &amp; Academic Specialisations:</strong> {{ implode(', ', $expertiseList) }}</p>
+                        <p class="hero-meta"><strong>Academic Qualifications:</strong></p>
+                        <ul class="hero-meta-list">
+                            @foreach($educationList as $item)
+                                <li>{{ $item }}</li>
+                            @endforeach
+                        </ul>
                     @endif
                 </div>
             </div>
@@ -370,19 +384,6 @@
                 <div class="profile-section">
                     <h3>Professional Profile</h3>
                     <div class="section-body">{!! $instructor->short_description !!}</div>
-                </div>
-            @endif
-
-            @if($educationList !== [])
-                <div class="profile-section">
-                    <h3>Academic Qualifications</h3>
-                    <div class="section-body">
-                        <ul>
-                            @foreach($educationList as $item)
-                                <li>{{ $item }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
                 </div>
             @endif
 
@@ -443,7 +444,13 @@
             @if($expertiseList !== [])
                 <div class="profile-section">
                     <h3>Professional &amp; Academic Specialisations</h3>
-                    <div class="section-body">{{ implode(', ', $expertiseList) }}</div>
+                    <div class="section-body">
+                        <ul>
+                            @foreach($expertiseList as $item)
+                                <li>{{ $item }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
                 </div>
             @endif
 
@@ -457,7 +464,13 @@
             @if($methodLabels !== [])
                 <div class="profile-section">
                     <h3>Teaching Methodology</h3>
-                    <div class="section-body">{{ implode(', ', $methodLabels) }}</div>
+                    <div class="section-body">
+                        <ul>
+                            @foreach($methodLabels as $label)
+                                <li>{{ $label }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
                 </div>
             @endif
 
