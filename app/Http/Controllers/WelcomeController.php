@@ -406,7 +406,7 @@ class WelcomeController extends Controller
         User::ensureLatLngColumns();
 
         $search = $request->only([
-            'course', 'country', 'city', 'name', 'education', 'specialisation',
+            'course', 'country', 'city', 'name', 'education', 'professional_qualification', 'specialisation',
             'avail_day', 'avail_period',
             'keyword', 'distance_km', 'lat', 'lng',
         ]);
@@ -446,15 +446,17 @@ class WelcomeController extends Controller
 
         if ($request->filled('specialisation')) {
             $specialisation = trim((string) $request->input('specialisation'));
-            $query->where(function ($q) use ($specialisation) {
-                $q->where('expertise', 'like', "%{$specialisation}%")
-                    ->orWhere('education', 'like', "%{$specialisation}%");
-            });
+            $query->where('expertise', 'like', "%{$specialisation}%");
         }
 
         if ($request->filled('education')) {
             $education = trim((string) $request->input('education'));
             $query->where('education', 'like', "%{$education}%");
+        }
+
+        if ($request->filled('professional_qualification')) {
+            $pq = trim((string) $request->input('professional_qualification'));
+            $query->where('professional_qualifications', 'like', "%{$pq}%");
         }
 
         $availDay = trim((string) $request->input('avail_day', ''));

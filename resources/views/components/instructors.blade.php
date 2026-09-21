@@ -185,27 +185,6 @@
             flex-direction: column;
             text-align: center;
             padding: 20px;
-        }
-
-        .instructor-left {
-            flex-direction: column;
-        }
-
-        .instructor-info {
-            margin-left: 0;
-            margin-top: 15px;
-        }
-
-        .instructor-action {
-            margin-top: 15px;
-            width: 100%;
-        }
-    }
-
-    @media (max-width: 768px) {
-        .instructor-card {
-            flex-direction: column;
-            text-align: center;
             align-items: center;
         }
 
@@ -215,13 +194,15 @@
         }
 
         .instructor-image {
-            width: 90px;
-            height: 90px;
+            width: 160px;
+            height: 160px;
+            border-radius: 8px;
         }
 
         .instructor-info {
+            margin-left: 0;
+            margin-top: 12px;
             text-align: center;
-            margin-top: 15px;
         }
 
         .name-row {
@@ -234,7 +215,7 @@
 
         .instructor-action {
             text-align: center;
-            margin-top: 15px;
+            margin-top: 8px;
             width: 100%;
         }
 
@@ -292,6 +273,26 @@
                 ->unique(fn ($v) => mb_strtolower($v))
                 ->sort(SORT_NATURAL | SORT_FLAG_CASE)
                 ->values();
+            $educationOptions = collect($instructors ?? [])
+                ->flatMap(function ($instructor) {
+                    return method_exists($instructor, 'educationList') ? $instructor->educationList() : [];
+                })
+                ->map(fn ($v) => trim((string) $v))
+                ->filter()
+                ->unique(fn ($v) => mb_strtolower($v))
+                ->sort(SORT_NATURAL | SORT_FLAG_CASE)
+                ->values();
+            $professionalQualOptions = collect($instructors ?? [])
+                ->flatMap(function ($instructor) {
+                    return method_exists($instructor, 'professionalQualificationsList')
+                        ? $instructor->professionalQualificationsList()
+                        : [];
+                })
+                ->map(fn ($v) => trim((string) $v))
+                ->filter()
+                ->unique(fn ($v) => mb_strtolower($v))
+                ->sort(SORT_NATURAL | SORT_FLAG_CASE)
+                ->values();
         @endphp
         <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <div>
@@ -310,6 +311,24 @@
                     <option value="">All Countries</option>
                     @foreach ($countries as $country)
                         <option value="{{ $country->iso_code }}">{{ $country->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold mb-1" for="education">Academic Qualifications</label>
+                <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm js-faculty-typefind" name="education" id="education" data-placeholder="Type to find academic qualifications…">
+                    <option value=""></option>
+                    @foreach ($educationOptions as $edu)
+                        <option value="{{ $edu }}">{{ $edu }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold mb-1" for="professional_qualification">Professional Qualifications</label>
+                <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm js-faculty-typefind" name="professional_qualification" id="professional_qualification" data-placeholder="Type to find professional qualifications…">
+                    <option value=""></option>
+                    @foreach ($professionalQualOptions as $pq)
+                        <option value="{{ $pq }}">{{ $pq }}</option>
                     @endforeach
                 </select>
             </div>
@@ -471,7 +490,7 @@
 <script>
 (function ($) {
     function initFacultyTypeFind() {
-        $('#specialisation, #course, #avail_day, #avail_period').each(function () {
+        $('#specialisation, #course, #avail_day, #avail_period, #education, #professional_qualification').each(function () {
             var $el = $(this);
             if ($el.hasClass('select2-hidden-accessible')) {
                 $el.select2('destroy');
