@@ -296,7 +296,9 @@ class UserController extends Controller
             $user->latitude = $request->filled('latitude') ? (float) $request->input('latitude') : null;
             $user->longitude = $request->filled('longitude') ? (float) $request->input('longitude') : null;
             $user->short_description = $request->input('short_description');
-            $user->long_description = $request->input('long_description');
+            if ($request->exists('long_description')) {
+                $user->long_description = $request->input('long_description');
+            }
             $user->experience = $request->input('experience');
             $user->linkedin = $request->input('linkedin');
             if ($user->roles()->where('name', 'instructor')->exists()) {

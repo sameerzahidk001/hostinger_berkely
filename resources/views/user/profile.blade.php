@@ -394,6 +394,7 @@
 
         var editors = [
             { id: 'short_description', counter: 'short_char_count', max: 500 },
+            { id: 'long_description', counter: 'long_char_count', max: 3000 },
             { id: 'experience', counter: 'experience_char_count', max: 2000 },
             { id: 'executive_experience', counter: 'executive_char_count', max: 2000 },
             { id: 'training_expertise', counter: 'training_char_count', max: 2000 },

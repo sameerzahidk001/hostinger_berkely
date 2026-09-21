@@ -17,6 +17,13 @@
         placeholder="Brief professional profile…">{!! old('short_description', $user->short_description) !!}</textarea>
 </div>
 
+<h3 class="profile-section-heading">Detailed Profile</h3>
+<div class="form-group">
+    <label for="long_description">Detailed Profile <span id="long_char_count" class="text-muted">(0 / 3000 Characters)</span></label>
+    <textarea name="long_description" id="long_description" class="form-control" rows="5"
+        placeholder="Full biography / detailed profile…">{!! old('long_description', $user->long_description) !!}</textarea>
+</div>
+
 <h3 class="profile-section-heading">Academic Qualifications</h3>
 <div class="form-group">
     <label for="education[]">Academic Qualifications</label>
