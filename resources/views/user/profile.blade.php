@@ -3,7 +3,7 @@
 
 @section('content')
 <div class="row wrapper border-bottom white-bg page-heading">
-    <div class="col-lg-10">
+    <div class="col-lg-8">
         <h2>Profile</h2>
         <ol class="breadcrumb">
             <li>
@@ -14,8 +14,32 @@
             </li>
         </ol>
     </div>
-    <div class="col-lg-2"></div>
+    <div class="col-lg-4" style="padding-top:20px;text-align:right;">
+        @if(optional($user->roles->first())->name === 'instructor' && (int) ($user->is_on_web ?? 0) === 1)
+            <a href="{{ url('/instructor/' . $user->id) }}" target="_blank" rel="noopener noreferrer" class="btn btn-primary">
+                View page
+            </a>
+        @elseif(optional($user->roles->first())->name === 'instructor')
+            <a href="{{ url('/instructor/' . $user->id) }}" target="_blank" rel="noopener noreferrer" class="btn btn-default" title="Public page (requires approved / on web)">
+                View page
+            </a>
+        @endif
+    </div>
 </div>
+<style>
+    .profile-section-heading {
+        font-size: 22px;
+        font-weight: 700;
+        color: #1ab394;
+        margin: 28px 0 14px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #e7eaec;
+        clear: both;
+    }
+    .profile-section-heading:first-child {
+        margin-top: 8px;
+    }
+</style>
 <div class="wrapper wrapper-content">
     <div class="row animated fadeInRight">
         <div class="col-md-4">
@@ -37,13 +61,12 @@
                         <p><strong>Mobile Number: </strong> {{ $user->mobile_number ?? '-' }}</p>
                         <p><strong>Gender: </strong> {{ $user->gender ?? '-' }}</p>
                         <p><strong>Date Of Birth: </strong> {{ $user->date_of_birth ?? '-' }}</p>
-                        <p><strong>Address: </strong> {{ $user->address ?? '-' }}</p>
                         <p><strong>Post Code: </strong> {{ $user->post_code ?? '-' }}</p>
                         <p><strong>Nationality: </strong> {{ $user->nationality ?? '-' }}</p>
                         <p><strong>City: </strong> {{ $user->city ?? '-' }}</p>
                         <p><strong>Country: </strong> {{ $user->country ?? '-' }}</p>
 
-                        @if($user->roles[0]->name == 'instructor')
+                        @if(optional($user->roles->first())->name === 'instructor')
                             @php
                                 \App\Models\User::ensureInstructorExtraColumns();
                                 $educationList = method_exists($user, 'educationList') ? $user->educationList() : [];
@@ -52,7 +75,6 @@
                                 $methodLabels = array_values(array_intersect_key(\App\Models\User::teachingMethodologyOptions(), array_flip($methodList)));
                                 $availLines = method_exists($user, 'availabilityDisplayLines') ? $user->availabilityDisplayLines() : [];
                             @endphp
-                            <div><strong>Short Profile Description: </strong> {!! $user->short_description ?? '-' !!}</div>
                             <p><strong>Experience: </strong> {!! $user->experience ?? '-' !!}</p>
                             @if($educationList !== [])
                                 <p><strong>Education:</strong></p>
@@ -80,12 +102,11 @@
                                 </ul>
                             @endif
 
-                            {{-- LinkedIn Display --}}
                             <p>
                                 <strong>LinkedIn: </strong>
                                 @if(!empty($user->linkedin))
                                     <a href="{{ $user->linkedin }}" target="_blank" class="text-primary" style="font-weight:600; text-decoration:none;">
-                                        View Profile →
+                                        View LinkedIn →
                                     </a>
                                 @else
                                     <span>-</span>
@@ -103,6 +124,11 @@
                 <div class="ibox-title">
                     <h5>Edit Profile</h5>
                     <div class="ibox-tools">
+                        @if(optional($user->roles->first())->name === 'instructor')
+                            <a href="{{ url('/instructor/' . $user->id) }}" target="_blank" rel="noopener noreferrer" class="btn btn-xs btn-primary" style="margin-right:8px;">
+                                View page
+                            </a>
+                        @endif
                         <a class="collapse-link">
                             <i class="fa fa-chevron-up"></i>
                         </a>
@@ -116,6 +142,9 @@
                         <form method="POST" action="{{ route('user.profile.update') }}" enctype="multipart/form-data">
                             @csrf
                             <div class="row">
+                                <div class="col-md-12">
+                                    <h3 class="profile-section-heading">Basic information</h3>
+                                </div>
                                 {{-- General Fields --}}
                                 <div class="col-md-6 mb-3">
                                     <label for="name">Full Name</label>
@@ -163,6 +192,10 @@
                                         value="{{ old('nationality', $user->nationality) }}" placeholder="Enter Your Nationality">
                                 </div>
 
+                                <div class="col-md-12">
+                                    <h3 class="profile-section-heading">Address</h3>
+                                </div>
+
                                 <div class="col-md-12 mb-3">
                                     <label for="address">Address</label>
                                     <input type="text" name="address" id="address" class="form-control"
@@ -194,26 +227,30 @@
                                 </div>
 
                                 {{-- Instructor Fields --}}
-                                @if($user->roles[0]->name == 'instructor')
+                                @if(optional($user->roles->first())->name === 'instructor')
                                     <div class="col-md-12" id="instructor-fields">
+                                        <h3 class="profile-section-heading">Summary of your profile</h3>
                                         <div class="form-group">
-                                            <label for="short_description">Summary of your profile <span id="short_char_count" class="text-muted">(0 / 500 Characters)</span></label>
+                                            <label for="short_description">Short summary <span id="short_char_count" class="text-muted">(0 / 500 Characters)</span></label>
                                             <textarea name="short_description" id="short_description" class="form-control" rows="3"
                                                 placeholder="Define yourself shortly...">{!! old('short_description', $user->short_description) !!}</textarea>
                                         </div>
 
-                                        <div class="form-group">
-                                            <label for="long_description">Detailed Profile <span id="long_char_count" class="text-muted">(0 / 3000 Characters)</span></label>
-                                            <textarea name="long_description" id="long_description" class="form-control" rows="3"
-                                                placeholder="Define yourself shortly...">{!! old('long_description', $user->long_description) !!}</textarea>
-                                        </div>
-
+                                        <h3 class="profile-section-heading">Teaching Experience</h3>
                                         <div class="form-group">
                                             <label for="experience">Summary about your Teaching Experience <span id="experience_char_count" class="text-muted">(0 / 1500 Characters)</span></label>
                                             <textarea name="experience" id="experience" class="form-control" rows="3"
                                                 placeholder="Describe experience...">{!! old('experience', $user->experience)  !!}</textarea>
                                         </div>
 
+                                        <h3 class="profile-section-heading">Detailed Profile</h3>
+                                        <div class="form-group">
+                                            <label for="long_description">Biography / detailed profile <span id="long_char_count" class="text-muted">(0 / 3000 Characters)</span></label>
+                                            <textarea name="long_description" id="long_description" class="form-control" rows="3"
+                                                placeholder="Define yourself shortly...">{!! old('long_description', $user->long_description) !!}</textarea>
+                                        </div>
+
+                                        <h3 class="profile-section-heading">LinkedIn</h3>
                                         <div class="form-group">
                                             <label for="linkedin">LinkedIn Profile URL</label>
                                             <input type="url" name="linkedin" id="linkedin" class="form-control"
@@ -221,6 +258,7 @@
                                                 value="{{ old('linkedin', $user->linkedin) }}">
                                         </div>
 
+                                        <h3 class="profile-section-heading">Education</h3>
                                         <div class="form-group mt-3">
                                             <label for="education[]">Education</label>
                                             <div id="education-wrapper">
@@ -238,7 +276,10 @@
                                             <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addEducationInput()">Add More</button>
                                         </div>
 
+                                        <h3 class="profile-section-heading">Expertise, availability &amp; methodology</h3>
                                         @include('admin.user._instructor_extra_fields', ['user' => $user])
+
+                                        <h3 class="profile-section-heading">Map location</h3>
                                         @include('admin.user._instructor_map_location', ['user' => $user])
                                     </div>
                                 @endif
