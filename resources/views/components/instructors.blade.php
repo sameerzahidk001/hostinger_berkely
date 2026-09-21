@@ -345,16 +345,6 @@
                                 @endif
 
 
-                                @php
-                                    $cardEducation = method_exists($instructor, 'educationList') ? $instructor->educationList() : [];
-                                    $cardExpertise = method_exists($instructor, 'expertiseList') ? $instructor->expertiseList() : [];
-                                @endphp
-                                @if($cardEducation !== [])
-                                    <p><strong>Academic Qualifications:</strong> {{ implode(', ', $cardEducation) }}</p>
-                                @endif
-                                @if($cardExpertise !== [])
-                                    <p><strong>Professional &amp; Academic Specialisations:</strong> {{ implode(', ', $cardExpertise) }}</p>
-                                @endif
                             </div>
                         </div>
 
