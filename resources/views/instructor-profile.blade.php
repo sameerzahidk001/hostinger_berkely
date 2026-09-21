@@ -335,7 +335,6 @@
                         $methodLabels = array_values(array_intersect_key(\App\Models\User::teachingMethodologyOptions(), array_flip($methodList)));
                         $hasAvailGrid = method_exists($instructor, 'hasAvailabilityGrid') && $instructor->hasAvailabilityGrid();
                         $hasProfessional = \App\Models\User::hasRichTextContent($instructor->short_description ?? null);
-                        $hasDetailed = \App\Models\User::hasRichTextContent($instructor->long_description ?? null);
                         $hasExecutive = \App\Models\User::hasRichTextContent($instructor->executive_experience ?? null);
                         $hasTeaching = \App\Models\User::hasRichTextContent($instructor->experience ?? null);
                         $hasTraining = \App\Models\User::hasRichTextContent($instructor->training_expertise ?? null);
@@ -370,13 +369,6 @@
                 <div class="profile-section">
                     <h3>Professional Profile</h3>
                     <div class="section-body">{!! $instructor->short_description !!}</div>
-                </div>
-            @endif
-
-            @if($hasDetailed)
-                <div class="profile-section">
-                    <h3>Detailed Profile</h3>
-                    <div class="section-body">{!! $instructor->long_description !!}</div>
                 </div>
             @endif
 
@@ -464,7 +456,7 @@
                 </div>
             @endif
 
-            @if(! $hasProfessional && ! $hasDetailed && $educationList === [] && $proQualList === [] && ! $hasExecutive && ! $hasTeaching && ! $hasTraining && ! $hasCorporate && $expertiseList === [] && ! $hasInstitutions && $methodLabels === [] && ! $hasAvailGrid)
+            @if(! $hasProfessional && $educationList === [] && $proQualList === [] && ! $hasExecutive && ! $hasTeaching && ! $hasTraining && ! $hasCorporate && $expertiseList === [] && ! $hasInstitutions && $methodLabels === [] && ! $hasAvailGrid)
                 <div class="profile-section">
                     <h3>Professional Profile</h3>
                     <div class="section-body"><p>This instructor has not added profile details yet.</p></div>
