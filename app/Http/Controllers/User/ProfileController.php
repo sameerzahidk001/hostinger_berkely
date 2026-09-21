@@ -86,6 +86,10 @@ class ProfileController extends Controller
             $validatedData['availability'],
             $validatedData['professional_qualifications']
         );
+        // Never wipe Detailed Profile if the field was omitted from the request.
+        if (! $request->exists('long_description')) {
+            unset($validatedData['long_description']);
+        }
 
         $user = Auth::user();
         \App\Models\User::ensureLatLngColumns();
