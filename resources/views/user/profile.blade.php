@@ -235,6 +235,12 @@
                                     </select>
                                 </div>
 
+                                @if(optional($user->roles->first())->name === 'instructor')
+                                    <div class="col-md-12">
+                                        @include('admin.user._instructor_map_location', ['user' => $user])
+                                    </div>
+                                @endif
+
                                 {{-- Instructor Fields --}}
                                 @if(optional($user->roles->first())->name === 'instructor')
                                     <div class="col-md-12" id="instructor-fields">
@@ -250,9 +256,6 @@
 
                                         <h3 class="profile-section-heading">Availability &amp; methodology</h3>
                                         @include('admin.user._instructor_extra_fields', ['user' => $user])
-
-                                        <h3 class="profile-section-heading">Map location</h3>
-                                        @include('admin.user._instructor_map_location', ['user' => $user])
                                     </div>
                                 @endif
                             </div>

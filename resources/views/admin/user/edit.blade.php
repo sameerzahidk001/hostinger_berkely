@@ -253,6 +253,12 @@
                                     @enderror
                                 </div>
 
+                                @if($user->roles[0]->name == 'instructor')
+                                    <div class="col-md-12" style="margin-bottom: 15px;">
+                                        @include('admin.user._instructor_map_location', ['user' => $user])
+                                    </div>
+                                @endif
+
                                 <!-- Account Status -->
                                 <div class="col-md-6">
                                     <div class="form-group">
@@ -290,8 +296,6 @@
                                         </div>
                                         <h3 class="profile-section-heading">Availability &amp; methodology</h3>
                                         @include('admin.user._instructor_extra_fields', ['user' => $user])
-                                        <h3 class="profile-section-heading">Map location</h3>
-                                        @include('admin.user._instructor_map_location', ['user' => $user])
                                     </div>
                                 @endif
                             </div>
