@@ -272,6 +272,8 @@
                                     clear: both;
                                 }
                             </style>
+                            <h3 class="profile-section-heading">Address — map location</h3>
+                            @include('admin.user._instructor_map_location', ['user' => new \App\Models\User()])
                             @include('admin.user._instructor_profile_sections', ['user' => new \App\Models\User()])
                             <h3 class="profile-section-heading">LinkedIn</h3>
                             <div class="form-group">
@@ -281,8 +283,6 @@
                             </div>
                             <h3 class="profile-section-heading">Availability &amp; methodology</h3>
                             @include('admin.user._instructor_extra_fields', ['user' => new \App\Models\User()])
-                            <h3 class="profile-section-heading">Map location</h3>
-                            @include('admin.user._instructor_map_location', ['user' => new \App\Models\User()])
                         </div>
                         <div class="row">
                             <div class="col-lg-12" style="margin-top: 16px;text-align:right;"> 
