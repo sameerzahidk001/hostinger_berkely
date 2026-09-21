@@ -97,6 +97,11 @@ class UserController extends Controller
             'linkedin' => 'nullable|url|string|max:255',
             'education' => 'nullable|array',
             'education.*' => 'nullable|string|max:255',
+            'expertise' => 'nullable|array',
+            'expertise.*' => 'nullable|string|max:255',
+            'teaching_methodology' => 'nullable|array',
+            'teaching_methodology.*' => 'nullable|string|max:100',
+            'availability' => 'nullable|array',
         ]);
 
         if ($validator->fails()) {
@@ -121,6 +126,11 @@ class UserController extends Controller
             $image = normalize_profile_image_path($request->image_path);
         }
 
+        $isInstructor = strtolower((string) optional($role)->name) === 'instructor';
+        if ($isInstructor) {
+            User::ensureInstructorExtraColumns();
+        }
+
         $user = User::create([
             'name' => $data['name'],
             'email' => $data['email'],
@@ -135,12 +145,17 @@ class UserController extends Controller
             'post_code' => $data['post_code'] ?? null,
             'city' => $data['city'] ?? null,
             'country' => $data['country'] ?? null,
-            'experience' => strtolower($role->name) === 'instructor' ? ($data['experience'] ?? null) : null,
+            'experience' => $isInstructor ? ($data['experience'] ?? null) : null,
             'short_description' => $data['short_description'] ?? null,
             'long_description' => $data['long_description'] ?? null,
             'linkedin' => $data['linkedin'] ?? null,
-            'education' => strtolower($role->name) === 'instructor' ? json_encode($data['education'] ?? []) : null,
+            'education' => $isInstructor ? User::encodeListField($data['education'] ?? []) : null,
         ]);
+
+        if ($isInstructor) {
+            $user->applyInstructorExtraFields($request);
+            $user->save();
+        }
 
         $user->roles()->sync([$data['role']]);
 
@@ -218,8 +233,15 @@ class UserController extends Controller
                 'linkedin' => 'nullable|url|string|max:255',
                 'short_description' => 'nullable|string|max:500',
                 'long_description' => 'nullable|string',
-                'experience' => 'nullable|string|max:255',
+                'experience' => 'nullable|string',
                 'date_of_birth' => 'nullable|date',
+                'education' => 'nullable|array',
+                'education.*' => 'nullable|string|max:255',
+                'expertise' => 'nullable|array',
+                'expertise.*' => 'nullable|string|max:255',
+                'teaching_methodology' => 'nullable|array',
+                'teaching_methodology.*' => 'nullable|string|max:100',
+                'availability' => 'nullable|array',
             ];
             if (Auth::guard('admin')->check()) {
                 $rules['email'] = 'required|email|unique:users,email,' . $id;
@@ -248,7 +270,11 @@ class UserController extends Controller
             $user->long_description = $request->input('long_description');
             $user->experience = $request->input('experience');
             $user->linkedin = $request->input('linkedin');
-            $user->education = json_encode($request->input('education', []));
+            if ($user->roles()->where('name', 'instructor')->exists()) {
+                $user->applyInstructorExtraFields($request);
+            } else {
+                $user->education = json_encode($request->input('education', []));
+            }
             $user->save();
 
             $emailTemplate = Email::where('name', 'admin-user-update')->first();

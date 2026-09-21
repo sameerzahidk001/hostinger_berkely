@@ -76,7 +76,7 @@
                     </div>
                     <div class="col-md-6 form-group">
                         <label>Head of the Faculty</label>
-                        <select name="head_of_faculty_id" class="form-control">
+                        <select name="head_of_faculty_id" id="head_of_faculty_id" class="form-control">
                             <option value="">—</option>
                             @foreach($instructors as $ins)
                                 <option value="{{ $ins->id }}" @selected(old('head_of_faculty_id') == $ins->id)>{{ $ins->name }}</option>
@@ -85,12 +85,12 @@
                     </div>
                     <div class="col-md-6 form-group">
                         <label>Instructors</label>
-                        <select name="instructor_ids[]" class="form-control" multiple size="6">
+                        <select name="instructor_ids[]" id="instructor_ids" class="form-control" multiple>
                             @foreach($instructors as $ins)
                                 <option value="{{ $ins->id }}" @selected(collect(old('instructor_ids', []))->contains($ins->id))>{{ $ins->name }}</option>
                             @endforeach
                         </select>
-                        <span class="help-block">Hold Ctrl/Cmd to select multiple. Access stays disabled until you Send from Access list.</span>
+                        <span class="help-block">Type to search and select multiple. Access stays disabled until you Send from Access list.</span>
                     </div>
                     @else
                     <div class="col-md-12">

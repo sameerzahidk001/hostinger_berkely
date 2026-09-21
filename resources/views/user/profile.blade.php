@@ -173,30 +173,21 @@
                                 @if($user->roles[0]->name == 'instructor')
                                     <div class="col-md-12" id="instructor-fields">
                                         <div class="form-group">
-                                            <label for="short_description">Short Description</label>
+                                            <label for="short_description">Summary of your profile <span id="short_char_count" class="text-muted">(0 / 500 Characters)</span></label>
                                             <textarea name="short_description" id="short_description" class="form-control" rows="3"
                                                 placeholder="Define yourself shortly...">{!! old('short_description', $user->short_description) !!}</textarea>
-                                            @error('short_description')
-                                                <p class="text-danger text-xs italic">{{ $message }}</p>
-                                            @enderror
                                         </div>
 
                                         <div class="form-group">
-                                            <label for="long_description">Long Description</label>
+                                            <label for="long_description">Detailed Profile <span id="long_char_count" class="text-muted">(0 / 3000 Characters)</span></label>
                                             <textarea name="long_description" id="long_description" class="form-control" rows="3"
                                                 placeholder="Define yourself shortly...">{!! old('long_description', $user->long_description) !!}</textarea>
-                                            @error('long_description')
-                                                <p class="text-danger text-xs italic">{{ $message }}</p>
-                                            @enderror
                                         </div>
 
                                         <div class="form-group">
-                                            <label for="experience">Experience</label>
+                                            <label for="experience">Summary about your Teaching Experience <span id="experience_char_count" class="text-muted">(0 / 1500 Characters)</span></label>
                                             <textarea name="experience" id="experience" class="form-control" rows="3"
                                                 placeholder="Describe experience...">{!! old('experience', $user->experience)  !!}</textarea>
-                                            @error('experience')
-                                                <p class="text-danger text-xs italic">{{ $message }}</p>
-                                            @enderror
                                         </div>
 
                                         <div class="form-group">
@@ -204,9 +195,6 @@
                                             <input type="url" name="linkedin" id="linkedin" class="form-control"
                                                 placeholder="https://www.linkedin.com/in/username"
                                                 value="{{ old('linkedin', $user->linkedin) }}">
-                                            @error('linkedin')
-                                                <p class="text-danger text-xs italic">{{ $message }}</p>
-                                            @enderror
                                         </div>
 
                                         <div class="form-group mt-3">
@@ -225,6 +213,8 @@
                                             </div>
                                             <button type="button" class="btn btn-sm btn-outline-primary mt-2" onclick="addEducationInput()">Add More</button>
                                         </div>
+
+                                        @include('admin.user._instructor_extra_fields', ['user' => $user])
                                     </div>
                                 @endif
                             </div>
@@ -270,7 +260,7 @@
 @endsection
 
 @push('script')
-<script>        
+<script>
     $('#education-wrapper').on('click', '.remove-education', function () {
         $(this).closest('.education-group').remove();
     });
@@ -285,66 +275,67 @@
         `);
     }
 
+    $('#expertise-wrapper').on('click', '.remove-expertise', function () {
+        $(this).closest('.expertise-group').remove();
+    });
+    $('#add-expertise-btn').on('click', function () {
+        $('#expertise-wrapper').append(`
+            <div class="form-group mb-2 expertise-group">
+                <input type="text" name="expertise[]" class="form-control" placeholder="Enter expertise">
+                <button type="button" class="btn btn-danger btn-sm remove-expertise" style="margin-left:10px;float:right;margin-top:10px;">Remove</button>
+            </div>
+        `);
+    });
+    $(document).on('change', 'input[name="availability[frequency]"]', function () {
+        $('#availability-days-wrap').toggle($(this).val() === 'particular');
+    });
+
+    function plainTextLength(html) {
+        var tmp = document.createElement('div');
+        tmp.innerHTML = html || '';
+        return (tmp.textContent || tmp.innerText || '').replace(/\u00a0/g, ' ').trim().length;
+    }
+    function bindEditorCounter(editor, counterId, max) {
+        var el = document.getElementById(counterId);
+        if (!el) return;
+        var update = function () {
+            el.textContent = '(' + plainTextLength(editor.getData()) + ' / ' + max + ' Characters)';
+        };
+        editor.model.document.on('change:data', update);
+        update();
+    }
+
     $(document).ready(function () {
         let shortEditorElement = document.getElementById('short_description');
         let longEditorElement = document.getElementById('long_description');
         let experienceElement = document.getElementById('experience');
+        var editorOpts = {
+            toolbar: [
+                'heading', '|', 'bold', 'italic', '|',
+                'alignment', 'bulletedList', 'numberedList', '|',
+                'link', 'blockQuote', '|',
+                'insertTable', 'tableColumn', 'tableRow', 'mergeTableCells', '|',
+                'undo', 'redo', '|',
+                'indent', 'outdent', '|'
+            ],
+        };
 
         if (shortEditorElement) {
-            ClassicEditor.create(shortEditorElement, {
-                toolbar: [
-                    'heading', '|', 'bold', 'italic', '|',
-                    'alignment', 'bulletedList', 'numberedList', '|',
-                    'link', 'blockQuote', '|',
-                    'insertTable', 'tableColumn', 'tableRow', 'mergeTableCells', '|',
-                    'undo', 'redo', '|',
-                    'indent', 'outdent', '|'
-                ],
-            })
-            .then(editor => {
-                window.editor = editor;
-            })
-            .catch(error => {
-                console.error('CKEditor initialization error:', error);
-            });
+            ClassicEditor.create(shortEditorElement, editorOpts)
+            .then(editor => { bindEditorCounter(editor, 'short_char_count', 500); })
+            .catch(error => { console.error('CKEditor initialization error:', error); });
         }
 
         if (longEditorElement) {
-            ClassicEditor.create(longEditorElement, {
-                toolbar: [
-                    'heading', '|', 'bold', 'italic', '|',
-                    'alignment', 'bulletedList', 'numberedList', '|',
-                    'link', 'blockQuote', '|',
-                    'insertTable', 'tableColumn', 'tableRow', 'mergeTableCells', '|',
-                    'undo', 'redo', '|',
-                    'indent', 'outdent', '|'
-                ],
-            })
-            .then(editor => {
-                window.editor = editor;
-            })
-            .catch(error => {
-                console.error('CKEditor initialization error:', error);
-            });
+            ClassicEditor.create(longEditorElement, editorOpts)
+            .then(editor => { bindEditorCounter(editor, 'long_char_count', 3000); })
+            .catch(error => { console.error('CKEditor initialization error:', error); });
         }
 
         if (experienceElement) {
-            ClassicEditor.create(experienceElement, {
-                toolbar: [
-                    'heading', '|', 'bold', 'italic', '|',
-                    'alignment', 'bulletedList', 'numberedList', '|',
-                    'link', 'blockQuote', '|',
-                    'insertTable', 'tableColumn', 'tableRow', 'mergeTableCells', '|',
-                    'undo', 'redo', '|',
-                    'indent', 'outdent', '|'
-                ],
-            })
-            .then(editor => {
-                window.editor = editor;
-            })
-            .catch(error => {
-                console.error('CKEditor initialization error:', error);
-            });
+            ClassicEditor.create(experienceElement, editorOpts)
+            .then(editor => { bindEditorCounter(editor, 'experience_char_count', 1500); })
+            .catch(error => { console.error('CKEditor initialization error:', error); });
         }
     });
 </script>

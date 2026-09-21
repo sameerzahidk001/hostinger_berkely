@@ -359,6 +359,37 @@
                     <p class="hero-highlight">
                         {{ is_array(json_decode($instructor->education, true)) ? implode(', ', json_decode($instructor->education, true)) : $instructor->education }}
                     </p>
+                    @php
+                        \App\Models\User::ensureInstructorExtraColumns();
+                        $expertiseList = method_exists($instructor, 'expertiseList') ? $instructor->expertiseList() : [];
+                        $methodList = method_exists($instructor, 'teachingMethodologyList') ? $instructor->teachingMethodologyList() : [];
+                        $methodLabels = array_values(array_intersect_key(\App\Models\User::teachingMethodologyOptions(), array_flip($methodList)));
+                        $availability = method_exists($instructor, 'availabilityData') ? $instructor->availabilityData() : [];
+                        $dayCodes = ['MO' => 'Mon', 'TU' => 'Tue', 'WE' => 'Wed', 'TH' => 'Thu', 'FR' => 'Fri', 'SA' => 'Sat', 'SU' => 'Sun'];
+                        $availDays = collect($availability['days'] ?? [])->map(fn ($d) => $dayCodes[$d] ?? $d)->filter()->implode(', ');
+                        $availFreq = ($availability['frequency'] ?? '') === 'daily' ? 'Daily' : ($availDays !== '' ? $availDays : '');
+                        $availTime = trim(($availability['start_time'] ?? '') . (($availability['start_time'] ?? '') && ($availability['end_time'] ?? '') ? ' – ' : '') . ($availability['end_time'] ?? ''));
+                        $availTz = $availability['timezone'] ?? '';
+                        $availFlexible = in_array($availability['flexible'] ?? 'no', ['yes', true, 1, '1'], true);
+                    @endphp
+                    @if(!empty($instructor->short_description))
+                        <div class="hero-short">{!! $instructor->short_description !!}</div>
+                    @endif
+                    @if($expertiseList !== [])
+                        <p><strong>Expertise:</strong> {{ implode(', ', $expertiseList) }}</p>
+                    @endif
+                    @if($methodLabels !== [])
+                        <p><strong>Teaching Methodology:</strong> {{ implode(', ', $methodLabels) }}</p>
+                    @endif
+                    @if($availFreq !== '' || $availTime !== '')
+                        <p>
+                            <strong>Availability:</strong>
+                            {{ $availFreq !== '' ? $availFreq : 'Particular days' }}
+                            @if($availTime !== '') · {{ $availTime }}@endif
+                            @if($availTz !== '') ({{ $availTz }})@endif
+                            @if($availFlexible) · Flexible@endif
+                        </p>
+                    @endif
                     <p>{!! $instructor->experience ?? '<p>Professional Instructor</p>' !!}</p>
                 </div>
             </div>

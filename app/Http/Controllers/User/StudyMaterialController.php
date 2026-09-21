@@ -187,11 +187,27 @@ class StudyMaterialController extends Controller
     public function schedules()
     {
         $isInstructor = Auth::user()?->roles()->where('name', 'instructor')->exists() ?? false;
-        $batches = $this->studentBatchSummaries();
+        $batches = $this->studentBatchSummaries(true);
+
+        $calendarEvents = $batches
+            ->flatMap(function ($batch) {
+                return collect($batch['session_models'] ?? [])
+                    ->flatMap(fn (ClassSchedule $row) => $row->toFullCalendarEvent(
+                        $row->zoho_link ?: route('user.class-schedules.batch', $batch['batch_id'] ?: ($batch['key'] ?? ''))
+                    ));
+            })
+            ->values();
+
+        // List view does not need expanded session payloads.
+        $batches = $batches->map(function ($batch) {
+            unset($batch['sessions'], $batch['session_models']);
+
+            return $batch;
+        });
 
         return view('user.study-materials.schedules', [
             'batches' => $batches,
-            'calendarEvents' => collect(),
+            'calendarEvents' => $calendarEvents,
             'isInstructor' => $isInstructor,
         ]);
     }

@@ -13,6 +13,7 @@ use App\Models\SiteSettings;
 use App\Models\PageSection;
 use Illuminate\Support\Facades\DB;
 use App\Models\CourseAgenda;
+use App\Models\Country;
 
 class WelcomeController extends Controller
 {
@@ -400,6 +401,8 @@ class WelcomeController extends Controller
 
     public function faculty_search(Request $request)
     {
+        User::ensureInstructorExtraColumns();
+
         $search = $request->only(['course', 'country', 'city', 'keyword']);
 
         $query = User::with('countryarray:iso_code,name')
@@ -425,14 +428,28 @@ class WelcomeController extends Controller
             $query->where('country', $search['country']);
         }
 
-        // Keyword Search
+        // Keyword Search (name, city, country, education, expertise)
         if ($request->filled('keyword')) {
             $keyword = $request->keyword;
-            $query->where(function ($q) use ($keyword) {
+            $countryCodes = Country::query()
+                ->where(function ($q) use ($keyword) {
+                    $q->where('name', 'like', "%{$keyword}%")
+                        ->orWhere('iso_code', 'like', "%{$keyword}%");
+                })
+                ->pluck('iso_code')
+                ->all();
+
+            $query->where(function ($q) use ($keyword, $countryCodes) {
                 $q->where('name', 'like', "%{$keyword}%")
                     ->orWhere('short_description', 'like', "%{$keyword}%")
                     ->orWhere('long_description', 'like', "%{$keyword}%")
-                    ->orWhere('city', 'like', "%{$keyword}%");
+                    ->orWhere('city', 'like', "%{$keyword}%")
+                    ->orWhere('country', 'like', "%{$keyword}%")
+                    ->orWhere('education', 'like', "%{$keyword}%")
+                    ->orWhere('expertise', 'like', "%{$keyword}%");
+                if ($countryCodes !== []) {
+                    $q->orWhereIn('country', $countryCodes);
+                }
             });
         }
 

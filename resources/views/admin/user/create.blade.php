@@ -301,6 +301,8 @@
                                     <p class="text-danger text-xs italic">{{ $message }}</p>
                                 @enderror
                             </div>
+
+                            @include('admin.user._instructor_extra_fields', ['user' => new \App\Models\User()])
                                 
                         </div>
                         <div class="row">
@@ -461,6 +463,21 @@
         // Remove education input
         $('#education-wrapper').on('click', '.remove-education', function () {
             $(this).closest('.education-group').remove();
+        });
+
+        $('#expertise-wrapper').on('click', '.remove-expertise', function () {
+            $(this).closest('.expertise-group').remove();
+        });
+        $('#add-expertise-btn').on('click', function () {
+            $('#expertise-wrapper').append(`
+                <div class="form-group mb-2 expertise-group">
+                    <input type="text" name="expertise[]" class="form-control" placeholder="Enter expertise">
+                    <button type="button" class="btn btn-danger btn-sm remove-expertise" style="margin-left:10px;float:right;margin-top:10px;">Remove</button>
+                </div>
+            `);
+        });
+        $(document).on('change', 'input[name="availability[frequency]"]', function () {
+            $('#availability-days-wrap').toggle($(this).val() === 'particular');
         });
     });
 </script>

@@ -138,8 +138,11 @@
 $(function () {
     var $batch = $('#batch_id');
     var $students = $('#student_ids');
-    $batch.select2({ placeholder: 'Select batch', allowClear: true, width: '100%' });
-    $students.select2({ placeholder: 'Students', width: '100%', closeOnSelect: false });
+    $batch.select2({ placeholder: 'Type to find batch', allowClear: true, width: '100%' });
+    $students.select2({ placeholder: 'Type to find students', width: '100%', closeOnSelect: false });
+    $('#head_of_faculty_id').select2({ placeholder: 'Type to find head of faculty', allowClear: true, width: '100%' });
+    $('#instructor_id').select2({ placeholder: 'Type to find instructor', allowClear: true, width: '100%' });
+    $('#meeting_account_id').select2({ placeholder: 'Type to find meeting account', allowClear: true, width: '100%' });
     $batch.on('change', function () {
         var id = $batch.val();
         if (!id) return;

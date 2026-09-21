@@ -43,7 +43,7 @@
                     </div>
                     <div class="col-md-6 form-group">
                         <label>Head of the Faculty</label>
-                        <select name="head_of_faculty_id" class="form-control" @disabled($readOnly)>
+                        <select name="head_of_faculty_id" id="head_of_faculty_id" class="form-control" @disabled($readOnly)>
                             <option value="">—</option>
                             @foreach($instructors as $ins)
                                 <option value="{{ $ins->id }}" @selected(old('head_of_faculty_id', $batch->head_of_faculty_id) == $ins->id)>{{ $ins->name }}</option>
@@ -52,12 +52,12 @@
                     </div>
                     <div class="col-md-6 form-group">
                         <label>Instructors (multi-select)</label>
-                        <select name="instructor_ids[]" class="form-control" multiple size="8" @disabled($readOnly)>
+                        <select name="instructor_ids[]" id="instructor_ids" class="form-control" multiple @disabled($readOnly)>
                             @foreach($instructors as $ins)
                                 <option value="{{ $ins->id }}" @selected(collect($selectedInstructorIds)->contains($ins->id))>{{ $ins->name }}</option>
                             @endforeach
                         </select>
-                        <span class="help-block">Hold Ctrl/Cmd to select multiple.</span>
+                        <span class="help-block">Type to search and select multiple.</span>
                     </div>
                     <div class="col-md-6 form-group">
                         <label>Students {{ $isAdmin ? '(Admin assigns)' : '(view only)' }}</label>
@@ -103,6 +103,8 @@
 <script>
 $(function () {
     $('#course_id').select2({ placeholder: 'Type to find the course', allowClear: true, width: '100%' });
+    $('#head_of_faculty_id').select2({ placeholder: 'Type to find head of faculty', allowClear: true, width: '100%' });
+    $('#instructor_ids').select2({ placeholder: 'Type to find instructors', width: '100%', closeOnSelect: false });
     $('#student_ids').select2({ placeholder: 'Type to find students', width: '100%', closeOnSelect: false });
 });
 </script>

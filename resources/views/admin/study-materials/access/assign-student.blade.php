@@ -29,7 +29,7 @@
                 <div class="row">
                     <div class="col-md-6 form-group">
                         <label>Active folder *</label>
-                        <select name="folder_id" id="folder_id" class="form-control" required>
+                        <select name="folder_id" id="folder_id" class="form-control js-type-find" data-placeholder="Type to find folder" required>
                             <option value="">Select folder</option>
                             @foreach($folders as $folder)
                                 <option value="{{ $folder->id }}"
@@ -42,7 +42,7 @@
                     </div>
                     <div class="col-md-6 form-group">
                         <label>Student *</label>
-                        <select name="student_id" id="student_id" class="form-control" required>
+                        <select name="student_id" id="student_id" class="form-control js-type-find" data-placeholder="Type to find student" required>
                             <option value="">Select student</option>
                             @foreach($students as $student)
                                 <option value="{{ $student->id }}" @selected(old('student_id') == $student->id)>{{ $student->name }} ({{ $student->email }})</option>
@@ -66,6 +66,7 @@
     </div>
 </div>
 @endsection
+@include('admin.partials.type-find-selects')
 @push('script')
 <script>
 (function () {
@@ -90,8 +91,12 @@
 
     function loadStudents() {
         const folderId = folder.value;
+        if (window.jQuery && $(student).hasClass('select2-hidden-accessible')) {
+            $(student).select2('destroy');
+        }
         student.innerHTML = '<option value="">Select student</option>';
         if (!folderId) {
+            if (window.initTypeFindSelects) window.initTypeFindSelects(student.parentElement);
             return;
         }
         fetch(studentsUrl + '/' + folderId, {
@@ -108,11 +113,14 @@
                     }
                     student.appendChild(opt);
                 });
+                if (window.initTypeFindSelects) window.initTypeFindSelects(student.parentElement);
             })
-            .catch(function () {});
+            .catch(function () {
+                if (window.initTypeFindSelects) window.initTypeFindSelects(student.parentElement);
+            });
     }
 
-    folder.addEventListener('change', function () {
+    $(folder).on('change select2:select select2:clear', function () {
         recalc();
         loadStudents();
     });

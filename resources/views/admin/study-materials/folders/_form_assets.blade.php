@@ -43,6 +43,20 @@
         allowClear: true,
         width: '100%'
     });
+    if ($('#head_of_faculty_id').length) {
+        $('#head_of_faculty_id').select2({
+            placeholder: 'Type to find head of faculty',
+            allowClear: true,
+            width: '100%'
+        });
+    }
+    if ($('#instructor_ids').length) {
+        $('#instructor_ids').select2({
+            placeholder: 'Type to find instructors',
+            width: '100%',
+            closeOnSelect: false
+        });
+    }
 
     function packageLabel(row) {
         return row.package_name + (row.price ? (' — ' + (row.currency || '') + ' ' + row.price) : '');

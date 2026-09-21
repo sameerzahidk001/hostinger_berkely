@@ -22,7 +22,7 @@
                 <div class="row">
                     <div class="col-md-6 form-group">
                         <label>Folder *</label>
-                        <select name="folder_id" id="folder_id" class="form-control" required>
+                        <select name="folder_id" id="folder_id" class="form-control js-type-find" data-placeholder="Type to find folder" required>
                             @foreach($folders as $folder)
                                 <option value="{{ $folder->id }}"
                                     data-months="{{ $folder->hasUnlimitedValidity() ? '' : $folder->validity_months }}"
@@ -34,7 +34,7 @@
                     </div>
                     <div class="col-md-6 form-group">
                         <label>Student *</label>
-                        <select name="student_id" class="form-control" required>
+                        <select name="student_id" class="form-control js-type-find" data-placeholder="Type to find student" required>
                             @foreach($students as $student)
                                 <option value="{{ $student->id }}" @selected(old('student_id', $access->student_id) == $student->id)>{{ $student->name }} ({{ $student->email }})</option>
                             @endforeach
@@ -64,3 +64,4 @@
     </div>
 </div>
 @endsection
+@include('admin.partials.type-find-selects')

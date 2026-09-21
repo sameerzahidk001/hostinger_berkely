@@ -23,7 +23,7 @@
                 <div class="row">
                     <div class="col-md-6 form-group">
                         <label>Folder *</label>
-                        <select name="folder_id" class="form-control" required>
+                        <select name="folder_id" class="form-control js-type-find" data-placeholder="Type to find folder" required>
                             <option value="">Select folder</option>
                             @foreach($folders as $folder)
                                 <option value="{{ $folder->id }}" @selected(old('folder_id', $selectedFolder) == $folder->id)>
@@ -34,7 +34,7 @@
                     </div>
                     <div class="col-md-6 form-group">
                         <label>Instructors *</label>
-                        <select name="instructor_ids[]" class="form-control" multiple size="8" required>
+                        <select name="instructor_ids[]" class="form-control js-type-find" data-placeholder="Type to find instructors" multiple required>
                             @foreach($instructors as $ins)
                                 <option value="{{ $ins->id }}" @selected(collect(old('instructor_ids'))->contains($ins->id))>{{ $ins->name }} ({{ $ins->email }})</option>
                             @endforeach
@@ -57,3 +57,4 @@
     </div>
 </div>
 @endsection
+@include('admin.partials.type-find-selects')

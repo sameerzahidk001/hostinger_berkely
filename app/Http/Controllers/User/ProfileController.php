@@ -39,9 +39,22 @@ class ProfileController extends Controller
             'country' => 'nullable|string|max:100',
             'experience' => 'nullable|string',
             'short_description' => 'nullable|string',
+            'long_description' => 'nullable|string',
             'linkedin' => 'nullable|url|string|max:255',
             'education' => 'nullable|array',
             'education.*' => 'nullable|string|max:255',
+            'expertise' => 'nullable|array',
+            'expertise.*' => 'nullable|string|max:255',
+            'teaching_methodology' => 'nullable|array',
+            'teaching_methodology.*' => 'nullable|string|max:100',
+            'availability' => 'nullable|array',
+            'availability.frequency' => 'nullable|in:daily,particular',
+            'availability.days' => 'nullable|array',
+            'availability.days.*' => 'nullable|string|max:2',
+            'availability.start_time' => 'nullable|string|max:10',
+            'availability.end_time' => 'nullable|string|max:10',
+            'availability.timezone' => 'nullable|string|max:64',
+            'availability.flexible' => 'nullable|in:yes,no',
         ]);
 
         if ($validator->fails()) {
@@ -49,10 +62,19 @@ class ProfileController extends Controller
         }
 
         $validatedData = $validator->validated();
-        unset($validatedData['image_path']);
+        unset(
+            $validatedData['image_path'],
+            $validatedData['education'],
+            $validatedData['expertise'],
+            $validatedData['teaching_methodology'],
+            $validatedData['availability']
+        );
 
         $user = Auth::user();
         $user->fill($validatedData);
+        if ($user->roles()->where('name', 'instructor')->exists()) {
+            $user->applyInstructorExtraFields($request);
+        }
         apply_profile_image_from_request($user, $request);
         $user->save();
         Auth::setUser($user->fresh());
