@@ -54,6 +54,15 @@
         gap: 16px;
     }
 
+    .instructor-media {
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        flex-shrink: 0;
+        width: 148px;
+        gap: 8px;
+    }
+
     .instructor-image {
         flex-shrink: 0;
         width: 148px;
@@ -111,16 +120,20 @@
     }
 
     .instructor-action {
-        margin-top: 4px;
+        margin-top: 0;
+        width: 100%;
     }
 
     .instructor-btn {
-        display: inline-block;
+        display: block;
+        width: 100%;
+        text-align: center;
+        box-sizing: border-box;
         background: linear-gradient(135deg, #bc8a13, #876213);
         color: #fff;
         font-size: 14px;
         font-weight: 600;
-        padding: 10px 20px;
+        padding: 10px 12px;
         border-radius: 8px;
         text-decoration: none;
         transition: all 0.3s ease;
@@ -193,6 +206,11 @@
             align-items: center;
         }
 
+        .instructor-media {
+            width: 160px;
+            align-items: stretch;
+        }
+
         .instructor-image {
             width: 160px;
             height: 160px;
@@ -215,12 +233,12 @@
 
         .instructor-action {
             text-align: center;
-            margin-top: 8px;
+            margin-top: 0;
             width: 100%;
         }
 
         .instructor-btn {
-            width: auto;
+            width: 100%;
         }
     }
 
@@ -379,14 +397,15 @@
                     <option value="100">100 km</option>
                 </select>
             </div>
+            <div class="flex flex-col justify-end">
+                <label class="block text-sm font-semibold mb-1" for="use-my-location">&nbsp;</label>
+                <button type="button" id="use-my-location"
+                    class="w-full border px-3 py-2 border-[#000435] text-[#000435] rounded text-sm">
+                    Use my location
+                </button>
+            </div>
         </div>
-        <div class="flex flex-wrap gap-3 items-end mb-4">
-            <button type="button" id="use-my-location"
-                class="border px-3 py-2 border-[#000435] text-[#000435] rounded text-sm">
-                Use my location
-            </button>
-            <p id="nearby-status" class="text-sm text-gray-600 mb-0">Optional: click “Use my location” to find instructors near you by distance.</p>
-        </div>
+        <p id="nearby-status" class="text-sm text-gray-600 mb-4">Optional: click “Use my location” to find instructors near you by distance.</p>
         <input type="hidden" name="lat" id="search_lat" value="">
         <input type="hidden" name="lng" id="search_lng" value="">
         <div class="flex gap-2 items-end mb-8 max-w-md">
@@ -404,9 +423,17 @@
         @foreach ($instructors as $instructor)
             <div class="instructor-card">
                 <div class="instructor-left">
-                    <div class="instructor-image">
-                        <img src="{{ asset($instructor['image'] ?? '/images/profiles/user.png') }}"
-                            alt="{{ $instructor['name'] }}">
+                    <div class="instructor-media">
+                        <div class="instructor-image">
+                            <img src="{{ asset($instructor['image'] ?? '/images/profiles/user.png') }}"
+                                alt="{{ $instructor['name'] }}">
+                        </div>
+                        <div class="instructor-action">
+                            <a href="{{ url('/instructor/' . $instructor['id']) }}" target="_blank" rel="noopener noreferrer"
+                                class="instructor-btn">
+                                View Profile
+                            </a>
+                        </div>
                     </div>
                     <div class="instructor-info">
                         <div class="instructor-title">
@@ -442,15 +469,6 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- View Details Button -->
-                <div class="instructor-action">
-                    <a href="{{ url('/instructor/' . $instructor['id']) }}" target="_blank" rel="noopener noreferrer"
-                        class="instructor-btn">
-                        View Profile
-                    </a>
-                </div>
-
             </div>
         @endforeach
     </div>

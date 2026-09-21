@@ -1,8 +1,16 @@
 @forelse ($results as $instructor)
     <div class="instructor-card">
         <div class="instructor-left">
-            <div class="instructor-image">
-                <img src="{{ asset($instructor['image'] ?? '/images/profiles/user.png') }}" alt="{{ $instructor['name'] }}">
+            <div class="instructor-media">
+                <div class="instructor-image">
+                    <img src="{{ asset($instructor['image'] ?? '/images/profiles/user.png') }}" alt="{{ $instructor['name'] }}">
+                </div>
+                <div class="instructor-action">
+                    <a href="{{ url('/instructor/' . $instructor['id']) }}" target="_blank" rel="noopener noreferrer"
+                        class="instructor-btn">
+                        View Profile
+                    </a>
+                </div>
             </div>
 
             <div class="instructor-info">
@@ -40,13 +48,6 @@
                     {!! $instructor->short_description ?? '<p>This instructor has not added a biography yet.</p>' !!}
                 </div>
             </div>
-        </div>
-
-        <div class="instructor-action">
-            <a href="{{ url('/instructor/' . $instructor['id']) }}" target="_blank" rel="noopener noreferrer"
-                class="instructor-btn">
-                View Profile
-            </a>
         </div>
     </div>
 @empty
