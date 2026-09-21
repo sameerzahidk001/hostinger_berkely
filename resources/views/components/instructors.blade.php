@@ -401,11 +401,11 @@
                 <label class="block text-sm font-semibold mb-1" for="use-my-location">&nbsp;</label>
                 <button type="button" id="use-my-location"
                     class="w-full border px-3 py-2 border-[#000435] text-[#000435] rounded text-sm">
-                    Use my location
+                    Find using my location
                 </button>
             </div>
         </div>
-        <p id="nearby-status" class="text-sm text-gray-600 mb-4">Optional: click “Use my location” to find instructors near you by distance.</p>
+        <p id="nearby-status" class="text-sm text-gray-600 mb-4">Optional: click “Find using my location” to find instructors near you by distance.</p>
         <input type="hidden" name="lat" id="search_lat" value="">
         <input type="hidden" name="lng" id="search_lng" value="">
         <div class="flex gap-2 items-end mb-8 max-w-md">
