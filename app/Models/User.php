@@ -45,6 +45,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'corporate_training',
         'institutions',
         'teaching_methodology',
+        'teaching_recognition',
         'availability',
         'linkedin',
         'long_description',
@@ -108,6 +109,29 @@ class User extends Authenticatable implements MustVerifyEmail
         ];
     }
 
+    public static function teachingRecognitionOptions(): array
+    {
+        return [
+            'afhea' => 'Associate Fellowship of Advance HE (AFHEA)',
+            'fhea' => 'Fellowship of Advance HE (FHEA)',
+            'sfhea' => 'Senior Fellowship of Advance HE (SFHEA)',
+            'pfhea' => 'Principal Fellowship of Advance HE (PFHEA)',
+            'qtls' => 'Qualified Teacher Learning and Skills (QTLS)',
+            'qts' => 'Qualified Teacher Status (QTS)',
+            'level5_diploma_teaching' => 'Level 5 Diploma in Teaching (Further Education and Skills)',
+            'pgce' => 'Postgraduate Certificate in Education (PGCE)',
+            'certed' => 'Certificate in Education (CertEd)',
+            'celta' => 'CELTA – Certificate in Teaching English to Speakers of Other Languages',
+            'delta' => 'DELTA – Diploma in Teaching English to Speakers of Other Languages',
+            'tkt' => 'TKT – Teaching Knowledge Test',
+            'oct' => 'Ontario Certified Teacher (OCT)',
+            'provincial_canada' => 'Provincial Teacher Certification (Canada)',
+            'state_usa' => 'State Teacher Certification / Teaching License (USA)',
+            'teacher_registration_australia' => 'Teacher Registration (Australia)',
+            'teaching_council_ireland' => 'Teaching Council Registration (Ireland)',
+        ];
+    }
+
     public function educationList(): array
     {
         $raw = $this->education ?? null;
@@ -160,6 +184,33 @@ class User extends Authenticatable implements MustVerifyEmail
         return is_array($decoded) ? array_values(array_filter(array_map('strval', $decoded))) : [];
     }
 
+    public function teachingRecognitionList(): array
+    {
+        $raw = $this->teaching_recognition ?? null;
+        if (is_array($raw)) {
+            return array_values(array_filter(array_map('strval', $raw)));
+        }
+        $decoded = json_decode((string) $raw, true);
+
+        return is_array($decoded) ? array_values(array_filter(array_map('strval', $decoded))) : [];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function teachingRecognitionLabels(): array
+    {
+        $selected = $this->teachingRecognitionList();
+        if ($selected === []) {
+            return [];
+        }
+
+        return array_values(array_intersect_key(
+            self::teachingRecognitionOptions(),
+            array_flip($selected)
+        ));
+    }
+
     public function availabilityData(): array
     {
         $raw = $this->availability ?? null;
@@ -180,6 +231,7 @@ class User extends Authenticatable implements MustVerifyEmail
         $needed = [
             'expertise',
             'teaching_methodology',
+            'teaching_recognition',
             'availability',
             'long_description',
             'professional_qualifications',
@@ -199,6 +251,9 @@ class User extends Authenticatable implements MustVerifyEmail
             }
             if (in_array('teaching_methodology', $missing, true)) {
                 $table->text('teaching_methodology')->nullable();
+            }
+            if (in_array('teaching_recognition', $missing, true)) {
+                $table->text('teaching_recognition')->nullable();
             }
             if (in_array('availability', $missing, true)) {
                 $table->text('availability')->nullable();
@@ -546,6 +601,12 @@ class User extends Authenticatable implements MustVerifyEmail
             $allowedMethods
         ));
         $this->teaching_methodology = json_encode($methods);
+        $allowedRecognition = array_keys(self::teachingRecognitionOptions());
+        $recognition = array_values(array_intersect(
+            array_map('strval', (array) $request->input('teaching_recognition', [])),
+            $allowedRecognition
+        ));
+        $this->teaching_recognition = json_encode($recognition);
         $this->availability = self::encodeAvailabilityField($request->input('availability'));
 
         foreach (['executive_experience', 'training_expertise', 'corporate_training', 'institutions'] as $field) {

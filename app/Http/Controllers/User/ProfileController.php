@@ -55,6 +55,8 @@ class ProfileController extends Controller
             'expertise.*' => 'nullable|string|max:255',
             'teaching_methodology' => 'nullable|array',
             'teaching_methodology.*' => 'nullable|string|max:100',
+            'teaching_recognition' => 'nullable|array',
+            'teaching_recognition.*' => 'nullable|string|max:100',
             'availability' => 'nullable|array',
             'availability.type' => 'nullable|in:grid',
             'availability.grid' => 'nullable|array',
@@ -83,6 +85,7 @@ class ProfileController extends Controller
             $validatedData['education'],
             $validatedData['expertise'],
             $validatedData['teaching_methodology'],
+            $validatedData['teaching_recognition'],
             $validatedData['availability'],
             $validatedData['professional_qualifications']
         );

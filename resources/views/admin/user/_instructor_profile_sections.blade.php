@@ -67,6 +67,21 @@
         placeholder="Describe teaching and academic experience…">{!! old('experience', $user->experience) !!}</textarea>
 </div>
 
+@php
+    $recognitionOptions = \App\Models\User::teachingRecognitionOptions();
+    $selectedRecognition = old('teaching_recognition', method_exists($user, 'teachingRecognitionList') ? $user->teachingRecognitionList() : []);
+@endphp
+<h3 class="profile-section-heading">Teaching Recognition and Certificates</h3>
+<div class="form-group">
+    <label for="teaching_recognition">Teaching Recognition and Certificates</label>
+    <select name="teaching_recognition[]" id="teaching_recognition" class="form-control" multiple size="8">
+        @foreach($recognitionOptions as $value => $label)
+            <option value="{{ $value }}" @selected(in_array($value, (array) $selectedRecognition, true))>{{ $label }}</option>
+        @endforeach
+    </select>
+    <span class="help-block">Hold Ctrl/Cmd to select multiple. Leave empty if none apply.</span>
+</div>
+
 <h3 class="profile-section-heading">Professional Training Expertise</h3>
 <div class="form-group">
     <label for="training_expertise">Professional Training Expertise <span id="training_char_count" class="text-muted">(0 / 2000 Characters)</span></label>
