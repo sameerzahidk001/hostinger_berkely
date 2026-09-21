@@ -20,13 +20,19 @@
                     <span
                         style="font-size: 14px; font-weight: 300;">{{ is_array(json_decode($instructor['education'], true)) ? implode(', ', json_decode($instructor['education'], true)) : $instructor['education'] }}</span>
                 </h3>
-                @if (!empty($instructor['city']) || !empty($instructor['countryarray']->name))
+                @if (!empty($instructor['city']) || !empty($instructor['countryarray']->name) || isset($instructor->distance_km))
                     <p class="instructor-location">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" class="location-icon">
                             <path
                                 d="M128 252.6C128 148.4 214 64 320 64C426 64 512 148.4 512 252.6C512 371.9 391.8 514.9 341.6 569.4C329.8 582.2 310.1 582.2 298.3 569.4C248.1 514.9 127.9 371.9 127.9 252.6zM320 320C355.3 320 384 291.3 384 256C384 220.7 355.3 192 320 192C284.7 192 256 220.7 256 256C256 291.3 284.7 320 320 320z" />
                         </svg>
-                        <span>{{ $instructor['city'] ?? '' }}{{ !empty($instructor['city']) && !empty($instructor['countryarray']->name) ? ', ' : '' }}{{ $instructor['countryarray']->name ?? '' }}</span>
+                        <span>
+                            @if(isset($instructor->distance_km) && is_numeric($instructor->distance_km))
+                                {{ number_format((float) $instructor->distance_km, 1) }} km away
+                                @if(!empty($instructor['city']) || !empty($instructor['countryarray']->name)) · @endif
+                            @endif
+                            {{ $instructor['city'] ?? '' }}{{ !empty($instructor['city']) && !empty($instructor['countryarray']->name) ? ', ' : '' }}{{ $instructor['countryarray']->name ?? '' }}
+                        </span>
                     </p>
                 @endif
 

@@ -270,8 +270,7 @@
                 placeholder="Type a name, city, country, education, or expertise…"
                 class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-[#f8961f] focus:ring-[#f8961f]">
         </div>
-        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-
+        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <div>
                 <label class="" for="course">Course</label>
                 <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm" name="course">
@@ -291,27 +290,35 @@
                     @endforeach
                 </select>
             </div>
-
-            {{-- <div>
-                <label class="" for="city">City</label>
-                <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm" name="city">
-                    <option value="">All Cities</option>
-                    @foreach ($cities as $city)
-                        <option value="{{ $city }}">{{ $city }}</option>
-                    @endforeach
+            <div>
+                <label for="distance_km">Within distance</label>
+                <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm" name="distance_km" id="distance_km">
+                    <option value="">Any distance</option>
+                    <option value="5">5 km</option>
+                    <option value="10">10 km</option>
+                    <option value="25" selected>25 km</option>
+                    <option value="50">50 km</option>
+                    <option value="100">100 km</option>
                 </select>
-            </div> --}}
-
+            </div>
             <div class="flex gap-2 items-end">
-                <button
-                    class="border px-4 py-2 w-full border-[#000435] bg-[#000435] transition-all delay-300 duration-300 content-center rounded uppercase text-white"
-                    type="submit">Search</button>
-                <button type="button" id="reset"
-                    class="hidden group-hover:bg-primary bg-secondary px-4 py-2 w-full transition-all delay-300 duration-300 content-center rounded uppercase text-white">
-                    Reset
+                <button type="button" id="use-my-location"
+                    class="border px-3 py-2 w-full border-[#000435] text-[#000435] rounded text-sm">
+                    Use my location
                 </button>
             </div>
-
+        </div>
+        <input type="hidden" name="lat" id="search_lat" value="">
+        <input type="hidden" name="lng" id="search_lng" value="">
+        <p id="nearby-status" class="text-sm text-gray-600 mb-4">Optional: click “Use my location” to find trainers near you by distance.</p>
+        <div class="flex gap-2 items-end mb-8 max-w-md">
+            <button
+                class="border px-4 py-2 w-full border-[#000435] bg-[#000435] transition-all delay-300 duration-300 content-center rounded uppercase text-white"
+                type="submit">Search</button>
+            <button type="button" id="reset"
+                class="hidden group-hover:bg-primary bg-secondary px-4 py-2 w-full transition-all delay-300 duration-300 content-center rounded uppercase text-white">
+                Reset
+            </button>
         </div>
     </form>
 
@@ -384,12 +391,40 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
     $(document).ready(function() {
+        $('#use-my-location').on('click', function () {
+            var $btn = $(this);
+            var $status = $('#nearby-status');
+            if (!navigator.geolocation) {
+                $status.text('Geolocation is not supported in this browser.');
+                return;
+            }
+            $btn.prop('disabled', true).text('Locating…');
+            navigator.geolocation.getCurrentPosition(function (pos) {
+                $('#search_lat').val(pos.coords.latitude.toFixed(7));
+                $('#search_lng').val(pos.coords.longitude.toFixed(7));
+                $status.text('Your location is set. Search to find nearby trainers.');
+                $btn.prop('disabled', false).text('Use my location');
+                $('#instructors-search-form').trigger('submit');
+            }, function (err) {
+                $status.text('Could not get your location: ' + (err.message || 'permission denied'));
+                $btn.prop('disabled', false).text('Use my location');
+            }, { enableHighAccuracy: true, timeout: 15000 });
+        });
+
         $('#instructors-search-form').on('submit', function(e) {
             e.preventDefault();
 
             let $form = $(this);
             let $submitBtn = $form.find('button[type="submit"]');
             let originalBtnText = $submitBtn.html();
+            let distance = $('#distance_km').val();
+            let lat = $('#search_lat').val();
+            let lng = $('#search_lng').val();
+
+            if (distance && (!lat || !lng)) {
+                $('#nearby-status').text('Click “Use my location” first to search within a distance.');
+                return;
+            }
 
             $submitBtn.prop('disabled', true).html(
                 'Searching... <span class="animate-spin inline-block ml-1">&#9696;</span>');
@@ -414,7 +449,7 @@
                     console.error('Error:', xhr.responseJSON?.message ||
                         'Something went wrong.');
                     $('#instructors-container').html(
-                        '<p class="col-span-full text-center text-gray-500 py-10">Failed to load agenda.</p>'
+                        '<p class="col-span-full text-center text-gray-500 py-10">Failed to load faculty.</p>'
                     );
                 },
                 complete: function() {

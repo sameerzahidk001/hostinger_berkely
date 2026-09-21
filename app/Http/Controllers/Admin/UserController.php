@@ -88,6 +88,8 @@ class UserController extends Controller
             'address' => 'nullable|string|max:255',
             'post_code' => 'nullable|string|max:20',
             'city' => 'nullable|string|max:100',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
             'country' => 'nullable|string|max:100',
             'image_path' => 'nullable|string',
             'local_file_input' => 'nullable|file|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
@@ -129,6 +131,7 @@ class UserController extends Controller
         $isInstructor = strtolower((string) optional($role)->name) === 'instructor';
         if ($isInstructor) {
             User::ensureInstructorExtraColumns();
+            User::ensureLatLngColumns();
         }
 
         $user = User::create([
@@ -144,6 +147,8 @@ class UserController extends Controller
             'address' => $data['address'] ?? null,
             'post_code' => $data['post_code'] ?? null,
             'city' => $data['city'] ?? null,
+            'latitude' => isset($data['latitude']) && $data['latitude'] !== '' ? (float) $data['latitude'] : null,
+            'longitude' => isset($data['longitude']) && $data['longitude'] !== '' ? (float) $data['longitude'] : null,
             'country' => $data['country'] ?? null,
             'experience' => $isInstructor ? ($data['experience'] ?? null) : null,
             'short_description' => $data['short_description'] ?? null,
@@ -230,6 +235,9 @@ class UserController extends Controller
                 'approved' => 'nullable|boolean',
                 'image_path' => 'nullable|string',
                 'local_file_input' => 'nullable|file|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+                'city' => 'nullable|string|max:100',
+                'latitude' => 'nullable|numeric|between:-90,90',
+                'longitude' => 'nullable|numeric|between:-180,180',
                 'linkedin' => 'nullable|url|string|max:255',
                 'short_description' => 'nullable|string|max:500',
                 'long_description' => 'nullable|string',
@@ -266,6 +274,9 @@ class UserController extends Controller
             $user->post_code = $request->input('post_code');
             $user->city = $request->input('city');
             $user->country = $request->input('country');
+            \App\Models\User::ensureLatLngColumns();
+            $user->latitude = $request->filled('latitude') ? (float) $request->input('latitude') : null;
+            $user->longitude = $request->filled('longitude') ? (float) $request->input('longitude') : null;
             $user->short_description = $request->input('short_description');
             $user->long_description = $request->input('long_description');
             $user->experience = $request->input('experience');

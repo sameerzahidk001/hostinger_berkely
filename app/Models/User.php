@@ -33,6 +33,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'post_code',
         'nationality',
         'city',
+        'latitude',
+        'longitude',
         'country',
         'experience',
         'education',
@@ -177,6 +179,41 @@ class User extends Authenticatable implements MustVerifyEmail
         });
 
         return true;
+    }
+
+    /**
+     * Hostinger deploys often skip artisan migrate; ensure map coordinates exist.
+     */
+    public static function ensureLatLngColumns(): bool
+    {
+        if (! Schema::hasTable('users')) {
+            return false;
+        }
+
+        $needLat = ! Schema::hasColumn('users', 'latitude');
+        $needLng = ! Schema::hasColumn('users', 'longitude');
+        if (! $needLat && ! $needLng) {
+            return true;
+        }
+
+        Schema::table('users', function (Blueprint $table) use ($needLat, $needLng) {
+            if ($needLat) {
+                $table->decimal('latitude', 10, 7)->nullable()->after('city');
+            }
+            if ($needLng) {
+                $table->decimal('longitude', 10, 7)->nullable()->after('latitude');
+            }
+        });
+
+        return Schema::hasColumn('users', 'latitude') && Schema::hasColumn('users', 'longitude');
+    }
+
+    public function hasMapLocation(): bool
+    {
+        return $this->latitude !== null
+            && $this->longitude !== null
+            && is_numeric($this->latitude)
+            && is_numeric($this->longitude);
     }
 
     public static function encodeListField(?array $items): string

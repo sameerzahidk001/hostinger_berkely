@@ -303,6 +303,7 @@
                             </div>
 
                             @include('admin.user._instructor_extra_fields', ['user' => new \App\Models\User()])
+                            @include('admin.user._instructor_map_location', ['user' => new \App\Models\User()])
                                 
                         </div>
                         <div class="row">

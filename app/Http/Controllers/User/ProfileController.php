@@ -36,6 +36,8 @@ class ProfileController extends Controller
             'post_code' => 'nullable|string|max:20',
             'nationality' => 'nullable|string|max:255',
             'city' => 'nullable|string|max:100',
+            'latitude' => 'nullable|numeric|between:-90,90',
+            'longitude' => 'nullable|numeric|between:-180,180',
             'country' => 'nullable|string|max:100',
             'experience' => 'nullable|string',
             'short_description' => 'nullable|string',
@@ -75,7 +77,18 @@ class ProfileController extends Controller
         );
 
         $user = Auth::user();
+        \App\Models\User::ensureLatLngColumns();
         $user->fill($validatedData);
+        if (array_key_exists('latitude', $validatedData)) {
+            $user->latitude = $validatedData['latitude'] !== null && $validatedData['latitude'] !== ''
+                ? (float) $validatedData['latitude']
+                : null;
+        }
+        if (array_key_exists('longitude', $validatedData)) {
+            $user->longitude = $validatedData['longitude'] !== null && $validatedData['longitude'] !== ''
+                ? (float) $validatedData['longitude']
+                : null;
+        }
         if ($user->roles()->where('name', 'instructor')->exists()) {
             $user->applyInstructorExtraFields($request);
         }

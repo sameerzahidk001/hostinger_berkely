@@ -62,6 +62,9 @@
                                     @endforeach
                                 </ul>
                             @endif
+                            @if(method_exists($user, 'hasMapLocation') && $user->hasMapLocation())
+                                <p><strong>Map location:</strong> Set (used for nearby trainer search)</p>
+                            @endif
                             @if($expertiseList !== [])
                                 <p><strong>Expertise:</strong> {{ implode(', ', $expertiseList) }}</p>
                             @endif
@@ -236,6 +239,7 @@
                                         </div>
 
                                         @include('admin.user._instructor_extra_fields', ['user' => $user])
+                                        @include('admin.user._instructor_map_location', ['user' => $user])
                                     </div>
                                 @endif
                             </div>

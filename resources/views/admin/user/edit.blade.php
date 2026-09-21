@@ -329,6 +329,7 @@
                                         </div>
 
                                         @include('admin.user._instructor_extra_fields', ['user' => $user])
+                                        @include('admin.user._instructor_map_location', ['user' => $user])
 
                                     </div>
                                 @endif

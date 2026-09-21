@@ -403,12 +403,13 @@ class WelcomeController extends Controller
     public function faculty_search(Request $request)
     {
         User::ensureInstructorExtraColumns();
+        User::ensureLatLngColumns();
 
-        $search = $request->only(['course', 'country', 'city', 'keyword']);
+        $search = $request->only(['course', 'country', 'city', 'keyword', 'distance_km', 'lat', 'lng']);
 
         $query = User::with('countryarray:iso_code,name')
             ->where('approved', 1)
-            ->where('is_on_web', 1) 
+            ->where('is_on_web', 1)
             ->whereHas('roles', function ($q) {
                 $q->where('name', 'instructor');
             });
@@ -454,8 +455,32 @@ class WelcomeController extends Controller
             });
         }
 
+        $viewerLat = is_numeric($request->input('lat')) ? (float) $request->input('lat') : null;
+        $viewerLng = is_numeric($request->input('lng')) ? (float) $request->input('lng') : null;
+        $distanceKm = is_numeric($request->input('distance_km')) ? (float) $request->input('distance_km') : null;
+        $useDistance = $viewerLat !== null && $viewerLng !== null;
+
+        if ($useDistance) {
+            // Haversine distance in km
+            $haversine = '(6371 * acos(least(1, greatest(-1,
+                cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?))
+                + sin(radians(?)) * sin(radians(latitude))
+            ))))';
+            $query->whereNotNull('latitude')
+                ->whereNotNull('longitude')
+                ->select('users.*')
+                ->selectRaw($haversine . ' as distance_km', [$viewerLat, $viewerLng, $viewerLat]);
+
+            if ($distanceKm !== null && $distanceKm > 0) {
+                $query->havingRaw('distance_km <= ?', [$distanceKm]);
+            }
+
+            $query->orderBy('distance_km');
+        }
+
         $results = $query->get();
         $html = view('partials.faculty_results', compact('results'))->render();
+
         return response()->json(['html' => $html]);
     }
 }
