@@ -197,6 +197,20 @@
             color: #00435a;
         }
 
+        .profile-section ul.two-col-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px 28px;
+            list-style: disc;
+            padding-left: 1.25em;
+        }
+
+        @media (max-width: 700px) {
+            .profile-section ul.two-col-list {
+                grid-template-columns: 1fr;
+            }
+        }
+
         /* ======= COURSES SECTION ======= */
         .courses-section {
             width: 100%;
@@ -453,7 +467,7 @@
                 <div class="profile-section">
                     <h3>Professional &amp; Academic Specialisations</h3>
                     <div class="section-body">
-                        <ul>
+                        <ul class="two-col-list">
                             @foreach($expertiseList as $item)
                                 <li>{{ $item }}</li>
                             @endforeach
