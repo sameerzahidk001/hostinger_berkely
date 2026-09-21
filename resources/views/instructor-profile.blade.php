@@ -193,16 +193,29 @@
 
         .profile-section ul {
             margin: 0;
-            padding-left: 1.2em;
+            padding-left: 1.4em;
             color: #00435a;
+            list-style: disc !important;
+            list-style-position: outside;
+        }
+
+        .profile-section ul li {
+            list-style: disc !important;
+            display: list-item;
+            margin: 4px 0;
         }
 
         .profile-section ul.two-col-list {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 4px 28px;
-            list-style: disc;
-            padding-left: 1.25em;
+            list-style: disc !important;
+            padding-left: 1.4em;
+        }
+
+        .profile-section ul.two-col-list li {
+            list-style: disc !important;
+            display: list-item;
         }
 
         @media (max-width: 700px) {
