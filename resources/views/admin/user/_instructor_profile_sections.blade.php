@@ -62,7 +62,7 @@
 
 <h3 class="profile-section-heading">Teaching &amp; Academic Experience</h3>
 <div class="form-group">
-    <label for="experience">Teaching &amp; Academic Experience <span id="experience_char_count" class="text-muted">(0 / 2000 Characters)</span></label>
+    <label for="experience">Teaching &amp; Academic Experience <span id="experience_char_count" class="text-muted">(0 / 5000 Characters)</span></label>
     <textarea name="experience" id="experience" class="form-control" rows="4"
         placeholder="Describe teaching and academic experience…">{!! old('experience', $user->experience) !!}</textarea>
 </div>

@@ -491,7 +491,7 @@
 
             [
                 { id: 'short_description', counter: 'short_char_count', max: 500 },
-                { id: 'experience', counter: 'experience_char_count', max: 2000 },
+                { id: 'experience', counter: 'experience_char_count', max: 5000 },
                 { id: 'executive_experience', counter: 'executive_char_count', max: 2000 },
                 { id: 'training_expertise', counter: 'training_char_count', max: 2000 },
                 { id: 'corporate_training', counter: 'corporate_char_count', max: 2000 },

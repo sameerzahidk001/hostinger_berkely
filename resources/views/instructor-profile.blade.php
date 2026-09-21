@@ -11,6 +11,7 @@
             align-items: center;
             overflow-x: hidden;
             margin-bottom: 40px;
+            padding-top: 28px;
         }
 
         /* ======= HERO SECTION ======= */
@@ -26,6 +27,7 @@
             justify-content: center;
             flex-wrap: wrap;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            margin-top: 12px;
         }
 
         @keyframes gradientShift {
@@ -380,13 +382,6 @@
 
         <!-- DETAILS SECTION -->
         <div class="instructor-about">
-            @if($hasProfessional)
-                <div class="profile-section">
-                    <h3>Professional Profile</h3>
-                    <div class="section-body">{!! $instructor->short_description !!}</div>
-                </div>
-            @endif
-
             @if($educationList !== [])
                 <div class="profile-section">
                     <h3>Academic Qualifications</h3>
