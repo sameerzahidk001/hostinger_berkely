@@ -9,6 +9,7 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class User extends Authenticatable implements MustVerifyEmail
@@ -241,42 +242,56 @@ class User extends Authenticatable implements MustVerifyEmail
             'institutions',
         ];
         $missing = array_values(array_filter($needed, fn ($col) => ! Schema::hasColumn('users', $col)));
-        if ($missing === []) {
-            return true;
+        if ($missing !== []) {
+            Schema::table('users', function (Blueprint $table) use ($missing) {
+                if (in_array('expertise', $missing, true)) {
+                    $table->text('expertise')->nullable();
+                }
+                if (in_array('teaching_methodology', $missing, true)) {
+                    $table->text('teaching_methodology')->nullable();
+                }
+                if (in_array('teaching_recognition', $missing, true)) {
+                    $table->text('teaching_recognition')->nullable();
+                }
+                if (in_array('availability', $missing, true)) {
+                    $table->text('availability')->nullable();
+                }
+                if (in_array('long_description', $missing, true)) {
+                    $table->longText('long_description')->nullable();
+                }
+                if (in_array('professional_qualifications', $missing, true)) {
+                    $table->text('professional_qualifications')->nullable();
+                }
+                if (in_array('executive_experience', $missing, true)) {
+                    $table->longText('executive_experience')->nullable();
+                }
+                if (in_array('training_expertise', $missing, true)) {
+                    $table->longText('training_expertise')->nullable();
+                }
+                if (in_array('corporate_training', $missing, true)) {
+                    $table->longText('corporate_training')->nullable();
+                }
+                if (in_array('institutions', $missing, true)) {
+                    $table->longText('institutions')->nullable();
+                }
+            });
         }
 
-        Schema::table('users', function (Blueprint $table) use ($missing) {
-            if (in_array('expertise', $missing, true)) {
-                $table->text('expertise')->nullable();
+        // Teaching & Academic Experience / Professional Profile use CKEditor — varchar truncates saves.
+        foreach (['experience', 'short_description'] as $column) {
+            if (! Schema::hasColumn('users', $column)) {
+                continue;
             }
-            if (in_array('teaching_methodology', $missing, true)) {
-                $table->text('teaching_methodology')->nullable();
+            $type = strtolower((string) Schema::getColumnType('users', $column));
+            if (in_array($type, ['text', 'longtext', 'mediumtext'], true)) {
+                continue;
             }
-            if (in_array('teaching_recognition', $missing, true)) {
-                $table->text('teaching_recognition')->nullable();
+            try {
+                DB::statement("ALTER TABLE `users` MODIFY `{$column}` LONGTEXT NULL");
+            } catch (\Throwable $e) {
+                // Hostinger may already have widened the column.
             }
-            if (in_array('availability', $missing, true)) {
-                $table->text('availability')->nullable();
-            }
-            if (in_array('long_description', $missing, true)) {
-                $table->longText('long_description')->nullable();
-            }
-            if (in_array('professional_qualifications', $missing, true)) {
-                $table->text('professional_qualifications')->nullable();
-            }
-            if (in_array('executive_experience', $missing, true)) {
-                $table->longText('executive_experience')->nullable();
-            }
-            if (in_array('training_expertise', $missing, true)) {
-                $table->longText('training_expertise')->nullable();
-            }
-            if (in_array('corporate_training', $missing, true)) {
-                $table->longText('corporate_training')->nullable();
-            }
-            if (in_array('institutions', $missing, true)) {
-                $table->longText('institutions')->nullable();
-            }
-        });
+        }
 
         return true;
     }

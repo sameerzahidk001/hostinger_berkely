@@ -93,9 +93,9 @@ class UserController extends Controller
             'country' => 'nullable|string|max:100',
             'image_path' => 'nullable|string',
             'local_file_input' => 'nullable|file|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
-            'short_description' => 'nullable|string|max:500',
+            'short_description' => 'nullable|string',
             'long_description' => 'nullable|string',
-            'experience' => 'nullable|string|max:255',
+            'experience' => 'nullable|string',
             'linkedin' => 'nullable|url|string|max:255',
             'education' => 'nullable|array',
             'education.*' => 'nullable|string|max:255',
@@ -250,7 +250,7 @@ class UserController extends Controller
                 'latitude' => 'nullable|numeric|between:-90,90',
                 'longitude' => 'nullable|numeric|between:-180,180',
                 'linkedin' => 'nullable|url|string|max:255',
-                'short_description' => 'nullable|string|max:500',
+                'short_description' => 'nullable|string',
                 'long_description' => 'nullable|string',
                 'experience' => 'nullable|string',
                 'date_of_birth' => 'nullable|date',
@@ -297,6 +297,7 @@ class UserController extends Controller
             $user->city = $request->input('city');
             $user->country = $request->input('country');
             \App\Models\User::ensureLatLngColumns();
+            \App\Models\User::ensureInstructorExtraColumns();
             $user->latitude = $request->filled('latitude') ? (float) $request->input('latitude') : null;
             $user->longitude = $request->filled('longitude') ? (float) $request->input('longitude') : null;
             $user->short_description = $request->input('short_description');
