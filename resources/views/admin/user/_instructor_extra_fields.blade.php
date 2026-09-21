@@ -104,18 +104,9 @@
     }
     .teaching-avail-swatch.on { background: #3b82f6; }
     .teaching-avail-swatch.off { background: #f3f3f3; border: 1px solid #d9d9d9; }
-    .profile-section-heading-red {
-        font-size: 22px;
-        font-weight: 700;
-        color: #bc1701 !important;
-        margin: 28px 0 14px;
-        padding-bottom: 8px;
-        border-bottom: 2px solid #f0d0cc;
-        clear: both;
-    }
 </style>
 
-<h3 class="profile-section-heading-red">Teaching Availability</h3>
+<h3 class="profile-section-heading">Teaching Availability</h3>
 <div class="form-group">
     <input type="hidden" name="availability[type]" value="grid">
     <p class="help-block">Click a cell to mark when you are available. Blue = available.</p>
@@ -164,7 +155,7 @@
     </div>
 </div>
 
-<h3 class="profile-section-heading-red">Teaching Methodology</h3>
+<h3 class="profile-section-heading">Teaching Methodology</h3>
 <div class="form-group">
     <select name="teaching_methodology[]" class="form-control" multiple size="3">
         @foreach($methodOptions as $value => $label)

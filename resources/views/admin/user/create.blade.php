@@ -265,10 +265,10 @@
                                 .profile-section-heading {
                                     font-size: 22px;
                                     font-weight: 700;
-                                    color: #1ab394;
+                                    color: #bc1701;
                                     margin: 28px 0 14px;
                                     padding-bottom: 8px;
-                                    border-bottom: 2px solid #e7eaec;
+                                    border-bottom: 2px solid #f0d0cc;
                                     clear: both;
                                 }
                             </style>
@@ -281,7 +281,6 @@
                                 <input type="url" name="linkedin" id="linkedin" class="form-control"
                                     placeholder="https://www.linkedin.com/in/username" value="{{ old('linkedin') }}">
                             </div>
-                            <h3 class="profile-section-heading">Availability &amp; methodology</h3>
                             @include('admin.user._instructor_extra_fields', ['user' => new \App\Models\User()])
                         </div>
                         <div class="row">
@@ -370,66 +369,46 @@
     }
 
     $(document).ready(function () {
-        let shortEditorElement = document.getElementById('short_description');
-        let longEditorElement = document.getElementById('long_description');
-        let experienceElement = document.getElementById('experience');
-
-        if (shortEditorElement) {
-            ClassicEditor.create(shortEditorElement, {
-                toolbar: [
-                    'heading', '|', 'bold', 'italic', '|',
-                    'alignment', 'bulletedList', 'numberedList', '|',
-                    'link', 'blockQuote', '|',
-                    'insertTable', 'tableColumn', 'tableRow', 'mergeTableCells', '|',
-                    'undo', 'redo', '|',
-                    'indent', 'outdent', '|'
-                ],
-            })
-            .then(editor => {
-                window.editor = editor;
-            })
-            .catch(error => {
-                console.error('CKEditor initialization error:', error);
-            });
+        function plainTextLength(html) {
+            var tmp = document.createElement('div');
+            tmp.innerHTML = html || '';
+            return (tmp.textContent || tmp.innerText || '').replace(/\u00a0/g, ' ').trim().length;
+        }
+        function bindEditorCounter(editor, counterId, max) {
+            var el = document.getElementById(counterId);
+            if (!el) return;
+            var update = function () {
+                el.textContent = '(' + plainTextLength(editor.getData()) + ' / ' + max + ' Characters)';
+            };
+            editor.model.document.on('change:data', update);
+            update();
         }
 
-        if (longEditorElement) {
-            ClassicEditor.create(longEditorElement, {
-                toolbar: [
-                    'heading', '|', 'bold', 'italic', '|',
-                    'alignment', 'bulletedList', 'numberedList', '|',
-                    'link', 'blockQuote', '|',
-                    'insertTable', 'tableColumn', 'tableRow', 'mergeTableCells', '|',
-                    'undo', 'redo', '|',
-                    'indent', 'outdent', '|'
-                ],
-            })
-            .then(editor => {
-                window.editor = editor;
-            })
-            .catch(error => {
-                console.error('CKEditor initialization error:', error);
-            });
-        }
+        var editorOpts = {
+            toolbar: [
+                'heading', '|', 'bold', 'italic', '|',
+                'alignment', 'bulletedList', 'numberedList', '|',
+                'link', 'blockQuote', '|',
+                'insertTable', 'tableColumn', 'tableRow', 'mergeTableCells', '|',
+                'undo', 'redo', '|',
+                'indent', 'outdent', '|'
+            ],
+        };
 
-        if (experienceElement) {
-            ClassicEditor.create(experienceElement, {
-                toolbar: [
-                    'heading', '|', 'bold', 'italic', '|',
-                    'alignment', 'bulletedList', 'numberedList', '|',
-                    'link', 'blockQuote', '|',
-                    'insertTable', 'tableColumn', 'tableRow', 'mergeTableCells', '|',
-                    'undo', 'redo', '|',
-                    'indent', 'outdent', '|'
-                ],
-            })
-            .then(editor => {
-                window.editor = editor;
-            })
-            .catch(error => {
-                console.error('CKEditor initialization error:', error);
-            });
-        }
+        [
+            { id: 'short_description', counter: 'short_char_count', max: 500 },
+            { id: 'experience', counter: 'experience_char_count', max: 2000 },
+            { id: 'executive_experience', counter: 'executive_char_count', max: 2000 },
+            { id: 'training_expertise', counter: 'training_char_count', max: 2000 },
+            { id: 'corporate_training', counter: 'corporate_char_count', max: 2000 },
+            { id: 'institutions', counter: 'institutions_char_count', max: 2000 },
+        ].forEach(function (cfg) {
+            var el = document.getElementById(cfg.id);
+            if (!el || typeof ClassicEditor === 'undefined') return;
+            ClassicEditor.create(el, editorOpts)
+                .then(function (editor) { bindEditorCounter(editor, cfg.counter, cfg.max); })
+                .catch(function (error) { console.error('CKEditor initialization error:', error); });
+        });
 
         // Initial check
         checkRoleAndToggleFields();
@@ -444,6 +423,18 @@
             $(this).closest('.education-group').remove();
         });
 
+        $('#pro-qual-wrapper').on('click', '.remove-pro-qual', function () {
+            $(this).closest('.pro-qual-group').remove();
+        });
+        $('#add-pro-qual-btn').on('click', function () {
+            $('#pro-qual-wrapper').append(`
+                <div class="form-group mb-2 pro-qual-group">
+                    <input type="text" name="professional_qualifications[]" class="form-control" placeholder="e.g. CFA, ACCA, PMP…">
+                    <button type="button" class="btn btn-danger btn-sm remove-pro-qual" style="margin-left:10px;float:right;margin-top:10px;">Remove</button>
+                </div>
+            `);
+        });
+
         $('#expertise-wrapper').on('click', '.remove-expertise', function () {
             $(this).closest('.expertise-group').remove();
         });
@@ -454,15 +445,6 @@
                     <button type="button" class="btn btn-danger btn-sm remove-expertise" style="margin-left:10px;float:right;margin-top:10px;">Remove</button>
                 </div>
             `);
-        });
-        $(document).on('change', 'input[name="availability[frequency]"]', function () {
-            var particular = $(this).val() === 'particular';
-            $('#availability-days-wrap').toggle(particular);
-            $('#availability-daily-times').toggle(!particular);
-        });
-        $(document).on('change', '.js-avail-day', function () {
-            var day = $(this).data('day');
-            $('.js-avail-day-times[data-day="' + day + '"]').toggle(this.checked);
         });
     });
 </script>

@@ -30,10 +30,10 @@
     .profile-section-heading {
         font-size: 22px;
         font-weight: 700;
-        color: #1ab394;
+        color: #bc1701;
         margin: 28px 0 14px;
         padding-bottom: 8px;
-        border-bottom: 2px solid #e7eaec;
+        border-bottom: 2px solid #f0d0cc;
         clear: both;
     }
     .profile-section-heading:first-child {
