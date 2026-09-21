@@ -179,12 +179,6 @@
                      <span class="nav-label">Manage Schedules</span>
                   </a>
                </li>
-               <li>
-                  <a href="{{ route('admin.study-materials.folders.index') }}">
-                     <i class="fa fa-folder-open"></i>
-                     <span class="nav-label">Manage Folders</span>
-                  </a>
-               </li>
                @endif
                @if(auth()->user()->hasPermission('testimonial-list'))
                   <li class="{{ request()->routeIs('user.testimonial.index') ? 'active' : '' }}">
@@ -198,10 +192,12 @@
                            class="nav-label">Cart @if(cart_item_count() > 0)({{ cart_item_count() }})@endif</span></a>
                   </li>
                @endif
+               @unless(auth()->user()->roles()->where('name', 'instructor')->exists())
                <li class="{{ request()->routeIs('user.history') ? 'active' : '' }}">
                   <a href="{{ route('user.history') }}"><i class="fa fa-history"></i> <span
                         class="nav-label">History</span></a>
                </li>
+               @endunless
                <li>
                   <a href="{{ route('user.logout') }}"><i class="fa fa-sign-out"></i> <span
                         class="nav-label">Log out</span></a>
