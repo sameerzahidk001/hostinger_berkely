@@ -619,7 +619,7 @@ class ClassScheduleController extends Controller
             'existing' => 'Meeting Join link was saved.',
             'manual_required' => 'Zoom selected — paste the Zoom Join URL in Meeting link (required), or add Zoom Server-to-Server OAuth credentials on the Meeting Account to auto-create.',
             'not_configured' => 'Selected meeting account is missing or not ready, so the Join link could not be auto-created. Check Meeting Accounts.',
-            'failed' => 'Meeting Join link was not created automatically. For Zoho, verify the Meeting Account credentials are live and valid. For Zoom without API credentials, paste the Join link manually.',
+            'failed' => 'Meeting Join link was not created automatically. If the host email is not the Zoho OAuth user (e.g. sk@ while OAuth is bdm@), open Meeting Accounts and set Presenter ZUID for that host, or reconnect OAuth while logged in as that host. For Zoom without API credentials, paste the Join link manually.',
             default => 'Meeting Join link was not created automatically. For Zoho check credentials; for Zoom paste the link manually or configure Zoom API credentials.',
         };
         if ($meetingNote) {

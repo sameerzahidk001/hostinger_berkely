@@ -124,7 +124,14 @@ grant_type=authorization_code
                                     <li>Response JSON includes <code>refresh_token</code> — paste that here. Keep it secret.</li>
                                 </ol>
                                 <p style="margin:10px 0 0;">
-                                    <strong>Org ID / Presenter ZUID / Calendar UID / WorkDrive Folder ID</strong> are optional for basic Join-link create.
+                                    <strong>Host email + Presenter ZUID</strong> — if OAuth is connected as
+                                    <code>bdm@berkeleyme.com</code> but you want meetings hosted by
+                                    <code>sk@berkeleyme.com</code> (or another user), set <em>Host email</em> to that
+                                    address and paste their <em>Presenter ZUID</em> from Zoho Meeting / profile.
+                                    Without ZUID, the system tries to look the user up in the Zoho Meeting org members list.
+                                </p>
+                                <p style="margin:10px 0 0;">
+                                    <strong>Org ID / Presenter ZUID / Calendar UID / WorkDrive Folder ID</strong> are optional for basic Join-link create when Host email matches the OAuth user.
                                     Org ID: Zoho Meeting admin URL or API. Presenter ZUID: user’s Zoho profile id.
                                     Calendar UID: from Zoho Calendar settings. WorkDrive folder: from folder URL/API.
                                 </p>

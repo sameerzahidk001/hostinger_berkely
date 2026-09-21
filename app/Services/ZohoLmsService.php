@@ -119,9 +119,18 @@ class ZohoLmsService
         $host = $this->resolveMeetingHost($account);
         $timezone = $schedule->timezoneName();
         if (!$orgId || !$host) {
+            $connected = '';
+            try {
+                $connected = $this->userEmail($this->currentUser($account));
+            } catch (Throwable $e) {
+                // ignore — already logged elsewhere
+            }
             Log::warning('Zoho Meeting missing org or host presenter', [
                 'expected_email' => $this->hostAccountEmail($account),
+                'oauth_email' => $connected ?: null,
+                'org_id' => $orgId,
                 'account_id' => $account?->id,
+                'hint' => 'For host emails other than the OAuth user (e.g. sk@berkeleyme.com), set Presenter ZUID on that Meeting Account, or ensure the user exists in Zoho Meeting org members.',
             ]);
             return null;
         }
@@ -835,37 +844,121 @@ class ZohoLmsService
     }
 
     /**
-     * Meetings must be hosted by the account email.
-     * Presenter ZUID comes from account/config, else from the OAuth user — only if email matches.
+     * Resolve who hosts the Zoho Meeting session.
+     *
+     * Priority:
+     * 1) Explicit presenter_zuid on the Meeting Account (+ host_email)
+     * 2) Org member matching host_email (so sk@… works while OAuth is bdm@…)
+     * 3) OAuth connected user, only when their email matches host_email
      */
     protected function resolveMeetingHost(?\App\Models\MeetingAccount $account = null): ?array
     {
         $expected = strtolower(trim($this->hostAccountEmail($account)));
+        if ($expected === '') {
+            return null;
+        }
+
+        $explicitPresenter = trim((string) ($account?->credential('presenter_zuid') ?: config('zoho.presenter_zuid') ?: ''));
+        if ($explicitPresenter !== '') {
+            return [
+                'email' => $expected,
+                'zuid' => $explicitPresenter,
+            ];
+        }
+
         $user = $this->currentUser($account);
-        $email = $this->userEmail($user);
-        $presenter = $account?->credential('presenter_zuid') ?: config('zoho.presenter_zuid');
-        $zuid = filled($presenter)
-            ? (string) $presenter
-            : (string) ($user['zuid'] ?? '');
+        $connectedEmail = $this->userEmail($user);
+        $connectedZuid = (string) ($user['zuid'] ?? '');
 
-        if ($zuid === '' || $email === '') {
+        if ($connectedEmail !== '' && strcasecmp($connectedEmail, $expected) === 0 && $connectedZuid !== '') {
+            return [
+                'email' => $connectedEmail,
+                'zuid' => $connectedZuid,
+            ];
+        }
+
+        $member = $this->findMeetingMemberByEmail($expected, $account);
+        if ($member) {
+            return $member;
+        }
+
+        Log::error('Zoho Meeting host could not be resolved', [
+            'expected_host' => $expected,
+            'oauth_email' => $connectedEmail ?: null,
+            'account_id' => $account?->id,
+            'hint' => 'Set Presenter ZUID for this host on Meeting Accounts, or generate OAuth while logged in as ' . $expected,
+        ]);
+
+        return null;
+    }
+
+    /**
+     * Look up a Zoho Meeting org member by email so alternate hosts (e.g. sk@) can present.
+     *
+     * @return array{email: string, zuid: string}|null
+     */
+    protected function findMeetingMemberByEmail(string $email, ?\App\Models\MeetingAccount $account = null): ?array
+    {
+        $email = strtolower(trim($email));
+        if ($email === '') {
             return null;
         }
 
-        if (strcasecmp($email, $expected) !== 0) {
-            Log::error('Zoho Meeting host email mismatch', [
-                'connected' => $email,
-                'expected' => $expected,
-                'account_id' => $account?->id,
-            ]);
+        $orgId = $this->orgId($account);
+        if (! $orgId) {
+            return null;
+        }
+
+        $cacheKey = 'zoho_meeting_members_' . ($account?->id ?: 'env') . '_' . $orgId;
+
+        try {
+            $members = Cache::remember($cacheKey, 30 * 60, function () use ($account, $orgId) {
+                $response = $this->meetingClient($account)->get('/api/v2/' . $orgId . '/member.json');
+                if (! $response->successful()) {
+                    Log::warning('Zoho Meeting member list failed', [
+                        'status' => $response->status(),
+                        'body' => $response->body(),
+                        'org_id' => $orgId,
+                    ]);
+
+                    return [];
+                }
+
+                $payload = $response->json();
+                foreach (['memberDetails', 'members', 'users', 'userDetails'] as $key) {
+                    if (! empty($payload[$key]) && is_array($payload[$key])) {
+                        return $payload[$key];
+                    }
+                }
+
+                return is_array($payload) ? $payload : [];
+            });
+        } catch (Throwable $e) {
+            Log::warning('Zoho Meeting member lookup exception', ['message' => $e->getMessage()]);
 
             return null;
         }
 
-        return [
-            'email' => $email,
-            'zuid' => $zuid,
-        ];
+        foreach ((array) $members as $member) {
+            if (! is_array($member)) {
+                continue;
+            }
+            $memberEmail = $this->userEmail($member);
+            if ($memberEmail === '' || strcasecmp($memberEmail, $email) !== 0) {
+                continue;
+            }
+            $zuid = (string) ($member['zuid'] ?? $member['userId'] ?? $member['id'] ?? '');
+            if ($zuid === '') {
+                continue;
+            }
+
+            return [
+                'email' => $memberEmail,
+                'zuid' => $zuid,
+            ];
+        }
+
+        return null;
     }
 
     public function hostAccountEmail(?\App\Models\MeetingAccount $account = null): string
@@ -888,7 +981,7 @@ class ZohoLmsService
 
     protected function userEmail(array $user): string
     {
-        foreach (['email', 'primaryEmail', 'loginName', 'displayName'] as $key) {
+        foreach (['email', 'primaryEmail', 'emailId', 'emailAddress', 'userEmail', 'loginName', 'displayName'] as $key) {
             $value = trim((string) ($user[$key] ?? ''));
             if ($value !== '' && filter_var($value, FILTER_VALIDATE_EMAIL)) {
                 return strtolower($value);
