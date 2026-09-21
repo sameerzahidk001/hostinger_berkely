@@ -95,7 +95,16 @@
                                                 </td>
                                                 <td>{{ $course->title ?? '—' }}</td>
                                                 <td>{{ $batch['session_count'] }}</td>
-                                                <td>{{ optional($batch['next_at'])->format('d M Y H:i') ?: 'No upcoming' }}</td>
+                                                <td>
+                                                    @if(!empty($batch['next_at']))
+                                                        {{ $batch['next_at']->format('d M Y H:i') }}
+                                                        @if(!empty($batch['next_timezone']))
+                                                            <small class="text-muted">({{ $batch['next_timezone'] }})</small>
+                                                        @endif
+                                                    @else
+                                                        No upcoming
+                                                    @endif
+                                                </td>
                                                 <td>
                                                     <a class="btn btn-primary btn-sm" href="{{ route('user.class-schedules.batch', $openKey) }}" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;font-weight:700;">Open schedule</a>
                                                 </td>

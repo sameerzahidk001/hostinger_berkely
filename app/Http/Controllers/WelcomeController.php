@@ -407,6 +407,7 @@ class WelcomeController extends Controller
 
         $search = $request->only([
             'course', 'country', 'city', 'name', 'education', 'specialisation',
+            'avail_day', 'avail_period',
             'keyword', 'distance_km', 'lat', 'lng',
         ]);
 
@@ -451,6 +452,23 @@ class WelcomeController extends Controller
         if ($request->filled('specialisation')) {
             $specialisation = trim((string) $request->input('specialisation'));
             $query->where('expertise', 'like', "%{$specialisation}%");
+        }
+
+        $availDay = trim((string) $request->input('avail_day', ''));
+        $availPeriod = trim((string) $request->input('avail_period', ''));
+        $dayKeys = array_keys(User::teachingAvailabilityDays());
+        $slotKeys = array_keys(User::teachingAvailabilitySlots());
+        if ($availDay !== '' && ! in_array($availDay, $dayKeys, true)) {
+            $availDay = '';
+        }
+        if ($availPeriod !== '' && ! in_array($availPeriod, $slotKeys, true)) {
+            $availPeriod = '';
+        }
+        if ($availDay !== '' || $availPeriod !== '') {
+            $query->whereNotNull('availability')
+                ->where('availability', '!=', '')
+                ->where('availability', '!=', '[]')
+                ->where('availability', '!=', '{}');
         }
 
         // Legacy combined keyword (kept for older bookmarks / forms)
@@ -502,6 +520,16 @@ class WelcomeController extends Controller
         }
 
         $results = $query->get();
+
+        if ($availDay !== '' || $availPeriod !== '') {
+            $results = $results->filter(function (User $instructor) use ($availDay, $availPeriod) {
+                return $instructor->isAvailableForTeachingSlot(
+                    $availDay !== '' ? $availDay : null,
+                    $availPeriod !== '' ? $availPeriod : null
+                );
+            })->values();
+        }
+
         $html = view('partials.faculty_results', compact('results'))->render();
 
         return response()->json(['html' => $html]);

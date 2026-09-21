@@ -311,12 +311,17 @@ class StudyMaterialController extends Controller
                     'session_count' => $sessions->count(),
                     'latest_at' => $sessions->max(fn ($s) => $s->scheduled_at?->timestamp ?? 0),
                     // Next upcoming session only — do not fall back to the batch start date.
-                    'next_at' => optional(
-                        $sessions->first(fn ($s) => $s->scheduled_at
-                            && $s->scheduled_at->isFuture()
-                            && ! in_array(strtolower((string) ($s->status ?? '')), ['cancelled', 'completed'], true))
-                    )->scheduled_at,
+                    'next_at' => null,
+                    'next_timezone' => null,
                 ];
+
+                $nextSession = $sessions->first(fn ($s) => $s->scheduled_at
+                    && $s->scheduled_at->isFuture()
+                    && ! in_array(strtolower((string) ($s->status ?? '')), ['cancelled', 'completed'], true));
+                if ($nextSession) {
+                    $row['next_at'] = $nextSession->scheduled_at;
+                    $row['next_timezone'] = (string) ($nextSession->timezone_label ?? '');
+                }
 
                 if ($withSessions) {
                     $row['sessions'] = $sessions;

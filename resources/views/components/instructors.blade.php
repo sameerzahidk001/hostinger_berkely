@@ -307,12 +307,12 @@
                 </select>
             </div>
             <div>
-                <label class="block text-sm font-semibold mb-1" for="education">Education</label>
-                <input type="text" name="education" id="education" placeholder="Search by education…"
+                <label class="block text-sm font-semibold mb-1" for="education">Academic Qualifications</label>
+                <input type="text" name="education" id="education" placeholder="Search by academic qualifications…"
                     class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-[#f8961f] focus:ring-[#f8961f]">
             </div>
             <div>
-                <label class="block text-sm font-semibold mb-1" for="specialisation">Specialisation</label>
+                <label class="block text-sm font-semibold mb-1" for="specialisation">Professional Specialisation</label>
                 <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm js-faculty-typefind" name="specialisation" id="specialisation" data-placeholder="Type to find specialisation…">
                     <option value=""></option>
                     @foreach ($specialisationOptions as $spec)
@@ -329,15 +329,33 @@
                     @endforeach
                 </select>
             </div>
+            <div>
+                <label class="block text-sm font-semibold mb-1" for="avail_day">Available day</label>
+                <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm js-faculty-typefind" name="avail_day" id="avail_day" data-placeholder="Any day">
+                    <option value=""></option>
+                    @foreach (\App\Models\User::teachingAvailabilityDays() as $dayCode => $dayLabel)
+                        <option value="{{ $dayCode }}">{{ $dayLabel }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-semibold mb-1" for="avail_period">Available period</label>
+                <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm js-faculty-typefind" name="avail_period" id="avail_period" data-placeholder="Any period">
+                    <option value=""></option>
+                    @foreach (\App\Models\User::teachingAvailabilitySlots() as $slotCode => $slotLabel)
+                        <option value="{{ $slotCode }}">{{ $slotLabel }}</option>
+                    @endforeach
+                </select>
+            </div>
         </div>
         <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <div>
                 <label class="block text-sm font-semibold mb-1" for="distance_km">Within distance</label>
                 <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm" name="distance_km" id="distance_km">
-                    <option value="">Any distance</option>
+                    <option value="" selected>Any distance</option>
                     <option value="5">5 km</option>
                     <option value="10">10 km</option>
-                    <option value="25" selected>25 km</option>
+                    <option value="25">25 km</option>
                     <option value="50">50 km</option>
                     <option value="100">100 km</option>
                 </select>
@@ -351,7 +369,7 @@
         </div>
         <input type="hidden" name="lat" id="search_lat" value="">
         <input type="hidden" name="lng" id="search_lng" value="">
-        <p id="nearby-status" class="text-sm text-gray-600 mb-4">Optional: click “Use my location” to find trainers near you by distance.</p>
+        <p id="nearby-status" class="text-sm text-gray-600 mb-4">Optional: click “Use my location” to find instructors near you by distance.</p>
         <div class="flex gap-2 items-end mb-8 max-w-md">
             <button
                 class="border px-4 py-2 w-full border-[#000435] bg-[#000435] transition-all delay-300 duration-300 content-center rounded uppercase text-white"
@@ -400,7 +418,7 @@
                         @endif
 
 
-                        <div><strong>About Trainer:</strong>
+                        <div><strong>About Instructor:</strong>
                             {!! $instructor->short_description ?? '<p>This instructor has not added a biography yet.</p>' !!}
                         </div>
                     </div>
@@ -453,7 +471,7 @@
 <script>
 (function ($) {
     function initFacultyTypeFind() {
-        $('#specialisation, #course').each(function () {
+        $('#specialisation, #course, #avail_day, #avail_period').each(function () {
             var $el = $(this);
             if ($el.hasClass('select2-hidden-accessible')) {
                 $el.select2('destroy');

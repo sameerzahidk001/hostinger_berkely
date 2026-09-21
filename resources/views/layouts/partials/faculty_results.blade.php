@@ -31,7 +31,7 @@
                 @endif
 
 
-                <div><strong>About Trainer:</strong>
+                <div><strong>About Instructor:</strong>
                     {!! $instructor->short_description ?? '<p>This instructor has not added a biography yet.</p>' !!}
                 </div>
             </div>

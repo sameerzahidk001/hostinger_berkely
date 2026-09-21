@@ -500,6 +500,42 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
+     * Match teaching availability grid for faculty search (day and/or period).
+     */
+    public function isAvailableForTeachingSlot(?string $day = null, ?string $period = null): bool
+    {
+        $day = $day ? strtoupper(trim($day)) : null;
+        $period = $period ? strtolower(trim($period)) : null;
+        $grid = $this->availabilityGrid();
+
+        if ($day && $period) {
+            return ! empty($grid[$day][$period]);
+        }
+
+        if ($day) {
+            foreach (($grid[$day] ?? []) as $on) {
+                if ($on) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        if ($period) {
+            foreach ($grid as $row) {
+                if (! empty($row[$period])) {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        return $this->hasAvailabilityGrid();
+    }
+
+    /**
      * Human-readable availability lines for public / view profile (legacy + grid summary).
      *
      * @return list<string>
