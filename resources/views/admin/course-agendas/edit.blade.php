@@ -82,8 +82,8 @@
                             @method('PUT')
                             <div class="row">
                                 <div class="col-lg-6" style="margin-bottom: 15px;">
-                                    <label for="course">Course</label>
-                                    <select name="course" id="course" class="form-control">
+                                    <label for="course">Batch / Course</label>
+                                    <select name="course" id="course" class="form-control js-type-find" data-placeholder="Type to find batch / course">
                                         <option value="">Select Course</option>
                                         @foreach ($courses as $course)
                                             <option value="{{ $course->id }}"
@@ -121,7 +121,7 @@
                                 </div>
                                 <div class="col-lg-4" style="margin-bottom: 15px;">
                                     <label for="country">Country</label>
-                                    <select name="country" id="country" class="form-control">
+                                    <select name="country" id="country" class="form-control js-type-find" data-placeholder="Type to find country">
                                         <option value="0">International</option>
                                         @foreach ($countries as $country)
                                             <option value="{{ $country->id }}"
@@ -192,5 +192,6 @@
 
 @endsection
 
+@include('admin.partials.type-find-selects')
 @push('script')
 @endpush

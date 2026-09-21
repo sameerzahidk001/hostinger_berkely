@@ -67,8 +67,8 @@
                         @csrf
                         <div class="row">
                             <div class="col-lg-4" style="margin-bottom: 15px;">
-                                <label for="student">Students</label>
-                                <select name="student" id="student" class="form-control">
+                                <label for="student">Student</label>
+                                <select name="student" id="student" class="form-control js-type-find" data-placeholder="Type to find student">
                                     <option value="">Select Student</option>
                                     @foreach($users as $user)
                                         <option value="{{ $user->id }}" {{ old('student') == $user->id ? 'selected' : '' }}>{{ $user->name }}</option>
@@ -79,8 +79,8 @@
                                 @enderror
                             </div>
                             <div class="col-lg-4" style="margin-bottom: 15px;">
-                                <label for="course">Course</label>
-                                <select name="course" id="course" class="form-control">
+                                <label for="course">Batch / Course</label>
+                                <select name="course" id="course" class="form-control js-type-find" data-placeholder="Type to find batch / course">
                                     <option value="">Select Course</option>
                                     @foreach($courses as $course)
                                         <option value="{{ $course->id }}" {{ old('course') == $course->id ? 'selected' : '' }}>
@@ -95,7 +95,7 @@
 
                             <div class="col-lg-4" style="margin-bottom: 15px;">
                                 <label for="package">Packages</label>
-                                <select name="package" id="package" class="form-control">
+                                <select name="package" id="package" class="form-control js-type-find" data-placeholder="Type to find package">
                                     <option value="">Select Package</option>
                                     @foreach ($packages as $package)
                                         <option value="{{ $package->id }}"
@@ -103,7 +103,6 @@
                                             data-price="{{ $package->price }}"
                                             data-currency="{{ $package->currency }}"
                                             data-packagename="{{ $package->package_name }}"
-                                            style="display: none;"
                                             {{ old('package') == $package->id ? 'selected' : '' }}>
                                             {{ $package->package_name }} ({{ $package->currency }})
                                         </option>
@@ -192,6 +191,7 @@
 
 @endsection
 
+@include('admin.partials.type-find-selects')
 @push('script')
     <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote.min.js"></script>
     <script>
@@ -224,35 +224,29 @@
                 }
             });
 
+            function filterPackagesByCourse(selectedCourseId, preferPackageId) {
+                const $package = $('#package');
+                $package.find('option').each(function () {
+                    const $opt = $(this);
+                    if (!$opt.val()) {
+                        $opt.prop('disabled', false);
+                        return;
+                    }
+                    const match = selectedCourseId && String($opt.data('courseid')) === String(selectedCourseId);
+                    $opt.prop('disabled', !match);
+                });
+                if (preferPackageId && $package.find('option[value="' + preferPackageId + '"]:not(:disabled)').length) {
+                    $package.val(preferPackageId);
+                } else {
+                    $package.val('');
+                }
+                $package.trigger('change.select2');
+            }
+
             $('#course').on('change', function () {
                 const selectedCourseId = $(this).val();
-                const packageSelect = $('#package');
-                packageSelect.val('');
                 $('#total_amount').val('');
-
-                // Get old selected package from Blade (server-side)
-                const oldPackageId = "{{ old('package') }}";
-
-                // Hide all options first
-                packageSelect.find('option').hide();
-                packageSelect.find('option[value=""]').show(); // Keep default "Select Package"
-
-                if (selectedCourseId) {
-                    packageSelect.find('option').each(function () {
-                        if ($(this).data('courseid') == selectedCourseId) {
-                            $(this).show();
-
-                            // Re-select old package if it matches course
-                            if ($(this).val() == oldPackageId) {
-                                $(this).prop('selected', true);
-
-                                // Also update total amount based on this package
-                                const price = $(this).data('price') || 0;
-                                $('#total_amount').val(price);
-                            }
-                        }
-                    });
-                }
+                filterPackagesByCourse(selectedCourseId, "{{ old('package') }}");
             });
 
             $('#package').on('change', function () {

@@ -188,18 +188,7 @@ class ClassScheduleController extends Controller
 
         // Create a Join link for every day in the series (primary + split days).
         $seriesIds = array_values(array_unique(array_merge([(int) $schedule->id], $siblingIds)));
-        $zohoStatus = ['meeting' => 'failed', 'calendar' => 'skipped'];
-        foreach ($seriesIds as $sid) {
-            $row = ClassSchedule::with(['meetingAccount', 'course', 'instructor', 'students'])->find($sid);
-            if (! $row) {
-                continue;
-            }
-            $status = $this->meetings->attachIntegrations($row);
-            if (in_array($status['meeting'] ?? '', ['created', 'existing', 'manual_required'], true)
-                || ($zohoStatus['meeting'] ?? '') === 'failed') {
-                $zohoStatus = $status;
-            }
-        }
+        $zohoStatus = $this->attachMeetingsForSeries($seriesIds);
 
         $message = $this->scheduleSavedMessage('created', $zohoStatus);
         if ($extraDays > 0) {
@@ -223,12 +212,7 @@ class ClassScheduleController extends Controller
             $studentIds = $schedule->students()->pluck('id')->map(fn ($id) => (int) $id)->all();
             $extra = $this->materializeRecurringSessions($schedule, $studentIds);
             $seriesIds = array_values(array_unique(array_merge([(int) $schedule->id], $extra)));
-            foreach ($seriesIds as $sid) {
-                $row = ClassSchedule::with(['meetingAccount', 'course', 'instructor', 'students'])->find($sid);
-                if ($row) {
-                    $this->meetings->attachIntegrations($row);
-                }
-            }
+            $this->attachMeetingsForSeries($seriesIds);
 
             return redirect()
                 ->route('admin.class-schedules.batch', $schedule->batch_id ?: $schedule->id)
@@ -706,6 +690,52 @@ class ClassScheduleController extends Controller
      * @param  \Illuminate\Support\Collection<int, ClassSchedule>  $rows
      * @return \Illuminate\Support\Collection<int, array<string, mixed>>
      */
+    /**
+     * Attach Zoho/Zoom Join links for each session id (with short delay + one retry).
+     * Recurring create previously only linked the first day — siblings stayed on "Link soon"
+     * until each was opened and saved again.
+     *
+     * @param  array<int, int>  $seriesIds
+     * @return array{meeting: string, calendar: string}
+     */
+    protected function attachMeetingsForSeries(array $seriesIds): array
+    {
+        $zohoStatus = ['meeting' => 'failed', 'calendar' => 'skipped'];
+        $pending = [];
+
+        foreach ($seriesIds as $index => $sid) {
+            $row = ClassSchedule::with(['meetingAccount', 'course', 'instructor', 'students'])->find($sid);
+            if (! $row) {
+                continue;
+            }
+            if ($index > 0) {
+                usleep(350000); // ~0.35s — avoid Zoho rate-limits on bulk create
+            }
+            $status = $this->meetings->attachIntegrations($row);
+            if (($status['meeting'] ?? '') === 'failed') {
+                $pending[] = (int) $sid;
+            }
+            if (in_array($status['meeting'] ?? '', ['created', 'existing', 'manual_required'], true)
+                || ($zohoStatus['meeting'] ?? '') === 'failed') {
+                $zohoStatus = $status;
+            }
+        }
+
+        foreach ($pending as $i => $sid) {
+            usleep(500000);
+            $row = ClassSchedule::with(['meetingAccount', 'course', 'instructor', 'students'])->find($sid);
+            if (! $row || filled($row->zoho_link)) {
+                continue;
+            }
+            $status = $this->meetings->attachIntegrations($row);
+            if (in_array($status['meeting'] ?? '', ['created', 'existing'], true)) {
+                $zohoStatus = $status;
+            }
+        }
+
+        return $zohoStatus;
+    }
+
     /**
      * Turn a recurring series into individual ClassSchedule rows (one per class day)
      * so Admin/Instructor can edit the Join link / description or delete a single day.

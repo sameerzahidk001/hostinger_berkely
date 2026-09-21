@@ -65,8 +65,8 @@
                         @method('PUT')
                         <div class="row">
                             <div class="col-lg-4" style="margin-bottom: 15px;">
-                                <label for="student">Students</label>
-                                <select name="student" id="student" class="form-control">
+                                <label for="student">Student</label>
+                                <select name="student" id="student" class="form-control js-type-find" data-placeholder="Type to find student">
                                     <option value="">Select Student</option>
                                     @foreach($users as $user)
                                         <option value="{{ $user->id }}" {{ $payment->user_id == $user->id ? 'selected' : '' }}>{{ $user->name }}</option>
@@ -77,8 +77,8 @@
                                 @enderror
                             </div>
                             <div class="col-lg-4" style="margin-bottom: 15px;">
-                                <label for="course">Course</label>
-                                <select name="course" id="course" class="form-control">
+                                <label for="course">Batch / Course</label>
+                                <select name="course" id="course" class="form-control js-type-find" data-placeholder="Type to find batch / course">
                                     <option value="">Select Course</option>
                                     @foreach($courses as $course)
                                         <option value="{{ $course->id }}" {{ $payment->course_id == $course->id ? 'selected' : '' }}>
@@ -92,7 +92,7 @@
                             </div>
                             <div class="col-lg-4" style="margin-bottom: 15px;">
                                 <label for="package">Packages</label>
-                                <select name="package" id="package" class="form-control">
+                                <select name="package" id="package" class="form-control js-type-find" data-placeholder="Type to find package">
                                     <option value="">Select Package</option>
                                     @foreach($packages as $package)
                                         <option value="{{ $package->id }}"
@@ -100,7 +100,6 @@
                                             data-price="{{ $package->price }}"
                                             data-currency="{{ $package->currency }}"
                                             data-packagename="{{ $package->package_name }}"
-                                            style="display: none;"
                                             {{ $payment->package_id == $package->id ? 'selected' : '' }}>
                                             {{ $package->package_name }} ({{ $package->currency }})
                                         </option>
