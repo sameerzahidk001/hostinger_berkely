@@ -112,6 +112,21 @@ class User extends Authenticatable implements MustVerifyEmail
         return is_array($decoded) ? array_values(array_filter(array_map('strval', $decoded))) : [];
     }
 
+    public function educationList(): array
+    {
+        $raw = $this->education ?? null;
+        if (is_array($raw)) {
+            return array_values(array_filter(array_map(static fn ($v) => trim((string) $v), $raw), static fn ($v) => $v !== ''));
+        }
+        $decoded = json_decode((string) $raw, true);
+        if (is_array($decoded)) {
+            return array_values(array_filter(array_map(static fn ($v) => trim((string) $v), $decoded), static fn ($v) => $v !== ''));
+        }
+        $plain = trim((string) $raw);
+
+        return $plain !== '' ? [$plain] : [];
+    }
+
     public function teachingMethodologyList(): array
     {
         $raw = $this->teaching_methodology ?? null;

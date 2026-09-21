@@ -338,11 +338,16 @@
                                 @endif
 
 
-                                <p>
-                                    {{ is_array(json_decode($instructor['education'], true))
-                                        ? implode(', ', json_decode($instructor['education'], true))
-                                        : $instructor['education'] }}
-                                </p>
+                                @php
+                                    $cardEducation = method_exists($instructor, 'educationList') ? $instructor->educationList() : [];
+                                    $cardExpertise = method_exists($instructor, 'expertiseList') ? $instructor->expertiseList() : [];
+                                @endphp
+                                @if($cardEducation !== [])
+                                    <p><strong>Education:</strong> {{ implode(', ', $cardEducation) }}</p>
+                                @endif
+                                @if($cardExpertise !== [])
+                                    <p><strong>Expertise:</strong> {{ implode(', ', $cardExpertise) }}</p>
+                                @endif
                             </div>
                         </div>
 

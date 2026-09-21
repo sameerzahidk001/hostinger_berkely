@@ -356,11 +356,9 @@
                             </a>
                         @endif
                     </h3>
-                    <p class="hero-highlight">
-                        {{ is_array(json_decode($instructor->education, true)) ? implode(', ', json_decode($instructor->education, true)) : $instructor->education }}
-                    </p>
                     @php
                         \App\Models\User::ensureInstructorExtraColumns();
+                        $educationList = method_exists($instructor, 'educationList') ? $instructor->educationList() : [];
                         $expertiseList = method_exists($instructor, 'expertiseList') ? $instructor->expertiseList() : [];
                         $methodList = method_exists($instructor, 'teachingMethodologyList') ? $instructor->teachingMethodologyList() : [];
                         $methodLabels = array_values(array_intersect_key(\App\Models\User::teachingMethodologyOptions(), array_flip($methodList)));
@@ -368,6 +366,9 @@
                     @endphp
                     @if(!empty($instructor->short_description))
                         <div class="hero-short">{!! $instructor->short_description !!}</div>
+                    @endif
+                    @if($educationList !== [])
+                        <p><strong>Education:</strong> {{ implode(', ', $educationList) }}</p>
                     @endif
                     @if($expertiseList !== [])
                         <p><strong>Expertise:</strong> {{ implode(', ', $expertiseList) }}</p>
@@ -383,7 +384,9 @@
                             @endforeach
                         </p>
                     @endif
-                    <p>{!! $instructor->experience ?? '<p>Professional Instructor</p>' !!}</p>
+                    @if(!empty($instructor->experience))
+                        <div>{!! $instructor->experience !!}</div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -392,13 +395,22 @@
         <div class="instructor-about">
             <h2>Trainer Profile</h2>
 
-            {{-- <div class="about-grid">
-            <div class="about-item"><strong>Gender</strong><span>{{ $instructor->gender ?? 'N/A' }}</span></div>
-            <div class="about-item"><strong>Nationality</strong><span>{{ $instructor->nationality ?? 'N/A' }}</span></div>
-            <div class="about-item"><strong>Education</strong><span>
-                {{ is_array(json_decode($instructor->education, true)) ? implode(', ', json_decode($instructor->education, true)) : $instructor->education }}
-            </span></div>
-        </div> --}}
+            @if($educationList !== [] || $expertiseList !== [] || $methodLabels !== [] || $availLines !== [])
+                <div class="about-grid" style="margin-bottom:24px;">
+                    @if($educationList !== [])
+                        <div class="about-item"><strong>Education</strong><span>{{ implode(', ', $educationList) }}</span></div>
+                    @endif
+                    @if($expertiseList !== [])
+                        <div class="about-item"><strong>Expertise</strong><span>{{ implode(', ', $expertiseList) }}</span></div>
+                    @endif
+                    @if($methodLabels !== [])
+                        <div class="about-item"><strong>Teaching Methodology</strong><span>{{ implode(', ', $methodLabels) }}</span></div>
+                    @endif
+                    @if($availLines !== [])
+                        <div class="about-item"><strong>Availability</strong><span>{!! implode('<br>', array_map('e', $availLines)) !!}</span></div>
+                    @endif
+                </div>
+            @endif
 
             <div class="bio-box">
                 <div>{!! $instructor->long_description ?? '<p>This instructor has not added a biography yet.</p>' !!}</div>

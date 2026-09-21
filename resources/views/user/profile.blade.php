@@ -44,17 +44,38 @@
                         <p><strong>Country: </strong> {{ $user->country ?? '-' }}</p>
 
                         @if($user->roles[0]->name == 'instructor')
+                            @php
+                                \App\Models\User::ensureInstructorExtraColumns();
+                                $educationList = method_exists($user, 'educationList') ? $user->educationList() : [];
+                                $expertiseList = method_exists($user, 'expertiseList') ? $user->expertiseList() : [];
+                                $methodList = method_exists($user, 'teachingMethodologyList') ? $user->teachingMethodologyList() : [];
+                                $methodLabels = array_values(array_intersect_key(\App\Models\User::teachingMethodologyOptions(), array_flip($methodList)));
+                                $availLines = method_exists($user, 'availabilityDisplayLines') ? $user->availabilityDisplayLines() : [];
+                            @endphp
                             <div><strong>Short Profile Description: </strong> {!! $user->short_description ?? '-' !!}</div>
                             <p><strong>Experience: </strong> {!! $user->experience ?? '-' !!}</p>
-                            <p><strong>Education:</strong></p>
-                            <ul>
-                                @php $education = json_decode($user->education ?? '[]', true); @endphp
-                                @forelse($education as $edu)
-                                    <li>{{ $edu }}</li>
-                                @empty
-                                    <li>-</li>
-                                @endforelse
-                            </ul>
+                            @if($educationList !== [])
+                                <p><strong>Education:</strong></p>
+                                <ul>
+                                    @foreach($educationList as $edu)
+                                        <li>{{ $edu }}</li>
+                                    @endforeach
+                                </ul>
+                            @endif
+                            @if($expertiseList !== [])
+                                <p><strong>Expertise:</strong> {{ implode(', ', $expertiseList) }}</p>
+                            @endif
+                            @if($methodLabels !== [])
+                                <p><strong>Teaching Methodology:</strong> {{ implode(', ', $methodLabels) }}</p>
+                            @endif
+                            @if($availLines !== [])
+                                <p><strong>Availability:</strong></p>
+                                <ul>
+                                    @foreach($availLines as $line)
+                                        <li>{{ $line }}</li>
+                                    @endforeach
+                                </ul>
+                            @endif
 
                             {{-- LinkedIn Display --}}
                             <p>

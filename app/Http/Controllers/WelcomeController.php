@@ -382,6 +382,7 @@ class WelcomeController extends Controller
     }
 
     public function instructorDetails($id) {
+        User::ensureInstructorExtraColumns();
 
         $instructor = User::with(['countryarray:iso_code,name'])
             ->where('approved', 1)
