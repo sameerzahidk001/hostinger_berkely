@@ -403,9 +403,9 @@
                     class="w-full border px-3 py-2 border-[#000435] text-[#000435] rounded text-sm">
                     Find using my location
                 </button>
+                <p id="nearby-status" class="text-sm text-gray-600 mt-2 mb-0">Optional: click “Find using my location” to find instructors near you by distance.</p>
             </div>
         </div>
-        <p id="nearby-status" class="text-sm text-gray-600 mb-4">Optional: click “Find using my location” to find instructors near you by distance.</p>
         <input type="hidden" name="lat" id="search_lat" value="">
         <input type="hidden" name="lng" id="search_lng" value="">
         <div class="flex gap-2 items-end mb-8 max-w-md">
@@ -507,6 +507,21 @@
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
 (function ($) {
+    function containsMatcher(params, data) {
+        if ($.trim(params.term || '') === '') {
+            return data;
+        }
+        if (typeof data.text === 'undefined') {
+            return null;
+        }
+        var haystack = String(data.text).toLowerCase();
+        var tokens = String(params.term).toLowerCase().split(/\s+/).filter(Boolean);
+        var matched = tokens.every(function (token) {
+            return haystack.indexOf(token) !== -1;
+        });
+        return matched ? data : null;
+    }
+
     function initFacultyTypeFind() {
         $('#specialisation, #course, #avail_day, #avail_period, #education, #professional_qualification').each(function () {
             var $el = $(this);
@@ -518,7 +533,8 @@
                 allowClear: true,
                 placeholder: $el.data('placeholder') || 'Type to find…',
                 minimumResultsForSearch: 0,
-                dropdownParent: $(document.body)
+                dropdownParent: $(document.body),
+                matcher: containsMatcher
             });
         });
 
@@ -532,7 +548,8 @@
                 allowClear: true,
                 placeholder: $el.data('placeholder') || 'All Countries',
                 minimumResultsForSearch: 0,
-                dropdownParent: $(document.body)
+                dropdownParent: $(document.body),
+                matcher: containsMatcher
             });
         });
     }
@@ -552,11 +569,11 @@
                 $('#search_lat').val(pos.coords.latitude.toFixed(7));
                 $('#search_lng').val(pos.coords.longitude.toFixed(7));
                 $status.text('Your location is set. Search to find nearby trainers.');
-                $btn.prop('disabled', false).text('Use my location');
+                $btn.prop('disabled', false).text('Find using my location');
                 $('#instructors-search-form').trigger('submit');
             }, function (err) {
                 $status.text('Could not get your location: ' + (err.message || 'permission denied'));
-                $btn.prop('disabled', false).text('Use my location');
+                $btn.prop('disabled', false).text('Find using my location');
             }, { enableHighAccuracy: true, timeout: 15000 });
         });
 
@@ -571,7 +588,7 @@
             var lng = $('#search_lng').val();
 
             if (distance && (!lat || !lng)) {
-                $('#nearby-status').text('Click “Use my location” first to search within a distance.');
+                $('#nearby-status').text('Click “Find using my location” first to search within a distance.');
                 return;
             }
 
