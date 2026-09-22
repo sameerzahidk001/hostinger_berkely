@@ -50,6 +50,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'availability',
         'linkedin',
         'long_description',
+        'dbs_background',
         'ip_address',
         'approved',
         'is_on_web',
@@ -240,6 +241,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'training_expertise',
             'corporate_training',
             'institutions',
+            'dbs_background',
         ];
         $missing = array_values(array_filter($needed, fn ($col) => ! Schema::hasColumn('users', $col)));
         if ($missing !== []) {
@@ -273,6 +275,9 @@ class User extends Authenticatable implements MustVerifyEmail
                 }
                 if (in_array('institutions', $missing, true)) {
                     $table->longText('institutions')->nullable();
+                }
+                if (in_array('dbs_background', $missing, true)) {
+                    $table->longText('dbs_background')->nullable();
                 }
             });
         }
@@ -640,6 +645,51 @@ class User extends Authenticatable implements MustVerifyEmail
         return $lines;
     }
 
+    public static function dbsCheckLevelOptions(): array
+    {
+        return [
+            'basic' => 'Basic',
+            'standard' => 'Standard',
+            'enhanced' => 'Enhanced',
+            'enhanced_barred' => 'Enhanced with Barred List Check',
+        ];
+    }
+
+    public static function dbsUpdateServiceStatusOptions(): array
+    {
+        return [
+            'active' => 'Active',
+            'expired' => 'Expired',
+            'not_applicable' => 'Not Applicable',
+        ];
+    }
+
+    public function dbsBackgroundData(): array
+    {
+        $raw = $this->dbs_background ?? null;
+        if (is_array($raw)) {
+            $data = $raw;
+        } elseif (is_string($raw) && trim($raw) !== '') {
+            $decoded = json_decode($raw, true);
+            $data = is_array($decoded) ? $decoded : [];
+        } else {
+            $data = [];
+        }
+
+        return array_merge([
+            'holds_certificate' => '',
+            'check_level' => '',
+            'issue_date' => '',
+            'certificate_number' => '',
+            'update_service_registered' => '',
+            'update_service_status' => '',
+            'certificate_file' => '',
+            'name_on_certificate' => '',
+            'declaration' => false,
+            'willing_to_undergo' => '',
+        ], $data);
+    }
+
     public function applyInstructorExtraFields(\Illuminate\Http\Request $request): void
     {
         self::ensureInstructorExtraColumns();
@@ -665,6 +715,89 @@ class User extends Authenticatable implements MustVerifyEmail
                 $this->{$field} = $request->input($field);
             }
         }
+
+        if ($request->exists('dbs') || $request->hasFile('dbs_certificate_file')) {
+            $this->applyDbsBackgroundFields($request);
+        }
+    }
+
+    public function applyDbsBackgroundFields(\Illuminate\Http\Request $request): void
+    {
+        self::ensureInstructorExtraColumns();
+        if (! Schema::hasColumn('users', 'dbs_background')) {
+            return;
+        }
+
+        $current = $this->dbsBackgroundData();
+        $input = (array) $request->input('dbs', []);
+
+        $yesNo = static function ($value): string {
+            $v = strtolower(trim((string) $value));
+
+            return in_array($v, ['yes', 'no'], true) ? $v : '';
+        };
+
+        $holds = $yesNo($input['holds_certificate'] ?? '');
+        $levels = array_keys(self::dbsCheckLevelOptions());
+        $level = (string) ($input['check_level'] ?? '');
+        if (! in_array($level, $levels, true)) {
+            $level = '';
+        }
+
+        $statuses = array_keys(self::dbsUpdateServiceStatusOptions());
+        $status = (string) ($input['update_service_status'] ?? '');
+        if (! in_array($status, $statuses, true)) {
+            $status = '';
+        }
+
+        $issueDate = trim((string) ($input['issue_date'] ?? ''));
+        if ($issueDate !== '' && ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $issueDate)) {
+            $issueDate = '';
+        }
+
+        $certificateFile = (string) ($current['certificate_file'] ?? '');
+        if ($request->boolean('dbs_remove_certificate')) {
+            $certificateFile = '';
+        }
+        if ($request->hasFile('dbs_certificate_file')) {
+            $file = $request->file('dbs_certificate_file');
+            $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+            $extension = strtolower($file->getClientOriginalExtension());
+            $fileName = \Illuminate\Support\Str::slug($originalName) . '-' . time() . '.' . $extension;
+            $destinationPath = public_path('uploads/dbs/');
+            if (function_exists('public_upload_move')) {
+                public_upload_move($file, $destinationPath, $fileName);
+            } else {
+                if (! is_dir($destinationPath)) {
+                    mkdir($destinationPath, 0755, true);
+                }
+                $file->move($destinationPath, $fileName);
+            }
+            $certificateFile = 'uploads/dbs/' . $fileName;
+        }
+
+        $payload = [
+            'holds_certificate' => $holds,
+            'check_level' => $holds === 'yes' ? $level : '',
+            'issue_date' => $holds === 'yes' ? $issueDate : '',
+            'certificate_number' => $holds === 'yes'
+                ? trim((string) ($input['certificate_number'] ?? ''))
+                : '',
+            'update_service_registered' => $holds === 'yes'
+                ? $yesNo($input['update_service_registered'] ?? '')
+                : '',
+            'update_service_status' => $holds === 'yes' ? $status : '',
+            'certificate_file' => $holds === 'yes' ? $certificateFile : '',
+            'name_on_certificate' => $holds === 'yes'
+                ? trim((string) ($input['name_on_certificate'] ?? ''))
+                : '',
+            'declaration' => ! empty($input['declaration']),
+            'willing_to_undergo' => $holds === 'no'
+                ? $yesNo($input['willing_to_undergo'] ?? '')
+                : '',
+        ];
+
+        $this->dbs_background = json_encode($payload);
     }
 
     public static function hasRichTextContent(?string $html): bool

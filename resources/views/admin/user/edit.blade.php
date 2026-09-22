@@ -295,6 +295,7 @@
                                                 placeholder="https://www.linkedin.com/in/username" value="{{ old('linkedin', $user->linkedin) }}">
                                         </div>
                                         @include('admin.user._instructor_extra_fields', ['user' => $user])
+                                        @include('admin.user._instructor_dbs_fields', ['user' => $user])
                                     </div>
                                 @endif
                             </div>

@@ -73,6 +73,18 @@ class ProfileController extends Controller
             'availability.end_time' => 'nullable|string|max:10',
             'availability.timezone' => 'nullable|string|max:64',
             'availability.flexible' => 'nullable|in:yes,no',
+            'dbs' => 'nullable|array',
+            'dbs.holds_certificate' => 'nullable|in:yes,no',
+            'dbs.check_level' => 'nullable|in:basic,standard,enhanced,enhanced_barred',
+            'dbs.issue_date' => 'nullable|date|before_or_equal:today',
+            'dbs.certificate_number' => 'nullable|string|max:100',
+            'dbs.update_service_registered' => 'nullable|in:yes,no',
+            'dbs.update_service_status' => 'nullable|in:active,expired,not_applicable',
+            'dbs.name_on_certificate' => 'nullable|string|max:255',
+            'dbs.declaration' => 'nullable',
+            'dbs.willing_to_undergo' => 'nullable|in:yes,no',
+            'dbs_certificate_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
+            'dbs_remove_certificate' => 'nullable|boolean',
         ]);
 
         if ($validator->fails()) {
@@ -87,7 +99,10 @@ class ProfileController extends Controller
             $validatedData['teaching_methodology'],
             $validatedData['teaching_recognition'],
             $validatedData['availability'],
-            $validatedData['professional_qualifications']
+            $validatedData['professional_qualifications'],
+            $validatedData['dbs'],
+            $validatedData['dbs_certificate_file'],
+            $validatedData['dbs_remove_certificate']
         );
         // Never wipe Detailed Profile if the field was omitted from the request.
         if (! $request->exists('long_description')) {
