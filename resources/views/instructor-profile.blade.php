@@ -224,6 +224,141 @@
             }
         }
 
+        .showcase-split {
+            display: flex;
+            gap: 28px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        .showcase-split-image {
+            width: 220px;
+            max-width: 100%;
+            flex-shrink: 0;
+        }
+
+        .showcase-split-image img {
+            width: 100%;
+            height: auto;
+            border-radius: 10px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .showcase-split-list {
+            flex: 1;
+            min-width: 240px;
+        }
+
+        .showcase-split-list ul {
+            margin: 0;
+            padding-left: 1.2em;
+        }
+
+        .showcase-meta {
+            color: #555;
+            font-weight: 400;
+            font-size: 14px;
+        }
+
+        .showcase-read-more {
+            color: #bc1701;
+            font-weight: 600;
+            text-decoration: none;
+            margin-left: 6px;
+            white-space: nowrap;
+        }
+
+        .showcase-read-more:hover {
+            text-decoration: underline;
+            color: #00435a;
+        }
+
+        .showcase-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 18px;
+        }
+
+        .showcase-grid-item {
+            background: #fff;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #eee;
+            text-align: left;
+        }
+
+        .showcase-grid-item img {
+            width: 100%;
+            height: 140px;
+            object-fit: cover;
+            display: block;
+            background: #eee;
+        }
+
+        .showcase-grid-item .item-body {
+            padding: 12px 14px 14px;
+        }
+
+        .showcase-grid-item .item-title {
+            font-weight: 700;
+            color: #00435a;
+            margin: 0 0 4px;
+            font-size: 15px;
+            line-height: 1.35;
+        }
+
+        .showcase-books {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 18px;
+        }
+
+        .showcase-book {
+            display: flex;
+            gap: 14px;
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            padding: 12px;
+        }
+
+        .showcase-book img {
+            width: 90px;
+            height: 120px;
+            object-fit: cover;
+            border-radius: 6px;
+            flex-shrink: 0;
+            background: #eee;
+        }
+
+        .showcase-book .item-title {
+            font-weight: 700;
+            color: #00435a;
+            margin: 0 0 6px;
+            font-size: 16px;
+        }
+
+        .showcase-book .item-desc {
+            color: #333;
+            font-size: 14px;
+            font-weight: 400;
+            line-height: 1.5;
+            margin: 0 0 8px;
+        }
+
+        @media (max-width: 992px) {
+            .showcase-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 560px) {
+            .showcase-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
         /* ======= COURSES SECTION ======= */
         .courses-section {
             width: 100%;
@@ -387,6 +522,22 @@
                         $hasTraining = \App\Models\User::hasRichTextContent($instructor->training_expertise ?? null);
                         $hasCorporate = \App\Models\User::hasRichTextContent($instructor->corporate_training ?? null);
                         $hasInstitutions = \App\Models\User::hasRichTextContent($instructor->institutions ?? null);
+                        $showcase = method_exists($instructor, 'instructorShowcaseData') ? $instructor->instructorShowcaseData() : [];
+                        $hasConference = method_exists($instructor, 'hasConferenceSpeaking') && $instructor->hasConferenceSpeaking();
+                        $hasAwards = method_exists($instructor, 'hasAwards') && $instructor->hasAwards();
+                        $hasBooks = method_exists($instructor, 'hasBooks') && $instructor->hasBooks();
+                        $hasArticles = method_exists($instructor, 'hasArticlesWriting') && $instructor->hasArticlesWriting();
+                        $hasPodcasts = method_exists($instructor, 'hasPodcasts') && $instructor->hasPodcasts();
+                        $fmtDate = static function (?string $date): string {
+                            if (! $date) {
+                                return '';
+                            }
+                            try {
+                                return \Carbon\Carbon::parse($date)->format('d M Y');
+                            } catch (\Throwable $e) {
+                                return $date;
+                            }
+                        };
                     @endphp
                     <p class="hero-kicker">Instructor's Profile</p>
                     <h3>{{ $instructor->name }}
@@ -518,7 +669,144 @@
                 </div>
             @endif
 
-            @if(! $hasProfessional && $educationList === [] && $proQualList === [] && ! $hasExecutive && ! $hasTeaching && $recognitionLabels === [] && ! $hasTraining && ! $hasCorporate && $expertiseList === [] && ! $hasInstitutions && $methodLabels === [] && ! $hasAvailGrid)
+            @if($hasConference)
+                <div class="profile-section">
+                    <h3>Conference Speaking</h3>
+                    <div class="section-body">
+                        <div class="showcase-split">
+                            @if(!empty($showcase['conference_speaking']['image']))
+                                <div class="showcase-split-image">
+                                    <img src="{{ asset($showcase['conference_speaking']['image']) }}" alt="Conference speaking">
+                                </div>
+                            @endif
+                            <div class="showcase-split-list">
+                                @if(!empty($showcase['conference_speaking']['items']))
+                                    <ul>
+                                        @foreach($showcase['conference_speaking']['items'] as $item)
+                                            <li>
+                                                <strong>{{ $item['name'] ?: 'Conference' }}</strong>
+                                                @if($item['venue'] || $item['date'])
+                                                    <span class="showcase-meta">
+                                                        — {{ collect([$item['venue'], $fmtDate($item['date'] ?? '')])->filter()->implode(' · ') }}
+                                                    </span>
+                                                @endif
+                                                @if(!empty($item['link']))
+                                                    <a class="showcase-read-more" href="{{ $item['link'] }}" target="_blank" rel="noopener">Read more</a>
+                                                @endif
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            @if($hasAwards)
+                <div class="profile-section">
+                    <h3>Awards</h3>
+                    <div class="section-body">
+                        <div class="showcase-grid">
+                            @foreach($showcase['awards'] as $item)
+                                <div class="showcase-grid-item">
+                                    @if(!empty($item['image']))
+                                        <img src="{{ asset($item['image']) }}" alt="{{ $item['name'] ?: 'Award' }}">
+                                    @endif
+                                    <div class="item-body">
+                                        <p class="item-title">{{ $item['name'] ?: 'Award' }}</p>
+                                        @if($item['venue'] || $item['date'])
+                                            <p class="showcase-meta" style="margin:0 0 6px;">
+                                                {{ collect([$item['venue'], $fmtDate($item['date'] ?? '')])->filter()->implode(' · ') }}
+                                            </p>
+                                        @endif
+                                        @if(!empty($item['link']))
+                                            <a class="showcase-read-more" href="{{ $item['link'] }}" target="_blank" rel="noopener">Read more</a>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            @if($hasBooks)
+                <div class="profile-section">
+                    <h3>Book Authoring</h3>
+                    <div class="section-body">
+                        <div class="showcase-books">
+                            @foreach($showcase['books'] as $item)
+                                <div class="showcase-book">
+                                    @if(!empty($item['image']))
+                                        <img src="{{ asset($item['image']) }}" alt="{{ $item['name'] ?: 'Book' }}">
+                                    @endif
+                                    <div>
+                                        <p class="item-title">{{ $item['name'] ?: 'Book' }}</p>
+                                        @if(!empty($item['description']))
+                                            <p class="item-desc">{{ $item['description'] }}</p>
+                                        @endif
+                                        @if(!empty($item['link']))
+                                            <a class="showcase-read-more" href="{{ $item['link'] }}" target="_blank" rel="noopener">Read more</a>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            @if($hasArticles)
+                <div class="profile-section">
+                    <h3>Articles Writing</h3>
+                    <div class="section-body">
+                        @if(!empty($showcase['articles_writing']['description']))
+                            <p>{{ $showcase['articles_writing']['description'] }}</p>
+                        @endif
+                        @if(!empty($showcase['articles_writing']['topics']))
+                            <ul class="two-col-list">
+                                @foreach($showcase['articles_writing']['topics'] as $topic)
+                                    <li>
+                                        {{ $topic['title'] ?: 'Article' }}
+                                        @if(!empty($topic['link']))
+                                            <a class="showcase-read-more" href="{{ $topic['link'] }}" target="_blank" rel="noopener">Read more</a>
+                                        @endif
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
+            @if($hasPodcasts)
+                <div class="profile-section">
+                    <h3>Podcasts</h3>
+                    <div class="section-body">
+                        <div class="showcase-grid">
+                            @foreach($showcase['podcasts'] as $item)
+                                <div class="showcase-grid-item">
+                                    @if(!empty($item['image']))
+                                        <img src="{{ asset($item['image']) }}" alt="{{ $item['name'] ?: 'Podcast' }}">
+                                    @endif
+                                    <div class="item-body">
+                                        <p class="item-title">{{ $item['name'] ?: 'Podcast' }}</p>
+                                        @if(!empty($item['date']))
+                                            <p class="showcase-meta" style="margin:0 0 6px;">{{ $fmtDate($item['date']) }}</p>
+                                        @endif
+                                        @if(!empty($item['link']))
+                                            <a class="showcase-read-more" href="{{ $item['link'] }}" target="_blank" rel="noopener">Read more</a>
+                                        @endif
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            @if(! $hasProfessional && $educationList === [] && $proQualList === [] && ! $hasExecutive && ! $hasTeaching && $recognitionLabels === [] && ! $hasTraining && ! $hasCorporate && $expertiseList === [] && ! $hasInstitutions && $methodLabels === [] && ! $hasAvailGrid && ! $hasConference && ! $hasAwards && ! $hasBooks && ! $hasArticles && ! $hasPodcasts)
                 <div class="profile-section">
                     <h3>Professional Profile</h3>
                     <div class="section-body"><p>This instructor has not added profile details yet.</p></div>

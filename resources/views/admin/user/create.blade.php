@@ -282,6 +282,7 @@
                                     placeholder="https://www.linkedin.com/in/username" value="{{ old('linkedin') }}">
                             </div>
                             @include('admin.user._instructor_extra_fields', ['user' => new \App\Models\User()])
+                            @include('admin.user._instructor_showcase_fields', ['user' => new \App\Models\User()])
                             @include('admin.user._instructor_dbs_fields', ['user' => new \App\Models\User()])
                         </div>
                         <div class="row">

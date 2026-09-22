@@ -51,6 +51,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'linkedin',
         'long_description',
         'dbs_background',
+        'instructor_showcase',
         'ip_address',
         'approved',
         'is_on_web',
@@ -242,6 +243,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'corporate_training',
             'institutions',
             'dbs_background',
+            'instructor_showcase',
         ];
         $missing = array_values(array_filter($needed, fn ($col) => ! Schema::hasColumn('users', $col)));
         if ($missing !== []) {
@@ -278,6 +280,9 @@ class User extends Authenticatable implements MustVerifyEmail
                 }
                 if (in_array('dbs_background', $missing, true)) {
                     $table->longText('dbs_background')->nullable();
+                }
+                if (in_array('instructor_showcase', $missing, true)) {
+                    $table->longText('instructor_showcase')->nullable();
                 }
             });
         }
@@ -690,6 +695,139 @@ class User extends Authenticatable implements MustVerifyEmail
         ], $data);
     }
 
+    public function instructorShowcaseData(): array
+    {
+        $raw = $this->instructor_showcase ?? null;
+        if (is_array($raw)) {
+            $data = $raw;
+        } elseif (is_string($raw) && trim($raw) !== '') {
+            $decoded = json_decode($raw, true);
+            $data = is_array($decoded) ? $decoded : [];
+        } else {
+            $data = [];
+        }
+
+        $conference = is_array($data['conference_speaking'] ?? null) ? $data['conference_speaking'] : [];
+        $articles = is_array($data['articles_writing'] ?? null) ? $data['articles_writing'] : [];
+
+        return [
+            'conference_speaking' => [
+                'image' => (string) ($conference['image'] ?? ''),
+                'items' => array_values(array_filter(
+                    array_map(static function ($row) {
+                        if (! is_array($row)) {
+                            return null;
+                        }
+                        $name = trim((string) ($row['name'] ?? ''));
+                        $venue = trim((string) ($row['venue'] ?? ''));
+                        $date = trim((string) ($row['date'] ?? ''));
+                        $link = trim((string) ($row['link'] ?? ''));
+                        if ($name === '' && $venue === '' && $date === '' && $link === '') {
+                            return null;
+                        }
+
+                        return compact('name', 'venue', 'date', 'link');
+                    }, (array) ($conference['items'] ?? []))
+                )),
+            ],
+            'awards' => array_values(array_filter(
+                array_map(static function ($row) {
+                    if (! is_array($row)) {
+                        return null;
+                    }
+                    $image = trim((string) ($row['image'] ?? ''));
+                    $name = trim((string) ($row['name'] ?? ''));
+                    $venue = trim((string) ($row['venue'] ?? ''));
+                    $date = trim((string) ($row['date'] ?? ''));
+                    $link = trim((string) ($row['link'] ?? ''));
+                    if ($image === '' && $name === '' && $venue === '' && $date === '' && $link === '') {
+                        return null;
+                    }
+
+                    return compact('image', 'name', 'venue', 'date', 'link');
+                }, (array) ($data['awards'] ?? []))
+            )),
+            'books' => array_values(array_filter(
+                array_map(static function ($row) {
+                    if (! is_array($row)) {
+                        return null;
+                    }
+                    $image = trim((string) ($row['image'] ?? ''));
+                    $name = trim((string) ($row['name'] ?? ''));
+                    $description = trim((string) ($row['description'] ?? ''));
+                    $link = trim((string) ($row['link'] ?? ''));
+                    if ($image === '' && $name === '' && $description === '' && $link === '') {
+                        return null;
+                    }
+
+                    return compact('image', 'name', 'description', 'link');
+                }, (array) ($data['books'] ?? []))
+            )),
+            'articles_writing' => [
+                'description' => trim((string) ($articles['description'] ?? '')),
+                'topics' => array_values(array_filter(
+                    array_map(static function ($row) {
+                        if (! is_array($row)) {
+                            return null;
+                        }
+                        $title = trim((string) ($row['title'] ?? ''));
+                        $link = trim((string) ($row['link'] ?? ''));
+                        if ($title === '' && $link === '') {
+                            return null;
+                        }
+
+                        return compact('title', 'link');
+                    }, (array) ($articles['topics'] ?? []))
+                )),
+            ],
+            'podcasts' => array_values(array_filter(
+                array_map(static function ($row) {
+                    if (! is_array($row)) {
+                        return null;
+                    }
+                    $image = trim((string) ($row['image'] ?? ''));
+                    $name = trim((string) ($row['name'] ?? ''));
+                    $date = trim((string) ($row['date'] ?? ''));
+                    $link = trim((string) ($row['link'] ?? ''));
+                    if ($image === '' && $name === '' && $date === '' && $link === '') {
+                        return null;
+                    }
+
+                    return compact('image', 'name', 'date', 'link');
+                }, (array) ($data['podcasts'] ?? []))
+            )),
+        ];
+    }
+
+    public function hasConferenceSpeaking(): bool
+    {
+        $data = $this->instructorShowcaseData()['conference_speaking'];
+
+        return ($data['image'] ?? '') !== '' || ($data['items'] ?? []) !== [];
+    }
+
+    public function hasAwards(): bool
+    {
+        return $this->instructorShowcaseData()['awards'] !== [];
+    }
+
+    public function hasBooks(): bool
+    {
+        return $this->instructorShowcaseData()['books'] !== [];
+    }
+
+    public function hasArticlesWriting(): bool
+    {
+        $data = $this->instructorShowcaseData()['articles_writing'];
+
+        return ($data['description'] ?? '') !== '' || ($data['topics'] ?? []) !== [];
+    }
+
+    public function hasPodcasts(): bool
+    {
+        return $this->instructorShowcaseData()['podcasts'] !== [];
+    }
+
     public function applyInstructorExtraFields(\Illuminate\Http\Request $request): void
     {
         self::ensureInstructorExtraColumns();
@@ -716,9 +854,191 @@ class User extends Authenticatable implements MustVerifyEmail
             }
         }
 
+        if (
+            $request->exists('conference')
+            || $request->exists('awards')
+            || $request->exists('books')
+            || $request->exists('articles')
+            || $request->exists('podcasts')
+            || $request->hasFile('conference_image')
+            || $request->files->has('awards')
+            || $request->files->has('books')
+            || $request->files->has('podcasts')
+        ) {
+            $this->applyInstructorShowcaseFields($request);
+        }
+
         if ($request->exists('dbs') || $request->hasFile('dbs_certificate_file')) {
             $this->applyDbsBackgroundFields($request);
         }
+    }
+
+    public function applyInstructorShowcaseFields(\Illuminate\Http\Request $request): void
+    {
+        self::ensureInstructorExtraColumns();
+        if (! Schema::hasColumn('users', 'instructor_showcase')) {
+            return;
+        }
+
+        $current = $this->instructorShowcaseData();
+        $normalizeUrl = static function ($value): string {
+            $url = trim((string) $value);
+            if ($url === '') {
+                return '';
+            }
+            if (! preg_match('#^https?://#i', $url)) {
+                $url = 'https://' . $url;
+            }
+
+            return filter_var($url, FILTER_VALIDATE_URL) ? $url : '';
+        };
+        $normalizeDate = static function ($value): string {
+            $date = trim((string) $value);
+            if ($date === '') {
+                return '';
+            }
+            if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+                return $date;
+            }
+
+            return '';
+        };
+        $storeImage = static function ($file): string {
+            if (! $file) {
+                return '';
+            }
+            $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+            $extension = strtolower($file->getClientOriginalExtension());
+            $fileName = \Illuminate\Support\Str::slug($originalName) . '-' . time() . '-' . substr(uniqid('', true), -5) . '.' . $extension;
+            $destinationPath = public_path('uploads/instructor-showcase/');
+            if (function_exists('public_upload_move')) {
+                public_upload_move($file, $destinationPath, $fileName);
+            } else {
+                if (! is_dir($destinationPath)) {
+                    mkdir($destinationPath, 0755, true);
+                }
+                $file->move($destinationPath, $fileName);
+            }
+
+            return 'uploads/instructor-showcase/' . $fileName;
+        };
+
+        $conferenceInput = (array) $request->input('conference', []);
+        $conferenceImage = (string) ($current['conference_speaking']['image'] ?? '');
+        if ($request->boolean('conference_remove_image')) {
+            $conferenceImage = '';
+        }
+        if ($request->hasFile('conference_image')) {
+            $conferenceImage = $storeImage($request->file('conference_image'));
+        } elseif (! empty($conferenceInput['existing_image'])) {
+            $conferenceImage = trim((string) $conferenceInput['existing_image']);
+        }
+        $conferenceItems = [];
+        foreach ((array) ($conferenceInput['items'] ?? []) as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $name = trim((string) ($row['name'] ?? ''));
+            $venue = trim((string) ($row['venue'] ?? ''));
+            $date = $normalizeDate($row['date'] ?? '');
+            $link = $normalizeUrl($row['link'] ?? '');
+            if ($name === '' && $venue === '' && $date === '' && $link === '') {
+                continue;
+            }
+            $conferenceItems[] = compact('name', 'venue', 'date', 'link');
+        }
+
+        $awards = [];
+        foreach ((array) $request->input('awards', []) as $index => $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $image = trim((string) ($row['existing_image'] ?? ''));
+            if (! empty($row['remove_image'])) {
+                $image = '';
+            }
+            if ($request->hasFile('awards.' . $index . '.image')) {
+                $image = $storeImage($request->file('awards.' . $index . '.image'));
+            }
+            $name = trim((string) ($row['name'] ?? ''));
+            $venue = trim((string) ($row['venue'] ?? ''));
+            $date = $normalizeDate($row['date'] ?? '');
+            $link = $normalizeUrl($row['link'] ?? '');
+            if ($image === '' && $name === '' && $venue === '' && $date === '' && $link === '') {
+                continue;
+            }
+            $awards[] = compact('image', 'name', 'venue', 'date', 'link');
+        }
+
+        $books = [];
+        foreach ((array) $request->input('books', []) as $index => $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $image = trim((string) ($row['existing_image'] ?? ''));
+            if (! empty($row['remove_image'])) {
+                $image = '';
+            }
+            if ($request->hasFile('books.' . $index . '.image')) {
+                $image = $storeImage($request->file('books.' . $index . '.image'));
+            }
+            $name = trim((string) ($row['name'] ?? ''));
+            $description = mb_substr(trim((string) ($row['description'] ?? '')), 0, 500);
+            $link = $normalizeUrl($row['link'] ?? '');
+            if ($image === '' && $name === '' && $description === '' && $link === '') {
+                continue;
+            }
+            $books[] = compact('image', 'name', 'description', 'link');
+        }
+
+        $articlesInput = (array) $request->input('articles', []);
+        $articleTopics = [];
+        foreach ((array) ($articlesInput['topics'] ?? []) as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $title = trim((string) ($row['title'] ?? ''));
+            $link = $normalizeUrl($row['link'] ?? '');
+            if ($title === '' && $link === '') {
+                continue;
+            }
+            $articleTopics[] = compact('title', 'link');
+        }
+
+        $podcasts = [];
+        foreach ((array) $request->input('podcasts', []) as $index => $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $image = trim((string) ($row['existing_image'] ?? ''));
+            if (! empty($row['remove_image'])) {
+                $image = '';
+            }
+            if ($request->hasFile('podcasts.' . $index . '.image')) {
+                $image = $storeImage($request->file('podcasts.' . $index . '.image'));
+            }
+            $name = trim((string) ($row['name'] ?? ''));
+            $date = $normalizeDate($row['date'] ?? '');
+            $link = $normalizeUrl($row['link'] ?? '');
+            if ($image === '' && $name === '' && $date === '' && $link === '') {
+                continue;
+            }
+            $podcasts[] = compact('image', 'name', 'date', 'link');
+        }
+
+        $this->instructor_showcase = json_encode([
+            'conference_speaking' => [
+                'image' => $conferenceImage,
+                'items' => $conferenceItems,
+            ],
+            'awards' => $awards,
+            'books' => $books,
+            'articles_writing' => [
+                'description' => trim((string) ($articlesInput['description'] ?? '')),
+                'topics' => $articleTopics,
+            ],
+            'podcasts' => $podcasts,
+        ]);
     }
 
     public function applyDbsBackgroundFields(\Illuminate\Http\Request $request): void
