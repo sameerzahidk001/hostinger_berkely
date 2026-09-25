@@ -1234,7 +1234,7 @@
 
     @if (!empty($upcomingAgendas) && $upcomingAgendas->isNotEmpty())
         <section id="training-calendar" class="flex flex-col items-center py-12 px-6 sm:px-12 lg:px-16 bg-white">
-            <div class="flex flex-col items-center gap-2 mb-8 w-full max-w-[1400px]">
+            <div class="flex flex-col items-center gap-2 mb-8 w-full max-w-[960px] mx-auto">
                 <div class="flex gap-3 items-center">
                     <div class="bg-yellow w-12 h-[2px]"></div>
                     <span class="text-[22px] sm:text-[28px] md:text-[34px] text-[#000435] font-canela tracking-wide">
@@ -1244,7 +1244,7 @@
                 </div>
             </div>
 
-            <div class="w-full max-w-[1400px] overflow-x-auto">
+            <div class="w-full max-w-[960px] mx-auto overflow-x-auto">
                 <table class="w-full text-sm text-left text-gray-700">
                     <thead class="text-xs uppercase bg-gray-100 text-gray-600">
                         <tr>

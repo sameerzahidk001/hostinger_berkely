@@ -1,18 +1,46 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+    #agenda-search-form .select2-container { width: 100% !important; }
+    #agenda-search-form .select2-container .select2-selection--single {
+        height: 38px;
+        border: 1px solid #d1d5db;
+        border-radius: 0.25rem;
+        background-color: #fff;
+    }
+    #agenda-search-form .select2-container .select2-selection--single .select2-selection__rendered {
+        line-height: 36px;
+        padding-left: 12px;
+        color: #111827;
+    }
+    #agenda-search-form .select2-container .select2-selection--single .select2-selection__placeholder {
+        color: #9ca3af;
+    }
+    #agenda-search-form .select2-container .select2-selection--single .select2-selection__arrow {
+        height: 36px;
+    }
+    #agenda-search-form .select2-dropdown {
+        border-color: #d1d5db;
+    }
+    #agenda-search-form .select2-search__field {
+        outline: none !important;
+    }
+</style>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 <section
     class="min-h-[174px] lg:px-[120px] px-4 md:px-8 w-full my-16 {{ $background != 'transparent' ? 'pb-16 pt-16' : '' }}"
     style="background-color: {{ $background }};">
 
+    <div class="w-full max-w-[1100px] mx-auto">
     <!-- Filter Form -->
     <form id="agenda-search-form">
         <input type="hidden" name="sort_by" id="sort_by" value="from">
         <input type="hidden" name="sort_dir" id="sort_dir" value="asc">
         <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 my-2">
             <div>
-                <label class="" for="school">Shools</label>
-                <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm" name="school">
+                <label class="" for="agenda_school">Schools</label>
+                <select id="agenda_school" class="agenda-typefind w-full border border-gray-300 rounded px-3 py-2 text-sm" name="school" data-placeholder="All Schools">
                     <option value="">All Schools</option>
                     @foreach ($schools as $school)
                         <option value="{{ $school->id }}">{{ $school->name }}</option>
@@ -20,8 +48,8 @@
                 </select>
             </div>
             <div>
-                <label class="" for="category">Categories</label>
-                <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm" name="category">
+                <label class="" for="agenda_category">Categories</label>
+                <select id="agenda_category" class="agenda-typefind w-full border border-gray-300 rounded px-3 py-2 text-sm" name="category" data-placeholder="All Categories">
                     <option value="">All Categories</option>
                     @foreach ($categories as $category)
                         <option value="{{ $category->id }}">{{ $category->name }}</option>
@@ -29,8 +57,8 @@
                 </select>
             </div>
             <div>
-                <label class="" for="course">Course</label>
-                <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm" name="course">
+                <label class="" for="agenda_course">Course</label>
+                <select id="agenda_course" class="agenda-typefind w-full border border-gray-300 rounded px-3 py-2 text-sm" name="course" data-placeholder="All Courses">
                     <option value="">All Courses</option>
                     @php $courses = DB::table('courses')->get(); @endphp
                     @foreach ($courses as $course)
@@ -39,8 +67,8 @@
                 </select>
             </div>
             <div>
-                <label class="" for="subject">Part / Subject</label>
-                <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm" name="subject">
+                <label class="" for="agenda_subject">Part / Subject</label>
+                <select id="agenda_subject" class="agenda-typefind w-full border border-gray-300 rounded px-3 py-2 text-sm" name="subject" data-placeholder="All Subject">
                     <option value="">All Subject</option>
                     @foreach ($agenda_subjects as $agenda_subject)
                         <option value="{{ $agenda_subject }}">{{ $agenda_subject }}</option>
@@ -50,8 +78,8 @@
         </div>
         <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 my-2">
             <div>
-                <label class="" for="class_type">Training Methodology</label>
-                <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm" name="class_type">
+                <label class="" for="agenda_class_type">Training Methodology</label>
+                <select id="agenda_class_type" class="agenda-typefind w-full border border-gray-300 rounded px-3 py-2 text-sm" name="class_type" data-placeholder="Virtual & Classroom">
                     <option value="">Virtual & Classroom</option>
                     <option value="Virtual">Virtual</option>
                     <option value="In Person">In Person</option>
@@ -59,8 +87,8 @@
             </div>
 
             <div>
-                <label class="" for="country">Location</label>
-                <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm" name="country">
+                <label class="" for="agenda_country">Location</label>
+                <select id="agenda_country" class="agenda-typefind w-full border border-gray-300 rounded px-3 py-2 text-sm" name="country" data-placeholder="All Countries / International">
                     <option value="0">All Countries / International</option>
                     @foreach ($countries as $country)
                         <option value="{{ $country->id }}">{{ $country->name }}</option>
@@ -69,8 +97,8 @@
             </div>
 
             <div>
-                <label class="" for="city">City</label>
-                <select class="w-full border border-gray-300 rounded px-3 py-2 text-sm" name="city">
+                <label class="" for="agenda_city">City</label>
+                <select id="agenda_city" class="agenda-typefind w-full border border-gray-300 rounded px-3 py-2 text-sm" name="city" data-placeholder="All Cities">
                     <option value="">All Cities</option>
                     @foreach ($agenda_cities as $agenda_city)
                         <option value="{{ $agenda_city }}">{{ $agenda_city }}</option>
@@ -206,6 +234,7 @@
             </div>
         </div>
     </div>
+    </div>
 </section>
 
 <!-- Inquiry Modal -->
@@ -219,8 +248,43 @@
 
 <!-- Ensure jQuery is included -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
     $(document).ready(function() {
+        function containsMatcher(params, data) {
+            if ($.trim(params.term || '') === '') {
+                return data;
+            }
+            if (typeof data.text === 'undefined') {
+                return null;
+            }
+            var haystack = String(data.text).toLowerCase();
+            var tokens = String(params.term).toLowerCase().split(/\s+/).filter(Boolean);
+            var matched = tokens.every(function (token) {
+                return haystack.indexOf(token) !== -1;
+            });
+            return matched ? data : null;
+        }
+
+        function initAgendaTypeFind() {
+            $('#agenda-search-form select.agenda-typefind').each(function () {
+                var $el = $(this);
+                if ($el.hasClass('select2-hidden-accessible')) {
+                    $el.select2('destroy');
+                }
+                $el.select2({
+                    width: '100%',
+                    allowClear: true,
+                    placeholder: $el.data('placeholder') || 'Type to find…',
+                    minimumResultsForSearch: 0,
+                    dropdownParent: $(document.body),
+                    matcher: containsMatcher
+                });
+            });
+        }
+
+        initAgendaTypeFind();
+
         flatpickr("#dateRange", {
             mode: "range",
             dateFormat: "Y-m-d",
