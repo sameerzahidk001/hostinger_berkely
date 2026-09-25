@@ -9,13 +9,13 @@
         || $expired;
     $disabledLabel = 'Access Ended';
 @endphp
-<div class="col-md-6 col-lg-4" style="display:flex;">
-    <div class="ibox sm-folder-card" style="width:100%;display:flex;flex-direction:column;@if($accessDisabled) border:1px solid #c5c5c5;@endif">
-        <div class="ibox-title" style="background:{{ $accessDisabled ? '#6b7280' : '#000435' }};color:#fff;min-height:48px;">
-            <h5 style="color:#fff;margin:0;line-height:1.3;">{{ $folder->name }}</h5>
+<div class="col-md-6 col-lg-4">
+    <div class="ibox sm-folder-card"@if($accessDisabled) style="border:1px solid #c5c5c5;"@endif>
+        <div class="ibox-title" style="background:{{ $accessDisabled ? '#6b7280' : '#000435' }};color:#fff;">
+            <h5>{{ $folder->name }}</h5>
         </div>
-        <div class="ibox-content" style="flex:1;display:flex;flex-direction:column;@if($accessDisabled) background:#ececec;color:#4b5563;@endif">
-            <div style="flex:1;">
+        <div class="ibox-content"@if($accessDisabled) style="background:#ececec;color:#4b5563;"@endif>
+            <div class="sm-folder-card-body">
                 <p style="margin-bottom:6px;">
                     Course:
                     @if($folder->course)
@@ -47,14 +47,15 @@
                 <p style="margin-bottom:6px;">Access Start: {{ optional($access->issued_at)->format('d M Y') ?: '—' }}</p>
                 <p style="margin-bottom:10px;" class="text-muted">Access Expire: {{ $access->access_till ? $access->access_till->format('d M Y') : 'No expiry' }}</p>
             </div>
-            <div style="margin-top:auto;">
+            <div class="sm-folder-card-footer">
                 @if($accessDisabled)
-                    <button type="button" class="btn btn-sm" disabled style="background:#9ca3af;border-color:#9ca3af;color:#fff;cursor:not-allowed;">{{ $disabledLabel }}</button>
-                    <p style="margin-top:10px;margin-bottom:0;">
+                    <button type="button" class="btn btn-sm" disabled style="background:#9ca3af;border-color:#9ca3af;color:#fff;cursor:not-allowed;align-self:flex-start;">{{ $disabledLabel }}</button>
+                    <p class="sm-folder-card-contact" style="margin-top:10px;margin-bottom:0;">
                         contact <a href="mailto:admin@eduberkeley.com">admin@eduberkeley.com</a>
                     </p>
                 @else
-                    <a class="btn btn-primary btn-sm" href="{{ route('user.study-materials.show', $folder->id) }}" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;">Open Now</a>
+                    <a class="btn btn-primary btn-sm" href="{{ route('user.study-materials.show', $folder->id) }}" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;align-self:flex-start;">Open Now</a>
+                    <p class="sm-folder-card-contact" style="margin-top:10px;margin-bottom:0;">&nbsp;</p>
                 @endif
             </div>
         </div>
