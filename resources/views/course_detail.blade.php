@@ -1357,13 +1357,13 @@
 
                             <!-- Features -->
                             @if ($package->package_feature)
-                                <ul class="mb-6 space-y-3 text-left px-2">
+                                <ul class="mb-6 space-y-1 text-left px-2">
                                     @foreach ($package->package_feature as $data)
                                         <li class="flex items-start space-x-2">
                                             <img src="{{ asset('frontend/images/svgs/tick.svg') }}"
-                                                class="w-5 h-5 mt-0.5" alt="">
+                                                class="w-4 h-4 mt-0.5 shrink-0" alt="">
                                             <span
-                                                class="text-gray-700 text-sm sm:text-base leading-snug">{{ $data }}</span>
+                                                class="text-gray-700 text-sm sm:text-base leading-tight">{{ $data }}</span>
                                         </li>
                                     @endforeach
                                 </ul>
