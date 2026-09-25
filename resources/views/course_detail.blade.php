@@ -1325,7 +1325,7 @@
                         hover:shadow-2xl hover:border-yellow transition duration-300 ease-in-out w-full max-w-sm mx-auto">
 
                             <!-- Package Title -->
-                            <h3 class="mb-3 text-2xl font-bold text-[#000435] min-h-[50px]">
+                            <h3 class="mb-3 text-2xl font-bold text-[#000435] min-h-[50px] leading-tight break-words">
                                 {{ $package->package_name }}
                             </h3>
 
@@ -1359,11 +1359,11 @@
                             @if ($package->package_feature)
                                 <ul class="mb-6 space-y-1 text-left px-2">
                                     @foreach ($package->package_feature as $data)
-                                        <li class="flex items-start space-x-2">
+                                        <li class="flex items-start gap-2">
                                             <img src="{{ asset('frontend/images/svgs/tick.svg') }}"
                                                 class="w-4 h-4 mt-0.5 shrink-0" alt="">
                                             <span
-                                                class="text-gray-700 text-sm sm:text-base leading-tight">{{ $data }}</span>
+                                                class="text-gray-700 text-sm sm:text-base leading-tight min-w-0 flex-1 break-words">{{ $data }}</span>
                                         </li>
                                     @endforeach
                                 </ul>
