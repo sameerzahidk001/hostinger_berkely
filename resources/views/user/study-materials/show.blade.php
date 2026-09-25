@@ -16,6 +16,56 @@
 #smViewerClose{background:transparent;border:0;color:#fff;font-size:24px;cursor:pointer;line-height:1;}
 #smViewerLoading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);color:#fff;font-weight:600;z-index:2;}
 #smViewerDownload.is-busy{opacity:.7;pointer-events:none;}
+
+.sm-tree-folder{margin:0 0 14px;}
+.sm-tree-folder-head{
+    padding:10px 12px;
+    background:#f7f8fa;
+    border:1px solid #e8eaed;
+    border-radius:6px;
+    margin-bottom:10px;
+}
+.sm-tree-folder-head .fa{margin-right:6px;}
+.sm-files-grid{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:10px;
+    margin-bottom:14px;
+}
+@media (min-width: 768px){
+    .sm-files-grid{grid-template-columns:1fr 1fr;}
+}
+.sm-file-card{
+    border:1px solid #e8eaed;
+    border-radius:6px;
+    background:#fff;
+    min-height:52px;
+}
+.sm-file-link{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    padding:12px 14px;
+    color:#000435;
+    font-weight:600;
+    text-decoration:none;
+    height:100%;
+}
+.sm-file-link:hover{
+    background:#f8fafc;
+    color:#000435;
+    text-decoration:none;
+}
+.sm-file-icon{
+    font-size:18px;
+    line-height:1.3;
+    flex-shrink:0;
+    margin-top:1px;
+}
+.sm-file-name{
+    word-break:break-word;
+    line-height:1.35;
+}
 </style>
 @endpush
 @section('content')
