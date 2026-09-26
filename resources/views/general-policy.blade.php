@@ -1,12 +1,39 @@
 @extends('layouts.app')
 @push('style')
-
+<style>
+    .policy-content h3 {
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin: 0.65rem 0 0.25rem;
+        line-height: 1.35;
+    }
+    .policy-content p {
+        margin: 0 0 0.45rem;
+        line-height: 1.5;
+        font-size: 0.95rem;
+    }
+    .policy-content ul {
+        margin: 0.25rem 0 0.65rem;
+    }
+    .policy-content li {
+        margin: 0 0 0.2rem;
+        align-items: flex-start !important;
+    }
+    .policy-content li img {
+        width: 1rem !important;
+        height: 1rem !important;
+        margin-top: 0.2rem;
+    }
+    .policy-content li p {
+        margin: 0;
+    }
+</style>
 @endpush
 
 @section('content')
 
-<section class="flex flex-col-reverse justify-between relative min-h-[491px] md:max-h-[491px]  bg-[#000435]">
-    <div class="flex text-white  min-[1200px]:pl-[72px] md:pr-12 py-[30px] px-6  md:w-[50%] m-0  flex-1 flex-col ">
+<section class="flex flex-col-reverse justify-between relative min-h-[360px] md:max-h-[400px] bg-[#000435]">
+    <div class="flex text-white  min-[1200px]:pl-[72px] md:pr-12 py-[24px] px-6  md:w-[50%] m-0  flex-1 flex-col ">
 
         <div class="items-center gap-1 hidden md:flex">
             <a href="#">Home</a>
@@ -16,7 +43,7 @@
             
         </div>
 
-        <div class="flex flex-col gap-1 mt-4 md:mt-10 mb-4 md:mb-10">
+        <div class="flex flex-col gap-1 mt-3 md:mt-6 mb-3 md:mb-6">
             <h1 class="text-[20px] leading-8  text-primary_orange">BERKELEY SCHOOL  OF BUSINESS, ARTS & SCIENCES</h1>
             <h2 class="text-[42px] md:text-[48px] leading-[58px] font-canela text-white">General Policy
 
@@ -43,14 +70,14 @@
     </div>
 </section>
 
-<section class="bg-[#efefef] w-full flex flex-col gap-5 px-3 md:px-16 lg:px-[71px] md:flex-row">
+<section class="bg-[#efefef] w-full flex flex-col gap-3 px-3 md:px-12 lg:px-[56px] md:flex-row">
 
 
     @include('components.website-privacy-sidebar')
 
-    <main class="md:w-2/3 lg:w-3/4 w-full py-4 min-h-screen">
+    <main class="md:w-2/3 lg:w-3/4 w-full py-3 min-h-screen">
         
-        <div class="px-4 py-2 bg-white">
+        <div class="px-4 py-3 bg-white policy-content">
             <h3 class="text-xl font-bold mb-2">POLICIES & PROCEDURES</h3>
             <h3 class="text-xl font-bold mb-2">Welcome!</h3>
             <p class="mb-4">Welcome to BERKELEY. Our commitment to research makes us one of the most quality organizations in terms of learning. We look forward to the future with an eagerness to continue our pursuit of excellence. We wish you a productive and enjoyable career at the BERKELEY. This Handbook provides a general overview for all staff.</p>

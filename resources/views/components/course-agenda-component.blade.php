@@ -25,11 +25,27 @@
     #agenda-search-form .select2-search__field {
         outline: none !important;
     }
+    .agenda-results-table { table-layout: fixed; width: 100%; }
+    .agenda-results-table th,
+    .agenda-results-table td { word-wrap: break-word; vertical-align: top; }
+    .agenda-results-table .col-school { width: 10%; }
+    .agenda-results-table .col-category { width: 11%; }
+    .agenda-results-table .col-course { width: 34%; }
+    .agenda-results-table .col-delivery { width: 9%; }
+    .agenda-results-table .col-location { width: 10%; }
+    .agenda-results-table .col-dates { width: 14%; }
+    .agenda-results-table .col-actions { width: 12%; }
+    .agenda-results-table .agenda-dates-cell {
+        text-align: left;
+        white-space: nowrap;
+        line-height: 1.35;
+    }
+    .agenda-results-table .agenda-dates-cell div { margin: 0; }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 <section
-    class="min-h-[174px] lg:px-[120px] px-4 md:px-8 w-full my-16 {{ $background != 'transparent' ? 'pb-16 pt-16' : '' }}"
+    class="min-h-0 lg:px-[120px] px-4 md:px-8 w-full my-6 {{ $background != 'transparent' ? 'pb-8 pt-4' : 'py-2' }}"
     style="background-color: {{ $background }};">
 
     <div class="w-full">
@@ -37,7 +53,7 @@
     <form id="agenda-search-form">
         <input type="hidden" name="sort_by" id="sort_by" value="from">
         <input type="hidden" name="sort_dir" id="sort_dir" value="asc">
-        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 my-2">
+        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-3 my-1">
             <div>
                 <label class="" for="agenda_school">Schools</label>
                 <select id="agenda_school" class="agenda-typefind w-full border border-gray-300 rounded px-3 py-2 text-sm" name="school" data-placeholder="All Schools">
@@ -76,7 +92,7 @@
                 </select>
             </div>
         </div>
-        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4 my-2">
+        <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-3 my-1">
             <div>
                 <label class="" for="agenda_class_type">Training Methodology</label>
                 <select id="agenda_class_type" class="agenda-typefind w-full border border-gray-300 rounded px-3 py-2 text-sm" name="class_type" data-placeholder="Virtual & Classroom">
@@ -112,12 +128,9 @@
                     name="date_range" placeholder="Select Dates">
             </div>
             <div class="flex gap-2 items-end">
-
                 <input type="text" name="keyword" id="keyword" placeholder="Search by keyword..."
                     class="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:border-[#f8961f] focus:ring-[#f8961f]">
-
             </div>
-
 
             <div class="flex gap-2">
                 <button
@@ -128,108 +141,17 @@
                     Reset
                 </button>
             </div>
-
         </div>
     </form>
 
     <!-- Results Section -->
-    <div class="flex flex-col items-center gap-8 mt-8">
+    <div class="flex flex-col items-center gap-4 mt-4">
         <div class="b-custom w-full">
-            <h3 class="text-[24px] font-semibold pb-2" style="color: {{ $color }}">{{ $title }}</h3>
+            <h3 class="text-[24px] font-semibold pb-1" style="color: {{ $color }}">{{ $title }}</h3>
             <div class="text-[18px] pb-2" style="color: {{ $color }}">{!! $description !!}</div>
             <div class="position-relative">
-                <div class="grid gap-6" id="agenda-container">
-                    <div class="space-y-4 overflow-x-auto">
-                        <table class="w-full text-sm text-left text-gray-700 rounded-lg">
-                            <thead class="text-xs uppercase bg-gray-100 text-gray-600">
-                                <tr>
-                                    <th scope="col" class="px-4 py-3 font-semibold" data-sort="school">School<span
-                                            class="inline-block ml-1 sort-icon float-right cursor-pointer">⇅</span></th>
-                                    <th scope="col" class="px-4 py-3 font-semibold" data-sort="category">
-                                        Category<span
-                                            class="inline-block ml-1 sort-icon float-right cursor-pointer">⇅</span></th>
-                                    <th scope="col" class="px-4 py-3 font-semibold" data-sort="course">Course<span
-                                            class="inline-block ml-1 sort-icon float-right cursor-pointer">⇅</span>
-                                    </th>
-                                    <th scope="col" class="px-4 py-3 font-semibold" data-sort="deliveryType">
-                                        Delivery Type<span
-                                            class="inline-block ml-1 sort-icon float-right cursor-pointer">⇅</span>
-                                    </th>
-                                    <th scope="col" class="px-4 py-3 font-semibold" data-sort="location">
-                                        Location<span
-                                            class="inline-block ml-1 sort-icon float-right cursor-pointer">⇅</span>
-                                    </th>
-                                    <th scope="col" class="px-4 py-3 font-semibold text-right" data-sort="dates">
-                                        Dates<span
-                                            class="inline-block ml-1 sort-icon float-right cursor-pointer">⇅</span>
-                                    </th>
-                                    <th scope="col" class="px-4 py-3 font-semibold text-right">Inquiry</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white">
-                                @foreach ($course_agendas as $course_agenda)
-                                    <tr class="{{ !$loop->last ? 'border-b border-gray-200' : '' }}">
-                                        <td class="px-4 py-3 text-gray-800">
-                                            @php
-                                                $schoolName = $course_agenda->course->categories
-                                                    ->first()
-                                                    ?->schools->first()?->name;
-                                            @endphp
-                                            {{ $schoolName ?? 'N/A' }}
-                                        </td>
-                                        <td class="px-4 py-3 text-gray-800">
-                                            @php
-                                                $categoryNames = $course_agenda->course->categories
-                                                    ->pluck('name')
-                                                    ->implode('<br>');
-                                            @endphp
-                                            {!! $categoryNames !!}
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            <a class="text-[#000435] hover:underline font-semibold" target="_blank"
-                                                href="{{ route('course.details', ['course' => $course_agenda->course->slug]) }}">
-                                                {{ $course_agenda->course->title }}
-                                            </a>
-                                            @if ($course_agenda->subject)
-                                                <br>
-                                                {{ $course_agenda->subject }}
-                                            @endif
-                                            @if ($course_agenda->description)
-                                                <br>
-                                                {!! $course_agenda->description !!}
-                                            @endif
-
-                                        </td>
-                                        <td class="px-4 py-3 text-gray-800">
-                                            {{ $course_agenda->delivery_type ? $course_agenda->delivery_type : 'Virtual & Classroom' }}
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            {{ $course_agenda->country ? $course_agenda->country->name : 'International' }}<br>
-                                            <span class="">{{ $course_agenda->city }}</span>
-                                        </td>
-                                        <td class="px-4 py-3 text-right text-gray-600">
-                                            <strong>Start Date:</strong>
-                                            {{ \Carbon\Carbon::parse($course_agenda->from)->format('d M Y') }} <br>
-                                            <strong>End Date:</strong>
-                                            {{ \Carbon\Carbon::parse($course_agenda->to)->format('d M Y') }}
-                                        </td>
-                                        <td class="px-4 py-3 text-right">
-                                            <div class="flex flex-col gap-2 min-w-[120px]">
-                                                <a href="{{ route('course.details', ['course' => $course_agenda->course->slug]) }}#eight"
-                                                    class="border px-4 py-1 w-full border-[#000435] bg-[#000435] text-white transition-all delay-300 duration-300 content-center rounded uppercase text-center text-xs font-semibold">
-                                                    Enroll
-                                                </a>
-                                                <a href="{{ route('course.details', ['course' => $course_agenda->course->slug]) }}#apply"
-                                                    class="border px-4 py-1 w-full border-[#000435] bg-white text-[#000435] transition-all delay-300 duration-300 content-center rounded uppercase text-center text-xs font-semibold">
-                                                    Inquire
-                                                </a>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
+                <div class="grid gap-4" id="agenda-container">
+                    @include('partials.agenda_results', ['results' => $course_agendas])
                 </div>
             </div>
         </div>
