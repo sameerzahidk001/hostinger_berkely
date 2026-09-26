@@ -1,7 +1,10 @@
 @if($items->isEmpty())
     <p class="text-muted">No subfolders or files yet.</p>
 @else
-@php \App\Models\StudyMaterialItem::ensureIconTypeColumn(); @endphp
+@php
+    \App\Models\StudyMaterialItem::ensureIconTypeColumn();
+    $items = \App\Models\StudyMaterialItem::naturalSort($items);
+@endphp
 <ul class="list-unstyled" style="padding-left: {{ isset($depth) ? ($depth * 18) : 0 }}px;">
     @foreach($items as $item)
         <li style="padding:8px 0;border-bottom:1px solid #eee;">

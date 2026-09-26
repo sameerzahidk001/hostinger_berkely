@@ -154,6 +154,26 @@ class StudyMaterialItem extends Model
         return $this->children()->with('childrenRecursive');
     }
 
+    /**
+     * Natural sort: "1, 2, 10" instead of lexicographic "1, 10, 2".
+     * Honors sort_order first when set.
+     */
+    public static function naturalSort($items)
+    {
+        $collection = $items instanceof \Illuminate\Support\Collection
+            ? $items
+            : collect($items);
+
+        return $collection->sort(function ($a, $b) {
+            $order = ((int) ($a->sort_order ?? 0)) <=> ((int) ($b->sort_order ?? 0));
+            if ($order !== 0) {
+                return $order;
+            }
+
+            return strnatcasecmp((string) ($a->name ?? ''), (string) ($b->name ?? ''));
+        })->values();
+    }
+
     public function isFolder(): bool
     {
         return $this->type === 'folder';

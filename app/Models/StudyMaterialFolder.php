@@ -141,10 +141,10 @@ class StudyMaterialFolder extends Model
         ];
 
         $walk = function ($parentId, int $depth) use (&$walk, $folders, &$options) {
-            $children = $folders->filter(function ($item) use ($parentId) {
+            $children = StudyMaterialItem::naturalSort($folders->filter(function ($item) use ($parentId) {
                 return (int) $item->parent_id === (int) $parentId
                     || ($parentId === null && empty($item->parent_id));
-            });
+            }));
 
             foreach ($children as $item) {
                 $options[] = [

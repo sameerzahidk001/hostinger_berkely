@@ -2,9 +2,13 @@
     <p class="text-muted">No files in this folder.</p>
 @else
     @php
-        $treeItems = $items instanceof \Illuminate\Support\Collection ? $items : collect($items);
-        $folders = $treeItems->filter(fn ($item) => ($item->type ?? '') === 'folder')->values();
-        $files = $treeItems->filter(fn ($item) => ($item->type ?? '') !== 'folder')->values();
+        $treeItems = \App\Models\StudyMaterialItem::naturalSort($items);
+        $folders = \App\Models\StudyMaterialItem::naturalSort(
+            $treeItems->filter(fn ($item) => ($item->type ?? '') === 'folder')
+        );
+        $files = \App\Models\StudyMaterialItem::naturalSort(
+            $treeItems->filter(fn ($item) => ($item->type ?? '') !== 'folder')
+        );
         $pad = isset($depth) ? ((int) $depth * 16) : 0;
     @endphp
 
