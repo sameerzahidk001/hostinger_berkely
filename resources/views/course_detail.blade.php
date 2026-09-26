@@ -1244,49 +1244,38 @@
                 </div>
             </div>
 
-            <div class="w-full max-w-[1100px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div class="w-full max-w-[1100px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-4">
                 @foreach ($upcomingAgendas as $agenda)
-                    <div class="border border-gray-200 rounded-xl bg-white p-5 flex flex-col gap-3 shadow-sm hover:shadow-md transition">
+                    <div class="border border-gray-200 rounded-lg bg-white px-4 py-3 flex flex-col gap-1.5 shadow-sm">
                         <div>
-                            <h3 class="font-semibold text-[#000435] text-base leading-snug">
+                            <h3 class="font-semibold text-[#000435] text-sm leading-snug">
                                 {{ $agenda->subject ?: $course->title }}
                             </h3>
                             @if ($agenda->description)
-                                <div class="text-gray-600 text-sm mt-1 leading-snug">{!! $agenda->description !!}</div>
+                                <div class="text-gray-600 text-xs mt-0.5 leading-snug">{!! $agenda->description !!}</div>
                             @endif
                         </div>
 
-                        <div class="grid grid-cols-2 gap-3 text-sm text-gray-700">
-                            <div>
-                                <span class="block text-xs uppercase tracking-wide text-gray-500 font-semibold mb-0.5">Delivery</span>
-                                {{ $agenda->delivery_type ?: 'Virtual & Classroom' }}
-                            </div>
-                            <div>
-                                <span class="block text-xs uppercase tracking-wide text-gray-500 font-semibold mb-0.5">Location</span>
-                                {{ $agenda->country?->name ?: 'International' }}
-                                @if ($agenda->city)
-                                    <span class="block text-gray-500">{{ $agenda->city }}</span>
-                                @endif
-                            </div>
-                            <div class="col-span-2">
-                                <span class="block text-xs uppercase tracking-wide text-gray-500 font-semibold mb-0.5">Dates</span>
-                                <span class="text-gray-600">
-                                    <strong>Start:</strong> {{ \Carbon\Carbon::parse($agenda->from)->format('d M Y') }}
-                                    &nbsp;·&nbsp;
-                                    <strong>End:</strong> {{ \Carbon\Carbon::parse($agenda->to)->format('d M Y') }}
-                                </span>
-                            </div>
-                        </div>
+                        <p class="text-xs text-gray-700 leading-snug m-0">
+                            <strong>Delivery:</strong> {{ $agenda->delivery_type ?: 'Virtual & Classroom' }}
+                            <span class="text-gray-300 mx-1.5">|</span>
+                            <strong>Location:</strong> {{ $agenda->country?->name ?: 'International' }}{{ $agenda->city ? ', ' . $agenda->city : '' }}
+                        </p>
+                        <p class="text-xs text-gray-600 leading-snug m-0">
+                            <strong>Dates:</strong>
+                            Start {{ \Carbon\Carbon::parse($agenda->from)->format('d M Y') }}
+                            – End {{ \Carbon\Carbon::parse($agenda->to)->format('d M Y') }}
+                        </p>
 
-                        <div class="mt-auto flex flex-wrap gap-2 pt-1">
+                        <div class="mt-1 flex flex-wrap gap-2">
                             @if (!$course->courseFeePackages->isEmpty() && $course->fee_visibility == 1)
                                 <a href="#eight"
-                                   class="border px-4 py-1.5 border-[#000435] bg-[#000435] text-white rounded uppercase text-center text-xs font-semibold">
+                                   class="border px-3 py-1 border-[#000435] bg-[#000435] text-white rounded uppercase text-center text-[11px] font-semibold leading-none">
                                     Enroll
                                 </a>
                             @endif
                             <a href="{{ $course->contact_us_section == 1 ? '#apply' : route('contact') }}"
-                               class="border px-4 py-1.5 border-[#000435] bg-white text-[#000435] rounded uppercase text-center text-xs font-semibold">
+                               class="border px-3 py-1 border-[#000435] bg-white text-[#000435] rounded uppercase text-center text-[11px] font-semibold leading-none">
                                 Enquire
                             </a>
                         </div>
