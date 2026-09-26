@@ -139,13 +139,22 @@ a {
 .btn-blue {
     background-color: #1A237E;
     width: 150px;
+    min-height: 48px;
+    padding: 12px 18px;
     color: #fff;
     border-radius: 2px;
+    font-size: 16px;
+    font-weight: 600;
 }
 
 .btn-blue:hover {
     background-color: #000;
     cursor: pointer;
+}
+
+.login-after-btn {
+    margin-top: 8px !important;
+    margin-bottom: 0 !important;
 }
 
 .bg-blue {
@@ -183,36 +192,18 @@ a {
     <div class="container-fluid px-0" style="height:100vh;">
         <div class="card card0 border-0" style="height:100vh;">
             <div class="row d-flex">
-                <div class="col-lg-6">
-                    <div class="card1" style="height: 100vh;"> <!-- Set the height of the card to fill the viewport height -->
-                        <div class="row px-0 border-line" style="height: 100%;"> <!-- Ensure the row takes full height -->
-                            <img src="{{ asset('student/images/pngs/login.png') }}" class="image" style="width: 100%; height: 100%; object-fit: cover;" alt="">
-                        </div>
-                    </div>
-                </div>
                 <div class="col-lg-6" style="background-color:white;">
                     <form method="POST" action="{{ route('login') }}">
                         @csrf
                         <div class="card2 card border-0 d-flex flex-column justify-content-center px-4 py-5" style="height: 100vh;">
-                            <!-- <div class="row mb-4 px-3">
-                                <h6 class="mb-0 mr-4 mt-2">Sign in with</h6>
-                                <div class="facebook text-center mr-3"><div class="fa fa-facebook"></div></div>
-                                <div class="twitter text-center mr-3"><div class="fa fa-twitter"></div></div>
-                                <div class="linkedin text-center mr-3"><div class="fa fa-linkedin"></div></div>
-                            </div> -->
                             <div class="row mb-4 px-3">
                                 <a href="{{ route('welcome') }}">
                                     <img src="{{ asset('frontend/images/pngs/header-logo.png') }}" alt="logo">
                                 </a>
                             </div>
-                            <!-- <div class="row px-3 mb-4">
-                                <div class="line"></div>
-                                <small class="or text-center">Or</small>
-                                <div class="line"></div>
-                            </div> -->
                             <div class="row px-3">
                                 <label class="mb-1"><h6 class="mb-0 text-sm">Email Address</h6></label>
-                                <input class="mb-2 @error('email') border-danger @enderror" id="email" type="email" name="email" placeholder="Enter a valid email address" name="email" value="{{ old('email') }}" required autocomplete="email" autofocus>
+                                <input class="mb-2 @error('email') border-danger @enderror" id="email" type="email" name="email" placeholder="Enter a valid email address" value="{{ old('email') }}" required autocomplete="email" autofocus>
                                 @error('email')
                                     <p class="text-danger text-xs italic">{{ $message }}</p>
                                 @enderror
@@ -239,24 +230,29 @@ a {
                                     <p class="text-danger text-xs italic mb-0 mt-1">{{ $message }}</p>
                                 @enderror
                             </div>
-                            <div class="row px-3 my-4">
+                            <div class="row px-3 mb-3" style="margin-top:12px;">
                                 <div class="custom-control custom-checkbox custom-control-inline">
-                                    <input id="chk1" type="checkbox" name="chk" class="custom-control-input"> 
+                                    <input id="chk1" type="checkbox" name="chk" class="custom-control-input">
                                     <label for="chk1" class="custom-control-label text-sm">Remember me</label>
                                 </div>
                                 <a href="{{ route('password.request') }}" class="ml-auto mb-0 text-sm">Forgot Password?</a>
                             </div>
-                            <div class="row mb-3 px-3">
+                            <div class="row mb-2 px-3">
                                 <button type="submit" class="btn btn-blue text-center">Login</button>
                             </div>
-                            <div class="row mb-4 px-3">
-                                <small class="font-weight-bold">Don't have an account ? <a href="{{ route('register') }}"class="text-danger">Register</a></small>
+                            <div class="row px-3 login-after-btn">
+                                <small class="font-weight-bold">Don't have an account ? <a href="{{ route('register') }}" class="text-danger">Register</a></small>
                             </div>
                         </div>
                     </form>
                 </div>
-
-
+                <div class="col-lg-6">
+                    <div class="card1" style="height: 100vh;">
+                        <div class="row px-0" style="height: 100%; margin: 0;">
+                            <img src="{{ asset('student/images/pngs/login.png') }}" class="image" style="width: 100%; height: 100%; object-fit: cover;" alt="EduBerkeley">
+                        </div>
+                    </div>
+                </div>
             </div>
             
         </div>

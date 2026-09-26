@@ -16,19 +16,20 @@
     }
     .sm-folder-card {
         width: 100%;
+        min-height: 320px;
         display: flex;
         flex-direction: column;
         margin-bottom: 0;
     }
     .sm-folder-card .ibox-title {
-        min-height: 56px;
+        min-height: 64px;
         display: flex;
         align-items: center;
     }
     .sm-folder-card .ibox-title h5 {
         color: #fff;
         margin: 0;
-        line-height: 1.3;
+        line-height: 1.35;
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
@@ -38,20 +39,30 @@
         flex: 1 1 auto;
         display: flex;
         flex-direction: column;
+        padding-bottom: 12px !important;
     }
     .sm-folder-card .sm-folder-card-body {
         flex: 1 1 auto;
+        padding-bottom: 12px;
     }
     .sm-folder-card .sm-folder-card-footer {
         margin-top: auto;
-        padding-top: 8px;
+        padding-top: 4px;
+        padding-bottom: 0;
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
+        gap: 0;
+    }
+    .sm-folder-card .sm-folder-card-footer > .btn,
+    .sm-folder-card .sm-folder-card-footer > a.btn {
+        margin-bottom: 0;
     }
     .sm-folder-card .sm-folder-card-contact {
-        min-height: 22px;
+        min-height: 0;
         font-size: 13px;
+        margin-top: 6px !important;
+        margin-bottom: 0 !important;
     }
 </style>
 <div class="row wrapper border-bottom white-bg page-heading">

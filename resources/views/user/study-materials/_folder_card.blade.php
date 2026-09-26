@@ -50,12 +50,11 @@
             <div class="sm-folder-card-footer">
                 @if($accessDisabled)
                     <button type="button" class="btn btn-sm" disabled style="background:#9ca3af;border-color:#9ca3af;color:#fff;cursor:not-allowed;align-self:flex-start;">{{ $disabledLabel }}</button>
-                    <p class="sm-folder-card-contact" style="margin-top:10px;margin-bottom:0;">
+                    <p class="sm-folder-card-contact">
                         contact <a href="mailto:admin@eduberkeley.com">admin@eduberkeley.com</a>
                     </p>
                 @else
                     <a class="btn btn-primary btn-sm" href="{{ route('user.study-materials.show', $folder->id) }}" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;align-self:flex-start;">Open Now</a>
-                    <p class="sm-folder-card-contact" style="margin-top:10px;margin-bottom:0;">&nbsp;</p>
                 @endif
             </div>
         </div>
