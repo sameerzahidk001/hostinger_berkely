@@ -1234,7 +1234,7 @@
 
     @if (!empty($upcomingAgendas) && $upcomingAgendas->isNotEmpty())
         <section id="training-calendar" class="flex flex-col items-center py-12 px-6 sm:px-12 lg:px-16 bg-white">
-            <div class="flex flex-col items-center gap-2 mb-8 w-full max-w-[960px] mx-auto">
+            <div class="flex flex-col items-center gap-2 mb-8 w-full max-w-[1100px] mx-auto">
                 <div class="flex gap-3 items-center">
                     <div class="bg-yellow w-12 h-[2px]"></div>
                     <span class="text-[22px] sm:text-[28px] md:text-[34px] text-[#000435] font-canela tracking-wide">
@@ -1244,57 +1244,54 @@
                 </div>
             </div>
 
-            <div class="w-full max-w-[960px] mx-auto overflow-x-auto">
-                <table class="w-full text-sm text-left text-gray-700">
-                    <thead class="text-xs uppercase bg-gray-100 text-gray-600">
-                        <tr>
-                            <th class="px-4 py-3 font-semibold">Subject</th>
-                            <th class="px-4 py-3 font-semibold">Delivery</th>
-                            <th class="px-4 py-3 font-semibold">Location</th>
-                            <th class="px-4 py-3 font-semibold text-right">Dates</th>
-                            <th class="px-4 py-3 font-semibold text-right">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white">
-                        @foreach ($upcomingAgendas as $agenda)
-                            <tr class="{{ !$loop->last ? 'border-b border-gray-200' : '' }}">
-                                <td class="px-4 py-3">
-                                    <span class="font-semibold text-[#000435]">{{ $agenda->subject ?: $course->title }}</span>
-                                    @if ($agenda->description)
-                                        <div class="text-gray-600 mt-1">{!! $agenda->description !!}</div>
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3">
-                                    {{ $agenda->delivery_type ?: 'Virtual & Classroom' }}
-                                </td>
-                                <td class="px-4 py-3">
-                                    {{ $agenda->country?->name ?: 'International' }}
-                                    @if ($agenda->city)
-                                        <br><span class="text-gray-500">{{ $agenda->city }}</span>
-                                    @endif
-                                </td>
-                                <td class="px-4 py-3 text-right text-gray-600 whitespace-nowrap">
-                                    <strong>Start:</strong> {{ \Carbon\Carbon::parse($agenda->from)->format('d M Y') }}<br>
+            <div class="w-full max-w-[1100px] mx-auto grid grid-cols-1 md:grid-cols-2 gap-5">
+                @foreach ($upcomingAgendas as $agenda)
+                    <div class="border border-gray-200 rounded-xl bg-white p-5 flex flex-col gap-3 shadow-sm hover:shadow-md transition">
+                        <div>
+                            <h3 class="font-semibold text-[#000435] text-base leading-snug">
+                                {{ $agenda->subject ?: $course->title }}
+                            </h3>
+                            @if ($agenda->description)
+                                <div class="text-gray-600 text-sm mt-1 leading-snug">{!! $agenda->description !!}</div>
+                            @endif
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3 text-sm text-gray-700">
+                            <div>
+                                <span class="block text-xs uppercase tracking-wide text-gray-500 font-semibold mb-0.5">Delivery</span>
+                                {{ $agenda->delivery_type ?: 'Virtual & Classroom' }}
+                            </div>
+                            <div>
+                                <span class="block text-xs uppercase tracking-wide text-gray-500 font-semibold mb-0.5">Location</span>
+                                {{ $agenda->country?->name ?: 'International' }}
+                                @if ($agenda->city)
+                                    <span class="block text-gray-500">{{ $agenda->city }}</span>
+                                @endif
+                            </div>
+                            <div class="col-span-2">
+                                <span class="block text-xs uppercase tracking-wide text-gray-500 font-semibold mb-0.5">Dates</span>
+                                <span class="text-gray-600">
+                                    <strong>Start:</strong> {{ \Carbon\Carbon::parse($agenda->from)->format('d M Y') }}
+                                    &nbsp;·&nbsp;
                                     <strong>End:</strong> {{ \Carbon\Carbon::parse($agenda->to)->format('d M Y') }}
-                                </td>
-                                <td class="px-4 py-3 text-right">
-                                    <div class="flex flex-col gap-2 min-w-[120px] items-stretch">
-                                        @if (!$course->courseFeePackages->isEmpty() && $course->fee_visibility == 1)
-                                            <a href="#eight"
-                                               class="border px-4 py-1 border-[#000435] bg-[#000435] text-white rounded uppercase text-center text-xs font-semibold">
-                                                Enroll
-                                            </a>
-                                        @endif
-                                        <a href="{{ $course->contact_us_section == 1 ? '#apply' : route('contact') }}"
-                                           class="border px-4 py-1 border-[#000435] bg-white text-[#000435] rounded uppercase text-center text-xs font-semibold">
-                                            Enquire
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                                </span>
+                            </div>
+                        </div>
+
+                        <div class="mt-auto flex flex-wrap gap-2 pt-1">
+                            @if (!$course->courseFeePackages->isEmpty() && $course->fee_visibility == 1)
+                                <a href="#eight"
+                                   class="border px-4 py-1.5 border-[#000435] bg-[#000435] text-white rounded uppercase text-center text-xs font-semibold">
+                                    Enroll
+                                </a>
+                            @endif
+                            <a href="{{ $course->contact_us_section == 1 ? '#apply' : route('contact') }}"
+                               class="border px-4 py-1.5 border-[#000435] bg-white text-[#000435] rounded uppercase text-center text-xs font-semibold">
+                                Enquire
+                            </a>
+                        </div>
+                    </div>
+                @endforeach
             </div>
         </section>
 
