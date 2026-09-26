@@ -29,10 +29,10 @@
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
 <section
-    class="min-h-[174px] px-4 md:px-8 lg:px-12 w-full my-16 {{ $background != 'transparent' ? 'pb-16 pt-16' : '' }}"
+    class="min-h-[174px] lg:px-[120px] px-4 md:px-8 w-full my-16 {{ $background != 'transparent' ? 'pb-16 pt-16' : '' }}"
     style="background-color: {{ $background }};">
 
-    <div class="w-full max-w-[980px] mx-auto">
+    <div class="w-full">
     <!-- Filter Form -->
     <form id="agenda-search-form">
         <input type="hidden" name="sort_by" id="sort_by" value="from">
