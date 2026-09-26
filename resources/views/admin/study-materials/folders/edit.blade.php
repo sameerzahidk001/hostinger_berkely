@@ -186,6 +186,15 @@
                             <span class="help-block">WorkDrive API is not connected yet. Paste a link, or upload to the server until OAuth is set.</span>
                         @endunless
                     </div>
+                    <div class="col-md-6 form-group">
+                        <label>Item icon type</label>
+                        <select name="icon_type" class="form-control">
+                            @foreach(\App\Models\StudyMaterialItem::iconTypeOptions() as $value => $label)
+                                <option value="{{ $value }}" {{ old('icon_type', 'auto') === $value ? 'selected' : '' }}>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        <span class="help-block">Shown to students next to the file name (PDF, Word, Video, etc.). Auto-detect uses the file name/type.</span>
+                    </div>
                     <div class="col-md-12 form-group" id="source-upload">
                         <label>Upload files</label>
                         <input type="file" name="files[]" class="form-control" multiple>

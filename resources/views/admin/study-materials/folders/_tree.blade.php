@@ -1,6 +1,7 @@
 @if($items->isEmpty())
     <p class="text-muted">No subfolders or files yet.</p>
 @else
+@php \App\Models\StudyMaterialItem::ensureIconTypeColumn(); @endphp
 <ul class="list-unstyled" style="padding-left: {{ isset($depth) ? ($depth * 18) : 0 }}px;">
     @foreach($items as $item)
         <li style="padding:8px 0;border-bottom:1px solid #eee;">
@@ -8,17 +9,18 @@
                 <div>
                     @if($item->type === 'folder')
                         <i class="fa fa-folder text-warning"></i> <strong>{{ $item->name }}</strong>
-                    @elseif($item->isExternal())
-                        <i class="fa fa-external-link"></i> {{ $item->name }}
-                        <span class="label label-info">Zoho WorkDrive</span>
-                        <a href="{{ $item->external_url }}" target="_blank" rel="noopener" class="btn btn-xs btn-default">Open</a>
                     @else
-                        <i class="fa fa-file-o"></i> {{ $item->name }}
-                        <small class="text-muted">({{ number_format(($item->size ?? 0) / 1024, 1) }} KB)</small>
+                        <i class="fa {{ $item->iconFaClass() }}"></i> {{ $item->name }}
+                        @if($item->isExternal())
+                            <span class="label label-info">Zoho WorkDrive</span>
+                            <a href="{{ $item->external_url }}" target="_blank" rel="noopener" class="btn btn-xs btn-default">Open</a>
+                        @else
+                            <small class="text-muted">({{ number_format(($item->size ?? 0) / 1024, 1) }} KB)</small>
+                        @endif
                     @endif
                 </div>
                 <div style="white-space:nowrap;">
-                    <button type="button" class="btn btn-xs btn-primary" onclick="var f=document.getElementById('rename-item-{{ $item->id }}'); if(f){ f.style.display = f.style.display==='none' ? 'block' : 'none'; }">Rename</button>
+                    <button type="button" class="btn btn-xs btn-primary" onclick="var f=document.getElementById('rename-item-{{ $item->id }}'); if(f){ f.style.display = f.style.display==='none' ? 'block' : 'none'; }">Edit</button>
                     @if($item->type === 'file')
                         <form action="{{ route('admin.study-materials.items.download', $item->id) }}" method="POST" style="display:inline;">
                             @csrf @method('PUT')
@@ -34,13 +36,24 @@
                     </form>
                 </div>
             </div>
-            <form id="rename-item-{{ $item->id }}" action="{{ route('admin.study-materials.items.rename', $item->id) }}" method="POST" style="display:none;margin-top:8px;max-width:420px;">
+            <form id="rename-item-{{ $item->id }}" action="{{ route('admin.study-materials.items.rename', $item->id) }}" method="POST" style="display:none;margin-top:8px;max-width:520px;">
                 @csrf @method('PUT')
-                <div class="input-group input-group-sm">
-                    <input type="text" name="name" class="form-control" value="{{ $item->name }}" required>
-                    <span class="input-group-btn">
-                        <button type="submit" class="btn btn-primary">Save name</button>
-                    </span>
+                <div class="row">
+                    <div class="col-sm-{{ $item->type === 'file' ? '6' : '9' }}">
+                        <input type="text" name="name" class="form-control input-sm" value="{{ $item->name }}" required>
+                    </div>
+                    @if($item->type === 'file')
+                        <div class="col-sm-4">
+                            <select name="icon_type" class="form-control input-sm">
+                                @foreach(\App\Models\StudyMaterialItem::iconTypeOptions() as $value => $label)
+                                    <option value="{{ $value }}" {{ ($item->icon_type ?: 'auto') === $value || ($value === 'auto' && empty($item->icon_type)) ? 'selected' : '' }}>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @endif
+                    <div class="col-sm-2">
+                        <button type="submit" class="btn btn-primary btn-sm btn-block">Save</button>
+                    </div>
                 </div>
             </form>
             @if($item->type === 'folder')

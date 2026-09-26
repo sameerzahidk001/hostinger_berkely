@@ -229,6 +229,29 @@ class StudyMaterialService
     public function ensureEmailTemplates(): void
     {
         (new StudyMaterialEmailTemplateSeeder())->run();
+
+        // Upgrade older student-access templates that only showed a single Instructor line.
+        $access = Email::query()->where('name', 'study-material-student-access')->first();
+        if ($access && is_string($access->body) && str_contains($access->body, 'Instructor: {instructor_name}')
+            && ! str_contains($access->body, '{head_of_faculty_name}')) {
+            $access->body = str_replace(
+                'Instructor: {instructor_name}',
+                'Head of Faculty: {head_of_faculty_name}<br>Trainer: {trainer_name}',
+                $access->body
+            );
+            $access->save();
+        }
+
+        $disabled = Email::query()->where('name', 'study-material-student-disabled')->first();
+        if ($disabled && is_string($disabled->body) && str_contains($disabled->body, 'Instructor: {instructor_name}')
+            && ! str_contains($disabled->body, '{head_of_faculty_name}')) {
+            $disabled->body = str_replace(
+                'Instructor: {instructor_name}',
+                'Head of Faculty: {head_of_faculty_name}<br>Trainer: {trainer_name}',
+                $disabled->body
+            );
+            $disabled->save();
+        }
     }
 
     public function sendFolderStudentEmails(StudyMaterialFolder $folder): array
@@ -555,22 +578,44 @@ class StudyMaterialService
     {
         $user = $access->student;
         $folder = $access->folder;
-        $instructorName = '';
+        $headOfFacultyName = '';
+        $trainerName = '';
 
         if ($folder) {
-            $instructorName = $folder->instructorAccess
-                ->where('status', 'active')
-                ->pluck('instructor.name')
-                ->filter()
-                ->first() ?? $folder->ownerName();
+            $folder->loadMissing(['course', 'instructorAccess.instructor']);
+            $instructors = $folder->displayInstructors();
+            $courseInstructorIds = course_instructor_ids($folder->course ?? null);
+            $head = $instructors->firstWhere('id', $courseInstructorIds[0] ?? null)
+                ?: ($instructors->count() > 1 ? $instructors->get(0) : null);
+            $trainer = $instructors->firstWhere('id', $courseInstructorIds[1] ?? null)
+                ?: ($instructors->count() > 1 ? $instructors->get(1) : $instructors->first());
+
+            // If only one person is assigned, treat them as trainer when roles are unclear.
+            if (! $head && $trainer && $instructors->count() === 1) {
+                $head = null;
+            }
+
+            $headOfFacultyName = $head?->name ?? '';
+            $trainerName = $trainer?->name ?? '';
+
+            if ($headOfFacultyName === '' && $trainerName === '') {
+                $trainerName = $folder->ownerName();
+            }
         }
+
+        $instructorName = trim(collect([
+            $headOfFacultyName !== '' ? 'Head of Faculty: ' . $headOfFacultyName : null,
+            $trainerName !== '' ? 'Trainer: ' . $trainerName : null,
+        ])->filter()->implode(' | ')) ?: ($trainerName ?: $headOfFacultyName);
 
         return array_merge([
             '{name}' => $user->name ?? '',
             '{email}' => $user->email ?? '',
             '{folder_name}' => $folder->name ?? '',
             '{course_name}' => $folder?->course?->title ?? $folder?->course?->name ?? '',
-            '{instructor_name}' => $instructorName ?? '',
+            '{instructor_name}' => $instructorName,
+            '{head_of_faculty_name}' => $headOfFacultyName !== '' ? $headOfFacultyName : '—',
+            '{trainer_name}' => $trainerName !== '' ? $trainerName : '—',
             '{validity}' => $folder ? $folder->validityLabel() : '',
             '{access_till}' => optional($access->access_till)->format('d M Y') ?? 'None',
             '{issued_at}' => optional($access->issued_at)->format('d M Y') ?? '',

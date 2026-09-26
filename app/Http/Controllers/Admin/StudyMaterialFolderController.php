@@ -298,6 +298,7 @@ class StudyMaterialFolderController extends Controller
         $validator = Validator::make($request->all(), [
             'parent_id' => 'nullable|exists:study_material_items,id',
             'source' => 'required|in:upload,workdrive,zoho',
+            'icon_type' => 'nullable|string|in:auto,pdf,word,excel,ppt,video,audio,image,zip,file',
             'files' => 'required_if:source,upload|required_if:source,workdrive|nullable|array',
             'files.*' => 'nullable|file|max:102400',
             'zoho_name' => 'required_if:source,zoho|nullable|string|max:255',
@@ -313,7 +314,9 @@ class StudyMaterialFolderController extends Controller
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
+        StudyMaterialItem::ensureIconTypeColumn();
         $parentId = $this->resolvedParentId($folder, $request->input('parent_id'));
+        $iconType = StudyMaterialItem::normalizeIconType($request->input('icon_type'));
 
         if ($request->input('source') === 'zoho') {
             StudyMaterialItem::create([
@@ -323,6 +326,7 @@ class StudyMaterialFolderController extends Controller
                 'name' => trim($request->zoho_name),
                 'external_url' => trim($request->zoho_url),
                 'mime' => 'zoho/workdrive',
+                'icon_type' => $iconType ?: StudyMaterialItem::guessIconTypeFromName(trim($request->zoho_name)),
             ]);
 
             return redirect()
@@ -354,6 +358,10 @@ class StudyMaterialFolderController extends Controller
                         'original_name' => $file->getClientOriginalName(),
                         'mime' => 'zoho/workdrive',
                         'size' => $file->getSize(),
+                        'icon_type' => $iconType ?: StudyMaterialItem::guessIconTypeFromName(
+                            $file->getClientOriginalName(),
+                            $file->getClientMimeType()
+                        ),
                     ]);
                     $uploaded++;
                 }
@@ -374,7 +382,7 @@ class StudyMaterialFolderController extends Controller
                 ->with('success', $uploaded . ' file(s) uploaded to Zoho WorkDrive.');
         }
 
-        $this->storeUploadedFiles($request->file('files', []), $folder, $parentId);
+        $this->storeUploadedFiles($request->file('files', []), $folder, $parentId, $iconType);
 
         return redirect()
             ->route('admin.study-materials.folders.edit', $folder->id)
@@ -417,15 +425,20 @@ class StudyMaterialFolderController extends Controller
 
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
+            'icon_type' => 'nullable|string|in:auto,pdf,word,excel,ppt,video,audio,image,zip,file',
         ]);
         if ($validator->fails()) {
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
+        StudyMaterialItem::ensureIconTypeColumn();
         $item->name = trim($request->input('name'));
+        if ($item->type === 'file' && $request->exists('icon_type')) {
+            $item->icon_type = StudyMaterialItem::normalizeIconType($request->input('icon_type'));
+        }
         $item->save();
 
-        return redirect()->back()->with('success', 'Item renamed.');
+        return redirect()->back()->with('success', 'Item updated.');
     }
 
     public function toggleDownload(Request $request, $id)
@@ -599,11 +612,13 @@ class StudyMaterialFolderController extends Controller
         }
     }
 
-    protected function storeUploadedFiles($files, StudyMaterialFolder $folder, $parentId = null): void
+    protected function storeUploadedFiles($files, StudyMaterialFolder $folder, $parentId = null, ?string $iconType = null): void
     {
         if (empty($files)) {
             return;
         }
+
+        StudyMaterialItem::ensureIconTypeColumn();
 
         $dir = public_path('uploads/study-materials/' . $folder->id);
         if (!File::isDirectory($dir)) {
@@ -630,6 +645,10 @@ class StudyMaterialFolderController extends Controller
                 'original_name' => $uploaded->getClientOriginalName(),
                 'mime' => $uploaded->getClientMimeType(),
                 'size' => File::size(public_path($relative)),
+                'icon_type' => $iconType ?: StudyMaterialItem::guessIconTypeFromName(
+                    $uploaded->getClientOriginalName(),
+                    $uploaded->getClientMimeType()
+                ),
             ]);
         }
     }

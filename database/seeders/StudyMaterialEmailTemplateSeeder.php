@@ -43,9 +43,10 @@ class StudyMaterialEmailTemplateSeeder extends Seeder
                 'bcc' => null,
                 'body' => '<p>Hello {name},</p>'
                     . '<p>You now have access to study materials for <strong>{folder_name}</strong>.</p>'
-                    . '<p>Course: {course_name}<br>Instructor: {instructor_name}<br>Validity: {validity}<br>Access till: {access_till}<br>Issued: {issued_at}</p>'
+                    . '<p>Log in to <a href="{login_url}">https://eduberkeley.com</a> and find the study materials in the student portal.</p>'
+                    . '<p>Course: {course_name}<br>Head of Faculty: {head_of_faculty_name}<br>Trainer: {trainer_name}<br>Issued Date: {issued_at}<br>Expiry Date: {access_till}<br>Validity: {validity}</p>'
                     . '<p><a href="{portal_url}">Open Study Materials</a></p>'
-                    . '<p>If you are not signed in, use <a href="{login_url}">this login page</a>.</p>',
+                    . '<p>We look forward to supporting you throughout your learning journey.</p>',
             ],
             [
                 'name' => 'study-material-student-disabled',
@@ -54,7 +55,7 @@ class StudyMaterialEmailTemplateSeeder extends Seeder
                 'bcc' => null,
                 'body' => '<p>Hello {name},</p>'
                     . '<p>Your access to study materials for <strong>{folder_name}</strong> has been {reason}.</p>'
-                    . '<p>Course: {course_name}<br>Instructor: {instructor_name}</p>'
+                    . '<p>Course: {course_name}<br>Head of Faculty: {head_of_faculty_name}<br>Trainer: {trainer_name}</p>'
                     . '<p>If you believe this is a mistake, contact <a href="mailto:admin@eduberkeley.com">admin@eduberkeley.com</a>.</p>'
                     . '<p><a href="{login_url}">Sign in to the student portal</a></p>',
             ],

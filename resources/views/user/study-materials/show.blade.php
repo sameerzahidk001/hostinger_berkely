@@ -35,6 +35,9 @@
 @media (min-width: 768px){
     .sm-files-grid{grid-template-columns:1fr 1fr;}
 }
+@media (min-width: 1100px){
+    .sm-files-grid{grid-template-columns:1fr 1fr 1fr;}
+}
 .sm-file-card{
     border:1px solid #e8eaed;
     border-radius:6px;

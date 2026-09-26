@@ -24,6 +24,7 @@ class LmsInstallCommand extends Command
             'database/migrations/2026_09_12_000001_add_allow_download_to_study_material_items.php',
             'database/migrations/2026_09_12_000002_add_code_to_study_material_folders.php',
             'database/migrations/2026_09_15_000001_add_recurrence_and_reminders_to_class_schedules.php',
+            'database/migrations/2026_09_25_000001_add_icon_type_to_study_material_items.php',
         ];
 
         foreach ($paths as $path) {
