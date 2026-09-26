@@ -43,8 +43,9 @@ class StudyMaterialAccessController extends Controller
 
         $search = $this->searchTerm($request);
         $rows = $this->studentAccessQuery($search)->paginate(20)->withQueryString();
+        $isAdmin = $this->lms->isAdminActor();
 
-        return view('admin.study-materials.access.students', compact('rows', 'search'));
+        return view('admin.study-materials.access.students', compact('rows', 'search', 'isAdmin'));
     }
 
     public function instructors(Request $request)
@@ -408,6 +409,19 @@ class StudyMaterialAccessController extends Controller
         $this->lms->sendStudentDisabledEmail($access, 'disabled');
 
         return redirect()->back()->with('success', 'Student access disabled.');
+    }
+
+    public function destroyStudent($id)
+    {
+        abort_unless($this->lms->isAdminActor(), 403);
+
+        $access = StudyMaterialStudentAccess::with(['folder', 'student'])->findOrFail($id);
+        $label = trim(($access->student->name ?? 'Student') . ' / ' . ($access->folder->name ?? 'folder'));
+        $access->delete();
+
+        return redirect()
+            ->route('admin.study-materials.access.students')
+            ->with('success', 'Student access deleted: ' . $label);
     }
 
     public function studentsByFolder($folderId)

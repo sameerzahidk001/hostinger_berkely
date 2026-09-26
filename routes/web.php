@@ -223,6 +223,7 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
             Route::put('/access/student/{id}', [StudyMaterialAccessController::class, 'updateStudent'])->name('access.student.update');
             Route::get('/access/student/{id}/send', [StudyMaterialAccessController::class, 'sendStudent'])->name('access.student.send');
             Route::get('/access/student/{id}/disable', [StudyMaterialAccessController::class, 'disableStudent'])->name('access.student.disable');
+            Route::delete('/access/student/{id}', [StudyMaterialAccessController::class, 'destroyStudent'])->name('access.student.destroy');
 
             Route::get('/access/instructors', [StudyMaterialAccessController::class, 'instructors'])->name('access.instructors');
             Route::get('/access/assign-instructor', [StudyMaterialAccessController::class, 'createInstructor'])->name('access.assign-instructor');

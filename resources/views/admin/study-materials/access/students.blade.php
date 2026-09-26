@@ -57,7 +57,14 @@
                             <td>
                                 <a class="btn btn-xs btn-default" href="{{ route('admin.study-materials.access.student.edit', $row->id) }}">Edit</a>
                                 <a class="btn btn-xs btn-primary" href="{{ route('admin.study-materials.access.student.send', $row->id) }}">Send</a>
-                                <a class="btn btn-xs btn-danger" href="{{ route('admin.study-materials.access.student.disable', $row->id) }}">Disable</a>
+                                <a class="btn btn-xs btn-warning" href="{{ route('admin.study-materials.access.student.disable', $row->id) }}">Disable</a>
+                                @if(!empty($isAdmin))
+                                    <form action="{{ route('admin.study-materials.access.student.destroy', $row->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Permanently delete this student access record?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-xs btn-danger">Delete</button>
+                                    </form>
+                                @endif
                             </td>
                         </tr>
                     @empty
