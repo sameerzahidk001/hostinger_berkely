@@ -249,7 +249,7 @@ a {
                 <div class="col-lg-6">
                     <div class="card1" style="height: 100vh;">
                         <div class="row px-0" style="height: 100%; margin: 0;">
-                            <img src="{{ asset('student/images/pngs/login.png') }}" class="image" style="width: 100%; height: 100%; object-fit: cover;" alt="EduBerkeley">
+                            <img src="{{ asset('student/images/pngs/login.jpg') }}?v=20260927" class="image" style="width: 100%; height: 100%; object-fit: cover;" alt="EduBerkeley">
                         </div>
                     </div>
                 </div>

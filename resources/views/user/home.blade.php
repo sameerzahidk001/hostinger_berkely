@@ -125,6 +125,7 @@
     @endif
 
     @if(isset($courseAccesses) && $courseAccesses->isNotEmpty())
+        @include('user.study-materials._folder_cards_styles')
         <div class="wrapper wrapper-content animated fadeInRight" style="padding-bottom:0;">
             <div class="row">
                 <div class="col-lg-12">
@@ -136,7 +137,7 @@
                     </div>
                 </div>
             </div>
-            <div class="row">
+            <div class="sm-folder-cards-row">
                 @foreach($courseAccesses as $access)
                     @include('user.study-materials._folder_card', ['access' => $access])
                 @endforeach
