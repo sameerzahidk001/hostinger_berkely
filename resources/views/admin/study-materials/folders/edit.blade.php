@@ -107,7 +107,7 @@
                         <select name="head_of_faculty_id" id="head_of_faculty_id" class="form-control">
                             <option value="">—</option>
                             @foreach($instructors as $ins)
-                                <option value="{{ $ins->id }}" @selected((string) old('head_of_faculty_id', $selectedInstructorIds[0] ?? '') === (string) $ins->id)>{{ $ins->name }}</option>
+                                <option value="{{ $ins->id }}" @selected((string) old('head_of_faculty_id', $selectedHeadOfFacultyId ?? '') === (string) $ins->id)>{{ $ins->name }}</option>
                             @endforeach
                         </select>
                     </div>

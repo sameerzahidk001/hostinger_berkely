@@ -90,7 +90,7 @@
         @php
             $instructors = $folder->displayInstructors();
             $courseInstructorIds = course_instructor_ids($folder->course ?? null);
-            $headOfFaculty = $instructors->firstWhere('id', $courseInstructorIds[0] ?? null) ?: ($instructors->count() > 1 ? $instructors->get(0) : null);
+            $headOfFaculty = $instructors->firstWhere('id', $courseInstructorIds[0] ?? null) ?: $instructors->first();
             $primaryInstructor = $instructors->firstWhere('id', $courseInstructorIds[1] ?? null)
                 ?: ($instructors->count() > 1 ? $instructors->get(1) : $instructors->first());
         @endphp

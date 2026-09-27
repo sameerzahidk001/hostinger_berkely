@@ -108,7 +108,7 @@
                     </div>
                     <div class="col-md-4 form-group">
                         <label>Duration (minutes)</label>
-                        <input type="number" name="duration_minutes" class="form-control" min="15" max="480" step="15" value="{{ old('duration_minutes') !== null && old('duration_minutes') !== '' ? old('duration_minutes') : 60 }}">
+                        <input type="number" name="duration_minutes" class="form-control" min="15" max="480" step="15" value="{{ old('duration_minutes') !== null && old('duration_minutes') !== '' ? old('duration_minutes') : 120 }}">
                     </div>
                     <div class="col-md-4 form-group">
                         <label id="meeting-link-label">Meeting link</label>

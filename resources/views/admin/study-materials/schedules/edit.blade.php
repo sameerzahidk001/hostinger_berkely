@@ -93,7 +93,7 @@
                     </div>
                     <div class="col-md-3 form-group">
                         <label>Duration (minutes)</label>
-                        <input type="number" name="duration_minutes" class="form-control" min="15" max="480" step="15" value="{{ old('duration_minutes', $schedule->duration_minutes ?: 60) }}">
+                        <input type="number" name="duration_minutes" class="form-control" min="15" max="480" step="15" value="{{ old('duration_minutes', $schedule->duration_minutes ?: 120) }}">
                     </div>
                     <div class="col-md-3 form-group">
                         <label>Status</label>

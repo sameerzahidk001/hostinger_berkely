@@ -198,7 +198,7 @@ class ClassScheduleController extends Controller
         if (! $schedule->instructor_id) {
             $schedule->instructor_id = $batch->primaryInstructorId() ?: Auth::id();
         }
-        $schedule->duration_minutes = (int) ($request->input('duration_minutes') ?: 60);
+        $schedule->duration_minutes = (int) ($request->input('duration_minutes') ?: 120);
         $schedule->status = 'scheduled';
         $this->applyRecurrenceAndReminders($schedule, $request);
 
@@ -336,7 +336,7 @@ class ClassScheduleController extends Controller
 
         $beforeAt = optional($schedule->scheduled_at)->format('Y-m-d H:i:s');
         $beforeTz = (string) ($schedule->timezone ?? '');
-        $beforeDuration = (int) ($schedule->duration_minutes ?: 60);
+        $beforeDuration = (int) ($schedule->duration_minutes ?: 120);
         $beforeTitle = (string) ($schedule->title ?? '');
         $beforeNotes = (string) ($schedule->notes ?? '');
 
@@ -351,7 +351,7 @@ class ClassScheduleController extends Controller
         $schedule->batch_id = $batch->id;
         $schedule->batch_name = $batch->name;
         $schedule->course_id = $batch->course_id;
-        $schedule->duration_minutes = (int) ($request->input('duration_minutes') ?: 60);
+        $schedule->duration_minutes = (int) ($request->input('duration_minutes') ?: 120);
         // Edit updates THIS day only — never recreate / expand a recurring series.
         $request->merge(['recurrence_type' => ClassSchedule::RECURRENCE_NONE]);
         $this->applyRecurrenceAndReminders($schedule, $request);
@@ -363,7 +363,7 @@ class ClassScheduleController extends Controller
         $afterAt = optional($schedule->scheduled_at)->format('Y-m-d H:i:s');
         $timeChanged = $beforeAt !== $afterAt
             || $beforeTz !== (string) ($schedule->timezone ?? '')
-            || $beforeDuration !== (int) ($schedule->duration_minutes ?: 60)
+            || $beforeDuration !== (int) ($schedule->duration_minutes ?: 120)
             || $beforeTitle !== (string) ($schedule->title ?? '')
             || $beforeNotes !== (string) ($schedule->notes ?? '');
 

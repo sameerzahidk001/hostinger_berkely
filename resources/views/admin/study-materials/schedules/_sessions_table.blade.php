@@ -28,7 +28,7 @@
                     $status = strtolower((string) ($row->status ?? 'scheduled'));
                     $duration = method_exists($row, 'durationMinutes')
                         ? $row->durationMinutes()
-                        : (int) ($row->duration_minutes ?? 60);
+                        : (int) ($row->duration_minutes ?? 120);
                     $joinDisabled = method_exists($row, 'isJoinWindowOpen')
                         ? ! $row->isJoinWindowOpen()
                         : (in_array($status, ['cancelled', 'completed'], true));

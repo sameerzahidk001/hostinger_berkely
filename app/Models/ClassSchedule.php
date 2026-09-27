@@ -92,7 +92,7 @@ class ClassSchedule extends Model
 
     public function durationMinutes(): int
     {
-        return max(15, (int) ($this->duration_minutes ?: 60));
+        return max(15, (int) ($this->duration_minutes ?: 120));
     }
 
     public function endsAt(?Carbon $start = null)

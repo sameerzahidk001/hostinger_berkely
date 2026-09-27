@@ -202,23 +202,28 @@ class StudyMaterialFolder extends Model
             ->unique('id')
             ->values();
 
-        // Prefer course order: [0] Head of Faculty, [1] Instructor — then any extras from folder access.
-        $orderedIds = course_instructor_ids($this->course);
-        foreach ($fromFolder as $user) {
-            $id = (int) $user->id;
-            if ($id && ! in_array($id, $orderedIds, true)) {
-                $orderedIds[] = $id;
+        if ($fromFolder->isEmpty()) {
+            return collect();
+        }
+
+        // Only folder assignees — never pull extra people from the course roster.
+        // Prefer course order (Head of Faculty, then Trainer) among those assignees.
+        $folderIds = $fromFolder->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $orderedIds = collect(course_instructor_ids($this->course))
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => in_array($id, $folderIds, true))
+            ->values();
+
+        foreach ($folderIds as $id) {
+            if (! $orderedIds->contains($id)) {
+                $orderedIds->push($id);
             }
         }
 
-        if ($orderedIds === []) {
-            return $fromFolder;
-        }
+        $byId = $fromFolder->keyBy(fn ($user) => (int) $user->id);
 
-        $users = User::query()->whereIn('id', $orderedIds)->get()->keyBy('id');
-
-        return collect($orderedIds)
-            ->map(fn ($id) => $users->get($id))
+        return $orderedIds
+            ->map(fn ($id) => $byId->get((int) $id))
             ->filter()
             ->values();
     }

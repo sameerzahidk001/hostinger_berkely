@@ -586,14 +586,9 @@ class StudyMaterialService
             $instructors = $folder->displayInstructors();
             $courseInstructorIds = course_instructor_ids($folder->course ?? null);
             $head = $instructors->firstWhere('id', $courseInstructorIds[0] ?? null)
-                ?: ($instructors->count() > 1 ? $instructors->get(0) : null);
+                ?: $instructors->first();
             $trainer = $instructors->firstWhere('id', $courseInstructorIds[1] ?? null)
                 ?: ($instructors->count() > 1 ? $instructors->get(1) : $instructors->first());
-
-            // If only one person is assigned, treat them as trainer when roles are unclear.
-            if (! $head && $trainer && $instructors->count() === 1) {
-                $head = null;
-            }
 
             $headOfFacultyName = $head?->name ?? '';
             $trainerName = $trainer?->name ?? '';

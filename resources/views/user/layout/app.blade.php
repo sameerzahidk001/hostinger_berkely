@@ -184,12 +184,10 @@
                            class="nav-label">Cart @if(cart_item_count() > 0)({{ cart_item_count() }})@endif</span></a>
                   </li>
                @endif
-               @unless(auth()->user()->roles()->where('name', 'instructor')->exists())
                <li class="{{ request()->routeIs('user.history') ? 'active' : '' }}">
                   <a href="{{ route('user.history') }}"><i class="fa fa-history"></i> <span
                         class="nav-label">History</span></a>
                </li>
-               @endunless
                <li>
                   <a href="{{ route('user.logout') }}"><i class="fa fa-sign-out"></i> <span
                         class="nav-label">Log out</span></a>

@@ -201,6 +201,19 @@ class StudyMaterialFolderController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'email']);
 
+        $selectedInstructorIds = old(
+            'instructor_ids',
+            $folder->instructorAccess->pluck('instructor_id')->map(fn ($id) => (int) $id)->values()->all()
+        );
+        $courseInstructorIds = course_instructor_ids($folder->course);
+        $selectedHeadOfFacultyId = old('head_of_faculty_id');
+        if ($selectedHeadOfFacultyId === null) {
+            $selectedHeadOfFacultyId = collect($courseInstructorIds)
+                ->map(fn ($id) => (int) $id)
+                ->first(fn ($id) => in_array($id, array_map('intval', (array) $selectedInstructorIds), true))
+                ?? ($selectedInstructorIds[0] ?? '');
+        }
+
         return view('admin.study-materials.folders.edit', [
             'folder' => $folder,
             'courses' => $courses,
@@ -209,7 +222,8 @@ class StudyMaterialFolderController extends Controller
             'isAdmin' => $this->lms->isAdminActor(),
             'lockedInstructor' => $folder->owner_type === 'instructor',
             'selectedPackageIds' => old('fee_package_ids', $folder->selectedPackageIds()),
-            'selectedInstructorIds' => old('instructor_ids', $folder->instructorAccess->pluck('instructor_id')->map(fn ($id) => (int) $id)->values()->all()),
+            'selectedInstructorIds' => $selectedInstructorIds,
+            'selectedHeadOfFacultyId' => $selectedHeadOfFacultyId,
             'folderOptions' => $folder->folderTreeOptions(),
             'zohoWorkDriveReady' => $this->zoho->isWorkDriveReady(),
         ]);
@@ -492,9 +506,16 @@ class StudyMaterialFolderController extends Controller
             ->unique()
             ->values();
 
+        // Persist removals: drop access rows that are no longer selected.
         if ($facultyIds->isEmpty()) {
+            $folder->instructorAccess()->delete();
+
             return;
         }
+
+        $folder->instructorAccess()
+            ->whereNotIn('instructor_id', $facultyIds->all())
+            ->delete();
 
         if (! $accessTill) {
             $accessTill = $this->lms->computeAccessTill(now(), $folder->validity_months);
