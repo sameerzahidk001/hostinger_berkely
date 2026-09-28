@@ -367,11 +367,23 @@
         ])->filter(fn ($row) => filled($row['url']))->unique('url')->values();
     @endphp
     @if($whatsappLinks->isNotEmpty())
-        <div style="position:fixed;bottom:5rem;right:10px;z-index:50;display:flex;flex-direction:column;align-items:flex-end;gap:12px;">
+        <style>
+            .wa-float { position:fixed;bottom:5rem;right:8px;z-index:50;display:flex;flex-direction:column;align-items:flex-end;gap:12px; }
+            .wa-float a { display:flex;align-items:center;gap:8px;text-decoration:none; }
+            .wa-float-label { display:inline-block;white-space:nowrap;background:#FFD60A;color:#000435;font-size:13px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;line-height:1.2;padding:7px 12px;border-radius:9999px;box-shadow:0 2px 8px rgba(0,0,0,.28); }
+            .wa-float-icon { width:64px;height:64px;border-radius:9999px;object-fit:cover;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.25); }
+            @media (max-width: 767px) {
+                .wa-float { bottom:4.25rem;right:6px;gap:6px; }
+                .wa-float a { gap:5px; }
+                .wa-float-label { font-size:9px;padding:4px 7px;letter-spacing:.02em; }
+                .wa-float-icon { width:34px;height:34px; }
+            }
+        </style>
+        <div class="wa-float">
             @foreach($whatsappLinks as $wa)
-                <a href="{{ $wa['url'] }}" target="_blank" rel="noopener" title="WhatsApp {{ $wa['label'] }}" style="display:flex;align-items:center;gap:8px;text-decoration:none;">
-                    <span style="display:inline-block;white-space:nowrap;background:#FFD60A;color:#000435;font-size:13px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;line-height:1.2;padding:7px 12px;border-radius:9999px;box-shadow:0 2px 8px rgba(0,0,0,.28);">{{ $wa['label'] }}</span>
-                    <img src="{{ asset('images/' . $whatsappIcon) }}" alt="WhatsApp {{ $wa['label'] }}" style="width:64px;height:64px;border-radius:9999px;object-fit:cover;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.25);">
+                <a href="{{ $wa['url'] }}" target="_blank" rel="noopener" title="WhatsApp {{ $wa['label'] }}">
+                    <span class="wa-float-label">{{ $wa['label'] }}</span>
+                    <img src="{{ asset('images/' . $whatsappIcon) }}" alt="WhatsApp {{ $wa['label'] }}" class="wa-float-icon">
                 </a>
             @endforeach
         </div>
