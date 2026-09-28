@@ -62,6 +62,52 @@
         .font-ghothic {
             font-family: trade-ghothic, sans-serif !important;
         }
+        .header-quick-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: #000435;
+            line-height: 1;
+            min-width: 44px;
+        }
+        .header-quick-icon-box {
+            position: relative;
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 16px;
+            box-shadow: 0 1px 2px rgba(0,0,0,.18);
+        }
+        .header-quick-icon-label {
+            font-size: 9px;
+            font-weight: 600;
+            margin-top: 3px;
+            white-space: nowrap;
+            color: #000435;
+        }
+        .header-quick-icon-badge {
+            position: absolute;
+            top: -5px;
+            right: -6px;
+            min-width: 16px;
+            height: 16px;
+            padding: 0 4px;
+            border-radius: 999px;
+            background: #f8961f;
+            color: #111;
+            font-size: 10px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
     </style>
     <script src="{{ asset('frontend/analytics.js') }}" defer></script>
     <style>
@@ -117,11 +163,31 @@
         <!-- Main Navigation Start -->
         <div id="navbar"
             class="flex fixed bg min-h-[70px] bg-white  z-[999] w-full top-0 justify-between  px-4 md:px-8 lg:px-[30px] my-0 py-0 ">
+            <div class="flex items-center gap-2 min-w-0">
             <a href="{{ url('/') }}" class="self-center">
                 <img src="{{ asset('images/' . ($settings->header_logo == 'logo' ? $settings->logo : $settings->white_logo)) }}"
-                    class="max-w-[220px] self-center object-fill min-h-[48px] sm:min-h-[48px] sm:min-w-[200px] lg:min-w-[240px] lg:min-h-[48px]"
+                    class="max-w-[160px] sm:max-w-[220px] self-center object-fill min-h-[40px] sm:min-h-[48px] sm:min-w-[200px] lg:min-w-[240px] lg:min-h-[48px]"
                     alt="">
             </a>
+            <div class="flex items-center gap-2 ml-1 min-[980px]:hidden">
+                @php $accountUrl = auth()->check() ? route('user.home') : route('login'); @endphp
+                <a href="{{ $accountUrl }}" class="header-quick-icon" title="My Account" aria-label="My Account">
+                    <span class="header-quick-icon-box">
+                        <i class="fa fa-user" aria-hidden="true"></i>
+                    </span>
+                    <span class="header-quick-icon-label">My Account</span>
+                </a>
+                <a href="{{ route('cart.index') }}" class="header-quick-icon" title="Cart" aria-label="Cart">
+                    <span class="header-quick-icon-box">
+                        <i class="fa fa-shopping-cart" aria-hidden="true"></i>
+                        @if(cart_item_count() > 0)
+                            <span class="header-quick-icon-badge">{{ cart_item_count() }}</span>
+                        @endif
+                    </span>
+                    <span class="header-quick-icon-label">Cart</span>
+                </a>
+            </div>
+            </div>
             <ul class="hidden list-none min-[980px]:flex font-ghothic text-[19px] gap-4">
                 @php
                     $filteredMenus = collect($menus)->where('menu_group', $settings->header_menu)->values();
@@ -191,21 +257,7 @@
                         </a>
                     @endif
 
-                    {{-- Mobile only (desktop My Account is beside Enquire in the nav) --}}
-                    @if(!$settings || $settings->login == '1')
-                        @guest
-                            <a href="{{ route('login') }}"
-                                class="hidden max-[979px]:inline-flex items-center py-2 whitespace-nowrap active:underline decoration-crimson underline-offset-4">
-                                My Account
-                            </a>
-                        @else
-                            <a href="{{ route('user.home') }}"
-                                class="hidden max-[979px]:inline-flex items-center py-2 whitespace-nowrap active:underline decoration-crimson underline-offset-4"
-                                title="{{ auth()->user()->name }}">
-                                My Account
-                            </a>
-                        @endguest
-                    @endif
+                    {{-- Mobile My Account / Cart icons sit next to the logo --}}
 
                     @guest
                         @if($settings && $settings->register == '1')
