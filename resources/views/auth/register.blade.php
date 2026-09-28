@@ -214,8 +214,8 @@
             @csrf
             <div class="card2 card border-0 d-flex flex-column justify-content-center px-4 py-5" style="height: 100%;">
               <div class="row mb-4 px-3">
-                <a href="{{ route('welcome') }}">
-                  <img src="{{ asset('frontend/images/pngs/header-logo.png') }}" alt="">
+                <a href="{{ route('welcome') }}" style="display:block;max-width:220px;width:100%;">
+                  <img src="{{ asset('frontend/images/pngs/header-logo.png') }}" alt="Berkeley School of Business, Arts &amp; Sciences" style="width:100%;height:auto;object-fit:contain;">
                 </a>
               </div>
               <div class="row px-3">

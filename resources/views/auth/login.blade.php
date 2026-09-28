@@ -157,6 +157,20 @@ a {
     margin-bottom: 0 !important;
 }
 
+.login-logo {
+    display: block;
+    max-width: 280px;
+    width: 100%;
+}
+
+.login-logo img {
+    display: block;
+    width: 100%;
+    max-width: 280px;
+    height: auto;
+    object-fit: contain;
+}
+
 .bg-blue {
     color: #fff;
     background-color: #1A237E;
@@ -167,9 +181,22 @@ a {
         margin-left: 0px;
     }
 
-    .image {
-        width: 300px;
-        height: 220px;
+    .container-fluid,
+    .card0 {
+        height: auto !important;
+        min-height: 100vh;
+    }
+
+    .login-hero,
+    .login-hero .card1,
+    .login-hero .row {
+        height: 180px !important;
+    }
+
+    .login-hero img.image {
+        width: 100% !important;
+        height: 180px !important;
+        object-fit: cover;
     }
 
     .border-line {
@@ -177,10 +204,38 @@ a {
     }
 
     .card2 {
-        border-top: 1px solid #EEEEEE !important;
-        margin: 0px 15px;
+        border-top: none !important;
+        margin: 0 8px;
+        height: auto !important;
+        min-height: 0 !important;
+        padding: 20px 12px 28px !important;
+        justify-content: flex-start !important;
     }
-    
+
+    .login-logo,
+    .login-logo img {
+        max-width: 220px;
+    }
+
+    .login-remember {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .login-remember a {
+        margin-left: 0 !important;
+    }
+
+    .login-captcha {
+        flex-direction: column;
+        align-items: stretch !important;
+    }
+
+    .login-captcha input {
+        max-width: 100% !important;
+        min-width: 0 !important;
+        width: 100% !important;
+    }
 }
     </style>
     <link href="//maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" rel="stylesheet" id="bootstrap-css">
@@ -189,16 +244,16 @@ a {
 </head>
 <body>
 
-    <div class="container-fluid px-0" style="height:100vh;">
-        <div class="card card0 border-0" style="height:100vh;">
+    <div class="container-fluid px-0" style="min-height:100vh;">
+        <div class="card card0 border-0" style="min-height:100vh;">
             <div class="row d-flex">
-                <div class="col-lg-6" style="background-color:white;">
+                <div class="col-lg-6 order-2 order-lg-1" style="background-color:white;">
                     <form method="POST" action="{{ route('login') }}">
                         @csrf
-                        <div class="card2 card border-0 d-flex flex-column justify-content-center px-4 py-5" style="height: 100vh;">
+                        <div class="card2 card border-0 d-flex flex-column justify-content-center px-4 py-5" style="min-height: 100vh;">
                             <div class="row mb-4 px-3">
-                                <a href="{{ route('welcome') }}">
-                                    <img src="{{ asset('frontend/images/pngs/header-logo.png') }}" alt="logo">
+                                <a href="{{ route('welcome') }}" class="login-logo">
+                                    <img src="{{ asset('frontend/images/pngs/header-logo.png') }}" alt="Berkeley School of Business, Arts &amp; Sciences">
                                 </a>
                             </div>
                             <div class="row px-3">
@@ -217,9 +272,9 @@ a {
                             </div>
                             <div class="row px-3 mb-3" style="margin-top:18px;">
                                 <label class="mb-2"><h6 class="mb-0 text-sm">Captcha</h6></label>
-                                <div class="d-flex align-items-center flex-wrap" style="gap:12px;">
+                                <div class="d-flex align-items-center flex-wrap login-captcha" style="gap:12px;">
                                     <img id="login-captcha-img" src="{{ route('login.captcha') }}?t={{ time() }}" alt="Captcha" width="160" height="48"
-                                        style="border:1px solid #ced4da;border-radius:4px;background:#f5f7fa;display:block;">
+                                        style="border:1px solid #ced4da;border-radius:4px;background:#f5f7fa;display:block;max-width:100%;height:auto;">
                                     <button type="button" id="login-captcha-refresh" class="btn btn-sm btn-outline-secondary" title="Refresh captcha"
                                         style="border:1px solid #ced4da;background:#fff;padding:6px 10px;cursor:pointer;">↻</button>
                                     <input class="mb-0 @error('captcha') border-danger @enderror" style="max-width:160px;flex:1;min-width:120px;"
@@ -230,7 +285,7 @@ a {
                                     <p class="text-danger text-xs italic mb-0 mt-1">{{ $message }}</p>
                                 @enderror
                             </div>
-                            <div class="row px-3 mb-3" style="margin-top:12px;">
+                            <div class="row px-3 mb-3 login-remember" style="margin-top:12px;">
                                 <div class="custom-control custom-checkbox custom-control-inline">
                                     <input id="chk1" type="checkbox" name="chk" class="custom-control-input">
                                     <label for="chk1" class="custom-control-label text-sm">Remember me</label>
@@ -246,7 +301,7 @@ a {
                         </div>
                     </form>
                 </div>
-                <div class="col-lg-6">
+                <div class="col-lg-6 order-1 order-lg-2 login-hero">
                     <div class="card1" style="height: 100vh;">
                         <div class="row px-0" style="height: 100%; margin: 0;">
                             <img src="{{ asset('student/images/pngs/login.jpg') }}?v=20260927" class="image" style="width: 100%; height: 100%; object-fit: cover;" alt="EduBerkeley">
