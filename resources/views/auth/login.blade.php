@@ -176,6 +176,13 @@ a {
     background-color: #1A237E;
 }
 
+.auth-heading {
+    font-size: 22px;
+    font-weight: 700;
+    color: #000435;
+    margin: 0 0 12px;
+}
+
 @media screen and (max-width: 991px) {
     .logo {
         margin-left: 0px;
@@ -184,18 +191,18 @@ a {
     .container-fluid,
     .card0 {
         height: auto !important;
-        min-height: 100vh;
+        min-height: 0 !important;
     }
 
     .login-hero,
     .login-hero .card1,
     .login-hero .row {
-        height: 180px !important;
+        height: 110px !important;
     }
 
     .login-hero img.image {
         width: 100% !important;
-        height: 180px !important;
+        height: 110px !important;
         object-fit: cover;
     }
 
@@ -205,36 +212,47 @@ a {
 
     .card2 {
         border-top: none !important;
-        margin: 0 8px;
+        margin: 0 6px;
         height: auto !important;
         min-height: 0 !important;
-        padding: 20px 12px 28px !important;
+        padding: 10px 10px 16px !important;
         justify-content: flex-start !important;
     }
 
     .login-logo,
     .login-logo img {
-        max-width: 220px;
+        max-width: 180px;
+    }
+
+    .auth-heading {
+        font-size: 18px;
+        margin: 4px 0 8px;
+    }
+
+    .btn-blue {
+        min-height: 40px;
+        padding: 8px 16px;
+        font-size: 15px;
+    }
+
+    input, textarea {
+        padding: 8px 10px;
+        margin-bottom: 2px;
+        margin-top: 0;
+    }
+
+    .login-captcha-hint {
+        display: none;
     }
 
     .login-remember {
         flex-wrap: wrap;
-        gap: 8px;
+        gap: 6px;
+        margin-top: 6px !important;
     }
 
     .login-remember a {
         margin-left: 0 !important;
-    }
-
-    .login-captcha {
-        flex-direction: column;
-        align-items: stretch !important;
-    }
-
-    .login-captcha input {
-        max-width: 100% !important;
-        min-width: 0 !important;
-        width: 100% !important;
     }
 }
     </style>
@@ -244,17 +262,20 @@ a {
 </head>
 <body>
 
-    <div class="container-fluid px-0" style="min-height:100vh;">
-        <div class="card card0 border-0" style="min-height:100vh;">
+    <div class="container-fluid px-0">
+        <div class="card card0 border-0">
             <div class="row d-flex">
                 <div class="col-lg-6 order-2 order-lg-1" style="background-color:white;">
                     <form method="POST" action="{{ route('login') }}">
                         @csrf
-                        <div class="card2 card border-0 d-flex flex-column justify-content-center px-4 py-5" style="min-height: 100vh;">
-                            <div class="row mb-4 px-3">
+                        <div class="card2 card border-0 d-flex flex-column justify-content-center px-4 py-5">
+                            <div class="row mb-2 px-3">
                                 <a href="{{ route('welcome') }}" class="login-logo">
                                     <img src="{{ asset('frontend/images/pngs/header-logo.png') }}" alt="Berkeley School of Business, Arts &amp; Sciences">
                                 </a>
+                            </div>
+                            <div class="row px-3">
+                                <h1 class="auth-heading">Sign in</h1>
                             </div>
                             <div class="row px-3">
                                 <label class="mb-1"><h6 class="mb-0 text-sm">Email Address</h6></label>
@@ -270,22 +291,22 @@ a {
                                     <p class="text-danger text-xs italic">{{ $message }}</p>
                                 @enderror
                             </div>
-                            <div class="row px-3 mb-3" style="margin-top:18px;">
-                                <label class="mb-2"><h6 class="mb-0 text-sm">Captcha</h6></label>
-                                <div class="d-flex align-items-center flex-wrap login-captcha" style="gap:12px;">
-                                    <img id="login-captcha-img" src="{{ route('login.captcha') }}?t={{ time() }}" alt="Captcha" width="160" height="48"
-                                        style="border:1px solid #ced4da;border-radius:4px;background:#f5f7fa;display:block;max-width:100%;height:auto;">
+                            <div class="row px-3 mb-2" style="margin-top:8px;">
+                                <label class="mb-1"><h6 class="mb-0 text-sm">Captcha</h6></label>
+                                <div class="d-flex align-items-center flex-wrap login-captcha" style="gap:8px;">
+                                    <img id="login-captcha-img" src="{{ route('login.captcha') }}?t={{ time() }}" alt="Captcha" width="140" height="40"
+                                        style="border:1px solid #ced4da;border-radius:4px;background:#f5f7fa;display:block;max-width:100%;height:40px;">
                                     <button type="button" id="login-captcha-refresh" class="btn btn-sm btn-outline-secondary" title="Refresh captcha"
                                         style="border:1px solid #ced4da;background:#fff;padding:6px 10px;cursor:pointer;">↻</button>
-                                    <input class="mb-0 @error('captcha') border-danger @enderror" style="max-width:160px;flex:1;min-width:120px;"
+                                    <input class="mb-0 @error('captcha') border-danger @enderror" style="max-width:140px;flex:1;min-width:110px;"
                                         type="text" name="captcha" maxlength="8" placeholder="Enter code" required autocomplete="off" autocapitalize="characters">
                                 </div>
-                                <small class="text-muted d-block mt-2">Type the characters shown in the image.</small>
+                                <small class="text-muted d-block mt-1 login-captcha-hint">Type the characters shown in the image.</small>
                                 @error('captcha')
                                     <p class="text-danger text-xs italic mb-0 mt-1">{{ $message }}</p>
                                 @enderror
                             </div>
-                            <div class="row px-3 mb-3 login-remember" style="margin-top:12px;">
+                            <div class="row px-3 mb-2 login-remember" style="margin-top:8px;">
                                 <div class="custom-control custom-checkbox custom-control-inline">
                                     <input id="chk1" type="checkbox" name="chk" class="custom-control-input">
                                     <label for="chk1" class="custom-control-label text-sm">Remember me</label>
@@ -293,7 +314,7 @@ a {
                                 <a href="{{ route('password.request') }}" class="ml-auto mb-0 text-sm">Forgot Password?</a>
                             </div>
                             <div class="row mb-2 px-3">
-                                <button type="submit" class="btn btn-blue text-center">Login</button>
+                                <button type="submit" class="btn btn-blue text-center">Sign in</button>
                             </div>
                             <div class="row px-3 login-after-btn">
                                 <small class="font-weight-bold">Don't have an account ? <a href="{{ route('register') }}" class="text-danger">Register</a></small>

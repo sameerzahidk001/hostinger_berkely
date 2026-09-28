@@ -156,14 +156,42 @@
       background-color: #1A237E;
     }
 
+    .auth-heading {
+      font-size: 22px;
+      font-weight: 700;
+      color: #000435;
+      margin: 0 0 12px;
+    }
+
+    .login-logo {
+      display: block;
+      max-width: 280px;
+      width: 100%;
+    }
+
+    .login-logo img {
+      display: block;
+      width: 100%;
+      max-width: 280px;
+      height: auto;
+      object-fit: contain;
+    }
+
     @media screen and (max-width: 991px) {
       .logo {
         margin-left: 0px;
       }
 
-      .image {
-        width: 300px;
-        height: 220px;
+      .login-hero,
+      .login-hero .card1,
+      .login-hero .row {
+        height: 110px !important;
+      }
+
+      .login-hero img.image {
+        width: 100% !important;
+        height: 110px !important;
+        object-fit: cover;
       }
 
       .border-line {
@@ -171,10 +199,22 @@
       }
 
       .card2 {
-        border-top: 1px solid #EEEEEE !important;
-        margin: 0px 15px;
+        border-top: none !important;
+        margin: 0 6px;
+        height: auto !important;
+        padding: 10px 10px 16px !important;
+        justify-content: flex-start !important;
       }
 
+      .login-logo,
+      .login-logo img {
+        max-width: 180px;
+      }
+
+      .auth-heading {
+        font-size: 18px;
+        margin: 4px 0 8px;
+      }
     }
 
     .shadow {
@@ -199,24 +239,25 @@
   <div class="container-fluid px-0" style="min-height: 100vh;">
     <div class="card card0 border-0" style="height: 100%;">
       <div class="row d-flex">
-        <div class="col-lg-6">
-          <div class="card1" style="height: 100%;">
-            <!-- Set the height of the card to fill the viewport height -->
-            <div class="row px-0 border-line" style="height: 100%;">
-              <!-- Ensure the row takes full height -->
-              <img src="{{ asset('student/images/pngs/reg.png') }}" class="image"
-                style="width: 100%; height: 100%; object-fit: cover;" alt="">
+        <div class="col-lg-6 order-1 order-lg-1 login-hero">
+          <div class="card1" style="height: 100vh;">
+            <div class="row px-0" style="height: 100%; margin: 0;">
+              <img src="{{ asset('student/images/pngs/login.jpg') }}?v=20260927" class="image"
+                style="width: 100%; height: 100%; object-fit: cover;" alt="EduBerkeley">
             </div>
           </div>
         </div>
-        <div class="col-lg-6" style="background-color:white;">
+        <div class="col-lg-6 order-2" style="background-color:white;">
           <form method="POST" action="{{ route('register') }}">
             @csrf
-            <div class="card2 card border-0 d-flex flex-column justify-content-center px-4 py-5" style="height: 100%;">
-              <div class="row mb-4 px-3">
-                <a href="{{ route('welcome') }}" style="display:block;max-width:220px;width:100%;">
-                  <img src="{{ asset('frontend/images/pngs/header-logo.png') }}" alt="Berkeley School of Business, Arts &amp; Sciences" style="width:100%;height:auto;object-fit:contain;">
+            <div class="card2 card border-0 d-flex flex-column justify-content-center px-4 py-5">
+              <div class="row mb-2 px-3">
+                <a href="{{ route('welcome') }}" class="login-logo">
+                  <img src="{{ asset('frontend/images/pngs/header-logo.png') }}" alt="Berkeley School of Business, Arts &amp; Sciences">
                 </a>
+              </div>
+              <div class="row px-3">
+                <h1 class="auth-heading">Sign up</h1>
               </div>
               <div class="row px-3">
                 @foreach ($roles as $key => $role)
@@ -299,7 +340,7 @@
                   Password?</a>
               </div>
               <div class="row mb-3 px-3">
-                <button type="submit" class="btn btn-blue text-center">Register</button>
+                <button type="submit" class="btn btn-blue text-center">Sign up</button>
               </div>
               <div class="row mb-4 px-3">
                 <small class="font-weight-bold">Already have an account ? <a href="{{ route('login') }}"
