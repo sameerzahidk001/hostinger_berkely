@@ -108,6 +108,18 @@
             align-items: center;
             justify-content: center;
         }
+        .header-quick-icons {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .header-quick-icons-desktop { display: none; }
+        .header-quick-icons-mobile { display: flex; }
+        @media (min-width: 980px) {
+            .header-quick-icons-desktop { display: flex; }
+            .header-quick-icons-mobile { display: none !important; }
+        }
     </style>
     <script src="{{ asset('frontend/analytics.js') }}" defer></script>
     <style>
@@ -163,31 +175,11 @@
         <!-- Main Navigation Start -->
         <div id="navbar"
             class="flex fixed bg min-h-[70px] bg-white  z-[999] w-full top-0 justify-between  px-4 md:px-8 lg:px-[30px] my-0 py-0 ">
-            <div class="flex items-center gap-2 min-w-0">
             <a href="{{ url('/') }}" class="self-center">
                 <img src="{{ asset('images/' . ($settings->header_logo == 'logo' ? $settings->logo : $settings->white_logo)) }}"
-                    class="max-w-[160px] sm:max-w-[220px] self-center object-fill min-h-[40px] sm:min-h-[48px] sm:min-w-[200px] lg:min-w-[240px] lg:min-h-[48px]"
+                    class="max-w-[220px] self-center object-contain min-h-[48px] sm:min-w-[200px] lg:min-w-[240px] lg:min-h-[48px]"
                     alt="">
             </a>
-            <div class="flex items-center gap-2 ml-1 min-[980px]:hidden">
-                @php $accountUrl = auth()->check() ? route('user.home') : route('login'); @endphp
-                <a href="{{ $accountUrl }}" class="header-quick-icon" title="My Account" aria-label="My Account">
-                    <span class="header-quick-icon-box">
-                        <i class="fa fa-user" aria-hidden="true"></i>
-                    </span>
-                    <span class="header-quick-icon-label">My Account</span>
-                </a>
-                <a href="{{ route('cart.index') }}" class="header-quick-icon" title="Cart" aria-label="Cart">
-                    <span class="header-quick-icon-box">
-                        <i class="fa fa-shopping-cart" aria-hidden="true"></i>
-                        @if(cart_item_count() > 0)
-                            <span class="header-quick-icon-badge">{{ cart_item_count() }}</span>
-                        @endif
-                    </span>
-                    <span class="header-quick-icon-label">Cart</span>
-                </a>
-            </div>
-            </div>
             <ul class="hidden list-none min-[980px]:flex font-ghothic text-[19px] gap-4">
                 @php
                     $filteredMenus = collect($menus)->where('menu_group', $settings->header_menu)->values();
@@ -227,20 +219,9 @@
                             {{ $settings->header_button_text }}
                         </a>
                     @endif
-                    @if(!$settings || $settings->login == '1')
-                        @guest
-                            <a href="{{ route('login') }}"
-                                class="inline-flex items-center py-2 whitespace-nowrap active:underline decoration-crimson underline-offset-4">
-                                My Account
-                            </a>
-                        @else
-                            <a href="{{ route('user.home') }}"
-                                class="inline-flex items-center py-2 whitespace-nowrap active:underline decoration-crimson underline-offset-4"
-                                title="{{ auth()->user()->name }}">
-                                My Account
-                            </a>
-                        @endguest
-                    @endif
+                    <div class="header-quick-icons header-quick-icons-desktop">
+                        @include('layouts.partials.header-quick-icons')
+                    </div>
                 </li>
             </ul>
 
@@ -257,8 +238,6 @@
                         </a>
                     @endif
 
-                    {{-- Mobile My Account / Cart icons sit next to the logo --}}
-
                     @guest
                         @if($settings && $settings->register == '1')
                             <a href="{{ route('register') }}"
@@ -266,14 +245,12 @@
                                 {{ $settings->register_text ?? 'Register' }}
                             </a>
                         @endif
-                    @else
-                        <a href="{{ route('cart.index') }}"
-                            class="hidden min-[980px]:flex items-center gap-2 py-2 hover:underline decoration-crimson underline-offset-4">
-                            <img src="{{ asset('frontend/images/svgs/shopping-cart.svg') }}" class="w-6 h-6" alt="Cart">
-                            <span>Cart ({{ cart_item_count() }})</span>
-                        </a>
                     @endguest
 
+                </div>
+
+                <div class="header-quick-icons header-quick-icons-mobile">
+                    @include('layouts.partials.header-quick-icons')
                 </div>
 
                 <!-- mobile button -->
