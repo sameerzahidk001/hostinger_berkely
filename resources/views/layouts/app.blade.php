@@ -252,11 +252,12 @@
                 @foreach($filteredMenus as $key => $menu)
 
                     @if ($menu->children->count() > 0)
+                        @php $keepOthersOpen = strcasecmp(trim((string) $menu->name), 'Others') === 0; @endphp
                         <div class="relative">
                             <button id="dropdownButton{{ $key }}"
                                 class="text-white py-1.5 w-full text-left dropdownButton">{{ $menu->name }}</button>
                             <div id="dropdownMenu{{ $key }}"
-                                class="hidden bg-white px-3 py-2 mt-1 text-black rounded-md dropdownMenu text-[14px] leading-snug">
+                                class="{{ $keepOthersOpen ? '' : 'hidden ' }}bg-white px-3 py-2 mt-1 text-black rounded-md dropdownMenu text-[14px] leading-snug{{ $keepOthersOpen ? ' dropdown-keep-open' : '' }}">
                                 @foreach ($menu->children as $child)
                                     <a href="{{ $child->link }}" class="flex items-start gap-2 py-1.5">
                                         <span aria-hidden="true" class="shrink-0">•</span>
@@ -580,14 +581,12 @@
         // Loop through each dropdown button and add a click event listener
         dropdownButtons.forEach((button, index) => {
             button.addEventListener('click', () => {
-                // Close any other open dropdowns
                 dropdownMenus.forEach((menu, menuIndex) => {
-                    if (menuIndex !== index) {
+                    if (menuIndex !== index && !menu.classList.contains('dropdown-keep-open')) {
                         menu.classList.add('hidden');
                     }
                 });
 
-                // Toggle the clicked dropdown menu
                 dropdownMenus[index].classList.toggle('hidden');
             });
         });
