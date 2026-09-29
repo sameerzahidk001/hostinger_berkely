@@ -107,13 +107,12 @@
                                     <label for="delivery_type">Delivery Type</label>
                                     <select name="delivery_type" id="delivery_type" class="form-control"
                                         value="{{ old('delivery_type') }}">
-                                        <option value="">Virtual & Classroom</option>
-                                        <option value="Virtual"
-                                            {{ old('delivery_type', $course_agenda->delivery_type) == 'Virtual' ? 'selected' : '' }}>
-                                            Virtual</option>
-                                        <option value="In Person"
-                                            {{ old('delivery_type', $course_agenda->delivery_type) == 'In Person' ? 'selected' : '' }}>
-                                            In Person</option>
+                                        <option value="">{{ \App\Models\CourseAgenda::deliveryTypeAllLabel() }}</option>
+                                        @foreach (\App\Models\CourseAgenda::deliveryTypeOptions() as $value => $label)
+                                            <option value="{{ $value }}"
+                                                {{ old('delivery_type', $course_agenda->delivery_type) == $value ? 'selected' : '' }}>
+                                                {{ $label }}</option>
+                                        @endforeach
                                     </select>
                                     @error('delivery_type')
                                         <p class="text-danger text-xs italic">{{ $message }}</p>

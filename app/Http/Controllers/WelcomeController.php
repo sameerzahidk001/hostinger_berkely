@@ -188,7 +188,9 @@ class WelcomeController extends Controller
 
             // Filter by Class Type
             if ($request->filled('class_type') && !empty($search['class_type'])) {
-                $query->where('delivery_type', $search['class_type']);
+                $type = $search['class_type'];
+                $stored = array_search($type, CourseAgenda::deliveryTypeOptions(), true);
+                $query->where('delivery_type', $stored !== false ? $stored : $type);
             }
 
             // Filter by Date Range
@@ -243,6 +245,12 @@ class WelcomeController extends Controller
                         ->orWhereHas('country', function ($q5) use ($keyword) {
                             $q5->where('name', 'like', "%{$keyword}%");
                         });
+
+                    foreach (CourseAgenda::deliveryTypeOptions() as $stored => $label) {
+                        if (stripos($label, $keyword) !== false || stripos($stored, $keyword) !== false) {
+                            $q->orWhere('delivery_type', $stored);
+                        }
+                    }
                 });
             }
 

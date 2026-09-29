@@ -25,6 +25,9 @@
     #agenda-search-form .select2-search__field {
         outline: none !important;
     }
+    .select2-container--open {
+        z-index: 100000;
+    }
     .agenda-results-table { table-layout: fixed; width: 100%; }
     .agenda-results-table th,
     .agenda-results-table td { word-wrap: break-word; vertical-align: top; }
@@ -56,8 +59,8 @@
         <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-3 my-1">
             <div>
                 <label class="" for="agenda_school">Schools</label>
-                <select id="agenda_school" class="agenda-typefind w-full border border-gray-300 rounded px-3 py-2 text-sm" name="school" data-placeholder="All Schools">
-                    <option value="">All Schools</option>
+                <select id="agenda_school" class="agenda-typefind w-full border border-gray-300 rounded px-3 py-2 text-sm" name="school" data-placeholder="Type to find school…">
+                    <option value=""></option>
                     @foreach ($schools as $school)
                         <option value="{{ $school->id }}">{{ $school->name }}</option>
                     @endforeach
@@ -65,8 +68,8 @@
             </div>
             <div>
                 <label class="" for="agenda_category">Categories</label>
-                <select id="agenda_category" class="agenda-typefind w-full border border-gray-300 rounded px-3 py-2 text-sm" name="category" data-placeholder="All Categories">
-                    <option value="">All Categories</option>
+                <select id="agenda_category" class="agenda-typefind w-full border border-gray-300 rounded px-3 py-2 text-sm" name="category" data-placeholder="Type to find category…">
+                    <option value=""></option>
                     @foreach ($categories as $category)
                         <option value="{{ $category->id }}">{{ $category->name }}</option>
                     @endforeach
@@ -74,8 +77,8 @@
             </div>
             <div>
                 <label class="" for="agenda_course">Course</label>
-                <select id="agenda_course" class="agenda-typefind w-full border border-gray-300 rounded px-3 py-2 text-sm" name="course" data-placeholder="All Courses">
-                    <option value="">All Courses</option>
+                <select id="agenda_course" class="agenda-typefind w-full border border-gray-300 rounded px-3 py-2 text-sm" name="course" data-placeholder="Type to find course…">
+                    <option value=""></option>
                     @php $courses = DB::table('courses')->get(); @endphp
                     @foreach ($courses as $course)
                         <option value="{{ $course->id }}">{{ $course->title }}</option>
@@ -84,8 +87,8 @@
             </div>
             <div>
                 <label class="" for="agenda_subject">Part / Subject</label>
-                <select id="agenda_subject" class="agenda-typefind w-full border border-gray-300 rounded px-3 py-2 text-sm" name="subject" data-placeholder="All Subject">
-                    <option value="">All Subject</option>
+                <select id="agenda_subject" class="agenda-typefind w-full border border-gray-300 rounded px-3 py-2 text-sm" name="subject" data-placeholder="Type to find part / subject…">
+                    <option value=""></option>
                     @foreach ($agenda_subjects as $agenda_subject)
                         <option value="{{ $agenda_subject }}">{{ $agenda_subject }}</option>
                     @endforeach
@@ -95,16 +98,18 @@
         <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-3 my-1">
             <div>
                 <label class="" for="agenda_class_type">Training Methodology</label>
-                <select id="agenda_class_type" class="agenda-typefind w-full border border-gray-300 rounded px-3 py-2 text-sm" name="class_type" data-placeholder="Virtual & Classroom">
-                    <option value="">Virtual & Classroom</option>
-                    <option value="Virtual">Virtual</option>
-                    <option value="In Person">In Person</option>
+                <select id="agenda_class_type" class="agenda-typefind w-full border border-gray-300 rounded px-3 py-2 text-sm" name="class_type" data-placeholder="Type to find methodology…">
+                    <option value=""></option>
+                    @foreach (\App\Models\CourseAgenda::deliveryTypeOptions() as $value => $label)
+                        <option value="{{ $value }}">{{ $label }}</option>
+                    @endforeach
                 </select>
             </div>
 
             <div>
                 <label class="" for="agenda_country">Location</label>
-                <select id="agenda_country" class="agenda-typefind w-full border border-gray-300 rounded px-3 py-2 text-sm" name="country" data-placeholder="All Countries / International">
+                <select id="agenda_country" class="agenda-typefind w-full border border-gray-300 rounded px-3 py-2 text-sm" name="country" data-placeholder="Type to find location…">
+                    <option value=""></option>
                     <option value="0">All Countries / International</option>
                     @foreach ($countries as $country)
                         <option value="{{ $country->id }}">{{ $country->name }}</option>
@@ -114,8 +119,8 @@
 
             <div>
                 <label class="" for="agenda_city">City</label>
-                <select id="agenda_city" class="agenda-typefind w-full border border-gray-300 rounded px-3 py-2 text-sm" name="city" data-placeholder="All Cities">
-                    <option value="">All Cities</option>
+                <select id="agenda_city" class="agenda-typefind w-full border border-gray-300 rounded px-3 py-2 text-sm" name="city" data-placeholder="Type to find city…">
+                    <option value=""></option>
                     @foreach ($agenda_cities as $agenda_city)
                         <option value="{{ $agenda_city }}">{{ $agenda_city }}</option>
                     @endforeach
@@ -168,49 +173,51 @@
     </div>
 </div>
 
-<!-- Ensure jQuery is included -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+@push('script')
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
-    $(document).ready(function() {
-        function containsMatcher(params, data) {
-            if ($.trim(params.term || '') === '') {
-                return data;
-            }
-            if (typeof data.text === 'undefined') {
-                return null;
-            }
-            var haystack = String(data.text).toLowerCase();
-            var tokens = String(params.term).toLowerCase().split(/\s+/).filter(Boolean);
-            var matched = tokens.every(function (token) {
-                return haystack.indexOf(token) !== -1;
-            });
-            return matched ? data : null;
+(function ($) {
+    function containsMatcher(params, data) {
+        if ($.trim(params.term || '') === '') {
+            return data;
         }
-
-        function initAgendaTypeFind() {
-            $('#agenda-search-form select.agenda-typefind').each(function () {
-                var $el = $(this);
-                if ($el.hasClass('select2-hidden-accessible')) {
-                    $el.select2('destroy');
-                }
-                $el.select2({
-                    width: '100%',
-                    allowClear: true,
-                    placeholder: $el.data('placeholder') || 'Type to find…',
-                    minimumResultsForSearch: 0,
-                    dropdownParent: $(document.body),
-                    matcher: containsMatcher
-                });
-            });
+        if (typeof data.text === 'undefined') {
+            return null;
         }
+        var haystack = String(data.text).toLowerCase();
+        var tokens = String(params.term).toLowerCase().split(/\s+/).filter(Boolean);
+        var matched = tokens.every(function (token) {
+            return haystack.indexOf(token) !== -1;
+        });
+        return matched ? data : null;
+    }
 
+    function initAgendaTypeFind() {
+        $('#agenda-search-form select').each(function () {
+            var $el = $(this);
+            if ($el.hasClass('select2-hidden-accessible')) {
+                $el.select2('destroy');
+            }
+            $el.select2({
+                width: '100%',
+                allowClear: true,
+                placeholder: $el.data('placeholder') || 'Type to find…',
+                minimumResultsForSearch: 0,
+                dropdownParent: $(document.body),
+                matcher: containsMatcher
+            });
+        });
+    }
+
+    $(function () {
         initAgendaTypeFind();
 
-        flatpickr("#dateRange", {
-            mode: "range",
-            dateFormat: "Y-m-d",
-        });
+        if (typeof flatpickr === 'function') {
+            flatpickr("#dateRange", {
+                mode: "range",
+                dateFormat: "Y-m-d",
+            });
+        }
 
         $('#agenda-search-form').on('submit', function(e) {
             e.preventDefault();
@@ -256,18 +263,16 @@
         $('#reset').on('click', function() {
             location.reload();
         });
-    });
 
-    document.addEventListener('DOMContentLoaded', function() {
+        $('#close-inquiry, #inquiry-modal').on('click', function(e) {
+            if (e.target.id === 'close-inquiry' || e.target.id === 'inquiry-modal') {
+                $('#inquiry-modal').addClass('hidden').removeClass('flex');
+                $('#inquiry-form-container').html('');
+            }
+        });
+
         bindSortEvents();
         bindInquiryModal();
-    });
-
-    $('#close-inquiry, #inquiry-modal').on('click', function(e) {
-        if (e.target.id === 'close-inquiry' || e.target.id === 'inquiry-modal') {
-            $('#inquiry-modal').addClass('hidden').removeClass('flex');
-            $('#inquiry-form-container').html('');
-        }
     });
 
     function bindSortEvents() {
@@ -331,4 +336,37 @@
             $('#inquiry-modal').removeClass('hidden').addClass('flex');
         });
     }
+})(jQuery);
+</script>
+@endpush
+<script>
+window.addEventListener('load', function () {
+    if (!window.jQuery || !document.getElementById('agenda-search-form')) {
+        return;
+    }
+    var $ = window.jQuery;
+    function boot() {
+        $('#agenda-search-form select').each(function () {
+            var $el = $(this);
+            if ($el.hasClass('select2-hidden-accessible')) {
+                return;
+            }
+            $el.select2({
+                width: '100%',
+                allowClear: true,
+                placeholder: $el.data('placeholder') || 'Type to find…',
+                minimumResultsForSearch: 0,
+                dropdownParent: $(document.body)
+            });
+        });
+    }
+    if (typeof $.fn.select2 === 'function') {
+        boot();
+        return;
+    }
+    var s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js';
+    s.onload = boot;
+    document.body.appendChild(s);
+});
 </script>

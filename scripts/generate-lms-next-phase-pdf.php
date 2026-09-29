@@ -1,0 +1,365 @@
+<?php
+
+/**
+ * Generate LMS Next Phase + Zoho CRM proposal PDF.
+ * Run: .tools\php\php.exe scripts/generate-lms-next-phase-pdf.php
+ */
+
+require __DIR__ . '/../vendor/autoload.php';
+
+use Dompdf\Dompdf;
+use Dompdf\Options;
+
+$html = <<<'HTML'
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  @page { margin: 34px 40px 42px; }
+  body {
+    font-family: DejaVu Sans, sans-serif;
+    font-size: 10.5px;
+    color: #1f2937;
+    line-height: 1.42;
+  }
+  h1 {
+    font-size: 19px;
+    color: #000435;
+    margin: 0 0 4px;
+  }
+  .subtitle {
+    color: #6b7280;
+    font-size: 10.5px;
+    margin: 0 0 14px;
+  }
+  h2 {
+    font-size: 13px;
+    color: #000435;
+    margin: 16px 0 7px;
+    padding-bottom: 3px;
+    border-bottom: 1.5px solid #f8961f;
+  }
+  h3 {
+    font-size: 11px;
+    color: #111827;
+    margin: 11px 0 4px;
+  }
+  p { margin: 0 0 7px; }
+  ul { margin: 3px 0 9px 16px; padding: 0; }
+  li { margin: 0 0 3px; }
+  .box {
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-left: 4px solid #000435;
+    padding: 9px 11px;
+    margin: 8px 0 12px;
+  }
+  .tag {
+    display: inline-block;
+    background: #000435;
+    color: #fff;
+    font-size: 8.5px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-right: 3px;
+  }
+  .tag-o { background: #f8961f; color: #111; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 7px 0 11px;
+    font-size: 10px;
+  }
+  th, td {
+    border: 1px solid #e5e7eb;
+    padding: 5px 7px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: #000435;
+    color: #fff;
+  }
+  .footer {
+    margin-top: 16px;
+    padding-top: 7px;
+    border-top: 1px solid #e5e7eb;
+    color: #6b7280;
+    font-size: 9px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Berkeley LMS — Next Phase Proposal</h1>
+<p class="subtitle">What we will build · Assessments, Mocks, Instructor Payments, Duplicate Course/Page, Fee Update in Page, SEO, Zoho CRM · September 2026</p>
+
+<div class="box">
+  This is a delivery proposal. Below is the work we will do on the LMS, website SEO, and Zoho CRM, based on the live site
+  (Study Materials, Class Schedule / Zoho Meeting, invoices INV-######, receipts RC-######).
+</div>
+
+<h2>1. Assessments in LMS</h2>
+<ul>
+  <li>Build a question bank inside LMS.</li>
+  <li>Support MCQ and simulation / essay answers.</li>
+  <li>Auto-mark MCQs.</li>
+  <li>Instructor / Admin mark essays and simulations.</li>
+  <li>Publish results to students (score, pass/fail, feedback).</li>
+</ul>
+
+<h2>2. Mock Exams section</h2>
+<ul>
+  <li>Add a separate <strong>Mock Exams</strong> area (not mixed with Study Materials).</li>
+  <li>Assign mocks to a batch.</li>
+  <li>Assign mocks to an individual student.</li>
+  <li>Student dashboard: upcoming mocks, attempts, and results.</li>
+</ul>
+
+<h2>3. Practice, Mocks and tests for all user types</h2>
+<ul>
+  <li>Admin / Instructor create Practice, Mock, and General Tests for students.</li>
+  <li>Admin create skill tests for instructors and staff.</li>
+  <li>Student portal: Upcoming · In progress · Submitted · Results.</li>
+</ul>
+
+<h2>4. Batch-wise instructor payments</h2>
+<ul>
+  <li>Accountant / Admin update instructor payments per batch.</li>
+  <li>Record rate, amount, currency, status (Pending / Approved / Paid), paid date, notes.</li>
+  <li>Instructor sees own payment status (read-only).</li>
+</ul>
+
+<h2>5. Delivery order — LMS</h2>
+<table>
+  <thead>
+    <tr><th style="width:24%;">Step</th><th>What we will do</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><span class="tag">1</span> Exam engine</td><td>Question bank, MCQ + essay, Practice, auto/manual mark, basic results page.</td></tr>
+    <tr><td><span class="tag">2</span> Mock Exams</td><td>Dedicated section, batch/student assignment, timed attempts, student results dashboard.</td></tr>
+    <tr><td><span class="tag">3</span> Staff tests</td><td>Admin tests for instructors/staff; Admin skill reports.</td></tr>
+    <tr><td><span class="tag">4</span> Instructor pay</td><td>Batch payment ledger for Accountant/Admin; instructor view.</td></tr>
+    <tr><td><span class="tag">5</span> Depth</td><td>Case simulations, pass-rate reports, item analysis for MCQs.</td></tr>
+  </tbody>
+</table>
+
+<h2>6. Zoho CRM — invoices and receipts</h2>
+<p>We will connect website payments to Zoho CRM so invoice and receipt details added on the site show on the student record in CRM.</p>
+
+<h3>6.1 CRM setup we will do</h3>
+<ul>
+  <li>Connect Zoho CRM with OAuth (same approach as Zoho Meeting).</li>
+  <li>Add CRM credentials in Admin settings.</li>
+  <li>Use Contact = student.</li>
+  <li>Use Deal / Enrolment = course + fee package.</li>
+  <li>Use Invoice record = website INV-######.</li>
+  <li>Use Receipt / Payment record = website RC-######.</li>
+  <li>Add CRM fields: Website Invoice ID, Website Receipt ID, Installment No, Balance Due, Package Name, Gateway.</li>
+</ul>
+
+<h3>6.2 Data we will send from the site</h3>
+<ul>
+  <li>Student: name, email, phone, address.</li>
+  <li>Invoice: INV number, course, package, currency, total, installment plan, status, created date.</li>
+  <li>Installment: n of N, due date, remaining amount, payment method (Noon, RAKBANK, etc.).</li>
+  <li>Receipt: RC number, linked INV, paid amount, paid date, balance after payment.</li>
+</ul>
+
+<h3>6.3 Matching we will apply</h3>
+<ul>
+  <li>Find CRM Contact by student email; create Contact if not found.</li>
+  <li>One CRM invoice per website payment (INV-######). Update, do not duplicate.</li>
+  <li>One CRM receipt per paid installment (RC-######).</li>
+</ul>
+
+<h3>6.4 When we will push to CRM</h3>
+<ul>
+  <li>Admin creates invoice on the site → Contact + Deal + Invoice created/updated in CRM.</li>
+  <li>Student pays (gateway or manual paid) → Receipt created; invoice status and balance updated.</li>
+  <li>Partial pay → CRM status Partial.</li>
+  <li>Full pay → CRM status Paid.</li>
+  <li>Invoice cancelled on site → CRM status updated (kept for audit).</li>
+  <li>Nightly retry for any failed push.</li>
+  <li>One-time backfill of existing invoices and receipts.</li>
+</ul>
+
+<h3>6.5 What staff will see in CRM</h3>
+<ul>
+  <li>Contact: student details, invoice list, receipt list, outstanding balance.</li>
+  <li>Deal: course, package, INV number, total vs paid vs due, next due date.</li>
+  <li>Invoice: same commercial details as the website invoice.</li>
+  <li>Receipt: RC number, linked INV, paid amount, paid date, gateway.</li>
+  <li>PDF of invoice/receipt attached on the CRM record.</li>
+</ul>
+
+<h2>7. Delivery order — Zoho CRM</h2>
+<table>
+  <thead>
+    <tr><th style="width:24%;">Step</th><th>What we will do</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><span class="tag tag-o">CRM-1</span> Setup</td><td>CRM fields, layouts, OAuth, sandbox connection.</td></tr>
+    <tr><td><span class="tag tag-o">CRM-2</span> Sync service</td><td>Laravel upsert for Contact, Invoice, Receipt; API log.</td></tr>
+    <tr><td><span class="tag tag-o">CRM-3</span> Live push</td><td>Hook invoice create and payment success so CRM updates in real time.</td></tr>
+    <tr><td><span class="tag tag-o">CRM-4</span> Backfill</td><td>Push existing Active / Partial / Paid invoices and receipts.</td></tr>
+    <tr><td><span class="tag tag-o">CRM-5</span> Admin</td><td>Last sync status on LMS; “Push to CRM” on invoice and receipt screens.</td></tr>
+  </tbody>
+</table>
+
+<h2>8. Duplicate a complete course / page</h2>
+<ul>
+  <li>Add a <strong>Duplicate</strong> button on the Admin course list and course edit screen.</li>
+  <li>Add a <strong>Duplicate</strong> button on the Admin page list and page edit screen.</li>
+  <li>Copy the full course: content, labels, structure, fee packages, SEO, FAQs, related sections, and media links.</li>
+  <li>Copy the full page: content, SEO, FAQs, and layout settings.</li>
+  <li>Create a new draft with a new name and URL (for example “Copy of …”) so the original stays live.</li>
+  <li>Admin can then edit the copy and publish it.</li>
+</ul>
+
+<h2>9. Website SEO — remaining items</h2>
+<p>These items are not complete on the live site. We will add them in next phase.</p>
+
+<h3>9.1 Index / Non Index</h3>
+<ul>
+  <li>Add Index / No Index control on each page and course SEO screen.</li>
+  <li>Apply the choice on the public page so Google can or cannot list it.</li>
+</ul>
+
+<h3>9.2 Robots Meta Tag</h3>
+<ul>
+  <li>Add robots meta options in Admin (index/noindex and follow/nofollow).</li>
+  <li>Output the matching <code>&lt;meta name="robots"&gt;</code> tag on every public page and course.</li>
+</ul>
+
+<h3>9.3 XML Sitemap</h3>
+<ul>
+  <li>Generate an XML sitemap of published pages and courses.</li>
+  <li>Keep it updated when pages/courses are added, edited, or unpublished.</li>
+  <li>Link the sitemap from robots.txt.</li>
+</ul>
+
+<h3>9.4 Core Web Vitals</h3>
+<ul>
+  <li>Improve load speed on homepage, course pages, and listing pages.</li>
+  <li>Fix layout shift (images with size, fonts, banners).</li>
+  <li>Defer non-critical scripts so the main content appears faster on mobile.</li>
+</ul>
+
+<h3>9.5 Image Compression &amp; Optimization</h3>
+<ul>
+  <li>Compress images on upload in Admin.</li>
+  <li>Create smaller sizes for cards, banners, and thumbnails.</li>
+  <li>Serve WebP where the browser supports it, with fallback.</li>
+  <li>Lazy-load images below the fold.</li>
+</ul>
+
+<h2>10. Delivery order — Website / SEO</h2>
+<table>
+  <thead>
+    <tr><th style="width:24%;">Step</th><th>What we will do</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><span class="tag">W-1</span> Duplicate</td><td>Duplicate button for full course and full page (draft copy, new URL).</td></tr>
+    <tr><td><span class="tag">W-2</span> Robots + Index</td><td>Admin Index/No Index + robots meta on pages and courses.</td></tr>
+    <tr><td><span class="tag">W-3</span> Sitemap</td><td>XML sitemap of published URLs, linked from robots.txt.</td></tr>
+    <tr><td><span class="tag">W-4</span> Images</td><td>Upload compression, WebP, sized variants, lazy-load.</td></tr>
+    <tr><td><span class="tag">W-5</span> Core Web Vitals</td><td>Faster LCP, less layout shift, lighter mobile scripts.</td></tr>
+    <tr><td><span class="tag">W-6</span> Fee Update in Page</td><td>Service-based fee structure on CMS pages, no Course required (see section 11).</td></tr>
+  </tbody>
+</table>
+
+<h2>11. FEE UPDATE IN PAGE</h2>
+<p>We will add fee structure and package items on a CMS <strong>Page</strong> without creating or linking a Course. Fees will be built by <strong>service</strong>, then <strong>category</strong>, then <strong>fee structure</strong>.</p>
+
+<h3>11.1 Structure we will use</h3>
+<table>
+  <thead>
+    <tr><th style="width:28%;">Level</th><th>What it is</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Page</td><td>Any published website page (no Course).</td></tr>
+    <tr><td>Service 1 Name</td><td>First service on the page (example: Student Visa, Attestation).</td></tr>
+    <tr><td>&nbsp;&nbsp;Category 1</td><td>Fee structure under Service 1 (packages, prices, include items, Enroll).</td></tr>
+    <tr><td>&nbsp;&nbsp;Category 2</td><td>Another fee structure under the same Service 1.</td></tr>
+    <tr><td>Service 2 Name</td><td>Second service on the same page.</td></tr>
+    <tr><td>&nbsp;&nbsp;Category 1</td><td>Fee structure under Service 2.</td></tr>
+    <tr><td>&nbsp;&nbsp;Category 2</td><td>Another fee structure under Service 2.</td></tr>
+  </tbody>
+</table>
+
+<h3>11.2 What we will build in Admin</h3>
+<ul>
+  <li>Add a <strong>FEE UPDATE IN PAGE</strong> block on the Page editor.</li>
+  <li>Add / edit / delete <strong>Services</strong> (service name, order, show/hide).</li>
+  <li>Under each service, add / edit / delete <strong>Categories</strong> (category name, order, show/hide).</li>
+  <li>Under each category, add the <strong>Fee Structure</strong>: package name, currency, price, tax, discount, short description, key points, include items, installments, show on website.</li>
+  <li>Support any number of services and any number of categories per service.</li>
+  <li>Duplicate a service or a category (with its fee packages) inside the same page.</li>
+</ul>
+
+<h3>11.3 What the public page will show</h3>
+<ul>
+  <li>Heading: <strong>FEE UPDATE IN PAGE</strong> (or the page’s own fee heading if set).</li>
+  <li>Service 1 Name, then Category 1 fee cards, then Category 2 fee cards.</li>
+  <li>Service 2 Name, then its Category 1 and Category 2 fee cards.</li>
+  <li>Each card: price, include items, and Enroll (same style as course fee cards).</li>
+</ul>
+
+<h3>11.4 Checkout and invoice (no Course)</h3>
+<ul>
+  <li>Enroll from a page package without a Course.</li>
+  <li>Invoice and receipt store page, service, category, and package (course stays empty).</li>
+  <li>Admin Create Invoice can pick a page service/category package, not only a course package.</li>
+</ul>
+
+<h3>11.5 Delivery order — Fee Update in Page</h3>
+<table>
+  <thead>
+    <tr><th style="width:24%;">Step</th><th>What we will do</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><span class="tag">F-1</span> Data</td><td>Services, categories, and fee packages linked to a Page (not to a Course).</td></tr>
+    <tr><td><span class="tag">F-2</span> Admin</td><td>FEE UPDATE IN PAGE module on Page editor: Service → Category → Fee Structure + items.</td></tr>
+    <tr><td><span class="tag">F-3</span> Public</td><td>Render services and category fee cards on the published page.</td></tr>
+    <tr><td><span class="tag">F-4</span> Pay</td><td>Cart, checkout, invoice, and receipt without requiring a Course.</td></tr>
+  </tbody>
+</table>
+
+<div class="box">
+  <strong>Result.</strong> LMS will handle teaching (materials, classes, then assessments and instructor pay).
+  Admin will duplicate a full course or page in one click.
+  A CMS page can carry its own fee structure by service and category, with no Course.
+  Public pages will have index/robots control, an XML sitemap, faster images, and better Core Web Vitals.
+  Zoho CRM will show every website invoice and receipt on the student record, with the same numbers, amounts, dates, course and package.
+</div>
+
+<div class="footer">
+  Berkeley School of Business, Arts &amp; Sciences · LMS Next Phase + Zoho CRM Proposal
+</div>
+
+</body>
+</html>
+HTML;
+
+$options = new Options();
+$options->set('isRemoteEnabled', false);
+$options->set('isHtml5ParserEnabled', true);
+$options->set('defaultFont', 'DejaVu Sans');
+
+$dompdf = new Dompdf($options);
+$dompdf->loadHtml($html);
+$dompdf->setPaper('A4', 'portrait');
+$dompdf->render();
+
+$outDir = __DIR__ . '/../docs';
+if (! is_dir($outDir)) {
+    mkdir($outDir, 0755, true);
+}
+
+$outPath = $outDir . '/LMS_Next_Phase_Plan.pdf';
+file_put_contents($outPath, $dompdf->output());
+
+echo "Wrote: {$outPath}\n";
+echo 'Pages: ' . $dompdf->getCanvas()->get_page_number() . "\n";

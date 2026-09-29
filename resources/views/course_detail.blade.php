@@ -1257,7 +1257,7 @@
                         </div>
 
                         <p class="text-xs text-gray-700 leading-snug m-0">
-                            <strong>Delivery:</strong> {{ $agenda->delivery_type ?: 'Virtual & Classroom' }}
+                            <strong>Delivery:</strong> {{ $agenda->delivery_type_label }}
                             <span class="text-gray-300 mx-1.5">|</span>
                             <strong>Location:</strong> {{ $agenda->country?->name ?: 'International' }}{{ $agenda->city ? ', ' . $agenda->city : '' }}
                         </p>
