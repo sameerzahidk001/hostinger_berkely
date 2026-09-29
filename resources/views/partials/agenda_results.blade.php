@@ -68,7 +68,7 @@
                         @endif
                     </td>
                     <td class="px-2 py-3 text-gray-800 text-xs">
-                        {{ $course_agenda->delivery_type ? $course_agenda->delivery_type : 'Virtual & Classroom' }}
+                        {{ $course_agenda->delivery_type_label }}
                     </td>
                     <td class="px-2 py-3 text-xs">
                         {{ $course_agenda->country ? $course_agenda->country->name : 'International' }}

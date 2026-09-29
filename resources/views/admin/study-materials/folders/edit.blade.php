@@ -158,7 +158,8 @@
         <div class="ibox-title"><h5>3. Add files</h5></div>
         <div class="ibox-content">
             <p class="help-block">Select the main folder or a subfolder, then upload to Zoho WorkDrive, upload to this server, or paste an existing WorkDrive link.</p>
-            <form method="POST" action="{{ route('admin.study-materials.folders.files.store', $folder->id) }}" enctype="multipart/form-data">
+            @php $fileSource = old('source', $fileSource ?? (($zohoWorkDriveReady ?? false) ? 'workdrive' : 'upload')); @endphp
+            <form id="add-file-form" method="POST" action="{{ route('admin.study-materials.folders.files.store', $folder->id) }}" enctype="multipart/form-data">
                 @csrf
                 <div class="row">
                     <div class="col-md-6 form-group">
@@ -173,13 +174,13 @@
                         <label>File source *</label>
                         <div>
                             <label class="radio-inline">
-                                <input type="radio" name="source" value="workdrive" {{ old('source', ($zohoWorkDriveReady ?? false) ? 'workdrive' : 'upload') === 'workdrive' ? 'checked' : '' }}> Upload to Zoho WorkDrive
+                                <input type="radio" name="source" value="workdrive" {{ $fileSource === 'workdrive' ? 'checked' : '' }}> Upload to Zoho WorkDrive
                             </label>
                             <label class="radio-inline">
-                                <input type="radio" name="source" value="upload" {{ old('source', ($zohoWorkDriveReady ?? false) ? 'workdrive' : 'upload') === 'upload' ? 'checked' : '' }}> Upload to server
+                                <input type="radio" name="source" value="upload" {{ $fileSource === 'upload' ? 'checked' : '' }}> Upload to server
                             </label>
                             <label class="radio-inline">
-                                <input type="radio" name="source" value="zoho" {{ old('source') === 'zoho' ? 'checked' : '' }}> Paste WorkDrive link
+                                <input type="radio" name="source" value="zoho" {{ $fileSource === 'zoho' ? 'checked' : '' }}> Paste WorkDrive link
                             </label>
                         </div>
                         @unless($zohoWorkDriveReady ?? false)
@@ -229,7 +230,9 @@
 <script>
 (function () {
     function toggleSource() {
-        const source = document.querySelector('input[name="source"]:checked');
+        const form = document.getElementById('add-file-form');
+        if (!form) return;
+        const source = form.querySelector('input[name="source"]:checked');
         const isZoho = source && source.value === 'zoho';
         const isWorkdrive = source && source.value === 'workdrive';
         document.getElementById('source-upload').style.display = isZoho ? 'none' : '';
@@ -242,9 +245,12 @@
                 : 'PDF, Word, Excel, PPT, audio, video, any file. Maximum 100 MB. Stored on this server.';
         }
     }
-    document.querySelectorAll('input[name="source"]').forEach(function (el) {
-        el.addEventListener('change', toggleSource);
-    });
+    const addForm = document.getElementById('add-file-form');
+    if (addForm) {
+        addForm.querySelectorAll('input[name="source"]').forEach(function (el) {
+            el.addEventListener('change', toggleSource);
+        });
+    }
     toggleSource();
 })();
 </script>

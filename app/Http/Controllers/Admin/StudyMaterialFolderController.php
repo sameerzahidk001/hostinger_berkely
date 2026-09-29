@@ -185,7 +185,7 @@ class StudyMaterialFolderController extends Controller
         return redirect()->back()->with('success', $message);
     }
 
-    public function edit($id)
+    public function edit(Request $request, $id)
     {
         $folder = StudyMaterialFolder::with(['rootItems.childrenRecursive', 'instructorAccess', 'studentAccess', 'items', 'feePackages'])->findOrFail($id);
         abort_unless($this->lms->canManageFolder($folder), 403);
@@ -226,6 +226,8 @@ class StudyMaterialFolderController extends Controller
             'selectedHeadOfFacultyId' => $selectedHeadOfFacultyId,
             'folderOptions' => $folder->folderTreeOptions(),
             'zohoWorkDriveReady' => $this->zoho->isWorkDriveReady(),
+            'fileSource' => $this->rememberedFileSource($request),
+            'openItemId' => (int) session('study_material_open_item', 0),
         ]);
     }
 
@@ -331,6 +333,8 @@ class StudyMaterialFolderController extends Controller
         StudyMaterialItem::ensureIconTypeColumn();
         $parentId = $this->resolvedParentId($folder, $request->input('parent_id'));
         $iconType = StudyMaterialItem::normalizeIconType($request->input('icon_type'));
+
+        $this->rememberFileSource($request->input('source'));
 
         if ($request->input('source') === 'zoho') {
             StudyMaterialItem::create([
@@ -440,6 +444,8 @@ class StudyMaterialFolderController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'icon_type' => 'nullable|string|in:auto,pdf,word,excel,ppt,video,audio,image,zip,file',
+            'source' => 'nullable|in:upload,workdrive,zoho',
+            'zoho_url' => 'nullable|url|max:2000',
         ]);
         if ($validator->fails()) {
             return redirect()->back()->withErrors($validator)->withInput();
@@ -450,7 +456,16 @@ class StudyMaterialFolderController extends Controller
         if ($item->type === 'file' && $request->exists('icon_type')) {
             $item->icon_type = StudyMaterialItem::normalizeIconType($request->input('icon_type'));
         }
+        if ($item->type === 'file' && $item->isExternal() && $request->filled('zoho_url')) {
+            $item->external_url = trim($request->input('zoho_url'));
+        }
         $item->save();
+
+        $source = $request->input('source');
+        if (! in_array($source, ['upload', 'workdrive', 'zoho'], true)) {
+            $source = $item->isExternal() ? 'zoho' : 'upload';
+        }
+        $this->rememberFileSource($source, $item->id);
 
         return redirect()->back()->with('success', 'Item updated.');
     }
@@ -531,6 +546,26 @@ class StudyMaterialFolderController extends Controller
                 ]
             );
         }
+    }
+
+    protected function rememberFileSource(?string $source, ?int $openItemId = null): void
+    {
+        if (in_array($source, ['upload', 'workdrive', 'zoho'], true)) {
+            session(['study_material_file_source' => $source]);
+        }
+        if ($openItemId) {
+            session()->flash('study_material_open_item', $openItemId);
+        }
+    }
+
+    protected function rememberedFileSource(Request $request): string
+    {
+        $source = old('source', session('study_material_file_source'));
+        if (in_array($source, ['upload', 'workdrive', 'zoho'], true)) {
+            return $source;
+        }
+
+        return $this->zoho->isWorkDriveReady() ? 'workdrive' : 'upload';
     }
 
     protected function folderRules(?int $folderId = null): array

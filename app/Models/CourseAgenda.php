@@ -25,4 +25,37 @@ class CourseAgenda extends Model
     {
         return $this->belongsTo(Country::class, 'country_id');
     }
+
+    public static function deliveryTypeOptions(): array
+    {
+        return [
+            'Virtual' => 'Live Online Instructor-Led',
+            'In Person' => 'Face-to-Face Classroom',
+        ];
+    }
+
+    public static function deliveryTypeAllLabel(): string
+    {
+        return 'Live Online Instructor-Led & Face-to-Face Classroom';
+    }
+
+    public static function deliveryTypeLabel(?string $value): string
+    {
+        $value = trim((string) $value);
+        if ($value === '' || $value === 'Virtual & Classroom') {
+            return self::deliveryTypeAllLabel();
+        }
+
+        $options = self::deliveryTypeOptions();
+        if (isset($options[$value])) {
+            return $options[$value];
+        }
+
+        return $value;
+    }
+
+    public function getDeliveryTypeLabelAttribute(): string
+    {
+        return self::deliveryTypeLabel($this->delivery_type);
+    }
 }

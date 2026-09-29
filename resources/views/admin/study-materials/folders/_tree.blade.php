@@ -39,7 +39,10 @@
                     </form>
                 </div>
             </div>
-            <form id="rename-item-{{ $item->id }}" action="{{ route('admin.study-materials.items.rename', $item->id) }}" method="POST" style="display:none;margin-top:8px;max-width:520px;">
+            @php
+                $showItemEdit = (int) ($openItemId ?? 0) === (int) $item->id;
+            @endphp
+            <form id="rename-item-{{ $item->id }}" action="{{ route('admin.study-materials.items.rename', $item->id) }}" method="POST" style="{{ $showItemEdit ? '' : 'display:none;' }}margin-top:8px;max-width:720px;">
                 @csrf @method('PUT')
                 <div class="row">
                     <div class="col-sm-{{ $item->type === 'file' ? '6' : '9' }}">
@@ -58,6 +61,23 @@
                         <button type="submit" class="btn btn-primary btn-sm btn-block">Save</button>
                     </div>
                 </div>
+                @if($item->type === 'file')
+                    <div class="form-group" style="margin:10px 0 0;">
+                        <label class="control-label" style="display:block;">File source</label>
+                        @if($item->isExternal())
+                            <input type="hidden" name="source" value="zoho">
+                            <label class="radio-inline">
+                                <input type="radio" checked disabled> Paste WorkDrive link
+                            </label>
+                            <input type="url" name="zoho_url" class="form-control input-sm" style="margin-top:8px;" value="{{ old('zoho_url', $item->external_url) }}" required>
+                        @else
+                            <input type="hidden" name="source" value="upload">
+                            <label class="radio-inline">
+                                <input type="radio" checked disabled> Upload to server
+                            </label>
+                        @endif
+                    </div>
+                @endif
             </form>
             @if($item->type === 'folder')
                 @php $nested = $item->relationLoaded('childrenRecursive') ? $item->childrenRecursive : $item->children; @endphp
