@@ -190,7 +190,7 @@
                         <label>Item icon type</label>
                         <select name="icon_type" class="form-control">
                             @foreach(\App\Models\StudyMaterialItem::iconTypeOptions() as $value => $label)
-                                <option value="{{ $value }}" {{ old('icon_type', 'auto') === $value ? 'selected' : '' }}>{{ $label }}</option>
+                                <option value="{{ $value }}" {{ old('icon_type', 'pdf') === $value ? 'selected' : '' }}>{{ $label }}</option>
                             @endforeach
                         </select>
                         <span class="help-block">Shown to students next to the file name (PDF, Word, Video, etc.). Auto-detect uses the file name/type.</span>
