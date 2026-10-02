@@ -6,7 +6,7 @@
     $courseHref = $course ? url('/course/' . ($course->slug ?: $course->id)) : null;
     $hof = $batch['head_of_faculty'] ?? null;
     $ins = $batch['instructor'] ?? null;
-    $studentCount = ($batch['students'] ?? collect())->count();
+    $studentCount = $batchModel->students->unique('id')->count();
 @endphp
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">

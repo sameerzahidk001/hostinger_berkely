@@ -109,6 +109,8 @@ class ClassScheduleController extends Controller
                 'primary' => null,
                 'latest_at' => 0,
             ];
+        } else {
+            $group['students'] = $batchModel->students;
         }
 
         if ($backfillNote && ! session()->has('success') && ! session()->has('fail')) {
