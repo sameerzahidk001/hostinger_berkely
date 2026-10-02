@@ -48,7 +48,12 @@
         $batch = is_array($batch ?? null) ? $batch : [];
         $docTitle = trim((string) ($batch['batch_name'] ?? 'Lecture Plan')) ?: 'Lecture Plan';
         $courseName = data_get($batch, 'course.title') ?: '—';
+        $batchCode = trim((string) ($batch['batch_code'] ?? '')) ?: '—';
+        $hofName = data_get($batch, 'head_of_faculty.name') ?: '—';
+        $insName = data_get($batch, 'instructor.name') ?: '—';
         $sessions = collect($batch['sessions'] ?? []);
+        $copyright = data_get($settings ?? null, 'copyright_message')
+            ?: ('Copyright © ' . now()->format('Y') . ' Berkeley School of Business, Arts & Sciences | UKPRN: 10101119');
 
         $logoSrc = null;
         $logoCandidates = [
@@ -91,11 +96,18 @@
     <table class="meta">
         <tr>
             <td><strong>Batch name:</strong> {{ $docTitle }}</td>
-            <td><strong>Course:</strong> {{ $courseName }}</td>
+            <td><strong>Batch code:</strong> {{ $batchCode }}</td>
         </tr>
         <tr>
+            <td><strong>Course:</strong> {{ $courseName }}</td>
             <td><strong>Sessions:</strong> {{ $sessions->count() }}</td>
-            <td><strong>Printed:</strong> {{ now()->format('d M Y H:i') }}</td>
+        </tr>
+        <tr>
+            <td><strong>Head of Faculty:</strong> {{ $hofName }}</td>
+            <td><strong>Instructor:</strong> {{ $insName }}</td>
+        </tr>
+        <tr>
+            <td colspan="2"><strong>Printed:</strong> {{ now()->format('d M Y H:i') }}</td>
         </tr>
     </table>
 
@@ -154,5 +166,6 @@
     </table>
 
     @include('partials.invoice-document-footer-pdf')
+    <div class="footer" style="border-top:0;margin-top:6px;padding-top:0;">{{ $copyright }}</div>
 </body>
 </html>

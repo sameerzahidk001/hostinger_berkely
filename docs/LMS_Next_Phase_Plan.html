@@ -1,16 +1,3 @@
-<?php
-
-/**
- * Generate LMS Next Phase + Zoho CRM proposal PDF.
- * Run: .tools\php\php.exe scripts/generate-lms-next-phase-pdf.php
- */
-
-require __DIR__ . '/../vendor/autoload.php';
-
-use Dompdf\Dompdf;
-use Dompdf\Options;
-
-$html = <<<'HTML'
 <!DOCTYPE html>
 <html>
 <head>
@@ -407,29 +394,3 @@ $html = <<<'HTML'
 
 </body>
 </html>
-HTML;
-
-$options = new Options();
-$options->set('isRemoteEnabled', false);
-$options->set('isHtml5ParserEnabled', true);
-$options->set('defaultFont', 'DejaVu Sans');
-
-$dompdf = new Dompdf($options);
-$dompdf->loadHtml($html);
-$dompdf->setPaper('A4', 'portrait');
-$dompdf->render();
-
-$outDir = __DIR__ . '/../docs';
-if (! is_dir($outDir)) {
-    mkdir($outDir, 0755, true);
-}
-
-$htmlPath = $outDir . '/LMS_Next_Phase_Plan.html';
-file_put_contents($htmlPath, $html);
-echo "Wrote: {$htmlPath}\n";
-
-$outPath = $outDir . '/LMS_Next_Phase_Plan.pdf';
-file_put_contents($outPath, $dompdf->output());
-
-echo "Wrote: {$outPath}\n";
-echo 'Pages: ' . $dompdf->getCanvas()->get_page_number() . "\n";
