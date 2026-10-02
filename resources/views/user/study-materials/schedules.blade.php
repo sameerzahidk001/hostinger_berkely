@@ -38,6 +38,7 @@
                                     <th>Course</th>
                                     <th>Head of Faculty</th>
                                     <th>Instructor</th>
+                                    <th>Students</th>
                                     <th>Sessions</th>
                                     <th>Next class</th>
                                     <th></th>
@@ -80,6 +81,7 @@
                                                 —
                                             @endif
                                         </td>
+                                        <td>{{ $batch['student_count'] ?? 0 }}</td>
                                         <td>{{ $batch['session_count'] }}</td>
                                         <td>
                                             @if(!empty($batch['next_at']))
@@ -100,7 +102,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="7" class="text-center text-muted">No batch schedules assigned yet.</td>
+                                        <td colspan="8" class="text-center text-muted">No batch schedules assigned yet.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
