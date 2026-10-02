@@ -15,8 +15,8 @@
     .logo { height: 42px; }
     .org { color: #000435; font-size: 16px; font-weight: bold; }
     .doc-title { color: #f8961f; font-size: 13px; font-weight: bold; text-transform: uppercase; }
-    .meta { width: 100%; margin: 8px 0 12px; }
-    .meta td { padding: 3px 0; width: 50%; vertical-align: top; }
+    .meta { width: 100%; table-layout: fixed; margin: 8px 0 12px; }
+    .meta td { padding: 3px 8px 3px 0; width: 50%; vertical-align: top; }
     table.plan { width: 100%; border-collapse: collapse; }
     table.plan th {
         background: #000435;

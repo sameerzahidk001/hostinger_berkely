@@ -1,12 +1,22 @@
 @php
     $isAdminView = !empty($isAdminView);
     $batchName = (string) ($batch['batch_name'] ?? '');
+    $batchCode = (string) ($batch['batch_code'] ?? '');
+    $courseTitle = (string) (data_get($batch, 'course.title') ?: '');
+    $hofName = (string) (data_get($batch, 'head_of_faculty.name') ?: '');
+    $insName = (string) (data_get($batch, 'instructor.name') ?: '');
     $sessions = $batch['sessions'] ?? collect();
     $lecturePlanId = 'lecture-plan-' . uniqid();
     $lecturePlanPdfUrl = $lecturePlanPdfUrl ?? null;
 @endphp
 <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
-    <button type="button" class="btn btn-default btn-sm js-download-lecture-plan" data-table="{{ $lecturePlanId }}" data-batch="{{ e($batchName) }}">
+    <button type="button" class="btn btn-default btn-sm js-download-lecture-plan"
+        data-table="{{ $lecturePlanId }}"
+        data-batch="{{ e($batchName) }}"
+        data-code="{{ e($batchCode) }}"
+        data-course="{{ e($courseTitle) }}"
+        data-instructor="{{ e($insName) }}"
+        data-hof="{{ e($hofName) }}">
         Download Lecture Plan (Excel)
     </button>
     @if($lecturePlanPdfUrl)
@@ -122,8 +132,17 @@
         var table = document.getElementById(btn.getAttribute('data-table'));
         if (!table) return;
         var batch = btn.getAttribute('data-batch') || 'Lecture Plan';
+        var code = btn.getAttribute('data-code') || '';
+        var course = btn.getAttribute('data-course') || '';
+        var instructor = btn.getAttribute('data-instructor') || '';
+        var hof = btn.getAttribute('data-hof') || '';
         var rows = [];
         rows.push(['Batch name', batch]);
+        rows.push(['Batch code', code]);
+        rows.push(['Course', course]);
+        rows.push(['Instructor', instructor]);
+        rows.push(['Head of Faculty', hof]);
+        rows.push([]);
         rows.push(['#', 'Date', 'Day', 'Time', 'Timezone', 'Duration', 'Title', 'Description']);
         table.querySelectorAll('tbody tr').forEach(function (tr) {
             var cells = tr.querySelectorAll('td');
