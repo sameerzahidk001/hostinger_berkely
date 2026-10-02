@@ -127,6 +127,7 @@
         </div>
     </div>
 
+    @if($isAdmin)
     <div class="ibox">
         <div class="ibox-title"><h5>2. Add subfolder / sub-subfolder</h5></div>
         <div class="ibox-content">
@@ -153,9 +154,10 @@
             </form>
         </div>
     </div>
+    @endif
 
     <div class="ibox">
-        <div class="ibox-title"><h5>3. Add files</h5></div>
+        <div class="ibox-title"><h5>{{ $isAdmin ? '3. Add files' : '2. Add files' }}</h5></div>
         <div class="ibox-content">
             <p class="help-block">Select the main folder or a subfolder, then upload to Zoho WorkDrive, upload to this server, or paste an existing WorkDrive link.</p>
             @php $fileSource = old('source', $fileSource ?? (($zohoWorkDriveReady ?? false) ? 'workdrive' : 'upload')); @endphp

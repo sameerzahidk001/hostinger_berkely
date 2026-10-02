@@ -10,7 +10,9 @@
         </ol>
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
+        @if($isAdmin)
         <a href="{{ route('admin.study-materials.folders.create') }}" class="btn btn-primary">Create Folder</a>
+        @endif
     </div>
 </div>
 <div class="wrapper wrapper-content">

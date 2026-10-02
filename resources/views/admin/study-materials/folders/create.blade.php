@@ -97,7 +97,9 @@
                         <div class="alert alert-info">You are creating as instructor — you will be set as owner/instructor. Admin can enable the folder.</div>
                     </div>
                     @endif
+                    @if($isAdmin)
                     @include('admin.study-materials.folders._subfolders')
+                    @endif
                 </div>
                 <button type="submit" class="btn btn-primary">Save Folder</button>
                 <a href="{{ route('admin.study-materials.folders.index') }}" class="btn btn-default">Cancel</a>

@@ -59,7 +59,11 @@
                 · {{ $batch['session_count'] }} session{{ $batch['session_count'] === 1 ? '' : 's' }}
             </p>
             <p class="help-block">All sessions stay visible (Scheduled, Completed, Cancelled). Only deleted sessions are removed.</p>
-            @include('admin.study-materials.schedules._sessions_table', ['batch' => $batch, 'isAdminView' => $canManage])
+            @include('admin.study-materials.schedules._sessions_table', [
+                'batch' => $batch,
+                'isAdminView' => $canManage,
+                'lecturePlanPdfUrl' => route('user.class-schedules.lecture-plan', $batch['batch_id'] ?? $batch['key'] ?? ''),
+            ])
         </div>
         <div id="batch-calendar" class="tab-pane">
             @include('admin.study-materials.schedules._calendar', ['calendarEvents' => $calendarEvents])
