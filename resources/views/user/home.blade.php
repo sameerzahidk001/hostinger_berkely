@@ -64,8 +64,9 @@
                         <div class="ibox-title" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
                             <h5 style="margin:0;">Class Schedule</h5>
                             <div>
-                                <a href="{{ route('user.class-schedules.index') }}" class="btn btn-xs btn-default">View Schedule</a>
-                                <a href="{{ route('user.class-schedules.index') }}" class="btn btn-xs btn-primary">Add session</a>
+                                <a href="{{ route('admin.class-batches.index') }}" class="btn btn-xs btn-default">Batches</a>
+                                <a href="{{ route('user.class-schedules.index') }}" class="btn btn-xs btn-default">Schedules</a>
+                                <a href="{{ route('admin.class-schedules.create') }}" class="btn btn-xs btn-primary">Add session</a>
                             </div>
                         </div>
                         <div class="ibox-content">
@@ -75,6 +76,7 @@
                                         <tr>
                                             <th>Batch</th>
                                             <th>Course</th>
+                                            <th>Students</th>
                                             <th>Sessions</th>
                                             <th>Next class</th>
                                             <th></th>
@@ -94,6 +96,7 @@
                                                     <strong>{{ $batch['batch_name'] }}</strong>
                                                 </td>
                                                 <td>{{ $course->title ?? '—' }}</td>
+                                                <td>{{ $batch['student_count'] ?? 0 }}</td>
                                                 <td>{{ $batch['session_count'] }}</td>
                                                 <td>
                                                     @if(!empty($batch['next_at']))
@@ -111,7 +114,7 @@
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="5" class="text-center text-muted">No class schedules assigned yet.</td>
+                                                <td colspan="6" class="text-center text-muted">No class schedules assigned yet.</td>
                                             </tr>
                                         @endforelse
                                     </tbody>

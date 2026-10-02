@@ -292,7 +292,7 @@ class StudyMaterialController extends Controller
     {
         $schedules = $this->studentSchedules();
 
-        return $schedules
+        $summaries = $schedules
             ->groupBy(function (ClassSchedule $row) {
                 if ($row->batch_id) {
                     return 'batch:' . $row->batch_id;
@@ -337,6 +337,7 @@ class StudyMaterialController extends Controller
                         ?: $batchModel?->instructors?->first(),
                     'head_of_faculty' => $batchModel?->headOfFaculty ?: $first->headOfFaculty,
                     'session_count' => $sessions->count(),
+                    'student_count' => $batchModel?->students?->count() ?? 0,
                     'latest_at' => $sessions->max(fn ($s) => $s->scheduled_at?->timestamp ?? 0),
                     // Next upcoming session only — do not fall back to the batch start date.
                     'next_at' => null,
@@ -358,6 +359,44 @@ class StudyMaterialController extends Controller
 
                 return $row;
             })
+            ->values();
+
+        if (Auth::user()?->roles()->where('name', 'instructor')->exists()
+            && Schema::hasTable('class_batches')) {
+            $uid = (int) Auth::id();
+            $existingIds = $summaries->pluck('batch_id')->filter()->map(fn ($id) => (int) $id)->all();
+            $assigned = ClassBatch::with(['course', 'headOfFaculty', 'instructors', 'students'])
+                ->withCount('students')
+                ->where(function ($q) use ($uid) {
+                    $q->where('head_of_faculty_id', $uid)
+                        ->orWhereHas('instructors', fn ($i) => $i->where('users.id', $uid));
+                })
+                ->get();
+
+            foreach ($assigned as $batchModel) {
+                if (in_array((int) $batchModel->id, $existingIds, true)) {
+                    continue;
+                }
+                $summaries->push([
+                    'key' => 'batch:' . $batchModel->id,
+                    'batch_id' => $batchModel->id,
+                    'batch_code' => $batchModel->code,
+                    'batch_name' => $batchModel->name,
+                    'course' => $batchModel->course,
+                    'instructor' => $batchModel->instructors->first(),
+                    'head_of_faculty' => $batchModel->headOfFaculty,
+                    'session_count' => 0,
+                    'student_count' => (int) $batchModel->students_count,
+                    'latest_at' => 0,
+                    'next_at' => null,
+                    'next_timezone' => null,
+                    'sessions' => $withSessions ? collect() : null,
+                    'session_models' => $withSessions ? collect() : null,
+                ]);
+            }
+        }
+
+        return $summaries
             ->sortByDesc(fn ($batch) => (int) ($batch['latest_at'] ?? 0))
             ->values();
     }
@@ -372,6 +411,7 @@ class StudyMaterialController extends Controller
             'batch.course',
             'batch.headOfFaculty',
             'batch.instructors',
+            'batch.students',
         ])->whereIn('status', ['scheduled', 'completed', 'cancelled']);
 
         if (Auth::user()?->roles()->where('name', 'instructor')->exists()) {

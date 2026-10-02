@@ -184,12 +184,30 @@
                   </a>
                </li>
                @endif
+               @if(auth()->user()->roles()->where('name', 'instructor')->exists())
+               <li class="{{ request()->routeIs('user.class-schedules.*') || request()->is('admin/class-schedules*') || request()->is('admin/class-batches*') ? 'active' : '' }}">
+                  <a href="javascript:void(0)">
+                     <i class="fa fa-calendar"></i>
+                     <span class="nav-label">Class Schedule</span>
+                     <span class="fa arrow"></span>
+                  </a>
+                  <ul class="nav nav-second-level">
+                     <li class="{{ request()->is('admin/class-batches*') ? 'active' : '' }}">
+                        <a href="{{ route('admin.class-batches.index') }}">Batches</a>
+                     </li>
+                     <li class="{{ request()->routeIs('user.class-schedules.*') || request()->is('admin/class-schedules*') ? 'active' : '' }}">
+                        <a href="{{ route('user.class-schedules.index') }}">Schedules</a>
+                     </li>
+                  </ul>
+               </li>
+               @else
                <li class="{{ request()->routeIs('user.class-schedules.*') ? 'active' : '' }}">
                   <a href="{{ route('user.class-schedules.index') }}">
                      <i class="fa fa-calendar"></i>
                      <span class="nav-label">Class Schedule</span>
                   </a>
                </li>
+               @endif
                @if(auth()->user()->hasPermission('testimonial-list'))
                   <li class="{{ request()->routeIs('user.testimonial.index') ? 'active' : '' }}">
                      <a href="{{ route('user.testimonial.index') }}"><i class="fa fa-th-large"></i> <span
