@@ -16,7 +16,7 @@
     .org { color: #000435; font-size: 16px; font-weight: bold; }
     .doc-title { color: #f8961f; font-size: 13px; font-weight: bold; text-transform: uppercase; }
     .meta { width: 100%; margin: 8px 0 12px; }
-    .meta td { padding: 3px 0; }
+    .meta td { padding: 3px 0; width: 50%; vertical-align: top; }
     table.plan { width: 100%; border-collapse: collapse; }
     table.plan th {
         background: #000435;
@@ -100,28 +100,29 @@
         </tr>
         <tr>
             <td><strong>Course:</strong> {{ $courseName }}</td>
-            <td><strong>Sessions:</strong> {{ $sessions->count() }}</td>
+            <td><strong>Printed:</strong> {{ now()->format('d M Y H:i') }}</td>
         </tr>
         <tr>
             <td><strong>Instructor:</strong> {{ $insName }}</td>
-            <td><strong>Head of Faculty:</strong> {{ $hofName }}</td>
+            <td><strong>Sessions:</strong> {{ $sessions->count() }}</td>
         </tr>
         <tr>
-            <td colspan="2"><strong>Printed:</strong> {{ now()->format('d M Y H:i') }}</td>
+            <td><strong>Head of Faculty:</strong> {{ $hofName }}</td>
+            <td></td>
         </tr>
     </table>
 
     <table class="plan">
         <thead>
             <tr>
-                <th style="width:5%;">#</th>
-                <th style="width:12%;">Date</th>
-                <th style="width:12%;">Day</th>
-                <th style="width:8%;">Time</th>
-                <th style="width:12%;">Timezone</th>
-                <th style="width:10%;">Duration</th>
-                <th style="width:16%;">Title</th>
-                <th>Description</th>
+                <th style="width:4%;">#</th>
+                <th style="width:8%;">Date</th>
+                <th style="width:8%;">Day</th>
+                <th style="width:6%;">Time</th>
+                <th style="width:10%;">Timezone</th>
+                <th style="width:7%;">Duration</th>
+                <th style="width:12%;">Title</th>
+                <th style="width:45%;">Description</th>
             </tr>
         </thead>
         <tbody>

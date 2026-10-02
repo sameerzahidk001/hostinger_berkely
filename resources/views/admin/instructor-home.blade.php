@@ -20,7 +20,8 @@
         <div class="alert alert-success">{{ session('success') }}</div>
     @endif
 
-    <div class="row">
+    @include('user.study-materials._folder_cards_styles')
+    <div class="sm-folder-cards-row">
         @forelse($courseAccesses as $access)
             @include('user.study-materials._folder_card', ['access' => $access])
         @empty
