@@ -3,11 +3,15 @@
     $batchName = (string) ($batch['batch_name'] ?? '');
     $sessions = $batch['sessions'] ?? collect();
     $lecturePlanId = 'lecture-plan-' . uniqid();
+    $lecturePlanPdfUrl = $lecturePlanPdfUrl ?? null;
 @endphp
-<div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
-    <button type="button" class="btn btn-primary btn-sm js-download-lecture-plan" data-table="{{ $lecturePlanId }}" data-batch="{{ e($batchName) }}">
-        Download Lecture Plan
+<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+    <button type="button" class="btn btn-default btn-sm js-download-lecture-plan" data-table="{{ $lecturePlanId }}" data-batch="{{ e($batchName) }}">
+        Download Lecture Plan (Excel)
     </button>
+    @if($lecturePlanPdfUrl)
+        <a href="{{ $lecturePlanPdfUrl }}" class="btn btn-primary btn-sm">Download Lecture Plan (PDF)</a>
+    @endif
 </div>
 <div class="table-responsive">
     <table id="{{ $lecturePlanId }}" class="table table-striped table-bordered" style="margin-bottom:0;">

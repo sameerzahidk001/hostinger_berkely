@@ -63,7 +63,11 @@
                 </a>
             </p>
             <p class="help-block">All sessions stay visible (Scheduled, Completed, Cancelled). Only deleted sessions are removed.</p>
-            @include('admin.study-materials.schedules._sessions_table', ['batch' => $batch, 'isAdminView' => true])
+            @include('admin.study-materials.schedules._sessions_table', [
+                'batch' => $batch,
+                'isAdminView' => true,
+                'lecturePlanPdfUrl' => route('admin.class-schedules.lecture-plan', $batchModel->id),
+            ])
         </div>
     </div>
 </div>

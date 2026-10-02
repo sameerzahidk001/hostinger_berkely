@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\MeetingLinkService;
 use App\Services\StudyMaterialService;
 use App\Services\ZohoLmsService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
@@ -119,6 +120,34 @@ class ClassScheduleController extends Controller
             'batchModel' => $batchModel,
             'isAdmin' => $this->lms->isAdminActor(),
         ]);
+    }
+
+    public function lecturePlanPdf($batchId)
+    {
+        $batchModel = ClassBatch::with(['course', 'headOfFaculty', 'instructors', 'students'])->findOrFail((int) $batchId);
+        $this->assertCanUseBatch($batchModel);
+
+        $sessions = ClassSchedule::with(['course', 'instructor', 'headOfFaculty', 'batch.course', 'batch.headOfFaculty'])
+            ->where('batch_id', $batchModel->id)
+            ->orderBy('scheduled_at')
+            ->get();
+
+        $group = $this->batchListGroups($sessions)->first() ?: [
+            'batch_id' => $batchModel->id,
+            'batch_code' => $batchModel->code,
+            'batch_name' => $batchModel->name,
+            'course' => $batchModel->course,
+            'instructor' => $batchModel->instructors->first(),
+            'head_of_faculty' => $batchModel->headOfFaculty,
+            'sessions' => collect(),
+        ];
+
+        $name = trim(preg_replace('/[\\\\\/:*?"<>|]+/', ' ', (string) ($group['batch_name'] ?? $batchModel->name ?? 'Lecture Plan'))) ?: 'Lecture Plan';
+
+        return Pdf::loadView('admin.study-materials.schedules.lecture_plan_pdf', [
+            'batch' => $group,
+            'settings' => SiteSettings::first(),
+        ])->setPaper('a4', 'landscape')->download($name . ' Lecture Plan.pdf');
     }
 
     public function create(Request $request)

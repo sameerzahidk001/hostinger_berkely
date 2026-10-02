@@ -62,6 +62,8 @@ class StudyMaterialFolderController extends Controller
 
     public function create()
     {
+        abort_unless($this->lms->isAdminActor(), 403);
+
         $courses = $this->lms->coursesForActor();
         $instructors = User::query()
             ->whereHas('roles', fn ($q) => $q->where('name', 'instructor'))
@@ -78,6 +80,8 @@ class StudyMaterialFolderController extends Controller
 
     public function store(Request $request)
     {
+        abort_unless($this->lms->isAdminActor(), 403);
+
         $request->request->remove('code');
         $validator = Validator::make($request->all(), $this->folderRules());
         if ($validator->fails()) {
@@ -283,6 +287,7 @@ class StudyMaterialFolderController extends Controller
 
     public function storeSubfolder(Request $request, $id)
     {
+        abort_unless($this->lms->isAdminActor(), 403);
         $folder = StudyMaterialFolder::with('items')->findOrFail($id);
         abort_unless($this->lms->canManageFolder($folder), 403);
 

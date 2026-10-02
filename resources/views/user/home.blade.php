@@ -135,7 +135,6 @@
                             <div>
                                 <a href="{{ route('user.study-materials.index') }}" class="btn btn-xs btn-default">All Study Materials</a>
                                 @if(!empty($isInstructor))
-                                    <a href="{{ route('admin.study-materials.folders.create') }}" class="btn btn-xs btn-primary">Create Folder</a>
                                     <a href="{{ route('admin.study-materials.folders.index') }}" class="btn btn-xs btn-default">Manage Folders</a>
                                     <a href="{{ route('admin.study-materials.access.assign-student') }}" class="btn btn-xs btn-success">Assign Access</a>
                                 @endif
@@ -157,10 +156,7 @@
                     <div class="ibox">
                         <div class="ibox-title"><h5 style="margin:0;">Course Access</h5></div>
                         <div class="ibox-content text-center text-muted">
-                            No folders assigned yet. You can create a folder for a course assigned to you.
-                            <div style="margin-top:12px;">
-                                <a href="{{ route('admin.study-materials.folders.create') }}" class="btn btn-primary">Create Folder</a>
-                            </div>
+                            No folders assigned yet. When admin assigns you folder access, it will appear here.
                         </div>
                     </div>
                 </div>

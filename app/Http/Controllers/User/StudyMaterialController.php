@@ -9,8 +9,10 @@ use App\Models\StudyMaterialFolder;
 use App\Models\StudyMaterialItem;
 use App\Models\StudyMaterialInstructorAccess;
 use App\Models\StudyMaterialStudentAccess;
+use App\Models\SiteSettings;
 use App\Services\StudyMaterialService;
 use App\Services\ZohoLmsService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
@@ -242,6 +244,26 @@ class StudyMaterialController extends Controller
             'calendarEvents' => $calendarEvents,
             'canManageSessions' => $canManage,
         ]);
+    }
+
+    public function lecturePlanPdf($batchKey)
+    {
+        $batches = $this->studentBatchSummaries(true);
+        $batch = $batches->first(function ($row) use ($batchKey) {
+            if (is_numeric($batchKey) && ! empty($row['batch_id'])) {
+                return (int) $row['batch_id'] === (int) $batchKey;
+            }
+
+            return ($row['key'] ?? '') === (string) $batchKey;
+        });
+        abort_unless($batch, 404);
+
+        $name = trim(preg_replace('/[\\\\\/:*?"<>|]+/', ' ', (string) ($batch['batch_name'] ?? 'Lecture Plan'))) ?: 'Lecture Plan';
+
+        return Pdf::loadView('admin.study-materials.schedules.lecture_plan_pdf', [
+            'batch' => $batch,
+            'settings' => SiteSettings::first(),
+        ])->setPaper('a4', 'landscape')->download($name . ' Lecture Plan.pdf');
     }
 
     public function schedulesIcs()

@@ -167,12 +167,6 @@
                   </a>
                </li>
                @if(auth()->user()->roles()->where('name', 'instructor')->exists())
-               <li class="{{ request()->routeIs('admin.study-materials.folders.create') ? 'active' : '' }}">
-                  <a href="{{ route('admin.study-materials.folders.create') }}">
-                     <i class="fa fa-plus-square"></i>
-                     <span class="nav-label">Create Folder</span>
-                  </a>
-               </li>
                <li class="{{ request()->routeIs('admin.study-materials.access.*') ? 'active' : '' }}">
                   <a href="{{ route('admin.study-materials.access.students') }}">
                      <i class="fa fa-users"></i>
