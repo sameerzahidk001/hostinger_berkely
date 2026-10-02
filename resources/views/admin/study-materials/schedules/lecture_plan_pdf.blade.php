@@ -8,7 +8,7 @@
 <meta charset="utf-8">
 <title>{{ $docTitle }} Lecture Plan</title>
 <style>
-    @page { margin: 22mm 14mm 24mm; }
+    @page { margin: 22mm 14mm 28mm; }
     body { font-family: DejaVu Sans, sans-serif; color: #1f2937; font-size: 11px; }
     .top { width: 100%; margin-bottom: 12px; }
     .top td { vertical-align: middle; }
@@ -33,13 +33,14 @@
     }
     table.plan tr:nth-child(even) td { background: #f8fafc; }
     .footer {
-        margin-top: 16px;
-        border-top: 2px solid #000435;
+        border-top: 1px solid #eee;
         padding-top: 8px;
+        margin-top: 16px;
         font-size: 9px;
-        color: #4b5563;
+        color: #777;
+        text-align: center;
+        line-height: 1.45;
     }
-    .footer strong { color: #000435; }
 </style>
 </head>
 <body>
@@ -47,11 +48,7 @@
         $batch = is_array($batch ?? null) ? $batch : [];
         $docTitle = trim((string) ($batch['batch_name'] ?? 'Lecture Plan')) ?: 'Lecture Plan';
         $courseName = data_get($batch, 'course.title') ?: '—';
-        $hofName = data_get($batch, 'head_of_faculty.name') ?: '—';
-        $insName = data_get($batch, 'instructor.name') ?: '—';
         $sessions = collect($batch['sessions'] ?? []);
-        $copyright = data_get($settings ?? null, 'copyright_message')
-            ?: 'Berkeley School of Business, Arts & Sciences';
 
         $logoSrc = null;
         $logoCandidates = [
@@ -95,10 +92,6 @@
         <tr>
             <td><strong>Batch name:</strong> {{ $docTitle }}</td>
             <td><strong>Course:</strong> {{ $courseName }}</td>
-        </tr>
-        <tr>
-            <td><strong>Head of Faculty:</strong> {{ $hofName }}</td>
-            <td><strong>Instructor:</strong> {{ $insName }}</td>
         </tr>
         <tr>
             <td><strong>Sessions:</strong> {{ $sessions->count() }}</td>
@@ -160,10 +153,6 @@
         </tbody>
     </table>
 
-    <div class="footer">
-        <strong>{{ $docTitle }}</strong><br>
-        Course: {{ $courseName }} · Head of Faculty: {{ $hofName }} · Instructor: {{ $insName }}<br>
-        {{ $copyright }}
-    </div>
+    @include('partials.invoice-document-footer-pdf')
 </body>
 </html>

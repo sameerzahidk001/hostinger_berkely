@@ -160,17 +160,27 @@
                         class="nav-label">Payments</span></a>
                </li>
                @endif
+               @if(auth()->user()->roles()->where('name', 'instructor')->exists())
                <li class="{{ request()->routeIs('user.study-materials.*') || request()->is('admin/study-materials*') ? 'active' : '' }}">
+                  <a href="javascript:void(0)">
+                     <i class="fa fa-book"></i>
+                     <span class="nav-label">Study Materials</span>
+                     <span class="fa arrow"></span>
+                  </a>
+                  <ul class="nav nav-second-level">
+                     <li class="{{ (request()->routeIs('user.study-materials.*') || request()->is('admin/study-materials/folders*')) && ! request()->routeIs('admin.study-materials.access.*') ? 'active' : '' }}">
+                        <a href="{{ route('user.study-materials.index') }}">Folders</a>
+                     </li>
+                     <li class="{{ request()->routeIs('admin.study-materials.access.*') ? 'active' : '' }}">
+                        <a href="{{ route('admin.study-materials.access.students') }}">Assign Access</a>
+                     </li>
+                  </ul>
+               </li>
+               @else
+               <li class="{{ request()->routeIs('user.study-materials.*') ? 'active' : '' }}">
                   <a href="{{ route('user.study-materials.index') }}">
                      <i class="fa fa-book"></i>
                      <span class="nav-label">Study Materials</span>
-                  </a>
-               </li>
-               @if(auth()->user()->roles()->where('name', 'instructor')->exists())
-               <li class="{{ request()->routeIs('admin.study-materials.access.*') ? 'active' : '' }}">
-                  <a href="{{ route('admin.study-materials.access.students') }}">
-                     <i class="fa fa-users"></i>
-                     <span class="nav-label">Assign Access</span>
                   </a>
                </li>
                @endif
