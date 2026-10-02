@@ -144,7 +144,7 @@ class StudyMaterialService
             ->orderBy('name');
 
         if ($this->isAdminActor() && (!$courseId || $courseId <= 0)) {
-            return $query->limit($limit)->get(['id', 'name', 'email']);
+            return $query->limit($limit)->get(['id', 'name', 'email'])->unique('id')->values();
         }
 
         if (!$courseId || $courseId <= 0) {
@@ -174,7 +174,9 @@ class StudyMaterialService
                     ->whereIn('status', ['Active', 'active', 'Paid', 'paid', 'Partial', 'partial']);
             })
             ->limit($limit)
-            ->get(['id', 'name', 'email']);
+            ->get(['id', 'name', 'email'])
+            ->unique('id')
+            ->values();
     }
 
     public function studentBelongsToCourse(int $studentId, int $courseId): bool

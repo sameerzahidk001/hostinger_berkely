@@ -432,7 +432,7 @@ class StudyMaterialAccessController extends Controller
         $students = $this->lms->studentsForCourse((int) $folder->course_id);
 
         return response()->json(
-            $students->map(fn ($s) => [
+            $students->unique('id')->map(fn ($s) => [
                 'id' => $s->id,
                 'name' => $s->name,
                 'email' => $s->email,
