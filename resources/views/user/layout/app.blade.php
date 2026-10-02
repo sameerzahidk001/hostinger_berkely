@@ -160,12 +160,26 @@
                         class="nav-label">Payments</span></a>
                </li>
                @endif
-               <li class="{{ request()->routeIs('user.study-materials.*') ? 'active' : '' }}">
+               <li class="{{ request()->routeIs('user.study-materials.*') || request()->is('admin/study-materials*') ? 'active' : '' }}">
                   <a href="{{ route('user.study-materials.index') }}">
                      <i class="fa fa-book"></i>
                      <span class="nav-label">Study Materials</span>
                   </a>
                </li>
+               @if(auth()->user()->roles()->where('name', 'instructor')->exists())
+               <li class="{{ request()->routeIs('admin.study-materials.folders.create') ? 'active' : '' }}">
+                  <a href="{{ route('admin.study-materials.folders.create') }}">
+                     <i class="fa fa-plus-square"></i>
+                     <span class="nav-label">Create Folder</span>
+                  </a>
+               </li>
+               <li class="{{ request()->routeIs('admin.study-materials.access.*') ? 'active' : '' }}">
+                  <a href="{{ route('admin.study-materials.access.students') }}">
+                     <i class="fa fa-users"></i>
+                     <span class="nav-label">Assign Access</span>
+                  </a>
+               </li>
+               @endif
                <li class="{{ request()->routeIs('user.class-schedules.*') ? 'active' : '' }}">
                   <a href="{{ route('user.class-schedules.index') }}">
                      <i class="fa fa-calendar"></i>

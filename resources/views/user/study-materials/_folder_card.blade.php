@@ -54,7 +54,20 @@
                         contact <a href="mailto:admin@eduberkeley.com">admin@eduberkeley.com</a>
                     </p>
                 @else
-                    <a class="btn btn-primary btn-sm" href="{{ route('user.study-materials.show', $folder->id) }}" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;align-self:flex-start;">Open Now</a>
+                    @php
+                        $lms = $lms ?? app(\App\Services\StudyMaterialService::class);
+                        $canManageFolder = $lms->isInstructorActor() && $lms->canManageFolder($folder);
+                        $canAssignFolder = $canManageFolder && $lms->canAssignStudentAccess($folder);
+                    @endphp
+                    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+                        <a class="btn btn-primary btn-sm" href="{{ route('user.study-materials.show', $folder->id) }}" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;">Open Now</a>
+                        @if($canManageFolder)
+                            <a class="btn btn-sm btn-default" href="{{ route('admin.study-materials.folders.edit', $folder->id) }}">Edit Folder</a>
+                        @endif
+                        @if($canAssignFolder)
+                            <a class="btn btn-sm btn-success" href="{{ route('admin.study-materials.access.assign-student', ['folder_id' => $folder->id]) }}">Assign Access</a>
+                        @endif
+                    </div>
                 @endif
             </div>
         </div>

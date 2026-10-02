@@ -200,7 +200,7 @@ class StudyMaterialAccessController extends Controller
 
         if ($this->lms->isInstructorActor()) {
             $folders = $folders->filter(function ($folder) {
-                return $this->lms->instructorAssignedToCourse((int) $folder->course_id);
+                return $this->lms->canAssignStudentAccess($folder);
             })->values();
         }
 
@@ -307,7 +307,7 @@ class StudyMaterialAccessController extends Controller
 
         if ($this->lms->isInstructorActor()) {
             $folders = $folders->filter(function ($folder) {
-                return $this->lms->instructorAssignedToCourse((int) $folder->course_id);
+                return $this->lms->canAssignStudentAccess($folder);
             })->values();
         }
 
