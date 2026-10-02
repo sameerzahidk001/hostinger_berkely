@@ -1,8 +1,12 @@
+@php
+    $batch = is_array($batch ?? null) ? $batch : [];
+    $docTitle = trim((string) ($batch['batch_name'] ?? 'Lecture Plan')) ?: 'Lecture Plan';
+@endphp
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
-<title>{{ $batchName }} Lecture Plan</title>
+<title>{{ $docTitle }} Lecture Plan</title>
 <style>
     @page { margin: 22mm 14mm 24mm; }
     body { font-family: DejaVu Sans, sans-serif; color: #1f2937; font-size: 11px; }
@@ -40,25 +44,44 @@
 </head>
 <body>
     @php
-        $logoPath = public_path('frontend/images/pngs/logo-color.png');
-        if (! empty($settings?->logo)) {
-            $fromSettings = public_path('images/' . ltrim((string) $settings->logo, '/'));
-            if (is_file($fromSettings)) {
-                $logoPath = $fromSettings;
+        $batch = is_array($batch ?? null) ? $batch : [];
+        $docTitle = trim((string) ($batch['batch_name'] ?? 'Lecture Plan')) ?: 'Lecture Plan';
+        $courseName = data_get($batch, 'course.title') ?: '—';
+        $hofName = data_get($batch, 'head_of_faculty.name') ?: '—';
+        $insName = data_get($batch, 'instructor.name') ?: '—';
+        $sessions = collect($batch['sessions'] ?? []);
+        $copyright = data_get($settings ?? null, 'copyright_message')
+            ?: 'Berkeley School of Business, Arts & Sciences';
+
+        $logoSrc = null;
+        $logoCandidates = [
+            public_path('frontend/images/pngs/logo-color.png'),
+            public_path('images/' . ltrim((string) data_get($settings ?? null, 'logo'), '/')),
+            public_path('images/logo.png'),
+        ];
+        foreach ($logoCandidates as $candidate) {
+            $size = is_file($candidate) ? (int) filesize($candidate) : 0;
+            if ($size > 0 && $size < 1500000) {
+                $mime = @mime_content_type($candidate) ?: 'image/png';
+                $logoSrc = 'data:' . $mime . ';base64,' . base64_encode((string) file_get_contents($candidate));
+                break;
             }
         }
-        $batchName = (string) ($batch['batch_name'] ?? 'Lecture Plan');
-        $course = $batch['course'] ?? null;
-        $hof = $batch['head_of_faculty'] ?? null;
-        $ins = $batch['instructor'] ?? null;
-        $sessions = $batch['sessions'] ?? collect();
+        if (! $logoSrc) {
+            foreach ($logoCandidates as $candidate) {
+                if (is_file($candidate)) {
+                    $logoSrc = $candidate;
+                    break;
+                }
+            }
+        }
     @endphp
 
     <table class="top">
         <tr>
             <td style="width:28%;">
-                @if(is_file($logoPath))
-                    <img class="logo" src="{{ $logoPath }}" alt="Logo">
+                @if($logoSrc)
+                    <img class="logo" src="{{ $logoSrc }}" alt="Logo">
                 @endif
             </td>
             <td style="text-align:right;">
@@ -70,16 +93,16 @@
 
     <table class="meta">
         <tr>
-            <td><strong>Batch name:</strong> {{ $batchName }}</td>
-            <td><strong>Course:</strong> {{ $course->title ?? '—' }}</td>
+            <td><strong>Batch name:</strong> {{ $docTitle }}</td>
+            <td><strong>Course:</strong> {{ $courseName }}</td>
         </tr>
         <tr>
-            <td><strong>Head of Faculty:</strong> {{ $hof->name ?? '—' }}</td>
-            <td><strong>Instructor:</strong> {{ $ins->name ?? '—' }}</td>
+            <td><strong>Head of Faculty:</strong> {{ $hofName }}</td>
+            <td><strong>Instructor:</strong> {{ $insName }}</td>
         </tr>
         <tr>
-            <td><strong>Sessions:</strong> {{ is_countable($sessions) ? count($sessions) : 0 }}</td>
-            <td><strong>Printed:</strong> {{ now()->timezone(config('app.timezone'))->format('d M Y H:i') }}</td>
+            <td><strong>Sessions:</strong> {{ $sessions->count() }}</td>
+            <td><strong>Printed:</strong> {{ now()->format('d M Y H:i') }}</td>
         </tr>
     </table>
 
@@ -99,24 +122,33 @@
         <tbody>
             @forelse($sessions as $row)
                 @php
-                    $duration = method_exists($row, 'durationMinutes')
-                        ? $row->durationMinutes()
-                        : (int) ($row->duration_minutes ?? 120);
-                    $title = trim((string) ($row->title ?? ''));
-                    if ($title !== '' && strcasecmp($title, $batchName) === 0) {
+                    $start = data_get($row, 'scheduled_at');
+                    if (is_string($start) && $start !== '') {
+                        try { $start = \Carbon\Carbon::parse($start); } catch (\Throwable $e) { $start = null; }
+                    }
+                    $hasDate = $start instanceof \DateTimeInterface;
+                    $duration = (int) (data_get($row, 'duration_minutes') ?: 120);
+                    if (is_object($row) && method_exists($row, 'durationMinutes')) {
+                        $duration = (int) $row->durationMinutes();
+                    }
+                    $title = trim((string) data_get($row, 'title', ''));
+                    if ($title !== '' && strcasecmp($title, $docTitle) === 0) {
                         $title = '';
                     }
-                    $notes = trim((string) ($row->notes ?? ''));
-                    $tzLabel = method_exists($row, 'timezoneLabel')
-                        ? $row->timezoneLabel()
-                        : (string) ($row->timezone_label ?? '—');
-                    $start = $row->scheduled_at ?? null;
+                    $notes = trim((string) data_get($row, 'notes', ''));
+                    $tzLabel = trim((string) data_get($row, 'timezone_label', ''));
+                    if ($tzLabel === '' && is_object($row) && method_exists($row, 'timezoneLabel')) {
+                        $tzLabel = (string) $row->timezoneLabel();
+                    }
+                    if ($tzLabel === '') {
+                        $tzLabel = '—';
+                    }
                 @endphp
                 <tr>
                     <td>{{ $loop->iteration }}</td>
-                    <td>{{ $start?->format('d M Y') ?? '—' }}</td>
-                    <td>{{ $start?->format('l') ?? '—' }}</td>
-                    <td>{{ $start?->format('H:i') ?? '—' }}</td>
+                    <td>{{ $hasDate ? $start->format('d M Y') : '—' }}</td>
+                    <td>{{ $hasDate ? $start->format('l') : '—' }}</td>
+                    <td>{{ $hasDate ? $start->format('H:i') : '—' }}</td>
                     <td>{{ $tzLabel }}</td>
                     <td>{{ $duration }} min</td>
                     <td>{{ $title !== '' ? $title : '—' }}</td>
@@ -129,9 +161,9 @@
     </table>
 
     <div class="footer">
-        <strong>{{ $batchName }}</strong><br>
-        Course: {{ $course->title ?? '—' }} · Head of Faculty: {{ $hof->name ?? '—' }} · Instructor: {{ $ins->name ?? '—' }}<br>
-        {{ $settings->copyright_message ?? 'Berkeley School of Business, Arts & Sciences' }}
+        <strong>{{ $docTitle }}</strong><br>
+        Course: {{ $courseName }} · Head of Faculty: {{ $hofName }} · Instructor: {{ $insName }}<br>
+        {{ $copyright }}
     </div>
 </body>
 </html>
