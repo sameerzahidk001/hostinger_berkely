@@ -158,19 +158,11 @@
             <div class="ibox float-e-margins">
                 <div class="ibox-title">
                     <h5>Edit Profile</h5>
-                    <div class="ibox-tools">
-                        @if(optional($user->roles->first())->name === 'instructor')
-                            <a href="{{ url('/instructor/' . $user->id) }}" target="_blank" rel="noopener noreferrer" class="btn btn-xs btn-primary" style="margin-right:8px;">
-                                View page
-                            </a>
-                        @endif
-                        <a class="collapse-link">
-                            <i class="fa fa-chevron-up"></i>
+                    @if(optional($user->roles->first())->name === 'instructor')
+                        <a href="{{ url('/instructor/' . $user->id) }}" target="_blank" rel="noopener noreferrer" class="btn btn-xs btn-primary pull-right" style="margin-top:6px;">
+                            View page
                         </a>
-                        <a class="close-link">
-                            <i class="fa fa-times"></i>
-                        </a>
-                    </div>
+                    @endif
                 </div>
                 <div class="ibox-content">
                     <div>
@@ -297,10 +289,6 @@
             <div class="ibox float-e-margins">
                 <div class="ibox-title">
                     <h5>Change your password</h5>
-                    <div class="ibox-tools">
-                        <a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
-                        <a class="close-link"><i class="fa fa-times"></i></a>
-                    </div>
                 </div>
                 <div class="ibox-content">
                     <form method="POST" action="{{ route('user.profile.update.password') }}">
