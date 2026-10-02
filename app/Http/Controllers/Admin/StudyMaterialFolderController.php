@@ -242,25 +242,22 @@ class StudyMaterialFolderController extends Controller
         $folder = StudyMaterialFolder::findOrFail($id);
         abort_unless($this->lms->canManageFolder($folder), 403);
 
-        $request->request->remove('code');
-        $validator = Validator::make($request->all(), $this->folderRules($folder->id));
+        $lockCourse = $this->lms->isInstructorActor();
+        $validator = Validator::make($request->all(), $this->folderRules($folder->id, $lockCourse));
         if ($validator->fails()) {
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
-        if ($this->lms->isInstructorActor() && ! $this->lms->instructorAssignedToCourse((int) $request->course_id)) {
-            return redirect()->back()
-                ->withErrors(['course_id' => 'You can only use courses assigned to you by admin.'])
-                ->withInput();
-        }
-
-        $packageIds = $this->packageIdsFromRequest($request);
         $wasActive = $folder->status === 'active';
 
         $folder->name = trim($request->name);
-        $folder->course_id = $request->course_id;
-        $folder->fee_package_id = $packageIds[0] ?? null;
         $folder->validity_months = $this->validityMonthsFromRequest($request);
+
+        if (! $lockCourse) {
+            $packageIds = $this->packageIdsFromRequest($request);
+            $folder->course_id = $request->course_id;
+            $folder->fee_package_id = $packageIds[0] ?? null;
+        }
 
         if ($this->lms->isAdminActor()) {
             $folder->status = $request->input('status', $folder->status) === 'active' ? 'active' : 'disabled';
@@ -270,7 +267,9 @@ class StudyMaterialFolderController extends Controller
 
         $folder->save();
         $folder->ensureCode();
-        $folder->feePackages()->sync($packageIds);
+        if (! $lockCourse) {
+            $folder->feePackages()->sync($packageIds);
+        }
 
         if ($this->lms->isAdminActor()) {
             $this->syncFolderFacultyAccess($folder, $request);
@@ -575,14 +574,14 @@ class StudyMaterialFolderController extends Controller
         return $this->zoho->isWorkDriveReady() ? 'workdrive' : 'upload';
     }
 
-    protected function folderRules(?int $folderId = null): array
+    protected function folderRules(?int $folderId = null, bool $lockCourse = false): array
     {
         $nameRule = 'required|string|max:255|unique:study_material_folders,name';
         if ($folderId) {
             $nameRule .= ',' . $folderId;
         }
 
-        return [
+        $rules = [
             'name' => $nameRule,
             'course_id' => 'required|exists:courses,id',
             'fee_package_ids' => 'nullable|array',
@@ -596,6 +595,12 @@ class StudyMaterialFolderController extends Controller
             'structure' => 'nullable|array',
             'structure.*.name' => 'nullable|string|max:255',
         ];
+
+        if ($lockCourse) {
+            unset($rules['course_id'], $rules['fee_package_ids'], $rules['fee_package_ids.*']);
+        }
+
+        return $rules;
     }
 
     protected function normalizedFolderCode($code): ?string

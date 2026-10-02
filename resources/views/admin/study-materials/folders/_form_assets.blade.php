@@ -33,16 +33,20 @@
     const urlBase = @json(url('admin/study-materials/packages-by-course'));
     const selectedPackages = @json($selectedPackageIds ?? []);
 
-    course.select2({
-        placeholder: 'Type to find the course',
-        allowClear: true,
-        width: '100%'
-    });
-    pkg.select2({
-        placeholder: 'Select one or more packages',
-        allowClear: true,
-        width: '100%'
-    });
+    if (course.length) {
+        course.select2({
+            placeholder: 'Type to find the course',
+            allowClear: true,
+            width: '100%'
+        });
+    }
+    if (pkg.length) {
+        pkg.select2({
+            placeholder: 'Select one or more packages',
+            allowClear: true,
+            width: '100%'
+        });
+    }
     if ($('#head_of_faculty_id').length) {
         $('#head_of_faculty_id').select2({
             placeholder: 'Type to find head of faculty',
@@ -81,12 +85,14 @@
             });
     }
 
-    course.on('select2:select select2:clear', function () {
-        loadPackages([]);
-    });
+    if (course.length) {
+        course.on('select2:select select2:clear', function () {
+            loadPackages([]);
+        });
 
-    if (course.val() && pkg.find('option').length === 0) {
-        loadPackages(selectedPackages.map(String));
+        if (course.val() && pkg.find('option').length === 0) {
+            loadPackages(selectedPackages.map(String));
+        }
     }
 
     $('#add-structure-root').on('click', function () {

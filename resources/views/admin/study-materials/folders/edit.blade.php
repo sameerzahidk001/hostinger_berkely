@@ -45,6 +45,7 @@
                         <input type="text" class="form-control" value="{{ $folder->code }}" readonly disabled>
                         <span class="help-block">Assigned automatically. Not editable. Created {{ $folder->created_at?->timezone(config('app.timezone'))->format('d M Y') }}.</span>
                     </div>
+                    @if($isAdmin)
                     <div class="col-md-6 form-group">
                         <label>Course *</label>
                         <select name="course_id" id="course_id" class="form-control" required>
@@ -66,6 +67,7 @@
                         </select>
                         <span class="help-block">Select one or more packages for this folder.</span>
                     </div>
+                    @endif
                     <div class="col-md-6 form-group">
                         <label>Validity (months)</label>
                         <select name="validity_months" class="form-control">

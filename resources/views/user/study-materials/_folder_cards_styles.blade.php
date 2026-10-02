@@ -13,7 +13,7 @@
     }
     .sm-folder-card {
         width: 100%;
-        min-height: 300px;
+        min-height: 320px;
         display: flex;
         flex-direction: column;
         margin-bottom: 0 !important;
@@ -42,6 +42,7 @@
     .sm-folder-card .sm-folder-card-body {
         flex: 1 1 auto;
         padding-bottom: 8px;
+        min-height: 150px;
     }
     .sm-folder-card .sm-folder-card-body p {
         margin-bottom: 5px !important;
