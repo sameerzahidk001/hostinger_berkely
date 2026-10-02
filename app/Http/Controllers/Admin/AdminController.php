@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use App\Models\User;
+use App\Models\Country;
 use App\Services\PanelActivityService;
 use App\Services\UserActivityLogService;
 use Illuminate\Support\Facades\Hash;
@@ -318,7 +319,17 @@ class AdminController extends Controller
             return redirect()->route('admin.login');
         }
 
-        return view('admin.profile');
+        $user = Auth::guard('admin')->check() ? null : Auth::user();
+        if ($user && $user->roles()->where('name', 'instructor')->exists()) {
+            $user->loadMissing('roles');
+            return view('admin.profile', [
+                'showInstructorForm' => true,
+                'user' => $user,
+                'countries' => Country::all(),
+            ]);
+        }
+
+        return view('admin.profile', ['showInstructorForm' => false]);
     }
 
     public function profile_update(Request $request)
