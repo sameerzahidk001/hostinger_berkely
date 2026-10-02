@@ -127,15 +127,11 @@ class StudyMaterialService
      */
     public function canAssignStudentAccess(StudyMaterialFolder $folder): bool
     {
-        if (!$this->canManageFolder($folder)) {
-            return false;
-        }
-
         if ($this->isAdminActor()) {
             return true;
         }
 
-        return $this->instructorAssignedToCourse((int) $folder->course_id);
+        return $this->canManageFolder($folder);
     }
 
     /**
@@ -156,7 +152,20 @@ class StudyMaterialService
         }
 
         if ($this->isInstructorActor() && !$this->instructorAssignedToCourse($courseId)) {
-            return collect();
+            $userId = $this->actorUserId();
+            $managesFolder = StudyMaterialFolder::query()
+                ->where('course_id', $courseId)
+                ->where(function ($q) use ($userId) {
+                    $q->where(function ($owned) use ($userId) {
+                        $owned->where('owner_type', 'instructor')->where('owner_id', $userId);
+                    })->orWhereHas('instructorAccess', function ($access) use ($userId) {
+                        $access->where('instructor_id', $userId)->where('status', 'active');
+                    });
+                })
+                ->exists();
+            if (! $managesFolder) {
+                return collect();
+            }
         }
 
         return $query
@@ -193,7 +202,7 @@ class StudyMaterialService
 
     public function canEnableFolder(): bool
     {
-        return $this->isAdminActor();
+        return $this->isAdminActor() || $this->isInstructorActor();
     }
 
     public function canDisableFolder(StudyMaterialFolder $folder): bool

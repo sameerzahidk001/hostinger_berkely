@@ -91,7 +91,9 @@ class StudyMaterialFolderController extends Controller
         }
 
         $status = 'disabled';
-        if ($this->lms->canEnableFolder() && $request->input('status') === 'active') {
+        if ($this->lms->isInstructorActor()) {
+            $status = 'active';
+        } elseif ($this->lms->canEnableFolder() && $request->input('status') === 'active') {
             $status = 'active';
         }
 

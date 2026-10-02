@@ -72,8 +72,13 @@
 </style>
 @endpush
 @section('content')
+@php
+    $lmsManage = app(\App\Services\StudyMaterialService::class);
+    $canManageThisFolder = $lmsManage->isInstructorActor() && $lmsManage->canManageFolder($folder);
+    $canAssignThisFolder = $canManageThisFolder && $lmsManage->canAssignStudentAccess($folder);
+@endphp
 <div class="row wrapper border-bottom white-bg page-heading">
-    <div class="col-lg-10">
+    <div class="col-lg-7">
         <h2>{{ $folder->name }}</h2>
         <ol class="breadcrumb">
             <li><a href="{{ route('user.study-materials.index') }}">Study Materials</a></li>
@@ -113,6 +118,14 @@
         <p class="text-muted" style="margin-bottom:4px;">Access Start: {{ optional($access->issued_at)->format('d M Y') ?: '—' }}</p>
         <p class="text-muted" style="margin-bottom:0;">Access Expire: {{ $access->access_till ? $access->access_till->format('d M Y') : 'No expiry' }}</p>
     </div>
+    @if($canManageThisFolder)
+    <div class="col-lg-5 text-right" style="padding-top:20px;">
+        <a href="{{ route('admin.study-materials.folders.edit', $folder->id) }}" class="btn btn-primary">Edit Folder</a>
+        @if($canAssignThisFolder)
+            <a href="{{ route('admin.study-materials.access.assign-student', ['folder_id' => $folder->id]) }}" class="btn btn-success">Assign Access</a>
+        @endif
+    </div>
+    @endif
 </div>
 <div class="wrapper wrapper-content">
     <div class="alert alert-info">Files open inside this page. A <strong>Download</strong> button appears only when download is allowed for that file.</div>

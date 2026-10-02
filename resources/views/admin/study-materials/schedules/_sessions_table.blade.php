@@ -2,9 +2,15 @@
     $isAdminView = !empty($isAdminView);
     $batchName = (string) ($batch['batch_name'] ?? '');
     $sessions = $batch['sessions'] ?? collect();
+    $lecturePlanId = 'lecture-plan-' . uniqid();
 @endphp
+<div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+    <button type="button" class="btn btn-primary btn-sm js-download-lecture-plan" data-table="{{ $lecturePlanId }}" data-batch="{{ e($batchName) }}">
+        Download Lecture Plan
+    </button>
+</div>
 <div class="table-responsive">
-    <table class="table table-striped table-bordered" style="margin-bottom:0;">
+    <table id="{{ $lecturePlanId }}" class="table table-striped table-bordered" style="margin-bottom:0;">
         <thead>
             <tr>
                 <th>#</th>
@@ -67,15 +73,8 @@
                     <td>
                         @if($row->zoho_link && ! $joinDisabled)
                             <a class="btn btn-primary btn-sm" href="{{ $row->zoho_link }}" target="_blank" rel="noopener" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;font-weight:700;">Join Now</a>
-                        @elseif($row->zoho_link && $joinDisabled)
+                        @elseif($row->zoho_link)
                             <button type="button" class="btn btn-default btn-sm" disabled>Join Now</button>
-                            @if($status === 'cancelled')
-                                <span class="label label-danger" style="margin-left:4px;">Cancelled</span>
-                            @elseif($status === 'completed')
-                                <span class="label label-primary" style="margin-left:4px;">Completed</span>
-                            @else
-                                <span class="label label-default" style="margin-left:4px;">Ended</span>
-                            @endif
                         @else
                             <span class="label label-default">Link soon</span>
                         @endif
@@ -102,3 +101,52 @@
         </tbody>
     </table>
 </div>
+<script>
+(function () {
+    if (window.__lecturePlanDownloadBound) return;
+    window.__lecturePlanDownloadBound = true;
+    function csvCell(value) {
+        var text = (value || '').replace(/\r?\n/g, ' ').trim();
+        if (/[",]/.test(text)) {
+            return '"' + text.replace(/"/g, '""') + '"';
+        }
+        return text;
+    }
+    document.addEventListener('click', function (e) {
+        var btn = e.target.closest('.js-download-lecture-plan');
+        if (!btn) return;
+        var table = document.getElementById(btn.getAttribute('data-table'));
+        if (!table) return;
+        var batch = btn.getAttribute('data-batch') || 'Lecture Plan';
+        var rows = [];
+        rows.push(['Batch name', batch]);
+        rows.push(['#', 'Date', 'Day', 'Time', 'Timezone', 'Duration', 'Title', 'Description']);
+        table.querySelectorAll('tbody tr').forEach(function (tr) {
+            var cells = tr.querySelectorAll('td');
+            if (cells.length < 8) return;
+            rows.push([
+                cells[0].innerText,
+                cells[1].innerText,
+                cells[2].innerText,
+                cells[3].innerText,
+                cells[4].innerText,
+                cells[5].innerText,
+                cells[6].innerText,
+                cells[7].innerText
+            ]);
+        });
+        var csv = rows.map(function (row) {
+            return row.map(csvCell).join(',');
+        }).join('\r\n');
+        var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+        var link = document.createElement('a');
+        var safe = batch.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim() || 'Lecture Plan';
+        link.href = URL.createObjectURL(blob);
+        link.download = safe + ' Lecture Plan.csv';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(function () { URL.revokeObjectURL(link.href); }, 1000);
+    });
+})();
+</script>
