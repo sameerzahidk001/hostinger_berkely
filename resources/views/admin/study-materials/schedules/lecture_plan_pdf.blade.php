@@ -103,8 +103,8 @@
             <td><strong>Sessions:</strong> {{ $sessions->count() }}</td>
         </tr>
         <tr>
-            <td><strong>Head of Faculty:</strong> {{ $hofName }}</td>
             <td><strong>Instructor:</strong> {{ $insName }}</td>
+            <td><strong>Head of Faculty:</strong> {{ $hofName }}</td>
         </tr>
         <tr>
             <td colspan="2"><strong>Printed:</strong> {{ now()->format('d M Y H:i') }}</td>
