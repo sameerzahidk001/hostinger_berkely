@@ -44,7 +44,7 @@
                         <label>Student *</label>
                         <select name="student_id" id="student_id" class="form-control js-type-find" data-placeholder="Type to find student" required>
                             <option value="">Select student</option>
-                            @foreach($students as $student)
+                            @foreach($students->unique('id') as $student)
                                 <option value="{{ $student->id }}" @selected(old('student_id') == $student->id)>{{ $student->name }} ({{ $student->email }})</option>
                             @endforeach
                         </select>
@@ -76,6 +76,7 @@
     const till = document.getElementById('access_till');
     const studentsUrl = @json(url('/admin/study-materials/students-by-folder'));
     const selectedStudent = @json((string) old('student_id', ''));
+    let studentsRequest = 0;
 
     function recalc() {
         const opt = folder.options[folder.selectedIndex];
@@ -91,6 +92,7 @@
 
     function loadStudents() {
         const folderId = folder.value;
+        const requestId = ++studentsRequest;
         if (window.jQuery && $(student).hasClass('select2-hidden-accessible')) {
             $(student).select2('destroy');
         }
@@ -104,11 +106,17 @@
         })
             .then(function (res) { return res.ok ? res.json() : []; })
             .then(function (rows) {
+                if (requestId !== studentsRequest) return;
+                student.innerHTML = '<option value="">Select student</option>';
+                const seen = {};
                 (rows || []).forEach(function (row) {
+                    const id = String(row.id);
+                    if (seen[id]) return;
+                    seen[id] = true;
                     const opt = document.createElement('option');
                     opt.value = row.id;
                     opt.textContent = row.name + ' (' + row.email + ')';
-                    if (String(row.id) === String(selectedStudent)) {
+                    if (id === String(selectedStudent)) {
                         opt.selected = true;
                     }
                     student.appendChild(opt);
@@ -116,11 +124,12 @@
                 if (window.initTypeFindSelects) window.initTypeFindSelects(student.parentElement);
             })
             .catch(function () {
+                if (requestId !== studentsRequest) return;
                 if (window.initTypeFindSelects) window.initTypeFindSelects(student.parentElement);
             });
     }
 
-    $(folder).on('change select2:select select2:clear', function () {
+    $(folder).on('change', function () {
         recalc();
         loadStudents();
     });
