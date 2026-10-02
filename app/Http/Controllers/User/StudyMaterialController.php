@@ -263,7 +263,13 @@ class StudyMaterialController extends Controller
         return Pdf::loadView('admin.study-materials.schedules.lecture_plan_pdf', [
             'batch' => $batch,
             'settings' => SiteSettings::first(),
-        ])->setPaper('a4', 'landscape')->download($name . ' Lecture Plan.pdf');
+        ])->setPaper('a4', 'landscape')
+            ->setOptions([
+                'isRemoteEnabled' => true,
+                'isHtml5ParserEnabled' => true,
+                'defaultFont' => 'DejaVu Sans',
+            ])
+            ->download($name . ' Lecture Plan.pdf');
     }
 
     public function schedulesIcs()
