@@ -40,7 +40,7 @@
                         <th>Created Date</th>
                         <th>Folder</th>
                         <th>Course</th>
-                        <th>Package</th>
+                        @if($isAdmin)<th>Package</th>@endif
                         <th>Instructor</th>
                         <th>Owner</th>
                         <th>Folder Status</th>
@@ -60,7 +60,9 @@
                             <td>{{ $folder->created_at?->timezone(config('app.timezone'))->format('d M Y') }}</td>
                             <td><strong>{{ $folder->name }}</strong></td>
                             <td>{{ $folder->course->title ?? '—' }}</td>
+                            @if($isAdmin)
                             <td>{{ $folder->packageNames() }}</td>
+                            @endif
                             <td>{{ $folder->instructorNames() }}</td>
                             <td>{{ $folder->ownerName() }}</td>
                             <td>
@@ -106,7 +108,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="{{ $isAdmin ? 11 : 10 }}" class="text-center">No folders yet.</td></tr>
+                        <tr><td colspan="{{ $isAdmin ? 11 : 9 }}" class="text-center">No folders yet.</td></tr>
                     @endforelse
                 </tbody>
             </table>
