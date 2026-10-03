@@ -136,12 +136,30 @@
         var course = btn.getAttribute('data-course') || '';
         var instructor = btn.getAttribute('data-instructor') || '';
         var hof = btn.getAttribute('data-hof') || '';
+        var sessionCount = table.querySelectorAll('tbody tr td:first-child').length;
+        var emptyRow = table.querySelector('tbody tr td[colspan]');
+        if (emptyRow) sessionCount = 0;
+        var printed = new Date();
+        var printedDate = printed.toLocaleString(undefined, {
+            day: '2-digit', month: 'short', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', hour12: false
+        });
+        var tzParts = [];
+        table.querySelectorAll('tbody tr').forEach(function (tr) {
+            var cells = tr.querySelectorAll('td');
+            if (cells.length < 9) return;
+            var tz = (cells[4].innerText || '').replace(/\s+/g, ' ').trim();
+            if (tz && tzParts.indexOf(tz) === -1) tzParts.push(tz);
+        });
         var rows = [];
         rows.push(['Batch name', batch]);
-        rows.push(['Batch code', code]);
         rows.push(['Course', course]);
         rows.push(['Instructor', instructor]);
         rows.push(['Head of Faculty', hof]);
+        rows.push(['Batch code', code]);
+        rows.push(['Sessions', String(sessionCount)]);
+        rows.push(['Printed Date', printedDate]);
+        rows.push(['Timezone', tzParts.join(', ') || '']);
         rows.push([]);
         rows.push(['#', 'Date', 'Day', 'Time', 'Timezone', 'Duration', 'Title', 'Description', 'Status']);
         table.querySelectorAll('tbody tr').forEach(function (tr) {

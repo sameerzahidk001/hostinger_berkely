@@ -52,6 +52,33 @@
         $hofName = data_get($batch, 'head_of_faculty.name') ?: '—';
         $insName = data_get($batch, 'instructor.name') ?: '—';
         $sessions = collect($batch['sessions'] ?? []);
+        $timezoneLabels = $sessions->map(function ($row) {
+            $label = trim((string) data_get($row, 'timezone_label', ''));
+            if ($label === '' && is_object($row) && method_exists($row, 'timezoneLabel')) {
+                $label = trim((string) $row->timezoneLabel());
+            }
+            if ($label === '') {
+                $label = trim((string) data_get($row, 'timezone', ''));
+            }
+
+            return $label;
+        })->filter()->unique()->values();
+        $timezoneLabel = $timezoneLabels->isNotEmpty() ? $timezoneLabels->implode(', ') : '—';
+        $printTz = 'Asia/Dubai';
+        $firstSession = $sessions->first();
+        if (is_object($firstSession) && method_exists($firstSession, 'timezoneName')) {
+            $printTz = $firstSession->timezoneName();
+        } elseif (is_object($firstSession) && filled(data_get($firstSession, 'timezone'))) {
+            $printTz = (string) data_get($firstSession, 'timezone');
+        }
+        try {
+            $printedAt = now($printTz);
+            $printedAbbr = $printedAt->format('T');
+            $printedDate = $printedAt->format('d M Y H:i')
+                . ($printedAbbr !== '' && $printedAbbr !== $printTz ? ' ' . $printedAbbr : '');
+        } catch (\Throwable $e) {
+            $printedDate = now()->format('d M Y H:i');
+        }
         $copyright = data_get($settings ?? null, 'copyright_message')
             ?: ('Copyright © ' . now()->format('Y') . ' Berkeley School of Business, Arts & Sciences | UKPRN: 10101119');
 
@@ -100,15 +127,15 @@
         </tr>
         <tr>
             <td><strong>Course:</strong> {{ $courseName }}</td>
-            <td><strong>Printed:</strong> {{ now()->format('d M Y H:i') }}</td>
-        </tr>
-        <tr>
-            <td><strong>Instructor:</strong> {{ $insName }}</td>
             <td><strong>Sessions:</strong> {{ $sessions->count() }}</td>
         </tr>
         <tr>
+            <td><strong>Instructor:</strong> {{ $insName }}</td>
+            <td><strong>Printed Date:</strong> {{ $printedDate }}</td>
+        </tr>
+        <tr>
             <td><strong>Head of Faculty:</strong> {{ $hofName }}</td>
-            <td></td>
+            <td><strong>Timezone:</strong> {{ $timezoneLabel }}</td>
         </tr>
     </table>
 
