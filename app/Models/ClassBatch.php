@@ -58,11 +58,23 @@ class ClassBatch extends Model
         return $this->status === 'active';
     }
 
+    public function trainerInstructors()
+    {
+        $people = $this->relationLoaded('instructors')
+            ? $this->instructors
+            : $this->instructors()->get();
+        $hofId = (int) $this->head_of_faculty_id;
+
+        return $people
+            ->reject(fn ($user) => $hofId > 0 && (int) $user->id === $hofId)
+            ->values();
+    }
+
     public function primaryInstructorId(): ?int
     {
-        $id = $this->instructors()->orderBy('users.name')->value('users.id');
+        $trainer = $this->trainerInstructors()->first();
 
-        return $id ? (int) $id : null;
+        return $trainer ? (int) $trainer->id : null;
     }
 
     public static function generateCode(): string

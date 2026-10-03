@@ -478,7 +478,7 @@ class ClassScheduleController extends Controller
             'course_id' => $batch->course_id,
             'course_title' => $batch->course->title ?? '',
             'head_of_faculty_id' => $batch->head_of_faculty_id,
-            'instructor_ids' => $batch->instructors->pluck('id')->values(),
+            'instructor_ids' => $batch->trainerInstructors()->pluck('id')->values(),
             'primary_instructor_id' => $batch->primaryInstructorId(),
             'students' => $this->studentsForScheduleForm((int) $batch->course_id, $batch->students)->map(function ($s) use ($batch) {
                 return [

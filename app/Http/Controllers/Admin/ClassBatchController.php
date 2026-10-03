@@ -168,7 +168,15 @@ class ClassBatchController extends Controller
             'courses' => $courses,
             'instructors' => $instructors,
             'students' => $students,
-            'selectedInstructorIds' => old('instructor_ids', $batch->instructors->pluck('id')->all()),
+            'selectedInstructorIds' => old(
+                'instructor_ids',
+                $batch->instructors
+                    ->pluck('id')
+                    ->map(fn ($id) => (int) $id)
+                    ->reject(fn ($id) => (int) $id === (int) $batch->head_of_faculty_id)
+                    ->values()
+                    ->all()
+            ),
             'selectedStudentIds' => old('student_ids', $batch->students->pluck('id')->all()),
             'isAdmin' => $this->lms->isAdminActor(),
             'readOnly' => ! $this->lms->isAdminActor(),
@@ -191,9 +199,11 @@ class ClassBatchController extends Controller
 
     protected function syncRelations(ClassBatch $batch, Request $request): void
     {
+        $hofId = (int) ($batch->head_of_faculty_id ?: 0);
         $instructorIds = collect($request->input('instructor_ids', []))
             ->map(fn ($id) => (int) $id)
             ->filter()
+            ->reject(fn ($id) => $hofId > 0 && $id === $hofId)
             ->unique()
             ->values()
             ->all();

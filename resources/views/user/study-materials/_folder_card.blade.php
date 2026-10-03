@@ -19,26 +19,7 @@
                     Course:
                     @include('partials.course_link', ['course' => $folder->course ?? null])
                 </p>
-                @php
-                    $headOfFaculty = $folder?->displayHeadOfFaculty();
-                    $trainerInstructors = $folder ? $folder->displayTrainerInstructors() : collect();
-                @endphp
-                <p style="margin-bottom:6px;">
-                    Instructor:
-                    @forelse($trainerInstructors as $primaryInstructor)
-                        <a href="{{ url('/instructor/' . $primaryInstructor->id) }}" target="_blank" rel="noopener"><strong>{{ $primaryInstructor->name }}</strong></a>@if(! $loop->last), @endif
-                    @empty
-                        —
-                    @endforelse
-                </p>
-                <p style="margin-bottom:6px;">
-                    Head of Faculty:
-                    @if($headOfFaculty)
-                        <a href="{{ url('/instructor/' . $headOfFaculty->id) }}" target="_blank" rel="noopener"><strong>{{ $headOfFaculty->name }}</strong></a>
-                    @else
-                        —
-                    @endif
-                </p>
+                @include('partials.folder_faculty', ['folder' => $folder])
                 <p style="margin-bottom:6px;">Access Start: {{ optional($access->issued_at)->format('d M Y') ?: '—' }}</p>
                 <p style="margin-bottom:10px;" class="text-muted">Access Expire: {{ $access->access_till ? $access->access_till->format('d M Y') : 'No expiry' }}</p>
             </div>
