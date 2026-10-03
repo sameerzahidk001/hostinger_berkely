@@ -49,7 +49,14 @@
                                 <td>{{ format_payment_aed_amount($installment->payment, (float) ($installment->paid_amount + $installment->remaining_amount)) }}</td>
                                 <td>{{ format_payment_aed_amount($installment->payment, (float) ($installment->paid_amount ?? 0)) }}</td>
                                 <td>{{ $installment->paid_date ?? 'N/A' }}</td>
-                                <td>{{ $installment->payment->course->title ?? 'N/A' }}</td>
+                                <td>
+                                    @php $admissionCourse = $installment->payment->course ?? null; @endphp
+                                    @if($admissionCourse && course_details_url($admissionCourse))
+                                        <a href="{{ course_details_url($admissionCourse) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;font-weight:700;">{{ $admissionCourse->title }}</a>
+                                    @else
+                                        {{ $admissionCourse->title ?? 'N/A' }}
+                                    @endif
+                                </td>
                                 <td>{{ $installment->payment->courseFee->package_name ?? 'N/A' }}</td>
                                 <td>
                                     <span

@@ -55,9 +55,9 @@
         flex-direction: column;
         justify-content: flex-end;
     }
-    .sm-folder-card .sm-folder-card-footer > .btn,
-    .sm-folder-card .sm-folder-card-footer > a.btn {
+    .sm-folder-card .sm-folder-card-footer .btn {
         margin-bottom: 0 !important;
+        font-weight: 700;
     }
     .sm-folder-card .sm-folder-card-contact {
         min-height: 0;

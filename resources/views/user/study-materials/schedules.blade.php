@@ -50,7 +50,7 @@
                                         $course = $batch['course'] ?? null;
                                         $hof = $batch['head_of_faculty'] ?? null;
                                         $ins = $batch['instructor'] ?? null;
-                                        $courseHref = $course ? url('/course/' . ($course->slug ?: $course->id)) : null;
+                                        $courseHref = course_details_url($course);
                                         $openKey = $batch['batch_id'] ?: ($batch['key'] ?? '');
                                     @endphp
                                     <tr>
@@ -62,7 +62,7 @@
                                         </td>
                                         <td>
                                             @if($courseHref)
-                                                <a href="{{ $courseHref }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ $course->title }}</a>
+                                                <a href="{{ $courseHref }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;font-weight:700;">{{ $course->title }}</a>
                                             @else
                                                 —
                                             @endif

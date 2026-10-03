@@ -87,6 +87,7 @@
                                             @php
                                                 $course = $batch['course'] ?? null;
                                                 $openKey = $batch['batch_id'] ?: ($batch['key'] ?? '');
+                                                $courseHref = course_details_url($course);
                                             @endphp
                                             <tr>
                                                 <td>
@@ -95,7 +96,13 @@
                                                     @endif
                                                     <strong>{{ $batch['batch_name'] }}</strong>
                                                 </td>
-                                                <td>{{ $course->title ?? '—' }}</td>
+                                                <td>
+                                                    @if($courseHref)
+                                                        <a href="{{ $courseHref }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;font-weight:700;">{{ $course->title }}</a>
+                                                    @else
+                                                        {{ $course->title ?? '—' }}
+                                                    @endif
+                                                </td>
                                                 <td>{{ $batch['student_count'] ?? 0 }}</td>
                                                 <td>{{ $batch['session_count'] }}</td>
                                                 <td>
@@ -211,7 +218,14 @@
                                                     <td>INV-{{ str_pad($installment->payment_id, 6, '0', STR_PAD_LEFT) }}</td>
                                                     <td data-order="{{ \Carbon\Carbon::parse($installment->created_at)->timestamp }}">{{ \Carbon\Carbon::parse($installment->created_at)->format('d-M-Y') ?? 'N/A' }}
                                                     </td>
-                                                    <td>{{ $installment->payment->course->title ?? 'N/A' }}</td>
+                                                    <td>
+                                                        @php $admissionCourse = $installment->payment->course ?? null; @endphp
+                                                        @if($admissionCourse && course_details_url($admissionCourse))
+                                                            <a href="{{ course_details_url($admissionCourse) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;font-weight:700;">{{ $admissionCourse->title }}</a>
+                                                        @else
+                                                            {{ $admissionCourse->title ?? 'N/A' }}
+                                                        @endif
+                                                    </td>
                                                     <td>{{ $installment->payment->courseFee->package_name ?? 'N/A' }}</td>
                                                     <td>
                                                         {{ $invoiceAmount['display'] }}

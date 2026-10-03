@@ -63,7 +63,7 @@
                             <td><strong>{{ $folder->name }}</strong></td>
                             <td>
                                 @if($folder->course)
-                                    <a href="{{ route('course.details', ['course' => $folder->course->slug ?: $folder->course->id]) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ $folder->course->title }}</a>
+                                    <a href="{{ course_details_url($folder->course) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ $folder->course->title }}</a>
                                 @else
                                     —
                                 @endif

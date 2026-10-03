@@ -1,6 +1,5 @@
 @php
     $folder = $access->folder;
-    $instructors = $folder ? $folder->displayInstructors() : collect();
     $expired = $access->access_till
         && $access->access_till->toDateString() < now()->toDateString();
     // Open when access is active and not expired (folder status alone must not grey the card).
@@ -18,28 +17,26 @@
             <div class="sm-folder-card-body">
                 <p style="margin-bottom:6px;">
                     Course:
-                    @if($folder->course)
-                        <a href="{{ route('course.details', ['course' => $folder->course->slug ?? $folder->course_id]) }}" target="_blank" rel="noopener"><strong>{{ $folder->course->title }}</strong></a>
+                    @if($folder->course && course_details_url($folder->course))
+                        <a href="{{ course_details_url($folder->course) }}" target="_blank" rel="noopener"><strong>{{ $folder->course->title }}</strong></a>
                     @else — @endif
                 </p>
                 @php
-                    $courseInstructorIds = course_instructor_ids($folder->course ?? null);
-                    $headOfFaculty = $instructors->firstWhere('id', $courseInstructorIds[0] ?? null) ?: $instructors->first();
-                    $primaryInstructor = $instructors->firstWhere('id', $courseInstructorIds[1] ?? null)
-                        ?: ($instructors->count() > 1 ? $instructors->get(1) : $instructors->first());
+                    $headOfFaculty = $folder?->displayHeadOfFaculty();
+                    $trainerInstructors = $folder ? $folder->displayTrainerInstructors() : collect();
                 @endphp
+                <p style="margin-bottom:6px;">
+                    Instructor:
+                    @forelse($trainerInstructors as $primaryInstructor)
+                        <a href="{{ url('/instructor/' . $primaryInstructor->id) }}" target="_blank" rel="noopener"><strong>{{ $primaryInstructor->name }}</strong></a>@if(! $loop->last), @endif
+                    @empty
+                        —
+                    @endforelse
+                </p>
                 <p style="margin-bottom:6px;">
                     Head of Faculty:
                     @if($headOfFaculty)
                         <a href="{{ url('/instructor/' . $headOfFaculty->id) }}" target="_blank" rel="noopener"><strong>{{ $headOfFaculty->name }}</strong></a>
-                    @else
-                        —
-                    @endif
-                </p>
-                <p style="margin-bottom:6px;">
-                    Instructor:
-                    @if($primaryInstructor)
-                        <a href="{{ url('/instructor/' . $primaryInstructor->id) }}" target="_blank" rel="noopener"><strong>{{ $primaryInstructor->name }}</strong></a>
                     @else
                         —
                     @endif

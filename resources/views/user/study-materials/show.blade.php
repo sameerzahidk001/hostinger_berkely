@@ -86,31 +86,28 @@
         </ol>
         <p class="text-muted" style="margin-bottom:4px;">
             Course:
-            @if($folder->course)
-                <a href="{{ route('course.details', ['course' => $folder->course->slug ?? $folder->course_id]) }}" target="_blank" rel="noopener"><strong>{{ $folder->course->title }}</strong></a>
+            @if($folder->course && course_details_url($folder->course))
+                <a href="{{ course_details_url($folder->course) }}" target="_blank" rel="noopener"><strong>{{ $folder->course->title }}</strong></a>
             @else
                 —
             @endif
         </p>
         @php
-            $instructors = $folder->displayInstructors();
-            $courseInstructorIds = course_instructor_ids($folder->course ?? null);
-            $headOfFaculty = $instructors->firstWhere('id', $courseInstructorIds[0] ?? null) ?: $instructors->first();
-            $primaryInstructor = $instructors->firstWhere('id', $courseInstructorIds[1] ?? null)
-                ?: ($instructors->count() > 1 ? $instructors->get(1) : $instructors->first());
+            $headOfFaculty = $folder->displayHeadOfFaculty();
+            $trainerInstructors = $folder->displayTrainerInstructors();
         @endphp
+        <p class="text-muted" style="margin-bottom:4px;">
+            Instructor:
+            @forelse($trainerInstructors as $primaryInstructor)
+                <a href="{{ url('/instructor/' . $primaryInstructor->id) }}" target="_blank" rel="noopener"><strong>{{ $primaryInstructor->name }}</strong></a>@if(! $loop->last), @endif
+            @empty
+                —
+            @endforelse
+        </p>
         <p class="text-muted" style="margin-bottom:4px;">
             Head of Faculty:
             @if($headOfFaculty)
                 <a href="{{ url('/instructor/' . $headOfFaculty->id) }}" target="_blank" rel="noopener"><strong>{{ $headOfFaculty->name }}</strong></a>
-            @else
-                —
-            @endif
-        </p>
-        <p class="text-muted" style="margin-bottom:4px;">
-            Instructor:
-            @if($primaryInstructor)
-                <a href="{{ url('/instructor/' . $primaryInstructor->id) }}" target="_blank" rel="noopener"><strong>{{ $primaryInstructor->name }}</strong></a>
             @else
                 —
             @endif
@@ -120,9 +117,9 @@
     </div>
     @if($canManageThisFolder)
     <div class="col-lg-5 text-right" style="padding-top:20px;">
-        <a href="{{ route('admin.study-materials.folders.edit', $folder->id) }}" class="btn btn-primary">Edit Folder</a>
+        <a href="{{ route('admin.study-materials.folders.edit', $folder->id) }}" class="btn btn-primary" style="font-weight:700;">Edit Folder</a>
         @if($canAssignThisFolder)
-            <a href="{{ route('admin.study-materials.access.assign-student', ['folder_id' => $folder->id]) }}" class="btn btn-success">Assign Access</a>
+            <a href="{{ route('admin.study-materials.access.assign-student', ['folder_id' => $folder->id]) }}" class="btn btn-success" style="font-weight:700;">Assign Access</a>
         @endif
     </div>
     @endif

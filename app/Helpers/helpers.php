@@ -1826,6 +1826,22 @@ if (!function_exists('course_instructor_ids')) {
     }
 }
 
+if (!function_exists('course_details_url')) {
+    function course_details_url($course): ?string
+    {
+        if (! $course) {
+            return null;
+        }
+
+        $key = trim((string) ($course->slug ?? ''));
+        if ($key === '') {
+            $key = (string) ($course->id ?? '');
+        }
+
+        return $key !== '' ? route('course.details', ['course' => $key]) : null;
+    }
+}
+
 if (!function_exists('courses_for_instructor')) {
     function courses_for_instructor(int $instructorId): \Illuminate\Support\Collection
     {
