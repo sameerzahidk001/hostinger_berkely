@@ -30,11 +30,19 @@
     <div class="ibox">
         <div class="ibox-title"><h5>All batches</h5></div>
         <div class="ibox-content table-responsive">
-            <p class="help-block">
-                Admin creates batches (unique code), assigns Head of Faculty + instructors, and students.
-                Instructors create schedules using an assigned batch from the dropdown.
-                Use <strong>Link legacy schedules</strong> once if older sessions still have only a batch name.
-            </p>
+            <form method="GET" action="{{ route('admin.class-batches.index') }}" class="m-b-md" style="margin-bottom:15px;">
+                <div class="row">
+                    <div class="col-sm-8 col-md-6">
+                        <input type="text" name="search" class="form-control" value="{{ $search ?? '' }}" placeholder="Search batch code, name, course or instructor">
+                    </div>
+                    <div class="col-sm-4 col-md-3">
+                        <button type="submit" class="btn btn-primary">Search</button>
+                        @if(($search ?? '') !== '')
+                            <a href="{{ route('admin.class-batches.index') }}" class="btn btn-default">Clear</a>
+                        @endif
+                    </div>
+                </div>
+            </form>
             <table class="table table-striped table-bordered">
                 <thead>
                     <tr>

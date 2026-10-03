@@ -23,13 +23,19 @@
         <div id="schedules-batches" class="tab-pane active">
             <div class="ibox" style="margin-bottom:0;box-shadow:none;border:0;">
                 <div class="ibox-content" style="border:0;padding:0;">
-                    <p class="help-block" style="margin-top:0;">
-                        @if($isInstructor)
-                            Open a batch to edit sessions, or use <strong>Add session</strong> to create a new class.
-                        @else
-                            Open a batch to see its full session schedule (Scheduled, Completed, Cancelled).
-                        @endif
-                    </p>
+                    <form method="GET" action="{{ route('user.class-schedules.index') }}" class="m-b-md" style="margin-bottom:15px;">
+                        <div class="row">
+                            <div class="col-sm-8 col-md-6">
+                                <input type="text" name="search" class="form-control" value="{{ $search ?? '' }}" placeholder="Search batch code, name, course or instructor">
+                            </div>
+                            <div class="col-sm-4 col-md-3">
+                                <button type="submit" class="btn btn-primary">Search</button>
+                                @if(($search ?? '') !== '')
+                                    <a href="{{ route('user.class-schedules.index') }}" class="btn btn-default">Clear</a>
+                                @endif
+                            </div>
+                        </div>
+                    </form>
                     <div class="table-responsive">
                         <table class="table table-striped table-bordered">
                             <thead>

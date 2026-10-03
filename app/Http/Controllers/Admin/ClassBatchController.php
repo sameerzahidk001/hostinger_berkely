@@ -17,7 +17,7 @@ class ClassBatchController extends Controller
     {
     }
 
-    public function index()
+    public function index(Request $request)
     {
         if (! Schema::hasTable('class_batches')) {
             return redirect()
@@ -25,6 +25,7 @@ class ClassBatchController extends Controller
                 ->with('fail', 'Batches table is missing. Run the meeting/batches migration first.');
         }
 
+        $search = trim((string) $request->get('search', ''));
         $query = ClassBatch::with(['course', 'headOfFaculty', 'instructors', 'students'])
             ->withCount(['schedules', 'students', 'instructors'])
             ->orderByDesc('id');
@@ -37,11 +38,23 @@ class ClassBatchController extends Controller
             });
         }
 
-        $batches = $query->paginate(20);
+        if ($search !== '') {
+            $like = '%' . addcslashes($search, '%_\\') . '%';
+            $query->where(function ($q) use ($like) {
+                $q->where('name', 'like', $like)
+                    ->orWhere('code', 'like', $like)
+                    ->orWhereHas('course', fn ($course) => $course->where('title', 'like', $like))
+                    ->orWhereHas('headOfFaculty', fn ($user) => $user->where('name', 'like', $like)->orWhere('email', 'like', $like))
+                    ->orWhereHas('instructors', fn ($user) => $user->where('name', 'like', $like)->orWhere('email', 'like', $like));
+            });
+        }
+
+        $batches = $query->paginate(20)->withQueryString();
 
         return view('admin.study-materials.batches.index', [
             'batches' => $batches,
             'isAdmin' => $this->lms->isAdminActor(),
+            'search' => $search,
         ]);
     }
 
@@ -199,11 +212,9 @@ class ClassBatchController extends Controller
 
     protected function syncRelations(ClassBatch $batch, Request $request): void
     {
-        $hofId = (int) ($batch->head_of_faculty_id ?: 0);
         $instructorIds = collect($request->input('instructor_ids', []))
             ->map(fn ($id) => (int) $id)
             ->filter()
-            ->reject(fn ($id) => $hofId > 0 && $id === $hofId)
             ->unique()
             ->values()
             ->all();

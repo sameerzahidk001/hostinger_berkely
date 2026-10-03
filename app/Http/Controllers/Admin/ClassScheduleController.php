@@ -28,7 +28,7 @@ class ClassScheduleController extends Controller
     ) {
     }
 
-    public function index()
+    public function index(Request $request)
     {
         if (! Schema::hasTable('class_schedules')) {
             return redirect()
@@ -36,9 +36,25 @@ class ClassScheduleController extends Controller
                 ->with('fail', 'LMS tables are missing. Create them here (do not use Ignition Run Migrations).');
         }
 
+        $search = trim((string) $request->get('search', ''));
         $batchList = $this->batchesForActor()
             ->load(['course', 'headOfFaculty', 'instructors'])
             ->loadCount(['schedules', 'students']);
+
+        if ($search !== '') {
+            $term = mb_strtolower($search);
+            $batchList = $batchList->filter(function (ClassBatch $batch) use ($term) {
+                $haystack = mb_strtolower(implode(' ', array_filter([
+                    $batch->code,
+                    $batch->name,
+                    $batch->course->title ?? '',
+                    $batch->headOfFaculty->name ?? '',
+                    $batch->trainerInstructors()->pluck('name')->implode(' '),
+                ])));
+
+                return str_contains($haystack, $term);
+            })->values();
+        }
 
         $calendarEvents = $this->calendarQuery()
             ->get()
@@ -51,6 +67,7 @@ class ClassScheduleController extends Controller
             'calendarEvents' => $calendarEvents,
             'zohoEmbed' => $zohoEmbed,
             'isAdmin' => $this->lms->isAdminActor(),
+            'search' => $search,
         ]);
     }
 

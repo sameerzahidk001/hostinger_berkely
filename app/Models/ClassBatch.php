@@ -64,10 +64,19 @@ class ClassBatch extends Model
             ? $this->instructors
             : $this->instructors()->get();
         $hofId = (int) $this->head_of_faculty_id;
+        $hof = $this->relationLoaded('headOfFaculty')
+            ? $this->headOfFaculty
+            : $this->headOfFaculty()->first();
 
-        return $people
+        $trainers = $people
             ->reject(fn ($user) => $hofId > 0 && (int) $user->id === $hofId)
             ->values();
+
+        if ($trainers->isEmpty() && $hof) {
+            return collect([$hof]);
+        }
+
+        return $trainers;
     }
 
     public function primaryInstructorId(): ?int
