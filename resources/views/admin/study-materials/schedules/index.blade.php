@@ -42,8 +42,8 @@
                             <th>Batch code</th>
                             <th>Batch name</th>
                             <th>Course</th>
-                            <th>Head of Faculty</th>
                             <th>Instructor</th>
+                            <th>Head of Faculty</th>
                             <th>Students</th>
                             <th>Sessions</th>
                             <th></th>
@@ -64,16 +64,16 @@
                                     @endif
                                 </td>
                                 <td>
-                                    @if($b->headOfFaculty)
-                                        <a href="{{ url('/instructor/' . $b->headOfFaculty->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ $b->headOfFaculty->name }}</a>
+                                    @php $ins = $b->instructors->first(); @endphp
+                                    @if($ins)
+                                        <a href="{{ url('/instructor/' . $ins->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ $ins->name }}</a>
                                     @else
                                         —
                                     @endif
                                 </td>
                                 <td>
-                                    @php $ins = $b->instructors->first(); @endphp
-                                    @if($ins)
-                                        <a href="{{ url('/instructor/' . $ins->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ $ins->name }}</a>
+                                    @if($b->headOfFaculty)
+                                        <a href="{{ url('/instructor/' . $b->headOfFaculty->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ $b->headOfFaculty->name }}</a>
                                     @else
                                         —
                                     @endif

@@ -289,7 +289,7 @@ class AdminController extends Controller
             $showUserColumn = true;
         }
 
-        $headers = ['Date & Time', 'Name', 'Activity', 'Item', 'Session', 'URL'];
+        $headers = ['Date & Time', 'User', 'Activity', 'Item', 'Session', 'URL'];
         $callback = function () use ($rows, $headers, $showUserColumn) {
             $handle = fopen('php://output', 'w');
             fputcsv($handle, $headers);
@@ -298,7 +298,7 @@ class AdminController extends Controller
                 fputcsv($handle, [
                     $activity['occurred_at']->format('Y-m-d H:i:s'),
                     $activity['user_name'] ?? '—',
-                    $activity['action'] ?? '',
+                    activity_action_label($activity['action'] ?? ''),
                     $activity['item'] ?? '',
                     $activity['session_id'] ?? '',
                     $activity['url'] ?? '',

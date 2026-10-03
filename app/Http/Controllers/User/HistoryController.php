@@ -21,6 +21,7 @@ class HistoryController extends Controller
         }
 
         $query = UserActivityLog::query()
+            ->with('user')
             ->where('user_id', Auth::id())
             ->orderByDesc('created_at');
 

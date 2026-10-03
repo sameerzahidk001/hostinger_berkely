@@ -41,8 +41,8 @@
                         <th>Code</th>
                         <th>Batch</th>
                         <th>Course</th>
+                        <th>Instructor</th>
                         <th>Head of Faculty</th>
-                        <th>Instructors</th>
                         <th>Students</th>
                         <th>Sessions</th>
                         <th>Status</th>
@@ -64,22 +64,26 @@
                                 @endif
                             </td>
                             <td>
-                                @if($batch->headOfFaculty)
-                                    <a href="{{ url('/instructor/' . $batch->headOfFaculty->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ $batch->headOfFaculty->name }}</a>
-                                @else
-                                    —
-                                @endif
-                            </td>
-                            <td>
                                 @forelse($batch->instructors as $ins)
                                     <a href="{{ url('/instructor/' . $ins->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ $ins->name }}</a>@if(! $loop->last), @endif
                                 @empty
                                     —
                                 @endforelse
                             </td>
+                            <td>
+                                @if($batch->headOfFaculty)
+                                    <a href="{{ url('/instructor/' . $batch->headOfFaculty->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ $batch->headOfFaculty->name }}</a>
+                                @else
+                                    —
+                                @endif
+                            </td>
                             <td>{{ $batch->students_count }}</td>
                             <td>{{ $batch->schedules_count }}</td>
-                            <td>{{ ucfirst($batch->status) }}</td>
+                            <td>
+                                <span class="label {{ $batch->status === 'active' ? 'label-primary' : 'label-default' }}">
+                                    {{ ucfirst($batch->status) }}
+                                </span>
+                            </td>
                             <td>
                                 <a class="btn btn-xs btn-default" href="{{ route('admin.class-batches.edit', $batch->id) }}">
                                     {{ $isAdmin ? 'Edit' : 'View' }}

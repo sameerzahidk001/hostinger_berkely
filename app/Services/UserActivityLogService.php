@@ -132,7 +132,7 @@ class UserActivityLogService
 
         return $query->get()->map(function (UserActivityLog $log) {
             return [
-                'action' => str_replace(' Logout', ' Log out', (string) $log->action),
+                'action' => activity_action_label($log->action),
                 'item' => $log->item ?? '',
                 'url' => $log->url,
                 'session_id' => $log->session_id,
@@ -164,6 +164,20 @@ class UserActivityLogService
 
         if ($log->admin) {
             return panel_actor_display_name($log->admin->name ?? null, $log->admin->email ?? null);
+        }
+
+        if ($log->user_id) {
+            $user = User::query()->find($log->user_id);
+            if ($user) {
+                return panel_actor_display_name($user->name ?? null, $user->email ?? null, $user->username ?? null);
+            }
+        }
+
+        if ($log->admin_id) {
+            $admin = Admin::query()->find($log->admin_id);
+            if ($admin) {
+                return panel_actor_display_name($admin->name ?? null, $admin->email ?? null);
+            }
         }
 
         return '-';
