@@ -58,7 +58,7 @@
                                 </td>
                                 <td>
                                     @if($b->course)
-                                        <a href="{{ url('/course/' . ($b->course->slug ?: $b->course->id)) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ $b->course->title }}</a>
+                                        <a href="{{ course_details_url($b->course) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ $b->course->title }}</a>
                                     @else
                                         —
                                     @endif

@@ -3,7 +3,7 @@
 @section('content')
 @php
     $course = $batch['course'] ?? null;
-    $courseHref = $course ? url('/course/' . ($course->slug ?: $course->id)) : null;
+    $courseHref = course_details_url($course);
     $hof = $batch['head_of_faculty'] ?? null;
     $ins = $batch['instructor'] ?? null;
     $studentCount = $batchModel->students->unique('id')->count();
@@ -45,15 +45,15 @@
                 @else
                     <strong>—</strong>
                 @endif
-                · Head of Faculty:
-                @if($hof && !empty($hof->id))
-                    <a href="{{ url('/instructor/' . $hof->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;"><strong>{{ $hof->name }}</strong></a>
-                @else
-                    <strong>—</strong>
-                @endif
                 · Instructor:
                 @if($ins && !empty($ins->id))
                     <a href="{{ url('/instructor/' . $ins->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;"><strong>{{ $ins->name }}</strong></a>
+                @else
+                    <strong>—</strong>
+                @endif
+                · Head of Faculty:
+                @if($hof && !empty($hof->id))
+                    <a href="{{ url('/instructor/' . $hof->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;"><strong>{{ $hof->name }}</strong></a>
                 @else
                     <strong>—</strong>
                 @endif
