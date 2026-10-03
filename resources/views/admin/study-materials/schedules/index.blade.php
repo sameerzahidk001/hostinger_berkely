@@ -64,7 +64,7 @@
                                     @endif
                                 </td>
                                 <td>
-                                    @php $ins = $b->instructors->first(); @endphp
+                                    @php $ins = $b->trainerInstructors()->first(); @endphp
                                     @if($ins)
                                         <a href="{{ url('/instructor/' . $ins->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ $ins->name }}</a>
                                     @else

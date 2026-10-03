@@ -326,6 +326,13 @@ class StudyMaterialController extends Controller
                     ->sortBy(fn ($row) => $row->scheduled_at?->timestamp ?? 0)
                     ->values();
 
+                $hof = $batchModel?->headOfFaculty ?: $first->headOfFaculty;
+                $hofId = (int) ($hof->id ?? $batchModel?->head_of_faculty_id ?? 0);
+                $trainer = $batchModel?->trainerInstructors()->first();
+                if (! $trainer && $first->instructor && (int) $first->instructor->id !== $hofId) {
+                    $trainer = $first->instructor;
+                }
+
                 $row = [
                     'key' => $key,
                     'batch_id' => $batchModel?->id ?: $first->batch_id,
@@ -333,9 +340,8 @@ class StudyMaterialController extends Controller
                     'batch_name' => $batchModel?->name
                         ?: ($first->batch_name ?: ($first->title ?: 'My batch')),
                     'course' => $batchModel?->course ?: $first->course,
-                    'instructor' => $first->instructor
-                        ?: $batchModel?->instructors?->first(),
-                    'head_of_faculty' => $batchModel?->headOfFaculty ?: $first->headOfFaculty,
+                    'instructor' => $trainer,
+                    'head_of_faculty' => $hof,
                     'session_count' => $sessions->count(),
                     'student_count' => $batchModel?->students?->count() ?? 0,
                     'latest_at' => $sessions->max(fn ($s) => $s->scheduled_at?->timestamp ?? 0),
@@ -383,7 +389,7 @@ class StudyMaterialController extends Controller
                     'batch_code' => $batchModel->code,
                     'batch_name' => $batchModel->name,
                     'course' => $batchModel->course,
-                    'instructor' => $batchModel->instructors->first(),
+                    'instructor' => $batchModel->trainerInstructors()->first(),
                     'head_of_faculty' => $batchModel->headOfFaculty,
                     'session_count' => 0,
                     'student_count' => (int) $batchModel->students_count,

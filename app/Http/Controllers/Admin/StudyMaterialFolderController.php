@@ -207,18 +207,20 @@ class StudyMaterialFolderController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'email']);
 
+        $accessIds = $folder->instructorAccess
+            ->pluck('instructor_id')
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->values();
+        $hofId = (int) (course_instructor_ids($folder->course)[0] ?? 0);
+        if ($hofId > 0 && ! $accessIds->contains($hofId)) {
+            $hofId = 0;
+        }
+        $selectedHeadOfFacultyId = old('head_of_faculty_id', $hofId ?: '');
         $selectedInstructorIds = old(
             'instructor_ids',
-            $folder->instructorAccess->pluck('instructor_id')->map(fn ($id) => (int) $id)->values()->all()
+            $accessIds->reject(fn ($id) => $hofId > 0 && (int) $id === $hofId)->values()->all()
         );
-        $courseInstructorIds = course_instructor_ids($folder->course);
-        $selectedHeadOfFacultyId = old('head_of_faculty_id');
-        if ($selectedHeadOfFacultyId === null) {
-            $selectedHeadOfFacultyId = collect($courseInstructorIds)
-                ->map(fn ($id) => (int) $id)
-                ->first(fn ($id) => in_array($id, array_map('intval', (array) $selectedInstructorIds), true))
-                ?? ($selectedInstructorIds[0] ?? '');
-        }
 
         return view('admin.study-materials.folders.edit', [
             'folder' => $folder,

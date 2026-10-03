@@ -64,7 +64,7 @@
                                 @endif
                             </td>
                             <td>
-                                @forelse($batch->instructors as $ins)
+                                @forelse($batch->trainerInstructors() as $ins)
                                     <a href="{{ url('/instructor/' . $ins->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ $ins->name }}</a>@if(! $loop->last), @endif
                                 @empty
                                     —

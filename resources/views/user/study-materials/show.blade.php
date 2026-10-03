@@ -88,26 +88,12 @@
             Course:
             @include('partials.course_link', ['course' => $folder->course ?? null])
         </p>
-        @php
-            $headOfFaculty = $folder->displayHeadOfFaculty();
-            $trainerInstructors = $folder->displayTrainerInstructors();
-        @endphp
-        <p class="text-muted" style="margin-bottom:4px;">
-            Instructor:
-            @forelse($trainerInstructors as $primaryInstructor)
-                <a href="{{ url('/instructor/' . $primaryInstructor->id) }}" target="_blank" rel="noopener"><strong>{{ $primaryInstructor->name }}</strong></a>@if(! $loop->last), @endif
-            @empty
-                —
-            @endforelse
-        </p>
-        <p class="text-muted" style="margin-bottom:4px;">
-            Head of Faculty:
-            @if($headOfFaculty)
-                <a href="{{ url('/instructor/' . $headOfFaculty->id) }}" target="_blank" rel="noopener"><strong>{{ $headOfFaculty->name }}</strong></a>
-            @else
-                —
-            @endif
-        </p>
+        @include('partials.folder_faculty', [
+            'folder' => $folder,
+            'labelTag' => 'p',
+            'labelClass' => 'text-muted',
+            'labelStyle' => 'margin-bottom:4px;',
+        ])
         <p class="text-muted" style="margin-bottom:4px;">Access Start: {{ optional($access->issued_at)->format('d M Y') ?: '—' }}</p>
         <p class="text-muted" style="margin-bottom:0;">Access Expire: {{ $access->access_till ? $access->access_till->format('d M Y') : 'No expiry' }}</p>
     </div>
