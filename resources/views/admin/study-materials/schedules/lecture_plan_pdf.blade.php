@@ -122,7 +122,8 @@
                 <th style="width:10%;">Timezone</th>
                 <th style="width:7%;">Duration</th>
                 <th style="width:12%;">Title</th>
-                <th style="width:45%;">Description</th>
+                <th style="width:37%;">Description</th>
+                <th style="width:8%;">Status</th>
             </tr>
         </thead>
         <tbody>
@@ -142,6 +143,7 @@
                         $title = '';
                     }
                     $notes = trim((string) data_get($row, 'notes', ''));
+                    $status = ucfirst(strtolower((string) (data_get($row, 'status') ?: 'scheduled')));
                     $tzLabel = trim((string) data_get($row, 'timezone_label', ''));
                     if ($tzLabel === '' && is_object($row) && method_exists($row, 'timezoneLabel')) {
                         $tzLabel = (string) $row->timezoneLabel();
@@ -159,9 +161,10 @@
                     <td>{{ $duration }} min</td>
                     <td>{{ $title !== '' ? $title : '—' }}</td>
                     <td>{{ $notes !== '' ? $notes : '—' }}</td>
+                    <td>{{ $status !== '' ? $status : '—' }}</td>
                 </tr>
             @empty
-                <tr><td colspan="8" style="text-align:center;">No sessions in this batch.</td></tr>
+                <tr><td colspan="9" style="text-align:center;">No sessions in this batch.</td></tr>
             @endforelse
         </tbody>
     </table>
