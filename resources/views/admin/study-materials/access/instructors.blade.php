@@ -50,7 +50,7 @@
                                     <br><small class="text-muted">{{ $row->instructor->email }}</small>
                                 @endif
                             </td>
-                            <td>{{ $row->folder->course->title ?? '—' }}</td>
+                            <td>@include('partials.course_link', ['course' => $row->folder->course ?? null])</td>
                             <td>{{ optional($row->issued_at)->format('d M Y') }}</td>
                             <td>{{ optional($row->access_till)->format('d M Y') ?? 'None' }}</td>
                             <td><span class="label {{ $row->status === 'active' ? 'label-primary' : 'label-warning' }}">{{ ucfirst($row->status) }}</span></td>

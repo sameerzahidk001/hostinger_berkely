@@ -43,7 +43,7 @@ class HomeController extends Controller
         }
 
         $scheduleBatches = collect();
-        if ($isInstructor && Schema::hasTable('class_schedules')) {
+        if (Schema::hasTable('class_schedules')) {
             $scheduleBatches = app(StudyMaterialController::class)->batchSummariesForActor();
         }
 

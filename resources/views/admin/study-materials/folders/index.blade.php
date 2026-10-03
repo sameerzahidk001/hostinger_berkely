@@ -61,13 +61,7 @@
                             <td><strong>{{ $folder->code ?: '—' }}</strong></td>
                             <td>{{ $folder->created_at?->timezone(config('app.timezone'))->format('d M Y') }}</td>
                             <td><strong>{{ $folder->name }}</strong></td>
-                            <td>
-                                @if($folder->course)
-                                    <a href="{{ course_details_url($folder->course) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ $folder->course->title }}</a>
-                                @else
-                                    —
-                                @endif
-                            </td>
+                            <td>@include('partials.course_link', ['course' => $folder->course ?? null])</td>
                             @if($isAdmin)
                             <td>{{ $folder->packageNames() }}</td>
                             @endif

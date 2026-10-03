@@ -203,7 +203,7 @@
                             <tr>
                                 <td>1</td>
                                 <td>
-                                    {{ $course->title }}<br>
+                                    @include('partials.course_link', ['course' => $course])<br>
                                     {{ $coursefee->package_name }}<br>
                                     @if ($coursefee->short_description)
                                         {{ $coursefee->short_description }}<br>

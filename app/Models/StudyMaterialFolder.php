@@ -200,10 +200,7 @@ class StudyMaterialFolder extends Model
 
         $hofId = (int) (course_instructor_ids($this->course)[0] ?? 0);
         if ($hofId > 0) {
-            $match = $people->first(fn ($user) => (int) $user->id === $hofId);
-            if ($match) {
-                return $match;
-            }
+            return $people->first(fn ($user) => (int) $user->id === $hofId);
         }
 
         return null;
@@ -212,25 +209,14 @@ class StudyMaterialFolder extends Model
     public function displayTrainerInstructors()
     {
         $people = $this->displayInstructors();
-        $courseIds = course_instructor_ids($this->course);
-        $hofId = (int) ($courseIds[0] ?? 0);
-        $trainerIds = collect($courseIds)
-            ->skip(1)
-            ->map(fn ($id) => (int) $id)
-            ->filter()
-            ->unique()
+        $hof = $this->displayHeadOfFaculty();
+        $hofId = $hof ? (int) $hof->id : 0;
+
+        $trainers = $people
+            ->reject(fn ($user) => $hofId > 0 && (int) $user->id === $hofId)
             ->values();
 
-        $trainers = $people->filter(function ($user) use ($hofId, $trainerIds) {
-            $id = (int) $user->id;
-            if ($trainerIds->isNotEmpty()) {
-                return $trainerIds->contains($id);
-            }
-
-            return $id !== $hofId;
-        })->values();
-
-        if ($trainers->isEmpty() && $people->count() === 1 && ! $this->displayHeadOfFaculty()) {
+        if ($trainers->isEmpty() && ! $hof) {
             return $people->values();
         }
 

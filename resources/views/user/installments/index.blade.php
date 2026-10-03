@@ -62,14 +62,7 @@
                                                 @endphp
                                                 <td>INV-{{ str_pad($installment->payment_id, 6, '0', STR_PAD_LEFT) }}</td>
                                                 <td>{{ \Carbon\Carbon::parse($installment->created_at)->format('d-M-Y') ?? 'N/A' }}</td>
-                                                <td>
-                                                    @php $admissionCourse = $installment->payment->course ?? null; @endphp
-                                                    @if($admissionCourse && course_details_url($admissionCourse))
-                                                        <a href="{{ course_details_url($admissionCourse) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;font-weight:700;">{{ $admissionCourse->title }}</a>
-                                                    @else
-                                                        {{ $admissionCourse->title ?? 'N/A' }}
-                                                    @endif
-                                                </td>
+                                                <td>@include('partials.course_link', ['course' => $installment->payment->course ?? null, 'fallback' => 'N/A'])</td>
                                                 <td>{{ $installment->payment->courseFee->package_name ?? 'N/A' }}</td>
                                                 <td>{{ format_payment_amount($installment->payment)['display'] }}</td>
                                                 <td>{{ $installment->installment_number }}/{{ $installment->payment->total_installment }}</td>

@@ -56,7 +56,7 @@
         </div>
     @endif
 
-    @if(!empty($isInstructor))
+    @if(!empty($isInstructor) || ($scheduleBatches ?? collect())->isNotEmpty())
         <div class="wrapper wrapper-content animated fadeInRight" style="padding-bottom:0;">
             <div class="row">
                 <div class="col-lg-12">
@@ -64,9 +64,13 @@
                         <div class="ibox-title" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
                             <h5 style="margin:0;">Class Schedule</h5>
                             <div>
-                                <a href="{{ route('admin.class-batches.index') }}" class="btn btn-xs btn-default">Batches</a>
-                                <a href="{{ route('user.class-schedules.index') }}" class="btn btn-xs btn-default">Schedules</a>
-                                <a href="{{ route('admin.class-schedules.create') }}" class="btn btn-xs btn-primary">Add session</a>
+                                @if(!empty($isInstructor))
+                                    <a href="{{ route('admin.class-batches.index') }}" class="btn btn-xs btn-default">Batches</a>
+                                    <a href="{{ route('user.class-schedules.index') }}" class="btn btn-xs btn-default">Schedules</a>
+                                    <a href="{{ route('admin.class-schedules.create') }}" class="btn btn-xs btn-primary">Add session</a>
+                                @else
+                                    <a href="{{ route('user.class-schedules.index') }}" class="btn btn-xs btn-default">Schedules</a>
+                                @endif
                             </div>
                         </div>
                         <div class="ibox-content">
@@ -87,7 +91,6 @@
                                             @php
                                                 $course = $batch['course'] ?? null;
                                                 $openKey = $batch['batch_id'] ?: ($batch['key'] ?? '');
-                                                $courseHref = course_details_url($course);
                                             @endphp
                                             <tr>
                                                 <td>
@@ -97,11 +100,7 @@
                                                     <strong>{{ $batch['batch_name'] }}</strong>
                                                 </td>
                                                 <td>
-                                                    @if($courseHref)
-                                                        <a href="{{ $courseHref }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;font-weight:700;">{{ $course->title }}</a>
-                                                    @else
-                                                        {{ $course->title ?? '—' }}
-                                                    @endif
+                                                    @include('partials.course_link', ['course' => $course])
                                                 </td>
                                                 <td>{{ $batch['student_count'] ?? 0 }}</td>
                                                 <td>{{ $batch['session_count'] }}</td>
@@ -218,14 +217,7 @@
                                                     <td>INV-{{ str_pad($installment->payment_id, 6, '0', STR_PAD_LEFT) }}</td>
                                                     <td data-order="{{ \Carbon\Carbon::parse($installment->created_at)->timestamp }}">{{ \Carbon\Carbon::parse($installment->created_at)->format('d-M-Y') ?? 'N/A' }}
                                                     </td>
-                                                    <td>
-                                                        @php $admissionCourse = $installment->payment->course ?? null; @endphp
-                                                        @if($admissionCourse && course_details_url($admissionCourse))
-                                                            <a href="{{ course_details_url($admissionCourse) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;font-weight:700;">{{ $admissionCourse->title }}</a>
-                                                        @else
-                                                            {{ $admissionCourse->title ?? 'N/A' }}
-                                                        @endif
-                                                    </td>
+                                                    <td>@include('partials.course_link', ['course' => $installment->payment->course ?? null, 'fallback' => 'N/A'])</td>
                                                     <td>{{ $installment->payment->courseFee->package_name ?? 'N/A' }}</td>
                                                     <td>
                                                         {{ $invoiceAmount['display'] }}

@@ -89,6 +89,9 @@
                                         @if($isPanel)
                                             <div>
                                                 <strong>{{ $package->package_name }}</strong>
+                                                @if($package->course)
+                                                    <div style="margin-top:4px;">@include('partials.course_link', ['course' => $package->course])</div>
+                                                @endif
                                                 @if(!empty($package->short_description))
                                                     <div class="text-muted" style="margin-top: 4px;">{{ $package->short_description }}</div>
                                                 @endif

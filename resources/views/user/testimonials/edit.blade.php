@@ -35,7 +35,7 @@
             <div class="col-lg-12">
                 <div class="ibox float-e-margins" style="margin-bottom: 0;">
                     <div class="ibox-title">
-                        <h5>Edit Testimonial of {{ $testimonial->course->title ?? 'N/A' }}</h5>
+                        <h5>Edit Testimonial of @include('partials.course_link', ['course' => $testimonial->course ?? null, 'fallback' => 'N/A'])</h5>
                         <div class="ibox-tools">
                             <a class="collapse-link"><i class="fa fa-chevron-up"></i></a>
                             <a class="close-link"><i class="fa fa-times"></i></a>
