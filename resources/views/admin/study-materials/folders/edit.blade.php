@@ -162,7 +162,8 @@
         <div class="ibox-title"><h5>{{ $isAdmin ? '3. Add files' : '2. Add files' }}</h5></div>
         <div class="ibox-content">
             <p class="help-block">Select the main folder or a subfolder, then upload to Zoho WorkDrive, upload to this server, or paste an existing WorkDrive link.</p>
-            @php $fileSource = old('source', $fileSource ?? (($zohoWorkDriveReady ?? false) ? 'workdrive' : 'upload')); @endphp
+            {{-- Default is the third radio: Paste WorkDrive link. Do not fall back to Upload to Zoho WorkDrive. --}}
+            @php $fileSource = old('source', $fileSource ?? 'zoho'); @endphp
             <form id="add-file-form" method="POST" action="{{ route('admin.study-materials.folders.files.store', $folder->id) }}" enctype="multipart/form-data">
                 @csrf
                 <div class="row">

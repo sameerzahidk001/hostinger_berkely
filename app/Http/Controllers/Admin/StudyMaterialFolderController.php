@@ -566,12 +566,13 @@ class StudyMaterialFolderController extends Controller
 
     protected function rememberedFileSource(Request $request): string
     {
-        $source = old('source', session('study_material_file_source'));
+        $source = old('source');
         if (in_array($source, ['upload', 'workdrive', 'zoho'], true)) {
             return $source;
         }
 
-        return $this->zoho->isWorkDriveReady() ? 'workdrive' : 'upload';
+        // Default is "Paste WorkDrive link" (third radio). Do not fall back to the first radio.
+        return 'zoho';
     }
 
     protected function folderRules(?int $folderId = null, bool $lockCourse = false): array
