@@ -110,7 +110,7 @@
                                             {!! $data->text !!}
                                         </td>
                                         <td>
-                                            {{ $data->course?->short_name }}
+                                            @include('partials.course_link', ['course' => $data->course ?? null, 'fallback' => $data->course?->short_name ?: '—'])
                                         </td>
                                         <td>
                                             @if($data->course)

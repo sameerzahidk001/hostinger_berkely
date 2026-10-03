@@ -86,11 +86,7 @@
         </ol>
         <p class="text-muted" style="margin-bottom:4px;">
             Course:
-            @if($folder->course && course_details_url($folder->course))
-                <a href="{{ course_details_url($folder->course) }}" target="_blank" rel="noopener"><strong>{{ $folder->course->title }}</strong></a>
-            @else
-                —
-            @endif
+            @include('partials.course_link', ['course' => $folder->course ?? null])
         </p>
         @php
             $headOfFaculty = $folder->displayHeadOfFaculty();

@@ -23,7 +23,7 @@
                 <a>Testimonial</a>
             </li>
             <li class="active">
-                <strong>{{ $course_test->title }}</strong>
+                <strong>@include('partials.course_link', ['course' => $course_test ?? null])</strong>
             </li>
         </ol>
     </div>
@@ -36,7 +36,7 @@
         <div class="col-lg-12">
             <div class="ibox float-e-margins" style="margin-bottom: 0;">
                 <div class="ibox-title">
-                    <h5>Add Testimonial to {{ $course_test->title }}</h5>
+                    <h5>Add Testimonial to @include('partials.course_link', ['course' => $course_test ?? null])</h5>
                     <div class="ibox-tools">
                         <a class="collapse-link">
                             <i class="fa fa-chevron-down"></i>

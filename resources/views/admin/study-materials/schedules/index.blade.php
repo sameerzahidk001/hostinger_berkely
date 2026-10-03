@@ -58,7 +58,7 @@
                                 </td>
                                 <td>
                                     @if($b->course)
-                                        <a href="{{ course_details_url($b->course) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ $b->course->title }}</a>
+                                        @include('partials.course_link', ['course' => $b->course ?? null])
                                     @else
                                         —
                                     @endif

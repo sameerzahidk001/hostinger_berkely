@@ -5,7 +5,6 @@
     $course = $batch['course'] ?? null;
     $hof = $batch['head_of_faculty'] ?? null;
     $ins = $batch['instructor'] ?? null;
-    $courseHref = course_details_url($course);
     $canManage = !empty($canManageSessions);
     $batchId = $batch['batch_id'] ?? null;
 @endphp
@@ -39,11 +38,7 @@
         <div id="batch-sessions" class="tab-pane active">
             <p class="help-block" style="margin-top:0;">
                 Course Name:
-                @if($courseHref)
-                    <a href="{{ $courseHref }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;"><strong>{{ $course->title }}</strong></a>
-                @else
-                    <strong>—</strong>
-                @endif
+                @include('partials.course_link', ['course' => $course])
                 · Instructor:
                 @if($ins && !empty($ins->id))
                     <a href="{{ url('/instructor/' . $ins->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;"><strong>{{ $ins->name }}</strong></a>

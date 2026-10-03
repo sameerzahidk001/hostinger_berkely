@@ -17,9 +17,7 @@
             <div class="sm-folder-card-body">
                 <p style="margin-bottom:6px;">
                     Course:
-                    @if($folder->course && course_details_url($folder->course))
-                        <a href="{{ course_details_url($folder->course) }}" target="_blank" rel="noopener"><strong>{{ $folder->course->title }}</strong></a>
-                    @else — @endif
+                    @include('partials.course_link', ['course' => $folder->course ?? null])
                 </p>
                 @php
                     $headOfFaculty = $folder?->displayHeadOfFaculty();

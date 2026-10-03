@@ -136,7 +136,7 @@
 
                     <div class="receipt-section">
                         <h4>Course Details</h4>
-                        <p><strong>Course Title:</strong> {{ $installment->payment->course->title ?? 'N/A' }}</p>
+                        <p><strong>Course Title:</strong> @include('partials.course_link', ['course' => $installment->payment->course ?? null, 'fallback' => 'N/A'])</p>
                         <p><strong>Package Name:</strong> {{ $installment->payment->courseFee->package_name ?? 'N/A' }}</p>
                     </div>
 
