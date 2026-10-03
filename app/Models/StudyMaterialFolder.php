@@ -216,6 +216,10 @@ class StudyMaterialFolder extends Model
             ->reject(fn ($user) => $hofId > 0 && (int) $user->id === $hofId)
             ->values();
 
+        if ($trainers->isEmpty() && $hof) {
+            return collect([$hof]);
+        }
+
         if ($trainers->isEmpty() && ! $hof) {
             return $people->values();
         }

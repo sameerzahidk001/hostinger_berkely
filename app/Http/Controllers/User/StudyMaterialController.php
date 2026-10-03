@@ -186,10 +186,11 @@ class StudyMaterialController extends Controller
         }
     }
 
-    public function schedules()
+    public function schedules(Request $request)
     {
         $isInstructor = Auth::user()?->roles()->where('name', 'instructor')->exists() ?? false;
         $batches = $this->studentBatchSummaries(true);
+        $search = trim((string) $request->get('search', ''));
 
         $calendarEvents = $batches
             ->flatMap(function ($batch) {
@@ -207,10 +208,26 @@ class StudyMaterialController extends Controller
             return $batch;
         });
 
+        if ($search !== '') {
+            $term = mb_strtolower($search);
+            $batches = $batches->filter(function ($batch) use ($term) {
+                $haystack = mb_strtolower(implode(' ', array_filter([
+                    $batch['batch_code'] ?? '',
+                    $batch['batch_name'] ?? '',
+                    data_get($batch, 'course.title'),
+                    data_get($batch, 'instructor.name'),
+                    data_get($batch, 'head_of_faculty.name'),
+                ])));
+
+                return str_contains($haystack, $term);
+            })->values();
+        }
+
         return view('user.study-materials.schedules', [
             'batches' => $batches,
             'calendarEvents' => $calendarEvents,
             'isInstructor' => $isInstructor,
+            'search' => $search,
         ]);
     }
 

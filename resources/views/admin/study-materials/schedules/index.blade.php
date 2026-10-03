@@ -29,12 +29,19 @@
 
     <div class="tab-content" style="background:#fff;border:1px solid #ddd;border-top:0;padding:16px;">
         <div id="schedules-batches" class="tab-pane active">
-            <p class="help-block" style="margin-top:0;">
-                Open a batch to view / edit its session schedule.
-                @unless($isAdmin ?? false)
-                    You can create and edit schedules for batches assigned to you, and add students on each session.
-                @endunless
-            </p>
+            <form method="GET" action="{{ route('admin.class-schedules.index') }}" class="m-b-md" style="margin-bottom:15px;">
+                <div class="row">
+                    <div class="col-sm-8 col-md-6">
+                        <input type="text" name="search" class="form-control" value="{{ $search ?? '' }}" placeholder="Search batch code, name, course or instructor">
+                    </div>
+                    <div class="col-sm-4 col-md-3">
+                        <button type="submit" class="btn btn-primary">Search</button>
+                        @if(($search ?? '') !== '')
+                            <a href="{{ route('admin.class-schedules.index') }}" class="btn btn-default">Clear</a>
+                        @endif
+                    </div>
+                </div>
+            </form>
             <div class="table-responsive">
                 <table class="table table-striped table-bordered">
                     <thead>
