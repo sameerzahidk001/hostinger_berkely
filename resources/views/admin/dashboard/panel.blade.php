@@ -274,7 +274,7 @@
                             <tr>
                                 <th style="width: 170px;">Date &amp; Time</th>
                                 @if($showUserColumn)
-                                    <th style="width: 180px;">Name</th>
+                                    <th style="width: 180px;">User</th>
                                 @endif
                                 <th style="width: 160px;">Activity</th>
                                 <th>Item</th>
@@ -291,7 +291,13 @@
                                     @if($showUserColumn)
                                         <td>{{ $activity['user_name'] ?? '—' }}</td>
                                     @endif
-                                    <td>{{ $activity['action'] }}</td>
+                                    <td>
+                                        @if(!empty($activity['url']))
+                                            <a href="{{ $activity['url'] }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ activity_action_label($activity['action'] ?? '') }}</a>
+                                        @else
+                                            {{ activity_action_label($activity['action'] ?? '') }}
+                                        @endif
+                                    </td>
                                     <td>{{ $activity['item'] }}</td>
                                     @if($showSessionColumn ?? false)
                                         <td>
@@ -348,7 +354,7 @@
                         <thead>
                             <tr>
                                 <th style="width: 170px;">Date &amp; Time</th>
-                                <th style="width: 180px;">Name</th>
+                                <th style="width: 180px;">User</th>
                                 <th style="width: 160px;">Activity</th>
                                 <th>Item</th>
                                 @if($showSessionColumn ?? false)
@@ -362,7 +368,13 @@
                                 <tr>
                                     <td>{{ $activity['occurred_at']->format('M j, Y g:i A') }}</td>
                                     <td>{{ $activity['user_name'] ?? '—' }}</td>
-                                    <td>{{ $activity['action'] }}</td>
+                                    <td>
+                                        @if(!empty($activity['url']))
+                                            <a href="{{ $activity['url'] }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ activity_action_label($activity['action'] ?? '') }}</a>
+                                        @else
+                                            {{ activity_action_label($activity['action'] ?? '') }}
+                                        @endif
+                                    </td>
                                     <td>{{ $activity['item'] }}</td>
                                     @if($showSessionColumn ?? false)
                                         <td>

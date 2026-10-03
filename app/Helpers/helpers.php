@@ -1283,6 +1283,24 @@ if (!function_exists('panel_actor_display_name')) {
     }
 }
 
+if (!function_exists('activity_action_label')) {
+    function activity_action_label(?string $action): string
+    {
+        $action = trim((string) $action);
+        $action = str_ireplace(' Logout', ' Log out', $action);
+
+        if (preg_match('/^(Admin|Staff|User)\s+Login$/i', $action)) {
+            return 'Login';
+        }
+
+        if (preg_match('/^(Admin|Staff|User)\s+Log out$/i', $action)) {
+            return 'Log out';
+        }
+
+        return $action !== '' ? $action : '—';
+    }
+}
+
 if (!function_exists('audit_user_name')) {
     function audit_user_name($model, $fallbackId = null): string
     {

@@ -42,6 +42,7 @@
                         <th>Course</th>
                         @if($isAdmin)<th>Package</th>@endif
                         <th>Instructor</th>
+                        <th>Head of Faculty</th>
                         <th>Owner</th>
                         <th>Folder Status</th>
                         @if($isAdmin)<th>Instructor Access</th>@endif
@@ -54,16 +55,36 @@
                         @php
                             $activeInstructor = $folder->instructorAccess->firstWhere('status', 'active');
                             $anyInstructor = $folder->instructorAccess->first();
+                            $hof = $folder->displayHeadOfFaculty();
                         @endphp
                         <tr>
                             <td><strong>{{ $folder->code ?: '—' }}</strong></td>
                             <td>{{ $folder->created_at?->timezone(config('app.timezone'))->format('d M Y') }}</td>
                             <td><strong>{{ $folder->name }}</strong></td>
-                            <td>{{ $folder->course->title ?? '—' }}</td>
+                            <td>
+                                @if($folder->course)
+                                    <a href="{{ route('course.details', ['course' => $folder->course->slug ?: $folder->course->id]) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ $folder->course->title }}</a>
+                                @else
+                                    —
+                                @endif
+                            </td>
                             @if($isAdmin)
                             <td>{{ $folder->packageNames() }}</td>
                             @endif
-                            <td>{{ $folder->instructorNames() }}</td>
+                            <td>
+                                @forelse($folder->displayTrainerInstructors() as $ins)
+                                    <a href="{{ url('/instructor/' . $ins->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ $ins->name }}</a>@if(! $loop->last), @endif
+                                @empty
+                                    —
+                                @endforelse
+                            </td>
+                            <td>
+                                @if($hof)
+                                    <a href="{{ url('/instructor/' . $hof->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ $hof->name }}</a>
+                                @else
+                                    —
+                                @endif
+                            </td>
                             <td>{{ $folder->ownerName() }}</td>
                             <td>
                                 <span class="label {{ $folder->status === 'active' ? 'label-primary' : 'label-default' }}">
@@ -108,7 +129,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="{{ $isAdmin ? 11 : 9 }}" class="text-center">No folders yet.</td></tr>
+                        <tr><td colspan="{{ $isAdmin ? 12 : 10 }}" class="text-center">No folders yet.</td></tr>
                     @endforelse
                 </tbody>
             </table>

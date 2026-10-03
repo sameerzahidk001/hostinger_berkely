@@ -186,9 +186,55 @@ class StudyMaterialFolder extends Model
 
     public function instructorNames(): string
     {
-        $names = $this->displayInstructors()->pluck('name')->filter()->values();
+        $names = $this->displayTrainerInstructors()->pluck('name')->filter()->values();
 
         return $names->isEmpty() ? '—' : $names->implode(', ');
+    }
+
+    public function displayHeadOfFaculty()
+    {
+        $people = $this->displayInstructors();
+        if ($people->isEmpty()) {
+            return null;
+        }
+
+        $hofId = (int) (course_instructor_ids($this->course)[0] ?? 0);
+        if ($hofId > 0) {
+            $match = $people->first(fn ($user) => (int) $user->id === $hofId);
+            if ($match) {
+                return $match;
+            }
+        }
+
+        return null;
+    }
+
+    public function displayTrainerInstructors()
+    {
+        $people = $this->displayInstructors();
+        $courseIds = course_instructor_ids($this->course);
+        $hofId = (int) ($courseIds[0] ?? 0);
+        $trainerIds = collect($courseIds)
+            ->skip(1)
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values();
+
+        $trainers = $people->filter(function ($user) use ($hofId, $trainerIds) {
+            $id = (int) $user->id;
+            if ($trainerIds->isNotEmpty()) {
+                return $trainerIds->contains($id);
+            }
+
+            return $id !== $hofId;
+        })->values();
+
+        if ($trainers->isEmpty() && $people->count() === 1 && ! $this->displayHeadOfFaculty()) {
+            return $people->values();
+        }
+
+        return $trainers;
     }
 
     public function displayInstructors()

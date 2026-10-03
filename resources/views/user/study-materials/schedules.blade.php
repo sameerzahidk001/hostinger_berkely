@@ -36,8 +36,8 @@
                                 <tr>
                                     <th>Batch</th>
                                     <th>Course</th>
-                                    <th>Head of Faculty</th>
                                     <th>Instructor</th>
+                                    <th>Head of Faculty</th>
                                     <th>Students</th>
                                     <th>Sessions</th>
                                     <th>Next class</th>
@@ -68,15 +68,15 @@
                                             @endif
                                         </td>
                                         <td>
-                                            @if($hof && !empty($hof->id))
-                                                <a href="{{ url('/instructor/' . $hof->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ $hof->name }}</a>
+                                            @if($ins && !empty($ins->id))
+                                                <a href="{{ url('/instructor/' . $ins->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ $ins->name }}</a>
                                             @else
                                                 —
                                             @endif
                                         </td>
                                         <td>
-                                            @if($ins && !empty($ins->id))
-                                                <a href="{{ url('/instructor/' . $ins->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ $ins->name }}</a>
+                                            @if($hof && !empty($hof->id))
+                                                <a href="{{ url('/instructor/' . $hof->id) }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ $hof->name }}</a>
                                             @else
                                                 —
                                             @endif

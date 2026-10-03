@@ -35,6 +35,7 @@
                     <thead>
                         <tr>
                             <th>Date &amp; Time</th>
+                            <th>User</th>
                             <th>Activity</th>
                             <th>Item</th>
                             <th>Link</th>
@@ -42,9 +43,24 @@
                     </thead>
                     <tbody>
                         @forelse($activities as $activity)
+                            @php
+                                $actorName = panel_actor_display_name(
+                                    $activity->user->name ?? Auth::user()->name ?? null,
+                                    $activity->user->email ?? Auth::user()->email ?? null,
+                                    $activity->user->username ?? Auth::user()->username ?? null
+                                );
+                                $actionLabel = activity_action_label($activity->action);
+                            @endphp
                             <tr>
                                 <td>{{ $activity->created_at?->timezone(config('app.timezone'))->format('d M Y g:i A') }}</td>
-                                <td>{{ str_replace(' Logout', ' Log out', (string) $activity->action) }}</td>
+                                <td>{{ $actorName }}</td>
+                                <td>
+                                    @if(!empty($activity->url))
+                                        <a href="{{ $activity->url }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ $actionLabel }}</a>
+                                    @else
+                                        {{ $actionLabel }}
+                                    @endif
+                                </td>
                                 <td>{{ $activity->item ?: '—' }}</td>
                                 <td>
                                     @if(!empty($activity->url))
@@ -56,7 +72,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="4" class="text-center text-muted">No activity recorded yet.</td>
+                                <td colspan="5" class="text-center text-muted">No activity recorded yet.</td>
                             </tr>
                         @endforelse
                     </tbody>
