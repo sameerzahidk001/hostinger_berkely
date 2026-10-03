@@ -143,10 +143,10 @@
         rows.push(['Instructor', instructor]);
         rows.push(['Head of Faculty', hof]);
         rows.push([]);
-        rows.push(['#', 'Date', 'Day', 'Time', 'Timezone', 'Duration', 'Title', 'Description']);
+        rows.push(['#', 'Date', 'Day', 'Time', 'Timezone', 'Duration', 'Title', 'Description', 'Status']);
         table.querySelectorAll('tbody tr').forEach(function (tr) {
             var cells = tr.querySelectorAll('td');
-            if (cells.length < 8) return;
+            if (cells.length < 9) return;
             rows.push([
                 cells[0].innerText,
                 cells[1].innerText,
@@ -155,7 +155,8 @@
                 cells[4].innerText,
                 cells[5].innerText,
                 cells[6].innerText,
-                cells[7].innerText
+                cells[7].innerText,
+                cells[8].innerText
             ]);
         });
         var csv = rows.map(function (row) {

@@ -227,6 +227,12 @@ class ClassBatchController extends Controller
             ->values()
             ->all();
         $batch->students()->sync($studentIds);
+
+        if (Schema::hasTable('class_schedules') && Schema::hasTable('class_schedule_student')) {
+            $batch->schedules()->each(function ($schedule) use ($studentIds) {
+                $schedule->students()->sync($studentIds);
+            });
+        }
     }
 
     protected function authorizeBatchAccess(ClassBatch $batch, bool $mutating): void

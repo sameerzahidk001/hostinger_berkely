@@ -63,7 +63,7 @@
                                 @forelse($course_agendas as $index => $data)
                                     <tr>
                                         <td>{{ $loop->iteration }}</td>
-                                        <td>{{ $data->course?->title ?? 'N/A' }}</td>
+                                        <td>@include('partials.course_link', ['course' => $data->course ?? null, 'fallback' => 'N/A'])</td>
                                         <td>{{ $data->subject }}</td>
                                         <td>{{ $data->delivery_type_label }}</td>
                                         <td>{{ $data->country ? $data->country->name : 'International' }}<br><span class="text-muted">{{ $data->city }}</span></td>

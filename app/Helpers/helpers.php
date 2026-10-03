@@ -1822,6 +1822,12 @@ if (!function_exists('course_instructor_ids')) {
             return array_values(array_filter(array_map('intval', explode(',', $raw))));
         }
 
+        if (is_numeric($raw)) {
+            $id = (int) $raw;
+
+            return $id > 0 ? [$id] : [];
+        }
+
         return [];
     }
 }

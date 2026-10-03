@@ -200,10 +200,14 @@ class StudyMaterialFolder extends Model
 
         $hofId = (int) (course_instructor_ids($this->course)[0] ?? 0);
         if ($hofId > 0) {
-            return $people->first(fn ($user) => (int) $user->id === $hofId);
+            $match = $people->first(fn ($user) => (int) $user->id === $hofId);
+            if ($match) {
+                return $match;
+            }
         }
 
-        return null;
+        // Course roster missing: first assigned faculty is Head of Faculty.
+        return $people->first();
     }
 
     public function displayTrainerInstructors()
