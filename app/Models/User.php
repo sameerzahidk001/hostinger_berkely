@@ -875,11 +875,6 @@ class User extends Authenticatable implements MustVerifyEmail
         if ($request->exists('dbs') || $request->hasFile('dbs_certificate_file')) {
             $this->applyDbsBackgroundFields($request);
         }
-
-        if (\Illuminate\Support\Facades\Auth::guard('admin')->check()
-            && $request->exists('lms_permissions_present')) {
-            $this->applyLmsPermissions($request);
-        }
     }
 
     public static function lmsPermissionOptions(): array

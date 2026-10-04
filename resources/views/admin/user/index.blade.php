@@ -110,6 +110,10 @@
                                                     <a href="{{ route('users.edit', $data->id) }}"
                                                         class="btn-primary btn btn-xs editFaqs">
                                                         <i class="fa fa-edit"></i>Edit</a>
+                                                    @if(($type === 'instructor' || optional($data->roles->first())->name === 'instructor') && Auth::guard('admin')->check())
+                                                    <a href="{{ route('users.edit', ['id' => $data->id, 'tab' => 'lms']) }}"
+                                                        class="btn btn-xs btn-default">LMS Permission</a>
+                                                    @endif
                                                     @if(admin_can_delete())
                                                     <form id="delete-form-{{ $data->id }}"
                                                         action="{{ route('users.destroy', $data->id) }}" method="POST"

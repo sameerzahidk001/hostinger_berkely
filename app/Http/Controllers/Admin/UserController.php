@@ -259,13 +259,14 @@ class UserController extends Controller
 
 
 
-    public function edit($id)
+    public function edit(Request $request, $id)
     {
         try {
             $user = User::findOrFail($id); // Find the user by ID
             $roles = Role::all(); // Get all roles for the dropdown
             $countries = Country::all();
-            return view('admin.user.edit', compact('user', 'roles', 'countries')); // Return the edit view with the user and roles data
+            $lmsTab = $request->query('tab') === 'lms';
+            return view('admin.user.edit', compact('user', 'roles', 'countries', 'lmsTab')); // Return the edit view with the user and roles data
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'Something went wrong: ' . $e->getMessage());
         }
@@ -439,6 +440,33 @@ class UserController extends Controller
 
         $roleName = optional($user->roles()->first())->name ?? 'user';
         return redirect()->route('users', ['type' => user_list_type_param($roleName)])->with('success', $successMessage);
+    }
+
+    public function updateLmsPermissions(Request $request, $id)
+    {
+        abort_unless(Auth::guard('admin')->check(), 403);
+
+        $user = User::findOrFail($id);
+        abort_unless($user->roles()->where('name', 'instructor')->exists(), 404);
+
+        $validator = Validator::make($request->all(), [
+            'lms_permissions' => 'nullable|array',
+            'lms_permissions.*' => 'in:create_folder,edit_folder,assign_student_access,manage_batch,manage_schedule',
+        ]);
+        if ($validator->fails()) {
+            return redirect()
+                ->route('users.edit', ['id' => $user->id, 'tab' => 'lms'])
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        User::ensureInstructorExtraColumns();
+        $user->applyLmsPermissions($request);
+        $user->save();
+
+        return redirect()
+            ->route('users.edit', ['id' => $user->id, 'tab' => 'lms'])
+            ->with('success', 'LMS permissions saved. The instructor profile was not changed and no profile email was sent.');
     }
 
     public function destroy($id)

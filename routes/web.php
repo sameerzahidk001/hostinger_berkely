@@ -318,6 +318,8 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
                 Route::post('/store', 'store')->name('users.store');
                 Route::get('/{id}/edit', 'edit')->name('users.edit');
                 Route::put('/{id}/update', 'update')->name('users.update');
+                Route::post('/{id}/update', 'update')->name('users.update.post');
+                Route::post('/{id}/lms-permissions', 'updateLmsPermissions')->name('users.lms-permissions.update');
                 Route::delete('/delete/{id}', 'destroy')->name('users.destroy');
                 Route::post('/status', 'status')->name('users.status');
                 Route::get('/email-verification/{id}', 'emailVerification')->name('users.emailVerification');

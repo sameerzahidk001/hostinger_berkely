@@ -46,8 +46,8 @@
                         <th>Owner</th>
                         <th>Folder Status</th>
                         @if($isAdmin)<th>Instructor Access</th>@endif
-                        <th>Actions</th>
-                        <th>Assign Access</th>
+                        @if(!empty($showFolderActions))<th>Actions</th>@endif
+                        @if(!empty($showFolderAssign) || $isAdmin)<th>Assign Access</th>@endif
                     </tr>
                 </thead>
                 <tbody>
@@ -63,7 +63,7 @@
                             <td><strong>{{ $folder->name }}</strong></td>
                             <td>@include('partials.course_link', ['course' => $folder->course ?? null])</td>
                             @if($isAdmin)
-                            <td>{{ $folder->packageNames() }}</td>
+                            <td>{{ $folder->packageNames() ?: '—' }}</td>
                             @endif
                             <td>
                                 @forelse($folder->displayTrainerInstructors() as $ins)
@@ -96,9 +96,12 @@
                                 @endif
                             </td>
                             @endif
+                            @if(!empty($showFolderActions))
                             <td>
                                 @if($isAdmin || ($lms ?? app(\App\Services\StudyMaterialService::class))->canEditFolder($folder))
                                 <a class="btn btn-xs btn-primary" href="{{ route('admin.study-materials.folders.edit', $folder->id) }}">Edit</a>
+                                @else
+                                    —
                                 @endif
                                 @if($isAdmin)
                                 <form action="{{ route('admin.study-materials.folders.destroy', $folder->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this folder? All student and instructor access will be removed.');">
@@ -107,6 +110,8 @@
                                 </form>
                                 @endif
                             </td>
+                            @endif
+                            @if(!empty($showFolderAssign) || $isAdmin)
                             <td>
                                 @if($folder->status === 'active' && ($isAdmin || ($lms ?? app(\App\Services\StudyMaterialService::class))->canAssignStudentAccess($folder)))
                                     <a class="btn btn-xs btn-success" href="{{ route('admin.study-materials.access.assign-student', ['folder_id' => $folder->id]) }}">Assign Student</a>
@@ -122,10 +127,14 @@
                                         <button type="submit" class="btn btn-xs btn-default">Send instructors ({{ $folder->instructorAccess->count() }})</button>
                                     </form>
                                 @endif
+                                @if($folder->status !== 'active' && ! $isAdmin)
+                                    —
+                                @endif
                             </td>
+                            @endif
                         </tr>
                     @empty
-                        <tr><td colspan="{{ $isAdmin ? 12 : 10 }}" class="text-center">No folders yet.</td></tr>
+                        <tr><td colspan="12" class="text-center">No folders yet.</td></tr>
                     @endforelse
                 </tbody>
             </table>
