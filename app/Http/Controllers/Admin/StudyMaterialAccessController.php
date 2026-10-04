@@ -44,6 +44,7 @@ class StudyMaterialAccessController extends Controller
         $search = $this->searchTerm($request);
         $rows = $this->studentAccessQuery($search)->paginate(20)->withQueryString();
         $isAdmin = $this->lms->isAdminActor();
+        abort_unless($isAdmin || $this->lms->canGrantStudentAccess(), 403);
 
         return view('admin.study-materials.access.students', compact('rows', 'search', 'isAdmin'));
     }
@@ -192,6 +193,7 @@ class StudyMaterialAccessController extends Controller
 
     public function createStudent(Request $request)
     {
+        abort_unless($this->lms->canGrantStudentAccess(), 403);
         $folders = $this->lms->foldersQueryForActor()
             ->where('status', 'active')
             ->with('course')

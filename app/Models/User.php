@@ -244,6 +244,7 @@ class User extends Authenticatable implements MustVerifyEmail
             'institutions',
             'dbs_background',
             'instructor_showcase',
+            'lms_permissions',
         ];
         $missing = array_values(array_filter($needed, fn ($col) => ! Schema::hasColumn('users', $col)));
         if ($missing !== []) {
@@ -283,6 +284,9 @@ class User extends Authenticatable implements MustVerifyEmail
                 }
                 if (in_array('instructor_showcase', $missing, true)) {
                     $table->longText('instructor_showcase')->nullable();
+                }
+                if (in_array('lms_permissions', $missing, true)) {
+                    $table->text('lms_permissions')->nullable();
                 }
             });
         }
@@ -871,6 +875,57 @@ class User extends Authenticatable implements MustVerifyEmail
         if ($request->exists('dbs') || $request->hasFile('dbs_certificate_file')) {
             $this->applyDbsBackgroundFields($request);
         }
+
+        if (\Illuminate\Support\Facades\Auth::guard('admin')->check()
+            && $request->exists('lms_permissions_present')) {
+            $this->applyLmsPermissions($request);
+        }
+    }
+
+    public static function lmsPermissionOptions(): array
+    {
+        return [
+            'create_folder' => 'Create Folder',
+            'edit_folder' => 'Edit Folder',
+            'assign_student_access' => 'Provide student access',
+            'manage_batch' => 'Create / Edit Batch',
+            'manage_schedule' => 'Create / Edit / Delete Schedule',
+        ];
+    }
+
+    public function lmsPermissionList(): array
+    {
+        $raw = $this->lms_permissions ?? null;
+        if (is_array($raw)) {
+            $keys = $raw;
+        } else {
+            $decoded = json_decode((string) $raw, true);
+            $keys = is_array($decoded) ? $decoded : [];
+        }
+
+        $allowed = array_keys(self::lmsPermissionOptions());
+
+        return array_values(array_intersect(array_map('strval', $keys), $allowed));
+    }
+
+    public function hasLmsPermission(string $key): bool
+    {
+        return in_array($key, $this->lmsPermissionList(), true);
+    }
+
+    public function applyLmsPermissions(\Illuminate\Http\Request $request): void
+    {
+        self::ensureInstructorExtraColumns();
+        if (! Schema::hasColumn('users', 'lms_permissions')) {
+            return;
+        }
+
+        $allowed = array_keys(self::lmsPermissionOptions());
+        $keys = array_values(array_intersect(
+            array_map('strval', (array) $request->input('lms_permissions', [])),
+            $allowed
+        ));
+        $this->lms_permissions = json_encode($keys);
     }
 
     public function applyInstructorShowcaseFields(\Illuminate\Http\Request $request): void

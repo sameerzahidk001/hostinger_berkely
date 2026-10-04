@@ -141,15 +141,18 @@
                   </li>
                   @endif
                   @if(admin_menu_allowed('study-materials'))
+                  @php $lmsMenu = app(\App\Services\StudyMaterialService::class); @endphp
                   <li class="{{ request()->is('admin/study-materials*') ? 'active' : '' }}">
                      <a href="javascript:void(0)"><i class="fa fa-folder-open"></i> <span class="nav-label">Study Materials</span> <span class="fa arrow"></span></a>
                      <ul class="nav nav-second-level">
                         <li class="{{ request()->routeIs('admin.study-materials.folders.*') ? 'active' : '' }}">
                            <a href="{{ route('admin.study-materials.folders.index') }}">Folders</a>
                         </li>
+                        @if(Auth::guard('admin')->check() || $lmsMenu->canGrantStudentAccess())
                         <li class="{{ request()->routeIs('admin.study-materials.access.students', 'admin.study-materials.access.assign-student') ? 'active' : '' }}">
                            <a href="{{ route('admin.study-materials.access.students') }}">Student Access</a>
                         </li>
+                        @endif
                         @if(Auth::guard('admin')->check())
                         <li class="{{ request()->routeIs('admin.study-materials.access.instructors', 'admin.study-materials.access.assign-instructor') ? 'active' : '' }}">
                            <a href="{{ route('admin.study-materials.access.instructors') }}">Instructor Access</a>

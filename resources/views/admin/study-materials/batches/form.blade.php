@@ -18,7 +18,7 @@
     <div class="ibox">
         <div class="ibox-content">
             @if($readOnly)
-                <div class="alert alert-info">Instructors can view batch details and create schedules. Only Admin can edit batch / students.</div>
+                <div class="alert alert-info">You can view this batch. Admin must grant Create / Edit Batch before you can change it.</div>
             @endif
             <form method="POST" action="{{ $batch->exists ? route('admin.class-batches.update', $batch->id) : route('admin.class-batches.store') }}">
                 @csrf
@@ -60,7 +60,7 @@
                         <span class="help-block">Type to search and select multiple.</span>
                     </div>
                     <div class="col-md-6 form-group">
-                        <label>Students {{ $isAdmin ? '(Admin assigns)' : '(view only)' }}</label>
+                        <label>Students {{ ($isAdmin || empty($readOnly)) ? '' : '(view only)' }}</label>
                         <select name="student_ids[]" id="student_ids" class="form-control" multiple size="8" @disabled($readOnly)>
                             @foreach($students as $student)
                                 <option value="{{ $student->id }}" @selected(collect($selectedStudentIds)->contains($student->id))>
@@ -86,7 +86,7 @@
                     <button type="submit" class="btn btn-primary">Save Batch</button>
                 @endunless
                 <a href="{{ route('admin.class-batches.index') }}" class="btn btn-default">Back</a>
-                @if($batch->exists)
+                @if($batch->exists && ($isAdmin || ($lms ?? app(\App\Services\StudyMaterialService::class))->canManageSchedule()))
                     <a href="{{ route('admin.class-schedules.create', ['batch_id' => $batch->id]) }}" class="btn btn-primary">Create schedule for this batch</a>
                 @endif
             </form>

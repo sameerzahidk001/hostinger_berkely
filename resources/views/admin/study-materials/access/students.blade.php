@@ -10,7 +10,9 @@
         </ol>
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
+        @if(!empty($isAdmin) || app(\App\Services\StudyMaterialService::class)->canGrantStudentAccess())
         <a href="{{ route('admin.study-materials.access.assign-student') }}" class="btn btn-primary">Assign Student</a>
+        @endif
     </div>
 </div>
 <div class="wrapper wrapper-content">

@@ -12,9 +12,12 @@
         </ol>
     </div>
     @if($isInstructorPortal)
+    @php $lmsPortal = app(\App\Services\StudyMaterialService::class); @endphp
     <div class="col-lg-5 text-right" style="padding-top:20px;">
         <a href="{{ route('admin.study-materials.folders.index') }}" class="btn btn-default">Manage Folders</a>
+        @if($lmsPortal->canGrantStudentAccess())
         <a href="{{ route('admin.study-materials.access.students') }}" class="btn btn-default">Student Access</a>
+        @endif
     </div>
     @endif
 </div>

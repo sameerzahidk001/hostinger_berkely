@@ -32,8 +32,8 @@
                 @else
                     @php
                         $lms = $lms ?? app(\App\Services\StudyMaterialService::class);
-                        $canManageFolder = $lms->isInstructorActor() && $lms->canManageFolder($folder);
-                        $canAssignFolder = $canManageFolder && $lms->canAssignStudentAccess($folder);
+                        $canManageFolder = $lms->isInstructorActor() && $lms->canEditFolder($folder);
+                        $canAssignFolder = $lms->isInstructorActor() && $lms->canAssignStudentAccess($folder);
                     @endphp
                     <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
                         <a class="btn btn-primary btn-sm" href="{{ route('user.study-materials.show', $folder->id) }}" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;">Open Now</a>

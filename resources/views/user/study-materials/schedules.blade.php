@@ -7,7 +7,7 @@
         <h2>{{ $isInstructor ? 'Class Schedule' : 'My Class Schedule' }}</h2>
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
-        @if($isInstructor)
+        @if(!empty($canManageSchedule))
             <a href="{{ route('admin.class-schedules.create') }}" class="btn btn-primary">Add session</a>
         @endif
         <a href="{{ route('user.class-schedules.ics') }}" class="btn btn-primary" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;">Add to Zoho Calendar</a>
@@ -96,7 +96,7 @@
                                         </td>
                                         <td>
                                             <a class="btn btn-primary btn-sm" href="{{ route('user.class-schedules.batch', $openKey) }}" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;font-weight:700;">Open schedule</a>
-                                            @if($isInstructor && !empty($batch['batch_id']))
+                                            @if(!empty($canManageSchedule) && !empty($batch['batch_id']))
                                                 <a class="btn btn-default btn-sm" href="{{ route('admin.class-schedules.create', ['batch_id' => $batch['batch_id']]) }}">Add session</a>
                                             @endif
                                         </td>

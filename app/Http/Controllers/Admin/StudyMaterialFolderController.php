@@ -56,13 +56,14 @@ class StudyMaterialFolderController extends Controller
         return view('admin.study-materials.folders.index', [
             'folders' => $folders,
             'isAdmin' => $this->lms->isAdminActor(),
+            'lms' => $this->lms,
             'search' => $search,
         ]);
     }
 
     public function create()
     {
-        abort_unless($this->lms->isAdminActor(), 403);
+        abort_unless($this->lms->canCreateFolder(), 403);
 
         $courses = $this->lms->coursesForActor();
         $instructors = User::query()
@@ -80,7 +81,7 @@ class StudyMaterialFolderController extends Controller
 
     public function store(Request $request)
     {
-        abort_unless($this->lms->isAdminActor(), 403);
+        abort_unless($this->lms->canCreateFolder(), 403);
 
         $request->request->remove('code');
         $validator = Validator::make($request->all(), $this->folderRules());
@@ -142,9 +143,15 @@ class StudyMaterialFolderController extends Controller
 
         $this->storeStructure((array) $request->input('structure', []), $folder, null, 0);
 
+        if ($this->lms->canEditFolder($folder)) {
+            return redirect()
+                ->route('admin.study-materials.folders.edit', $folder->id)
+                ->with('success', 'Folder structure saved. Now add files to the main folder or a subfolder.');
+        }
+
         return redirect()
-            ->route('admin.study-materials.folders.edit', $folder->id)
-            ->with('success', 'Folder structure saved. Now add files to the main folder or a subfolder.');
+            ->route('admin.study-materials.folders.index')
+            ->with('success', 'Folder created.');
     }
 
     public function sendStudents($id)
@@ -194,7 +201,7 @@ class StudyMaterialFolderController extends Controller
     public function edit(Request $request, $id)
     {
         $folder = StudyMaterialFolder::with(['rootItems.childrenRecursive', 'instructorAccess', 'studentAccess', 'items', 'feePackages'])->findOrFail($id);
-        abort_unless($this->lms->canManageFolder($folder), 403);
+        abort_unless($this->lms->canEditFolder($folder), 403);
 
         $courses = $this->lms->coursesForActor();
         // Keep current course visible even if assignment was removed later.
@@ -242,7 +249,7 @@ class StudyMaterialFolderController extends Controller
     public function update(Request $request, $id)
     {
         $folder = StudyMaterialFolder::findOrFail($id);
-        abort_unless($this->lms->canManageFolder($folder), 403);
+        abort_unless($this->lms->canEditFolder($folder), 403);
 
         $lockCourse = $this->lms->isInstructorActor();
         $validator = Validator::make($request->all(), $this->folderRules($folder->id, $lockCourse));
@@ -288,9 +295,8 @@ class StudyMaterialFolderController extends Controller
 
     public function storeSubfolder(Request $request, $id)
     {
-        abort_unless($this->lms->isAdminActor(), 403);
         $folder = StudyMaterialFolder::with('items')->findOrFail($id);
-        abort_unless($this->lms->canManageFolder($folder), 403);
+        abort_unless($this->lms->canEditFolder($folder), 403);
 
         $validator = Validator::make($request->all(), [
             'subfolder_name' => 'required|string|max:255',
@@ -317,7 +323,7 @@ class StudyMaterialFolderController extends Controller
     public function storeFile(Request $request, $id)
     {
         $folder = StudyMaterialFolder::with('items')->findOrFail($id);
-        abort_unless($this->lms->canManageFolder($folder), 403);
+        abort_unless($this->lms->canEditFolder($folder), 403);
 
         $validator = Validator::make($request->all(), [
             'parent_id' => 'nullable|exists:study_material_items,id',
@@ -447,7 +453,7 @@ class StudyMaterialFolderController extends Controller
     public function renameItem(Request $request, $id)
     {
         $item = StudyMaterialItem::with('folder')->findOrFail($id);
-        abort_unless($this->lms->canManageFolder($item->folder), 403);
+        abort_unless($this->lms->canEditFolder($item->folder), 403);
 
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
@@ -481,7 +487,7 @@ class StudyMaterialFolderController extends Controller
     public function toggleDownload(Request $request, $id)
     {
         $item = StudyMaterialItem::with('folder')->findOrFail($id);
-        abort_unless($this->lms->canManageFolder($item->folder), 403);
+        abort_unless($this->lms->canEditFolder($item->folder), 403);
         abort_if($item->type !== 'file', 404);
 
         $item->allow_download = $request->boolean('allow_download');
@@ -498,7 +504,7 @@ class StudyMaterialFolderController extends Controller
     public function destroyItem($id)
     {
         $item = StudyMaterialItem::with('folder')->findOrFail($id);
-        abort_unless($this->lms->canManageFolder($item->folder), 403);
+        abort_unless($this->lms->canEditFolder($item->folder), 403);
 
         $this->deleteItemRecursive($item);
 
