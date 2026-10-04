@@ -57,6 +57,8 @@ class StudyMaterialFolderController extends Controller
             'folders' => $folders,
             'isAdmin' => $this->lms->isAdminActor(),
             'lms' => $this->lms,
+            'showFolderActions' => $this->lms->isAdminActor() || $this->lms->actorHasLmsPermission('edit_folder'),
+            'showFolderAssign' => $this->lms->isAdminActor() || $this->lms->actorHasLmsPermission('assign_student_access'),
             'search' => $search,
         ]);
     }

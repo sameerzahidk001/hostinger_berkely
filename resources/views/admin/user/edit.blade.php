@@ -57,6 +57,26 @@
         </div>
     </div>
 
+    @php
+        $isInstructorUser = strtolower((string) ($user->roles[0]->name ?? '')) === 'instructor';
+        $showLmsTab = $isInstructorUser && Auth::guard('admin')->check();
+        $lmsTabActive = $showLmsTab && ! empty($lmsTab);
+    @endphp
+    @if($showLmsTab)
+    <div class="wrapper wrapper-content" style="padding-bottom:0;">
+        <ul class="nav nav-tabs">
+            <li class="{{ $lmsTabActive ? '' : 'active' }}">
+                <a data-toggle="tab" href="#instructor-profile-tab">Profile</a>
+            </li>
+            <li class="{{ $lmsTabActive ? 'active' : '' }}">
+                <a data-toggle="tab" href="#instructor-lms-tab">LMS Permission</a>
+            </li>
+        </ul>
+    </div>
+    <div class="tab-content">
+        <div id="instructor-profile-tab" class="tab-pane {{ $lmsTabActive ? '' : 'active' }}">
+    @endif
+
     <div class="wrapper wrapper-content animated fadeInRight" style="padding-bottom:0px;">
         <div class="row">
             <div class="col-lg-12">
@@ -295,9 +315,6 @@
                                                 placeholder="https://www.linkedin.com/in/username" value="{{ old('linkedin', $user->linkedin) }}">
                                         </div>
                                         @include('admin.user._instructor_extra_fields', ['user' => $user])
-                                        @if(Auth::guard('admin')->check())
-                                            @include('admin.user._instructor_lms_permissions', ['user' => $user])
-                                        @endif
                                         @include('admin.user._instructor_showcase_fields', ['user' => $user])
                                         @include('admin.user._instructor_dbs_fields', ['user' => $user])
                                     </div>
@@ -362,6 +379,33 @@
             </div>
         </div>
     </div>
+
+    @if($showLmsTab)
+        </div>
+        <div id="instructor-lms-tab" class="tab-pane {{ $lmsTabActive ? 'active' : '' }}">
+            <div class="wrapper wrapper-content animated fadeInRight">
+                @if(session('success') && $lmsTabActive)
+                    <div class="alert alert-success">{{ session('success') }}</div>
+                @endif
+                <div class="ibox float-e-margins">
+                    <div class="ibox-title">
+                        <h5>LMS Permission</h5>
+                    </div>
+                    <div class="ibox-content">
+                        <form method="POST" action="{{ route('users.lms-permissions.update', $user->id) }}">
+                            @csrf
+                            <p class="help-block">Saving this tab only updates LMS actions. It does not change the instructor profile and does not send a profile email.</p>
+                            @include('admin.user._instructor_lms_permissions', ['user' => $user])
+                            <div class="text-right">
+                                <button class="btn btn-primary" type="submit"><i class="fa fa-check"></i>&nbsp;Save LMS Permission</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
 
 @endsection
 
