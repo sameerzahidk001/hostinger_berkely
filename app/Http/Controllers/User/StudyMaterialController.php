@@ -29,6 +29,10 @@ class StudyMaterialController extends Controller
 
     public function index()
     {
+        if ($this->lms->isInstructorActor()) {
+            return redirect()->route('admin.study-materials.folders.index');
+        }
+
         $accesses = $this->lms->portalAccessesForUser(Auth::user());
 
         return view('user.study-materials.index', compact('accesses'));

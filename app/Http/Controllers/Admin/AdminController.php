@@ -74,13 +74,7 @@ class AdminController extends Controller
         $role = normalize_panel_role(panel_role_name());
 
         if ($role === 'instructor' || normalize_role_key($role) === 'instructor') {
-            $courseAccesses = collect();
-            if (\Illuminate\Support\Facades\Schema::hasTable('study_material_instructor_access') && Auth::check()) {
-                $courseAccesses = app(\App\Services\StudyMaterialService::class)
-                    ->instructorPortalAccesses((int) Auth::id());
-            }
-
-            return view('admin.instructor-home', compact('courseAccesses'));
+            return redirect()->route('user.home');
         }
 
         if ($role === 'content_writer') {

@@ -1,11 +1,11 @@
-@extends('admin.layout.app')
+@extends(lms_portal_layout())
 @section('title', ($batch->exists ? ($readOnly ? 'View' : 'Edit') : 'Create') . ' Batch')
 @section('content')
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
         <h2>{{ $batch->exists ? ($readOnly ? 'View Batch' : 'Edit Batch') : 'Create Batch' }}</h2>
         <ol class="breadcrumb">
-            <li><a href="{{ route('admin.home') }}">Home</a></li>
+            <li><a href="{{ lms_portal_home() }}">Home</a></li>
             <li><a href="{{ route('admin.class-batches.index') }}">Batches</a></li>
             <li class="active"><strong>{{ $batch->exists ? ($readOnly ? 'View' : 'Edit') : 'Create' }}</strong></li>
         </ol>

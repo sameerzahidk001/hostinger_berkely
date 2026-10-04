@@ -1,11 +1,11 @@
-@extends('admin.layout.app')
+@extends(lms_portal_layout())
 @section('title', 'Batches')
 @section('content')
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">
         <h2>Batches</h2>
         <ol class="breadcrumb">
-            <li><a href="{{ route('admin.home') }}">Home</a></li>
+            <li><a href="{{ lms_portal_home() }}">Home</a></li>
             <li><a href="{{ route('admin.class-schedules.index') }}">Class Schedule</a></li>
             <li class="active"><strong>Batches</strong></li>
         </ol>

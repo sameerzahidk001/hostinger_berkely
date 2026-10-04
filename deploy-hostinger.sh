@@ -68,6 +68,15 @@ if [ -f .env ]; then
   upsert_env NOON_PAYMENT_ACTION SALE
   upsert_env NOON_WEBHOOK_SECRET d3aa6de3-2653-4c6f-851e-51794d1dc32b
 
+  current_lifetime="$(grep "^SESSION_LIFETIME=" .env | head -n1 | cut -d= -f2-)"
+  if [ -z "$current_lifetime" ] || [ "$current_lifetime" = "15" ]; then
+    if grep -q "^SESSION_LIFETIME=" .env; then
+      sed -i "s|^SESSION_LIFETIME=.*|SESSION_LIFETIME=120|" .env
+    else
+      echo "SESSION_LIFETIME=120" >> .env
+    fi
+  fi
+
   # Zoho Meeting Lab + WorkDrive + Calendar (bdm@berkeleyme.com OAuth)
   # Force-write so a blank/stale token on Hostinger is replaced.
   force_env() {
