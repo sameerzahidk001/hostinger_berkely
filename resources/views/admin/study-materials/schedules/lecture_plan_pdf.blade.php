@@ -63,7 +63,7 @@
 
             return $label;
         })->filter()->unique()->values();
-        $timezoneLabel = $timezoneLabels->isNotEmpty() ? $timezoneLabels->implode(', ') : '—';
+        $timezoneLabel = $timezoneLabels->isNotEmpty() ? $timezoneLabels->implode(', ') : '';
         $printTz = 'Asia/Dubai';
         $firstSession = $sessions->first();
         if (is_object($firstSession) && method_exists($firstSession, 'timezoneName')) {
@@ -73,11 +73,12 @@
         }
         try {
             $printedAt = now($printTz);
-            $printedAbbr = $printedAt->format('T');
-            $printedDate = $printedAt->format('d M Y H:i')
-                . ($printedAbbr !== '' && $printedAbbr !== $printTz ? ' ' . $printedAbbr : '');
+            $offset = preg_replace('/:00$/', '', $printedAt->format('P'));
+            $tzInParens = $timezoneLabel !== '' ? $timezoneLabel : trim($printTz . ' · ' . $offset);
+            $printedDate = $printedAt->format('d M Y H:i') . ' (' . $tzInParens . ')';
         } catch (\Throwable $e) {
-            $printedDate = now()->format('d M Y H:i');
+            $printedDate = now()->format('d M Y H:i')
+                . ($timezoneLabel !== '' ? ' (' . $timezoneLabel . ')' : '');
         }
         $copyright = data_get($settings ?? null, 'copyright_message')
             ?: ('Copyright © ' . now()->format('Y') . ' Berkeley School of Business, Arts & Sciences | UKPRN: 10101119');
@@ -135,7 +136,7 @@
         </tr>
         <tr>
             <td><strong>Head of Faculty:</strong> {{ $hofName }}</td>
-            <td><strong>Timezone:</strong> {{ $timezoneLabel }}</td>
+            <td></td>
         </tr>
     </table>
 
