@@ -736,6 +736,24 @@ if (!function_exists('panel_role_name')) {
     }
 }
 
+if (!function_exists('lms_portal_layout')) {
+    function lms_portal_layout(): string
+    {
+        return app(\App\Services\StudyMaterialService::class)->isInstructorActor()
+            ? 'user.layout.app'
+            : 'admin.layout.app';
+    }
+}
+
+if (!function_exists('lms_portal_home')) {
+    function lms_portal_home(): string
+    {
+        return app(\App\Services\StudyMaterialService::class)->isInstructorActor()
+            ? route('user.home')
+            : route('admin.home');
+    }
+}
+
 if (!function_exists('panel_profile_user')) {
     function panel_profile_user()
     {

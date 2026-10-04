@@ -144,6 +144,9 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
         Route::get('csrf-token', function () {
             return response()->json(['token' => csrf_token()]);
         })->name('admin.csrf-token');
+        Route::get('session/ping', function () {
+            return response()->json(['ok' => true]);
+        })->name('admin.session.ping');
 
         // Payment Gateway
         Route::get('/payment-gateways', [PaymentGatewayController::class, 'index'])->name('admin.payment-gateways.index');
@@ -549,6 +552,9 @@ Route::prefix('user')->middleware(['auth', 'approved', 'redirect.panel.from.stud
 
     // Dashboard
     Route::get('/', [UserHomeController::class, 'index'])->name('user.home');
+    Route::get('/session/ping', function () {
+        return response()->json(['ok' => true]);
+    })->name('session.ping');
     Route::get('/payments', [UserHomeController::class, 'payments'])->name('user.payments');
     Route::get('/cart', [CartController::class, 'index'])->name('user.cart.index');
     Route::post('/generate/noonCheckout', [UserHomeController::class, 'generateNoonCheckout'])->name('user.generate.noonCheckout');

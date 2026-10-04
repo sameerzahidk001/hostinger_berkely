@@ -142,10 +142,13 @@
                         <div class="ibox-title" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
                             <h5 style="margin:0;">Course Access</h5>
                             <div>
-                                <a href="{{ route('user.study-materials.index') }}" class="btn btn-xs btn-default">All Study Materials</a>
                                 @if(!empty($isInstructor))
                                     <a href="{{ route('admin.study-materials.folders.index') }}" class="btn btn-xs btn-default">Manage Folders</a>
+                                    @if(app(\App\Services\StudyMaterialService::class)->canGrantStudentAccess())
                                     <a href="{{ route('admin.study-materials.access.assign-student') }}" class="btn btn-xs btn-success">Assign Access</a>
+                                    @endif
+                                @else
+                                    <a href="{{ route('user.study-materials.index') }}" class="btn btn-xs btn-default">All Study Materials</a>
                                 @endif
                             </div>
                         </div>

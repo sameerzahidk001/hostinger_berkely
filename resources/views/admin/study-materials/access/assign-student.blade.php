@@ -1,11 +1,11 @@
-@extends('admin.layout.app')
+@extends(lms_portal_layout())
 @section('title', 'Assign Student')
 @section('content')
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
         <h2>Assign Folder to Student</h2>
         <ol class="breadcrumb">
-            <li><a href="{{ route('admin.home') }}">Home</a></li>
+            <li><a href="{{ lms_portal_home() }}">Home</a></li>
             <li><a href="{{ route('admin.study-materials.access.students') }}">Student Access</a></li>
             <li class="active"><strong>Assign Student</strong></li>
         </ol>

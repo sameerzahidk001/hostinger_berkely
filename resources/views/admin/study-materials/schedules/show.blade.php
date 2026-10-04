@@ -1,4 +1,4 @@
-@extends('admin.layout.app')
+@extends(lms_portal_layout())
 @section('title', ($batch['batch_code'] ?? '') . ' ' . ($batch['batch_name'] ?? 'Batch schedule'))
 @section('content')
 @php
@@ -17,7 +17,7 @@
             {{ $batch['batch_name'] }}
         </h2>
         <ol class="breadcrumb">
-            <li><a href="{{ route('admin.home') }}">Home</a></li>
+            <li><a href="{{ lms_portal_home() }}">Home</a></li>
             <li><a href="{{ route('admin.class-schedules.index') }}">Schedules</a></li>
             <li class="active"><strong>{{ $batch['batch_name'] }}</strong></li>
         </ol>

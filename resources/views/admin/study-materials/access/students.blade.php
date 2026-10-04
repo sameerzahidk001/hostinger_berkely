@@ -1,11 +1,11 @@
-@extends('admin.layout.app')
+@extends(lms_portal_layout())
 @section('title', 'Student Access')
 @section('content')
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">
         <h2>Student Access</h2>
         <ol class="breadcrumb">
-            <li><a href="{{ route('admin.home') }}">Home</a></li>
+            <li><a href="{{ lms_portal_home() }}">Home</a></li>
             <li class="active"><strong>Student Access</strong></li>
         </ol>
     </div>
