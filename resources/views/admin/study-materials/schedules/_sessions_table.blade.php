@@ -151,6 +151,9 @@
             var tz = (cells[4].innerText || '').replace(/\s+/g, ' ').trim();
             if (tz && tzParts.indexOf(tz) === -1) tzParts.push(tz);
         });
+        if (tzParts.length) {
+            printedDate += ' (' + tzParts.join(', ') + ')';
+        }
         var rows = [];
         rows.push(['Batch name', batch]);
         rows.push(['Course', course]);
@@ -159,7 +162,6 @@
         rows.push(['Batch code', code]);
         rows.push(['Sessions', String(sessionCount)]);
         rows.push(['Printed Date', printedDate]);
-        rows.push(['Timezone', tzParts.join(', ') || '']);
         rows.push([]);
         rows.push(['#', 'Date', 'Day', 'Time', 'Timezone', 'Duration', 'Title', 'Description', 'Status']);
         table.querySelectorAll('tbody tr').forEach(function (tr) {
