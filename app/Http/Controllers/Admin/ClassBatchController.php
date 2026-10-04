@@ -54,6 +54,7 @@ class ClassBatchController extends Controller
         return view('admin.study-materials.batches.index', [
             'batches' => $batches,
             'isAdmin' => $this->lms->isAdminActor(),
+            'lms' => $this->lms,
             'search' => $search,
         ]);
     }
@@ -76,7 +77,7 @@ class ClassBatchController extends Controller
 
     public function create()
     {
-        abort_unless($this->lms->isAdminActor(), 403);
+        abort_unless($this->lms->isAdminActor() || $this->lms->canManageBatch(), 403);
 
         return view('admin.study-materials.batches.form', $this->formData(new ClassBatch([
             'status' => 'active',
@@ -86,11 +87,17 @@ class ClassBatchController extends Controller
 
     public function store(Request $request)
     {
-        abort_unless($this->lms->isAdminActor(), 403);
+        abort_unless($this->lms->isAdminActor() || $this->lms->canManageBatch(), 403);
 
         $validator = Validator::make($request->all(), $this->rules());
         if ($validator->fails()) {
             return redirect()->back()->withErrors($validator)->withInput();
+        }
+
+        if ($this->lms->isInstructorActor() && ! $this->lms->instructorAssignedToCourse((int) $request->input('course_id'))) {
+            return redirect()->back()
+                ->withErrors(['course_id' => 'You can only create batches for courses assigned to you.'])
+                ->withInput();
         }
 
         $batch = new ClassBatch();
@@ -98,7 +105,11 @@ class ClassBatchController extends Controller
         $batch->course_id = (int) $request->input('course_id');
         $batch->head_of_faculty_id = $request->input('head_of_faculty_id') ?: null;
         $batch->status = $request->input('status', 'active') === 'active' ? 'active' : 'disabled';
-        $batch->created_by_admin_id = Auth::guard('admin')->id();
+        if ($this->lms->isAdminActor()) {
+            $batch->created_by_admin_id = Auth::guard('admin')->id();
+        } else {
+            $batch->created_by_user_id = Auth::id();
+        }
         $batch->code = ClassBatch::generateCode();
         $batch->save();
         ClassBatch::ensureCode($batch);
@@ -128,11 +139,13 @@ class ClassBatchController extends Controller
             return redirect()->back()->withErrors($validator)->withInput();
         }
 
-        if ($this->lms->isAdminActor()) {
+        if ($this->lms->isAdminActor() || $this->lms->canManageBatch()) {
             $batch->name = trim((string) $request->input('name'));
             $batch->course_id = (int) $request->input('course_id');
             $batch->head_of_faculty_id = $request->input('head_of_faculty_id') ?: null;
-            $batch->status = $request->input('status', 'active') === 'active' ? 'active' : 'disabled';
+            if ($this->lms->isAdminActor()) {
+                $batch->status = $request->input('status', 'active') === 'active' ? 'active' : 'disabled';
+            }
             $batch->save();
             $this->syncRelations($batch, $request);
         }
@@ -165,9 +178,9 @@ class ClassBatchController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'email']);
 
-        // Admin can assign any student (same as Class Schedule). Instructors only see batch roster.
-        $students = $this->lms->isAdminActor()
-            ? $this->lms->studentsForCourse(null)
+        // Admin can assign any student. Instructors with batch permission see course students.
+        $students = ($this->lms->isAdminActor() || $this->lms->canManageBatch())
+            ? $this->lms->studentsForCourse($this->lms->isAdminActor() ? null : (int) $batch->course_id)
             : $batch->students;
 
         if ($batch->relationLoaded('students') && $batch->students->isNotEmpty()) {
@@ -192,7 +205,8 @@ class ClassBatchController extends Controller
             ),
             'selectedStudentIds' => old('student_ids', $batch->students->pluck('id')->all()),
             'isAdmin' => $this->lms->isAdminActor(),
-            'readOnly' => ! $this->lms->isAdminActor(),
+            'lms' => $this->lms,
+            'readOnly' => ! $this->lms->isAdminActor() && ! $this->lms->canManageBatch(),
         ];
     }
 
@@ -216,8 +230,11 @@ class ClassBatchController extends Controller
             ->map(fn ($id) => (int) $id)
             ->filter()
             ->unique()
-            ->values()
-            ->all();
+            ->values();
+        if ($this->lms->isInstructorActor() && Auth::id()) {
+            $instructorIds->push((int) Auth::id());
+        }
+        $instructorIds = $instructorIds->unique()->values()->all();
         $batch->instructors()->sync($instructorIds);
 
         $studentIds = collect($request->input('student_ids', []))
@@ -242,7 +259,7 @@ class ClassBatchController extends Controller
         }
 
         if ($mutating) {
-            abort(403);
+            abort_unless($this->lms->canManageBatch(), 403);
         }
 
         $userId = (int) Auth::id();

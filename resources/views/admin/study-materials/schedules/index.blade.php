@@ -12,8 +12,10 @@
     <div class="col-lg-4 text-right" style="padding-top:20px;">
         <a href="{{ route('admin.class-batches.index') }}" class="btn btn-default">Batches</a>
         <a href="{{ route('admin.class-schedules.feed') }}" class="btn btn-default">Add to Zoho Calendar (.ics)</a>
+        @if($isAdmin || ($lms ?? app(\App\Services\StudyMaterialService::class))->canManageSchedule())
         <a href="{{ route('admin.class-schedules.create') }}" class="btn btn-primary">Create Schedule</a>
-        @if($isAdmin ?? Auth::guard('admin')->check())
+        @endif
+        @if($isAdmin || ($lms ?? app(\App\Services\StudyMaterialService::class))->canManageBatch())
             <a href="{{ route('admin.class-batches.create') }}" class="btn btn-primary">Create Batch</a>
         @endif
     </div>
@@ -89,7 +91,9 @@
                                 <td>{{ $b->schedules_count }}</td>
                                 <td>
                                     <a class="btn btn-xs btn-primary" href="{{ route('admin.class-schedules.batch', $b->id) }}" style="font-weight:700;">Open schedule</a>
+                                    @if($isAdmin || ($lms ?? app(\App\Services\StudyMaterialService::class))->canManageSchedule())
                                     <a class="btn btn-xs btn-default" href="{{ route('admin.class-schedules.create', ['batch_id' => $b->id]) }}">Add session</a>
+                                    @endif
                                 </td>
                             </tr>
                         @empty

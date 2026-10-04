@@ -10,7 +10,7 @@
         </ol>
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
-        @if($isAdmin)
+        @if($isAdmin || ($lms ?? app(\App\Services\StudyMaterialService::class))->canCreateFolder())
         <a href="{{ route('admin.study-materials.folders.create') }}" class="btn btn-primary">Create Folder</a>
         @endif
     </div>
@@ -97,7 +97,9 @@
                             </td>
                             @endif
                             <td>
+                                @if($isAdmin || ($lms ?? app(\App\Services\StudyMaterialService::class))->canEditFolder($folder))
                                 <a class="btn btn-xs btn-primary" href="{{ route('admin.study-materials.folders.edit', $folder->id) }}">Edit</a>
+                                @endif
                                 @if($isAdmin)
                                 <form action="{{ route('admin.study-materials.folders.destroy', $folder->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this folder? All student and instructor access will be removed.');">
                                     @csrf @method('DELETE')
@@ -106,7 +108,7 @@
                                 @endif
                             </td>
                             <td>
-                                @if($folder->status === 'active')
+                                @if($folder->status === 'active' && ($isAdmin || ($lms ?? app(\App\Services\StudyMaterialService::class))->canAssignStudentAccess($folder)))
                                     <a class="btn btn-xs btn-success" href="{{ route('admin.study-materials.access.assign-student', ['folder_id' => $folder->id]) }}">Assign Student</a>
                                     <form action="{{ route('admin.study-materials.folders.send-students', $folder->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Email all assigned students for this folder?');">
                                         @csrf

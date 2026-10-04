@@ -67,6 +67,7 @@ class ClassScheduleController extends Controller
             'calendarEvents' => $calendarEvents,
             'zohoEmbed' => $zohoEmbed,
             'isAdmin' => $this->lms->isAdminActor(),
+            'lms' => $this->lms,
             'search' => $search,
         ]);
     }
@@ -138,6 +139,7 @@ class ClassScheduleController extends Controller
             'batch' => $group,
             'batchModel' => $batchModel,
             'isAdmin' => $this->lms->isAdminActor(),
+            'lms' => $this->lms,
         ]);
     }
 
@@ -177,6 +179,7 @@ class ClassScheduleController extends Controller
 
     public function create(Request $request)
     {
+        abort_unless($this->lms->canManageSchedule(), 403);
         ClassSchedule::ensureRecurrenceColumns();
         ClassSchedule::ensureTimezoneColumn();
 
@@ -215,6 +218,7 @@ class ClassScheduleController extends Controller
 
     public function store(Request $request)
     {
+        abort_unless($this->lms->canManageSchedule(), 403);
         ClassSchedule::ensureRecurrenceColumns();
         ClassSchedule::ensureTimezoneColumn();
         ClassSchedule::ensureMeetingKeyColumn();
@@ -443,7 +447,16 @@ class ClassScheduleController extends Controller
     public function ics($id)
     {
         $schedule = ClassSchedule::with(['course', 'instructor', 'batch'])->findOrFail($id);
-        $this->assertCanManageSchedule($schedule);
+        if ($schedule->batch) {
+            $this->assertCanUseBatch($schedule->batch);
+        } else {
+            abort_unless(
+                $this->lms->isAdminActor()
+                || (int) $schedule->instructor_id === (int) Auth::id()
+                || (int) $schedule->head_of_faculty_id === (int) Auth::id(),
+                403
+            );
+        }
 
         return $this->icsResponse(
             [$schedule],
@@ -590,6 +603,7 @@ class ClassScheduleController extends Controller
         }
 
         abort_unless($this->lms->isInstructorActor(), 403);
+        abort_unless($this->lms->canManageSchedule(), 403);
 
         if ($schedule->batch) {
             $this->assertCanUseBatch($schedule->batch);
@@ -898,6 +912,7 @@ class ClassScheduleController extends Controller
 
     public function clearBatch($batchId)
     {
+        abort_unless($this->lms->canManageSchedule(), 403);
         $batch = ClassBatch::findOrFail((int) $batchId);
         $this->assertCanUseBatch($batch);
 

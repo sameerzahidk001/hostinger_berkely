@@ -163,6 +163,8 @@ class UserController extends Controller
             'podcasts.*.date' => 'nullable|date',
             'podcasts.*.link' => 'nullable|url|max:500',
             'podcasts.*.image' => 'nullable|file|image|mimes:jpeg,png,jpg,webp|max:4096',
+            'lms_permissions' => 'nullable|array',
+            'lms_permissions.*' => 'in:create_folder,edit_folder,assign_student_access,manage_batch,manage_schedule',
         ]);
 
         if ($validator->fails()) {
@@ -368,6 +370,8 @@ class UserController extends Controller
                 'podcasts.*.date' => 'nullable|date',
                 'podcasts.*.link' => 'nullable|url|max:500',
                 'podcasts.*.image' => 'nullable|file|image|mimes:jpeg,png,jpg,webp|max:4096',
+                'lms_permissions' => 'nullable|array',
+                'lms_permissions.*' => 'in:create_folder,edit_folder,assign_student_access,manage_batch,manage_schedule',
             ];
             if (Auth::guard('admin')->check()) {
                 $rules['email'] = 'required|email|unique:users,email,' . $id;

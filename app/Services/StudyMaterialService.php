@@ -122,8 +122,42 @@ class StudyMaterialService
         return $this->coursesForActor()->contains(fn ($course) => (int) $course->id === $courseId);
     }
 
+    public function actorHasLmsPermission(string $key): bool
+    {
+        if ($this->isAdminActor()) {
+            return true;
+        }
+
+        if (! $this->isInstructorActor()) {
+            return false;
+        }
+
+        $user = Auth::user();
+        if (! $user) {
+            return false;
+        }
+
+        User::ensureInstructorExtraColumns();
+
+        return method_exists($user, 'hasLmsPermission') && $user->hasLmsPermission($key);
+    }
+
+    public function canCreateFolder(): bool
+    {
+        return $this->actorHasLmsPermission('create_folder');
+    }
+
+    public function canEditFolder(StudyMaterialFolder $folder): bool
+    {
+        if ($this->isAdminActor()) {
+            return true;
+        }
+
+        return $this->canManageFolder($folder) && $this->actorHasLmsPermission('edit_folder');
+    }
+
     /**
-     * Giving student access requires manage rights AND (for instructors) course assignment.
+     * Giving student access requires folder access AND the admin-granted permission.
      */
     public function canAssignStudentAccess(StudyMaterialFolder $folder): bool
     {
@@ -131,7 +165,22 @@ class StudyMaterialService
             return true;
         }
 
-        return $this->canManageFolder($folder);
+        return $this->canManageFolder($folder) && $this->actorHasLmsPermission('assign_student_access');
+    }
+
+    public function canGrantStudentAccess(): bool
+    {
+        return $this->actorHasLmsPermission('assign_student_access');
+    }
+
+    public function canManageBatch(): bool
+    {
+        return $this->actorHasLmsPermission('manage_batch');
+    }
+
+    public function canManageSchedule(): bool
+    {
+        return $this->actorHasLmsPermission('manage_schedule');
     }
 
     /**

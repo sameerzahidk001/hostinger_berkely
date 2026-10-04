@@ -6,6 +6,7 @@
     $hof = $batch['head_of_faculty'] ?? null;
     $ins = $batch['instructor'] ?? null;
     $studentCount = $batchModel->students->unique('id')->count();
+    $canManageSessions = ($lms ?? app(\App\Services\StudyMaterialService::class))->canManageSchedule();
 @endphp
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">
@@ -23,11 +24,13 @@
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
         <a href="{{ route('admin.class-schedules.index') }}" class="btn btn-default">All batches</a>
+        @if($canManageSessions)
         <a href="{{ route('admin.class-schedules.create', ['batch_id' => $batch['batch_id'] ?? $batchModel->id]) }}" class="btn btn-primary">Add session</a>
         <form action="{{ route('admin.class-schedules.batch.clear', $batchModel->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete ALL sessions in this batch? This cannot be undone.');">
             @csrf @method('DELETE')
             <button type="submit" class="btn btn-danger">Clear all sessions</button>
         </form>
+        @endif
     </div>
 </div>
 <div class="wrapper wrapper-content">
@@ -60,7 +63,7 @@
             <p class="help-block">All sessions stay visible (Scheduled, Completed, Cancelled). Only deleted sessions are removed.</p>
             @include('admin.study-materials.schedules._sessions_table', [
                 'batch' => $batch,
-                'isAdminView' => true,
+                'isAdminView' => $canManageSessions,
                 'lecturePlanPdfUrl' => route('admin.class-schedules.lecture-plan', $batchModel->id),
             ])
         </div>

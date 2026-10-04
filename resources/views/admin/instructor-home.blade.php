@@ -11,7 +11,9 @@
     </div>
     <div class="col-lg-5 text-right" style="padding-top:20px;">
         <a href="{{ route('admin.study-materials.folders.index') }}" class="btn btn-default">Manage Folders</a>
+        @if(app(\App\Services\StudyMaterialService::class)->canGrantStudentAccess())
         <a href="{{ route('admin.study-materials.access.assign-student') }}" class="btn btn-success">Assign Access</a>
+        @endif
     </div>
 </div>
 

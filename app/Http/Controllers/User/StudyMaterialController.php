@@ -227,6 +227,7 @@ class StudyMaterialController extends Controller
             'batches' => $batches,
             'calendarEvents' => $calendarEvents,
             'isInstructor' => $isInstructor,
+            'canManageSchedule' => $isInstructor && $this->lms->canManageSchedule(),
             'search' => $search,
         ]);
     }
@@ -254,7 +255,7 @@ class StudyMaterialController extends Controller
             ))
             ->values();
 
-        $canManage = $this->instructorCanManageBatch($batch);
+        $canManage = $this->lms->canManageSchedule() && $this->instructorCanManageBatch($batch);
 
         return view('user.study-materials.schedule-batch', [
             'batch' => $batch,
