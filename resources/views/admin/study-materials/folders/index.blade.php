@@ -46,6 +46,7 @@
                         <th>Owner</th>
                         <th>Folder Status</th>
                         @if($isAdmin)<th>Instructor Access</th>@endif
+                        <th>Open</th>
                         @if(!empty($showFolderActions))<th>Actions</th>@endif
                         @if(!empty($showFolderAssign) || $isAdmin)<th>Assign Access</th>@endif
                     </tr>
@@ -96,6 +97,9 @@
                                 @endif
                             </td>
                             @endif
+                            <td>
+                                <a class="btn btn-xs btn-primary" href="{{ route('user.study-materials.show', $folder->id) }}" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;font-weight:700;">Open Now</a>
+                            </td>
                             @if(!empty($showFolderActions))
                             <td>
                                 @if($isAdmin || ($lms ?? app(\App\Services\StudyMaterialService::class))->canEditFolder($folder))

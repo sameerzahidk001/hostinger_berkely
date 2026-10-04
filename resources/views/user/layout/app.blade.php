@@ -161,7 +161,9 @@
                </li>
                @endif
                @if(auth()->user()->roles()->where('name', 'instructor')->exists())
+               @php $lmsMenu = app(\App\Services\StudyMaterialService::class); @endphp
                <li class="{{ request()->routeIs('user.study-materials.*') || request()->is('admin/study-materials*') ? 'active' : '' }}">
+                  @if($lmsMenu->canGrantStudentAccess())
                   <a href="javascript:void(0)">
                      <i class="fa fa-book"></i>
                      <span class="nav-label">Study Materials</span>
@@ -175,6 +177,12 @@
                         <a href="{{ route('admin.study-materials.access.students') }}">Assign Access</a>
                      </li>
                   </ul>
+                  @else
+                  <a href="{{ route('user.study-materials.index') }}">
+                     <i class="fa fa-book"></i>
+                     <span class="nav-label">Study Materials</span>
+                  </a>
+                  @endif
                </li>
                @else
                <li class="{{ request()->routeIs('user.study-materials.*') ? 'active' : '' }}">

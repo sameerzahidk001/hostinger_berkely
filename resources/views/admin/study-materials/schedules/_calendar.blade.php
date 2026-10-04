@@ -1,7 +1,7 @@
 @push('style')
 <link href="{{ asset('/admin/css/plugins/fullcalendar/fullcalendar.css') }}" rel="stylesheet">
 <style>
-#class-calendar { background:#fff; }
+#class-calendar { background:#fff; min-height: 520px; }
 .fc-event { cursor: pointer; }
 </style>
 @endpush
@@ -27,8 +27,12 @@
         var target = $(e.target).attr('href') || '';
         if (target.indexOf('calendar') !== -1) {
             $cal.fullCalendar('render');
+            $cal.fullCalendar('rerenderEvents');
         }
     });
+    setTimeout(function () {
+        $cal.fullCalendar('render');
+    }, 200);
 })();
 </script>
 @endpush
