@@ -18,7 +18,7 @@ class LogPageView
 
         $response = $next($request);
 
-        $userIp = $request->ip();
+        $userIp = visitor_client_ip($request) ?: $request->ip();
         $sessionId = $request->session()->getId();
         $fullUrl = $request->fullUrl();
         $userAgent = (string) $request->header('User-Agent');

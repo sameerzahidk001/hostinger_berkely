@@ -2387,28 +2387,124 @@ if (!function_exists('analytics_channel')) {
     }
 }
 
+if (!function_exists('visitor_client_ip')) {
+    function visitor_client_ip($request = null): ?string
+    {
+        $request = $request ?? request();
+        if (! $request) {
+            return null;
+        }
+
+        foreach (['CF-Connecting-IP', 'True-Client-IP', 'X-Real-IP'] as $header) {
+            $ip = trim((string) $request->header($header));
+            if ($ip !== '' && filter_var($ip, FILTER_VALIDATE_IP)) {
+                return $ip;
+            }
+        }
+
+        $ip = (string) $request->ip();
+
+        return filter_var($ip, FILTER_VALIDATE_IP) ? $ip : null;
+    }
+}
+
+if (!function_exists('visitor_country_header')) {
+    function visitor_country_header($request = null): ?string
+    {
+        $request = $request ?? request();
+        if (! $request) {
+            return null;
+        }
+
+        $code = strtoupper(trim((string) ($request->header('CF-IPCountry') ?: $request->header('X-Country-Code') ?: '')));
+        if ($code === '' || in_array($code, ['XX', 'T1', 'ZZ'], true)) {
+            return null;
+        }
+
+        return preg_match('/^[A-Z]{2}$/', $code) ? $code : null;
+    }
+}
+
 if (!function_exists('getUserLocation')) {
     function getUserLocation($ip = null)
     {
-        $ip = $ip ?? request()->ip();
+        $ip = $ip ?? visitor_client_ip();
 
-        if ($ip === '127.0.0.1' || $ip === '::1') {
-            $ip = '8.8.8.8';
+        if (! $ip || in_array($ip, ['127.0.0.1', '::1'], true)) {
+            $header = visitor_country_header();
+            return $header ? ['country' => $header, 'city' => null, 'region' => null, 'postal' => null, 'loc' => null] : ['error' => 'Local IP'];
         }
 
-        try {
-            $token = env('IPINFO_TOKEN');
-            $url = $token
-                ? "https://ipinfo.io/{$ip}?token={$token}"
-                : "https://ipinfo.io/{$ip}/json";
+        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+            $header = visitor_country_header();
+            return $header ? ['country' => $header, 'city' => null, 'region' => null, 'postal' => null, 'loc' => null] : ['error' => 'Private IP'];
+        }
 
-            $response = Http::timeout(5)->get($url);
+        $header = visitor_country_header();
+        if ($header) {
+            return ['country' => $header, 'city' => null, 'region' => null, 'postal' => null, 'loc' => null];
+        }
 
-            if ($response->successful()) {
-                return $response->json();
+        $mmdb = storage_path('app/geoip.mmdb');
+        if (is_file($mmdb) && class_exists(\Torann\GeoIP\Facades\GeoIP::class)) {
+            try {
+                $loc = \Torann\GeoIP\Facades\GeoIP::getLocation($ip);
+                $isDefault = is_object($loc) ? ! empty($loc->default) : ! empty($loc['default']);
+                $iso = is_object($loc) ? ($loc->iso_code ?? null) : ($loc['iso_code'] ?? null);
+                if (! $isDefault && $iso) {
+                    return [
+                        'country' => $iso,
+                        'city' => is_object($loc) ? ($loc->city ?? null) : ($loc['city'] ?? null),
+                        'region' => is_object($loc) ? ($loc->state_name ?? $loc->state ?? null) : ($loc['state_name'] ?? null),
+                        'postal' => is_object($loc) ? ($loc->postal_code ?? null) : ($loc['postal_code'] ?? null),
+                        'loc' => null,
+                    ];
+                }
+            } catch (\Throwable $e) {
+                // fall through to HTTP providers
             }
-        } catch (\Exception $e) {
-            return ['error' => 'Unable to fetch location.'];
+        }
+
+        $providers = [];
+        $token = env('IPINFO_TOKEN');
+        if ($token) {
+            $providers[] = "https://ipinfo.io/{$ip}?token={$token}";
+        }
+        $providers[] = "http://ip-api.com/json/{$ip}?fields=status,country,countryCode,regionName,city,zip,lat,lon";
+        $providers[] = "https://ipwho.is/{$ip}";
+
+        foreach ($providers as $url) {
+            try {
+                $response = \Illuminate\Support\Facades\Http::timeout(2)->get($url);
+                if (! $response->successful()) {
+                    continue;
+                }
+                $data = $response->json();
+                if (! is_array($data)) {
+                    continue;
+                }
+                if (($data['status'] ?? null) === 'fail' || ($data['success'] ?? true) === false) {
+                    continue;
+                }
+
+                $code = $data['countryCode'] ?? $data['country_code'] ?? $data['country'] ?? null;
+                if (is_string($code) && strlen($code) > 2 && isset($data['countryCode'])) {
+                    $code = $data['countryCode'];
+                }
+                if (empty($code)) {
+                    continue;
+                }
+
+                return [
+                    'country' => $code,
+                    'city' => $data['city'] ?? null,
+                    'region' => $data['regionName'] ?? $data['region'] ?? null,
+                    'postal' => $data['zip'] ?? $data['postal'] ?? null,
+                    'loc' => isset($data['lat'], $data['lon']) ? ($data['lat'] . ',' . $data['lon']) : ($data['loc'] ?? null),
+                ];
+            } catch (\Throwable $e) {
+                continue;
+            }
         }
 
         return ['error' => 'Failed to get location.'];
@@ -2426,6 +2522,18 @@ if (!function_exists('resolve_ip_location')) {
             'location' => null,
         ];
 
+        $header = visitor_country_header();
+        if ($header) {
+            $name = \App\Models\Country::where('iso_code', $header)->value('name') ?: $header;
+            return [
+                'country' => $name,
+                'city' => null,
+                'region' => null,
+                'postal' => null,
+                'location' => null,
+            ];
+        }
+
         if (! $ip) {
             return $empty;
         }
@@ -2438,35 +2546,41 @@ if (!function_exists('resolve_ip_location')) {
             return $empty;
         }
 
-        return \Illuminate\Support\Facades\Cache::remember(
-            'ip_location:' . $ip,
-            now()->addDays(7),
-            function () use ($ip, $empty) {
-                $data = getUserLocation($ip);
+        $cached = \Illuminate\Support\Facades\Cache::get('ip_location:' . $ip);
+        if (is_array($cached) && ! empty($cached['country'])) {
+            return $cached;
+        }
 
-                if (empty($data) || isset($data['error'])) {
-                    return $empty;
-                }
+        $data = getUserLocation($ip);
 
-                $countryCode = $data['country'] ?? null;
-                $countryName = $countryCode;
+        if (empty($data) || isset($data['error'])) {
+            \Illuminate\Support\Facades\Cache::put('ip_location_miss:' . $ip, 1, now()->addMinutes(30));
+            return $empty;
+        }
 
-                if ($countryCode) {
-                    $name = \App\Models\Country::where('iso_code', $countryCode)->value('name');
-                    if ($name) {
-                        $countryName = $name;
-                    }
-                }
+        $countryCode = $data['country'] ?? null;
+        $countryName = $countryCode;
 
-                return [
-                    'country' => $countryName ?: $countryCode,
-                    'city' => $data['city'] ?? null,
-                    'region' => $data['region'] ?? null,
-                    'postal' => $data['postal'] ?? null,
-                    'location' => $data['loc'] ?? null,
-                ];
+        if ($countryCode && strlen((string) $countryCode) === 2) {
+            $name = \App\Models\Country::where('iso_code', $countryCode)->value('name');
+            if ($name) {
+                $countryName = $name;
             }
-        );
+        }
+
+        $resolved = [
+            'country' => $countryName ?: $countryCode,
+            'city' => $data['city'] ?? null,
+            'region' => $data['region'] ?? null,
+            'postal' => $data['postal'] ?? null,
+            'location' => $data['loc'] ?? null,
+        ];
+
+        if (! empty($resolved['country'])) {
+            \Illuminate\Support\Facades\Cache::put('ip_location:' . $ip, $resolved, now()->addDays(30));
+        }
+
+        return $resolved;
     }
 }
 
