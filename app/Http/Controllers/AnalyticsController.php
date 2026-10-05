@@ -7,6 +7,7 @@ use App\Services\StudyMaterialService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -64,111 +65,151 @@ class AnalyticsController extends Controller
                 }
             }
 
-            $currentVisitors = (int) $this->publicViewsQuery()
-                ->whereBetween('created_at', [$start, $end])
-                ->sum('view_count');
-
-            $previousVisitors = 0;
-            $growth = 0;
-            if ($period !== 'lifetime') {
-                $previousVisitors = (int) $this->publicViewsQuery()
-                    ->whereBetween('created_at', [$range['prevStart'], $range['prevEnd']])
-                    ->sum('view_count');
-                $growth = $previousVisitors > 0
-                    ? round((($currentVisitors - $previousVisitors) / $previousVisitors) * 100, 1)
-                    : ($currentVisitors > 0 ? 100 : 0);
-            }
-
-            $emptyPage = new LengthAwarePaginator([], 0, 100, 1, [
-                'path' => $request->url(),
-                'query' => $request->query(),
-            ]);
-            $emptyChart = [
-                'labels' => ['No data'],
-                'values' => [1],
-                'percents' => [100],
-                'colors' => ['#e0e0e0'],
-                'sliceColors' => ['#e0e0e0'],
-                'total' => 0,
-            ];
-
-            $dailyLabels = [];
-            $dailyValues = [];
-            $channels = $emptyChart;
-            $locations = $emptyChart;
-            $devices = $emptyChart;
-            $liveCount = 0;
-            $liveUsers = collect();
-            $latestPageViews = $emptyPage;
-            $mostVisited = $emptyPage;
-
-            if ($tab === 'traffic') {
-                [$dailyLabels, $dailyValues] = $this->buildChartSeries($start, $end);
-                $channels = $this->aggregateChannels($start, $end);
-                $locations = $this->aggregateLocations($start, $end);
-                $devices = $this->aggregateDevices($start, $end);
-
-                $liveSince = now()->subMinutes(5);
-                $liveCount = (int) $this->publicViewsQuery()->where('updated_at', '>=', $liveSince)->count();
-                $liveUsers = $this->publicViewsQuery()
-                    ->where('updated_at', '>=', $liveSince)
-                    ->orderByDesc('updated_at')
-                    ->limit(25)
-                    ->get(['url', 'ip_address', 'country', 'updated_at', 'view_count']);
-            }
-
-            if ($tab === 'visits') {
-                $visitsQuery = $this->publicViewsQuery()
-                    ->whereBetween('created_at', [$filterStart, $filterEnd]);
-                $this->applySearch($visitsQuery, $search);
-                $latestPageViews = $visitsQuery
-                    ->orderByDesc('updated_at')
-                    ->paginate(100)
-                    ->withQueryString();
-            }
-
-            if ($tab === 'pages') {
-                $pagesQuery = $this->publicViewsQuery()
-                    ->whereBetween('created_at', [$filterStart, $filterEnd]);
-                if ($search !== '') {
-                    $pagesQuery->where('url', 'like', '%' . addcslashes($search, '%_\\') . '%');
-                }
-                $mostVisited = $pagesQuery
-                    ->selectRaw('url, SUM(view_count) as visits, MAX(updated_at) as last_visit')
-                    ->groupBy('url')
-                    ->orderByDesc('visits')
-                    ->paginate(100)
-                    ->withQueryString();
-            }
-
-            return view('admin.analytics.index', [
-                'period' => $period,
-                'tab' => $tab,
-                'periodLabel' => $range['label'],
-                'comparisonLabel' => $period === 'lifetime' ? 'the start of tracking' : $range['comparisonLabel'],
-                'currentVisitors' => $currentVisitors,
-                'previousVisitors' => $previousVisitors,
-                'growth' => $growth,
-                'dailyLabels' => $dailyLabels,
-                'dailyValues' => $dailyValues,
-                'channels' => $channels,
-                'locations' => $locations,
-                'devices' => $devices,
-                'latestPageViews' => $latestPageViews,
-                'mostVisited' => $mostVisited,
-                'liveCount' => $liveCount,
-                'liveUsers' => $liveUsers,
-                'search' => $search,
-                'fromInput' => $fromInput !== '' ? $filterStart->toDateString() : '',
-                'toInput' => $toInput !== '' ? $filterEnd->toDateString() : '',
-                'start' => $start,
-                'end' => $end,
-            ]);
+            return view('admin.analytics.index', $this->buildPayload(
+                $request, $period, $tab, $range, $start, $end, $search, $fromInput, $toInput, $filterStart, $filterEnd
+            ));
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Analytics page failed: ' . $e->getMessage());
 
             return view('admin.analytics.index', $this->emptyAnalyticsPayload($request));
         }
+    }
+
+    private function buildPayload(
+        Request $request,
+        string $period,
+        string $tab,
+        array $range,
+        Carbon $start,
+        Carbon $end,
+        string $search,
+        string $fromInput,
+        string $toInput,
+        Carbon $filterStart,
+        Carbon $filterEnd
+    ): array {
+        $emptyPage = new LengthAwarePaginator([], 0, 100, 1, [
+            'path' => $request->url(),
+            'query' => $request->query(),
+        ]);
+        $emptyChart = [
+            'labels' => ['No data'],
+            'values' => [1],
+            'percents' => [100],
+            'colors' => ['#e0e0e0'],
+            'sliceColors' => ['#e0e0e0'],
+            'total' => 0,
+        ];
+
+        $dailyLabels = [];
+        $dailyValues = [];
+        $channels = $emptyChart;
+        $locations = $emptyChart;
+        $devices = $emptyChart;
+        $liveCount = 0;
+        $liveUsers = collect();
+        $latestPageViews = $emptyPage;
+        $mostVisited = $emptyPage;
+        $currentVisitors = 0;
+        $previousVisitors = 0;
+        $growth = 0;
+
+        if ($tab === 'traffic') {
+            $cacheKey = 'analytics.traffic.' . $period . '.' . $start->toDateString() . '.' . $end->toDateString();
+            $cached = Cache::remember($cacheKey, 180, function () use ($start, $end, $period, $range) {
+                [$dailyLabels, $dailyValues] = $this->buildChartSeries($start, $end);
+                $currentVisitors = (int) array_sum($dailyValues);
+                $previousVisitors = 0;
+                $growth = 0;
+                if (in_array($period, ['today', '7'], true)) {
+                    $previousVisitors = (int) $this->rangeQuery($range['prevStart'], $range['prevEnd'])->sum('view_count');
+                    $growth = $previousVisitors > 0
+                        ? round((($currentVisitors - $previousVisitors) / $previousVisitors) * 100, 1)
+                        : ($currentVisitors > 0 ? 100 : 0);
+                }
+
+                return [
+                    'currentVisitors' => $currentVisitors,
+                    'previousVisitors' => $previousVisitors,
+                    'growth' => $growth,
+                    'dailyLabels' => $dailyLabels,
+                    'dailyValues' => $dailyValues,
+                    'channels' => $this->aggregateChannels($start, $end),
+                    'locations' => $this->aggregateLocations($start, $end),
+                    'devices' => $this->aggregateDevices($start, $end),
+                ];
+            });
+
+            $currentVisitors = $cached['currentVisitors'];
+            $previousVisitors = $cached['previousVisitors'];
+            $growth = $cached['growth'];
+            $dailyLabels = $cached['dailyLabels'];
+            $dailyValues = $cached['dailyValues'];
+            $channels = $cached['channels'];
+            $locations = $cached['locations'];
+            $devices = $cached['devices'];
+
+            $liveSince = now()->subMinutes(5);
+            $liveCount = (int) PageView::query()->where('updated_at', '>=', $liveSince)->count();
+            $liveUsers = PageView::query()
+                ->where('updated_at', '>=', $liveSince)
+                ->orderByDesc('id')
+                ->limit(25)
+                ->get(['url', 'ip_address', 'country', 'updated_at', 'view_count']);
+        }
+
+        if ($tab === 'visits') {
+            $visitsQuery = $this->listingQuery($filterStart, $filterEnd);
+            $this->applySearch($visitsQuery, $search);
+            $latestPageViews = $visitsQuery
+                ->orderByDesc('id')
+                ->paginate(100)
+                ->withQueryString();
+        }
+
+        if ($tab === 'pages') {
+            $pagesQuery = $this->listingQuery($filterStart, $filterEnd);
+            if ($search !== '') {
+                $pagesQuery->where('url', 'like', '%' . addcslashes($search, '%_\\') . '%');
+            }
+            $rows = $pagesQuery
+                ->selectRaw('url, SUM(view_count) as visits, MAX(updated_at) as last_visit')
+                ->groupBy('url')
+                ->orderByDesc('visits')
+                ->limit(100)
+                ->get();
+            $mostVisited = new LengthAwarePaginator(
+                $rows,
+                $rows->count(),
+                100,
+                1,
+                ['path' => $request->url(), 'query' => $request->query()]
+            );
+        }
+
+        return [
+            'period' => $period,
+            'tab' => $tab,
+            'periodLabel' => $range['label'],
+            'comparisonLabel' => $period === 'lifetime' ? 'the start of tracking' : $range['comparisonLabel'],
+            'currentVisitors' => $currentVisitors,
+            'previousVisitors' => $previousVisitors,
+            'growth' => $growth,
+            'dailyLabels' => $dailyLabels,
+            'dailyValues' => $dailyValues,
+            'channels' => $channels,
+            'locations' => $locations,
+            'devices' => $devices,
+            'latestPageViews' => $latestPageViews,
+            'mostVisited' => $mostVisited,
+            'liveCount' => $liveCount,
+            'liveUsers' => $liveUsers,
+            'search' => $search,
+            'fromInput' => $fromInput !== '' ? $filterStart->toDateString() : '',
+            'toInput' => $toInput !== '' ? $filterEnd->toDateString() : '',
+            'start' => $start,
+            'end' => $end,
+        ];
     }
 
     private function emptyAnalyticsPayload(Request $request): array
@@ -221,20 +262,16 @@ class AnalyticsController extends Controller
         ];
     }
 
-    private function publicViewsQuery()
+    private function rangeQuery(Carbon $start, Carbon $end)
     {
-        $query = PageView::query()
-            ->where('url', 'not like', '%/user-behavior%')
-            ->where('url', 'not like', '%/admin/%')
-            ->where('url', 'not like', '%/skin%')
-            ->where('url', 'not like', '%/vendor/%')
-            ->where('url', 'not like', '%/livewire%')
-            ->where('url', 'not like', '%.js')
-            ->where('url', 'not like', '%.css')
-            ->where('url', 'not like', '%.map')
-            ->where('url', 'not like', '%/frontend/%');
+        return PageView::query()->whereBetween('created_at', [$start, $end]);
+    }
 
-        return $query;
+    private function listingQuery(Carbon $start, Carbon $end)
+    {
+        return $this->rangeQuery($start, $end)
+            ->where('url', 'not like', '%/admin/%')
+            ->where('url', 'not like', '%/skin%');
     }
 
     private function applySearch($query, string $search): void
@@ -269,7 +306,7 @@ class AnalyticsController extends Controller
         }
 
         if ($period === 'lifetime') {
-            $first = $this->publicViewsQuery()->min('created_at');
+            $first = PageView::query()->min('created_at');
             $start = $first ? Carbon::parse($first)->startOfDay() : Carbon::today()->startOfDay();
             $spanDays = max(1, $start->copy()->startOfDay()->diffInDays($end->copy()->startOfDay()) + 1);
             $prevEnd = $start->copy()->subDay()->endOfDay();
@@ -309,8 +346,7 @@ class AnalyticsController extends Controller
             $bucket = $driver === 'mysql'
                 ? "DATE_FORMAT(created_at, '%Y-%m')"
                 : "strftime('%Y-%m', created_at)";
-            $rows = $this->publicViewsQuery()
-                ->whereBetween('created_at', [$start, $end])
+            $rows = $this->rangeQuery($start, $end)
                 ->selectRaw($bucket . ' as bucket, SUM(view_count) as total')
                 ->groupByRaw($bucket)
                 ->orderByRaw($bucket)
@@ -332,8 +368,7 @@ class AnalyticsController extends Controller
         $bucket = $driver === 'mysql'
             ? 'DATE(created_at)'
             : "date(created_at)";
-        $rows = $this->publicViewsQuery()
-            ->whereBetween('created_at', [$start, $end])
+        $rows = $this->rangeQuery($start, $end)
             ->selectRaw($bucket . ' as bucket, SUM(view_count) as total')
             ->groupByRaw($bucket)
             ->orderByRaw($bucket)
@@ -369,8 +404,7 @@ class AnalyticsController extends Controller
         END";
 
         if (! Schema::hasColumn('page_views', 'referrer')) {
-            $totals['Direct'] = (int) $this->publicViewsQuery()
-                ->whereBetween('created_at', [$start, $end])
+            $totals['Direct'] = (int) $this->rangeQuery($start, $end)
                 ->sum('view_count');
 
             return $this->toChartSlices($totals, ['#f4b400', '#4285f4', '#9c27b0', '#34a853']);
@@ -384,8 +418,7 @@ class AnalyticsController extends Controller
             END";
         }
 
-        $rows = $this->publicViewsQuery()
-            ->whereBetween('created_at', [$start, $end])
+        $rows = $this->rangeQuery($start, $end)
             ->selectRaw($channelSql . ' as channel, SUM(view_count) as total')
             ->groupByRaw($channelSql)
             ->pluck('total', 'channel');
@@ -404,8 +437,7 @@ class AnalyticsController extends Controller
     private function aggregateLocations(Carbon $start, Carbon $end): array
     {
         $countryExpr = "COALESCE(NULLIF(country, ''), 'Unknown')";
-        $rows = $this->publicViewsQuery()
-            ->whereBetween('created_at', [$start, $end])
+        $rows = $this->rangeQuery($start, $end)
             ->selectRaw($countryExpr . ' as country, SUM(view_count) as total')
             ->groupByRaw($countryExpr)
             ->orderByDesc('total')
@@ -421,22 +453,20 @@ class AnalyticsController extends Controller
 
     private function aggregateDevices(Carbon $start, Carbon $end): array
     {
-        $rows = $this->publicViewsQuery()
-            ->whereBetween('created_at', [$start, $end])
-            ->selectRaw('platform, browser, SUM(view_count) as total')
-            ->groupBy('platform', 'browser')
+        $rows = $this->rangeQuery($start, $end)
+            ->selectRaw('platform, SUM(view_count) as total')
+            ->groupBy('platform')
             ->get();
 
         $totals = ['Desktop' => 0, 'Mobile' => 0, 'Tablet' => 0, 'Other' => 0];
         foreach ($rows as $row) {
             $platform = strtolower($row->platform ?? '');
-            $ua = strtolower($row->browser ?? '');
             $count = (int) $row->total;
-            if (str_contains($platform, 'android') || str_contains($ua, 'mobile')) {
+            if (str_contains($platform, 'android') || str_contains($platform, 'iphone') || str_contains($platform, 'mobile')) {
                 $totals['Mobile'] += $count;
-            } elseif (str_contains($platform, 'ipad') || str_contains($ua, 'tablet')) {
+            } elseif (str_contains($platform, 'ipad') || str_contains($platform, 'tablet')) {
                 $totals['Tablet'] += $count;
-            } elseif (in_array($platform, ['windows', 'mac', 'macos', 'linux', 'chrome os'], true) || $platform !== '') {
+            } elseif ($platform !== '') {
                 $totals['Desktop'] += $count;
             } else {
                 $totals['Other'] += $count;
