@@ -122,6 +122,7 @@ php artisan migrate --path=database/migrations/2026_06_22_000001_add_image_to_ad
 php artisan migrate --path=database/migrations/2026_06_23_000001_add_focus_keyword_to_pages_seo_table.php --force
 php artisan migrate --path=database/migrations/2026_09_16_000001_add_head_of_faculty_to_class_schedules.php --force
 php artisan migrate --path=database/migrations/2026_10_04_000001_add_lms_permissions_to_users.php --force
+php artisan migrate --path=database/migrations/2026_10_05_000001_add_indexes_to_page_views_table.php --force
 
 php artisan config:clear
 php artisan cache:clear
