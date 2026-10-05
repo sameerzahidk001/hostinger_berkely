@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Schema;
 class AnalyticsController extends Controller
 {
     private const PERIODS = ['today', '7', '28', '90', '180', '365', 'lifetime'];
-    private const TABS = ['traffic', 'visits', 'pages'];
+    private const TABS = ['traffic', 'live', 'visits', 'pages'];
 
     public function __construct()
     {
@@ -148,14 +148,16 @@ class AnalyticsController extends Controller
             $channels = $cached['channels'];
             $locations = $cached['locations'];
             $devices = $cached['devices'];
+        }
 
+        if ($tab === 'live') {
             $liveSince = now()->subMinutes(5);
             $liveCount = (int) PageView::query()->where('updated_at', '>=', $liveSince)->count();
             $liveUsers = PageView::query()
                 ->where('updated_at', '>=', $liveSince)
                 ->orderByDesc('id')
-                ->limit(25)
-                ->get(['url', 'ip_address', 'country', 'updated_at', 'view_count']);
+                ->paginate(100)
+                ->withQueryString();
         }
 
         if ($tab === 'visits') {
