@@ -74,14 +74,14 @@
 @section('content')
 @php
     $lmsManage = app(\App\Services\StudyMaterialService::class);
-    $canManageThisFolder = $lmsManage->isInstructorActor() && $lmsManage->canManageFolder($folder);
-    $canAssignThisFolder = $canManageThisFolder && $lmsManage->canAssignStudentAccess($folder);
+    $canEditThisFolder = $lmsManage->isInstructorActor() && $lmsManage->canEditFolder($folder);
+    $canAssignThisFolder = $lmsManage->isInstructorActor() && $lmsManage->canAssignStudentAccess($folder);
 @endphp
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-7">
         <h2>{{ $folder->name }}</h2>
         <ol class="breadcrumb">
-            <li><a href="{{ route('user.study-materials.index') }}">Study Materials</a></li>
+            <li><a href="{{ $lmsManage->isInstructorActor() ? route('admin.study-materials.folders.index') : route('user.study-materials.index') }}">Study Materials</a></li>
             <li class="active"><strong>{{ $folder->name }}</strong></li>
         </ol>
         <p class="text-muted" style="margin-bottom:4px;">
@@ -97,9 +97,11 @@
         <p class="text-muted" style="margin-bottom:4px;">Access Start: {{ optional($access->issued_at)->format('d M Y') ?: '—' }}</p>
         <p class="text-muted" style="margin-bottom:0;">Access Expire: {{ $access->access_till ? $access->access_till->format('d M Y') : 'No expiry' }}</p>
     </div>
-    @if($canManageThisFolder)
+    @if($canEditThisFolder || $canAssignThisFolder)
     <div class="col-lg-5 text-right" style="padding-top:20px;">
-        <a href="{{ route('admin.study-materials.folders.edit', $folder->id) }}" class="btn btn-primary" style="font-weight:700;">Edit Folder</a>
+        @if($canEditThisFolder)
+            <a href="{{ route('admin.study-materials.folders.edit', $folder->id) }}" class="btn btn-primary" style="font-weight:700;">Edit Folder</a>
+        @endif
         @if($canAssignThisFolder)
             <a href="{{ route('admin.study-materials.access.assign-student', ['folder_id' => $folder->id]) }}" class="btn btn-success" style="font-weight:700;">Assign Access</a>
         @endif
@@ -107,6 +109,9 @@
     @endif
 </div>
 <div class="wrapper wrapper-content">
+    @if(session('fail'))
+        <div class="alert alert-danger">{{ session('fail') }}</div>
+    @endif
     <div class="alert alert-info">Files open inside this page. A <strong>Download</strong> button appears only when download is allowed for that file.</div>
     <div class="ibox">
         <div class="ibox-content">

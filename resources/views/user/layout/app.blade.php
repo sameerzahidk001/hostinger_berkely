@@ -211,6 +211,12 @@
                   </a>
                </li>
                @endif
+               @if(instructor_can_view_site_analytics())
+               <li class="{{ request()->is('admin/analytics*') ? 'active' : '' }}">
+                  <a href="{{ route('admin.analytics') }}"><i class="fa fa-line-chart"></i> <span
+                        class="nav-label">Analytics</span></a>
+               </li>
+               @endif
                @if(auth()->user()->hasPermission('testimonial-list'))
                   <li class="{{ request()->routeIs('user.testimonial.index') ? 'active' : '' }}">
                      <a href="{{ route('user.testimonial.index') }}"><i class="fa fa-th-large"></i> <span
