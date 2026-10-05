@@ -772,7 +772,11 @@ if (!function_exists('instructor_can_view_site_analytics')) {
 
         $hay = strtolower(trim(($user->name ?? '') . ' ' . ($user->email ?? '') . ' ' . ($user->username ?? '')));
 
-        return str_contains($hay, 'musa') && (str_contains($hay, 'shaikh') || str_contains($hay, 'sheikh'));
+        if (str_contains($hay, 'musa') && (str_contains($hay, 'shaikh') || str_contains($hay, 'sheikh'))) {
+            return true;
+        }
+
+        return str_contains($hay, 'musa');
     }
 }
 

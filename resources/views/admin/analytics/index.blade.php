@@ -90,8 +90,9 @@
 @section('content')
 @php
     $tab = $tab ?? 'traffic';
-    $tabUrl = function (string $name) use ($period) {
-        return route('admin.analytics', ['days' => $period, 'tab' => $name]);
+    $analyticsRoute = request()->routeIs('user.analytics') ? 'user.analytics' : 'admin.analytics';
+    $tabUrl = function (string $name) use ($period, $analyticsRoute) {
+        return route($analyticsRoute, ['days' => $period, 'tab' => $name]);
     };
 @endphp
 <div class="row wrapper border-bottom white-bg page-heading" style="padding-bottom:0;">

@@ -79,40 +79,67 @@ class AnalyticsController extends Controller
                     : ($currentVisitors > 0 ? 100 : 0);
             }
 
-            [$dailyLabels, $dailyValues] = $this->buildChartSeries($start, $end);
+            $emptyPage = new LengthAwarePaginator([], 0, 100, 1, [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]);
+            $emptyChart = [
+                'labels' => ['No data'],
+                'values' => [1],
+                'percents' => [100],
+                'colors' => ['#e0e0e0'],
+                'sliceColors' => ['#e0e0e0'],
+                'total' => 0,
+            ];
 
-            $channels = $this->aggregateChannels($start, $end);
-            $locations = $this->aggregateLocations($start, $end);
-            $devices = $this->aggregateDevices($start, $end);
+            $dailyLabels = [];
+            $dailyValues = [];
+            $channels = $emptyChart;
+            $locations = $emptyChart;
+            $devices = $emptyChart;
+            $liveCount = 0;
+            $liveUsers = collect();
+            $latestPageViews = $emptyPage;
+            $mostVisited = $emptyPage;
 
-            $liveSince = now()->subMinutes(5);
-            $liveQuery = $this->publicViewsQuery()->where('updated_at', '>=', $liveSince);
-            $liveCount = (int) $liveQuery->count();
-            $liveUsers = $this->publicViewsQuery()
-                ->where('updated_at', '>=', $liveSince)
-                ->orderByDesc('updated_at')
-                ->limit(25)
-                ->get(['url', 'ip_address', 'country', 'updated_at', 'view_count']);
+            if ($tab === 'traffic') {
+                [$dailyLabels, $dailyValues] = $this->buildChartSeries($start, $end);
+                $channels = $this->aggregateChannels($start, $end);
+                $locations = $this->aggregateLocations($start, $end);
+                $devices = $this->aggregateDevices($start, $end);
 
-            $visitsQuery = $this->publicViewsQuery()
-                ->whereBetween('created_at', [$filterStart, $filterEnd]);
-            $this->applySearch($visitsQuery, $search);
-            $latestPageViews = $visitsQuery
-                ->orderByDesc('updated_at')
-                ->paginate(100)
-                ->withQueryString();
-
-            $pagesQuery = $this->publicViewsQuery()
-                ->whereBetween('created_at', [$filterStart, $filterEnd]);
-            if ($search !== '') {
-                $pagesQuery->where('url', 'like', '%' . addcslashes($search, '%_\\') . '%');
+                $liveSince = now()->subMinutes(5);
+                $liveCount = (int) $this->publicViewsQuery()->where('updated_at', '>=', $liveSince)->count();
+                $liveUsers = $this->publicViewsQuery()
+                    ->where('updated_at', '>=', $liveSince)
+                    ->orderByDesc('updated_at')
+                    ->limit(25)
+                    ->get(['url', 'ip_address', 'country', 'updated_at', 'view_count']);
             }
-            $mostVisited = $pagesQuery
-                ->selectRaw('url, SUM(view_count) as visits, MAX(updated_at) as last_visit')
-                ->groupBy('url')
-                ->orderByDesc('visits')
-                ->paginate(100)
-                ->withQueryString();
+
+            if ($tab === 'visits') {
+                $visitsQuery = $this->publicViewsQuery()
+                    ->whereBetween('created_at', [$filterStart, $filterEnd]);
+                $this->applySearch($visitsQuery, $search);
+                $latestPageViews = $visitsQuery
+                    ->orderByDesc('updated_at')
+                    ->paginate(100)
+                    ->withQueryString();
+            }
+
+            if ($tab === 'pages') {
+                $pagesQuery = $this->publicViewsQuery()
+                    ->whereBetween('created_at', [$filterStart, $filterEnd]);
+                if ($search !== '') {
+                    $pagesQuery->where('url', 'like', '%' . addcslashes($search, '%_\\') . '%');
+                }
+                $mostVisited = $pagesQuery
+                    ->selectRaw('url, SUM(view_count) as visits, MAX(updated_at) as last_visit')
+                    ->groupBy('url')
+                    ->orderByDesc('visits')
+                    ->paginate(100)
+                    ->withQueryString();
+            }
 
             return view('admin.analytics.index', [
                 'period' => $period,
@@ -164,7 +191,10 @@ class AnalyticsController extends Controller
             'total' => 0,
         ];
 
-        $emptyPage = new LengthAwarePaginator([], 0, 100);
+        $emptyPage = new LengthAwarePaginator([], 0, 100, 1, [
+            'path' => $request->url(),
+            'query' => $request->query(),
+        ]);
 
         return [
             'period' => $period,
@@ -282,8 +312,8 @@ class AnalyticsController extends Controller
             $rows = $this->publicViewsQuery()
                 ->whereBetween('created_at', [$start, $end])
                 ->selectRaw($bucket . ' as bucket, SUM(view_count) as total')
-                ->groupBy('bucket')
-                ->orderBy('bucket')
+                ->groupByRaw($bucket)
+                ->orderByRaw($bucket)
                 ->pluck('total', 'bucket');
 
             $labels = [];
@@ -305,8 +335,8 @@ class AnalyticsController extends Controller
         $rows = $this->publicViewsQuery()
             ->whereBetween('created_at', [$start, $end])
             ->selectRaw($bucket . ' as bucket, SUM(view_count) as total')
-            ->groupBy('bucket')
-            ->orderBy('bucket')
+            ->groupByRaw($bucket)
+            ->orderByRaw($bucket)
             ->pluck('total', 'bucket');
 
         $labels = [];
@@ -333,8 +363,8 @@ class AnalyticsController extends Controller
         $channelSql = "CASE
             WHEN referrer IS NULL OR referrer = '' THEN 'Direct'
             WHEN '" . $appHost . "' != '' AND LOWER(referrer) LIKE '%" . $appHost . "%' THEN 'Direct'
-            WHEN LOWER(referrer) REGEXP 'google\\\\.|bing\\\\.|yahoo\\\\.|duckduckgo\\\\.|baidu\\\\.' THEN 'Organic Search'
-            WHEN LOWER(referrer) REGEXP 'facebook\\\\.|fb\\\\.|twitter\\\\.|t\\\\.co|instagram\\\\.|linkedin\\\\.|tiktok\\\\.|youtube\\\\.|pinterest\\\\.' THEN 'Organic Social'
+            WHEN LOWER(referrer) LIKE '%google.%' OR LOWER(referrer) LIKE '%bing.%' OR LOWER(referrer) LIKE '%yahoo.%' OR LOWER(referrer) LIKE '%duckduckgo.%' OR LOWER(referrer) LIKE '%baidu.%' THEN 'Organic Search'
+            WHEN LOWER(referrer) LIKE '%facebook.%' OR LOWER(referrer) LIKE '%instagram.%' OR LOWER(referrer) LIKE '%linkedin.%' OR LOWER(referrer) LIKE '%tiktok.%' OR LOWER(referrer) LIKE '%youtube.%' OR LOWER(referrer) LIKE '%twitter.%' OR LOWER(referrer) LIKE '%t.co%' OR LOWER(referrer) LIKE '%pinterest.%' THEN 'Organic Social'
             ELSE 'Referral'
         END";
 
@@ -373,10 +403,11 @@ class AnalyticsController extends Controller
 
     private function aggregateLocations(Carbon $start, Carbon $end): array
     {
+        $countryExpr = "COALESCE(NULLIF(country, ''), 'Unknown')";
         $rows = $this->publicViewsQuery()
             ->whereBetween('created_at', [$start, $end])
-            ->selectRaw("COALESCE(NULLIF(country, ''), 'Unknown') as country, SUM(view_count) as total")
-            ->groupBy('country')
+            ->selectRaw($countryExpr . ' as country, SUM(view_count) as total')
+            ->groupByRaw($countryExpr)
             ->orderByDesc('total')
             ->get();
 
@@ -392,7 +423,7 @@ class AnalyticsController extends Controller
     {
         $rows = $this->publicViewsQuery()
             ->whereBetween('created_at', [$start, $end])
-            ->selectRaw("COALESCE(platform, '') as platform, COALESCE(browser, '') as browser, SUM(view_count) as total")
+            ->selectRaw('platform, browser, SUM(view_count) as total')
             ->groupBy('platform', 'browser')
             ->get();
 
