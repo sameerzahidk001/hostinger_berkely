@@ -212,8 +212,8 @@
                </li>
                @endif
                @if(instructor_can_view_site_analytics())
-               <li class="{{ request()->is('admin/analytics*') ? 'active' : '' }}">
-                  <a href="{{ route('admin.analytics') }}"><i class="fa fa-line-chart"></i> <span
+               <li class="{{ request()->routeIs('user.analytics') || request()->is('admin/analytics*') ? 'active' : '' }}">
+                  <a href="{{ route('user.analytics') }}"><i class="fa fa-line-chart"></i> <span
                         class="nav-label">Analytics</span></a>
                </li>
                @endif

@@ -572,6 +572,7 @@ Route::prefix('user')->middleware(['auth', 'approved', 'redirect.panel.from.stud
     Route::get('/class-schedules.ics', [UserStudyMaterialController::class, 'schedulesIcs'])->name('user.class-schedules.ics');
     Route::get('/class-schedules/{id}.ics', [UserStudyMaterialController::class, 'scheduleIcs'])->name('user.class-schedules.item-ics');
     Route::get('/history', [UserHistoryController::class, 'index'])->name('user.history');
+    Route::get('/analytics', [AnalyticsController::class, 'index'])->name('user.analytics');
 
     // Logout
     Route::get('/logout', [App\Http\Controllers\HomeController::class, 'logout'])->name('user.logout');
