@@ -754,6 +754,28 @@ if (!function_exists('lms_portal_home')) {
     }
 }
 
+if (!function_exists('instructor_can_view_site_analytics')) {
+    function instructor_can_view_site_analytics($user = null): bool
+    {
+        if (Auth::guard('admin')->check()) {
+            return false;
+        }
+
+        $user = $user ?? Auth::user();
+        if (! $user || ! method_exists($user, 'roles')) {
+            return false;
+        }
+
+        if (! $user->roles()->where('name', 'instructor')->exists()) {
+            return false;
+        }
+
+        $hay = strtolower(trim(($user->name ?? '') . ' ' . ($user->email ?? '') . ' ' . ($user->username ?? '')));
+
+        return str_contains($hay, 'musa') && (str_contains($hay, 'shaikh') || str_contains($hay, 'sheikh'));
+    }
+}
+
 if (!function_exists('panel_profile_user')) {
     function panel_profile_user()
     {

@@ -3,13 +3,17 @@
 namespace App\Http\Controllers;
 
 use App\Models\PageView;
+use App\Services\StudyMaterialService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class AnalyticsController extends Controller
 {
     private const PERIODS = ['today', '7', '28', '90', '180', '365', 'lifetime'];
+    private const TABS = ['traffic', 'visits', 'pages'];
 
     public function __construct()
     {
@@ -18,78 +22,121 @@ class AnalyticsController extends Controller
 
     public function index(Request $request)
     {
+        $lms = app(StudyMaterialService::class);
+        if ($lms->isInstructorActor() && ! instructor_can_view_site_analytics()) {
+            return redirect()->route('user.home')->with('fail', 'Analytics is not available on this account.');
+        }
+
         if (! Schema::hasTable('page_views')) {
             return view('admin.analytics.index', $this->emptyAnalyticsPayload($request));
         }
 
         try {
-        $period = (string) $request->query('days', '28');
-        if (! in_array($period, self::PERIODS, true)) {
-            $period = '28';
-        }
+            $period = (string) $request->query('days', '28');
+            if (! in_array($period, self::PERIODS, true)) {
+                $period = '28';
+            }
 
-        $range = $this->resolvePeriodRange($period);
-        $start = $range['start'];
-        $end = $range['end'];
-        $prevStart = $range['prevStart'];
-        $prevEnd = $range['prevEnd'];
-        $periodLabel = $range['label'];
-        $comparisonLabel = $range['comparisonLabel'];
+            $tab = (string) $request->query('tab', 'traffic');
+            if (! in_array($tab, self::TABS, true)) {
+                $tab = 'traffic';
+            }
 
-        $baseQuery = fn () => PageView::query()
-            ->where('url', 'not like', '%/user-behavior%')
-            ->where('url', 'not like', '%/admin/%');
+            $range = $this->resolvePeriodRange($period);
+            $start = $range['start'];
+            $end = $range['end'];
+            $search = trim((string) $request->query('q', ''));
+            $fromInput = trim((string) $request->query('from', ''));
+            $toInput = trim((string) $request->query('to', ''));
 
-        $currentVisitors = (int) $baseQuery()
-            ->whereBetween('created_at', [$start, $end])
-            ->sum('view_count');
+            $filterStart = $start->copy();
+            $filterEnd = $end->copy();
+            if ($fromInput !== '') {
+                try {
+                    $filterStart = Carbon::parse($fromInput)->startOfDay();
+                } catch (\Throwable $e) {
+                }
+            }
+            if ($toInput !== '') {
+                try {
+                    $filterEnd = Carbon::parse($toInput)->endOfDay();
+                } catch (\Throwable $e) {
+                }
+            }
 
-        $previousVisitors = (int) $baseQuery()
-            ->whereBetween('created_at', [$prevStart, $prevEnd])
-            ->sum('view_count');
+            $currentVisitors = (int) $this->publicViewsQuery()
+                ->whereBetween('created_at', [$start, $end])
+                ->sum('view_count');
 
-        $growth = $previousVisitors > 0
-            ? round((($currentVisitors - $previousVisitors) / $previousVisitors) * 100, 1)
-            : ($currentVisitors > 0 ? 100 : 0);
+            $previousVisitors = 0;
+            $growth = 0;
+            if ($period !== 'lifetime') {
+                $previousVisitors = (int) $this->publicViewsQuery()
+                    ->whereBetween('created_at', [$range['prevStart'], $range['prevEnd']])
+                    ->sum('view_count');
+                $growth = $previousVisitors > 0
+                    ? round((($currentVisitors - $previousVisitors) / $previousVisitors) * 100, 1)
+                    : ($currentVisitors > 0 ? 100 : 0);
+            }
 
-        [$dailyLabels, $dailyValues] = $this->buildChartSeries($baseQuery, $start, $end);
+            [$dailyLabels, $dailyValues] = $this->buildChartSeries($start, $end);
 
-        $periodViews = $baseQuery()
-            ->whereBetween('created_at', [$start, $end])
-            ->get($this->pageViewSelectColumns());
+            $channels = $this->aggregateChannels($start, $end);
+            $locations = $this->aggregateLocations($start, $end);
+            $devices = $this->aggregateDevices($start, $end);
 
-        $this->backfillMissingLocations($periodViews);
+            $liveSince = now()->subMinutes(5);
+            $liveQuery = $this->publicViewsQuery()->where('updated_at', '>=', $liveSince);
+            $liveCount = (int) $liveQuery->count();
+            $liveUsers = $this->publicViewsQuery()
+                ->where('updated_at', '>=', $liveSince)
+                ->orderByDesc('updated_at')
+                ->limit(25)
+                ->get(['url', 'ip_address', 'country', 'updated_at', 'view_count']);
 
-        $channels = $this->aggregateChannels($periodViews);
-        $locations = $this->aggregateLocations($periodViews);
-        $devices = $this->aggregateDevices($periodViews);
-        $topPages = $this->aggregateTopPages($periodViews);
+            $visitsQuery = $this->publicViewsQuery()
+                ->whereBetween('created_at', [$filterStart, $filterEnd]);
+            $this->applySearch($visitsQuery, $search);
+            $latestPageViews = $visitsQuery
+                ->orderByDesc('updated_at')
+                ->paginate(100)
+                ->withQueryString();
 
-        $latestPageViews = $baseQuery()
-            ->with('userBehaviors')
-            ->orderByDesc('updated_at')
-            ->paginate(15)
-            ->withQueryString();
+            $pagesQuery = $this->publicViewsQuery()
+                ->whereBetween('created_at', [$filterStart, $filterEnd]);
+            if ($search !== '') {
+                $pagesQuery->where('url', 'like', '%' . addcslashes($search, '%_\\') . '%');
+            }
+            $mostVisited = $pagesQuery
+                ->selectRaw('url, SUM(view_count) as visits, MAX(updated_at) as last_visit')
+                ->groupBy('url')
+                ->orderByDesc('visits')
+                ->paginate(100)
+                ->withQueryString();
 
-        $this->backfillMissingLocations($latestPageViews->getCollection());
-
-        return view('admin.analytics.index', compact(
-            'period',
-            'periodLabel',
-            'comparisonLabel',
-            'currentVisitors',
-            'previousVisitors',
-            'growth',
-            'dailyLabels',
-            'dailyValues',
-            'channels',
-            'locations',
-            'devices',
-            'topPages',
-            'latestPageViews',
-            'start',
-            'end'
-        ));
+            return view('admin.analytics.index', [
+                'period' => $period,
+                'tab' => $tab,
+                'periodLabel' => $range['label'],
+                'comparisonLabel' => $period === 'lifetime' ? 'the start of tracking' : $range['comparisonLabel'],
+                'currentVisitors' => $currentVisitors,
+                'previousVisitors' => $previousVisitors,
+                'growth' => $growth,
+                'dailyLabels' => $dailyLabels,
+                'dailyValues' => $dailyValues,
+                'channels' => $channels,
+                'locations' => $locations,
+                'devices' => $devices,
+                'latestPageViews' => $latestPageViews,
+                'mostVisited' => $mostVisited,
+                'liveCount' => $liveCount,
+                'liveUsers' => $liveUsers,
+                'search' => $search,
+                'fromInput' => $fromInput !== '' ? $filterStart->toDateString() : '',
+                'toInput' => $toInput !== '' ? $filterEnd->toDateString() : '',
+                'start' => $start,
+                'end' => $end,
+            ]);
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Analytics page failed: ' . $e->getMessage());
 
@@ -103,6 +150,10 @@ class AnalyticsController extends Controller
         if (! in_array($period, self::PERIODS, true)) {
             $period = '28';
         }
+        $tab = (string) $request->query('tab', 'traffic');
+        if (! in_array($tab, self::TABS, true)) {
+            $tab = 'traffic';
+        }
 
         $emptyChart = [
             'labels' => ['No data'],
@@ -113,8 +164,11 @@ class AnalyticsController extends Controller
             'total' => 0,
         ];
 
+        $emptyPage = new LengthAwarePaginator([], 0, 100);
+
         return [
             'period' => $period,
+            'tab' => $tab,
             'periodLabel' => $period,
             'comparisonLabel' => 'the previous period',
             'currentVisitors' => 0,
@@ -125,11 +179,46 @@ class AnalyticsController extends Controller
             'channels' => $emptyChart,
             'locations' => $emptyChart,
             'devices' => $emptyChart,
-            'topPages' => [],
-            'latestPageViews' => new \Illuminate\Pagination\LengthAwarePaginator([], 0, 15),
-            'start' => \Carbon\Carbon::today()->startOfDay(),
-            'end' => \Carbon\Carbon::today()->endOfDay(),
+            'latestPageViews' => $emptyPage,
+            'mostVisited' => $emptyPage,
+            'liveCount' => 0,
+            'liveUsers' => collect(),
+            'search' => '',
+            'fromInput' => '',
+            'toInput' => '',
+            'start' => Carbon::today()->startOfDay(),
+            'end' => Carbon::today()->endOfDay(),
         ];
+    }
+
+    private function publicViewsQuery()
+    {
+        $query = PageView::query()
+            ->where('url', 'not like', '%/user-behavior%')
+            ->where('url', 'not like', '%/admin/%')
+            ->where('url', 'not like', '%/skin%')
+            ->where('url', 'not like', '%/vendor/%')
+            ->where('url', 'not like', '%/livewire%')
+            ->where('url', 'not like', '%.js')
+            ->where('url', 'not like', '%.css')
+            ->where('url', 'not like', '%.map')
+            ->where('url', 'not like', '%/frontend/%');
+
+        return $query;
+    }
+
+    private function applySearch($query, string $search): void
+    {
+        if ($search === '') {
+            return;
+        }
+
+        $like = '%' . addcslashes($search, '%_\\') . '%';
+        $query->where(function ($q) use ($like) {
+            $q->where('url', 'like', $like)
+                ->orWhere('ip_address', 'like', $like)
+                ->orWhere('country', 'like', $like);
+        });
     }
 
     private function resolvePeriodRange(string $period): array
@@ -150,7 +239,7 @@ class AnalyticsController extends Controller
         }
 
         if ($period === 'lifetime') {
-            $first = PageView::query()->min('created_at');
+            $first = $this->publicViewsQuery()->min('created_at');
             $start = $first ? Carbon::parse($first)->startOfDay() : Carbon::today()->startOfDay();
             $spanDays = max(1, $start->copy()->startOfDay()->diffInDays($end->copy()->startOfDay()) + 1);
             $prevEnd = $start->copy()->subDay()->endOfDay();
@@ -181,70 +270,57 @@ class AnalyticsController extends Controller
         ];
     }
 
-    private function buildChartSeries(callable $baseQuery, Carbon $start, Carbon $end): array
+    private function buildChartSeries(Carbon $start, Carbon $end): array
     {
         $spanDays = max(1, $start->copy()->startOfDay()->diffInDays($end->copy()->startOfDay()) + 1);
-        $labels = [];
-        $values = [];
+        $driver = DB::connection()->getDriverName();
 
         if ($spanDays > 180) {
+            $bucket = $driver === 'mysql'
+                ? "DATE_FORMAT(created_at, '%Y-%m')"
+                : "strftime('%Y-%m', created_at)";
+            $rows = $this->publicViewsQuery()
+                ->whereBetween('created_at', [$start, $end])
+                ->selectRaw($bucket . ' as bucket, SUM(view_count) as total')
+                ->groupBy('bucket')
+                ->orderBy('bucket')
+                ->pluck('total', 'bucket');
+
+            $labels = [];
+            $values = [];
             $cursor = $start->copy()->startOfMonth();
             while ($cursor <= $end) {
-                $monthStart = $cursor->copy()->startOfMonth();
-                $monthEnd = $cursor->copy()->endOfMonth();
-                if ($monthEnd > $end) {
-                    $monthEnd = $end->copy();
-                }
-                if ($monthStart < $start) {
-                    $monthStart = $start->copy();
-                }
-
+                $key = $cursor->format('Y-m');
                 $labels[] = $cursor->format('M Y');
-                $values[] = (int) $baseQuery()
-                    ->whereBetween('created_at', [$monthStart, $monthEnd])
-                    ->sum('view_count');
-
+                $values[] = (int) ($rows[$key] ?? 0);
                 $cursor->addMonth();
             }
 
             return [$labels, $values];
         }
 
-        if ($spanDays > 60) {
-            $cursor = $start->copy()->startOfWeek();
-            while ($cursor <= $end) {
-                $weekStart = $cursor->copy()->startOfDay();
-                $weekEnd = $cursor->copy()->endOfWeek()->endOfDay();
-                if ($weekEnd > $end) {
-                    $weekEnd = $end->copy();
-                }
-                if ($weekStart < $start) {
-                    $weekStart = $start->copy();
-                }
+        $bucket = $driver === 'mysql'
+            ? 'DATE(created_at)'
+            : "date(created_at)";
+        $rows = $this->publicViewsQuery()
+            ->whereBetween('created_at', [$start, $end])
+            ->selectRaw($bucket . ' as bucket, SUM(view_count) as total')
+            ->groupBy('bucket')
+            ->orderBy('bucket')
+            ->pluck('total', 'bucket');
 
-                $labels[] = 'Wk ' . $weekStart->format('M j');
-                $values[] = (int) $baseQuery()
-                    ->whereBetween('created_at', [$weekStart, $weekEnd])
-                    ->sum('view_count');
-
-                $cursor->addWeek();
-            }
-
-            return [$labels, $values];
-        }
-
+        $labels = [];
+        $values = [];
         for ($i = 0; $i < $spanDays; $i++) {
             $date = $start->copy()->addDays($i);
             $labels[] = $date->format('M j');
-            $values[] = (int) $baseQuery()
-                ->whereDate('created_at', $date->toDateString())
-                ->sum('view_count');
+            $values[] = (int) ($rows[$date->toDateString()] ?? 0);
         }
 
         return [$labels, $values];
     }
 
-    private function aggregateChannels($views): array
+    private function aggregateChannels(Carbon $start, Carbon $end): array
     {
         $totals = [
             'Direct' => 0,
@@ -253,100 +329,90 @@ class AnalyticsController extends Controller
             'Referral' => 0,
         ];
 
-        foreach ($views as $view) {
-            $channel = $this->detectChannel($view->referrer, $view->url);
-            $totals[$channel] += max(1, (int) $view->view_count);
+        $appHost = addcslashes(strtolower(parse_url((string) config('app.url'), PHP_URL_HOST) ?? ''), '%_\\');
+        $channelSql = "CASE
+            WHEN referrer IS NULL OR referrer = '' THEN 'Direct'
+            WHEN '" . $appHost . "' != '' AND LOWER(referrer) LIKE '%" . $appHost . "%' THEN 'Direct'
+            WHEN LOWER(referrer) REGEXP 'google\\\\.|bing\\\\.|yahoo\\\\.|duckduckgo\\\\.|baidu\\\\.' THEN 'Organic Search'
+            WHEN LOWER(referrer) REGEXP 'facebook\\\\.|fb\\\\.|twitter\\\\.|t\\\\.co|instagram\\\\.|linkedin\\\\.|tiktok\\\\.|youtube\\\\.|pinterest\\\\.' THEN 'Organic Social'
+            ELSE 'Referral'
+        END";
+
+        if (! Schema::hasColumn('page_views', 'referrer')) {
+            $totals['Direct'] = (int) $this->publicViewsQuery()
+                ->whereBetween('created_at', [$start, $end])
+                ->sum('view_count');
+
+            return $this->toChartSlices($totals, ['#f4b400', '#4285f4', '#9c27b0', '#34a853']);
+        }
+
+        $driver = DB::connection()->getDriverName();
+        if ($driver !== 'mysql') {
+            $channelSql = "CASE
+                WHEN referrer IS NULL OR referrer = '' THEN 'Direct'
+                ELSE 'Referral'
+            END";
+        }
+
+        $rows = $this->publicViewsQuery()
+            ->whereBetween('created_at', [$start, $end])
+            ->selectRaw($channelSql . ' as channel, SUM(view_count) as total')
+            ->groupByRaw($channelSql)
+            ->pluck('total', 'channel');
+
+        foreach ($rows as $channel => $total) {
+            if (! array_key_exists((string) $channel, $totals)) {
+                $totals['Referral'] += (int) $total;
+                continue;
+            }
+            $totals[$channel] += (int) $total;
         }
 
         return $this->toChartSlices($totals, ['#f4b400', '#4285f4', '#9c27b0', '#34a853']);
     }
 
-    private function detectChannel(?string $referrer, ?string $url): string
+    private function aggregateLocations(Carbon $start, Carbon $end): array
     {
-        if (empty($referrer)) {
-            return 'Direct';
-        }
+        $rows = $this->publicViewsQuery()
+            ->whereBetween('created_at', [$start, $end])
+            ->selectRaw("COALESCE(NULLIF(country, ''), 'Unknown') as country, SUM(view_count) as total")
+            ->groupBy('country')
+            ->orderByDesc('total')
+            ->get();
 
-        $ref = strtolower($referrer);
-        $host = parse_url($ref, PHP_URL_HOST) ?? '';
-
-        $appHost = strtolower(parse_url(config('app.url'), PHP_URL_HOST) ?? '');
-
-        if ($host === '' || ($appHost && str_contains($host, $appHost))) {
-            return 'Direct';
-        }
-
-        if (preg_match('/google\.|bing\.|yahoo\.|duckduckgo\.|baidu\./', $host)) {
-            return 'Organic Search';
-        }
-
-        if (preg_match('/facebook\.|fb\.|twitter\.|t\.co|instagram\.|linkedin\.|tiktok\.|youtube\.|pinterest\./', $host)) {
-            return 'Organic Social';
-        }
-
-        return 'Referral';
-    }
-
-    private function aggregateLocations($views): array
-    {
         $totals = [];
-
-        foreach ($views as $view) {
-            $label = $view->country ?: 'Unknown';
-            $totals[$label] = ($totals[$label] ?? 0) + max(1, (int) $view->view_count);
+        foreach ($rows as $row) {
+            $totals[$row->country] = (int) $row->total;
         }
 
-        arsort($totals);
-        $totals = array_slice($totals, 0, 6, true);
-
-        return $this->toChartSlices($totals, ['#4285f4', '#34a853', '#f4b400', '#ea4335', '#9c27b0', '#00acc1']);
+        return $this->toChartSlices($totals, ['#4285f4', '#34a853', '#f4b400', '#ea4335', '#9c27b0', '#00acc1', '#ff6d00', '#5c6bc0']);
     }
 
-    private function aggregateDevices($views): array
+    private function aggregateDevices(Carbon $start, Carbon $end): array
     {
+        $rows = $this->publicViewsQuery()
+            ->whereBetween('created_at', [$start, $end])
+            ->selectRaw("COALESCE(platform, '') as platform, COALESCE(browser, '') as browser, SUM(view_count) as total")
+            ->groupBy('platform', 'browser')
+            ->get();
+
         $totals = ['Desktop' => 0, 'Mobile' => 0, 'Tablet' => 0, 'Other' => 0];
-
-        foreach ($views as $view) {
-            $platform = strtolower($view->platform ?? '');
-            $ua = strtolower($view->browser ?? '');
-
+        foreach ($rows as $row) {
+            $platform = strtolower($row->platform ?? '');
+            $ua = strtolower($row->browser ?? '');
+            $count = (int) $row->total;
             if (str_contains($platform, 'android') || str_contains($ua, 'mobile')) {
-                $totals['Mobile'] += max(1, (int) $view->view_count);
+                $totals['Mobile'] += $count;
             } elseif (str_contains($platform, 'ipad') || str_contains($ua, 'tablet')) {
-                $totals['Tablet'] += max(1, (int) $view->view_count);
+                $totals['Tablet'] += $count;
             } elseif (in_array($platform, ['windows', 'mac', 'macos', 'linux', 'chrome os'], true) || $platform !== '') {
-                $totals['Desktop'] += max(1, (int) $view->view_count);
+                $totals['Desktop'] += $count;
             } else {
-                $totals['Other'] += max(1, (int) $view->view_count);
+                $totals['Other'] += $count;
             }
         }
 
         return $this->toChartSlices(array_filter($totals), ['#4285f4', '#34a853', '#f4b400', '#9e9e9e']);
-    }
-
-    private function aggregateTopPages($views): array
-    {
-        $pages = [];
-
-        foreach ($views as $view) {
-            $path = $this->shortUrl($view->url);
-            $pages[$path] = ($pages[$path] ?? 0) + max(1, (int) $view->view_count);
-        }
-
-        arsort($pages);
-
-        return array_slice($pages, 0, 10, true);
-    }
-
-    private function shortUrl(?string $url): string
-    {
-        if (! $url) {
-            return '/';
-        }
-
-        $path = parse_url($url, PHP_URL_PATH) ?: $url;
-
-        return strlen($path) > 60 ? substr($path, 0, 57) . '...' : $path;
     }
 
     private function toChartSlices(array $totals, array $colors): array
@@ -381,44 +447,5 @@ class AnalyticsController extends Controller
         }
 
         return compact('labels', 'values', 'percents', 'sliceColors') + ['total' => $total, 'colors' => $sliceColors];
-    }
-
-    private function backfillMissingLocations($views): void
-    {
-        $filled = 0;
-
-        foreach ($views as $view) {
-            if ($filled >= 5) {
-                break;
-            }
-
-            if (! empty($view->country) || empty($view->ip_address)) {
-                continue;
-            }
-
-            $location = resolve_ip_location($view->ip_address);
-            if (empty($location['country'])) {
-                continue;
-            }
-
-            PageView::whereKey($view->id)->update($location);
-            $view->country = $location['country'];
-            $view->city = $location['city'];
-            $view->region = $location['region'];
-            $view->postal = $location['postal'];
-            $view->location = $location['location'];
-            $filled++;
-        }
-    }
-
-    private function pageViewSelectColumns(): array
-    {
-        $columns = ['id', 'ip_address', 'country', 'platform', 'browser', 'url', 'view_count'];
-
-        if (Schema::hasColumn('page_views', 'referrer')) {
-            array_splice($columns, 2, 0, ['referrer']);
-        }
-
-        return $columns;
     }
 }

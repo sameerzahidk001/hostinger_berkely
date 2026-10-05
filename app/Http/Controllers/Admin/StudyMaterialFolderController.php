@@ -203,7 +203,13 @@ class StudyMaterialFolderController extends Controller
     public function edit(Request $request, $id)
     {
         $folder = StudyMaterialFolder::with(['rootItems.childrenRecursive', 'instructorAccess', 'studentAccess', 'items', 'feePackages'])->findOrFail($id);
-        abort_unless($this->lms->canEditFolder($folder), 403);
+        if (! $this->lms->canEditFolder($folder)) {
+            $home = $this->lms->isInstructorActor()
+                ? route('user.study-materials.show', $folder->id)
+                : route('admin.study-materials.folders.index');
+
+            return redirect($home)->with('fail', 'You do not have permission to edit this folder. Please contact the admin.');
+        }
 
         $courses = $this->lms->coursesForActor();
         // Keep current course visible even if assignment was removed later.

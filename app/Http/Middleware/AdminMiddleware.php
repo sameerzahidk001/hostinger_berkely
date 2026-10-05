@@ -50,6 +50,7 @@ class AdminMiddleware
                 || $request->is('admin/logout')
                 || $request->is('admin/csrf-token')
                 || $request->is('admin/session/ping')
+                || ($request->is('admin/analytics*') && instructor_can_view_site_analytics($user))
             )) {
                 $freshUser = $user?->fresh(['roles']);
                 if ($freshUser) {
