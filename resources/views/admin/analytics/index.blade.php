@@ -117,6 +117,7 @@
         </div>
         <div class="site-kit-tabs">
             <a href="{{ $tabUrl('traffic') }}" class="{{ $tab === 'traffic' ? 'active' : '' }}">Traffic</a>
+            <a href="{{ $tabUrl('live') }}" class="{{ $tab === 'live' ? 'active' : '' }}">Live users</a>
             <a href="{{ $tabUrl('visits') }}" class="{{ $tab === 'visits' ? 'active' : '' }}">Page visits</a>
             <a href="{{ $tabUrl('pages') }}" class="{{ $tab === 'pages' ? 'active' : '' }}">Most visited pages</a>
         </div>
@@ -186,7 +187,9 @@
                 </div>
             </div>
         </div>
+    @endif
 
+    @if($tab === 'live')
         <div class="site-kit-card">
             <h5 style="margin-top:0;">Live users <span class="label label-primary">{{ $liveCount }}</span></h5>
             <p class="text-muted">Active in the last 5 minutes.</p>
@@ -214,6 +217,9 @@
                     </tbody>
                 </table>
             </div>
+            @if(method_exists($liveUsers, 'links'))
+                {!! $liveUsers->links() !!}
+            @endif
         </div>
     @endif
 
