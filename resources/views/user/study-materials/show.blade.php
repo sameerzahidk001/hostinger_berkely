@@ -1,4 +1,4 @@
-@extends('user.layout.app')
+@extends(\Illuminate\Support\Facades\Auth::guard('admin')->check() ? 'admin.layout.app' : 'user.layout.app')
 @section('title', $folder->name)
 @push('style')
 <style>
@@ -74,14 +74,14 @@
 @section('content')
 @php
     $lmsManage = app(\App\Services\StudyMaterialService::class);
-    $canEditThisFolder = $lmsManage->isInstructorActor() && $lmsManage->canEditFolder($folder);
-    $canAssignThisFolder = $lmsManage->isInstructorActor() && $lmsManage->canAssignStudentAccess($folder);
+    $canEditThisFolder = $lmsManage->isAdminActor() || ($lmsManage->isInstructorActor() && $lmsManage->canEditFolder($folder));
+    $canAssignThisFolder = $lmsManage->isAdminActor() || ($lmsManage->isInstructorActor() && $lmsManage->canAssignStudentAccess($folder));
 @endphp
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-7">
         <h2>{{ $folder->name }}</h2>
         <ol class="breadcrumb">
-            <li><a href="{{ $lmsManage->isInstructorActor() ? route('admin.study-materials.folders.index') : route('user.study-materials.index') }}">Study Materials</a></li>
+            <li><a href="{{ Auth::guard('admin')->check() || $lmsManage->isInstructorActor() ? route('admin.study-materials.folders.index') : route('user.study-materials.index') }}">Study Materials</a></li>
             <li class="active"><strong>{{ $folder->name }}</strong></li>
         </ol>
         <p class="text-muted" style="margin-bottom:4px;">

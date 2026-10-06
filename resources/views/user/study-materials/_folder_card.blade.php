@@ -36,7 +36,7 @@
                         $canAssignFolder = $lms->isInstructorActor() && $lms->canAssignStudentAccess($folder);
                     @endphp
                     <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
-                        <a class="btn btn-primary btn-sm" href="{{ route('user.study-materials.show', $folder->id) }}" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;">Open Now</a>
+                        <a class="btn btn-primary btn-sm" href="{{ Auth::guard('admin')->check() ? route('admin.study-materials.folders.open', $folder->id) : route('user.study-materials.show', $folder->id) }}" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;">Open Now</a>
                         @if($canManageFolder)
                             <a class="btn btn-sm btn-default" href="{{ route('admin.study-materials.folders.edit', $folder->id) }}">Edit Folder</a>
                         @endif

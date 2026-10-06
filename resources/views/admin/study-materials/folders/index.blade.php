@@ -134,7 +134,7 @@
                             </td>
                             @endif
                             <td>
-                                <a class="btn btn-sm btn-primary" href="{{ route('user.study-materials.show', $folder->id) }}" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;font-weight:700;">Open Now</a>
+                                <a class="btn btn-sm btn-primary" href="{{ Auth::guard('admin')->check() ? route('admin.study-materials.folders.open', $folder->id) : route('user.study-materials.show', $folder->id) }}" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;font-weight:700;">Open Now</a>
                             </td>
                         </tr>
                     @empty
