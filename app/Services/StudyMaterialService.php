@@ -774,6 +774,10 @@ class StudyMaterialService
 
     public function userCanOpenFolder(int $userId, int $folderId): bool
     {
+        if ($this->isAdminActor()) {
+            return true;
+        }
+
         return $this->studentHasActiveAccess($userId, $folderId)
             || $this->instructorHasActiveAccess($userId, $folderId);
     }

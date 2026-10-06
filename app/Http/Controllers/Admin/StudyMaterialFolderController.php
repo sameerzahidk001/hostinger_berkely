@@ -63,6 +63,23 @@ class StudyMaterialFolderController extends Controller
         ]);
     }
 
+    public function open($id)
+    {
+        $folder = StudyMaterialFolder::with([
+            'course',
+            'rootItems.childrenRecursive',
+            'instructorAccess.instructor',
+        ])->findOrFail($id);
+
+        $access = (object) [
+            'issued_at' => $folder->created_at,
+            'access_till' => null,
+            'status' => 'active',
+        ];
+
+        return view('user.study-materials.show', compact('folder', 'access'));
+    }
+
     public function create()
     {
         abort_unless($this->lms->canCreateFolder(), 403);

@@ -40,7 +40,11 @@ class StudyMaterialController extends Controller
 
     public function show($id)
     {
-        abort_unless($this->lms->userCanOpenFolder((int) Auth::id(), (int) $id), 403, 'This folder is disabled or you no longer have access.');
+        abort_unless(
+            $this->lms->isAdminActor() || $this->lms->userCanOpenFolder((int) Auth::id(), (int) $id),
+            403,
+            'This folder is disabled or you no longer have access.'
+        );
 
         $folder = StudyMaterialFolder::with([
             'course',
@@ -75,7 +79,11 @@ class StudyMaterialController extends Controller
     {
         $item = StudyMaterialItem::with('folder')->findOrFail($itemId);
         abort_if($item->type !== 'file', 404);
-        abort_unless($this->lms->userCanOpenFolder((int) Auth::id(), (int) $item->folder_id), 403, 'This folder is disabled or you no longer have access.');
+        abort_unless(
+            $this->lms->isAdminActor() || $this->lms->userCanOpenFolder((int) Auth::id(), (int) $item->folder_id),
+            403,
+            'This folder is disabled or you no longer have access.'
+        );
 
         $asDownload = $request->boolean('download');
         if ($asDownload) {

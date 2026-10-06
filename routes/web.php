@@ -206,7 +206,9 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
             Route::get('/folders', [StudyMaterialFolderController::class, 'index'])->name('folders.index');
             Route::get('/folders/create', [StudyMaterialFolderController::class, 'create'])->name('folders.create');
             Route::post('/folders', [StudyMaterialFolderController::class, 'store'])->name('folders.store');
+            Route::get('/folders/{id}/open', [StudyMaterialFolderController::class, 'open'])->name('folders.open');
             Route::get('/folders/{id}/edit', [StudyMaterialFolderController::class, 'edit'])->name('folders.edit');
+            Route::get('/file/{itemId}', [UserStudyMaterialController::class, 'viewFile'])->name('file');
             Route::put('/folders/{id}', [StudyMaterialFolderController::class, 'update'])->name('folders.update');
             Route::delete('/folders/{id}', [StudyMaterialFolderController::class, 'destroy'])->name('folders.destroy');
             Route::post('/folders/{id}/subfolders', [StudyMaterialFolderController::class, 'storeSubfolder'])->name('folders.subfolders.store');

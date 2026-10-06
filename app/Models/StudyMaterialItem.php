@@ -198,7 +198,12 @@ class StudyMaterialItem extends Model
             }
         }
 
-        return route('user.study-materials.file', ['itemId' => $this->id, 'raw' => 1]);
+        return $this->portalFileUrl(['raw' => 1]);
+    }
+
+    public function portalDownloadUrl(): string
+    {
+        return $this->portalFileUrl(['download' => 1]);
     }
 
     public function allowsDownload(): bool
@@ -206,9 +211,15 @@ class StudyMaterialItem extends Model
         return $this->type === 'file' && $this->allow_download !== false;
     }
 
-    public function portalDownloadUrl(): string
+    protected function portalFileUrl(array $query = []): string
     {
-        return route('user.study-materials.file', ['itemId' => $this->id, 'download' => 1]);
+        $params = array_merge(['itemId' => $this->id], $query);
+
+        if (\Illuminate\Support\Facades\Auth::guard('admin')->check()) {
+            return route('admin.study-materials.file', $params);
+        }
+
+        return route('user.study-materials.file', $params);
     }
 
     public function portalKind(): string
