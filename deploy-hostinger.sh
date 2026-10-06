@@ -69,11 +69,11 @@ if [ -f .env ]; then
   upsert_env NOON_WEBHOOK_SECRET d3aa6de3-2653-4c6f-851e-51794d1dc32b
 
   current_lifetime="$(grep "^SESSION_LIFETIME=" .env | head -n1 | cut -d= -f2-)"
-  if [ -z "$current_lifetime" ] || [ "$current_lifetime" = "15" ]; then
+  if [ -z "$current_lifetime" ] || [ "$current_lifetime" = "120" ] || [ "$current_lifetime" = "15" ]; then
     if grep -q "^SESSION_LIFETIME=" .env; then
-      sed -i "s|^SESSION_LIFETIME=.*|SESSION_LIFETIME=120|" .env
+      sed -i "s|^SESSION_LIFETIME=.*|SESSION_LIFETIME=15|" .env
     else
-      echo "SESSION_LIFETIME=120" >> .env
+      echo "SESSION_LIFETIME=15" >> .env
     fi
   fi
 
