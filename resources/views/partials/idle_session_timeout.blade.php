@@ -1,6 +1,6 @@
-{{-- Keep the session alive while the user is viewing PDFs, videos, or other materials. --}}
+{{-- Auto-logout after 15 minutes idle. Stay signed in only while a PDF/video/file is actually open. --}}
 @php
-    $idleMinutes = 120;
+    $idleMinutes = 15;
     $idleMs = $idleMinutes * 60 * 1000;
     $pingUrl = $pingUrl ?? (Auth::guard('admin')->check()
         ? route('admin.session.ping')
@@ -13,6 +13,7 @@
     var pingUrl = @json($pingUrl);
     var lastActivity = Date.now();
     var timer = null;
+    var ignoreActivity = false;
 
     function logoutNow() {
         window.location.href = logoutUrl;
@@ -33,6 +34,7 @@
     }
 
     function markActivity() {
+        if (ignoreActivity) return;
         lastActivity = Date.now();
         if (timer) clearTimeout(timer);
         timer = setTimeout(checkIdle, idleLimitMs);
@@ -40,7 +42,10 @@
 
     function checkIdle() {
         if (isViewingMaterial()) {
-            markActivity();
+            lastActivity = Date.now();
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(checkIdle, idleLimitMs);
+            pingSession();
             return;
         }
         var idleFor = Date.now() - lastActivity;
@@ -60,29 +65,34 @@
         }).catch(function () {});
     }
 
+    function onUserReturn() {
+        ignoreActivity = true;
+        checkIdle();
+        ignoreActivity = false;
+        if (isViewingMaterial()) {
+            markActivity();
+        }
+    }
+
     ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'].forEach(function (evt) {
         document.addEventListener(evt, markActivity, { passive: true });
     });
 
     document.addEventListener('visibilitychange', function () {
         if (!document.hidden) {
-            if (isViewingMaterial()) {
-                markActivity();
-            }
-            checkIdle();
+            onUserReturn();
         }
     });
-    window.addEventListener('focus', checkIdle);
+    window.addEventListener('focus', onUserReturn);
 
     setInterval(function () {
         if (isViewingMaterial()) {
-            markActivity();
+            lastActivity = Date.now();
+            pingSession();
         }
-        pingSession();
         checkIdle();
-    }, 60000);
+    }, 30000);
 
     markActivity();
-    pingSession();
 })();
 </script>
