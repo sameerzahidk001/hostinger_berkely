@@ -97,16 +97,6 @@
                                 <label for="package">Packages</label>
                                 <select name="package" id="package" class="form-control js-type-find" data-placeholder="Type to find package">
                                     <option value="">Select Package</option>
-                                    @foreach ($packages as $package)
-                                        <option value="{{ $package->id }}"
-                                            data-courseid="{{ $package->course->id }}"
-                                            data-price="{{ $package->price }}"
-                                            data-currency="{{ $package->currency }}"
-                                            data-packagename="{{ $package->package_name }}"
-                                            {{ old('package') == $package->id ? 'selected' : '' }}>
-                                            {{ $package->package_name }} ({{ $package->currency }})
-                                        </option>
-                                    @endforeach
                                 </select>
                                 @error('package')
                                     <p class="text-danger text-xs italic">{{ $message }}</p>
@@ -224,34 +214,70 @@
                 }
             });
 
+            const allPackages = @json(
+                $packages->map(function ($package) {
+                    return [
+                        'id' => (string) $package->id,
+                        'course_id' => (string) $package->courses_id,
+                        'price' => $package->price,
+                        'currency' => $package->currency,
+                        'name' => $package->package_name,
+                        'label' => $package->package_name . ' (' . $package->currency . ')',
+                    ];
+                })->values()
+            );
+
             function filterPackagesByCourse(selectedCourseId, preferPackageId) {
                 const $package = $('#package');
-                $package.find('option').each(function () {
-                    const $opt = $(this);
-                    if (!$opt.val()) {
-                        $opt.prop('disabled', false);
-                        return;
-                    }
-                    const match = selectedCourseId && String($opt.data('courseid')) === String(selectedCourseId);
-                    $opt.prop('disabled', !match);
-                });
-                if (preferPackageId && $package.find('option[value="' + preferPackageId + '"]:not(:disabled)').length) {
-                    $package.val(preferPackageId);
+                const courseId = selectedCourseId ? String(selectedCourseId) : '';
+                const keepId = preferPackageId ? String(preferPackageId) : '';
+
+                $package.empty().append($('<option>', { value: '', text: 'Select Package' }));
+
+                if (courseId) {
+                    allPackages
+                        .filter(function (pkg) { return String(pkg.course_id) === courseId; })
+                        .forEach(function (pkg) {
+                            const $opt = $('<option>', {
+                                value: pkg.id,
+                                text: pkg.label
+                            });
+                            $opt.attr({
+                                'data-courseid': pkg.course_id,
+                                'data-price': pkg.price,
+                                'data-currency': pkg.currency,
+                                'data-packagename': pkg.name
+                            });
+                            $package.append($opt);
+                        });
+                }
+
+                if (keepId && $package.find('option[value="' + keepId + '"]').length) {
+                    $package.val(keepId);
                 } else {
                     $package.val('');
                 }
-                $package.trigger('change.select2');
+
+                if ($package.hasClass('select2-hidden-accessible')) {
+                    $package.select2('destroy');
+                }
+                if (typeof window.initTypeFindSelects === 'function') {
+                    window.initTypeFindSelects($package.parent());
+                }
             }
 
             $('#course').on('change', function () {
                 const selectedCourseId = $(this).val();
                 $('#total_amount').val('');
-                filterPackagesByCourse(selectedCourseId, "{{ old('package') }}");
+                $('.currency').val('$');
+                $('.currency-addon').text('$');
+                filterPackagesByCourse(selectedCourseId, null);
             });
 
             $('#package').on('change', function () {
-                const price = $(this).find(':selected').data('price') || 0;
-                const currency = $(this).find(':selected').data('currency') || 'AED';
+                const $selected = $(this).find(':selected');
+                const price = $selected.data('price') || 0;
+                const currency = $selected.data('currency') || 'AED';
                 const currencySymbol = currency === 'AED' ? 'AED' : currency;
                 $('#total_amount').val(price);
                 if ($('#fullAmountInFirstInstallment').is(':checked')) {
@@ -295,9 +321,16 @@
                 }
             });
 
-            const preselectedCourse = $('#course').val();
+            const preselectedCourse = $('#course').val() || "{{ old('course') }}";
+            const preselectedPackage = "{{ old('package') }}";
             if (preselectedCourse) {
-                $('#course').trigger('change');
+                $('#course').val(String(preselectedCourse));
+                filterPackagesByCourse(preselectedCourse, preselectedPackage);
+                if (preselectedPackage) {
+                    $('#package').trigger('change');
+                }
+            } else {
+                filterPackagesByCourse('', null);
             }
         });
     </script>
