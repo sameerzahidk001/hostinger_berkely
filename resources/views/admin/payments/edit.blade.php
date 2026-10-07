@@ -199,8 +199,8 @@
                 }
             });
 
-            const allPackages = @json(
-                $packages->map(function ($package) {
+            @php
+                $invoicePackagesForJs = $packages->map(function ($package) {
                     return [
                         'id' => (string) $package->id,
                         'course_id' => (string) $package->courses_id,
@@ -209,8 +209,9 @@
                         'name' => $package->package_name,
                         'label' => $package->package_name . ' (' . $package->currency . ')',
                     ];
-                })->values()
-            );
+                })->values();
+            @endphp
+            const allPackages = @json($invoicePackagesForJs);
 
             function filterPackagesByCourse(selectedCourseId, preferPackageId) {
                 const $package = $('#package');
