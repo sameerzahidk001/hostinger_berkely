@@ -63,11 +63,12 @@ class PaymentController extends Controller
             $query->where('name', 'student');
         })->orderByDesc('created_at')->get();
         $courses = Course::orderByDesc('created_at')->get();
-        $packages = CourseFee::whereHas('course', function ($query) {
-            $query->where('status', 1);
-        })->get();
-
-        // dd($packages->toArray());
+        $packages = CourseFee::with('course')
+            ->whereHas('course', function ($query) {
+                $query->where('status', 1);
+            })
+            ->orderBy('package_name')
+            ->get();
 
         return view('admin.payments.create', compact('users', 'courses', 'packages'));
     }
@@ -95,13 +96,18 @@ class PaymentController extends Controller
             if (round($sumOfAmounts, 2) !== round($expectedTotal, 2)) {
                 $validator->errors()->add('amount', 'The sum of all installment amounts must equal the total amount.');
             }
+
+            if ($request->filled('package') && $request->filled('course')) {
+                $packageCourseId = CourseFee::where('id', $request->package)->value('courses_id');
+                if ((string) $packageCourseId !== (string) $request->course) {
+                    $validator->errors()->add('package', 'Selected package does not belong to the selected course.');
+                }
+            }
         });
 
         if ($validator->fails()) {
             return redirect()->back()->withErrors($validator)->withInput();
         }
-
-        // dd($request->toArray());
 
         try {
             $package = CourseFee::findOrFail($request->package);
@@ -167,9 +173,12 @@ class PaymentController extends Controller
             $query->where('name', 'student');
         })->get();
         $courses = Course::where('status', 1)->get();
-        $packages = CourseFee::whereHas('course', function ($query) {
-            $query->where('status', 1);
-        })->get();
+        $packages = CourseFee::with('course')
+            ->whereHas('course', function ($query) {
+                $query->where('status', 1);
+            })
+            ->orderBy('package_name')
+            ->get();
 
         return view('admin.payments.edit', compact('payment', 'users', 'courses', 'packages'));
     }
@@ -200,6 +209,13 @@ class PaymentController extends Controller
 
             if (round($sumOfAmounts, 2) !== round($expectedTotal, 2)) {
                 $validator->errors()->add('amount', 'The sum of all installment amounts must equal the total amount.');
+            }
+
+            if ($request->filled('package') && $request->filled('course')) {
+                $packageCourseId = CourseFee::where('id', $request->package)->value('courses_id');
+                if ((string) $packageCourseId !== (string) $request->course) {
+                    $validator->errors()->add('package', 'Selected package does not belong to the selected course.');
+                }
             }
         });
 
