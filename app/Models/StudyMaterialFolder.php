@@ -13,6 +13,7 @@ class StudyMaterialFolder extends Model
         'code',
         'name',
         'course_id',
+        'head_of_faculty_id',
         'fee_package_id',
         'validity_months',
         'status',
@@ -54,6 +55,11 @@ class StudyMaterialFolder extends Model
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class);
+    }
+
+    public function headOfFaculty(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'head_of_faculty_id');
     }
 
     public function feePackage(): BelongsTo
@@ -193,21 +199,35 @@ class StudyMaterialFolder extends Model
 
     public function displayHeadOfFaculty()
     {
+        $hofId = (int) ($this->head_of_faculty_id ?? 0);
+        if ($hofId > 0) {
+            if ($this->relationLoaded('headOfFaculty') && $this->headOfFaculty) {
+                return $this->headOfFaculty;
+            }
+
+            $fromAccess = $this->displayInstructors()->first(fn ($user) => (int) $user->id === $hofId);
+            if ($fromAccess) {
+                return $fromAccess;
+            }
+
+            return $this->headOfFaculty()->first() ?: User::query()->find($hofId);
+        }
+
+        // Legacy folders: fall back to course roster first instructor if they have access.
         $people = $this->displayInstructors();
         if ($people->isEmpty()) {
             return null;
         }
 
-        $hofId = (int) (course_instructor_ids($this->course)[0] ?? 0);
-        if ($hofId > 0) {
-            $match = $people->first(fn ($user) => (int) $user->id === $hofId);
+        $courseHofId = (int) (course_instructor_ids($this->course)[0] ?? 0);
+        if ($courseHofId > 0) {
+            $match = $people->first(fn ($user) => (int) $user->id === $courseHofId);
             if ($match) {
                 return $match;
             }
         }
 
-        // Course roster missing: first assigned faculty is Head of Faculty.
-        return $people->first();
+        return null;
     }
 
     public function displayTrainerInstructors()
@@ -216,19 +236,9 @@ class StudyMaterialFolder extends Model
         $hof = $this->displayHeadOfFaculty();
         $hofId = $hof ? (int) $hof->id : 0;
 
-        $trainers = $people
+        return $people
             ->reject(fn ($user) => $hofId > 0 && (int) $user->id === $hofId)
             ->values();
-
-        if ($trainers->isEmpty() && $hof) {
-            return collect([$hof]);
-        }
-
-        if ($trainers->isEmpty() && ! $hof) {
-            return $people->values();
-        }
-
-        return $trainers;
     }
 
     public function displayInstructors()

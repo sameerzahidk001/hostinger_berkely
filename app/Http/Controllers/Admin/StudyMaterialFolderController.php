@@ -219,7 +219,7 @@ class StudyMaterialFolderController extends Controller
 
     public function edit(Request $request, $id)
     {
-        $folder = StudyMaterialFolder::with(['rootItems.childrenRecursive', 'instructorAccess', 'studentAccess', 'items', 'feePackages'])->findOrFail($id);
+        $folder = StudyMaterialFolder::with(['rootItems.childrenRecursive', 'instructorAccess.instructor', 'headOfFaculty', 'studentAccess', 'items', 'feePackages', 'course'])->findOrFail($id);
         if (! $this->lms->canEditFolder($folder)) {
             $home = $this->lms->isInstructorActor()
                 ? route('user.study-materials.show', $folder->id)
@@ -244,9 +244,13 @@ class StudyMaterialFolderController extends Controller
             ->map(fn ($id) => (int) $id)
             ->filter()
             ->values();
-        $hofId = (int) (course_instructor_ids($folder->course)[0] ?? 0);
-        if ($hofId > 0 && ! $accessIds->contains($hofId)) {
-            $hofId = 0;
+        $hofId = (int) ($folder->head_of_faculty_id ?? 0);
+        if ($hofId <= 0) {
+            // Legacy folders without a stored HoF: use course roster first if they have access.
+            $hofId = (int) (course_instructor_ids($folder->course)[0] ?? 0);
+            if ($hofId > 0 && ! $accessIds->contains($hofId)) {
+                $hofId = 0;
+            }
         }
         $selectedHeadOfFacultyId = old('head_of_faculty_id', $hofId ?: '');
         $selectedInstructorIds = old(
@@ -350,9 +354,13 @@ class StudyMaterialFolderController extends Controller
         $folder = StudyMaterialFolder::with('items')->findOrFail($id);
         abort_unless($this->lms->canEditFolder($folder), 403);
 
+        $allowedSources = $this->lms->isAdminActor()
+            ? ['upload', 'workdrive', 'zoho']
+            : ['workdrive', 'zoho'];
+
         $validator = Validator::make($request->all(), [
             'parent_id' => 'nullable|exists:study_material_items,id',
-            'source' => 'required|in:upload,workdrive,zoho',
+            'source' => 'required|in:' . implode(',', $allowedSources),
             'icon_type' => 'nullable|string|in:auto,pdf,word,excel,ppt,video,audio,image,zip,file',
             'files' => 'required_if:source,upload|required_if:source,workdrive|nullable|array',
             'files.*' => 'nullable|file|max:102400',
@@ -364,6 +372,7 @@ class StudyMaterialFolderController extends Controller
             'files.*.max' => 'The file failed to upload. Maximum size is 100 MB.',
             'zoho_name.required_if' => 'Enter a display name for the Zoho WorkDrive file.',
             'zoho_url.required_if' => 'Enter the Zoho WorkDrive link.',
+            'source.in' => 'Instructors can upload to Zoho WorkDrive or paste a WorkDrive link only.',
         ]);
         if ($validator->fails()) {
             return redirect()->back()->withErrors($validator)->withInput();
@@ -374,6 +383,10 @@ class StudyMaterialFolderController extends Controller
         $iconType = StudyMaterialItem::normalizeIconType($request->input('icon_type'));
 
         $this->rememberFileSource($request->input('source'));
+
+        if ($request->input('source') === 'upload' && ! $this->lms->isAdminActor()) {
+            return redirect()->back()->with('fail', 'Upload to server is only available for admins.');
+        }
 
         if ($request->input('source') === 'zoho') {
             StudyMaterialItem::create([
@@ -550,8 +563,12 @@ class StudyMaterialFolderController extends Controller
 
     protected function syncFolderFacultyAccess(StudyMaterialFolder $folder, Request $request, $accessTill = null): void
     {
+        $hofId = (int) ($request->input('head_of_faculty_id') ?: 0);
+        $folder->head_of_faculty_id = $hofId > 0 ? $hofId : null;
+        $folder->save();
+
         $facultyIds = collect([
-            $request->input('head_of_faculty_id'),
+            $hofId > 0 ? $hofId : null,
             $request->input('instructor_id'),
         ])
             ->merge((array) $request->input('instructor_ids', []))
@@ -601,6 +618,10 @@ class StudyMaterialFolderController extends Controller
     {
         $source = old('source');
         if (in_array($source, ['upload', 'workdrive', 'zoho'], true)) {
+            if ($source === 'upload' && ! $this->lms->isAdminActor()) {
+                return 'zoho';
+            }
+
             return $source;
         }
 
