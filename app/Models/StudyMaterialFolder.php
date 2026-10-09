@@ -6,9 +6,28 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
 
 class StudyMaterialFolder extends Model
 {
+    public static function ensureHeadOfFacultyColumn(): bool
+    {
+        if (! Schema::hasTable('study_material_folders')) {
+            return false;
+        }
+        if (Schema::hasColumn('study_material_folders', 'head_of_faculty_id')) {
+            return true;
+        }
+
+        Schema::table('study_material_folders', function (Blueprint $table) {
+            $table->unsignedBigInteger('head_of_faculty_id')->nullable()->after('course_id');
+            $table->index('head_of_faculty_id');
+        });
+
+        return Schema::hasColumn('study_material_folders', 'head_of_faculty_id');
+    }
+
     protected $fillable = [
         'code',
         'name',
