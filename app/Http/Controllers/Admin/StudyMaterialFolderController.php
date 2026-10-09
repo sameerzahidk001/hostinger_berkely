@@ -579,37 +579,58 @@ class StudyMaterialFolderController extends Controller
         $folder->head_of_faculty_id = $hofId > 0 ? $hofId : null;
         $folder->save();
 
-        $trainerIds = collect((array) $request->input('instructor_ids', []))
-            ->push($request->input('instructor_id'))
-            ->filter()
-            ->map(fn ($id) => (int) $id)
-            ->reject(fn ($id) => $hofId > 0 && $id === $hofId)
-            ->unique()
-            ->values();
-
-        $facultyIds = collect($hofId > 0 ? [$hofId] : [])
-            ->merge($trainerIds)
-            ->unique()
-            ->values();
-
-        // Persist removals: drop access rows that are no longer selected.
-        if ($facultyIds->isEmpty()) {
-            $folder->instructorAccess()->delete();
-
-            return;
-        }
-
-        $folder->instructorAccess()
-            ->whereNotIn('instructor_id', $facultyIds->all())
-            ->delete();
-
         if (! $accessTill) {
             $accessTill = $this->lms->computeAccessTill(now(), $folder->validity_months);
         }
 
-        foreach ($facultyIds as $instructorId) {
+        // Instructors multi-select only syncs when the form included that field.
+        // Missing instructor_ids alone must not wipe existing trainers.
+        $instructorsSubmitted = $request->boolean('instructor_ids_present')
+            || $request->has('instructor_ids')
+            || $request->filled('instructor_id');
+
+        if ($instructorsSubmitted) {
+            $trainerIds = collect((array) $request->input('instructor_ids', []))
+                ->push($request->input('instructor_id'))
+                ->filter()
+                ->map(fn ($id) => (int) $id)
+                ->reject(fn ($id) => $hofId > 0 && $id === $hofId)
+                ->unique()
+                ->values();
+
+            $facultyIds = collect($hofId > 0 ? [$hofId] : [])
+                ->merge($trainerIds)
+                ->unique()
+                ->values();
+
+            if ($facultyIds->isEmpty()) {
+                $folder->instructorAccess()->delete();
+
+                return;
+            }
+
+            $folder->instructorAccess()
+                ->whereNotIn('instructor_id', $facultyIds->all())
+                ->delete();
+
+            foreach ($facultyIds as $instructorId) {
+                $folder->instructorAccess()->firstOrCreate(
+                    ['instructor_id' => $instructorId],
+                    [
+                        'status' => 'disabled',
+                        'issued_at' => now()->toDateString(),
+                        'access_till' => $accessTill?->toDateString(),
+                    ]
+                );
+            }
+
+            return;
+        }
+
+        // HoF-only update: keep existing trainers, ensure HoF access row exists.
+        if ($hofId > 0) {
             $folder->instructorAccess()->firstOrCreate(
-                ['instructor_id' => $instructorId],
+                ['instructor_id' => $hofId],
                 [
                     'status' => 'disabled',
                     'issued_at' => now()->toDateString(),

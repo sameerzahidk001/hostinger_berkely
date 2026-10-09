@@ -115,6 +115,7 @@
                     </div>
                     <div class="col-md-6 form-group">
                         <label>Instructors</label>
+                        <input type="hidden" name="instructor_ids_present" value="1">
                         <select name="instructor_ids[]" id="instructor_ids" class="form-control" multiple>
                             @foreach($instructors as $ins)
                                 <option value="{{ $ins->id }}" @selected(in_array((int) $ins->id, array_map('intval', $selectedInstructorIds ?? []), true))>{{ $ins->name }}</option>

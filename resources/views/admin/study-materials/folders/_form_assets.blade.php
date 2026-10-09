@@ -56,14 +56,34 @@
     }
     if ($('#instructor_ids').length) {
         const selectedInstructorIds = @json(array_values(array_map('strval', $selectedInstructorIds ?? [])));
-        $('#instructor_ids').select2({
+        const $instructorSelect = $('#instructor_ids');
+        $instructorSelect.select2({
             placeholder: 'Type to find instructors',
             width: '100%',
             closeOnSelect: false
         });
         if (selectedInstructorIds.length) {
-            $('#instructor_ids').val(selectedInstructorIds).trigger('change');
+            $instructorSelect.val(selectedInstructorIds).trigger('change');
         }
+
+        // Keep native <select> in sync so instructor_ids[] always posts on Save.
+        $instructorSelect.closest('form').on('submit', function () {
+            const vals = $instructorSelect.val() || [];
+            $instructorSelect.find('option').each(function () {
+                this.selected = vals.indexOf(String(this.value)) !== -1;
+            });
+        });
+
+        $('#head_of_faculty_id').on('change', function () {
+            const hof = String($(this).val() || '');
+            if (!hof) {
+                return;
+            }
+            const vals = ($instructorSelect.val() || []).filter(function (id) {
+                return String(id) !== hof;
+            });
+            $instructorSelect.val(vals).trigger('change');
+        });
     }
 
     function packageLabel(row) {
