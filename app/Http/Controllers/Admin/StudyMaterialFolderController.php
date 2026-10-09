@@ -34,6 +34,8 @@ class StudyMaterialFolderController extends Controller
                 ->with('fail', 'LMS tables are missing. Create them here (do not use Ignition Run Migrations).');
         }
 
+        StudyMaterialFolder::ensureHeadOfFacultyColumn();
+
         $search = trim((string) $request->get('search', ''));
         $query = $this->lms->foldersQueryForActor();
 
@@ -219,6 +221,8 @@ class StudyMaterialFolderController extends Controller
 
     public function edit(Request $request, $id)
     {
+        StudyMaterialFolder::ensureHeadOfFacultyColumn();
+
         $folder = StudyMaterialFolder::with(['rootItems.childrenRecursive', 'instructorAccess.instructor', 'headOfFaculty', 'studentAccess', 'items', 'feePackages', 'course'])->findOrFail($id);
         if (! $this->lms->canEditFolder($folder)) {
             $home = $this->lms->isInstructorActor()
@@ -563,6 +567,8 @@ class StudyMaterialFolderController extends Controller
 
     protected function syncFolderFacultyAccess(StudyMaterialFolder $folder, Request $request, $accessTill = null): void
     {
+        StudyMaterialFolder::ensureHeadOfFacultyColumn();
+
         $hofId = (int) ($request->input('head_of_faculty_id') ?: 0);
         $folder->head_of_faculty_id = $hofId > 0 ? $hofId : null;
         $folder->save();
