@@ -35,6 +35,7 @@ class StudyMaterialFolderController extends Controller
         }
 
         StudyMaterialFolder::ensureHeadOfFacultyColumn();
+        StudyMaterialFolder::backfillMissingHeadOfFaculty();
 
         $search = trim((string) $request->get('search', ''));
         $query = $this->lms->foldersQueryForActor();
@@ -249,12 +250,12 @@ class StudyMaterialFolderController extends Controller
             ->filter()
             ->values();
         $hofId = (int) ($folder->head_of_faculty_id ?? 0);
-        if ($hofId <= 0) {
-            // Legacy folders without a stored HoF: use course roster first if they have access.
-            $hofId = (int) (course_instructor_ids($folder->course)[0] ?? 0);
-            if ($hofId > 0 && ! $accessIds->contains($hofId)) {
-                $hofId = 0;
-            }
+        if ($hofId <= 0 && $accessIds->isNotEmpty()) {
+            // Legacy folders: course roster first if assigned, else first faculty on the folder.
+            $courseHofId = (int) (course_instructor_ids($folder->course)[0] ?? 0);
+            $hofId = ($courseHofId > 0 && $accessIds->contains($courseHofId))
+                ? $courseHofId
+                : (int) $accessIds->first();
         }
         $selectedHeadOfFacultyId = old('head_of_faculty_id', $hofId ?: '');
         $selectedInstructorIds = collect(old(
