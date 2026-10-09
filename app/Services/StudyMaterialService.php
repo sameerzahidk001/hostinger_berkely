@@ -46,7 +46,7 @@ class StudyMaterialService
     public function foldersQueryForActor()
     {
         $query = StudyMaterialFolder::query()
-            ->with(['course', 'feePackage', 'feePackages', 'instructorAccess.instructor', 'studentAccess']);
+            ->with(['course', 'feePackage', 'feePackages', 'instructorAccess.instructor', 'headOfFaculty', 'studentAccess']);
 
         if ($this->isAdminActor()) {
             return $query->latest();

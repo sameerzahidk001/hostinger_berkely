@@ -257,10 +257,15 @@ class StudyMaterialFolderController extends Controller
             }
         }
         $selectedHeadOfFacultyId = old('head_of_faculty_id', $hofId ?: '');
-        $selectedInstructorIds = old(
+        $selectedInstructorIds = collect(old(
             'instructor_ids',
             $accessIds->reject(fn ($id) => $hofId > 0 && (int) $id === $hofId)->values()->all()
-        );
+        ))
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
 
         return view('admin.study-materials.folders.edit', [
             'folder' => $folder,
@@ -573,13 +578,16 @@ class StudyMaterialFolderController extends Controller
         $folder->head_of_faculty_id = $hofId > 0 ? $hofId : null;
         $folder->save();
 
-        $facultyIds = collect([
-            $hofId > 0 ? $hofId : null,
-            $request->input('instructor_id'),
-        ])
-            ->merge((array) $request->input('instructor_ids', []))
+        $trainerIds = collect((array) $request->input('instructor_ids', []))
+            ->push($request->input('instructor_id'))
             ->filter()
             ->map(fn ($id) => (int) $id)
+            ->reject(fn ($id) => $hofId > 0 && $id === $hofId)
+            ->unique()
+            ->values();
+
+        $facultyIds = collect($hofId > 0 ? [$hofId] : [])
+            ->merge($trainerIds)
             ->unique()
             ->values();
 
