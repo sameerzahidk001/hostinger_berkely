@@ -161,9 +161,21 @@
     <div class="ibox">
         <div class="ibox-title"><h5>{{ $isAdmin ? '3. Add files' : '2. Add files' }}</h5></div>
         <div class="ibox-content">
-            <p class="help-block">Select the main folder or a subfolder, then upload to Zoho WorkDrive, upload to this server, or paste an existing WorkDrive link.</p>
-            {{-- Default is the third radio: Paste WorkDrive link. Do not fall back to Upload to Zoho WorkDrive. --}}
-            @php $fileSource = old('source', $fileSource ?? 'zoho'); @endphp
+            <p class="help-block">
+                Select the main folder or a subfolder, then
+                @if($isAdmin)
+                    upload to Zoho WorkDrive, upload to this server, or paste an existing WorkDrive link.
+                @else
+                    upload to Zoho WorkDrive or paste an existing WorkDrive link.
+                @endif
+            </p>
+            {{-- Default is Paste WorkDrive link. Do not fall back to Upload to Zoho WorkDrive. --}}
+            @php
+                $fileSource = old('source', $fileSource ?? 'zoho');
+                if (! $isAdmin && $fileSource === 'upload') {
+                    $fileSource = 'zoho';
+                }
+            @endphp
             <form id="add-file-form" method="POST" action="{{ route('admin.study-materials.folders.files.store', $folder->id) }}" enctype="multipart/form-data">
                 @csrf
                 <div class="row">
@@ -181,15 +193,23 @@
                             <label class="radio-inline">
                                 <input type="radio" name="source" value="workdrive" {{ $fileSource === 'workdrive' ? 'checked' : '' }}> Upload to Zoho WorkDrive
                             </label>
+                            @if($isAdmin)
                             <label class="radio-inline">
                                 <input type="radio" name="source" value="upload" {{ $fileSource === 'upload' ? 'checked' : '' }}> Upload to server
                             </label>
+                            @endif
                             <label class="radio-inline">
                                 <input type="radio" name="source" value="zoho" {{ $fileSource === 'zoho' ? 'checked' : '' }}> Paste WorkDrive link
                             </label>
                         </div>
                         @unless($zohoWorkDriveReady ?? false)
-                            <span class="help-block">WorkDrive API is not connected yet. Paste a link, or upload to the server until OAuth is set.</span>
+                            <span class="help-block">
+                                @if($isAdmin)
+                                    WorkDrive API is not connected yet. Paste a link, or upload to the server until OAuth is set.
+                                @else
+                                    WorkDrive API is not connected yet. Paste a WorkDrive link instead.
+                                @endif
+                            </span>
                         @endunless
                     </div>
                     <div class="col-md-6 form-group">
