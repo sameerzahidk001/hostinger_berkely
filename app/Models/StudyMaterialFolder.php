@@ -28,6 +28,44 @@ class StudyMaterialFolder extends Model
         return Schema::hasColumn('study_material_folders', 'head_of_faculty_id');
     }
 
+    /**
+     * Fill missing head_of_faculty_id from course roster / first assigned faculty
+     * so Folders list shows HoF without re-saving every row.
+     */
+    public static function backfillMissingHeadOfFaculty(): void
+    {
+        if (! static::ensureHeadOfFacultyColumn()) {
+            return;
+        }
+
+        $folders = static::query()
+            ->whereNull('head_of_faculty_id')
+            ->with(['course', 'instructorAccess'])
+            ->get();
+
+        foreach ($folders as $folder) {
+            $accessIds = $folder->instructorAccess
+                ->pluck('instructor_id')
+                ->map(fn ($id) => (int) $id)
+                ->filter()
+                ->values();
+
+            if ($accessIds->isEmpty()) {
+                continue;
+            }
+
+            $courseHofId = (int) (course_instructor_ids($folder->course)[0] ?? 0);
+            $hofId = ($courseHofId > 0 && $accessIds->contains($courseHofId))
+                ? $courseHofId
+                : (int) $accessIds->first();
+
+            if ($hofId > 0) {
+                static::query()->whereKey($folder->id)->update(['head_of_faculty_id' => $hofId]);
+                $folder->head_of_faculty_id = $hofId;
+            }
+        }
+    }
+
     protected $fillable = [
         'code',
         'name',
@@ -218,13 +256,15 @@ class StudyMaterialFolder extends Model
 
     public function displayHeadOfFaculty()
     {
+        $people = $this->displayInstructors();
+
         $hofId = (int) ($this->head_of_faculty_id ?? 0);
         if ($hofId > 0) {
             if ($this->relationLoaded('headOfFaculty') && $this->headOfFaculty) {
                 return $this->headOfFaculty;
             }
 
-            $fromAccess = $this->displayInstructors()->first(fn ($user) => (int) $user->id === $hofId);
+            $fromAccess = $people->first(fn ($user) => (int) $user->id === $hofId);
             if ($fromAccess) {
                 return $fromAccess;
             }
@@ -232,12 +272,11 @@ class StudyMaterialFolder extends Model
             return $this->headOfFaculty()->first() ?: User::query()->find($hofId);
         }
 
-        // Legacy folders: fall back to course roster first instructor if they have access.
-        $people = $this->displayInstructors();
         if ($people->isEmpty()) {
             return null;
         }
 
+        // Legacy folders: course roster Head of Faculty if assigned, else first faculty.
         $courseHofId = (int) (course_instructor_ids($this->course)[0] ?? 0);
         if ($courseHofId > 0) {
             $match = $people->first(fn ($user) => (int) $user->id === $courseHofId);
@@ -246,7 +285,7 @@ class StudyMaterialFolder extends Model
             }
         }
 
-        return null;
+        return $people->first();
     }
 
     public function displayTrainerInstructors()
