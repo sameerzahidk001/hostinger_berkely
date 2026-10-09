@@ -117,7 +117,7 @@
                         <label>Instructors</label>
                         <select name="instructor_ids[]" id="instructor_ids" class="form-control" multiple>
                             @foreach($instructors as $ins)
-                                <option value="{{ $ins->id }}" @selected(collect($selectedInstructorIds ?? [])->contains($ins->id))>{{ $ins->name }}</option>
+                                <option value="{{ $ins->id }}" @selected(in_array((int) $ins->id, array_map('intval', $selectedInstructorIds ?? []), true))>{{ $ins->name }}</option>
                             @endforeach
                         </select>
                         <span class="help-block">Type to search and select multiple. Access stays disabled until you Send from Access list or Send to instructors.</span>
@@ -250,7 +250,10 @@
     </div>
 </div>
 @endsection
-@include('admin.study-materials.folders._form_assets', ['selectedPackageIds' => $selectedPackageIds ?? []])
+@include('admin.study-materials.folders._form_assets', [
+    'selectedPackageIds' => $selectedPackageIds ?? [],
+    'selectedInstructorIds' => $selectedInstructorIds ?? [],
+])
 @push('script')
 <script>
 (function () {

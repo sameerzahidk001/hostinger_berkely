@@ -55,11 +55,15 @@
         });
     }
     if ($('#instructor_ids').length) {
+        const selectedInstructorIds = @json(array_values(array_map('strval', $selectedInstructorIds ?? [])));
         $('#instructor_ids').select2({
             placeholder: 'Type to find instructors',
             width: '100%',
             closeOnSelect: false
         });
+        if (selectedInstructorIds.length) {
+            $('#instructor_ids').val(selectedInstructorIds).trigger('change');
+        }
     }
 
     function packageLabel(row) {
