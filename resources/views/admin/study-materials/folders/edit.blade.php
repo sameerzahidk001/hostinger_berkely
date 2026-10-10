@@ -58,14 +58,15 @@
                     </div>
                     <div class="col-md-6 form-group">
                         <label>Fee packages</label>
+                        <input type="hidden" name="fee_package_ids_present" value="1">
                         <select name="fee_package_ids[]" id="fee_package_ids" class="form-control" multiple>
                             @foreach($packages as $package)
-                                <option value="{{ $package->id }}" @selected(collect($selectedPackageIds ?? [])->contains($package->id))>
+                                <option value="{{ $package->id }}" @selected(in_array((int) $package->id, array_map('intval', $selectedPackageIds ?? []), true))>
                                     {{ $package->package_name }}{{ $package->price ? ' — ' . ($package->currency ?? '') . ' ' . $package->price : '' }}
                                 </option>
                             @endforeach
                         </select>
-                        <span class="help-block">Select one or more packages for this folder.</span>
+                        <span class="help-block">Select one or more packages for this folder. Clear all to leave none selected.</span>
                     </div>
                     @endif
                     <div class="col-md-6 form-group">

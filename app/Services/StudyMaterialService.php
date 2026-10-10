@@ -539,33 +539,25 @@ class StudyMaterialService
 
         $studentId = (int) $payment->user_id;
         $packageId = (int) ($payment->package_id ?? 0);
-        $courseId = (int) ($payment->course_id ?? 0);
 
         if ($studentId <= 0) {
             return 0;
         }
 
-        $folders = collect();
-
-        if ($packageId > 0) {
-            $folders = StudyMaterialFolder::query()
-                ->where('status', 'active')
-                ->where(function ($q) use ($packageId) {
-                    $q->where('fee_package_id', $packageId)
-                        ->orWhereHas('feePackages', function ($packages) use ($packageId) {
-                            $packages->where('course_fees.id', $packageId);
-                        });
-                })
-                ->get();
+        // Only folders linked to the paid package. Do not grant every course folder.
+        if ($packageId <= 0) {
+            return 0;
         }
 
-        // Fallback: active folders for the paid course when package link is missing.
-        if ($folders->isEmpty() && $courseId > 0) {
-            $folders = StudyMaterialFolder::query()
-                ->where('status', 'active')
-                ->where('course_id', $courseId)
-                ->get();
-        }
+        $folders = StudyMaterialFolder::query()
+            ->where('status', 'active')
+            ->where(function ($q) use ($packageId) {
+                $q->where('fee_package_id', $packageId)
+                    ->orWhereHas('feePackages', function ($packages) use ($packageId) {
+                        $packages->where('course_fees.id', $packageId);
+                    });
+            })
+            ->get();
 
         $granted = 0;
 
@@ -575,20 +567,22 @@ class StudyMaterialService
                 ->where('student_id', $studentId)
                 ->first();
 
-            if ($access && $access->status === 'active' && $access->sent_at) {
+            if ($access && $access->status === 'active') {
                 $granted++;
                 continue;
             }
 
-            if (!$access) {
+            if (! $access) {
                 $issued = now();
                 $till = $this->computeAccessTill($issued, $folder->validity_months);
-                $access = StudyMaterialStudentAccess::create([
+                StudyMaterialStudentAccess::create([
                     'folder_id' => $folder->id,
                     'student_id' => $studentId,
                     'status' => 'active',
                     'issued_at' => $issued->toDateString(),
                     'access_till' => $till?->toDateString(),
+                    // Do not auto-send Study Materials Access email on payment.
+                    // Admin sends from Assign Access when ready.
                     'sent_at' => null,
                 ]);
             } else {
@@ -603,18 +597,6 @@ class StudyMaterialService
                 }
                 $access->status = 'active';
                 $access->save();
-            }
-
-            // Access is granted even if the welcome email fails (SMTP/template issues).
-            if (! $access->sent_at) {
-                try {
-                    $this->sendStudentAccessEmail($access->fresh(['folder.course', 'student', 'folder.instructorAccess.instructor']));
-                } catch (Throwable $e) {
-                    Log::warning('Folder access granted but email failed', [
-                        'access_id' => $access->id,
-                        'message' => $e->getMessage(),
-                    ]);
-                }
             }
 
             $granted++;

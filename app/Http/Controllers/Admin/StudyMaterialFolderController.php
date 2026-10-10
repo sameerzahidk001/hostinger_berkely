@@ -301,6 +301,7 @@ class StudyMaterialFolderController extends Controller
         $folder->name = trim($request->name);
         $folder->validity_months = $this->validityMonthsFromRequest($request);
 
+        $packageIds = null;
         if (! $lockCourse) {
             $packageIds = $this->packageIdsFromRequest($request);
             $folder->course_id = $request->course_id;
@@ -315,8 +316,12 @@ class StudyMaterialFolderController extends Controller
 
         $folder->save();
         $folder->ensureCode();
-        if (! $lockCourse) {
+        if (! $lockCourse && is_array($packageIds)) {
             $folder->feePackages()->sync($packageIds);
+            if ($packageIds === []) {
+                $folder->fee_package_id = null;
+                $folder->save();
+            }
         }
 
         if ($this->lms->isAdminActor()) {
@@ -714,6 +719,11 @@ class StudyMaterialFolderController extends Controller
 
     protected function packageIdsFromRequest(Request $request): array
     {
+        // When the form included packages, honour an empty selection (clear all).
+        if (! $request->boolean('fee_package_ids_present') && ! $request->has('fee_package_ids')) {
+            return [];
+        }
+
         return collect((array) $request->input('fee_package_ids', []))
             ->map(fn ($id) => (int) $id)
             ->filter()

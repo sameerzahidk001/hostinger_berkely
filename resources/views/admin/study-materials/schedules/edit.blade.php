@@ -32,10 +32,6 @@
                         </select>
                     </div>
                     <div class="col-md-6 form-group">
-                        <label>Title</label>
-                        <input type="text" name="title" class="form-control" value="{{ old('title', $schedule->title) }}">
-                    </div>
-                    <div class="col-md-6 form-group">
                         <label>Course</label>
                         <input type="text" id="course_title" class="form-control" value="{{ $schedule->course->title ?? optional($selectedBatch?->course)->title }}" readonly>
                     </div>
@@ -121,7 +117,11 @@
                         </select>
                         <span class="help-block">Admin and Instructor can add or remove students for this session.</span>
                     </div>
-                    <div class="col-md-12 form-group">
+                    <div class="col-md-6 form-group">
+                        <label>Title</label>
+                        <input type="text" name="title" class="form-control" value="{{ old('title', $schedule->title) }}">
+                    </div>
+                    <div class="col-md-6 form-group">
                         <label>Description</label>
                         <textarea name="notes" class="form-control" rows="3" placeholder="Shown to students on the schedule (topic, homework, etc.)">{{ old('notes', $schedule->notes) }}</textarea>
                         <span class="help-block">Admin and Instructor can edit description and the Join link for this day.</span>
