@@ -44,7 +44,17 @@
         pkg.select2({
             placeholder: 'Select one or more packages',
             allowClear: true,
-            width: '100%'
+            width: '100%',
+            closeOnSelect: false
+        });
+        if (selectedPackages.length) {
+            pkg.val(selectedPackages.map(String)).trigger('change');
+        }
+        pkg.closest('form').on('submit', function () {
+            const vals = pkg.val() || [];
+            pkg.find('option').each(function () {
+                this.selected = vals.indexOf(String(this.value)) !== -1;
+            });
         });
     }
     if ($('#head_of_faculty_id').length) {

@@ -173,31 +173,14 @@ class ProfileController extends Controller
         $user->save();
         Auth::setUser($user->fresh());
 
-        $mailError = null;
-        $emailTemplate = Email::where('name', 'user-update')->first();
-        $placeholders = ['{name}', '{email}'];
-        $values = [$user->name, $user->email];
+        $mailError = send_user_profile_update_email($user->fresh());
 
-        if ($emailTemplate) {
-            try {
-
-                $emailBody = str_replace($placeholders, $values, $emailTemplate->body);
-
-                $cc = !empty($emailTemplate->cc) ? array_filter(array_map('trim', explode(',', $emailTemplate->cc))) : [];
-                $bcc = !empty($emailTemplate->bcc) ? array_filter(array_map('trim', explode(',', $emailTemplate->bcc))) : [];
-
-                Mail::to($user->email)->cc($cc)->bcc($bcc)
-                    ->send(new UserMail($user, $emailTemplate->subject, $emailBody));
-            } catch (\Throwable $e) {
-                $mailError = "Email sending failed: " . $e->getMessage();
-            }
+        $successMessage = 'Your profile updated successfully!';
+        if ($mailError) {
+            $successMessage .= ' However, there was an issue sending the email: ' . $mailError;
         }
 
-        $successMessage = 'User updated successfully!';
-        if ($mailError)
-            $successMessage .= ' However, there was an issue sending the email: ' . $mailError;
-
-        return redirect()->back()->with('success', 'Your profile updated successfully!');
+        return redirect()->back()->with('success', $successMessage);
     }
 
     public function changePassword(Request $request)

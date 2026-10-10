@@ -51,9 +51,10 @@
                     </div>
                     <div class="col-md-6 form-group">
                         <label>Fee packages</label>
+                        <input type="hidden" name="fee_package_ids_present" value="1">
                         <select name="fee_package_ids[]" id="fee_package_ids" class="form-control" multiple>
                         </select>
-                        <span class="help-block">Select one or more packages for this folder.</span>
+                        <span class="help-block">Select one or more packages for this folder. Clear all to leave none selected.</span>
                     </div>
                     <div class="col-md-6 form-group">
                         <label>Validity (months)</label>

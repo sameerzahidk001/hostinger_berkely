@@ -1984,6 +1984,70 @@ if (!function_exists('record_panel_activity')) {
     }
 }
 
+if (!function_exists('ensure_user_update_email_template')) {
+    function ensure_user_update_email_template(): ?\App\Models\Email
+    {
+        if (! \Illuminate\Support\Facades\Schema::hasTable('emails')) {
+            return null;
+        }
+
+        $template = \App\Models\Email::query()
+            ->whereIn('name', ['user-update', 'User Update', 'profile-update', 'user-profile-update'])
+            ->orderByRaw("CASE name WHEN 'user-update' THEN 0 ELSE 1 END")
+            ->first();
+
+        if ($template) {
+            return $template;
+        }
+
+        return \App\Models\Email::query()->firstOrCreate(
+            ['name' => 'user-update'],
+            [
+                'subject' => 'Your profile was updated | Berkeley School of Business',
+                'cc' => null,
+                'bcc' => null,
+                'body' => 'Dear {name},<br><br>Your profile has been updated successfully.<br><br>Email on file: {email}<br><br>If you did not make this change, please contact support.',
+            ]
+        );
+    }
+}
+
+if (!function_exists('send_user_profile_update_email')) {
+    /**
+     * Send the User Update email template after a student/instructor/staff user saves their profile.
+     * @return string|null Error message when sending fails; null on success or when skipped.
+     */
+    function send_user_profile_update_email($user): ?string
+    {
+        if (! $user || empty($user->email)) {
+            return 'Profile email skipped: user has no email address.';
+        }
+
+        $emailTemplate = ensure_user_update_email_template();
+        if (! $emailTemplate) {
+            return 'Profile email skipped: User Update template is missing.';
+        }
+
+        try {
+            $placeholders = ['{name}', '{email}', '{password}'];
+            $values = [$user->name ?? '', $user->email ?? '', ''];
+            $emailBody = str_replace($placeholders, $values, (string) $emailTemplate->body);
+
+            $cc = ! empty($emailTemplate->cc) ? array_filter(array_map('trim', explode(',', $emailTemplate->cc))) : [];
+            $bcc = ! empty($emailTemplate->bcc) ? array_filter(array_map('trim', explode(',', $emailTemplate->bcc))) : [];
+
+            \Illuminate\Support\Facades\Mail::to($user->email)->cc($cc)->bcc($bcc)
+                ->send(new \App\Mail\UserMail($user, $emailTemplate->subject, $emailBody));
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Profile update email failed: ' . $e->getMessage());
+
+            return 'Email sending failed: ' . $e->getMessage();
+        }
+
+        return null;
+    }
+}
+
 if (!function_exists('touch_content_audit')) {
     function touch_content_audit(\Illuminate\Database\Eloquent\Model $model): void
     {

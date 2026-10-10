@@ -8,8 +8,10 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use App\Models\User;
 use App\Models\Country;
+use App\Services\ContentDashboardReportService;
 use App\Services\PanelActivityService;
 use App\Services\UserActivityLogService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Hash;
 
 class AdminController extends Controller
@@ -86,6 +88,8 @@ class AdminController extends Controller
                 'showUserColumn' => true,
                 'showUserFilter' => false,
                 'showSessionColumn' => true,
+                'showContentReports' => true,
+                'contentReportActorId' => audit_user_id(),
                 'logAudience' => 'staff',
                 'activityTitle' => 'My activity history',
             ]);
@@ -118,6 +122,8 @@ class AdminController extends Controller
             'showUserFilter' => true,
             'showStudentTable' => true,
             'showSessionColumn' => true,
+            'showContentReports' => true,
+            'contentReportActorId' => $request->filled('user_id') ? (int) $request->query('user_id') : audit_user_id(),
             'logAudience' => 'staff',
             'activityTitle' => $this->adminActivityTitle($request),
             'studentActivityTitle' => 'Student activity history',
@@ -197,6 +203,16 @@ class AdminController extends Controller
             )
             : null;
 
+        $showContentReports = (bool) ($options['showContentReports'] ?? false);
+        $contentReportActorId = $options['contentReportActorId'] ?? null;
+        $contentReports = $showContentReports
+            ? app(ContentDashboardReportService::class)->reportBundle(
+                $contentReportActorId ? (int) $contentReportActorId : null,
+                $dateFrom,
+                $dateTo
+            )
+            : null;
+
         return view('admin.dashboard.panel', [
             'summary' => $summary,
             'activities' => $activities,
@@ -210,11 +226,122 @@ class AdminController extends Controller
             'showUserFilter' => (bool) ($options['showUserFilter'] ?? false),
             'showStudentTable' => $showStudentTable,
             'showSessionColumn' => (bool) ($options['showSessionColumn'] ?? false),
+            'showContentReports' => $showContentReports,
+            'contentReports' => $contentReports,
+            'contentReportActorId' => $contentReportActorId,
+            'contentReportMetricLabels' => [
+                'pages' => app(ContentDashboardReportService::class)->metricLabels('pages'),
+                'courses' => app(ContentDashboardReportService::class)->metricLabels('courses'),
+                'seo' => app(ContentDashboardReportService::class)->metricLabels('seo'),
+            ],
             'filterUsers' => ($options['showUserFilter'] ?? false) ? $service->filterUsers() : collect(),
             'studentFilterUsers' => $showStudentTable ? $logService->studentFilterUsers() : collect(),
             'activityTitle' => $options['activityTitle'] ?? 'Activity history',
             'studentActivityTitle' => $options['studentActivityTitle'] ?? 'Student activity history',
         ]);
+    }
+
+    public function contentReportDetails(Request $request)
+    {
+        $module = (string) $request->query('module', 'pages');
+        $metric = (string) $request->query('metric', 'total');
+        $actorId = $this->resolveContentReportActorId($request);
+        $rows = app(ContentDashboardReportService::class)->detailRows(
+            $module,
+            $metric,
+            $actorId,
+            $request->query('date_from'),
+            $request->query('date_to'),
+            $request->query('q')
+        );
+
+        $labels = app(ContentDashboardReportService::class)->metricLabels($module);
+
+        return response()->json([
+            'module' => $module,
+            'metric' => $metric,
+            'label' => $labels[$metric] ?? ucfirst(str_replace('_', ' ', $metric)),
+            'count' => $rows->count(),
+            'rows' => $rows->values(),
+        ]);
+    }
+
+    public function contentReportExport(Request $request)
+    {
+        $module = (string) $request->query('module', 'pages');
+        $metric = (string) $request->query('metric', 'total');
+        $format = strtolower((string) $request->query('format', 'excel'));
+        $actorId = $this->resolveContentReportActorId($request);
+        $service = app(ContentDashboardReportService::class);
+        $labels = $service->metricLabels($module);
+        $label = $labels[$metric] ?? ucfirst(str_replace('_', ' ', $metric));
+        $rows = $service->detailRows(
+            $module,
+            $metric,
+            $actorId,
+            $request->query('date_from'),
+            $request->query('date_to'),
+            $request->query('q')
+        );
+        $username = panel_profile_name() ?: 'User';
+        $filenameBase = 'content-report-' . $module . '-' . $metric . '_' . now()->format('Y-m-d');
+
+        if ($format === 'pdf') {
+            $pdf = Pdf::loadView('admin.dashboard.report-pdf', [
+                'module' => ucfirst($module),
+                'label' => $label,
+                'username' => $username,
+                'generatedAt' => now()->format('Y-m-d H:i:s'),
+                'dateFrom' => $request->query('date_from'),
+                'dateTo' => $request->query('date_to'),
+                'rows' => $rows,
+            ])->setPaper('a4', 'landscape');
+
+            return $pdf->download($filenameBase . '.pdf');
+        }
+
+        $headers = ['Title', 'Status', 'Created By', 'Updated By', 'Created At', 'Updated At', 'URL'];
+        $callback = function () use ($rows, $headers, $username, $module, $label) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Report', ucfirst($module) . ' — ' . $label]);
+            fputcsv($handle, ['Generated by', $username]);
+            fputcsv($handle, ['Generated at', now()->format('Y-m-d H:i:s')]);
+            fputcsv($handle, []);
+            fputcsv($handle, $headers);
+
+            foreach ($rows as $row) {
+                fputcsv($handle, [
+                    $row['title'] ?? '',
+                    $row['status'] ?? '',
+                    $row['created_by'] ?? '',
+                    $row['updated_by'] ?? '',
+                    $row['created_at'] ?? '',
+                    $row['updated_at'] ?? '',
+                    $row['url'] ?? '',
+                ]);
+            }
+
+            fclose($handle);
+        };
+
+        return response()->streamDownload($callback, $filenameBase . '.csv', [
+            'Content-Type' => 'text/csv',
+        ]);
+    }
+
+    private function resolveContentReportActorId(Request $request): ?int
+    {
+        $role = normalize_panel_role(panel_role_name());
+
+        if ($role === 'content_writer') {
+            return audit_user_id();
+        }
+
+        if ($request->filled('user_id')) {
+            return (int) $request->query('user_id');
+        }
+
+        return audit_user_id();
     }
 
     public function exportActivity(Request $request)
@@ -381,7 +508,13 @@ class AdminController extends Controller
         $user->save();
         Auth::setUser($user->fresh());
 
-        return redirect()->back()->with('success', 'Profile updated successfully!');
+        $mailError = send_user_profile_update_email($user->fresh());
+        $successMessage = 'Profile updated successfully!';
+        if ($mailError) {
+            $successMessage .= ' However, there was an issue sending the email: ' . $mailError;
+        }
+
+        return redirect()->back()->with('success', $successMessage);
     }
 
     public function logout(Request $request){

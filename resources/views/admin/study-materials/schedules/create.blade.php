@@ -42,10 +42,6 @@
                         @endif
                     </div>
                     <div class="col-md-6 form-group">
-                        <label>Title</label>
-                        <input type="text" name="title" class="form-control" value="{{ old('title') }}">
-                    </div>
-                    <div class="col-md-6 form-group">
                         <label>Course</label>
                         <input type="text" id="course_title" class="form-control" value="{{ optional($selectedBatch?->course)->title }}" readonly>
                     </div>
@@ -129,7 +125,11 @@
                         </select>
                         <span class="help-block">Select students for this session. Defaults to batch students when you pick a batch.</span>
                     </div>
-                    <div class="col-md-12 form-group">
+                    <div class="col-md-6 form-group">
+                        <label>Title</label>
+                        <input type="text" name="title" class="form-control" value="{{ old('title') }}">
+                    </div>
+                    <div class="col-md-6 form-group">
                         <label>Description</label>
                         <textarea name="notes" class="form-control" rows="3" placeholder="Shown to students on the schedule (topic, homework, etc.)">{{ old('notes') }}</textarea>
                     </div>

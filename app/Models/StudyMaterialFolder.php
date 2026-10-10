@@ -173,6 +173,8 @@ class StudyMaterialFolder extends Model
 
         $ids = $ids->map(fn ($id) => (int) $id)->filter()->values();
 
+        // Prefer pivot packages. Only fall back to legacy fee_package_id when pivot is empty
+        // and that legacy id is still set (older rows before multi-package sync).
         if ($ids->isEmpty() && $this->fee_package_id) {
             return [(int) $this->fee_package_id];
         }
