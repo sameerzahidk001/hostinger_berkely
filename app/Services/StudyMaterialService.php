@@ -544,18 +544,16 @@ class StudyMaterialService
             return 0;
         }
 
-        // Only folders linked to the paid package. Do not grant every course folder.
+        // Only folders that actually have this package assigned (pivot).
+        // Do not use legacy fee_package_id alone — cleared UI packages must not grant.
         if ($packageId <= 0) {
             return 0;
         }
 
         $folders = StudyMaterialFolder::query()
             ->where('status', 'active')
-            ->where(function ($q) use ($packageId) {
-                $q->where('fee_package_id', $packageId)
-                    ->orWhereHas('feePackages', function ($packages) use ($packageId) {
-                        $packages->where('course_fees.id', $packageId);
-                    });
+            ->whereHas('feePackages', function ($packages) use ($packageId) {
+                $packages->where('course_fees.id', $packageId);
             })
             ->get();
 
@@ -567,8 +565,8 @@ class StudyMaterialService
                 ->where('student_id', $studentId)
                 ->first();
 
-            if ($access && $access->status === 'active' && $access->sent_at) {
-                $granted++;
+            // Already has access to this folder (e.g. split fee / 2nd payment) — do not re-trigger.
+            if ($access && $access->status === 'active') {
                 continue;
             }
 
@@ -597,7 +595,7 @@ class StudyMaterialService
                 $access->save();
             }
 
-            // Auto-send Study Materials Access email when paid package matches this folder.
+            // Auto-send Study Materials Access email once when paid package matches this folder.
             if (! $access->sent_at) {
                 try {
                     $this->sendStudentAccessEmail($access->fresh([
