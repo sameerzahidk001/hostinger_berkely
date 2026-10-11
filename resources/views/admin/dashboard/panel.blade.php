@@ -183,6 +183,10 @@
     </div>
 </div>
 
+@if($showContentReports ?? false)
+    @include('admin.dashboard.content-reports')
+@endif
+
 <div class="row" style="padding: 0 10px 12px;">
     <div class="col-lg-12">
         <div class="ibox float-e-margins">
