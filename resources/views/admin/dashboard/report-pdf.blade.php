@@ -26,6 +26,8 @@
             <tr>
                 <th>Title</th>
                 <th>Status</th>
+                <th>SEO Status</th>
+                <th>SEO Score</th>
                 <th>Created By</th>
                 <th>Updated By</th>
                 <th>Created</th>
@@ -37,6 +39,8 @@
                 <tr>
                     <td>{{ $row['title'] ?? '' }}</td>
                     <td>{{ $row['status'] ?? '' }}</td>
+                    <td>{{ $row['seo_status'] ?? '' }}</td>
+                    <td>{{ $row['seo_score'] ?? '' }}</td>
                     <td>{{ $row['created_by'] ?? '' }}</td>
                     <td>{{ $row['updated_by'] ?? '' }}</td>
                     <td>{{ $row['created_at'] ?? '' }}</td>
@@ -44,7 +48,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6">No records found.</td>
+                    <td colspan="8">No records found.</td>
                 </tr>
             @endforelse
         </tbody>

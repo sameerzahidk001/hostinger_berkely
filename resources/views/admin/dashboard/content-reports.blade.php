@@ -5,6 +5,8 @@
     if (! in_array($activeTab, ['pages', 'courses', 'seo'], true)) {
         $activeTab = 'pages';
     }
+    $rangeFrom = request('date_from', $reports['date_from'] ?? '');
+    $rangeTo = request('date_to', $reports['date_to'] ?? '');
 @endphp
 
 <div class="row" style="padding: 0 10px 12px;" id="content-reports-panel">
@@ -15,6 +17,26 @@
                 <small class="text-muted">Click any statistic for detailed records. Exports include your username.</small>
             </div>
             <div class="ibox-content">
+                <form method="GET" action="{{ route('admin.home') }}" class="form-inline" style="margin-bottom:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;" id="contentReportDateForm">
+                    @foreach(request()->except(['date_from', 'date_to', 'page']) as $key => $value)
+                        @if(is_scalar($value))
+                            <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                        @endif
+                    @endforeach
+                    <div class="form-group" style="margin:0;">
+                        <label for="content_report_date_from" class="m-r-xs">Selected range From</label>
+                        <input type="date" id="content_report_date_from" name="date_from" class="form-control" value="{{ $rangeFrom }}">
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label for="content_report_date_to" class="m-r-xs">To</label>
+                        <input type="date" id="content_report_date_to" name="date_to" class="form-control" value="{{ $rangeTo }}">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm">Apply range</button>
+                    <small class="text-muted" style="margin-bottom:6px;">
+                        Used by “Created / Updated In Selected Range”. Same dates as Filter activity below.
+                    </small>
+                </form>
+
                 <ul class="nav nav-tabs" role="tablist" style="margin-bottom:16px;">
                     <li class="{{ $activeTab === 'pages' ? 'active' : '' }}">
                         <a href="#report-pages" data-toggle="tab">Pages</a>
@@ -81,15 +103,17 @@
                         <thead>
                             <tr>
                                 <th>Title</th>
-                                <th style="width:100px;">Status</th>
-                                <th style="width:140px;">Created By</th>
-                                <th style="width:140px;">Updated By</th>
-                                <th style="width:130px;">Created</th>
-                                <th style="width:130px;">Updated</th>
+                                <th style="width:90px;">Status</th>
+                                <th style="width:110px;">SEO Status</th>
+                                <th style="width:90px;">SEO Score</th>
+                                <th style="width:130px;">Created By</th>
+                                <th style="width:130px;">Updated By</th>
+                                <th style="width:120px;">Created</th>
+                                <th style="width:120px;">Updated</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr><td colspan="6" class="text-center text-muted">Loading…</td></tr>
+                            <tr><td colspan="8" class="text-center text-muted">Loading…</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -107,12 +131,15 @@
     var searchTimer = null;
     var detailsUrl = @json(route('admin.home.content-report-details'));
     var exportUrl = @json(route('admin.home.content-report-export'));
+    var colCount = 8;
 
     function filterQuery() {
         var params = new URLSearchParams(window.location.search);
+        var formFrom = $('#content_report_date_from').val() || '';
+        var formTo = $('#content_report_date_to').val() || '';
         return {
-            date_from: params.get('date_from') || '',
-            date_to: params.get('date_to') || '',
+            date_from: formFrom || params.get('date_from') || '',
+            date_to: formTo || params.get('date_to') || '',
             user_id: params.get('user_id') || ''
         };
     }
@@ -131,7 +158,7 @@
 
     function loadDetails() {
         var q = $('#contentReportSearch').val() || '';
-        $('#contentReportTable tbody').html('<tr><td colspan="6" class="text-center text-muted">Loading…</td></tr>');
+        $('#contentReportTable tbody').html('<tr><td colspan="' + colCount + '" class="text-center text-muted">Loading…</td></tr>');
         $('#contentReportModalLabel').text(currentLabel + ' — ' + currentModule.charAt(0).toUpperCase() + currentModule.slice(1));
 
         $('#contentReportExportExcel').attr('href', buildUrl(exportUrl, {
@@ -154,7 +181,7 @@
         })).done(function (resp) {
             var rows = resp.rows || [];
             if (!rows.length) {
-                $('#contentReportTable tbody').html('<tr><td colspan="6" class="text-center text-muted">No records found.</td></tr>');
+                $('#contentReportTable tbody').html('<tr><td colspan="' + colCount + '" class="text-center text-muted">No records found.</td></tr>');
                 return;
             }
             var html = rows.map(function (row) {
@@ -164,6 +191,8 @@
                 return '<tr>' +
                     '<td>' + title + '</td>' +
                     '<td>' + $('<div>').text(row.status || '—').html() + '</td>' +
+                    '<td>' + $('<div>').text(row.seo_status || '—').html() + '</td>' +
+                    '<td>' + $('<div>').text(row.seo_score || '—').html() + '</td>' +
                     '<td>' + $('<div>').text(row.created_by || '—').html() + '</td>' +
                     '<td>' + $('<div>').text(row.updated_by || '—').html() + '</td>' +
                     '<td>' + $('<div>').text(row.created_at || '—').html() + '</td>' +
@@ -172,7 +201,7 @@
             }).join('');
             $('#contentReportTable tbody').html(html);
         }).fail(function () {
-            $('#contentReportTable tbody').html('<tr><td colspan="6" class="text-center text-danger">Failed to load report details.</td></tr>');
+            $('#contentReportTable tbody').html('<tr><td colspan="' + colCount + '" class="text-center text-danger">Failed to load report details.</td></tr>');
         });
     }
 
