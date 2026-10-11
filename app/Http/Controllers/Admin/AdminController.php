@@ -203,15 +203,29 @@ class AdminController extends Controller
             )
             : null;
 
-        $showContentReports = (bool) ($options['showContentReports'] ?? false);
+        $showContentReports = (bool) ($options['showContentReports'] ?? false)
+            && class_exists(ContentDashboardReportService::class);
         $contentReportActorId = $options['contentReportActorId'] ?? null;
-        $contentReports = $showContentReports
-            ? app(ContentDashboardReportService::class)->reportBundle(
+        $contentReports = null;
+        $contentReportMetricLabels = [
+            'pages' => [],
+            'courses' => [],
+            'seo' => [],
+        ];
+
+        if ($showContentReports) {
+            $reportService = app(ContentDashboardReportService::class);
+            $contentReports = $reportService->reportBundle(
                 $contentReportActorId ? (int) $contentReportActorId : null,
                 $dateFrom,
                 $dateTo
-            )
-            : null;
+            );
+            $contentReportMetricLabels = [
+                'pages' => $reportService->metricLabels('pages'),
+                'courses' => $reportService->metricLabels('courses'),
+                'seo' => $reportService->metricLabels('seo'),
+            ];
+        }
 
         return view('admin.dashboard.panel', [
             'summary' => $summary,
@@ -229,11 +243,7 @@ class AdminController extends Controller
             'showContentReports' => $showContentReports,
             'contentReports' => $contentReports,
             'contentReportActorId' => $contentReportActorId,
-            'contentReportMetricLabels' => [
-                'pages' => app(ContentDashboardReportService::class)->metricLabels('pages'),
-                'courses' => app(ContentDashboardReportService::class)->metricLabels('courses'),
-                'seo' => app(ContentDashboardReportService::class)->metricLabels('seo'),
-            ],
+            'contentReportMetricLabels' => $contentReportMetricLabels,
             'filterUsers' => ($options['showUserFilter'] ?? false) ? $service->filterUsers() : collect(),
             'studentFilterUsers' => $showStudentTable ? $logService->studentFilterUsers() : collect(),
             'activityTitle' => $options['activityTitle'] ?? 'Activity history',
