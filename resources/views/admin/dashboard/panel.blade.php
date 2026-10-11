@@ -27,6 +27,8 @@
 @endif
 <div class="wrapper wrapper-content animated fadeInRight" style="padding: 20px 10px 0px;">
     <div class="row">
+        {{-- Colored summary cards duplicate Content performance reports; hide when reports are shown. --}}
+        @if(!($showContentReports ?? false))
         @if($showMyStats ?? false)
         <div class="col-lg-3 col-md-6">
             <div class="widget style1 navy-bg">
@@ -123,6 +125,7 @@
                 </div>
             </div>
         </div>
+        @endif
         @endif
         @endif
 
