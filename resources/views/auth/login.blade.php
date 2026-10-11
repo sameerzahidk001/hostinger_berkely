@@ -301,7 +301,7 @@ a {
                                     <input class="mb-0 @error('captcha') border-danger @enderror" style="max-width:140px;flex:1;min-width:110px;"
                                         type="text" name="captcha" maxlength="8" placeholder="Enter code" required autocomplete="off" autocapitalize="characters">
                                 </div>
-                                <small class="text-muted d-block mt-1 login-captcha-hint">Type the characters shown in the image.</small>
+                                <small class="text-muted d-block mt-1 login-captcha-hint">CAPTCHA entries are not case-sensitive.</small>
                                 @error('captcha')
                                     <p class="text-danger text-xs italic mb-0 mt-1">{{ $message }}</p>
                                 @enderror
