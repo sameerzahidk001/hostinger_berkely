@@ -264,160 +264,178 @@
     </div>
 </div>
 
-<div class="row" style="padding: 0 10px 12px;">
-    <div class="col-lg-12">
-        <div class="ibox float-e-margins" style="margin-bottom: 16px;">
-            <div class="ibox-title" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-                <h5 style="margin:0;">{{ $activityTitle }}</h5>
-                <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'staff'])) }}"
-                    class="btn btn-success btn-sm">
-                    <i class="fa fa-file-excel-o"></i> Export to Excel
-                </a>
-            </div>
-            <div class="ibox-content">
-                <div class="table-responsive">
-                    <table class="table table-striped table-bordered table-hover">
-                        <thead>
-                            <tr>
-                                <th style="width: 170px;">Date &amp; Time</th>
-                                @if($showUserColumn)
-                                    <th style="width: 180px;">User</th>
-                                @endif
-                                <th style="width: 160px;">Activity</th>
-                                <th>Item</th>
-                                @if($showSessionColumn ?? false)
-                                    <th style="width: 140px;">Session</th>
-                                @endif
-                                <th style="width: 90px;">Link</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($activities as $activity)
-                                <tr>
-                                    <td>{{ $activity['occurred_at']->format('M j, Y g:i A') }}</td>
-                                    @if($showUserColumn)
-                                        <td>{{ $activity['user_name'] ?? '—' }}</td>
-                                    @endif
-                                    <td>
-                                        @if(!empty($activity['url']))
-                                            <a href="{{ $activity['url'] }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ activity_action_label($activity['action'] ?? '') }}</a>
-                                        @else
-                                            {{ activity_action_label($activity['action'] ?? '') }}
-                                        @endif
-                                    </td>
-                                    <td>{{ $activity['item'] }}</td>
-                                    @if($showSessionColumn ?? false)
-                                        <td>
-                                            @if(!empty($activity['session_id']))
-                                                <span class="text-muted small" title="{{ $activity['session_id'] }}">{{ \Illuminate\Support\Str::limit($activity['session_id'], 12) }}</span>
-                                            @else
-                                                <span class="text-muted">—</span>
-                                            @endif
-                                        </td>
-                                    @endif
-                                    <td>
-                                        @if(!empty($activity['url']))
-                                            <a href="{{ $activity['url'] }}" target="_blank" rel="noopener">Open</a>
-                                        @else
-                                            <span class="text-muted">—</span>
-                                        @endif
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    @php
-                                        $staffColspan = 4
-                                            + ($showUserColumn ? 1 : 0)
-                                            + (($showSessionColumn ?? false) ? 1 : 0);
-                                    @endphp
-                                    <td colspan="{{ $staffColspan }}" class="text-center text-muted">
-                                        No activity found for the selected filters.
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                    {!! $activities->links() !!}
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
+@php
+    $activityTab = request('activity_tab', 'staff');
+    if (! in_array($activityTab, ['staff', 'student'], true)) {
+        $activityTab = 'staff';
+    }
+    if (! ($showStudentTable ?? false)) {
+        $activityTab = 'staff';
+    }
+    $staffColspan = 4
+        + (($showUserColumn ?? false) ? 1 : 0)
+        + (($showSessionColumn ?? false) ? 1 : 0);
+@endphp
 
-@if($showStudentTable ?? false)
 <div class="row" style="padding: 0 10px 12px;">
     <div class="col-lg-12">
-        <div class="ibox float-e-margins" style="margin-bottom: 16px;">
-            <div class="ibox-title" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-                <h5 style="margin:0;">{{ $studentActivityTitle ?? 'Student activity history' }}</h5>
-                <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'student'])) }}"
-                    class="btn btn-success btn-sm">
-                    <i class="fa fa-file-excel-o"></i> Export to Excel
-                </a>
+        <div class="ibox float-e-margins" style="margin-bottom: 16px;" id="activities-panel">
+            <div class="ibox-title">
+                <h5 style="margin:0;">Activities</h5>
             </div>
             <div class="ibox-content">
-                <div class="table-responsive">
-                    <table class="table table-striped table-bordered table-hover">
-                        <thead>
-                            <tr>
-                                <th style="width: 170px;">Date &amp; Time</th>
-                                <th style="width: 180px;">User</th>
-                                <th style="width: 160px;">Activity</th>
-                                <th>Item</th>
-                                @if($showSessionColumn ?? false)
-                                    <th style="width: 140px;">Session</th>
-                                @endif
-                                <th style="width: 90px;">Link</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($studentActivities ?? [] as $activity)
-                                <tr>
-                                    <td>{{ $activity['occurred_at']->format('M j, Y g:i A') }}</td>
-                                    <td>{{ $activity['user_name'] ?? '—' }}</td>
-                                    <td>
-                                        @if(!empty($activity['url']))
-                                            <a href="{{ $activity['url'] }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ activity_action_label($activity['action'] ?? '') }}</a>
-                                        @else
-                                            {{ activity_action_label($activity['action'] ?? '') }}
+                @if($showStudentTable ?? false)
+                <ul class="nav nav-tabs" role="tablist" style="margin-bottom:16px;">
+                    <li class="{{ $activityTab === 'staff' ? 'active' : '' }}">
+                        <a href="#activity-staff" data-toggle="tab">{{ $activityTitle ?? 'Staff activity' }}</a>
+                    </li>
+                    <li class="{{ $activityTab === 'student' ? 'active' : '' }}">
+                        <a href="#activity-student" data-toggle="tab">{{ $studentActivityTitle ?? 'Student activity' }}</a>
+                    </li>
+                </ul>
+                @endif
+
+                <div class="tab-content">
+                    <div role="tabpanel" class="tab-pane {{ $activityTab === 'staff' || !($showStudentTable ?? false) ? 'active' : '' }}" id="activity-staff">
+                        <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+                            <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'staff'])) }}"
+                                class="btn btn-success btn-sm">
+                                <i class="fa fa-file-excel-o"></i> Export to Excel
+                            </a>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-bordered table-hover">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 170px;">Date &amp; Time</th>
+                                        @if($showUserColumn ?? false)
+                                            <th style="width: 180px;">User</th>
                                         @endif
-                                    </td>
-                                    <td>{{ $activity['item'] }}</td>
-                                    @if($showSessionColumn ?? false)
-                                        <td>
-                                            @if(!empty($activity['session_id']))
-                                                <span class="text-muted small" title="{{ $activity['session_id'] }}">{{ \Illuminate\Support\Str::limit($activity['session_id'], 12) }}</span>
-                                            @else
-                                                <span class="text-muted">—</span>
+                                        <th style="width: 160px;">Activity</th>
+                                        <th>Item</th>
+                                        @if($showSessionColumn ?? false)
+                                            <th style="width: 140px;">Session</th>
+                                        @endif
+                                        <th style="width: 90px;">Link</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($activities as $activity)
+                                        <tr>
+                                            <td>{{ $activity['occurred_at']->format('M j, Y g:i A') }}</td>
+                                            @if($showUserColumn ?? false)
+                                                <td>{{ $activity['user_name'] ?? '—' }}</td>
                                             @endif
-                                        </td>
-                                    @endif
-                                    <td>
-                                        @if(!empty($activity['url']))
-                                            <a href="{{ $activity['url'] }}" target="_blank" rel="noopener">Open</a>
-                                        @else
-                                            <span class="text-muted">—</span>
+                                            <td>
+                                                @if(!empty($activity['url']))
+                                                    <a href="{{ $activity['url'] }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ activity_action_label($activity['action'] ?? '') }}</a>
+                                                @else
+                                                    {{ activity_action_label($activity['action'] ?? '') }}
+                                                @endif
+                                            </td>
+                                            <td>{{ $activity['item'] }}</td>
+                                            @if($showSessionColumn ?? false)
+                                                <td>
+                                                    @if(!empty($activity['session_id']))
+                                                        <span class="text-muted small" title="{{ $activity['session_id'] }}">{{ \Illuminate\Support\Str::limit($activity['session_id'], 12) }}</span>
+                                                    @else
+                                                        <span class="text-muted">—</span>
+                                                    @endif
+                                                </td>
+                                            @endif
+                                            <td>
+                                                @if(!empty($activity['url']))
+                                                    <a href="{{ $activity['url'] }}" target="_blank" rel="noopener">Open</a>
+                                                @else
+                                                    <span class="text-muted">—</span>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="{{ $staffColspan }}" class="text-center text-muted">
+                                                No activity found for the selected filters.
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                            {!! $activities->appends(array_merge(request()->query(), ['activity_tab' => 'staff']))->links() !!}
+                        </div>
+                    </div>
+
+                    @if($showStudentTable ?? false)
+                    <div role="tabpanel" class="tab-pane {{ $activityTab === 'student' ? 'active' : '' }}" id="activity-student">
+                        <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+                            <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'student'])) }}"
+                                class="btn btn-success btn-sm">
+                                <i class="fa fa-file-excel-o"></i> Export to Excel
+                            </a>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-bordered table-hover">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 170px;">Date &amp; Time</th>
+                                        <th style="width: 180px;">User</th>
+                                        <th style="width: 160px;">Activity</th>
+                                        <th>Item</th>
+                                        @if($showSessionColumn ?? false)
+                                            <th style="width: 140px;">Session</th>
                                         @endif
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="{{ ($showSessionColumn ?? false) ? 6 : 5 }}" class="text-center text-muted">
-                                        No student activity found for the selected filters.
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                    @if($studentActivities)
-                        {!! $studentActivities->links() !!}
+                                        <th style="width: 90px;">Link</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse($studentActivities ?? [] as $activity)
+                                        <tr>
+                                            <td>{{ $activity['occurred_at']->format('M j, Y g:i A') }}</td>
+                                            <td>{{ $activity['user_name'] ?? '—' }}</td>
+                                            <td>
+                                                @if(!empty($activity['url']))
+                                                    <a href="{{ $activity['url'] }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ activity_action_label($activity['action'] ?? '') }}</a>
+                                                @else
+                                                    {{ activity_action_label($activity['action'] ?? '') }}
+                                                @endif
+                                            </td>
+                                            <td>{{ $activity['item'] }}</td>
+                                            @if($showSessionColumn ?? false)
+                                                <td>
+                                                    @if(!empty($activity['session_id']))
+                                                        <span class="text-muted small" title="{{ $activity['session_id'] }}">{{ \Illuminate\Support\Str::limit($activity['session_id'], 12) }}</span>
+                                                    @else
+                                                        <span class="text-muted">—</span>
+                                                    @endif
+                                                </td>
+                                            @endif
+                                            <td>
+                                                @if(!empty($activity['url']))
+                                                    <a href="{{ $activity['url'] }}" target="_blank" rel="noopener">Open</a>
+                                                @else
+                                                    <span class="text-muted">—</span>
+                                                @endif
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="{{ ($showSessionColumn ?? false) ? 6 : 5 }}" class="text-center text-muted">
+                                                No student activity found for the selected filters.
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                            @if($studentActivities)
+                                {!! $studentActivities->appends(array_merge(request()->query(), ['activity_tab' => 'student']))->links() !!}
+                            @endif
+                        </div>
+                    </div>
                     @endif
                 </div>
             </div>
         </div>
     </div>
 </div>
-@endif
 @endsection
 
 @push('script')
@@ -449,6 +467,15 @@ $(document).ready(function() {
             }
         });
     }
+
+    // Keep Activities tab in the URL so pagination stays on the same tab.
+    $('#activities-panel a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+        var target = $(e.target).attr('href') || '';
+        var tab = target.indexOf('student') !== -1 ? 'student' : 'staff';
+        var url = new URL(window.location.href);
+        url.searchParams.set('activity_tab', tab);
+        window.history.replaceState({}, '', url.toString());
+    });
 });
 </script>
 @endpush
