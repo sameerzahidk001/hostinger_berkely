@@ -259,12 +259,12 @@ class ContentDashboardReportService
                 'created_this_week' => 'Created This Week by ' . $who,
                 'created_this_month' => 'Created This Month by ' . $who,
                 'created_last_month' => 'Created Last Month by ' . $who,
-                'created_in_range' => 'Created Custom Date Range',
                 'updated_today' => 'Updated Today by ' . $who,
                 'updated_yesterday' => 'Updated Yesterday by ' . $who,
                 'updated_this_week' => 'Updated This Week by ' . $who,
                 'updated_this_month' => 'Updated This Month by ' . $who,
                 'updated_last_month' => 'Updated Last Month by ' . $who,
+                'created_in_range' => 'Created Custom Date Range',
                 'updated_in_range' => 'Updated Custom Date Range',
             ];
         }
@@ -283,12 +283,12 @@ class ContentDashboardReportService
             'created_this_week' => 'Created This Week by ' . $who,
             'created_this_month' => 'Created This Month by ' . $who,
             'created_last_month' => 'Created Last Month by ' . $who,
-            'created_in_range' => 'Created Custom Date Range',
             'updated_today' => 'Updated Today by ' . $who,
             'updated_yesterday' => 'Updated Yesterday by ' . $who,
             'updated_this_week' => 'Updated This Week by ' . $who,
             'updated_this_month' => 'Updated This Month by ' . $who,
             'updated_last_month' => 'Updated Last Month by ' . $who,
+            'created_in_range' => 'Created Custom Date Range',
             'updated_in_range' => 'Updated Custom Date Range',
         ];
     }
