@@ -59,7 +59,8 @@ class ContentDashboardReportService
                 false,
                 $actorUserId
             ),
-            'created_this_week' => $this->countCreatedInRange(Page::class, now()->startOfWeek(), now()->endOfWeek(), false, $actorUserId),
+            'created_this_week' => $this->countCreatedInRange(Page::class, $this->thisWeekBounds()[0], $this->thisWeekBounds()[1], false, $actorUserId),
+            'created_last_week' => $this->countCreatedInRange(Page::class, $this->lastWeekBounds()[0], $this->lastWeekBounds()[1], false, $actorUserId),
             'created_this_month' => $this->countCreatedInRange(Page::class, now()->startOfMonth(), now()->endOfMonth(), false, $actorUserId),
             'created_this_year' => $this->countCreatedInRange(Page::class, now()->startOfYear(), now()->endOfYear(), false, $actorUserId),
             'created_last_month' => $this->countCreatedInRange(
@@ -78,7 +79,8 @@ class ContentDashboardReportService
                 false,
                 $actorUserId
             ),
-            'updated_this_week' => $this->countUpdatedInRange(Page::class, now()->startOfWeek(), now()->endOfWeek(), false, $actorUserId),
+            'updated_this_week' => $this->countUpdatedInRange(Page::class, $this->thisWeekBounds()[0], $this->thisWeekBounds()[1], false, $actorUserId),
+            'updated_last_week' => $this->countUpdatedInRange(Page::class, $this->lastWeekBounds()[0], $this->lastWeekBounds()[1], false, $actorUserId),
             'updated_this_month' => $this->countUpdatedInRange(Page::class, now()->startOfMonth(), now()->endOfMonth(), false, $actorUserId),
             'updated_last_month' => $this->countUpdatedInRange(
                 Page::class,
@@ -122,7 +124,8 @@ class ContentDashboardReportService
                 true,
                 $actorUserId
             ),
-            'created_this_week' => $this->countCreatedInRange(Course::class, now()->startOfWeek(), now()->endOfWeek(), true, $actorUserId),
+            'created_this_week' => $this->countCreatedInRange(Course::class, $this->thisWeekBounds()[0], $this->thisWeekBounds()[1], true, $actorUserId),
+            'created_last_week' => $this->countCreatedInRange(Course::class, $this->lastWeekBounds()[0], $this->lastWeekBounds()[1], true, $actorUserId),
             'created_this_month' => $this->countCreatedInRange(Course::class, now()->startOfMonth(), now()->endOfMonth(), true, $actorUserId),
             'created_this_year' => $this->countCreatedInRange(Course::class, now()->startOfYear(), now()->endOfYear(), true, $actorUserId),
             'created_last_month' => $this->countCreatedInRange(
@@ -141,7 +144,8 @@ class ContentDashboardReportService
                 true,
                 $actorUserId
             ),
-            'updated_this_week' => $this->countUpdatedInRange(Course::class, now()->startOfWeek(), now()->endOfWeek(), true, $actorUserId),
+            'updated_this_week' => $this->countUpdatedInRange(Course::class, $this->thisWeekBounds()[0], $this->thisWeekBounds()[1], true, $actorUserId),
+            'updated_last_week' => $this->countUpdatedInRange(Course::class, $this->lastWeekBounds()[0], $this->lastWeekBounds()[1], true, $actorUserId),
             'updated_this_month' => $this->countUpdatedInRange(Course::class, now()->startOfMonth(), now()->endOfMonth(), true, $actorUserId),
             'updated_last_month' => $this->countUpdatedInRange(
                 Course::class,
@@ -206,7 +210,8 @@ class ContentDashboardReportService
                 false,
                 $actorUserId
             ),
-            'created_this_week' => $this->countCreatedInRange(PagesSEO::class, now()->startOfWeek(), now()->endOfWeek(), false, $actorUserId),
+            'created_this_week' => $this->countCreatedInRange(PagesSEO::class, $this->thisWeekBounds()[0], $this->thisWeekBounds()[1], false, $actorUserId),
+            'created_last_week' => $this->countCreatedInRange(PagesSEO::class, $this->lastWeekBounds()[0], $this->lastWeekBounds()[1], false, $actorUserId),
             'created_this_month' => $this->countCreatedInRange(PagesSEO::class, now()->startOfMonth(), now()->endOfMonth(), false, $actorUserId),
             'created_this_year' => $this->countCreatedInRange(PagesSEO::class, now()->startOfYear(), now()->endOfYear(), false, $actorUserId),
             'created_last_month' => $this->countCreatedInRange(
@@ -225,7 +230,8 @@ class ContentDashboardReportService
                 false,
                 $actorUserId
             ),
-            'updated_this_week' => $this->countUpdatedInRange(PagesSEO::class, now()->startOfWeek(), now()->endOfWeek(), false, $actorUserId),
+            'updated_this_week' => $this->countUpdatedInRange(PagesSEO::class, $this->thisWeekBounds()[0], $this->thisWeekBounds()[1], false, $actorUserId),
+            'updated_last_week' => $this->countUpdatedInRange(PagesSEO::class, $this->lastWeekBounds()[0], $this->lastWeekBounds()[1], false, $actorUserId),
             'updated_this_month' => $this->countUpdatedInRange(PagesSEO::class, now()->startOfMonth(), now()->endOfMonth(), false, $actorUserId),
             'updated_last_month' => $this->countUpdatedInRange(
                 PagesSEO::class,
@@ -280,11 +286,13 @@ class ContentDashboardReportService
                 'created_this_year' => 'Total Created This Year by ' . $who,
                 'created_yesterday' => 'Created Yesterday by ' . $who,
                 'created_this_week' => 'Created This Week by ' . $who,
+                'created_last_week' => 'Created Last Week by ' . $who,
                 'created_this_month' => 'Created This Month by ' . $who,
                 'created_last_month' => 'Created Last Month by ' . $who,
                 'updated_today' => 'Updated Today by ' . $who,
                 'updated_yesterday' => 'Updated Yesterday by ' . $who,
                 'updated_this_week' => 'Updated This Week by ' . $who,
+                'updated_last_week' => 'Updated Last Week by ' . $who,
                 'updated_this_month' => 'Updated This Month by ' . $who,
                 'updated_last_month' => 'Updated Last Month by ' . $who,
                 'created_in_range' => 'Created Custom Date Range',
@@ -309,11 +317,13 @@ class ContentDashboardReportService
             'created_this_year' => 'Total Created This Year by ' . $who,
             'created_yesterday' => 'Created Yesterday by ' . $who,
             'created_this_week' => 'Created This Week by ' . $who,
+            'created_last_week' => 'Created Last Week by ' . $who,
             'created_this_month' => 'Created This Month by ' . $who,
             'created_last_month' => 'Created Last Month by ' . $who,
             'updated_today' => 'Updated Today by ' . $who,
             'updated_yesterday' => 'Updated Yesterday by ' . $who,
             'updated_this_week' => 'Updated This Week by ' . $who,
+            'updated_last_week' => 'Updated Last Week by ' . $who,
             'updated_this_month' => 'Updated This Month by ' . $who,
             'updated_last_month' => 'Updated Last Month by ' . $who,
             'created_in_range' => 'Created Custom Date Range',
@@ -349,7 +359,8 @@ class ContentDashboardReportService
                 : ($actorUserId ? 0 : $total),
             'created_today' => $this->countCreatedInRange(CourseAgenda::class, now()->startOfDay(), now()->endOfDay(), false, $actorUserId),
             'created_yesterday' => $this->countCreatedInRange(CourseAgenda::class, now()->subDay()->startOfDay(), now()->subDay()->endOfDay(), false, $actorUserId),
-            'created_this_week' => $this->countCreatedInRange(CourseAgenda::class, now()->startOfWeek(), now()->endOfWeek(), false, $actorUserId),
+            'created_this_week' => $this->countCreatedInRange(CourseAgenda::class, $this->thisWeekBounds()[0], $this->thisWeekBounds()[1], false, $actorUserId),
+            'created_last_week' => $this->countCreatedInRange(CourseAgenda::class, $this->lastWeekBounds()[0], $this->lastWeekBounds()[1], false, $actorUserId),
             'created_this_month' => $this->countCreatedInRange(CourseAgenda::class, now()->startOfMonth(), now()->endOfMonth(), false, $actorUserId),
             'created_this_year' => $this->countCreatedInRange(CourseAgenda::class, now()->startOfYear(), now()->endOfYear(), false, $actorUserId),
             'created_last_month' => $this->countCreatedInRange(
@@ -362,7 +373,8 @@ class ContentDashboardReportService
             'created_in_range' => $this->countCreatedInRange(CourseAgenda::class, $from, $to, false, $actorUserId),
             'updated_today' => $this->countUpdatedInRange(CourseAgenda::class, now()->startOfDay(), now()->endOfDay(), false, $actorUserId),
             'updated_yesterday' => $this->countUpdatedInRange(CourseAgenda::class, now()->subDay()->startOfDay(), now()->subDay()->endOfDay(), false, $actorUserId),
-            'updated_this_week' => $this->countUpdatedInRange(CourseAgenda::class, now()->startOfWeek(), now()->endOfWeek(), false, $actorUserId),
+            'updated_this_week' => $this->countUpdatedInRange(CourseAgenda::class, $this->thisWeekBounds()[0], $this->thisWeekBounds()[1], false, $actorUserId),
+            'updated_last_week' => $this->countUpdatedInRange(CourseAgenda::class, $this->lastWeekBounds()[0], $this->lastWeekBounds()[1], false, $actorUserId),
             'updated_this_month' => $this->countUpdatedInRange(CourseAgenda::class, now()->startOfMonth(), now()->endOfMonth(), false, $actorUserId),
             'updated_last_month' => $this->countUpdatedInRange(
                 CourseAgenda::class,
@@ -405,7 +417,8 @@ class ContentDashboardReportService
                 : ($actorUserId ? 0 : $total),
             'created_today' => $this->countCreatedInRange(CourseFee::class, now()->startOfDay(), now()->endOfDay(), false, $hasAudit ? $actorUserId : null),
             'created_yesterday' => $this->countCreatedInRange(CourseFee::class, now()->subDay()->startOfDay(), now()->subDay()->endOfDay(), false, $hasAudit ? $actorUserId : null),
-            'created_this_week' => $this->countCreatedInRange(CourseFee::class, now()->startOfWeek(), now()->endOfWeek(), false, $hasAudit ? $actorUserId : null),
+            'created_this_week' => $this->countCreatedInRange(CourseFee::class, $this->thisWeekBounds()[0], $this->thisWeekBounds()[1], false, $hasAudit ? $actorUserId : null),
+            'created_last_week' => $this->countCreatedInRange(CourseFee::class, $this->lastWeekBounds()[0], $this->lastWeekBounds()[1], false, $hasAudit ? $actorUserId : null),
             'created_this_month' => $this->countCreatedInRange(CourseFee::class, now()->startOfMonth(), now()->endOfMonth(), false, $hasAudit ? $actorUserId : null),
             'created_this_year' => $this->countCreatedInRange(CourseFee::class, now()->startOfYear(), now()->endOfYear(), false, $hasAudit ? $actorUserId : null),
             'created_last_month' => $this->countCreatedInRange(
@@ -418,7 +431,8 @@ class ContentDashboardReportService
             'created_in_range' => $this->countCreatedInRange(CourseFee::class, $from, $to, false, $hasAudit ? $actorUserId : null),
             'updated_today' => $this->countUpdatedInRange(CourseFee::class, now()->startOfDay(), now()->endOfDay(), false, $hasAudit ? $actorUserId : null),
             'updated_yesterday' => $this->countUpdatedInRange(CourseFee::class, now()->subDay()->startOfDay(), now()->subDay()->endOfDay(), false, $hasAudit ? $actorUserId : null),
-            'updated_this_week' => $this->countUpdatedInRange(CourseFee::class, now()->startOfWeek(), now()->endOfWeek(), false, $hasAudit ? $actorUserId : null),
+            'updated_this_week' => $this->countUpdatedInRange(CourseFee::class, $this->thisWeekBounds()[0], $this->thisWeekBounds()[1], false, $hasAudit ? $actorUserId : null),
+            'updated_last_week' => $this->countUpdatedInRange(CourseFee::class, $this->lastWeekBounds()[0], $this->lastWeekBounds()[1], false, $hasAudit ? $actorUserId : null),
             'updated_this_month' => $this->countUpdatedInRange(CourseFee::class, now()->startOfMonth(), now()->endOfMonth(), false, $hasAudit ? $actorUserId : null),
             'updated_last_month' => $this->countUpdatedInRange(
                 CourseFee::class,
@@ -452,7 +466,8 @@ class ContentDashboardReportService
                 : ($actorUserId ? $query->whereRaw('1 = 0') : null),
             'created_today' => $this->applyCreatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->startOfDay(), now()->endOfDay()),
             'created_yesterday' => $this->applyCreatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->subDay()->startOfDay(), now()->subDay()->endOfDay()),
-            'created_this_week' => $this->applyCreatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->startOfWeek(), now()->endOfWeek()),
+            'created_this_week' => $this->applyCreatedByActorRange($query, $hasAudit ? $actorUserId : null, $this->thisWeekBounds()[0], $this->thisWeekBounds()[1]),
+            'created_last_week' => $this->applyCreatedByActorRange($query, $hasAudit ? $actorUserId : null, $this->lastWeekBounds()[0], $this->lastWeekBounds()[1]),
             'created_this_month' => $this->applyCreatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->startOfMonth(), now()->endOfMonth()),
             'created_this_year' => $this->applyCreatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->startOfYear(), now()->endOfYear()),
             'created_last_month' => $this->applyCreatedByActorRange(
@@ -464,7 +479,8 @@ class ContentDashboardReportService
             'created_in_range' => $this->applyCreatedByActorRange($query, $hasAudit ? $actorUserId : null, $from, $to),
             'updated_today' => $this->applyUpdatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->startOfDay(), now()->endOfDay()),
             'updated_yesterday' => $this->applyUpdatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->subDay()->startOfDay(), now()->subDay()->endOfDay()),
-            'updated_this_week' => $this->applyUpdatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->startOfWeek(), now()->endOfWeek()),
+            'updated_this_week' => $this->applyUpdatedByActorRange($query, $hasAudit ? $actorUserId : null, $this->thisWeekBounds()[0], $this->thisWeekBounds()[1]),
+            'updated_last_week' => $this->applyUpdatedByActorRange($query, $hasAudit ? $actorUserId : null, $this->lastWeekBounds()[0], $this->lastWeekBounds()[1]),
             'updated_this_month' => $this->applyUpdatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->startOfMonth(), now()->endOfMonth()),
             'updated_last_month' => $this->applyUpdatedByActorRange(
                 $query,
@@ -531,7 +547,8 @@ class ContentDashboardReportService
                 : ($actorUserId ? $query->whereRaw('1 = 0') : null),
             'created_today' => $this->applyCreatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->startOfDay(), now()->endOfDay()),
             'created_yesterday' => $this->applyCreatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->subDay()->startOfDay(), now()->subDay()->endOfDay()),
-            'created_this_week' => $this->applyCreatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->startOfWeek(), now()->endOfWeek()),
+            'created_this_week' => $this->applyCreatedByActorRange($query, $hasAudit ? $actorUserId : null, $this->thisWeekBounds()[0], $this->thisWeekBounds()[1]),
+            'created_last_week' => $this->applyCreatedByActorRange($query, $hasAudit ? $actorUserId : null, $this->lastWeekBounds()[0], $this->lastWeekBounds()[1]),
             'created_this_month' => $this->applyCreatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->startOfMonth(), now()->endOfMonth()),
             'created_this_year' => $this->applyCreatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->startOfYear(), now()->endOfYear()),
             'created_last_month' => $this->applyCreatedByActorRange(
@@ -543,7 +560,8 @@ class ContentDashboardReportService
             'created_in_range' => $this->applyCreatedByActorRange($query, $hasAudit ? $actorUserId : null, $from, $to),
             'updated_today' => $this->applyUpdatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->startOfDay(), now()->endOfDay()),
             'updated_yesterday' => $this->applyUpdatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->subDay()->startOfDay(), now()->subDay()->endOfDay()),
-            'updated_this_week' => $this->applyUpdatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->startOfWeek(), now()->endOfWeek()),
+            'updated_this_week' => $this->applyUpdatedByActorRange($query, $hasAudit ? $actorUserId : null, $this->thisWeekBounds()[0], $this->thisWeekBounds()[1]),
+            'updated_last_week' => $this->applyUpdatedByActorRange($query, $hasAudit ? $actorUserId : null, $this->lastWeekBounds()[0], $this->lastWeekBounds()[1]),
             'updated_this_month' => $this->applyUpdatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->startOfMonth(), now()->endOfMonth()),
             'updated_last_month' => $this->applyUpdatedByActorRange(
                 $query,
@@ -599,6 +617,7 @@ class ContentDashboardReportService
             'created_today' => 0,
             'created_yesterday' => 0,
             'created_this_week' => 0,
+            'created_last_week' => 0,
             'created_this_month' => 0,
             'created_this_year' => 0,
             'created_last_month' => 0,
@@ -606,6 +625,7 @@ class ContentDashboardReportService
             'updated_today' => 0,
             'updated_yesterday' => 0,
             'updated_this_week' => 0,
+            'updated_last_week' => 0,
             'updated_this_month' => 0,
             'updated_last_month' => 0,
             'updated_in_range' => 0,
@@ -724,7 +744,8 @@ class ContentDashboardReportService
             'updated_by_me' => $actorUserId ? $query->where('updated_by', $actorUserId) : null,
             'created_today' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfDay(), now()->endOfDay()),
             'created_yesterday' => $this->applyCreatedByActorRange($query, $actorUserId, now()->subDay()->startOfDay(), now()->subDay()->endOfDay()),
-            'created_this_week' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfWeek(), now()->endOfWeek()),
+            'created_this_week' => $this->applyCreatedByActorRange($query, $actorUserId, $this->thisWeekBounds()[0], $this->thisWeekBounds()[1]),
+            'created_last_week' => $this->applyCreatedByActorRange($query, $actorUserId, $this->lastWeekBounds()[0], $this->lastWeekBounds()[1]),
             'created_this_month' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfMonth(), now()->endOfMonth()),
             'created_this_year' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfYear(), now()->endOfYear()),
             'created_last_month' => $this->applyCreatedByActorRange(
@@ -736,7 +757,8 @@ class ContentDashboardReportService
             'created_in_range' => $this->applyCreatedByActorRange($query, $actorUserId, $from, $to),
             'updated_today' => $this->applyUpdatedByActorRange($query, $actorUserId, now()->startOfDay(), now()->endOfDay()),
             'updated_yesterday' => $this->applyUpdatedByActorRange($query, $actorUserId, now()->subDay()->startOfDay(), now()->subDay()->endOfDay()),
-            'updated_this_week' => $this->applyUpdatedByActorRange($query, $actorUserId, now()->startOfWeek(), now()->endOfWeek()),
+            'updated_this_week' => $this->applyUpdatedByActorRange($query, $actorUserId, $this->thisWeekBounds()[0], $this->thisWeekBounds()[1]),
+            'updated_last_week' => $this->applyUpdatedByActorRange($query, $actorUserId, $this->lastWeekBounds()[0], $this->lastWeekBounds()[1]),
             'updated_this_month' => $this->applyUpdatedByActorRange($query, $actorUserId, now()->startOfMonth(), now()->endOfMonth()),
             'updated_last_month' => $this->applyUpdatedByActorRange(
                 $query,
@@ -893,7 +915,8 @@ class ContentDashboardReportService
             'updated_by_me' => $actorUserId ? $query->where('updated_by', $actorUserId) : null,
             'created_today' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfDay(), now()->endOfDay()),
             'created_yesterday' => $this->applyCreatedByActorRange($query, $actorUserId, now()->subDay()->startOfDay(), now()->subDay()->endOfDay()),
-            'created_this_week' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfWeek(), now()->endOfWeek()),
+            'created_this_week' => $this->applyCreatedByActorRange($query, $actorUserId, $this->thisWeekBounds()[0], $this->thisWeekBounds()[1]),
+            'created_last_week' => $this->applyCreatedByActorRange($query, $actorUserId, $this->lastWeekBounds()[0], $this->lastWeekBounds()[1]),
             'created_this_month' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfMonth(), now()->endOfMonth()),
             'created_this_year' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfYear(), now()->endOfYear()),
             'created_last_month' => $this->applyCreatedByActorRange(
@@ -905,7 +928,8 @@ class ContentDashboardReportService
             'created_in_range' => $this->applyCreatedByActorRange($query, $actorUserId, $from, $to),
             'updated_today' => $this->applyUpdatedByActorRange($query, $actorUserId, now()->startOfDay(), now()->endOfDay()),
             'updated_yesterday' => $this->applyUpdatedByActorRange($query, $actorUserId, now()->subDay()->startOfDay(), now()->subDay()->endOfDay()),
-            'updated_this_week' => $this->applyUpdatedByActorRange($query, $actorUserId, now()->startOfWeek(), now()->endOfWeek()),
+            'updated_this_week' => $this->applyUpdatedByActorRange($query, $actorUserId, $this->thisWeekBounds()[0], $this->thisWeekBounds()[1]),
+            'updated_last_week' => $this->applyUpdatedByActorRange($query, $actorUserId, $this->lastWeekBounds()[0], $this->lastWeekBounds()[1]),
             'updated_this_month' => $this->applyUpdatedByActorRange($query, $actorUserId, now()->startOfMonth(), now()->endOfMonth()),
             'updated_last_month' => $this->applyUpdatedByActorRange(
                 $query,
@@ -927,7 +951,8 @@ class ContentDashboardReportService
             'updated_by_me' => $actorUserId ? $query->where('updated_by', $actorUserId) : null,
             'created_today' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfDay(), now()->endOfDay()),
             'created_yesterday' => $this->applyCreatedByActorRange($query, $actorUserId, now()->subDay()->startOfDay(), now()->subDay()->endOfDay()),
-            'created_this_week' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfWeek(), now()->endOfWeek()),
+            'created_this_week' => $this->applyCreatedByActorRange($query, $actorUserId, $this->thisWeekBounds()[0], $this->thisWeekBounds()[1]),
+            'created_last_week' => $this->applyCreatedByActorRange($query, $actorUserId, $this->lastWeekBounds()[0], $this->lastWeekBounds()[1]),
             'created_this_month' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfMonth(), now()->endOfMonth()),
             'created_this_year' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfYear(), now()->endOfYear()),
             'created_last_month' => $this->applyCreatedByActorRange(
@@ -939,7 +964,8 @@ class ContentDashboardReportService
             'created_in_range' => $this->applyCreatedByActorRange($query, $actorUserId, $from, $to),
             'updated_today' => $this->applyUpdatedByActorRange($query, $actorUserId, now()->startOfDay(), now()->endOfDay()),
             'updated_yesterday' => $this->applyUpdatedByActorRange($query, $actorUserId, now()->subDay()->startOfDay(), now()->subDay()->endOfDay()),
-            'updated_this_week' => $this->applyUpdatedByActorRange($query, $actorUserId, now()->startOfWeek(), now()->endOfWeek()),
+            'updated_this_week' => $this->applyUpdatedByActorRange($query, $actorUserId, $this->thisWeekBounds()[0], $this->thisWeekBounds()[1]),
+            'updated_last_week' => $this->applyUpdatedByActorRange($query, $actorUserId, $this->lastWeekBounds()[0], $this->lastWeekBounds()[1]),
             'updated_this_month' => $this->applyUpdatedByActorRange($query, $actorUserId, now()->startOfMonth(), now()->endOfMonth()),
             'updated_last_month' => $this->applyUpdatedByActorRange(
                 $query,
@@ -1030,6 +1056,7 @@ class ContentDashboardReportService
             'created_today' => 0,
             'created_yesterday' => 0,
             'created_this_week' => 0,
+            'created_last_week' => 0,
             'created_this_month' => 0,
             'created_this_year' => 0,
             'created_last_month' => 0,
@@ -1037,9 +1064,31 @@ class ContentDashboardReportService
             'updated_today' => 0,
             'updated_yesterday' => 0,
             'updated_this_week' => 0,
+            'updated_last_week' => 0,
             'updated_this_month' => 0,
             'updated_last_month' => 0,
             'updated_in_range' => 0,
+        ];
+    }
+
+
+    /** @return array{0: Carbon, 1: Carbon} Monday-Sunday of current week */
+    private function thisWeekBounds(): array
+    {
+        return [
+            now()->startOfWeek(Carbon::MONDAY)->startOfDay(),
+            now()->endOfWeek(Carbon::SUNDAY)->endOfDay(),
+        ];
+    }
+
+    /** @return array{0: Carbon, 1: Carbon} Monday-Sunday of previous week */
+    private function lastWeekBounds(): array
+    {
+        $start = now()->startOfWeek(Carbon::MONDAY)->subWeek()->startOfDay();
+
+        return [
+            $start,
+            $start->copy()->endOfWeek(Carbon::SUNDAY)->endOfDay(),
         ];
     }
 
