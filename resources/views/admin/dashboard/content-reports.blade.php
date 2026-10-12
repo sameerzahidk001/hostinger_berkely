@@ -16,7 +16,7 @@
     <div class="col-lg-12">
         <div class="ibox float-e-margins">
             <div class="ibox-title" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-                <h5 style="margin:0;">Content performance reports</h5>
+                <h5 style="margin:0;font-weight:700;text-transform:uppercase;letter-spacing:.02em;">Content performance reports</h5>
                 @if($showReportUserFilter)
                 <form method="GET" action="{{ route('admin.home') }}" class="form-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0;" id="contentReportUserForm">
                     @foreach(request()->except(['report_user', 'page']) as $key => $value)
@@ -24,7 +24,7 @@
                             <input type="hidden" name="{{ $key }}" value="{{ $value }}">
                         @endif
                     @endforeach
-                    <label for="content_report_user" class="m-r-xs" style="margin:0;font-weight:normal;">User</label>
+                    <label for="content_report_user" class="m-r-xs" style="margin:0;font-weight:700;text-transform:uppercase;font-size:12px;">Search by User</label>
                     <select id="content_report_user" name="report_user" class="form-control" style="min-width:240px;">
                         @foreach($reportUsers as $ru)
                             <option value="{{ $ru['key'] }}" @selected((string) $reportActorKey === (string) $ru['key'])>{{ $ru['label'] }}</option>
@@ -32,7 +32,6 @@
                     </select>
                 </form>
                 @endif
-                <small class="text-muted">Click any statistic for detailed records. Exports include your username.</small>
             </div>
             <div class="ibox-content">
                 <style>
