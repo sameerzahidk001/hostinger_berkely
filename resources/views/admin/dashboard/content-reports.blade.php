@@ -87,15 +87,17 @@
                     <div class="col-sm-3" style="padding-left:0;">
                         <input type="text" id="contentReportSearch" class="form-control" placeholder="Search title / keyword...">
                     </div>
-                    <div class="form-group" style="margin:0;">
-                        <label for="content_report_date_from" class="m-r-xs" style="font-weight:normal;font-size:12px;">From</label>
-                        <input type="date" id="content_report_date_from" class="form-control" value="{{ $rangeFrom }}">
+                    <div id="contentReportRangeFilters" style="display:none;display:none;flex-wrap:wrap;gap:8px;align-items:flex-end;">
+                        <div class="form-group" style="margin:0;">
+                            <label for="content_report_date_from" class="m-r-xs" style="font-weight:normal;font-size:12px;">From</label>
+                            <input type="date" id="content_report_date_from" class="form-control" value="{{ $rangeFrom }}">
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                            <label for="content_report_date_to" class="m-r-xs" style="font-weight:normal;font-size:12px;">To</label>
+                            <input type="date" id="content_report_date_to" class="form-control" value="{{ $rangeTo }}">
+                        </div>
+                        <button type="button" id="contentReportApplyRange" class="btn btn-primary btn-sm">Apply range</button>
                     </div>
-                    <div class="form-group" style="margin:0;">
-                        <label for="content_report_date_to" class="m-r-xs" style="font-weight:normal;font-size:12px;">To</label>
-                        <input type="date" id="content_report_date_to" class="form-control" value="{{ $rangeTo }}">
-                    </div>
-                    <button type="button" id="contentReportApplyRange" class="btn btn-primary btn-sm">Apply range</button>
                     <div class="col-sm-auto text-right" style="margin-left:auto;padding-right:0;">
                         <a href="#" id="contentReportExportExcel" class="btn btn-success btn-sm" target="_blank">
                             <i class="fa fa-file-excel-o"></i> Export Excel
@@ -144,16 +146,27 @@
     var sortKey = '#';
     var sortDir = 'asc';
 
+    function isSelectedRangeMetric(metric) {
+        return metric === 'created_in_range' || metric === 'updated_in_range';
+    }
+
+    function syncRangeFilterVisibility() {
+        var show = isSelectedRangeMetric(currentMetric);
+        $('#contentReportRangeFilters').css('display', show ? 'flex' : 'none');
+    }
+
     function filterQuery() {
         var params = new URLSearchParams(window.location.search);
-        var formFrom = $('#content_report_date_from').val() || '';
-        var formTo = $('#content_report_date_to').val() || '';
-        return {
-            date_from: formFrom || params.get('date_from') || '',
-            date_to: formTo || params.get('date_to') || '',
+        var q = {
             user_id: params.get('user_id') || '',
             report_user: params.get('report_user') || @json($reportActorKey)
         };
+        // Date range applies only to Selected Range metrics.
+        if (isSelectedRangeMetric(currentMetric)) {
+            q.date_from = $('#content_report_date_from').val() || params.get('date_from') || '';
+            q.date_to = $('#content_report_date_to').val() || params.get('date_to') || '';
+        }
+        return q;
     }
 
     function buildUrl(base, extra) {
@@ -281,6 +294,7 @@
         sortKey = '#';
         sortDir = 'asc';
         $('#contentReportSearch').val('');
+        syncRangeFilterVisibility();
         $('#contentReportModal').modal('show');
         loadDetails();
     });
