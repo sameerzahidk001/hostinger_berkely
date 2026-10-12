@@ -293,19 +293,16 @@
                             </div>
                             <button type="submit" class="btn btn-primary m-r-sm m-b-sm">Filter</button>
                             <a href="{{ route('admin.home', $staffClearQuery) }}" class="btn btn-default m-b-sm">Clear</a>
-                            <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'staff'])) }}"
+                            <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'staff', 'format' => 'excel'])) }}"
                                 class="btn btn-success btn-sm m-b-sm" style="margin-left:auto;">
-                                <i class="fa fa-file-excel-o"></i> Export to Excel
+                                <i class="fa fa-file-excel-o"></i> Export Excel
+                            </a>
+                            <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'staff', 'format' => 'pdf'])) }}"
+                                class="btn btn-danger btn-sm m-b-sm">
+                                <i class="fa fa-file-pdf-o"></i> Export PDF
                             </a>
                         </form>
                         <p class="text-muted small m-b-sm">Leave any dropdown on <strong>None</strong> to skip that filter. Use dates only when needed.</p>
-                        <div class="m-b-md">
-                            <span class="label label-primary m-r-xs">Courses created: {{ $summary['courses_created'] }}</span>
-                            <span class="label label-info m-r-xs">Pages created: {{ $summary['pages_created'] }}</span>
-                            @if($includePayments ?? false)
-                                <span class="label label-success m-r-xs">Invoices recorded: {{ $summary['invoices_recorded'] ?? $summary['payments_recorded'] }}</span>
-                            @endif
-                        </div>
                         <div class="table-responsive">
                             <table class="table table-striped table-bordered table-hover">
                                 <thead>
@@ -401,9 +398,13 @@
                             </div>
                             <button type="submit" class="btn btn-primary m-r-sm m-b-sm">Filter</button>
                             <a href="{{ route('admin.home', $studentClearQuery) }}" class="btn btn-default m-b-sm">Clear</a>
-                            <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'student'])) }}"
+                            <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'student', 'format' => 'excel'])) }}"
                                 class="btn btn-success btn-sm m-b-sm" style="margin-left:auto;">
-                                <i class="fa fa-file-excel-o"></i> Export to Excel
+                                <i class="fa fa-file-excel-o"></i> Export Excel
+                            </a>
+                            <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'student', 'format' => 'pdf'])) }}"
+                                class="btn btn-danger btn-sm m-b-sm">
+                                <i class="fa fa-file-pdf-o"></i> Export PDF
                             </a>
                         </form>
                         <p class="text-muted small m-b-sm">Leave Student on <strong>None</strong> to see all students. Use dates only when needed.</p>
