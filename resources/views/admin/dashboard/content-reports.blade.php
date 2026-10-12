@@ -129,12 +129,12 @@
                         <a href="#report-pages" data-toggle="tab" class="tab-pages">Pages</a>
                     </li>
                     <li class="{{ $activeTab === 'seo' ? 'active' : '' }}">
-                        <a href="#report-seo" data-toggle="tab" class="tab-seo">SEO</a>
+                        <a href="#report-seo" data-toggle="tab" class="tab-seo">SEO Active</a>
                     </li>
                 </ul>
 
                 <div class="tab-content">
-                    @foreach(['courses' => 'Courses', 'pages' => 'Pages', 'seo' => 'SEO'] as $module => $moduleTitle)
+                    @foreach(['courses' => 'Courses', 'pages' => 'Pages', 'seo' => 'SEO Active'] as $module => $moduleTitle)
                         @php $stats = $reports[$module] ?? []; @endphp
                         <div role="tabpanel" class="tab-pane {{ $activeTab === $module ? 'active' : '' }}" id="report-{{ $module }}">
                             <div class="row content-report-stat-row">
@@ -234,6 +234,11 @@
     var currentMetric = 'total';
     var currentLabel = 'Total';
     var currentCountHint = 0;
+    var moduleTitles = { courses: 'COURSES', pages: 'PAGES', seo: 'SEO ACTIVE' };
+
+    function moduleTitle(module) {
+        return moduleTitles[module] || String(module || '').toUpperCase();
+    }
     var searchTimer = null;
     var detailsUrl = @json(route('admin.home.content-report-details'));
     var exportUrl = @json(route('admin.home.content-report-export'));
@@ -372,7 +377,7 @@
                 currentLabel = resp.label;
             }
             $('#contentReportModalLabel').text(
-                String(currentModule || '').toUpperCase() + ' -> ' + String(currentLabel || '').toUpperCase()
+                moduleTitle(currentModule) + ' -> ' + String(currentLabel || '').toUpperCase()
             );
             allRows = (resp.rows || []).map(function (row) {
                 if (!row.created_by || row.created_by === '-' || row.created_by === '—') {
@@ -402,7 +407,7 @@
         sortDir = 'asc';
         $('#contentReportSearch').val('');
         $('#contentReportModalLabel').text(
-            String(currentModule || '').toUpperCase() + ' -> ' + String(currentLabel || '').toUpperCase()
+            moduleTitle(currentModule) + ' -> ' + String(currentLabel || '').toUpperCase()
         );
         $('#contentReportModalCount').text('…');
         syncRangeFilterVisibility();
