@@ -15,6 +15,22 @@
     padding-left: 12px;
 }
 .select2-container .select2-selection--single .select2-selection__arrow { height: 32px; }
+#activities-panel .activity-module-tabs > li > a {
+    color: #fff !important;
+    border: none !important;
+    border-radius: 3px 3px 0 0;
+    margin-right: 4px;
+    padding: 10px 18px;
+    font-weight: 600;
+}
+#activities-panel .activity-module-tabs > li > a.tab-staff { background: #2f4f4f; }
+#activities-panel .activity-module-tabs > li > a.tab-student { background: #4a1942; }
+#activities-panel .activity-module-tabs > li.active > a.tab-staff,
+#activities-panel .activity-module-tabs > li > a.tab-staff:hover,
+#activities-panel .activity-module-tabs > li > a.tab-staff:focus { background: #1f3535; color: #fff !important; }
+#activities-panel .activity-module-tabs > li.active > a.tab-student,
+#activities-panel .activity-module-tabs > li > a.tab-student:hover,
+#activities-panel .activity-module-tabs > li > a.tab-student:focus { background: #32102c; color: #fff !important; }
 </style>
 @endpush
 
@@ -240,12 +256,12 @@
             </div>
             <div class="ibox-content">
                 @if($showStudentTable ?? false)
-                <ul class="nav nav-tabs" role="tablist" style="margin-bottom:16px;">
+                <ul class="nav nav-tabs activity-module-tabs" role="tablist" style="margin-bottom:16px;border-bottom:none;">
                     <li class="{{ $activityTab === 'staff' ? 'active' : '' }}">
-                        <a href="#activity-staff" data-toggle="tab">{{ $activityTitle ?? 'Staff activity' }}</a>
+                        <a href="#activity-staff" data-toggle="tab" class="tab-staff">{{ $activityTitle ?? 'Staff activity' }}</a>
                     </li>
                     <li class="{{ $activityTab === 'student' ? 'active' : '' }}">
-                        <a href="#activity-student" data-toggle="tab">{{ $studentActivityTitle ?? 'Student activity' }}</a>
+                        <a href="#activity-student" data-toggle="tab" class="tab-student">{{ $studentActivityTitle ?? 'Student activity' }}</a>
                     </li>
                 </ul>
                 @endif
