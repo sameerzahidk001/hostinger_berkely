@@ -390,8 +390,13 @@ class ContentDashboardReportService
         $query = PagesSEO::query()->with(['page', 'course', 'createdBy', 'updatedBy']);
 
         match ($metric) {
-            'seo_entered_pages', 'page_seo' => $query->whereNotNull('page_id'),
-            'seo_entered_courses', 'course_seo' => $query->whereNotNull('course_id'),
+            // Match dashboard cards (distinct page/course counts), not duplicate SEO rows.
+            'seo_entered_pages', 'page_seo' => $query->whereNotNull('page_id')->whereIn('id', function ($q) {
+                $q->selectRaw('MAX(id)')->from('pages_s_e_o_s')->whereNotNull('page_id')->groupBy('page_id');
+            }),
+            'seo_entered_courses', 'course_seo' => $query->whereNotNull('course_id')->whereIn('id', function ($q) {
+                $q->selectRaw('MAX(id)')->from('pages_s_e_o_s')->whereNotNull('course_id')->groupBy('course_id');
+            }),
             'created_by_me' => $actorUserId ? $query->where('created_by', $actorUserId) : $query->whereNotNull('created_by'),
             'updated_by_me' => $actorUserId ? $query->where('updated_by', $actorUserId) : $query->whereNotNull('updated_by'),
             'created_today' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfDay(), now()->endOfDay()),
