@@ -40,7 +40,13 @@
             @forelse($rows as $index => $row)
                 <tr>
                     <td>{{ $index + 1 }}</td>
-                    <td>{{ $row['title'] ?? '' }}</td>
+                    <td>
+                        @if(!empty($row['url']))
+                            <a href="{{ $row['url'] }}">{{ $row['title'] ?? '' }}</a>
+                        @else
+                            {{ $row['title'] ?? '' }}
+                        @endif
+                    </td>
                     <td>{{ $row['status'] ?? '' }}</td>
                     <td>{{ $row['type'] ?? '' }}</td>
                     <td>{{ $row['seo_status'] ?? '' }}</td>

@@ -446,7 +446,7 @@ class ContentDashboardReportService
 
             return [
                 'id' => $seo->id,
-                'title' => trim(($seo->title ?: 'SEO #' . $seo->id) . ' (' . $type . ': ' . $linked . ')'),
+                'title' => trim((string) ($seo->title ?: $linked ?: ('SEO #' . $seo->id))),
                 'status' => $status,
                 'type' => $type,
                 'seo_status' => $seoStatus,
