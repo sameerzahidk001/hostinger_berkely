@@ -41,7 +41,12 @@
                         border-radius: 3px 3px 0 0;
                         margin-right: 4px;
                         padding: 10px 18px;
-                        font-weight: 600;
+                        font-weight: 700;
+                        text-transform: uppercase;
+                    }
+                    #content-reports-panel .btn {
+                        font-weight: 700;
+                        text-transform: uppercase;
                     }
                     #content-reports-panel .content-report-module-tabs > li > a.tab-pages { background: #800000; }
                     #content-reports-panel .content-report-module-tabs > li > a.tab-courses { background: #000080; }
@@ -55,7 +60,12 @@
                     #content-reports-panel .content-report-module-tabs > li.active > a.tab-seo,
                     #content-reports-panel .content-report-module-tabs > li > a.tab-seo:hover,
                     #content-reports-panel .content-report-module-tabs > li > a.tab-seo:focus { background: #8b6914; color: #fff !important; }
-                    #content-reports-panel .content-report-stat-value { font-size:28px; font-weight:700; line-height:1.2; margin-top:auto; }
+                    #content-reports-panel .content-report-stat-value {
+                        font-size: 28px;
+                        font-weight: 700;
+                        line-height: 1.15;
+                        margin: 0 0 6px;
+                    }
                     #report-pages .content-report-stat-value { color: #800000; }
                     #report-courses .content-report-stat-value { color: #000080; }
                     #report-seo .content-report-stat-value { color: #b8860b; }
@@ -73,20 +83,21 @@
                         flex-direction: column;
                         justify-content: flex-start;
                         width: 100%;
-                        min-height: 118px;
+                        min-height: 96px;
                         border: 1px solid #e7eaec;
                         border-radius: 4px;
-                        padding: 14px 16px;
+                        padding: 12px 14px;
                         background: #f9f9f9;
                         color: #676a6c;
                         text-decoration: none;
                     }
                     #content-reports-panel .content-report-stat-label {
                         font-size: 12px;
+                        font-weight: 700;
                         text-transform: uppercase;
                         letter-spacing: .03em;
-                        line-height: 1.35;
-                        min-height: 3.9em;
+                        line-height: 1.3;
+                        margin: 0;
                     }
                 </style>
                 <ul class="nav nav-tabs content-report-module-tabs" role="tablist" style="margin-bottom:16px;border-bottom:none;">
@@ -114,8 +125,8 @@
                                             data-module="{{ $module }}"
                                             data-metric="{{ $metricKey }}"
                                             data-label="{{ $metricLabel }}">
-                                            <div class="content-report-stat-label">{{ $metricLabel }}</div>
                                             <div class="content-report-stat-value">{{ $value }}</div>
+                                            <div class="content-report-stat-label">{{ $metricLabel }}</div>
                                         </a>
                                     </div>
                                 @endforeach
