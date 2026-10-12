@@ -328,7 +328,7 @@ class AdminController extends Controller
             return $pdf->download($filenameBase . '.pdf');
         }
 
-        $headers = ['#', 'Title', 'Status', 'SEO Status', 'SEO Score', 'Created By', 'Updated By', 'Created At', 'Updated At', 'URL'];
+        $headers = ['#', 'Title', 'Status', 'Type', 'SEO Status', 'SEO Score', 'Created By', 'Updated By', 'Created At', 'Updated At', 'URL'];
         $callback = function () use ($rows, $headers, $username, $module, $label) {
             $handle = fopen('php://output', 'w');
             fputcsv($handle, ['Report', ucfirst($module) . ' — ' . $label]);
@@ -352,6 +352,7 @@ class AdminController extends Controller
                     $n,
                     $row['title'] ?? '',
                     $row['status'] ?? '',
+                    $row['type'] ?? '',
                     $row['seo_status'] ?? '',
                     $row['seo_score'] ?? '',
                     $createdBy,
@@ -611,7 +612,7 @@ class AdminController extends Controller
             return $pdf->download($fileStamp . '.pdf');
         }
 
-        $headers = ['Date & Time', 'User', 'Activity', 'Item', 'Session', 'URL'];
+        $headers = ['Date & Time', 'User', 'Activity', 'Description', 'Session', 'URL'];
         $callback = function () use ($rows, $headers) {
             $handle = fopen('php://output', 'w');
             fputcsv($handle, $headers);

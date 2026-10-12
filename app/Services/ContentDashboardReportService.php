@@ -302,7 +302,7 @@ class ContentDashboardReportService
 
         return $query->orderByDesc('updated_at')->limit(500)->get()->map(function (Page $page) use ($analyzer) {
             $status = pages_status_enabled()
-                ? (((int) ($page->status ?? 1) === 1) ? 'Active' : 'Disabled')
+                ? (((int) ($page->status ?? 1) === 1) ? 'Active' : 'Inactive')
                 : 'Active';
             $seo = PagesSEO::query()->where('page_id', $page->id)->first();
             [$seoStatus, $seoScore] = $this->seoStatusAndScore($seo, $analyzer);
@@ -311,6 +311,7 @@ class ContentDashboardReportService
                 'id' => $page->id,
                 'title' => $page->page_name ?: ('Page #' . $page->id),
                 'status' => $status,
+                'type' => 'Page',
                 'seo_status' => $seoStatus,
                 'seo_score' => $seoScore,
                 'created_by' => audit_user_name($page->createdBy, $page->created_by ?? null),
@@ -348,7 +349,8 @@ class ContentDashboardReportService
             return [
                 'id' => $course->id,
                 'title' => $course->title ?: ('Course #' . $course->id),
-                'status' => $course->deleted_at ? 'Disabled' : 'Active',
+                'status' => $course->deleted_at ? 'Inactive' : 'Active',
+                'type' => 'Course',
                 'seo_status' => $seoStatus,
                 'seo_score' => $seoScore,
                 'created_by' => audit_user_name($course->createdBy, $course->created_by ?? null),
@@ -421,12 +423,20 @@ class ContentDashboardReportService
             $linked = $seo->course_id
                 ? ($seo->course?->title ?: ('Course #' . $seo->course_id))
                 : ($seo->page?->page_name ?: ('Page #' . $seo->page_id));
+            if ($seo->course_id) {
+                $status = $seo->course && $seo->course->deleted_at ? 'Inactive' : 'Active';
+            } else {
+                $status = pages_status_enabled()
+                    ? (((int) ($seo->page?->status ?? 1) === 1) ? 'Active' : 'Inactive')
+                    : 'Active';
+            }
             [$seoStatus, $seoScore] = $this->seoStatusAndScore($seo, $analyzer);
 
             return [
                 'id' => $seo->id,
                 'title' => trim(($seo->title ?: 'SEO #' . $seo->id) . ' (' . $type . ': ' . $linked . ')'),
-                'status' => $type,
+                'status' => $status,
+                'type' => $type,
                 'seo_status' => $seoStatus,
                 'seo_score' => $seoScore,
                 'created_by' => audit_user_name($seo->createdBy, $seo->created_by ?? null),
@@ -453,13 +463,14 @@ class ContentDashboardReportService
 
         return $query->orderByDesc('updated_at')->limit(500)->get()->map(function (Page $page) {
             $status = pages_status_enabled()
-                ? (((int) ($page->status ?? 1) === 1) ? 'Active' : 'Disabled')
+                ? (((int) ($page->status ?? 1) === 1) ? 'Active' : 'Inactive')
                 : 'Active';
 
             return [
                 'id' => $page->id,
                 'title' => $page->page_name ?: ('Page #' . $page->id),
                 'status' => $status,
+                'type' => 'Page',
                 'seo_status' => 'Missing',
                 'seo_score' => '—',
                 'created_by' => audit_user_name($page->createdBy, $page->created_by ?? null),
@@ -489,6 +500,7 @@ class ContentDashboardReportService
                 'id' => $course->id,
                 'title' => $course->title ?: ('Course #' . $course->id),
                 'status' => 'Active',
+                'type' => 'Course',
                 'seo_status' => 'Missing',
                 'seo_score' => '—',
                 'created_by' => audit_user_name($course->createdBy, $course->created_by ?? null),

@@ -348,7 +348,7 @@
                                             <th data-sort-col="1" style="width: 180px;cursor:pointer;">User <span class="sort-ind"></span></th>
                                         @endif
                                         <th data-sort-col="{{ ($showUserColumn ?? false) ? 2 : 1 }}" style="width: 160px;cursor:pointer;">Activity <span class="sort-ind"></span></th>
-                                        <th data-sort-col="{{ ($showUserColumn ?? false) ? 3 : 2 }}" style="cursor:pointer;">Item <span class="sort-ind"></span></th>
+                                        <th data-sort-col="{{ ($showUserColumn ?? false) ? 3 : 2 }}" style="cursor:pointer;">Description <span class="sort-ind"></span></th>
                                         @if($showSessionColumn ?? false)
                                             <th data-sort-col="{{ ($showUserColumn ?? false) ? 4 : 3 }}" style="width: 140px;cursor:pointer;">Session <span class="sort-ind"></span></th>
                                         @endif
@@ -453,7 +453,7 @@
                                         <th data-sort-col="0" style="width: 170px;cursor:pointer;">Date &amp; Time <span class="sort-ind"></span></th>
                                         <th data-sort-col="1" style="width: 180px;cursor:pointer;">User <span class="sort-ind"></span></th>
                                         <th data-sort-col="2" style="width: 160px;cursor:pointer;">Activity <span class="sort-ind"></span></th>
-                                        <th data-sort-col="3" style="cursor:pointer;">Item <span class="sort-ind"></span></th>
+                                        <th data-sort-col="3" style="cursor:pointer;">Description <span class="sort-ind"></span></th>
                                         @if($showSessionColumn ?? false)
                                             <th data-sort-col="4" style="width: 140px;cursor:pointer;">Session <span class="sort-ind"></span></th>
                                         @endif
