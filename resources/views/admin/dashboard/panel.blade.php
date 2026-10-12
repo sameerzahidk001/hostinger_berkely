@@ -42,7 +42,13 @@
 #activities-panel #role + .select2-container { width: 150px !important; min-width: 150px !important; }
 #activities-panel #user_id + .select2-container,
 #activities-panel #student_user_id + .select2-container { width: 220px !important; min-width: 220px !important; }
-#activities-panel .activity-filter-actions {
+#activities-panel .activity-filter-search {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+}
+#activities-panel .activity-filter-exports {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -270,7 +276,7 @@
     <div class="col-lg-12">
         <div class="ibox float-e-margins" style="margin-bottom: 16px;" id="activities-panel">
             <div class="ibox-title">
-                <h5 style="margin:0;">Activities</h5>
+                <h5 style="margin:0;font-weight:700;">Activities</h5>
             </div>
             <div class="ibox-content">
                 @if($showStudentTable ?? false)
@@ -325,9 +331,11 @@
                                 <label for="staff_date_to" class="m-r-xs">To</label>
                                 <input type="date" id="staff_date_to" name="date_to" class="form-control" value="{{ request('date_to') }}">
                             </div>
-                            <div class="activity-filter-actions">
-                                <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+                            <div class="activity-filter-search">
+                                <button type="submit" class="btn btn-primary btn-sm">Search</button>
                                 <a href="{{ route('admin.home', $staffClearQuery) }}" class="btn btn-default btn-sm">Clear</a>
+                            </div>
+                            <div class="activity-filter-exports">
                                 <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'staff', 'format' => 'excel'])) }}"
                                     class="btn btn-success btn-sm">
                                     <i class="fa fa-file-excel-o"></i> Export Excel
@@ -432,9 +440,11 @@
                                 <label for="student_date_to" class="m-r-xs">To</label>
                                 <input type="date" id="student_date_to" name="date_to" class="form-control" value="{{ request('date_to') }}">
                             </div>
-                            <div class="activity-filter-actions">
-                                <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+                            <div class="activity-filter-search">
+                                <button type="submit" class="btn btn-primary btn-sm">Search</button>
                                 <a href="{{ route('admin.home', $studentClearQuery) }}" class="btn btn-default btn-sm">Clear</a>
+                            </div>
+                            <div class="activity-filter-exports">
                                 <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'student', 'format' => 'excel'])) }}"
                                     class="btn btn-success btn-sm">
                                     <i class="fa fa-file-excel-o"></i> Export Excel
