@@ -152,9 +152,11 @@ class AnalyticsController extends Controller
 
         if ($tab === 'live') {
             $liveSince = now()->subMinutes(5);
-            $liveCount = (int) PageView::query()->where('updated_at', '>=', $liveSince)->count();
-            $liveUsers = PageView::query()
-                ->where('updated_at', '>=', $liveSince)
+            $liveBase = $this->excludeInnerUrls(
+                PageView::query()->where('updated_at', '>=', $liveSince)
+            );
+            $liveCount = (int) (clone $liveBase)->count();
+            $liveUsers = $liveBase
                 ->orderByDesc('id')
                 ->paginate(100)
                 ->withQueryString();
@@ -275,7 +277,7 @@ class AnalyticsController extends Controller
     }
 
     /**
-     * Hide system / app inner endpoints from Site Kit listings (ping, webhooks, /user, etc.).
+     * Hide system / app inner endpoints and staging junk from Site Kit listings.
      */
     private function excludeInnerUrls($query)
     {
@@ -287,6 +289,12 @@ class AnalyticsController extends Controller
             ->where('url', 'not like', '%/sanctum/%')
             ->where('url', 'not like', '%/broadcasting/%')
             ->where('url', 'not like', '%/livewire/%')
+            ->where('url', 'not like', '%/login/captcha%')
+            ->where('url', 'not like', '%/captcha%')
+            ->where('url', 'not like', '%hostingsite.com%')
+            ->where('url', 'not like', '%LSCWP_CTRL%')
+            ->where('url', 'not like', '%.hostingersite.com%')
+            ->where('url', 'not like', '%preview-%')
             ->whereRaw("LOWER(TRIM(TRAILING '/' FROM SUBSTRING_INDEX(SUBSTRING_INDEX(url, '?', 1), '#', 1))) NOT REGEXP '/user$'");
     }
 
