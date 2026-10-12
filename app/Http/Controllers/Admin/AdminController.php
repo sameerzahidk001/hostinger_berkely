@@ -215,11 +215,16 @@ class AdminController extends Controller
 
         $showContentReports = (bool) ($options['showContentReports'] ?? false)
             && class_exists(ContentDashboardReportService::class);
-        $contentReportActorId = $options['contentReportActorId'] ?? audit_user_id();
-        $contentReportActorName = $options['contentReportActorName']
-            ?? $this->contentReportActorDisplayName((int) ($contentReportActorId ?: 0));
-        $contentReportActorKey = $options['contentReportActorKey']
-            ?? $this->defaultContentReportActorKey();
+        // null actor id means All Users — must not fall through ?? to the logged-in admin.
+        $contentReportActorId = array_key_exists('contentReportActorId', $options)
+            ? $options['contentReportActorId']
+            : audit_user_id();
+        $contentReportActorName = array_key_exists('contentReportActorName', $options)
+            ? (string) $options['contentReportActorName']
+            : $this->contentReportActorDisplayName((int) ($contentReportActorId ?: 0));
+        $contentReportActorKey = array_key_exists('contentReportActorKey', $options)
+            ? (string) $options['contentReportActorKey']
+            : $this->defaultContentReportActorKey();
         $showContentReportUserFilter = (bool) ($options['showContentReportUserFilter'] ?? false);
         $contentReports = null;
         $contentReportMetricLabels = [
