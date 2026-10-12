@@ -1368,7 +1368,7 @@ if (!function_exists('audit_user_name')) {
             }
         }
 
-        return '-';
+        return 'Admin';
     }
 }
 

@@ -76,11 +76,21 @@
             $instructorSelect.val(selectedInstructorIds).trigger('change');
         }
 
-        // Keep native <select> in sync so instructor_ids[] always posts on Save.
+        // Keep native <select> + hidden inputs in sync so instructor_ids[] always posts on Save.
         $instructorSelect.closest('form').on('submit', function () {
-            const vals = $instructorSelect.val() || [];
+            const $form = $(this);
+            const vals = ($instructorSelect.val() || []).map(String);
             $instructorSelect.find('option').each(function () {
                 this.selected = vals.indexOf(String(this.value)) !== -1;
+            });
+            $form.find('input.js-instructor-ids-sync').remove();
+            vals.forEach(function (id) {
+                $('<input>', {
+                    type: 'hidden',
+                    'class': 'js-instructor-ids-sync',
+                    name: 'instructor_ids[]',
+                    value: id
+                }).appendTo($form);
             });
         });
 

@@ -17,26 +17,6 @@
                 <small class="text-muted">Click any statistic for detailed records. Exports include your username.</small>
             </div>
             <div class="ibox-content">
-                <form method="GET" action="{{ route('admin.home') }}" class="form-inline" style="margin-bottom:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;" id="contentReportDateForm">
-                    @foreach(request()->except(['date_from', 'date_to', 'page']) as $key => $value)
-                        @if(is_scalar($value))
-                            <input type="hidden" name="{{ $key }}" value="{{ $value }}">
-                        @endif
-                    @endforeach
-                    <div class="form-group" style="margin:0;">
-                        <label for="content_report_date_from" class="m-r-xs">Selected range From</label>
-                        <input type="date" id="content_report_date_from" name="date_from" class="form-control" value="{{ $rangeFrom }}">
-                    </div>
-                    <div class="form-group" style="margin:0;">
-                        <label for="content_report_date_to" class="m-r-xs">To</label>
-                        <input type="date" id="content_report_date_to" name="date_to" class="form-control" value="{{ $rangeTo }}">
-                    </div>
-                    <button type="submit" class="btn btn-primary btn-sm">Apply range</button>
-                    <small class="text-muted" style="margin-bottom:6px;">
-                        Used by “Created / Updated In Selected Range”. Same dates as Filter activity below.
-                    </small>
-                </form>
-
                 <ul class="nav nav-tabs" role="tablist" style="margin-bottom:16px;">
                     <li class="{{ $activeTab === 'pages' ? 'active' : '' }}">
                         <a href="#report-pages" data-toggle="tab">Pages</a>
@@ -85,16 +65,25 @@
                 <h4 class="modal-title" id="contentReportModalLabel">Report details</h4>
             </div>
             <div class="modal-body">
-                <div class="row" style="margin-bottom:12px;">
-                    <div class="col-sm-6">
+                <div class="row" style="margin-bottom:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;">
+                    <div class="col-sm-3" style="padding-left:0;">
                         <input type="text" id="contentReportSearch" class="form-control" placeholder="Search title / keyword...">
                     </div>
-                    <div class="col-sm-6 text-right">
+                    <div class="form-group" style="margin:0;">
+                        <label for="content_report_date_from" class="m-r-xs" style="font-weight:normal;font-size:12px;">From</label>
+                        <input type="date" id="content_report_date_from" class="form-control" value="{{ $rangeFrom }}">
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label for="content_report_date_to" class="m-r-xs" style="font-weight:normal;font-size:12px;">To</label>
+                        <input type="date" id="content_report_date_to" class="form-control" value="{{ $rangeTo }}">
+                    </div>
+                    <button type="button" id="contentReportApplyRange" class="btn btn-primary btn-sm">Apply range</button>
+                    <div class="col-sm-auto text-right" style="margin-left:auto;padding-right:0;">
                         <a href="#" id="contentReportExportExcel" class="btn btn-success btn-sm" target="_blank">
-                            <i class="fa fa-file-excel-o"></i> Excel
+                            <i class="fa fa-file-excel-o"></i> Export Excel
                         </a>
                         <a href="#" id="contentReportExportPdf" class="btn btn-danger btn-sm" target="_blank">
-                            <i class="fa fa-file-pdf-o"></i> PDF
+                            <i class="fa fa-file-pdf-o"></i> Export PDF
                         </a>
                     </div>
                 </div>
@@ -102,18 +91,19 @@
                     <table class="table table-striped table-bordered table-hover" id="contentReportTable">
                         <thead>
                             <tr>
-                                <th>Title</th>
-                                <th style="width:90px;">Status</th>
-                                <th style="width:110px;">SEO Status</th>
-                                <th style="width:90px;">SEO Score</th>
-                                <th style="width:130px;">Created By</th>
-                                <th style="width:130px;">Updated By</th>
-                                <th style="width:120px;">Created</th>
-                                <th style="width:120px;">Updated</th>
+                                <th data-sort-key="#" style="width:50px;cursor:pointer;"># <span class="sort-ind"></span></th>
+                                <th data-sort-key="title" style="cursor:pointer;">Title <span class="sort-ind"></span></th>
+                                <th data-sort-key="status" style="width:90px;cursor:pointer;">Status <span class="sort-ind"></span></th>
+                                <th data-sort-key="seo_status" style="width:110px;cursor:pointer;">SEO Status <span class="sort-ind"></span></th>
+                                <th data-sort-key="seo_score" style="width:90px;cursor:pointer;">SEO Score <span class="sort-ind"></span></th>
+                                <th data-sort-key="created_by" style="width:130px;cursor:pointer;">Created By <span class="sort-ind"></span></th>
+                                <th data-sort-key="updated_by" style="width:130px;cursor:pointer;">Updated By <span class="sort-ind"></span></th>
+                                <th data-sort-key="created_at" style="width:120px;cursor:pointer;">Created <span class="sort-ind"></span></th>
+                                <th data-sort-key="updated_at" style="width:120px;cursor:pointer;">Updated <span class="sort-ind"></span></th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr><td colspan="8" class="text-center text-muted">Loading…</td></tr>
+                            <tr><td colspan="9" class="text-center text-muted">Loading…</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -131,7 +121,10 @@
     var searchTimer = null;
     var detailsUrl = @json(route('admin.home.content-report-details'));
     var exportUrl = @json(route('admin.home.content-report-export'));
-    var colCount = 8;
+    var colCount = 9;
+    var allRows = [];
+    var sortKey = '#';
+    var sortDir = 'asc';
 
     function filterQuery() {
         var params = new URLSearchParams(window.location.search);
@@ -154,6 +147,73 @@
             }
         });
         return base + '?' + usp.toString();
+    }
+
+    function scoreNum(val) {
+        if (val === null || val === undefined || val === '' || val === '—') return -1;
+        var m = String(val).match(/(\d+)/);
+        return m ? parseInt(m[1], 10) : -1;
+    }
+
+    function sortRows(rows) {
+        var key = sortKey;
+        var dir = sortDir === 'asc' ? 1 : -1;
+        var sorted = rows.slice();
+        if (key === '#') {
+            return dir === 1 ? sorted : sorted.reverse();
+        }
+        sorted.sort(function (a, b) {
+            var av, bv;
+            if (key === 'seo_score') {
+                av = scoreNum(a.seo_score);
+                bv = scoreNum(b.seo_score);
+                return (av - bv) * dir;
+            }
+            av = String(a[key] || '').toLowerCase();
+            bv = String(b[key] || '').toLowerCase();
+            if (av < bv) return -1 * dir;
+            if (av > bv) return 1 * dir;
+            return 0;
+        });
+        return sorted;
+    }
+
+    function updateSortIndicators() {
+        $('#contentReportTable thead th').each(function () {
+            var key = $(this).data('sort-key');
+            var ind = $(this).find('.sort-ind');
+            if (key === sortKey) {
+                ind.text(sortDir === 'asc' ? ' ▲' : ' ▼');
+            } else {
+                ind.text('');
+            }
+        });
+    }
+
+    function renderRows(rows) {
+        if (!rows.length) {
+            $('#contentReportTable tbody').html('<tr><td colspan="' + colCount + '" class="text-center text-muted">No records found.</td></tr>');
+            return;
+        }
+        var sorted = sortRows(rows);
+        var html = sorted.map(function (row, idx) {
+            var title = row.url
+                ? '<a href="' + row.url + '" target="_blank" rel="noopener">' + $('<div>').text(row.title || '').html() + '</a>'
+                : $('<div>').text(row.title || '').html();
+            return '<tr>' +
+                '<td>' + (idx + 1) + '</td>' +
+                '<td>' + title + '</td>' +
+                '<td>' + $('<div>').text(row.status || '—').html() + '</td>' +
+                '<td>' + $('<div>').text(row.seo_status || '—').html() + '</td>' +
+                '<td>' + $('<div>').text(row.seo_score || '—').html() + '</td>' +
+                '<td>' + $('<div>').text(row.created_by || 'Admin').html() + '</td>' +
+                '<td>' + $('<div>').text(row.updated_by || 'Admin').html() + '</td>' +
+                '<td>' + $('<div>').text(row.created_at || '—').html() + '</td>' +
+                '<td>' + $('<div>').text(row.updated_at || '—').html() + '</td>' +
+                '</tr>';
+        }).join('');
+        $('#contentReportTable tbody').html(html);
+        updateSortIndicators();
     }
 
     function loadDetails() {
@@ -179,28 +239,18 @@
             metric: currentMetric,
             q: q
         })).done(function (resp) {
-            var rows = resp.rows || [];
-            if (!rows.length) {
-                $('#contentReportTable tbody').html('<tr><td colspan="' + colCount + '" class="text-center text-muted">No records found.</td></tr>');
-                return;
-            }
-            var html = rows.map(function (row) {
-                var title = row.url
-                    ? '<a href="' + row.url + '" target="_blank" rel="noopener">' + $('<div>').text(row.title || '').html() + '</a>'
-                    : $('<div>').text(row.title || '').html();
-                return '<tr>' +
-                    '<td>' + title + '</td>' +
-                    '<td>' + $('<div>').text(row.status || '—').html() + '</td>' +
-                    '<td>' + $('<div>').text(row.seo_status || '—').html() + '</td>' +
-                    '<td>' + $('<div>').text(row.seo_score || '—').html() + '</td>' +
-                    '<td>' + $('<div>').text(row.created_by || '—').html() + '</td>' +
-                    '<td>' + $('<div>').text(row.updated_by || '—').html() + '</td>' +
-                    '<td>' + $('<div>').text(row.created_at || '—').html() + '</td>' +
-                    '<td>' + $('<div>').text(row.updated_at || '—').html() + '</td>' +
-                    '</tr>';
-            }).join('');
-            $('#contentReportTable tbody').html(html);
+            allRows = (resp.rows || []).map(function (row) {
+                if (!row.created_by || row.created_by === '-' || row.created_by === '—') {
+                    row.created_by = 'Admin';
+                }
+                if (!row.updated_by || row.updated_by === '-' || row.updated_by === '—') {
+                    row.updated_by = 'Admin';
+                }
+                return row;
+            });
+            renderRows(allRows);
         }).fail(function () {
+            allRows = [];
             $('#contentReportTable tbody').html('<tr><td colspan="' + colCount + '" class="text-center text-danger">Failed to load report details.</td></tr>');
         });
     }
@@ -209,6 +259,8 @@
         currentModule = $(this).data('module');
         currentMetric = $(this).data('metric');
         currentLabel = $(this).data('label');
+        sortKey = '#';
+        sortDir = 'asc';
         $('#contentReportSearch').val('');
         $('#contentReportModal').modal('show');
         loadDetails();
@@ -217,6 +269,21 @@
     $('#contentReportSearch').on('keyup', function () {
         clearTimeout(searchTimer);
         searchTimer = setTimeout(loadDetails, 350);
+    });
+
+    $('#contentReportApplyRange').on('click', function () {
+        loadDetails();
+    });
+
+    $('#contentReportTable thead').on('click', 'th[data-sort-key]', function () {
+        var key = $(this).data('sort-key');
+        if (sortKey === key) {
+            sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+            sortKey = key;
+            sortDir = key === '#' ? 'asc' : 'asc';
+        }
+        renderRows(allRows);
     });
 })(jQuery);
 </script>

@@ -271,9 +271,23 @@ class AnalyticsController extends Controller
 
     private function listingQuery(Carbon $start, Carbon $end)
     {
-        return $this->rangeQuery($start, $end)
+        return $this->excludeInnerUrls($this->rangeQuery($start, $end));
+    }
+
+    /**
+     * Hide system / app inner endpoints from Site Kit listings (ping, webhooks, /user, etc.).
+     */
+    private function excludeInnerUrls($query)
+    {
+        return $query
             ->where('url', 'not like', '%/admin/%')
-            ->where('url', 'not like', '%/skin%');
+            ->where('url', 'not like', '%/skin%')
+            ->where('url', 'not like', '%/user/session/%')
+            ->where('url', 'not like', '%/room/webhook%')
+            ->where('url', 'not like', '%/sanctum/%')
+            ->where('url', 'not like', '%/broadcasting/%')
+            ->where('url', 'not like', '%/livewire/%')
+            ->whereRaw("LOWER(TRIM(TRAILING '/' FROM SUBSTRING_INDEX(SUBSTRING_INDEX(url, '?', 1), '#', 1))) NOT REGEXP '/user$'");
     }
 
     private function applySearch($query, string $search): void
