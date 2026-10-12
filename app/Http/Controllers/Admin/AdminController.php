@@ -353,9 +353,16 @@ class AdminController extends Controller
                 if ($updatedBy === '' || $updatedBy === '-' || $updatedBy === '—') {
                     $updatedBy = 'Admin';
                 }
+                $title = (string) ($row['title'] ?? '');
+                $url = trim((string) ($row['url'] ?? ''));
+                if ($url !== '' && $title !== '') {
+                    $safeTitle = str_replace('"', '""', $title);
+                    $safeUrl = str_replace('"', '""', $url);
+                    $title = '=HYPERLINK("' . $safeUrl . '","' . $safeTitle . '")';
+                }
                 fputcsv($handle, [
                     $n,
-                    $row['title'] ?? '',
+                    $title,
                     $row['status'] ?? '',
                     $row['type'] ?? '',
                     $row['seo_status'] ?? '',
