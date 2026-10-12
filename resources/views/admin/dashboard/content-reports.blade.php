@@ -55,10 +55,39 @@
                     #content-reports-panel .content-report-module-tabs > li.active > a.tab-seo,
                     #content-reports-panel .content-report-module-tabs > li > a.tab-seo:hover,
                     #content-reports-panel .content-report-module-tabs > li > a.tab-seo:focus { background: #8b6914; color: #fff !important; }
-                    #content-reports-panel .content-report-stat-value { font-size:28px; font-weight:700; line-height:1.2; }
+                    #content-reports-panel .content-report-stat-value { font-size:28px; font-weight:700; line-height:1.2; margin-top:auto; }
                     #report-pages .content-report-stat-value { color: #800000; }
                     #report-courses .content-report-stat-value { color: #000080; }
                     #report-seo .content-report-stat-value { color: #b8860b; }
+                    #content-reports-panel .content-report-stat-row {
+                        display: flex;
+                        flex-wrap: wrap;
+                    }
+                    #content-reports-panel .content-report-stat-row > [class*="col-"] {
+                        display: flex;
+                        float: none;
+                        margin-bottom: 12px;
+                    }
+                    #content-reports-panel a.content-report-stat {
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: flex-start;
+                        width: 100%;
+                        min-height: 118px;
+                        border: 1px solid #e7eaec;
+                        border-radius: 4px;
+                        padding: 14px 16px;
+                        background: #f9f9f9;
+                        color: #676a6c;
+                        text-decoration: none;
+                    }
+                    #content-reports-panel .content-report-stat-label {
+                        font-size: 12px;
+                        text-transform: uppercase;
+                        letter-spacing: .03em;
+                        line-height: 1.35;
+                        min-height: 3.9em;
+                    }
                 </style>
                 <ul class="nav nav-tabs content-report-module-tabs" role="tablist" style="margin-bottom:16px;border-bottom:none;">
                     <li class="{{ $activeTab === 'pages' ? 'active' : '' }}">
@@ -76,17 +105,16 @@
                     @foreach(['pages' => 'Pages', 'courses' => 'Courses', 'seo' => 'SEO'] as $module => $moduleTitle)
                         @php $stats = $reports[$module] ?? []; @endphp
                         <div role="tabpanel" class="tab-pane {{ $activeTab === $module ? 'active' : '' }}" id="report-{{ $module }}">
-                            <div class="row">
+                            <div class="row content-report-stat-row">
                                 @foreach(($metricLabels[$module] ?? []) as $metricKey => $metricLabel)
                                     @php $value = (int) ($stats[$metricKey] ?? 0); @endphp
-                                    <div class="col-lg-3 col-md-4 col-sm-6" style="margin-bottom:12px;">
+                                    <div class="col-lg-3 col-md-4 col-sm-6">
                                         <a href="javascript:void(0);"
                                             class="content-report-stat"
                                             data-module="{{ $module }}"
                                             data-metric="{{ $metricKey }}"
-                                            data-label="{{ $metricLabel }}"
-                                            style="display:block;border:1px solid #e7eaec;border-radius:4px;padding:14px 16px;background:#f9f9f9;color:#676a6c;text-decoration:none;min-height:88px;">
-                                            <div style="font-size:12px;text-transform:uppercase;letter-spacing:.03em;">{{ $metricLabel }}</div>
+                                            data-label="{{ $metricLabel }}">
+                                            <div class="content-report-stat-label">{{ $metricLabel }}</div>
                                             <div class="content-report-stat-value">{{ $value }}</div>
                                         </a>
                                     </div>
