@@ -1,6 +1,23 @@
 @extends('admin.layout.app')
 @section('title', 'Dashboard')
 
+@push('style')
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+.select2-container { width: 100% !important; min-width: 220px; }
+.select2-container .select2-selection--single {
+    height: 34px;
+    border: 1px solid #e5e6e7;
+    border-radius: 1px;
+}
+.select2-container .select2-selection--single .select2-selection__rendered {
+    line-height: 32px;
+    padding-left: 12px;
+}
+.select2-container .select2-selection--single .select2-selection__arrow { height: 32px; }
+</style>
+@endpush
+
 @section('content')
 @if(!($activityLogsEnabled ?? true))
 <div class="row" style="padding: 0 10px 12px;">
@@ -457,6 +474,7 @@
 @endsection
 
 @push('script')
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
 $(document).ready(function() {
     setTimeout(function() {
@@ -469,19 +487,43 @@ $(document).ready(function() {
     }, 300);
     toastr.success('Welcome, {{ addslashes(panel_profile_name() ?: 'User') }}');
 
+    function initTypeFind($el, placeholder) {
+        if (!$el.length || $el.hasClass('select2-hidden-accessible')) {
+            return;
+        }
+        $el.select2({
+            placeholder: placeholder,
+            allowClear: true,
+            width: '100%',
+            minimumResultsForSearch: 0
+        });
+    }
+
+    initTypeFind($('#role'), 'Type to find role');
+    initTypeFind($('#user_id'), 'Type to find user');
+    initTypeFind($('#student_user_id'), 'Type to find student');
+    initTypeFind($('#content_report_user'), 'Type to find user');
+
+    $('#content_report_user').on('change', function () {
+        var $form = $(this).closest('form');
+        if ($form.length) {
+            $form.trigger('submit');
+        }
+    });
+
     var $role = $('#role');
     var $user = $('#user_id');
 
     if ($role.length && $user.length) {
         $role.on('change', function() {
             if ($(this).val() !== '') {
-                $user.val('');
+                $user.val(null).trigger('change');
             }
         });
 
         $user.on('change', function() {
             if ($(this).val() !== '') {
-                $role.val('');
+                $role.val(null).trigger('change');
             }
         });
     }
