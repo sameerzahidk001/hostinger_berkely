@@ -11,7 +11,7 @@ class Admin extends Authenticatable
     use HasFactory,SoftDeletes;
 
     protected $fillable = [
-        'name',
+        'username',
         'email',
         'image',
         'password',
@@ -21,4 +21,16 @@ class Admin extends Authenticatable
         'password',
         'remember_token',
     ];
+
+    /**
+     * Display helper: live DB has username, not name.
+     */
+    public function getNameAttribute($value = null): string
+    {
+        if (is_string($value) && trim($value) !== '') {
+            return $value;
+        }
+
+        return (string) ($this->attributes['username'] ?? '');
+    }
 }

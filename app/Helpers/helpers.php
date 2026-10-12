@@ -1359,7 +1359,10 @@ if (!function_exists('audit_user_name')) {
         if ($fallbackId) {
             $admin = \App\Models\Admin::find($fallbackId);
             if ($admin) {
-                return panel_actor_display_name($admin->name ?? null, $admin->email ?? null);
+                return panel_actor_display_name(
+                    $admin->username ?? $admin->name ?? null,
+                    $admin->email ?? null
+                );
             }
 
             $user = \App\Models\User::find($fallbackId);
