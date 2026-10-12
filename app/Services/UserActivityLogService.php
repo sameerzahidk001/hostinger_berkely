@@ -102,7 +102,8 @@ class UserActivityLogService
         string $audience,
         ?int $userId,
         ?string $dateFrom,
-        ?string $dateTo
+        ?string $dateTo,
+        ?int $limit = null
     ): Collection {
         if (! $this->tableExists()) {
             return collect();
@@ -128,6 +129,10 @@ class UserActivityLogService
 
         if ($to) {
             $query->where('created_at', '<=', $to);
+        }
+
+        if ($limit !== null && $limit > 0) {
+            $query->limit($limit);
         }
 
         return $query->get()->map(function (UserActivityLog $log) {

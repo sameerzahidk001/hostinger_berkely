@@ -540,6 +540,9 @@ class AdminController extends Controller
 
     public function exportActivity(Request $request)
     {
+        @set_time_limit(120);
+        @ini_set('memory_limit', '512M');
+
         $role = normalize_panel_role(panel_role_name());
         $service = app(PanelActivityService::class);
         $logService = app(UserActivityLogService::class);
@@ -552,6 +555,9 @@ class AdminController extends Controller
         $includePayments = $role !== 'content_writer';
         $restrictToUserIds = null;
         $paymentsOnly = false;
+        $format = strtolower((string) $request->query('format', 'excel'));
+        // Unbounded exports previously gateway-timed-out; cap newest rows (CSV more, PDF less).
+        $maxRows = $format === 'pdf' ? 1000 : 8000;
 
         if ($role === 'content_writer') {
             $userId = audit_user_id();
@@ -562,7 +568,13 @@ class AdminController extends Controller
         }
 
         if ($exportType === 'student') {
-            $rows = $logService->buildFeed('student', $request->filled('student_user_id') ? (int) $request->query('student_user_id') : null, $dateFrom, $dateTo);
+            $rows = $logService->buildFeed(
+                'student',
+                $request->filled('student_user_id') ? (int) $request->query('student_user_id') : null,
+                $dateFrom,
+                $dateTo,
+                $maxRows
+            );
             $filename = 'student-activity-history';
             $showUserColumn = true;
         } else {
@@ -572,10 +584,11 @@ class AdminController extends Controller
                 $dateTo,
                 $includePayments && ! $paymentsOnly,
                 $restrictToUserIds,
-                $paymentsOnly
+                $paymentsOnly,
+                $maxRows
             );
 
-            $logs = $logService->buildFeed('staff', $userId, $dateFrom, $dateTo);
+            $logs = $logService->buildFeed('staff', $userId, $dateFrom, $dateTo, $maxRows);
 
             if ($restrictToUserIds !== null) {
                 $logs = $logs->filter(function (array $row) use ($restrictToUserIds) {
@@ -598,13 +611,13 @@ class AdminController extends Controller
                         $row['occurred_at']?->format('Y-m-d H:i') ?? '',
                     ]);
                 })
+                ->take($maxRows)
                 ->values();
 
             $filename = 'dashboard-activity-history';
             $showUserColumn = true;
         }
 
-        $format = strtolower((string) $request->query('format', 'excel'));
         $username = panel_profile_name() ?: 'User';
         $title = $exportType === 'student' ? 'Student activity history' : 'Staff & panel user activity';
         $fileStamp = $filename . '_' . now()->format('Y-m-d');
