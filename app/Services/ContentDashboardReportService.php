@@ -158,10 +158,19 @@ class ContentDashboardReportService
 
         $hasAudit = Schema::hasColumn('pages_s_e_o_s', 'created_by');
         $base = PagesSEO::query();
-        $enteredPages = (int) PagesSEO::whereNotNull('page_id')->distinct('page_id')->count('page_id');
-        $enteredCourses = (int) PagesSEO::whereNotNull('course_id')->distinct('course_id')->count('course_id');
-        $totalPages = (int) Page::count();
-        $totalCourses = (int) Course::count();
+        // SEO entered/missing metrics only count Active pages & courses.
+        $enteredPages = (int) PagesSEO::query()
+            ->whereNotNull('page_id')
+            ->whereIn('page_id', $this->activePagesQuery()->select('id'))
+            ->distinct('page_id')
+            ->count('page_id');
+        $enteredCourses = (int) PagesSEO::query()
+            ->whereNotNull('course_id')
+            ->whereIn('course_id', $this->activeCoursesQuery()->select('id'))
+            ->distinct('course_id')
+            ->count('course_id');
+        $totalActivePages = (int) $this->activePagesQuery()->count();
+        $totalActiveCourses = (int) $this->activeCoursesQuery()->count();
 
         return [
             'total' => (int) (clone $base)->count(),
@@ -171,8 +180,8 @@ class ContentDashboardReportService
             'inactive' => 0,
             'seo_entered_pages' => $enteredPages,
             'seo_entered_courses' => $enteredCourses,
-            'seo_missing_pages' => max(0, $totalPages - $enteredPages),
-            'seo_missing_courses' => max(0, $totalCourses - $enteredCourses),
+            'seo_missing_pages' => max(0, $totalActivePages - $enteredPages),
+            'seo_missing_courses' => max(0, $totalActiveCourses - $enteredCourses),
             'page_seo' => $enteredPages,
             'course_seo' => $enteredCourses,
             'created_by_me' => $hasAudit
@@ -390,13 +399,17 @@ class ContentDashboardReportService
         $query = PagesSEO::query()->with(['page', 'course', 'createdBy', 'updatedBy']);
 
         match ($metric) {
-            // Match dashboard cards (distinct page/course counts), not duplicate SEO rows.
-            'seo_entered_pages', 'page_seo' => $query->whereNotNull('page_id')->whereIn('id', function ($q) {
-                $q->selectRaw('MAX(id)')->from('pages_s_e_o_s')->whereNotNull('page_id')->groupBy('page_id');
-            }),
-            'seo_entered_courses', 'course_seo' => $query->whereNotNull('course_id')->whereIn('id', function ($q) {
-                $q->selectRaw('MAX(id)')->from('pages_s_e_o_s')->whereNotNull('course_id')->groupBy('course_id');
-            }),
+            // Match dashboard cards: distinct Active page/course SEO rows only.
+            'seo_entered_pages', 'page_seo' => $query->whereNotNull('page_id')
+                ->whereIn('page_id', $this->activePagesQuery()->select('id'))
+                ->whereIn('id', function ($q) {
+                    $q->selectRaw('MAX(id)')->from('pages_s_e_o_s')->whereNotNull('page_id')->groupBy('page_id');
+                }),
+            'seo_entered_courses', 'course_seo' => $query->whereNotNull('course_id')
+                ->whereIn('course_id', $this->activeCoursesQuery()->select('id'))
+                ->whereIn('id', function ($q) {
+                    $q->selectRaw('MAX(id)')->from('pages_s_e_o_s')->whereNotNull('course_id')->groupBy('course_id');
+                }),
             'created_by_me' => $actorUserId ? $query->where('created_by', $actorUserId) : $query->whereNotNull('created_by'),
             'updated_by_me' => $actorUserId ? $query->where('updated_by', $actorUserId) : $query->whereNotNull('updated_by'),
             'created_today' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfDay(), now()->endOfDay()),
@@ -467,7 +480,7 @@ class ContentDashboardReportService
 
     private function missingPageSeoRows(?string $search): Collection
     {
-        $query = Page::query()
+        $query = $this->activePagesQuery()
             ->whereDoesntHave('seo')
             ->with(['createdBy', 'updatedBy']);
 
@@ -479,14 +492,10 @@ class ContentDashboardReportService
         }
 
         return $query->orderByDesc('updated_at')->limit(10000)->get()->map(function (Page $page) {
-            $status = pages_status_enabled()
-                ? (((int) ($page->status ?? 1) === 1) ? 'Active' : 'Inactive')
-                : 'Active';
-
             return [
                 'id' => $page->id,
                 'title' => $page->page_name ?: ('Page #' . $page->id),
-                'status' => $status,
+                'status' => 'Active',
                 'type' => 'Page',
                 'seo_status' => 'Missing',
                 'seo_score' => '—',
@@ -501,7 +510,7 @@ class ContentDashboardReportService
 
     private function missingCourseSeoRows(?string $search): Collection
     {
-        $query = Course::query()
+        $query = $this->activeCoursesQuery()
             ->whereDoesntHave('seo')
             ->with(['createdBy', 'updatedBy']);
 
@@ -527,6 +536,22 @@ class ContentDashboardReportService
                 'url' => route('course.edit', $course->id),
             ];
         });
+    }
+
+    private function activePagesQuery()
+    {
+        $query = Page::query();
+        if (pages_status_enabled()) {
+            $query->where('status', 1);
+        }
+
+        return $query;
+    }
+
+    private function activeCoursesQuery()
+    {
+        // Soft-deletes exclude disabled/inactive courses by default.
+        return Course::query();
     }
 
     private function seoStatusAndScore(?PagesSEO $seo, SeoAnalyzerService $analyzer): array
