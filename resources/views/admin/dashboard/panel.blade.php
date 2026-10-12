@@ -335,11 +335,11 @@
                             @endif
                             <div class="form-group">
                                 <label for="staff_date_from" class="m-r-xs">From</label>
-                                <input type="date" id="staff_date_from" name="date_from" class="form-control" value="{{ request('date_from') }}">
+                                <input type="date" id="staff_date_from" name="date_from" class="form-control" value="{{ $activityDateFrom ?? request('date_from', now()->toDateString()) }}">
                             </div>
                             <div class="form-group">
                                 <label for="staff_date_to" class="m-r-xs">To</label>
-                                <input type="date" id="staff_date_to" name="date_to" class="form-control" value="{{ request('date_to') }}">
+                                <input type="date" id="staff_date_to" name="date_to" class="form-control" value="{{ $activityDateTo ?? request('date_to', now()->toDateString()) }}">
                             </div>
                             <div class="activity-filter-search">
                                 <button type="submit" class="btn btn-primary btn-sm">Search</button>
@@ -444,11 +444,11 @@
                             </div>
                             <div class="form-group">
                                 <label for="student_date_from" class="m-r-xs">From</label>
-                                <input type="date" id="student_date_from" name="date_from" class="form-control" value="{{ request('date_from') }}">
+                                <input type="date" id="student_date_from" name="date_from" class="form-control" value="{{ $activityDateFrom ?? request('date_from', now()->toDateString()) }}">
                             </div>
                             <div class="form-group">
                                 <label for="student_date_to" class="m-r-xs">To</label>
-                                <input type="date" id="student_date_to" name="date_to" class="form-control" value="{{ request('date_to') }}">
+                                <input type="date" id="student_date_to" name="date_to" class="form-control" value="{{ $activityDateTo ?? request('date_to', now()->toDateString()) }}">
                             </div>
                             <div class="activity-filter-search">
                                 <button type="submit" class="btn btn-primary btn-sm">Search</button>

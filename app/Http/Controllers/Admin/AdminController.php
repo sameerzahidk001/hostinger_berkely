@@ -166,8 +166,9 @@ class AdminController extends Controller
         $includePayments = (bool) ($options['includePayments'] ?? false);
         $logAudience = (string) ($options['logAudience'] ?? 'staff');
         $showStudentTable = (bool) ($options['showStudentTable'] ?? false);
-        $dateFrom = $request->query('date_from');
-        $dateTo = $request->query('date_to');
+        $today = now()->toDateString();
+        $dateFrom = $request->filled('date_from') ? (string) $request->query('date_from') : $today;
+        $dateTo = $request->filled('date_to') ? (string) $request->query('date_to') : $today;
 
         $restrictToUserIds = null;
         $paymentsOnly = false;
@@ -266,6 +267,8 @@ class AdminController extends Controller
             'studentFilterUsers' => $showStudentTable ? $logService->studentFilterUsers() : collect(),
             'activityTitle' => $options['activityTitle'] ?? 'Activity history',
             'studentActivityTitle' => $options['studentActivityTitle'] ?? 'Student activity history',
+            'activityDateFrom' => $dateFrom,
+            'activityDateTo' => $dateTo,
         ]);
     }
 
@@ -273,7 +276,8 @@ class AdminController extends Controller
     {
         $module = (string) $request->query('module', 'pages');
         $metric = (string) $request->query('metric', 'total');
-        $actorId = $this->resolveContentReportActorId($request);
+        $actor = $this->resolveContentReportActor($request);
+        $actorId = $actor['id'];
         $rows = app(ContentDashboardReportService::class)->detailRows(
             $module,
             $metric,
@@ -283,7 +287,7 @@ class AdminController extends Controller
             $request->query('q')
         );
 
-        $labels = app(ContentDashboardReportService::class)->metricLabels($module);
+        $labels = app(ContentDashboardReportService::class)->metricLabels($module, $actor['name']);
 
         return response()->json([
             'module' => $module,
@@ -299,9 +303,10 @@ class AdminController extends Controller
         $module = (string) $request->query('module', 'pages');
         $metric = (string) $request->query('metric', 'total');
         $format = strtolower((string) $request->query('format', 'excel'));
-        $actorId = $this->resolveContentReportActorId($request);
+        $actor = $this->resolveContentReportActor($request);
+        $actorId = $actor['id'];
         $service = app(ContentDashboardReportService::class);
-        $labels = $service->metricLabels($module);
+        $labels = $service->metricLabels($module, $actor['name']);
         $label = $labels[$metric] ?? ucfirst(str_replace('_', ' ', $metric));
         $rows = $service->detailRows(
             $module,
@@ -328,7 +333,7 @@ class AdminController extends Controller
             return $pdf->download($filenameBase . '.pdf');
         }
 
-        $headers = ['#', 'Title', 'Status', 'Type', 'SEO Status', 'SEO Score', 'Created By', 'Updated By', 'Created At', 'Updated At', 'URL'];
+        $headers = ['#', 'Title', 'Status', 'Type', 'SEO Status', 'SEO Score', 'Created By', 'Created Date', 'Updated By', 'Updated Date', 'URL'];
         $callback = function () use ($rows, $headers, $username, $module, $label) {
             $handle = fopen('php://output', 'w');
             fputcsv($handle, ['Report', strtoupper($module) . ' -> ' . strtoupper($label)]);
@@ -356,8 +361,8 @@ class AdminController extends Controller
                     $row['seo_status'] ?? '',
                     $row['seo_score'] ?? '',
                     $createdBy,
-                    $updatedBy,
                     $row['created_at'] ?? '',
+                    $updatedBy,
                     $row['updated_at'] ?? '',
                     $row['url'] ?? '',
                 ]);
@@ -418,12 +423,11 @@ class AdminController extends Controller
             ];
         }
 
-        $id = audit_user_id();
-
+        // Admin/staff default: All Users (content writers stay scoped above).
         return [
-            'id' => $id,
-            'name' => $this->contentReportActorDisplayName((int) ($id ?: 0)),
-            'key' => $this->defaultContentReportActorKey(),
+            'id' => null,
+            'name' => 'All Users',
+            'key' => 'all',
         ];
     }
 
@@ -549,8 +553,9 @@ class AdminController extends Controller
 
         $userId = $request->filled('user_id') ? (int) $request->query('user_id') : null;
         $roleFilter = $request->filled('role') ? $request->query('role') : null;
-        $dateFrom = $request->query('date_from');
-        $dateTo = $request->query('date_to');
+        $today = now()->toDateString();
+        $dateFrom = $request->filled('date_from') ? (string) $request->query('date_from') : $today;
+        $dateTo = $request->filled('date_to') ? (string) $request->query('date_to') : $today;
         $exportType = $request->query('type', 'staff');
         $includePayments = $role !== 'content_writer';
         $restrictToUserIds = null;

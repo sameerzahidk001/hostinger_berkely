@@ -31,9 +31,9 @@
                 <th>SEO Status</th>
                 <th>SEO Score</th>
                 <th>Created By</th>
+                <th>Created Date</th>
                 <th>Updated By</th>
-                <th>Created</th>
-                <th>Updated</th>
+                <th>Updated Date</th>
             </tr>
         </thead>
         <tbody>
@@ -46,8 +46,8 @@
                     <td>{{ $row['seo_status'] ?? '' }}</td>
                     <td>{{ $row['seo_score'] ?? '' }}</td>
                     <td>{{ ($row['created_by'] ?? '') === '-' || ($row['created_by'] ?? '') === '' || ($row['created_by'] ?? '') === '—' ? 'Admin' : ($row['created_by'] ?? 'Admin') }}</td>
-                    <td>{{ ($row['updated_by'] ?? '') === '-' || ($row['updated_by'] ?? '') === '' || ($row['updated_by'] ?? '') === '—' ? 'Admin' : ($row['updated_by'] ?? 'Admin') }}</td>
                     <td>{{ $row['created_at'] ?? '' }}</td>
+                    <td>{{ ($row['updated_by'] ?? '') === '-' || ($row['updated_by'] ?? '') === '' || ($row['updated_by'] ?? '') === '—' ? 'Admin' : ($row['updated_by'] ?? 'Admin') }}</td>
                     <td>{{ $row['updated_at'] ?? '' }}</td>
                 </tr>
             @empty
