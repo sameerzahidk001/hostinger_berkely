@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\Course;
+use App\Models\CourseAgenda;
+use App\Models\CourseFee;
 use App\Models\Page;
 use App\Models\PagesSEO;
 use Carbon\Carbon;
@@ -19,6 +21,8 @@ class ContentDashboardReportService
             'pages' => $this->pagesStats($actorUserId, $from, $to),
             'courses' => $this->coursesStats($actorUserId, $from, $to),
             'seo' => $this->seoStats($actorUserId, $from, $to),
+            'training' => $this->trainingStats($actorUserId, $from, $to),
+            'fees' => $this->feePackageStats($actorUserId, $from, $to),
             'date_from' => $dateFrom,
             'date_to' => $dateTo,
         ];
@@ -245,6 +249,8 @@ class ContentDashboardReportService
             'pages' => $this->pageDetailRows($metric, $actorUserId, $from, $to, $search),
             'courses' => $this->courseDetailRows($metric, $actorUserId, $from, $to, $search),
             'seo' => $this->seoDetailRows($metric, $actorUserId, $from, $to, $search),
+            'training' => $this->trainingDetailRows($metric, $actorUserId, $from, $to, $search),
+            'fees' => $this->feePackageDetailRows($metric, $actorUserId, $from, $to, $search),
             default => collect(),
         };
     }
@@ -252,6 +258,14 @@ class ContentDashboardReportService
     public function metricLabels(string $module, string $actorName = 'All Users'): array
     {
         $who = trim($actorName) !== '' ? trim($actorName) : 'All Users';
+
+        if ($module === 'training') {
+            return $this->standardMetricLabels('Training Calendar entries', 'Training Calendar', $who);
+        }
+
+        if ($module === 'fees') {
+            return $this->standardMetricLabels('Fee Packages', 'Fee Packages', $who);
+        }
 
         if ($module === 'seo') {
             return [
@@ -280,12 +294,17 @@ class ContentDashboardReportService
 
         $noun = $module === 'courses' ? 'Courses' : 'Pages';
 
+        return $this->standardMetricLabels($noun, $noun, $who);
+    }
+
+    private function standardMetricLabels(string $totalNoun, string $statusNoun, string $who): array
+    {
         return [
-            'total' => 'Total ' . $noun,
-            'active' => 'Active ' . $noun,
-            'inactive' => 'Inactive ' . $noun,
-            'created_by_me' => 'Total ' . $noun . ' created by ' . $who,
-            'updated_by_me' => 'Total ' . $noun . ' updated by ' . $who,
+            'total' => 'Total ' . $totalNoun,
+            'active' => 'Active ' . $statusNoun,
+            'inactive' => 'Inactive ' . $statusNoun,
+            'created_by_me' => 'Total ' . $totalNoun . ' created by ' . $who,
+            'updated_by_me' => 'Total ' . $totalNoun . ' updated by ' . $who,
             'created_today' => 'Created Today by ' . $who,
             'created_this_year' => 'Total Created This Year by ' . $who,
             'created_yesterday' => 'Created Yesterday by ' . $who,
@@ -299,6 +318,297 @@ class ContentDashboardReportService
             'updated_last_month' => 'Updated Last Month by ' . $who,
             'created_in_range' => 'Created Custom Date Range',
             'updated_in_range' => 'Updated Custom Date Range',
+        ];
+    }
+
+    public function trainingStats(?int $actorUserId, ?Carbon $from, ?Carbon $to): array
+    {
+        if (! Schema::hasTable('course_agendas')) {
+            return $this->emptyStandardStats();
+        }
+
+        $hasAudit = Schema::hasColumn('course_agendas', 'created_by');
+        $today = now()->startOfDay();
+        $total = (int) CourseAgenda::count();
+        $active = (int) CourseAgenda::query()->whereDate('to', '>=', $today)->count();
+        $inactive = (int) CourseAgenda::query()->whereDate('to', '<', $today)->count();
+
+        return [
+            'total' => $total,
+            'active' => $active,
+            'inactive' => $inactive,
+            'created_by_me' => $hasAudit
+                ? (int) ($actorUserId
+                    ? CourseAgenda::where('created_by', $actorUserId)->count()
+                    : CourseAgenda::count())
+                : ($actorUserId ? 0 : $total),
+            'updated_by_me' => $hasAudit
+                ? (int) ($actorUserId
+                    ? CourseAgenda::where('updated_by', $actorUserId)->count()
+                    : CourseAgenda::count())
+                : ($actorUserId ? 0 : $total),
+            'created_today' => $this->countCreatedInRange(CourseAgenda::class, now()->startOfDay(), now()->endOfDay(), false, $actorUserId),
+            'created_yesterday' => $this->countCreatedInRange(CourseAgenda::class, now()->subDay()->startOfDay(), now()->subDay()->endOfDay(), false, $actorUserId),
+            'created_this_week' => $this->countCreatedInRange(CourseAgenda::class, now()->startOfWeek(), now()->endOfWeek(), false, $actorUserId),
+            'created_this_month' => $this->countCreatedInRange(CourseAgenda::class, now()->startOfMonth(), now()->endOfMonth(), false, $actorUserId),
+            'created_this_year' => $this->countCreatedInRange(CourseAgenda::class, now()->startOfYear(), now()->endOfYear(), false, $actorUserId),
+            'created_last_month' => $this->countCreatedInRange(
+                CourseAgenda::class,
+                now()->subMonthNoOverflow()->startOfMonth(),
+                now()->subMonthNoOverflow()->endOfMonth(),
+                false,
+                $actorUserId
+            ),
+            'created_in_range' => $this->countCreatedInRange(CourseAgenda::class, $from, $to, false, $actorUserId),
+            'updated_today' => $this->countUpdatedInRange(CourseAgenda::class, now()->startOfDay(), now()->endOfDay(), false, $actorUserId),
+            'updated_yesterday' => $this->countUpdatedInRange(CourseAgenda::class, now()->subDay()->startOfDay(), now()->subDay()->endOfDay(), false, $actorUserId),
+            'updated_this_week' => $this->countUpdatedInRange(CourseAgenda::class, now()->startOfWeek(), now()->endOfWeek(), false, $actorUserId),
+            'updated_this_month' => $this->countUpdatedInRange(CourseAgenda::class, now()->startOfMonth(), now()->endOfMonth(), false, $actorUserId),
+            'updated_last_month' => $this->countUpdatedInRange(
+                CourseAgenda::class,
+                now()->subMonthNoOverflow()->startOfMonth(),
+                now()->subMonthNoOverflow()->endOfMonth(),
+                false,
+                $actorUserId
+            ),
+            'updated_in_range' => $this->countUpdatedInRange(CourseAgenda::class, $from, $to, false, $actorUserId),
+        ];
+    }
+
+    public function feePackageStats(?int $actorUserId, ?Carbon $from, ?Carbon $to): array
+    {
+        if (! Schema::hasTable('course_fees')) {
+            return $this->emptyStandardStats();
+        }
+
+        $hasAudit = Schema::hasColumn('course_fees', 'created_by');
+        $hasShow = Schema::hasColumn('course_fees', 'showonwebsite');
+        $total = (int) CourseFee::count();
+        $active = $hasShow ? (int) CourseFee::where('showonwebsite', 1)->count() : $total;
+        $inactive = $hasShow ? (int) CourseFee::where(function ($q) {
+            $q->where('showonwebsite', 0)->orWhereNull('showonwebsite');
+        })->count() : 0;
+
+        return [
+            'total' => $total,
+            'active' => $active,
+            'inactive' => $inactive,
+            'created_by_me' => $hasAudit
+                ? (int) ($actorUserId
+                    ? CourseFee::where('created_by', $actorUserId)->count()
+                    : CourseFee::count())
+                : ($actorUserId ? 0 : $total),
+            'updated_by_me' => $hasAudit
+                ? (int) ($actorUserId
+                    ? CourseFee::where('updated_by', $actorUserId)->count()
+                    : CourseFee::count())
+                : ($actorUserId ? 0 : $total),
+            'created_today' => $this->countCreatedInRange(CourseFee::class, now()->startOfDay(), now()->endOfDay(), false, $hasAudit ? $actorUserId : null),
+            'created_yesterday' => $this->countCreatedInRange(CourseFee::class, now()->subDay()->startOfDay(), now()->subDay()->endOfDay(), false, $hasAudit ? $actorUserId : null),
+            'created_this_week' => $this->countCreatedInRange(CourseFee::class, now()->startOfWeek(), now()->endOfWeek(), false, $hasAudit ? $actorUserId : null),
+            'created_this_month' => $this->countCreatedInRange(CourseFee::class, now()->startOfMonth(), now()->endOfMonth(), false, $hasAudit ? $actorUserId : null),
+            'created_this_year' => $this->countCreatedInRange(CourseFee::class, now()->startOfYear(), now()->endOfYear(), false, $hasAudit ? $actorUserId : null),
+            'created_last_month' => $this->countCreatedInRange(
+                CourseFee::class,
+                now()->subMonthNoOverflow()->startOfMonth(),
+                now()->subMonthNoOverflow()->endOfMonth(),
+                false,
+                $hasAudit ? $actorUserId : null
+            ),
+            'created_in_range' => $this->countCreatedInRange(CourseFee::class, $from, $to, false, $hasAudit ? $actorUserId : null),
+            'updated_today' => $this->countUpdatedInRange(CourseFee::class, now()->startOfDay(), now()->endOfDay(), false, $hasAudit ? $actorUserId : null),
+            'updated_yesterday' => $this->countUpdatedInRange(CourseFee::class, now()->subDay()->startOfDay(), now()->subDay()->endOfDay(), false, $hasAudit ? $actorUserId : null),
+            'updated_this_week' => $this->countUpdatedInRange(CourseFee::class, now()->startOfWeek(), now()->endOfWeek(), false, $hasAudit ? $actorUserId : null),
+            'updated_this_month' => $this->countUpdatedInRange(CourseFee::class, now()->startOfMonth(), now()->endOfMonth(), false, $hasAudit ? $actorUserId : null),
+            'updated_last_month' => $this->countUpdatedInRange(
+                CourseFee::class,
+                now()->subMonthNoOverflow()->startOfMonth(),
+                now()->subMonthNoOverflow()->endOfMonth(),
+                false,
+                $hasAudit ? $actorUserId : null
+            ),
+            'updated_in_range' => $this->countUpdatedInRange(CourseFee::class, $from, $to, false, $hasAudit ? $actorUserId : null),
+        ];
+    }
+
+    private function trainingDetailRows(string $metric, ?int $actorUserId, ?Carbon $from, ?Carbon $to, ?string $search): Collection
+    {
+        if (! Schema::hasTable('course_agendas')) {
+            return collect();
+        }
+
+        $hasAudit = Schema::hasColumn('course_agendas', 'created_by');
+        $query = CourseAgenda::query()->with(['course', 'country', 'createdBy', 'updatedBy']);
+        $today = now()->startOfDay();
+
+        match ($metric) {
+            'active' => $query->whereDate('to', '>=', $today),
+            'inactive' => $query->whereDate('to', '<', $today),
+            'created_by_me' => $hasAudit
+                ? ($actorUserId ? $query->where('created_by', $actorUserId) : null)
+                : ($actorUserId ? $query->whereRaw('1 = 0') : null),
+            'updated_by_me' => $hasAudit
+                ? ($actorUserId ? $query->where('updated_by', $actorUserId) : null)
+                : ($actorUserId ? $query->whereRaw('1 = 0') : null),
+            'created_today' => $this->applyCreatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->startOfDay(), now()->endOfDay()),
+            'created_yesterday' => $this->applyCreatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->subDay()->startOfDay(), now()->subDay()->endOfDay()),
+            'created_this_week' => $this->applyCreatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->startOfWeek(), now()->endOfWeek()),
+            'created_this_month' => $this->applyCreatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->startOfMonth(), now()->endOfMonth()),
+            'created_this_year' => $this->applyCreatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->startOfYear(), now()->endOfYear()),
+            'created_last_month' => $this->applyCreatedByActorRange(
+                $query,
+                $hasAudit ? $actorUserId : null,
+                now()->subMonthNoOverflow()->startOfMonth(),
+                now()->subMonthNoOverflow()->endOfMonth()
+            ),
+            'created_in_range' => $this->applyCreatedByActorRange($query, $hasAudit ? $actorUserId : null, $from, $to),
+            'updated_today' => $this->applyUpdatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->startOfDay(), now()->endOfDay()),
+            'updated_yesterday' => $this->applyUpdatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->subDay()->startOfDay(), now()->subDay()->endOfDay()),
+            'updated_this_week' => $this->applyUpdatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->startOfWeek(), now()->endOfWeek()),
+            'updated_this_month' => $this->applyUpdatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->startOfMonth(), now()->endOfMonth()),
+            'updated_last_month' => $this->applyUpdatedByActorRange(
+                $query,
+                $hasAudit ? $actorUserId : null,
+                now()->subMonthNoOverflow()->startOfMonth(),
+                now()->subMonthNoOverflow()->endOfMonth()
+            ),
+            'updated_in_range' => $this->applyUpdatedByActorRange($query, $hasAudit ? $actorUserId : null, $from, $to),
+            default => null,
+        };
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('subject', 'like', '%' . $search . '%')
+                    ->orWhere('city', 'like', '%' . $search . '%')
+                    ->orWhere('delivery_type', 'like', '%' . $search . '%')
+                    ->orWhereHas('course', fn ($cq) => $cq->where('title', 'like', '%' . $search . '%'));
+            });
+        }
+
+        return $query->orderByDesc('updated_at')->limit(10000)->get()->map(function (CourseAgenda $row) use ($today) {
+            $courseTitle = $row->course?->title ?: ('Course #' . $row->course_id);
+            $title = trim(($row->subject ?: 'Training') . ' — ' . $courseTitle);
+            $isActive = $row->to && Carbon::parse($row->to)->startOfDay()->gte($today);
+
+            return [
+                'id' => $row->id,
+                'title' => $title,
+                'status' => $isActive ? 'Active' : 'Inactive',
+                'type' => 'Training',
+                'seo_status' => '—',
+                'seo_score' => '—',
+                'created_by' => audit_user_name($row->createdBy, $row->created_by ?? null),
+                'updated_by' => audit_user_name($row->updatedBy, $row->updated_by ?? null),
+                'created_at' => optional($row->created_at)?->format('Y-m-d H:i'),
+                'updated_at' => optional($row->updated_at)?->format('Y-m-d H:i'),
+                'url' => route('admin.course-agendas.edit', ['training_calendar' => $row->id]),
+            ];
+        });
+    }
+
+    private function feePackageDetailRows(string $metric, ?int $actorUserId, ?Carbon $from, ?Carbon $to, ?string $search): Collection
+    {
+        if (! Schema::hasTable('course_fees')) {
+            return collect();
+        }
+
+        $hasAudit = Schema::hasColumn('course_fees', 'created_by');
+        $hasShow = Schema::hasColumn('course_fees', 'showonwebsite');
+        $query = CourseFee::query()->with(['course']);
+
+        match ($metric) {
+            'active' => $hasShow ? $query->where('showonwebsite', 1) : null,
+            'inactive' => $hasShow
+                ? $query->where(function ($q) {
+                    $q->where('showonwebsite', 0)->orWhereNull('showonwebsite');
+                })
+                : $query->whereRaw('1 = 0'),
+            'created_by_me' => $hasAudit
+                ? ($actorUserId ? $query->where('created_by', $actorUserId) : null)
+                : ($actorUserId ? $query->whereRaw('1 = 0') : null),
+            'updated_by_me' => $hasAudit
+                ? ($actorUserId ? $query->where('updated_by', $actorUserId) : null)
+                : ($actorUserId ? $query->whereRaw('1 = 0') : null),
+            'created_today' => $this->applyCreatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->startOfDay(), now()->endOfDay()),
+            'created_yesterday' => $this->applyCreatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->subDay()->startOfDay(), now()->subDay()->endOfDay()),
+            'created_this_week' => $this->applyCreatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->startOfWeek(), now()->endOfWeek()),
+            'created_this_month' => $this->applyCreatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->startOfMonth(), now()->endOfMonth()),
+            'created_this_year' => $this->applyCreatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->startOfYear(), now()->endOfYear()),
+            'created_last_month' => $this->applyCreatedByActorRange(
+                $query,
+                $hasAudit ? $actorUserId : null,
+                now()->subMonthNoOverflow()->startOfMonth(),
+                now()->subMonthNoOverflow()->endOfMonth()
+            ),
+            'created_in_range' => $this->applyCreatedByActorRange($query, $hasAudit ? $actorUserId : null, $from, $to),
+            'updated_today' => $this->applyUpdatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->startOfDay(), now()->endOfDay()),
+            'updated_yesterday' => $this->applyUpdatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->subDay()->startOfDay(), now()->subDay()->endOfDay()),
+            'updated_this_week' => $this->applyUpdatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->startOfWeek(), now()->endOfWeek()),
+            'updated_this_month' => $this->applyUpdatedByActorRange($query, $hasAudit ? $actorUserId : null, now()->startOfMonth(), now()->endOfMonth()),
+            'updated_last_month' => $this->applyUpdatedByActorRange(
+                $query,
+                $hasAudit ? $actorUserId : null,
+                now()->subMonthNoOverflow()->startOfMonth(),
+                now()->subMonthNoOverflow()->endOfMonth()
+            ),
+            'updated_in_range' => $this->applyUpdatedByActorRange($query, $hasAudit ? $actorUserId : null, $from, $to),
+            default => null,
+        };
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('package_name', 'like', '%' . $search . '%')
+                    ->orWhere('short_description', 'like', '%' . $search . '%')
+                    ->orWhereHas('course', fn ($cq) => $cq->where('title', 'like', '%' . $search . '%'));
+            });
+        }
+
+        return $query->orderByDesc('updated_at')->limit(10000)->get()->map(function (CourseFee $fee) use ($hasShow, $hasAudit) {
+            $courseTitle = $fee->course?->title ?: ('Course #' . $fee->courses_id);
+            $title = trim(($fee->package_name ?: 'Fee Package') . ' — ' . $courseTitle);
+            $isActive = $hasShow ? (int) ($fee->showonwebsite ?? 0) === 1 : true;
+
+            return [
+                'id' => $fee->id,
+                'title' => $title,
+                'status' => $isActive ? 'Active' : 'Inactive',
+                'type' => 'Fee Package',
+                'seo_status' => '—',
+                'seo_score' => '—',
+                'created_by' => $hasAudit
+                    ? audit_user_name(null, $fee->created_by ?? null)
+                    : 'Admin',
+                'updated_by' => $hasAudit
+                    ? audit_user_name(null, $fee->updated_by ?? null)
+                    : 'Admin',
+                'created_at' => optional($fee->created_at)?->format('Y-m-d H:i'),
+                'updated_at' => optional($fee->updated_at)?->format('Y-m-d H:i'),
+                'url' => route('course.edit-fee', ['id' => $fee->id]),
+            ];
+        });
+    }
+
+    private function emptyStandardStats(): array
+    {
+        return [
+            'total' => 0,
+            'active' => 0,
+            'inactive' => 0,
+            'created_by_me' => 0,
+            'updated_by_me' => 0,
+            'created_today' => 0,
+            'created_yesterday' => 0,
+            'created_this_week' => 0,
+            'created_this_month' => 0,
+            'created_this_year' => 0,
+            'created_last_month' => 0,
+            'created_in_range' => 0,
+            'updated_today' => 0,
+            'updated_yesterday' => 0,
+            'updated_this_week' => 0,
+            'updated_this_month' => 0,
+            'updated_last_month' => 0,
+            'updated_in_range' => 0,
         ];
     }
 

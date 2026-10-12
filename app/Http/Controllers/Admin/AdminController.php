@@ -231,6 +231,8 @@ class AdminController extends Controller
             'pages' => [],
             'courses' => [],
             'seo' => [],
+            'training' => [],
+            'fees' => [],
         ];
 
         if ($showContentReports) {
@@ -244,6 +246,8 @@ class AdminController extends Controller
                 'pages' => $reportService->metricLabels('pages', $contentReportActorName),
                 'courses' => $reportService->metricLabels('courses', $contentReportActorName),
                 'seo' => $reportService->metricLabels('seo', $contentReportActorName),
+                'training' => $reportService->metricLabels('training', $contentReportActorName),
+                'fees' => $reportService->metricLabels('fees', $contentReportActorName),
             ];
         }
 
@@ -394,6 +398,8 @@ class AdminController extends Controller
             'courses' => 'COURSES',
             'pages' => 'PAGES',
             'seo' => 'SEO ACTIVE',
+            'training' => 'TRAINING CALENDAR',
+            'fees' => 'FEE PACKAGE',
             default => strtoupper($module),
         };
     }
