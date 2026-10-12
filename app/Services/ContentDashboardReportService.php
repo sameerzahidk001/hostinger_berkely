@@ -40,12 +40,12 @@ class ContentDashboardReportService
             'created_by_me' => $hasAudit
                 ? (int) ($actorUserId
                     ? Page::where('created_by', $actorUserId)->count()
-                    : Page::whereNotNull('created_by')->count())
+                    : Page::count())
                 : 0,
             'updated_by_me' => $hasAudit
                 ? (int) ($actorUserId
                     ? Page::where('updated_by', $actorUserId)->count()
-                    : Page::whereNotNull('updated_by')->count())
+                    : Page::count())
                 : 0,
             'created_today' => $this->countCreatedInRange(Page::class, now()->startOfDay(), now()->endOfDay(), false, $actorUserId),
             'created_yesterday' => $this->countCreatedInRange(
@@ -103,12 +103,12 @@ class ContentDashboardReportService
             'created_by_me' => $hasAudit
                 ? (int) ($actorUserId
                     ? Course::withTrashed()->where('created_by', $actorUserId)->count()
-                    : Course::withTrashed()->whereNotNull('created_by')->count())
+                    : Course::withTrashed()->count())
                 : 0,
             'updated_by_me' => $hasAudit
                 ? (int) ($actorUserId
                     ? Course::withTrashed()->where('updated_by', $actorUserId)->count()
-                    : Course::withTrashed()->whereNotNull('updated_by')->count())
+                    : Course::withTrashed()->count())
                 : 0,
             'created_today' => $this->countCreatedInRange(Course::class, now()->startOfDay(), now()->endOfDay(), true, $actorUserId),
             'created_yesterday' => $this->countCreatedInRange(
@@ -187,12 +187,12 @@ class ContentDashboardReportService
             'created_by_me' => $hasAudit
                 ? (int) ($actorUserId
                     ? PagesSEO::where('created_by', $actorUserId)->count()
-                    : PagesSEO::whereNotNull('created_by')->count())
+                    : PagesSEO::count())
                 : 0,
             'updated_by_me' => $hasAudit
                 ? (int) ($actorUserId
                     ? PagesSEO::where('updated_by', $actorUserId)->count()
-                    : PagesSEO::whereNotNull('updated_by')->count())
+                    : PagesSEO::count())
                 : 0,
             'created_today' => $this->countCreatedInRange(PagesSEO::class, now()->startOfDay(), now()->endOfDay(), false, $actorUserId),
             'created_yesterday' => $this->countCreatedInRange(
@@ -410,8 +410,8 @@ class ContentDashboardReportService
                 ->whereIn('id', function ($q) {
                     $q->selectRaw('MAX(id)')->from('pages_s_e_o_s')->whereNotNull('course_id')->groupBy('course_id');
                 }),
-            'created_by_me' => $actorUserId ? $query->where('created_by', $actorUserId) : $query->whereNotNull('created_by'),
-            'updated_by_me' => $actorUserId ? $query->where('updated_by', $actorUserId) : $query->whereNotNull('updated_by'),
+            'created_by_me' => $actorUserId ? $query->where('created_by', $actorUserId) : null,
+            'updated_by_me' => $actorUserId ? $query->where('updated_by', $actorUserId) : null,
             'created_today' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfDay(), now()->endOfDay()),
             'created_yesterday' => $this->applyCreatedByActorRange($query, $actorUserId, now()->subDay()->startOfDay(), now()->subDay()->endOfDay()),
             'created_this_week' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfWeek(), now()->endOfWeek()),
@@ -579,8 +579,8 @@ class ContentDashboardReportService
         match ($metric) {
             'active' => $statusEnabled ? $query->where('status', 1) : null,
             'inactive' => $statusEnabled ? $query->where('status', 0) : $query->whereRaw('1 = 0'),
-            'created_by_me' => $actorUserId ? $query->where('created_by', $actorUserId) : $query->whereNotNull('created_by'),
-            'updated_by_me' => $actorUserId ? $query->where('updated_by', $actorUserId) : $query->whereNotNull('updated_by'),
+            'created_by_me' => $actorUserId ? $query->where('created_by', $actorUserId) : null,
+            'updated_by_me' => $actorUserId ? $query->where('updated_by', $actorUserId) : null,
             'created_today' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfDay(), now()->endOfDay()),
             'created_yesterday' => $this->applyCreatedByActorRange($query, $actorUserId, now()->subDay()->startOfDay(), now()->subDay()->endOfDay()),
             'created_this_week' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfWeek(), now()->endOfWeek()),
@@ -613,8 +613,8 @@ class ContentDashboardReportService
         match ($metric) {
             'active' => $query->whereNull('deleted_at'),
             'inactive' => $query->whereNotNull('deleted_at'),
-            'created_by_me' => $actorUserId ? $query->where('created_by', $actorUserId) : $query->whereNotNull('created_by'),
-            'updated_by_me' => $actorUserId ? $query->where('updated_by', $actorUserId) : $query->whereNotNull('updated_by'),
+            'created_by_me' => $actorUserId ? $query->where('created_by', $actorUserId) : null,
+            'updated_by_me' => $actorUserId ? $query->where('updated_by', $actorUserId) : null,
             'created_today' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfDay(), now()->endOfDay()),
             'created_yesterday' => $this->applyCreatedByActorRange($query, $actorUserId, now()->subDay()->startOfDay(), now()->subDay()->endOfDay()),
             'created_this_week' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfWeek(), now()->endOfWeek()),
