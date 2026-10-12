@@ -1,9 +1,9 @@
 @php
     $reports = $contentReports ?? [];
     $metricLabels = $contentReportMetricLabels ?? [];
-    $activeTab = request('report_tab', 'pages');
-    if (! in_array($activeTab, ['pages', 'courses', 'seo'], true)) {
-        $activeTab = 'pages';
+    $activeTab = request('report_tab', 'courses');
+    if (! in_array($activeTab, ['courses', 'pages', 'seo'], true)) {
+        $activeTab = 'courses';
     }
     $rangeFrom = request('date_from', $reports['date_from'] ?? '');
     $rangeTo = request('date_to', $reports['date_to'] ?? '');
@@ -118,11 +118,11 @@
                     }
                 </style>
                 <ul class="nav nav-tabs content-report-module-tabs" role="tablist" style="margin-bottom:16px;border-bottom:none;">
-                    <li class="{{ $activeTab === 'pages' ? 'active' : '' }}">
-                        <a href="#report-pages" data-toggle="tab" class="tab-pages">Pages</a>
-                    </li>
                     <li class="{{ $activeTab === 'courses' ? 'active' : '' }}">
                         <a href="#report-courses" data-toggle="tab" class="tab-courses">Courses</a>
+                    </li>
+                    <li class="{{ $activeTab === 'pages' ? 'active' : '' }}">
+                        <a href="#report-pages" data-toggle="tab" class="tab-pages">Pages</a>
                     </li>
                     <li class="{{ $activeTab === 'seo' ? 'active' : '' }}">
                         <a href="#report-seo" data-toggle="tab" class="tab-seo">SEO</a>
@@ -130,7 +130,7 @@
                 </ul>
 
                 <div class="tab-content">
-                    @foreach(['pages' => 'Pages', 'courses' => 'Courses', 'seo' => 'SEO'] as $module => $moduleTitle)
+                    @foreach(['courses' => 'Courses', 'pages' => 'Pages', 'seo' => 'SEO'] as $module => $moduleTitle)
                         @php $stats = $reports[$module] ?? []; @endphp
                         <div role="tabpanel" class="tab-pane {{ $activeTab === $module ? 'active' : '' }}" id="report-{{ $module }}">
                             <div class="row content-report-stat-row">
@@ -141,7 +141,8 @@
                                             class="content-report-stat"
                                             data-module="{{ $module }}"
                                             data-metric="{{ $metricKey }}"
-                                            data-label="{{ $metricLabel }}">
+                                            data-label="{{ $metricLabel }}"
+                                            data-count="{{ $value }}">
                                             <div class="content-report-stat-value">{{ $value }}</div>
                                             <div class="content-report-stat-label">{{ $metricLabel }}</div>
                                         </a>
@@ -220,9 +221,10 @@
 @push('script')
 <script>
 (function ($) {
-    var currentModule = 'pages';
+    var currentModule = 'courses';
     var currentMetric = 'total';
     var currentLabel = 'Total';
+    var currentCountHint = 0;
     var searchTimer = null;
     var detailsUrl = @json(route('admin.home.content-report-details'));
     var exportUrl = @json(route('admin.home.content-report-export'));
@@ -372,12 +374,13 @@
                 }
                 return row;
             });
-            var total = typeof resp.count === 'number' ? resp.count : allRows.length;
+            var loaded = typeof resp.count === 'number' ? resp.count : allRows.length;
+            var total = q ? loaded : Math.max(loaded, currentCountHint || 0);
             $('#contentReportModalCount').text(total);
             renderRows(allRows);
         }).fail(function () {
             allRows = [];
-            $('#contentReportModalCount').text('0');
+            $('#contentReportModalCount').text(currentCountHint || '0');
             $('#contentReportTable tbody').html('<tr><td colspan="' + colCount + '" class="text-center text-danger">Failed to load report details.</td></tr>');
         });
     }
@@ -386,12 +389,14 @@
         currentModule = $(this).data('module');
         currentMetric = $(this).data('metric');
         currentLabel = $(this).data('label');
+        currentCountHint = parseInt($(this).attr('data-count'), 10) || 0;
         sortKey = '#';
         sortDir = 'asc';
         $('#contentReportSearch').val('');
         $('#contentReportModalLabel').text(
             String(currentModule || '').toUpperCase() + ' -> ' + String(currentLabel || '').toUpperCase()
         );
+        $('#contentReportModalCount').text(currentCountHint || '…');
         syncRangeFilterVisibility();
         $('#contentReportModal').modal('show');
         loadDetails();

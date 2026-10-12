@@ -312,7 +312,7 @@ class ContentDashboardReportService
 
         $analyzer = app(SeoAnalyzerService::class);
 
-        return $query->orderByDesc('updated_at')->limit(500)->get()->map(function (Page $page) use ($analyzer) {
+        return $query->orderByDesc('updated_at')->limit(10000)->get()->map(function (Page $page) use ($analyzer) {
             $status = pages_status_enabled()
                 ? (((int) ($page->status ?? 1) === 1) ? 'Active' : 'Inactive')
                 : 'Active';
@@ -354,7 +354,7 @@ class ContentDashboardReportService
 
         $analyzer = app(SeoAnalyzerService::class);
 
-        return $query->orderByDesc('updated_at')->limit(500)->get()->map(function (Course $course) use ($analyzer) {
+        return $query->orderByDesc('updated_at')->limit(10000)->get()->map(function (Course $course) use ($analyzer) {
             $seo = PagesSEO::query()->where('course_id', $course->id)->first();
             [$seoStatus, $seoScore] = $this->seoStatusAndScore($seo, $analyzer);
 
@@ -430,7 +430,7 @@ class ContentDashboardReportService
 
         $analyzer = app(SeoAnalyzerService::class);
 
-        return $query->orderByDesc('updated_at')->limit(500)->get()->map(function (PagesSEO $seo) use ($analyzer) {
+        return $query->orderByDesc('updated_at')->limit(10000)->get()->map(function (PagesSEO $seo) use ($analyzer) {
             $type = $seo->course_id ? 'Course' : 'Page';
             $linked = $seo->course_id
                 ? ($seo->course?->title ?: ('Course #' . $seo->course_id))
@@ -473,7 +473,7 @@ class ContentDashboardReportService
             });
         }
 
-        return $query->orderByDesc('updated_at')->limit(500)->get()->map(function (Page $page) {
+        return $query->orderByDesc('updated_at')->limit(10000)->get()->map(function (Page $page) {
             $status = pages_status_enabled()
                 ? (((int) ($page->status ?? 1) === 1) ? 'Active' : 'Inactive')
                 : 'Active';
@@ -507,7 +507,7 @@ class ContentDashboardReportService
             });
         }
 
-        return $query->orderByDesc('updated_at')->limit(500)->get()->map(function (Course $course) {
+        return $query->orderByDesc('updated_at')->limit(10000)->get()->map(function (Course $course) {
             return [
                 'id' => $course->id,
                 'title' => $course->title ?: ('Course #' . $course->id),
