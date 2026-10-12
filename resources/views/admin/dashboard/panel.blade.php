@@ -304,25 +304,25 @@
                         </form>
                         <p class="text-muted small m-b-sm">Leave any dropdown on <strong>None</strong> to skip that filter. Use dates only when needed.</p>
                         <div class="table-responsive">
-                            <table class="table table-striped table-bordered table-hover">
+                            <table class="table table-striped table-bordered table-hover js-sortable-table" id="staffActivityTable">
                                 <thead>
                                     <tr>
-                                        <th style="width: 170px;">Date &amp; Time</th>
+                                        <th data-sort-col="0" style="width: 170px;cursor:pointer;">Date &amp; Time <span class="sort-ind"></span></th>
                                         @if($showUserColumn ?? false)
-                                            <th style="width: 180px;">User</th>
+                                            <th data-sort-col="1" style="width: 180px;cursor:pointer;">User <span class="sort-ind"></span></th>
                                         @endif
-                                        <th style="width: 160px;">Activity</th>
-                                        <th>Item</th>
+                                        <th data-sort-col="{{ ($showUserColumn ?? false) ? 2 : 1 }}" style="width: 160px;cursor:pointer;">Activity <span class="sort-ind"></span></th>
+                                        <th data-sort-col="{{ ($showUserColumn ?? false) ? 3 : 2 }}" style="cursor:pointer;">Item <span class="sort-ind"></span></th>
                                         @if($showSessionColumn ?? false)
-                                            <th style="width: 140px;">Session</th>
+                                            <th data-sort-col="{{ ($showUserColumn ?? false) ? 4 : 3 }}" style="width: 140px;cursor:pointer;">Session <span class="sort-ind"></span></th>
                                         @endif
-                                        <th style="width: 90px;">Link</th>
+                                        <th data-sort-col="{{ $staffColspan - 1 }}" style="width: 90px;cursor:pointer;">Link <span class="sort-ind"></span></th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @forelse($activities as $activity)
                                         <tr>
-                                            <td>{{ $activity['occurred_at']->format('M j, Y g:i A') }}</td>
+                                            <td data-sort="{{ $activity['occurred_at']->timestamp }}">{{ $activity['occurred_at']->format('M j, Y g:i A') }}</td>
                                             @if($showUserColumn ?? false)
                                                 <td>{{ $activity['user_name'] ?? '—' }}</td>
                                             @endif
@@ -409,23 +409,23 @@
                         </form>
                         <p class="text-muted small m-b-sm">Leave Student on <strong>None</strong> to see all students. Use dates only when needed.</p>
                         <div class="table-responsive">
-                            <table class="table table-striped table-bordered table-hover">
+                            <table class="table table-striped table-bordered table-hover js-sortable-table" id="studentActivityTable">
                                 <thead>
                                     <tr>
-                                        <th style="width: 170px;">Date &amp; Time</th>
-                                        <th style="width: 180px;">User</th>
-                                        <th style="width: 160px;">Activity</th>
-                                        <th>Item</th>
+                                        <th data-sort-col="0" style="width: 170px;cursor:pointer;">Date &amp; Time <span class="sort-ind"></span></th>
+                                        <th data-sort-col="1" style="width: 180px;cursor:pointer;">User <span class="sort-ind"></span></th>
+                                        <th data-sort-col="2" style="width: 160px;cursor:pointer;">Activity <span class="sort-ind"></span></th>
+                                        <th data-sort-col="3" style="cursor:pointer;">Item <span class="sort-ind"></span></th>
                                         @if($showSessionColumn ?? false)
-                                            <th style="width: 140px;">Session</th>
+                                            <th data-sort-col="4" style="width: 140px;cursor:pointer;">Session <span class="sort-ind"></span></th>
                                         @endif
-                                        <th style="width: 90px;">Link</th>
+                                        <th data-sort-col="{{ ($showSessionColumn ?? false) ? 5 : 4 }}" style="width: 90px;cursor:pointer;">Link <span class="sort-ind"></span></th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @forelse($studentActivities ?? [] as $activity)
                                         <tr>
-                                            <td>{{ $activity['occurred_at']->format('M j, Y g:i A') }}</td>
+                                            <td data-sort="{{ $activity['occurred_at']->timestamp }}">{{ $activity['occurred_at']->format('M j, Y g:i A') }}</td>
                                             <td>{{ $activity['user_name'] ?? '—' }}</td>
                                             <td>
                                                 @if(!empty($activity['url']))
@@ -536,6 +536,50 @@ $(document).ready(function() {
         var url = new URL(window.location.href);
         url.searchParams.set('activity_tab', tab);
         window.history.replaceState({}, '', url.toString());
+    });
+
+    // Client-side column sort for activity tables (current page).
+    $('.js-sortable-table').each(function () {
+        var $table = $(this);
+        var sortCol = 0;
+        var sortDir = 'desc';
+
+        $table.on('click', 'thead th[data-sort-col]', function () {
+            var col = parseInt($(this).data('sort-col'), 10);
+            if (sortCol === col) {
+                sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortCol = col;
+                sortDir = 'asc';
+            }
+
+            var $rows = $table.find('tbody tr').get().filter(function (row) {
+                return $(row).find('td').length > 1;
+            });
+
+            $rows.sort(function (a, b) {
+                var $a = $(a).children('td').eq(sortCol);
+                var $b = $(b).children('td').eq(sortCol);
+                var av = $a.attr('data-sort') || $a.text().trim().toLowerCase();
+                var bv = $b.attr('data-sort') || $b.text().trim().toLowerCase();
+                var an = parseFloat(av);
+                var bn = parseFloat(bv);
+                var cmp;
+                if (!isNaN(an) && !isNaN(bn) && String(av).match(/^\d+(\.\d+)?$/)) {
+                    cmp = an - bn;
+                } else {
+                    cmp = String(av).localeCompare(String(bv), undefined, { numeric: true, sensitivity: 'base' });
+                }
+                return sortDir === 'asc' ? cmp : -cmp;
+            });
+
+            $.each($rows, function (_, row) {
+                $table.children('tbody').append(row);
+            });
+
+            $table.find('thead th .sort-ind').text('');
+            $(this).find('.sort-ind').text(sortDir === 'asc' ? ' ▲' : ' ▼');
+        });
     });
 });
 </script>
