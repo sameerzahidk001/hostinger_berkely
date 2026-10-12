@@ -2,7 +2,7 @@
     $reports = $contentReports ?? [];
     $metricLabels = $contentReportMetricLabels ?? [];
     $activeTab = request('report_tab', 'courses');
-    if (! in_array($activeTab, ['courses', 'pages', 'seo'], true)) {
+    if (! in_array($activeTab, ['courses', 'pages', 'seo', 'training', 'fees'], true)) {
         $activeTab = 'courses';
     }
     $rangeFrom = request('date_from', $reports['date_from'] ?? '');
@@ -51,6 +51,8 @@
                     #content-reports-panel .content-report-module-tabs > li > a.tab-pages { background: #800000; }
                     #content-reports-panel .content-report-module-tabs > li > a.tab-courses { background: #000080; }
                     #content-reports-panel .content-report-module-tabs > li > a.tab-seo { background: #b8860b; }
+                    #content-reports-panel .content-report-module-tabs > li > a.tab-training { background: #0d7377; }
+                    #content-reports-panel .content-report-module-tabs > li > a.tab-fees { background: #2d6a4f; }
                     #content-reports-panel .content-report-module-tabs > li.active > a.tab-pages,
                     #content-reports-panel .content-report-module-tabs > li > a.tab-pages:hover,
                     #content-reports-panel .content-report-module-tabs > li > a.tab-pages:focus { background: #5c0000; color: #fff !important; }
@@ -60,6 +62,12 @@
                     #content-reports-panel .content-report-module-tabs > li.active > a.tab-seo,
                     #content-reports-panel .content-report-module-tabs > li > a.tab-seo:hover,
                     #content-reports-panel .content-report-module-tabs > li > a.tab-seo:focus { background: #8b6914; color: #fff !important; }
+                    #content-reports-panel .content-report-module-tabs > li.active > a.tab-training,
+                    #content-reports-panel .content-report-module-tabs > li > a.tab-training:hover,
+                    #content-reports-panel .content-report-module-tabs > li > a.tab-training:focus { background: #095c5f; color: #fff !important; }
+                    #content-reports-panel .content-report-module-tabs > li.active > a.tab-fees,
+                    #content-reports-panel .content-report-module-tabs > li > a.tab-fees:hover,
+                    #content-reports-panel .content-report-module-tabs > li > a.tab-fees:focus { background: #1b4332; color: #fff !important; }
                     #content-reports-panel .content-report-stat-value {
                         font-size: 28px;
                         font-weight: 700;
@@ -69,6 +77,8 @@
                     #report-pages .content-report-stat-value { color: #800000; }
                     #report-courses .content-report-stat-value { color: #000080; }
                     #report-seo .content-report-stat-value { color: #b8860b; }
+                    #report-training .content-report-stat-value { color: #0d7377; }
+                    #report-fees .content-report-stat-value { color: #2d6a4f; }
                     #content-reports-panel .content-report-stat-row {
                         display: flex;
                         flex-wrap: wrap;
@@ -131,10 +141,16 @@
                     <li class="{{ $activeTab === 'seo' ? 'active' : '' }}">
                         <a href="#report-seo" data-toggle="tab" class="tab-seo">SEO Active</a>
                     </li>
+                    <li class="{{ $activeTab === 'training' ? 'active' : '' }}">
+                        <a href="#report-training" data-toggle="tab" class="tab-training">Training Calendar</a>
+                    </li>
+                    <li class="{{ $activeTab === 'fees' ? 'active' : '' }}">
+                        <a href="#report-fees" data-toggle="tab" class="tab-fees">Fee Package</a>
+                    </li>
                 </ul>
 
                 <div class="tab-content">
-                    @foreach(['courses' => 'Courses', 'pages' => 'Pages', 'seo' => 'SEO Active'] as $module => $moduleTitle)
+                    @foreach(['courses' => 'Courses', 'pages' => 'Pages', 'seo' => 'SEO Active', 'training' => 'Training Calendar', 'fees' => 'Fee Package'] as $module => $moduleTitle)
                         @php $stats = $reports[$module] ?? []; @endphp
                         <div role="tabpanel" class="tab-pane {{ $activeTab === $module ? 'active' : '' }}" id="report-{{ $module }}">
                             <div class="row content-report-stat-row">
@@ -234,7 +250,13 @@
     var currentMetric = 'total';
     var currentLabel = 'Total';
     var currentCountHint = 0;
-    var moduleTitles = { courses: 'COURSES', pages: 'PAGES', seo: 'SEO ACTIVE' };
+    var moduleTitles = {
+        courses: 'COURSES',
+        pages: 'PAGES',
+        seo: 'SEO ACTIVE',
+        training: 'TRAINING CALENDAR',
+        fees: 'FEE PACKAGE'
+    };
 
     function moduleTitle(module) {
         return moduleTitles[module] || String(module || '').toUpperCase();
