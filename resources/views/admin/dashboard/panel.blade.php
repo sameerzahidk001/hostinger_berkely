@@ -15,13 +15,23 @@
     padding-left: 12px;
 }
 .select2-container .select2-selection--single .select2-selection__arrow { height: 32px; }
+#activities-panel .ibox-title h5 {
+    margin: 0;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+#activities-panel .btn {
+    font-weight: 700;
+    text-transform: uppercase;
+}
 #activities-panel .activity-module-tabs > li > a {
     color: #fff !important;
     border: none !important;
     border-radius: 3px 3px 0 0;
     margin-right: 4px;
     padding: 10px 18px;
-    font-weight: 600;
+    font-weight: 700;
+    text-transform: uppercase;
 }
 #activities-panel .activity-module-tabs > li > a.tab-staff { background: #6fa8a8; }
 #activities-panel .activity-module-tabs > li > a.tab-student { background: #c48bb8; }
@@ -276,7 +286,7 @@
     <div class="col-lg-12">
         <div class="ibox float-e-margins" style="margin-bottom: 16px;" id="activities-panel">
             <div class="ibox-title">
-                <h5 style="margin:0;font-weight:700;">Activities</h5>
+                <h5>Activities</h5>
             </div>
             <div class="ibox-content">
                 @if($showStudentTable ?? false)
@@ -333,7 +343,7 @@
                             </div>
                             <div class="activity-filter-search">
                                 <button type="submit" class="btn btn-primary btn-sm">Search</button>
-                                <a href="{{ route('admin.home', $staffClearQuery) }}" class="btn btn-default btn-sm">Clear</a>
+                                <a href="{{ route('admin.home', $staffClearQuery) }}" class="btn btn-default btn-sm">RESET</a>
                             </div>
                             <div class="activity-filter-exports">
                                 <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'staff', 'format' => 'excel'])) }}"
@@ -442,7 +452,7 @@
                             </div>
                             <div class="activity-filter-search">
                                 <button type="submit" class="btn btn-primary btn-sm">Search</button>
-                                <a href="{{ route('admin.home', $studentClearQuery) }}" class="btn btn-default btn-sm">Clear</a>
+                                <a href="{{ route('admin.home', $studentClearQuery) }}" class="btn btn-default btn-sm">RESET</a>
                             </div>
                             <div class="activity-filter-exports">
                                 <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'student', 'format' => 'excel'])) }}"
