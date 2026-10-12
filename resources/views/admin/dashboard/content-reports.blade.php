@@ -35,15 +35,37 @@
                 <small class="text-muted">Click any statistic for detailed records. Exports include your username.</small>
             </div>
             <div class="ibox-content">
-                <ul class="nav nav-tabs" role="tablist" style="margin-bottom:16px;">
+                <style>
+                    #content-reports-panel .content-report-module-tabs > li > a {
+                        color: #fff !important;
+                        border: none !important;
+                        border-radius: 3px 3px 0 0;
+                        margin-right: 4px;
+                        padding: 10px 18px;
+                        font-weight: 600;
+                    }
+                    #content-reports-panel .content-report-module-tabs > li > a.tab-pages { background: #800000; }
+                    #content-reports-panel .content-report-module-tabs > li > a.tab-courses { background: #000080; }
+                    #content-reports-panel .content-report-module-tabs > li > a.tab-seo { background: #b8860b; }
+                    #content-reports-panel .content-report-module-tabs > li.active > a.tab-pages,
+                    #content-reports-panel .content-report-module-tabs > li > a.tab-pages:hover,
+                    #content-reports-panel .content-report-module-tabs > li > a.tab-pages:focus { background: #5c0000; color: #fff !important; }
+                    #content-reports-panel .content-report-module-tabs > li.active > a.tab-courses,
+                    #content-reports-panel .content-report-module-tabs > li > a.tab-courses:hover,
+                    #content-reports-panel .content-report-module-tabs > li > a.tab-courses:focus { background: #00005c; color: #fff !important; }
+                    #content-reports-panel .content-report-module-tabs > li.active > a.tab-seo,
+                    #content-reports-panel .content-report-module-tabs > li > a.tab-seo:hover,
+                    #content-reports-panel .content-report-module-tabs > li > a.tab-seo:focus { background: #8b6914; color: #fff !important; }
+                </style>
+                <ul class="nav nav-tabs content-report-module-tabs" role="tablist" style="margin-bottom:16px;border-bottom:none;">
                     <li class="{{ $activeTab === 'pages' ? 'active' : '' }}">
-                        <a href="#report-pages" data-toggle="tab">Pages</a>
+                        <a href="#report-pages" data-toggle="tab" class="tab-pages">Pages</a>
                     </li>
                     <li class="{{ $activeTab === 'courses' ? 'active' : '' }}">
-                        <a href="#report-courses" data-toggle="tab">Courses</a>
+                        <a href="#report-courses" data-toggle="tab" class="tab-courses">Courses</a>
                     </li>
                     <li class="{{ $activeTab === 'seo' ? 'active' : '' }}">
-                        <a href="#report-seo" data-toggle="tab">SEO</a>
+                        <a href="#report-seo" data-toggle="tab" class="tab-seo">SEO</a>
                     </li>
                 </ul>
 
