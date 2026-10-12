@@ -55,6 +55,10 @@
                     #content-reports-panel .content-report-module-tabs > li.active > a.tab-seo,
                     #content-reports-panel .content-report-module-tabs > li > a.tab-seo:hover,
                     #content-reports-panel .content-report-module-tabs > li > a.tab-seo:focus { background: #8b6914; color: #fff !important; }
+                    #content-reports-panel .content-report-stat-value { font-size:28px; font-weight:700; line-height:1.2; }
+                    #report-pages .content-report-stat-value { color: #800000; }
+                    #report-courses .content-report-stat-value { color: #000080; }
+                    #report-seo .content-report-stat-value { color: #b8860b; }
                 </style>
                 <ul class="nav nav-tabs content-report-module-tabs" role="tablist" style="margin-bottom:16px;border-bottom:none;">
                     <li class="{{ $activeTab === 'pages' ? 'active' : '' }}">
@@ -83,7 +87,7 @@
                                             data-label="{{ $metricLabel }}"
                                             style="display:block;border:1px solid #e7eaec;border-radius:4px;padding:14px 16px;background:#f9f9f9;color:#676a6c;text-decoration:none;min-height:88px;">
                                             <div style="font-size:12px;text-transform:uppercase;letter-spacing:.03em;">{{ $metricLabel }}</div>
-                                            <div style="font-size:28px;font-weight:700;color:#1ab394;line-height:1.2;">{{ $value }}</div>
+                                            <div class="content-report-stat-value">{{ $value }}</div>
                                         </a>
                                     </div>
                                 @endforeach
