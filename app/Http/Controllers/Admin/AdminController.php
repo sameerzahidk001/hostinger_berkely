@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
+use App\Models\Admin;
 use App\Models\User;
 use App\Models\Country;
 use App\Services\ContentDashboardReportService;
@@ -13,6 +14,7 @@ use App\Services\PanelActivityService;
 use App\Services\UserActivityLogService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Collection;
 
 class AdminController extends Controller
 {
@@ -89,6 +91,7 @@ class AdminController extends Controller
                 'showUserFilter' => false,
                 'showSessionColumn' => true,
                 'showContentReports' => true,
+                'showContentReportUserFilter' => false,
                 'contentReportActorId' => audit_user_id(),
                 'logAudience' => 'staff',
                 'activityTitle' => 'My activity history',
@@ -111,6 +114,8 @@ class AdminController extends Controller
             ]);
         }
 
+        $reportActor = $this->resolveContentReportActor($request);
+
         return $this->activityDashboard($request, [
             'userId' => $request->filled('user_id') ? (int) $request->query('user_id') : null,
             'roleFilter' => $request->filled('role') ? $request->query('role') : null,
@@ -123,7 +128,10 @@ class AdminController extends Controller
             'showStudentTable' => true,
             'showSessionColumn' => true,
             'showContentReports' => true,
-            'contentReportActorId' => $request->filled('user_id') ? (int) $request->query('user_id') : audit_user_id(),
+            'showContentReportUserFilter' => true,
+            'contentReportActorId' => $reportActor['id'],
+            'contentReportActorName' => $reportActor['name'],
+            'contentReportActorKey' => $reportActor['key'],
             'logAudience' => 'staff',
             'activityTitle' => $this->adminActivityTitle($request),
             'studentActivityTitle' => 'Student activity history',
@@ -205,7 +213,12 @@ class AdminController extends Controller
 
         $showContentReports = (bool) ($options['showContentReports'] ?? false)
             && class_exists(ContentDashboardReportService::class);
-        $contentReportActorId = $options['contentReportActorId'] ?? null;
+        $contentReportActorId = $options['contentReportActorId'] ?? audit_user_id();
+        $contentReportActorName = $options['contentReportActorName']
+            ?? $this->contentReportActorDisplayName((int) ($contentReportActorId ?: 0));
+        $contentReportActorKey = $options['contentReportActorKey']
+            ?? $this->defaultContentReportActorKey();
+        $showContentReportUserFilter = (bool) ($options['showContentReportUserFilter'] ?? false);
         $contentReports = null;
         $contentReportMetricLabels = [
             'pages' => [],
@@ -221,9 +234,9 @@ class AdminController extends Controller
                 $dateTo
             );
             $contentReportMetricLabels = [
-                'pages' => $reportService->metricLabels('pages'),
-                'courses' => $reportService->metricLabels('courses'),
-                'seo' => $reportService->metricLabels('seo'),
+                'pages' => $reportService->metricLabels('pages', $contentReportActorName),
+                'courses' => $reportService->metricLabels('courses', $contentReportActorName),
+                'seo' => $reportService->metricLabels('seo', $contentReportActorName),
             ];
         }
 
@@ -241,9 +254,13 @@ class AdminController extends Controller
             'showStudentTable' => $showStudentTable,
             'showSessionColumn' => (bool) ($options['showSessionColumn'] ?? false),
             'showContentReports' => $showContentReports,
+            'showContentReportUserFilter' => $showContentReportUserFilter,
             'contentReports' => $contentReports,
             'contentReportActorId' => $contentReportActorId,
+            'contentReportActorName' => $contentReportActorName,
+            'contentReportActorKey' => $contentReportActorKey,
             'contentReportMetricLabels' => $contentReportMetricLabels,
+            'contentReportUsers' => $showContentReportUserFilter ? $this->contentReportFilterUsers() : collect(),
             'filterUsers' => ($options['showUserFilter'] ?? false) ? $service->filterUsers() : collect(),
             'studentFilterUsers' => $showStudentTable ? $logService->studentFilterUsers() : collect(),
             'activityTitle' => $options['activityTitle'] ?? 'Activity history',
@@ -354,17 +371,158 @@ class AdminController extends Controller
 
     private function resolveContentReportActorId(Request $request): ?int
     {
+        return $this->resolveContentReportActor($request)['id'];
+    }
+
+    /**
+     * @return array{id: ?int, name: string, key: string}
+     */
+    private function resolveContentReportActor(Request $request): array
+    {
         $role = normalize_panel_role(panel_role_name());
 
         if ($role === 'content_writer') {
-            return audit_user_id();
+            $id = audit_user_id();
+
+            return [
+                'id' => $id,
+                'name' => $this->contentReportActorDisplayName((int) ($id ?: 0)),
+                'key' => $this->defaultContentReportActorKey(),
+            ];
         }
 
+        // Dedicated content-report filter (does not rewrite activity filter user_id).
+        if ($request->filled('report_user')) {
+            return $this->parseContentReportActorKey((string) $request->query('report_user'));
+        }
+
+        // Backward compatible: activity User filter still works for reports.
         if ($request->filled('user_id')) {
-            return (int) $request->query('user_id');
+            $id = (int) $request->query('user_id');
+
+            return [
+                'id' => $id,
+                'name' => $this->contentReportActorDisplayName($id, 'user'),
+                'key' => 'user:' . $id,
+            ];
         }
 
-        return audit_user_id();
+        $id = audit_user_id();
+
+        return [
+            'id' => $id,
+            'name' => $this->contentReportActorDisplayName((int) ($id ?: 0)),
+            'key' => $this->defaultContentReportActorKey(),
+        ];
+    }
+
+    private function defaultContentReportActorKey(): string
+    {
+        if (Auth::guard('admin')->check()) {
+            return 'admin:' . Auth::guard('admin')->id();
+        }
+
+        $id = Auth::id();
+
+        return $id ? ('user:' . $id) : '';
+    }
+
+    /**
+     * @return array{id: ?int, name: string, key: string}
+     */
+    private function parseContentReportActorKey(string $key): array
+    {
+        if (preg_match('/^(admin|user):(\d+)$/', $key, $m)) {
+            $type = $m[1];
+            $id = (int) $m[2];
+
+            return [
+                'id' => $id,
+                'name' => $this->contentReportActorDisplayName($id, $type),
+                'key' => $type . ':' . $id,
+            ];
+        }
+
+        $id = audit_user_id();
+
+        return [
+            'id' => $id,
+            'name' => $this->contentReportActorDisplayName((int) ($id ?: 0)),
+            'key' => $this->defaultContentReportActorKey(),
+        ];
+    }
+
+    private function contentReportActorDisplayName(int $id, ?string $preferType = null): string
+    {
+        if ($id <= 0) {
+            return 'Me';
+        }
+
+        if ($preferType === 'admin' || ($preferType === null && Auth::guard('admin')->check() && (int) Auth::guard('admin')->id() === $id)) {
+            $admin = Admin::find($id);
+            if ($admin) {
+                $name = trim((string) ($admin->name ?: $admin->email ?: 'Admin'));
+
+                return $name !== '' ? $name : 'Admin';
+            }
+        }
+
+        if ($preferType === 'user' || $preferType === null) {
+            $user = User::with('roles')->find($id);
+            if ($user) {
+                $name = trim((string) ($user->name ?: $user->email ?: 'User'));
+                $role = $user->roles->first()?->name;
+                if ($role) {
+                    $name .= ' (' . role_display_name($role) . ')';
+                }
+
+                return $name !== '' ? $name : 'User';
+            }
+        }
+
+        $admin = Admin::find($id);
+        if ($admin) {
+            return trim((string) ($admin->name ?: $admin->email ?: 'Admin')) ?: 'Admin';
+        }
+
+        return 'Admin';
+    }
+
+    private function contentReportFilterUsers(): Collection
+    {
+        $rows = collect();
+
+        Admin::query()->orderBy('name')->get(['id', 'name', 'email'])->each(function (Admin $admin) use ($rows) {
+            $label = trim((string) ($admin->name ?: $admin->email ?: 'Admin'));
+            $rows->push([
+                'key' => 'admin:' . $admin->id,
+                'label' => $label . ' (Admin)',
+            ]);
+        });
+
+        User::query()
+            ->with('roles')
+            ->whereHas('roles', function ($q) {
+                $q->whereIn('name', [
+                    'content_writer', 'Content Writer', 'librarian', 'content-writer',
+                    'instructor', 'Instructor',
+                ]);
+            })
+            ->orderBy('name')
+            ->get(['id', 'name', 'email'])
+            ->each(function (User $user) use ($rows) {
+                $role = $user->roles->first()?->name;
+                $label = trim((string) ($user->name ?: $user->email ?: 'User'));
+                if ($role) {
+                    $label .= ' (' . role_display_name($role) . ')';
+                }
+                $rows->push([
+                    'key' => 'user:' . $user->id,
+                    'label' => $label,
+                ]);
+            });
+
+        return $rows;
     }
 
     public function exportActivity(Request $request)

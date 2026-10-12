@@ -7,6 +7,9 @@
     }
     $rangeFrom = request('date_from', $reports['date_from'] ?? '');
     $rangeTo = request('date_to', $reports['date_to'] ?? '');
+    $reportActorKey = $contentReportActorKey ?? request('report_user', '');
+    $showReportUserFilter = (bool) ($showContentReportUserFilter ?? false);
+    $reportUsers = $contentReportUsers ?? collect();
 @endphp
 
 <div class="row" style="padding: 0 10px 12px;" id="content-reports-panel">
@@ -14,6 +17,21 @@
         <div class="ibox float-e-margins">
             <div class="ibox-title" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
                 <h5 style="margin:0;">Content performance reports</h5>
+                @if($showReportUserFilter)
+                <form method="GET" action="{{ route('admin.home') }}" class="form-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0;" id="contentReportUserForm">
+                    @foreach(request()->except(['report_user', 'page']) as $key => $value)
+                        @if(is_scalar($value))
+                            <input type="hidden" name="{{ $key }}" value="{{ $value }}">
+                        @endif
+                    @endforeach
+                    <label for="content_report_user" class="m-r-xs" style="margin:0;font-weight:normal;">User</label>
+                    <select id="content_report_user" name="report_user" class="form-control" style="min-width:240px;" onchange="this.form.submit()">
+                        @foreach($reportUsers as $ru)
+                            <option value="{{ $ru['key'] }}" @selected((string) $reportActorKey === (string) $ru['key'])>{{ $ru['label'] }}</option>
+                        @endforeach
+                    </select>
+                </form>
+                @endif
                 <small class="text-muted">Click any statistic for detailed records. Exports include your username.</small>
             </div>
             <div class="ibox-content">
@@ -133,7 +151,8 @@
         return {
             date_from: formFrom || params.get('date_from') || '',
             date_to: formTo || params.get('date_to') || '',
-            user_id: params.get('user_id') || ''
+            user_id: params.get('user_id') || '',
+            report_user: params.get('report_user') || @json($reportActorKey)
         };
     }
 

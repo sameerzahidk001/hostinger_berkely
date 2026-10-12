@@ -43,34 +43,43 @@ class ContentDashboardReportService
             'updated_by_me' => $hasAudit && $actorUserId
                 ? (int) Page::where('updated_by', $actorUserId)->count()
                 : 0,
-            'created_today' => $this->countCreatedInRange(Page::class, now()->startOfDay(), now()->endOfDay()),
+            'created_today' => $this->countCreatedInRange(Page::class, now()->startOfDay(), now()->endOfDay(), false, $actorUserId),
             'created_yesterday' => $this->countCreatedInRange(
                 Page::class,
                 now()->subDay()->startOfDay(),
-                now()->subDay()->endOfDay()
+                now()->subDay()->endOfDay(),
+                false,
+                $actorUserId
             ),
-            'created_this_week' => $this->countCreatedInRange(Page::class, now()->startOfWeek(), now()->endOfWeek()),
-            'created_this_month' => $this->countCreatedInRange(Page::class, now()->startOfMonth(), now()->endOfMonth()),
+            'created_this_week' => $this->countCreatedInRange(Page::class, now()->startOfWeek(), now()->endOfWeek(), false, $actorUserId),
+            'created_this_month' => $this->countCreatedInRange(Page::class, now()->startOfMonth(), now()->endOfMonth(), false, $actorUserId),
+            'created_this_year' => $this->countCreatedInRange(Page::class, now()->startOfYear(), now()->endOfYear(), false, $actorUserId),
             'created_last_month' => $this->countCreatedInRange(
                 Page::class,
                 now()->subMonthNoOverflow()->startOfMonth(),
-                now()->subMonthNoOverflow()->endOfMonth()
+                now()->subMonthNoOverflow()->endOfMonth(),
+                false,
+                $actorUserId
             ),
-            'created_in_range' => $this->countCreatedInRange(Page::class, $from, $to),
-            'updated_today' => $this->countUpdatedInRange(Page::class, now()->startOfDay(), now()->endOfDay()),
+            'created_in_range' => $this->countCreatedInRange(Page::class, $from, $to, false, $actorUserId),
+            'updated_today' => $this->countUpdatedInRange(Page::class, now()->startOfDay(), now()->endOfDay(), false, $actorUserId),
             'updated_yesterday' => $this->countUpdatedInRange(
                 Page::class,
                 now()->subDay()->startOfDay(),
-                now()->subDay()->endOfDay()
+                now()->subDay()->endOfDay(),
+                false,
+                $actorUserId
             ),
-            'updated_this_week' => $this->countUpdatedInRange(Page::class, now()->startOfWeek(), now()->endOfWeek()),
-            'updated_this_month' => $this->countUpdatedInRange(Page::class, now()->startOfMonth(), now()->endOfMonth()),
+            'updated_this_week' => $this->countUpdatedInRange(Page::class, now()->startOfWeek(), now()->endOfWeek(), false, $actorUserId),
+            'updated_this_month' => $this->countUpdatedInRange(Page::class, now()->startOfMonth(), now()->endOfMonth(), false, $actorUserId),
             'updated_last_month' => $this->countUpdatedInRange(
                 Page::class,
                 now()->subMonthNoOverflow()->startOfMonth(),
-                now()->subMonthNoOverflow()->endOfMonth()
+                now()->subMonthNoOverflow()->endOfMonth(),
+                false,
+                $actorUserId
             ),
-            'updated_in_range' => $this->countUpdatedInRange(Page::class, $from, $to),
+            'updated_in_range' => $this->countUpdatedInRange(Page::class, $from, $to, false, $actorUserId),
         ];
     }
 
@@ -93,38 +102,43 @@ class ContentDashboardReportService
             'updated_by_me' => $hasAudit && $actorUserId
                 ? (int) Course::withTrashed()->where('updated_by', $actorUserId)->count()
                 : 0,
-            'created_today' => $this->countCreatedInRange(Course::class, now()->startOfDay(), now()->endOfDay(), true),
+            'created_today' => $this->countCreatedInRange(Course::class, now()->startOfDay(), now()->endOfDay(), true, $actorUserId),
             'created_yesterday' => $this->countCreatedInRange(
                 Course::class,
                 now()->subDay()->startOfDay(),
                 now()->subDay()->endOfDay(),
-                true
+                true,
+                $actorUserId
             ),
-            'created_this_week' => $this->countCreatedInRange(Course::class, now()->startOfWeek(), now()->endOfWeek(), true),
-            'created_this_month' => $this->countCreatedInRange(Course::class, now()->startOfMonth(), now()->endOfMonth(), true),
+            'created_this_week' => $this->countCreatedInRange(Course::class, now()->startOfWeek(), now()->endOfWeek(), true, $actorUserId),
+            'created_this_month' => $this->countCreatedInRange(Course::class, now()->startOfMonth(), now()->endOfMonth(), true, $actorUserId),
+            'created_this_year' => $this->countCreatedInRange(Course::class, now()->startOfYear(), now()->endOfYear(), true, $actorUserId),
             'created_last_month' => $this->countCreatedInRange(
                 Course::class,
                 now()->subMonthNoOverflow()->startOfMonth(),
                 now()->subMonthNoOverflow()->endOfMonth(),
-                true
+                true,
+                $actorUserId
             ),
-            'created_in_range' => $this->countCreatedInRange(Course::class, $from, $to, true),
-            'updated_today' => $this->countUpdatedInRange(Course::class, now()->startOfDay(), now()->endOfDay(), true),
+            'created_in_range' => $this->countCreatedInRange(Course::class, $from, $to, true, $actorUserId),
+            'updated_today' => $this->countUpdatedInRange(Course::class, now()->startOfDay(), now()->endOfDay(), true, $actorUserId),
             'updated_yesterday' => $this->countUpdatedInRange(
                 Course::class,
                 now()->subDay()->startOfDay(),
                 now()->subDay()->endOfDay(),
-                true
+                true,
+                $actorUserId
             ),
-            'updated_this_week' => $this->countUpdatedInRange(Course::class, now()->startOfWeek(), now()->endOfWeek(), true),
-            'updated_this_month' => $this->countUpdatedInRange(Course::class, now()->startOfMonth(), now()->endOfMonth(), true),
+            'updated_this_week' => $this->countUpdatedInRange(Course::class, now()->startOfWeek(), now()->endOfWeek(), true, $actorUserId),
+            'updated_this_month' => $this->countUpdatedInRange(Course::class, now()->startOfMonth(), now()->endOfMonth(), true, $actorUserId),
             'updated_last_month' => $this->countUpdatedInRange(
                 Course::class,
                 now()->subMonthNoOverflow()->startOfMonth(),
                 now()->subMonthNoOverflow()->endOfMonth(),
-                true
+                true,
+                $actorUserId
             ),
-            'updated_in_range' => $this->countUpdatedInRange(Course::class, $from, $to, true),
+            'updated_in_range' => $this->countUpdatedInRange(Course::class, $from, $to, true, $actorUserId),
         ];
     }
 
@@ -159,34 +173,43 @@ class ContentDashboardReportService
             'updated_by_me' => $hasAudit && $actorUserId
                 ? (int) PagesSEO::where('updated_by', $actorUserId)->count()
                 : 0,
-            'created_today' => $this->countCreatedInRange(PagesSEO::class, now()->startOfDay(), now()->endOfDay()),
+            'created_today' => $this->countCreatedInRange(PagesSEO::class, now()->startOfDay(), now()->endOfDay(), false, $actorUserId),
             'created_yesterday' => $this->countCreatedInRange(
                 PagesSEO::class,
                 now()->subDay()->startOfDay(),
-                now()->subDay()->endOfDay()
+                now()->subDay()->endOfDay(),
+                false,
+                $actorUserId
             ),
-            'created_this_week' => $this->countCreatedInRange(PagesSEO::class, now()->startOfWeek(), now()->endOfWeek()),
-            'created_this_month' => $this->countCreatedInRange(PagesSEO::class, now()->startOfMonth(), now()->endOfMonth()),
+            'created_this_week' => $this->countCreatedInRange(PagesSEO::class, now()->startOfWeek(), now()->endOfWeek(), false, $actorUserId),
+            'created_this_month' => $this->countCreatedInRange(PagesSEO::class, now()->startOfMonth(), now()->endOfMonth(), false, $actorUserId),
+            'created_this_year' => $this->countCreatedInRange(PagesSEO::class, now()->startOfYear(), now()->endOfYear(), false, $actorUserId),
             'created_last_month' => $this->countCreatedInRange(
                 PagesSEO::class,
                 now()->subMonthNoOverflow()->startOfMonth(),
-                now()->subMonthNoOverflow()->endOfMonth()
+                now()->subMonthNoOverflow()->endOfMonth(),
+                false,
+                $actorUserId
             ),
-            'created_in_range' => $this->countCreatedInRange(PagesSEO::class, $from, $to),
-            'updated_today' => $this->countUpdatedInRange(PagesSEO::class, now()->startOfDay(), now()->endOfDay()),
+            'created_in_range' => $this->countCreatedInRange(PagesSEO::class, $from, $to, false, $actorUserId),
+            'updated_today' => $this->countUpdatedInRange(PagesSEO::class, now()->startOfDay(), now()->endOfDay(), false, $actorUserId),
             'updated_yesterday' => $this->countUpdatedInRange(
                 PagesSEO::class,
                 now()->subDay()->startOfDay(),
-                now()->subDay()->endOfDay()
+                now()->subDay()->endOfDay(),
+                false,
+                $actorUserId
             ),
-            'updated_this_week' => $this->countUpdatedInRange(PagesSEO::class, now()->startOfWeek(), now()->endOfWeek()),
-            'updated_this_month' => $this->countUpdatedInRange(PagesSEO::class, now()->startOfMonth(), now()->endOfMonth()),
+            'updated_this_week' => $this->countUpdatedInRange(PagesSEO::class, now()->startOfWeek(), now()->endOfWeek(), false, $actorUserId),
+            'updated_this_month' => $this->countUpdatedInRange(PagesSEO::class, now()->startOfMonth(), now()->endOfMonth(), false, $actorUserId),
             'updated_last_month' => $this->countUpdatedInRange(
                 PagesSEO::class,
                 now()->subMonthNoOverflow()->startOfMonth(),
-                now()->subMonthNoOverflow()->endOfMonth()
+                now()->subMonthNoOverflow()->endOfMonth(),
+                false,
+                $actorUserId
             ),
-            'updated_in_range' => $this->countUpdatedInRange(PagesSEO::class, $from, $to),
+            'updated_in_range' => $this->countUpdatedInRange(PagesSEO::class, $from, $to, false, $actorUserId),
         ];
     }
 
@@ -205,27 +228,9 @@ class ContentDashboardReportService
         };
     }
 
-    public function metricLabels(string $module): array
+    public function metricLabels(string $module, string $actorName = 'Me'): array
     {
-        $common = [
-            'total' => 'Total',
-            'active' => 'Active',
-            'inactive' => 'Inactive',
-            'created_by_me' => 'Created by Me',
-            'updated_by_me' => 'Updated by Me',
-            'created_today' => 'Created Today',
-            'created_yesterday' => 'Created Yesterday',
-            'created_this_week' => 'Created This Week',
-            'created_this_month' => 'Created This Month',
-            'created_last_month' => 'Created Last Month',
-            'created_in_range' => 'Created In Selected Range',
-            'updated_today' => 'Updated Today',
-            'updated_yesterday' => 'Updated Yesterday',
-            'updated_this_week' => 'Updated This Week',
-            'updated_this_month' => 'Updated This Month',
-            'updated_last_month' => 'Updated Last Month',
-            'updated_in_range' => 'Updated In Selected Range',
-        ];
+        $who = trim($actorName) !== '' ? trim($actorName) : 'Me';
 
         if ($module === 'seo') {
             return [
@@ -234,24 +239,46 @@ class ContentDashboardReportService
                 'seo_entered_courses' => 'SEO Entered Courses',
                 'seo_missing_pages' => 'SEO Missing Pages',
                 'seo_missing_courses' => 'SEO Missing Courses',
-                'created_by_me' => 'Created by Me',
-                'updated_by_me' => 'Updated by Me',
-                'created_today' => 'Created Today',
-                'created_yesterday' => 'Created Yesterday',
-                'created_this_week' => 'Created This Week',
-                'created_this_month' => 'Created This Month',
-                'created_last_month' => 'Created Last Month',
-                'created_in_range' => 'Created In Selected Range',
-                'updated_today' => 'Updated Today',
-                'updated_yesterday' => 'Updated Yesterday',
-                'updated_this_week' => 'Updated This Week',
-                'updated_this_month' => 'Updated This Month',
-                'updated_last_month' => 'Updated Last Month',
-                'updated_in_range' => 'Updated In Selected Range',
+                'created_by_me' => 'Total SEO created by ' . $who,
+                'updated_by_me' => 'Total SEO updated by ' . $who,
+                'created_today' => 'Created Today by ' . $who,
+                'created_this_year' => 'Total Created This Year by ' . $who,
+                'created_yesterday' => 'Created Yesterday by ' . $who,
+                'created_this_week' => 'Created This Week by ' . $who,
+                'created_this_month' => 'Created This Month by ' . $who,
+                'created_last_month' => 'Created Last Month by ' . $who,
+                'created_in_range' => 'Created In Selected Range by ' . $who,
+                'updated_today' => 'Updated Today by ' . $who,
+                'updated_yesterday' => 'Updated Yesterday by ' . $who,
+                'updated_this_week' => 'Updated This Week by ' . $who,
+                'updated_this_month' => 'Updated This Month by ' . $who,
+                'updated_last_month' => 'Updated Last Month by ' . $who,
+                'updated_in_range' => 'Updated In Selected Range by ' . $who,
             ];
         }
 
-        return $common;
+        $noun = $module === 'courses' ? 'Courses' : 'Pages';
+
+        return [
+            'total' => 'Total ' . $noun,
+            'active' => 'Active ' . $noun,
+            'inactive' => 'Inactive ' . $noun,
+            'created_by_me' => 'Total ' . $noun . ' created by ' . $who,
+            'updated_by_me' => 'Total ' . $noun . ' updated by ' . $who,
+            'created_today' => 'Created Today by ' . $who,
+            'created_this_year' => 'Total Created This Year by ' . $who,
+            'created_yesterday' => 'Created Yesterday by ' . $who,
+            'created_this_week' => 'Created This Week by ' . $who,
+            'created_this_month' => 'Created This Month by ' . $who,
+            'created_last_month' => 'Created Last Month by ' . $who,
+            'created_in_range' => 'Created In Selected Range by ' . $who,
+            'updated_today' => 'Updated Today by ' . $who,
+            'updated_yesterday' => 'Updated Yesterday by ' . $who,
+            'updated_this_week' => 'Updated This Week by ' . $who,
+            'updated_this_month' => 'Updated This Month by ' . $who,
+            'updated_last_month' => 'Updated Last Month by ' . $who,
+            'updated_in_range' => 'Updated In Selected Range by ' . $who,
+        ];
     }
 
     private function pageDetailRows(string $metric, ?int $actorUserId, ?Carbon $from, ?Carbon $to, ?string $search): Collection
@@ -353,26 +380,29 @@ class ContentDashboardReportService
             'seo_entered_courses', 'course_seo' => $query->whereNotNull('course_id'),
             'created_by_me' => $actorUserId ? $query->where('created_by', $actorUserId) : $query->whereRaw('1 = 0'),
             'updated_by_me' => $actorUserId ? $query->where('updated_by', $actorUserId) : $query->whereRaw('1 = 0'),
-            'created_today' => $this->applyCreatedRange($query, now()->startOfDay(), now()->endOfDay()),
-            'created_yesterday' => $this->applyCreatedRange($query, now()->subDay()->startOfDay(), now()->subDay()->endOfDay()),
-            'created_this_week' => $this->applyCreatedRange($query, now()->startOfWeek(), now()->endOfWeek()),
-            'created_this_month' => $this->applyCreatedRange($query, now()->startOfMonth(), now()->endOfMonth()),
-            'created_last_month' => $this->applyCreatedRange(
+            'created_today' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfDay(), now()->endOfDay()),
+            'created_yesterday' => $this->applyCreatedByActorRange($query, $actorUserId, now()->subDay()->startOfDay(), now()->subDay()->endOfDay()),
+            'created_this_week' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfWeek(), now()->endOfWeek()),
+            'created_this_month' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfMonth(), now()->endOfMonth()),
+            'created_this_year' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfYear(), now()->endOfYear()),
+            'created_last_month' => $this->applyCreatedByActorRange(
                 $query,
+                $actorUserId,
                 now()->subMonthNoOverflow()->startOfMonth(),
                 now()->subMonthNoOverflow()->endOfMonth()
             ),
-            'created_in_range' => $this->applyCreatedRange($query, $from, $to),
-            'updated_today' => $this->applyUpdatedRange($query, now()->startOfDay(), now()->endOfDay()),
-            'updated_yesterday' => $this->applyUpdatedRange($query, now()->subDay()->startOfDay(), now()->subDay()->endOfDay()),
-            'updated_this_week' => $this->applyUpdatedRange($query, now()->startOfWeek(), now()->endOfWeek()),
-            'updated_this_month' => $this->applyUpdatedRange($query, now()->startOfMonth(), now()->endOfMonth()),
-            'updated_last_month' => $this->applyUpdatedRange(
+            'created_in_range' => $this->applyCreatedByActorRange($query, $actorUserId, $from, $to),
+            'updated_today' => $this->applyUpdatedByActorRange($query, $actorUserId, now()->startOfDay(), now()->endOfDay()),
+            'updated_yesterday' => $this->applyUpdatedByActorRange($query, $actorUserId, now()->subDay()->startOfDay(), now()->subDay()->endOfDay()),
+            'updated_this_week' => $this->applyUpdatedByActorRange($query, $actorUserId, now()->startOfWeek(), now()->endOfWeek()),
+            'updated_this_month' => $this->applyUpdatedByActorRange($query, $actorUserId, now()->startOfMonth(), now()->endOfMonth()),
+            'updated_last_month' => $this->applyUpdatedByActorRange(
                 $query,
+                $actorUserId,
                 now()->subMonthNoOverflow()->startOfMonth(),
                 now()->subMonthNoOverflow()->endOfMonth()
             ),
-            'updated_in_range' => $this->applyUpdatedRange($query, $from, $to),
+            'updated_in_range' => $this->applyUpdatedByActorRange($query, $actorUserId, $from, $to),
             default => null,
         };
 
@@ -497,26 +527,29 @@ class ContentDashboardReportService
             'inactive' => $statusEnabled ? $query->where('status', 0) : $query->whereRaw('1 = 0'),
             'created_by_me' => $actorUserId ? $query->where('created_by', $actorUserId) : $query->whereRaw('1 = 0'),
             'updated_by_me' => $actorUserId ? $query->where('updated_by', $actorUserId) : $query->whereRaw('1 = 0'),
-            'created_today' => $this->applyCreatedRange($query, now()->startOfDay(), now()->endOfDay()),
-            'created_yesterday' => $this->applyCreatedRange($query, now()->subDay()->startOfDay(), now()->subDay()->endOfDay()),
-            'created_this_week' => $this->applyCreatedRange($query, now()->startOfWeek(), now()->endOfWeek()),
-            'created_this_month' => $this->applyCreatedRange($query, now()->startOfMonth(), now()->endOfMonth()),
-            'created_last_month' => $this->applyCreatedRange(
+            'created_today' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfDay(), now()->endOfDay()),
+            'created_yesterday' => $this->applyCreatedByActorRange($query, $actorUserId, now()->subDay()->startOfDay(), now()->subDay()->endOfDay()),
+            'created_this_week' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfWeek(), now()->endOfWeek()),
+            'created_this_month' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfMonth(), now()->endOfMonth()),
+            'created_this_year' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfYear(), now()->endOfYear()),
+            'created_last_month' => $this->applyCreatedByActorRange(
                 $query,
+                $actorUserId,
                 now()->subMonthNoOverflow()->startOfMonth(),
                 now()->subMonthNoOverflow()->endOfMonth()
             ),
-            'created_in_range' => $this->applyCreatedRange($query, $from, $to),
-            'updated_today' => $this->applyUpdatedRange($query, now()->startOfDay(), now()->endOfDay()),
-            'updated_yesterday' => $this->applyUpdatedRange($query, now()->subDay()->startOfDay(), now()->subDay()->endOfDay()),
-            'updated_this_week' => $this->applyUpdatedRange($query, now()->startOfWeek(), now()->endOfWeek()),
-            'updated_this_month' => $this->applyUpdatedRange($query, now()->startOfMonth(), now()->endOfMonth()),
-            'updated_last_month' => $this->applyUpdatedRange(
+            'created_in_range' => $this->applyCreatedByActorRange($query, $actorUserId, $from, $to),
+            'updated_today' => $this->applyUpdatedByActorRange($query, $actorUserId, now()->startOfDay(), now()->endOfDay()),
+            'updated_yesterday' => $this->applyUpdatedByActorRange($query, $actorUserId, now()->subDay()->startOfDay(), now()->subDay()->endOfDay()),
+            'updated_this_week' => $this->applyUpdatedByActorRange($query, $actorUserId, now()->startOfWeek(), now()->endOfWeek()),
+            'updated_this_month' => $this->applyUpdatedByActorRange($query, $actorUserId, now()->startOfMonth(), now()->endOfMonth()),
+            'updated_last_month' => $this->applyUpdatedByActorRange(
                 $query,
+                $actorUserId,
                 now()->subMonthNoOverflow()->startOfMonth(),
                 now()->subMonthNoOverflow()->endOfMonth()
             ),
-            'updated_in_range' => $this->applyUpdatedRange($query, $from, $to),
+            'updated_in_range' => $this->applyUpdatedByActorRange($query, $actorUserId, $from, $to),
             default => null,
         };
     }
@@ -528,26 +561,29 @@ class ContentDashboardReportService
             'inactive' => $query->whereNotNull('deleted_at'),
             'created_by_me' => $actorUserId ? $query->where('created_by', $actorUserId) : $query->whereRaw('1 = 0'),
             'updated_by_me' => $actorUserId ? $query->where('updated_by', $actorUserId) : $query->whereRaw('1 = 0'),
-            'created_today' => $this->applyCreatedRange($query, now()->startOfDay(), now()->endOfDay()),
-            'created_yesterday' => $this->applyCreatedRange($query, now()->subDay()->startOfDay(), now()->subDay()->endOfDay()),
-            'created_this_week' => $this->applyCreatedRange($query, now()->startOfWeek(), now()->endOfWeek()),
-            'created_this_month' => $this->applyCreatedRange($query, now()->startOfMonth(), now()->endOfMonth()),
-            'created_last_month' => $this->applyCreatedRange(
+            'created_today' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfDay(), now()->endOfDay()),
+            'created_yesterday' => $this->applyCreatedByActorRange($query, $actorUserId, now()->subDay()->startOfDay(), now()->subDay()->endOfDay()),
+            'created_this_week' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfWeek(), now()->endOfWeek()),
+            'created_this_month' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfMonth(), now()->endOfMonth()),
+            'created_this_year' => $this->applyCreatedByActorRange($query, $actorUserId, now()->startOfYear(), now()->endOfYear()),
+            'created_last_month' => $this->applyCreatedByActorRange(
                 $query,
+                $actorUserId,
                 now()->subMonthNoOverflow()->startOfMonth(),
                 now()->subMonthNoOverflow()->endOfMonth()
             ),
-            'created_in_range' => $this->applyCreatedRange($query, $from, $to),
-            'updated_today' => $this->applyUpdatedRange($query, now()->startOfDay(), now()->endOfDay()),
-            'updated_yesterday' => $this->applyUpdatedRange($query, now()->subDay()->startOfDay(), now()->subDay()->endOfDay()),
-            'updated_this_week' => $this->applyUpdatedRange($query, now()->startOfWeek(), now()->endOfWeek()),
-            'updated_this_month' => $this->applyUpdatedRange($query, now()->startOfMonth(), now()->endOfMonth()),
-            'updated_last_month' => $this->applyUpdatedRange(
+            'created_in_range' => $this->applyCreatedByActorRange($query, $actorUserId, $from, $to),
+            'updated_today' => $this->applyUpdatedByActorRange($query, $actorUserId, now()->startOfDay(), now()->endOfDay()),
+            'updated_yesterday' => $this->applyUpdatedByActorRange($query, $actorUserId, now()->subDay()->startOfDay(), now()->subDay()->endOfDay()),
+            'updated_this_week' => $this->applyUpdatedByActorRange($query, $actorUserId, now()->startOfWeek(), now()->endOfWeek()),
+            'updated_this_month' => $this->applyUpdatedByActorRange($query, $actorUserId, now()->startOfMonth(), now()->endOfMonth()),
+            'updated_last_month' => $this->applyUpdatedByActorRange(
                 $query,
+                $actorUserId,
                 now()->subMonthNoOverflow()->startOfMonth(),
                 now()->subMonthNoOverflow()->endOfMonth()
             ),
-            'updated_in_range' => $this->applyUpdatedRange($query, $from, $to),
+            'updated_in_range' => $this->applyUpdatedByActorRange($query, $actorUserId, $from, $to),
             default => null,
         };
     }
@@ -572,18 +608,38 @@ class ContentDashboardReportService
         }
     }
 
-    private function countCreatedInRange(string $modelClass, ?Carbon $from, ?Carbon $to, bool $withTrashed = false): int
+    private function applyCreatedByActorRange($query, ?int $actorUserId, ?Carbon $from, ?Carbon $to): void
+    {
+        if ($actorUserId) {
+            $query->where('created_by', $actorUserId);
+        } else {
+            $query->whereRaw('1 = 0');
+        }
+        $this->applyCreatedRange($query, $from, $to);
+    }
+
+    private function applyUpdatedByActorRange($query, ?int $actorUserId, ?Carbon $from, ?Carbon $to): void
+    {
+        if ($actorUserId) {
+            $query->where('updated_by', $actorUserId);
+        } else {
+            $query->whereRaw('1 = 0');
+        }
+        $this->applyUpdatedRange($query, $from, $to);
+    }
+
+    private function countCreatedInRange(string $modelClass, ?Carbon $from, ?Carbon $to, bool $withTrashed = false, ?int $actorUserId = null): int
     {
         $query = $this->baseQuery($modelClass, $withTrashed);
-        $this->applyCreatedRange($query, $from, $to);
+        $this->applyCreatedByActorRange($query, $actorUserId, $from, $to);
 
         return (int) $query->count();
     }
 
-    private function countUpdatedInRange(string $modelClass, ?Carbon $from, ?Carbon $to, bool $withTrashed = false): int
+    private function countUpdatedInRange(string $modelClass, ?Carbon $from, ?Carbon $to, bool $withTrashed = false, ?int $actorUserId = null): int
     {
         $query = $this->baseQuery($modelClass, $withTrashed);
-        $this->applyUpdatedRange($query, $from, $to);
+        $this->applyUpdatedByActorRange($query, $actorUserId, $from, $to);
 
         return (int) $query->count();
     }
@@ -615,6 +671,7 @@ class ContentDashboardReportService
             'created_yesterday' => 0,
             'created_this_week' => 0,
             'created_this_month' => 0,
+            'created_this_year' => 0,
             'created_last_month' => 0,
             'created_in_range' => 0,
             'updated_today' => 0,
