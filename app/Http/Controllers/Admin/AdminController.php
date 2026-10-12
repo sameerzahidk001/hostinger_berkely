@@ -395,7 +395,16 @@ class AdminController extends Controller
 
         // Dedicated content-report filter (does not rewrite activity filter user_id).
         if ($request->filled('report_user')) {
-            return $this->parseContentReportActorKey((string) $request->query('report_user'));
+            $reportUser = (string) $request->query('report_user');
+            if ($reportUser === 'all') {
+                return [
+                    'id' => null,
+                    'name' => 'All Users',
+                    'key' => 'all',
+                ];
+            }
+
+            return $this->parseContentReportActorKey($reportUser);
         }
 
         // Backward compatible: activity User filter still works for reports.
@@ -470,13 +479,9 @@ class AdminController extends Controller
         }
 
         if ($preferType === 'user' || $preferType === null) {
-            $user = User::with('roles')->find($id);
+            $user = User::find($id);
             if ($user) {
                 $name = trim((string) ($user->name ?: $user->email ?: 'User'));
-                $role = $user->roles->first()?->name;
-                if ($role) {
-                    $name .= ' (' . role_display_name($role) . ')';
-                }
 
                 return $name !== '' ? $name : 'User';
             }
@@ -492,7 +497,12 @@ class AdminController extends Controller
 
     private function contentReportFilterUsers(): Collection
     {
-        $rows = collect();
+        $rows = collect([
+            [
+                'key' => 'all',
+                'label' => 'All Users',
+            ],
+        ]);
 
         // Live admins table uses username (not name) — never select name.
         Admin::query()->orderBy('username')->get(['id', 'username', 'email'])->each(function (Admin $admin) use ($rows) {
