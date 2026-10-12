@@ -266,7 +266,31 @@ class ContentDashboardReportService
         $who = trim($actorName) !== '' ? trim($actorName) : 'All Users';
 
         if ($module === 'training') {
-            return $this->standardMetricLabels('Training Calendar entries', 'Training Calendar', $who);
+            return [
+                'total' => 'Total Training Calendar entries',
+                'active' => 'Active Training Calendars',
+                'inactive' => 'Training Calendars with Past Dates',
+                'courses_with_training' => 'Courses with Training Calendar (Active)',
+                'courses_without_training' => 'Courses without Training Calendar (Active)',
+                'courses_past_only_training' => 'Courses with Only Past Training Calendars (Active)',
+                'created_by_me' => 'Total Training Calendar entries created by ' . $who,
+                'updated_by_me' => 'Total Training Calendar entries updated by ' . $who,
+                'created_today' => 'Created Today by ' . $who,
+                'created_this_year' => 'Total Created This Year by ' . $who,
+                'created_yesterday' => 'Created Yesterday by ' . $who,
+                'created_this_week' => 'Created This Week by ' . $who,
+                'created_last_week' => 'Created Last Week by ' . $who,
+                'created_this_month' => 'Created This Month by ' . $who,
+                'created_last_month' => 'Created Last Month by ' . $who,
+                'updated_today' => 'Updated Today by ' . $who,
+                'updated_yesterday' => 'Updated Yesterday by ' . $who,
+                'updated_this_week' => 'Updated This Week by ' . $who,
+                'updated_last_week' => 'Updated Last Week by ' . $who,
+                'updated_this_month' => 'Updated This Month by ' . $who,
+                'updated_last_month' => 'Updated Last Month by ' . $who,
+                'created_in_range' => 'Created Custom Date Range',
+                'updated_in_range' => 'Updated Custom Date Range',
+            ];
         }
 
         if ($module === 'fees') {
@@ -334,7 +358,11 @@ class ContentDashboardReportService
     public function trainingStats(?int $actorUserId, ?Carbon $from, ?Carbon $to): array
     {
         if (! Schema::hasTable('course_agendas')) {
-            return $this->emptyStandardStats();
+            return array_merge($this->emptyStandardStats(), [
+                'courses_with_training' => 0,
+                'courses_without_training' => 0,
+                'courses_past_only_training' => 0,
+            ]);
         }
 
         $hasAudit = Schema::hasColumn('course_agendas', 'created_by');
@@ -342,11 +370,20 @@ class ContentDashboardReportService
         $total = (int) CourseAgenda::count();
         $active = (int) CourseAgenda::query()->whereDate('to', '>=', $today)->count();
         $inactive = (int) CourseAgenda::query()->whereDate('to', '<', $today)->count();
+        $coursesWithTraining = (int) $this->activeCoursesQuery()->whereHas('agendas')->count();
+        $coursesWithoutTraining = (int) $this->activeCoursesQuery()->whereDoesntHave('agendas')->count();
+        $coursesPastOnlyTraining = (int) $this->activeCoursesQuery()
+            ->whereHas('agendas')
+            ->whereDoesntHave('agendas', fn ($q) => $q->whereDate('to', '>=', $today))
+            ->count();
 
         return [
             'total' => $total,
             'active' => $active,
             'inactive' => $inactive,
+            'courses_with_training' => $coursesWithTraining,
+            'courses_without_training' => $coursesWithoutTraining,
+            'courses_past_only_training' => $coursesPastOnlyTraining,
             'created_by_me' => $hasAudit
                 ? (int) ($actorUserId
                     ? CourseAgenda::where('created_by', $actorUserId)->count()
@@ -447,6 +484,10 @@ class ContentDashboardReportService
 
     private function trainingDetailRows(string $metric, ?int $actorUserId, ?Carbon $from, ?Carbon $to, ?string $search): Collection
     {
+        if (in_array($metric, ['courses_with_training', 'courses_without_training', 'courses_past_only_training'], true)) {
+            return $this->trainingCourseCoverageRows($metric, $search);
+        }
+
         if (! Schema::hasTable('course_agendas')) {
             return collect();
         }
@@ -860,6 +901,55 @@ class ContentDashboardReportService
                 'status' => 'Active',
                 'type' => 'Course',
                 'seo_status' => 'Missing',
+                'seo_score' => '—',
+                'created_by' => audit_user_name($course->createdBy, $course->created_by ?? null),
+                'updated_by' => audit_user_name($course->updatedBy, $course->updated_by ?? null),
+                'created_at' => optional($course->created_at)?->format('Y-m-d H:i'),
+                'updated_at' => optional($course->updated_at)?->format('Y-m-d H:i'),
+                'url' => route('course.edit', $course->id),
+            ];
+        });
+    }
+
+    private function trainingCourseCoverageRows(string $metric, ?string $search): Collection
+    {
+        if (! Schema::hasTable('course_agendas')) {
+            return collect();
+        }
+
+        $today = now()->startOfDay();
+        $query = $this->activeCoursesQuery()->with(['createdBy', 'updatedBy']);
+
+        match ($metric) {
+            'courses_with_training' => $query->whereHas('agendas'),
+            'courses_without_training' => $query->whereDoesntHave('agendas'),
+            'courses_past_only_training' => $query
+                ->whereHas('agendas')
+                ->whereDoesntHave('agendas', fn ($q) => $q->whereDate('to', '>=', $today)),
+            default => $query->whereRaw('1 = 0'),
+        };
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', '%' . $search . '%')
+                    ->orWhere('slug', 'like', '%' . $search . '%');
+            });
+        }
+
+        $coverageLabel = match ($metric) {
+            'courses_with_training' => 'Has Calendar',
+            'courses_without_training' => 'Missing',
+            'courses_past_only_training' => 'Past Only',
+            default => '—',
+        };
+
+        return $query->orderByDesc('updated_at')->limit(10000)->get()->map(function (Course $course) use ($coverageLabel) {
+            return [
+                'id' => $course->id,
+                'title' => $course->title ?: ('Course #' . $course->id),
+                'status' => 'Active',
+                'type' => 'Course',
+                'seo_status' => $coverageLabel,
                 'seo_score' => '—',
                 'created_by' => audit_user_name($course->createdBy, $course->created_by ?? null),
                 'updated_by' => audit_user_name($course->updatedBy, $course->updated_by ?? null),
