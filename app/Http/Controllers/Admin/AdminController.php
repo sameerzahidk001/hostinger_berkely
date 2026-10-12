@@ -592,8 +592,26 @@ class AdminController extends Controller
             $showUserColumn = true;
         }
 
+        $format = strtolower((string) $request->query('format', 'excel'));
+        $username = panel_profile_name() ?: 'User';
+        $title = $exportType === 'student' ? 'Student activity history' : 'Staff & panel user activity';
+        $fileStamp = $filename . '_' . now()->format('Y-m-d');
+
+        if ($format === 'pdf') {
+            $pdf = Pdf::loadView('admin.dashboard.activity-pdf', [
+                'title' => $title,
+                'username' => $username,
+                'generatedAt' => now()->format('Y-m-d H:i:s'),
+                'dateFrom' => $dateFrom,
+                'dateTo' => $dateTo,
+                'rows' => $rows,
+            ])->setPaper('a4', 'landscape');
+
+            return $pdf->download($fileStamp . '.pdf');
+        }
+
         $headers = ['Date & Time', 'User', 'Activity', 'Item', 'Session', 'URL'];
-        $callback = function () use ($rows, $headers, $showUserColumn) {
+        $callback = function () use ($rows, $headers) {
             $handle = fopen('php://output', 'w');
             fputcsv($handle, $headers);
 
@@ -611,7 +629,7 @@ class AdminController extends Controller
             fclose($handle);
         };
 
-        return response()->streamDownload($callback, $filename . '_' . now()->format('Y-m-d') . '.csv', [
+        return response()->streamDownload($callback, $fileStamp . '.csv', [
             'Content-Type' => 'text/csv',
         ]);
     }
