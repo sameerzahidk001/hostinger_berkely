@@ -240,9 +240,9 @@ class ContentDashboardReportService
         };
     }
 
-    public function metricLabels(string $module, string $actorName = 'Me'): array
+    public function metricLabels(string $module, string $actorName = 'All Users'): array
     {
-        $who = trim($actorName) !== '' ? trim($actorName) : 'Me';
+        $who = trim($actorName) !== '' ? trim($actorName) : 'All Users';
 
         if ($module === 'seo') {
             return [

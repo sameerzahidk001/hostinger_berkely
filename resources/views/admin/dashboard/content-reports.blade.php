@@ -77,6 +77,23 @@
                         display: flex;
                         float: none;
                         margin-bottom: 12px;
+                        width: 20%;
+                        max-width: 20%;
+                        flex: 0 0 20%;
+                    }
+                    @media (max-width: 1199px) {
+                        #content-reports-panel .content-report-stat-row > [class*="col-"] {
+                            width: 33.333%;
+                            max-width: 33.333%;
+                            flex: 0 0 33.333%;
+                        }
+                    }
+                    @media (max-width: 767px) {
+                        #content-reports-panel .content-report-stat-row > [class*="col-"] {
+                            width: 50%;
+                            max-width: 50%;
+                            flex: 0 0 50%;
+                        }
                     }
                     #content-reports-panel a.content-report-stat {
                         display: flex;
@@ -185,9 +202,9 @@
                                 <th data-sort-key="seo_status" style="width:110px;cursor:pointer;">SEO Status <span class="sort-ind"></span></th>
                                 <th data-sort-key="seo_score" style="width:90px;cursor:pointer;">SEO Score <span class="sort-ind"></span></th>
                                 <th data-sort-key="created_by" style="width:130px;cursor:pointer;">Created By <span class="sort-ind"></span></th>
+                                <th data-sort-key="created_at" style="width:130px;cursor:pointer;">Created Date <span class="sort-ind"></span></th>
                                 <th data-sort-key="updated_by" style="width:130px;cursor:pointer;">Updated By <span class="sort-ind"></span></th>
-                                <th data-sort-key="created_at" style="width:120px;cursor:pointer;">Created <span class="sort-ind"></span></th>
-                                <th data-sort-key="updated_at" style="width:120px;cursor:pointer;">Updated <span class="sort-ind"></span></th>
+                                <th data-sort-key="updated_at" style="width:130px;cursor:pointer;">Updated Date <span class="sort-ind"></span></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -308,8 +325,8 @@
                 '<td>' + $('<div>').text(row.seo_status || '—').html() + '</td>' +
                 '<td>' + $('<div>').text(row.seo_score || '—').html() + '</td>' +
                 '<td>' + $('<div>').text(row.created_by || 'Admin').html() + '</td>' +
-                '<td>' + $('<div>').text(row.updated_by || 'Admin').html() + '</td>' +
                 '<td>' + $('<div>').text(row.created_at || '—').html() + '</td>' +
+                '<td>' + $('<div>').text(row.updated_by || 'Admin').html() + '</td>' +
                 '<td>' + $('<div>').text(row.updated_at || '—').html() + '</td>' +
                 '</tr>';
         }).join('');
@@ -320,9 +337,6 @@
     function loadDetails() {
         var q = $('#contentReportSearch').val() || '';
         $('#contentReportTable tbody').html('<tr><td colspan="' + colCount + '" class="text-center text-muted">Loading…</td></tr>');
-        $('#contentReportModalLabel').text(
-            String(currentModule || '').toUpperCase() + ' -> ' + String(currentLabel || '').toUpperCase()
-        );
         $('#contentReportModalCount').text('…');
 
         $('#contentReportExportExcel').attr('href', buildUrl(exportUrl, {
@@ -343,6 +357,12 @@
             metric: currentMetric,
             q: q
         })).done(function (resp) {
+            if (resp.label) {
+                currentLabel = resp.label;
+            }
+            $('#contentReportModalLabel').text(
+                String(currentModule || '').toUpperCase() + ' -> ' + String(currentLabel || '').toUpperCase()
+            );
             allRows = (resp.rows || []).map(function (row) {
                 if (!row.created_by || row.created_by === '-' || row.created_by === '—') {
                     row.created_by = 'Admin';
@@ -369,6 +389,9 @@
         sortKey = '#';
         sortDir = 'asc';
         $('#contentReportSearch').val('');
+        $('#contentReportModalLabel').text(
+            String(currentModule || '').toUpperCase() + ' -> ' + String(currentLabel || '').toUpperCase()
+        );
         syncRangeFilterVisibility();
         $('#contentReportModal').modal('show');
         loadDetails();
