@@ -461,7 +461,7 @@ class AdminController extends Controller
         if ($preferType === 'admin' || ($preferType === null && Auth::guard('admin')->check() && (int) Auth::guard('admin')->id() === $id)) {
             $admin = Admin::find($id);
             if ($admin) {
-                $name = trim((string) ($admin->name ?: $admin->email ?: 'Admin'));
+                $name = trim((string) ($admin->username ?: $admin->email ?: 'Admin'));
 
                 return $name !== '' ? $name : 'Admin';
             }
@@ -482,7 +482,7 @@ class AdminController extends Controller
 
         $admin = Admin::find($id);
         if ($admin) {
-            return trim((string) ($admin->name ?: $admin->email ?: 'Admin')) ?: 'Admin';
+            return trim((string) ($admin->username ?: $admin->email ?: 'Admin')) ?: 'Admin';
         }
 
         return 'Admin';
@@ -492,8 +492,9 @@ class AdminController extends Controller
     {
         $rows = collect();
 
-        Admin::query()->orderBy('name')->get(['id', 'name', 'email'])->each(function (Admin $admin) use ($rows) {
-            $label = trim((string) ($admin->name ?: $admin->email ?: 'Admin'));
+        // Live admins table uses username (not name) — never select name.
+        Admin::query()->orderBy('username')->get(['id', 'username', 'email'])->each(function (Admin $admin) use ($rows) {
+            $label = trim((string) ($admin->username ?: $admin->email ?: 'Admin'));
             $rows->push([
                 'key' => 'admin:' . $admin->id,
                 'label' => $label . ' (Admin)',
