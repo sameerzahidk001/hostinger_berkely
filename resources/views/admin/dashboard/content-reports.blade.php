@@ -108,6 +108,10 @@
                         color: #676a6c;
                         text-decoration: none;
                     }
+                    #content-reports-panel a.content-report-stat-range {
+                        justify-content: center;
+                        min-height: 72px;
+                    }
                     #content-reports-panel .content-report-stat-label {
                         font-size: 12px;
                         font-weight: 700;
@@ -135,15 +139,20 @@
                         <div role="tabpanel" class="tab-pane {{ $activeTab === $module ? 'active' : '' }}" id="report-{{ $module }}">
                             <div class="row content-report-stat-row">
                                 @foreach(($metricLabels[$module] ?? []) as $metricKey => $metricLabel)
-                                    @php $value = (int) ($stats[$metricKey] ?? 0); @endphp
+                                    @php
+                                        $value = (int) ($stats[$metricKey] ?? 0);
+                                        $hideValue = in_array($metricKey, ['created_in_range', 'updated_in_range'], true);
+                                    @endphp
                                     <div class="col-lg-3 col-md-4 col-sm-6">
                                         <a href="javascript:void(0);"
-                                            class="content-report-stat"
+                                            class="content-report-stat{{ $hideValue ? ' content-report-stat-range' : '' }}"
                                             data-module="{{ $module }}"
                                             data-metric="{{ $metricKey }}"
                                             data-label="{{ $metricLabel }}"
-                                            data-count="{{ $value }}">
-                                            <div class="content-report-stat-value">{{ $value }}</div>
+                                            data-count="{{ $hideValue ? 0 : $value }}">
+                                            @if(! $hideValue)
+                                                <div class="content-report-stat-value">{{ $value }}</div>
+                                            @endif
                                             <div class="content-report-stat-label">{{ $metricLabel }}</div>
                                         </a>
                                     </div>
