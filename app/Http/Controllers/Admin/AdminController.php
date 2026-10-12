@@ -121,7 +121,8 @@ class AdminController extends Controller
             'roleFilter' => $request->filled('role') ? $request->query('role') : null,
             'showMyStats' => false,
             'showSiteStats' => true,
-            'showInvoiceStats' => true,
+            // Invoice widgets belong on the accountant dashboard (coming separately).
+            'showInvoiceStats' => false,
             'includePayments' => true,
             'showUserColumn' => true,
             'showUserFilter' => true,
