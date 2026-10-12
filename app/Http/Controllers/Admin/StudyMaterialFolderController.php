@@ -588,20 +588,25 @@ class StudyMaterialFolderController extends Controller
             $accessTill = $this->lms->computeAccessTill(now(), $folder->validity_months);
         }
 
-        // Instructors multi-select only syncs when the form included that field.
-        // Missing instructor_ids alone must not wipe existing trainers.
-        $instructorsSubmitted = $request->boolean('instructor_ids_present')
-            || $request->has('instructor_ids')
-            || $request->filled('instructor_id');
+        // Only rewrite trainers when real instructor_ids[] values were posted.
+        // Select2 often omits an empty multi-select — never treat that as "clear all"
+        // or existing instructors get wiped on Save (looks like the change was reversed).
+        $postedTrainerIds = collect((array) $request->input('instructor_ids', []))
+            ->push($request->input('instructor_id'))
+            ->filter(fn ($id) => $id !== null && $id !== '')
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0)
+            ->reject(fn ($id) => $hofId > 0 && $id === $hofId)
+            ->unique()
+            ->values();
+
+        $instructorsSubmitted = $postedTrainerIds->isNotEmpty()
+            || $request->boolean('instructor_ids_clear');
 
         if ($instructorsSubmitted) {
-            $trainerIds = collect((array) $request->input('instructor_ids', []))
-                ->push($request->input('instructor_id'))
-                ->filter()
-                ->map(fn ($id) => (int) $id)
-                ->reject(fn ($id) => $hofId > 0 && $id === $hofId)
-                ->unique()
-                ->values();
+            $trainerIds = $request->boolean('instructor_ids_clear')
+                ? collect()
+                : $postedTrainerIds;
 
             $facultyIds = collect($hofId > 0 ? [$hofId] : [])
                 ->merge($trainerIds)

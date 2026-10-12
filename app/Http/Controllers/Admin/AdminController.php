@@ -310,7 +310,7 @@ class AdminController extends Controller
             return $pdf->download($filenameBase . '.pdf');
         }
 
-        $headers = ['Title', 'Status', 'SEO Status', 'SEO Score', 'Created By', 'Updated By', 'Created At', 'Updated At', 'URL'];
+        $headers = ['#', 'Title', 'Status', 'SEO Status', 'SEO Score', 'Created By', 'Updated By', 'Created At', 'Updated At', 'URL'];
         $callback = function () use ($rows, $headers, $username, $module, $label) {
             $handle = fopen('php://output', 'w');
             fputcsv($handle, ['Report', ucfirst($module) . ' — ' . $label]);
@@ -319,14 +319,25 @@ class AdminController extends Controller
             fputcsv($handle, []);
             fputcsv($handle, $headers);
 
+            $n = 0;
             foreach ($rows as $row) {
+                $n++;
+                $createdBy = trim((string) ($row['created_by'] ?? ''));
+                $updatedBy = trim((string) ($row['updated_by'] ?? ''));
+                if ($createdBy === '' || $createdBy === '-' || $createdBy === '—') {
+                    $createdBy = 'Admin';
+                }
+                if ($updatedBy === '' || $updatedBy === '-' || $updatedBy === '—') {
+                    $updatedBy = 'Admin';
+                }
                 fputcsv($handle, [
+                    $n,
                     $row['title'] ?? '',
                     $row['status'] ?? '',
                     $row['seo_status'] ?? '',
                     $row['seo_score'] ?? '',
-                    $row['created_by'] ?? '',
-                    $row['updated_by'] ?? '',
+                    $createdBy,
+                    $updatedBy,
                     $row['created_at'] ?? '',
                     $row['updated_at'] ?? '',
                     $row['url'] ?? '',

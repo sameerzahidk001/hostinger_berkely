@@ -24,6 +24,7 @@
     <table>
         <thead>
             <tr>
+                <th>#</th>
                 <th>Title</th>
                 <th>Status</th>
                 <th>SEO Status</th>
@@ -35,20 +36,21 @@
             </tr>
         </thead>
         <tbody>
-            @forelse($rows as $row)
+            @forelse($rows as $index => $row)
                 <tr>
+                    <td>{{ $index + 1 }}</td>
                     <td>{{ $row['title'] ?? '' }}</td>
                     <td>{{ $row['status'] ?? '' }}</td>
                     <td>{{ $row['seo_status'] ?? '' }}</td>
                     <td>{{ $row['seo_score'] ?? '' }}</td>
-                    <td>{{ $row['created_by'] ?? '' }}</td>
-                    <td>{{ $row['updated_by'] ?? '' }}</td>
+                    <td>{{ ($row['created_by'] ?? '') === '-' || ($row['created_by'] ?? '') === '' || ($row['created_by'] ?? '') === '—' ? 'Admin' : ($row['created_by'] ?? 'Admin') }}</td>
+                    <td>{{ ($row['updated_by'] ?? '') === '-' || ($row['updated_by'] ?? '') === '' || ($row['updated_by'] ?? '') === '—' ? 'Admin' : ($row['updated_by'] ?? 'Admin') }}</td>
                     <td>{{ $row['created_at'] ?? '' }}</td>
                     <td>{{ $row['updated_at'] ?? '' }}</td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="8">No records found.</td>
+                    <td colspan="9">No records found.</td>
                 </tr>
             @endforelse
         </tbody>
