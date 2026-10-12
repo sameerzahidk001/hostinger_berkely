@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Course;
 use App\Models\Page;
+use App\Models\PagesSEO;
 use App\Models\Payment;
 use App\Models\User;
 use Carbon\Carbon;
@@ -182,24 +183,31 @@ class PanelActivityService
         ?string $dateTo,
         bool $includePayments = false,
         ?array $restrictToUserIds = null,
-        bool $paymentsOnly = false
+        bool $paymentsOnly = false,
+        ?int $limit = null
     ): Collection {
         [$from, $to] = $this->parseDateRange($dateFrom, $dateTo);
+        $sourceLimit = ($limit !== null && $limit > 0 && ! $from && ! $to)
+            ? max(500, (int) ceil($limit / 2))
+            : null;
 
         if ($paymentsOnly) {
-            return $this->invoiceActivities($from, $to)
-                ->merge($this->installmentPaymentActivities($from, $to))
+            $feed = $this->invoiceActivities($from, $to, $sourceLimit)
+                ->merge($this->installmentPaymentActivities($from, $to, $sourceLimit))
                 ->sortByDesc(fn (array $row) => $row['occurred_at']->timestamp)
                 ->values();
+
+            return $limit ? $feed->take($limit)->values() : $feed;
         }
 
-        $feed = $this->courseActivities($userId, $from, $to)
-            ->merge($this->pageActivities($userId, $from, $to));
+        $feed = $this->courseActivities($userId, $from, $to, $sourceLimit)
+            ->merge($this->pageActivities($userId, $from, $to, $sourceLimit))
+            ->merge($this->seoActivities($userId, $from, $to, $sourceLimit));
 
         if ($includePayments && $userId === null && $restrictToUserIds === null) {
             $feed = $feed
-                ->merge($this->invoiceActivities($from, $to))
-                ->merge($this->installmentPaymentActivities($from, $to));
+                ->merge($this->invoiceActivities($from, $to, $sourceLimit))
+                ->merge($this->installmentPaymentActivities($from, $to, $sourceLimit));
         }
 
         if ($restrictToUserIds !== null) {
@@ -212,9 +220,11 @@ class PanelActivityService
             });
         }
 
-        return $feed
+        $feed = $feed
             ->sortByDesc(fn (array $row) => $row['occurred_at']->timestamp)
             ->values();
+
+        return $limit ? $feed->take($limit)->values() : $feed;
     }
 
     public function userIdsForRole(?string $role): ?array
@@ -263,7 +273,7 @@ class PanelActivityService
             ->get(['id', 'name', 'email']);
     }
 
-    private function courseActivities(?int $userId, ?Carbon $from, ?Carbon $to): Collection
+    private function courseActivities(?int $userId, ?Carbon $from, ?Carbon $to, ?int $limit = null): Collection
     {
         if (! Schema::hasColumn('courses', 'created_by')) {
             return collect();
@@ -275,6 +285,10 @@ class PanelActivityService
             $query->where(function ($q) use ($userId) {
                 $q->where('created_by', $userId)->orWhere('updated_by', $userId);
             });
+        }
+
+        if ($limit) {
+            $query->orderByDesc('updated_at')->limit($limit);
         }
 
         return $query->get()->flatMap(function (Course $course) use ($userId, $from, $to) {
@@ -307,7 +321,7 @@ class PanelActivityService
         });
     }
 
-    private function pageActivities(?int $userId, ?Carbon $from, ?Carbon $to): Collection
+    private function pageActivities(?int $userId, ?Carbon $from, ?Carbon $to, ?int $limit = null): Collection
     {
         if (! Schema::hasColumn('pages', 'created_by')) {
             return collect();
@@ -319,6 +333,10 @@ class PanelActivityService
             $query->where(function ($q) use ($userId) {
                 $q->where('created_by', $userId)->orWhere('updated_by', $userId);
             });
+        }
+
+        if ($limit) {
+            $query->orderByDesc('updated_at')->limit($limit);
         }
 
         return $query->get()->flatMap(function (Page $page) use ($userId, $from, $to) {
@@ -352,15 +370,81 @@ class PanelActivityService
         });
     }
 
-    private function invoiceActivities(?Carbon $from, ?Carbon $to): Collection
+    private function seoActivities(?int $userId, ?Carbon $from, ?Carbon $to, ?int $limit = null): Collection
+    {
+        if (! Schema::hasTable('pages_s_e_o_s') || ! Schema::hasColumn('pages_s_e_o_s', 'created_by')) {
+            return collect();
+        }
+
+        $query = PagesSEO::query()->with(['page', 'course']);
+
+        if ($userId) {
+            $query->where(function ($q) use ($userId) {
+                $q->where('created_by', $userId)->orWhere('updated_by', $userId);
+            });
+        }
+
+        if ($limit) {
+            $query->orderByDesc('updated_at')->limit($limit);
+        }
+
+        return $query->get()->flatMap(function (PagesSEO $seo) use ($userId, $from, $to) {
+            $rows = collect();
+            $type = $seo->course_id ? 'Course' : 'Page';
+            $name = $seo->course_id
+                ? ($seo->course?->title ?: 'Course #' . $seo->course_id)
+                : ($seo->page?->page_name ?: 'Page #' . $seo->page_id);
+            $item = $type . ': ' . $name;
+            $url = $seo->id ? route('courses-pages-seo.edit', $seo->id) : '#';
+
+            if ((! $userId || (int) $seo->created_by === $userId)
+                && $this->inRange($seo->created_at, $from, $to)) {
+                $rows->push($this->activityRow(
+                    'SEO Created',
+                    $item,
+                    $url,
+                    $seo->created_by,
+                    $seo->created_at
+                ));
+            }
+
+            if ($this->wasUpdated($seo->created_at, $seo->updated_at)
+                && (! $userId || (int) $seo->updated_by === $userId)
+                && $this->inRange($seo->updated_at, $from, $to)) {
+                $rows->push($this->activityRow(
+                    'SEO Updated',
+                    $item,
+                    $url,
+                    $seo->updated_by ?: $seo->created_by,
+                    $seo->updated_at
+                ));
+            }
+
+            return $rows;
+        });
+    }
+
+    private function invoiceActivities(?Carbon $from, ?Carbon $to, ?int $limit = null): Collection
     {
         if (! Schema::hasTable('payments')) {
             return collect();
         }
 
-        return Payment::query()
+        $query = Payment::query()
             ->with(['user', 'course'])
-            ->orderByDesc('created_at')
+            ->orderByDesc('created_at');
+
+        if ($from) {
+            $query->where('created_at', '>=', $from);
+        }
+        if ($to) {
+            $query->where('created_at', '<=', $to);
+        }
+        if ($limit) {
+            $query->limit($limit);
+        }
+
+        return $query
             ->get()
             ->filter(fn (Payment $payment) => $this->inRange($payment->created_at, $from, $to))
             ->map(function (Payment $payment) {
@@ -377,18 +461,24 @@ class PanelActivityService
             });
     }
 
-    private function installmentPaymentActivities(?Carbon $from, ?Carbon $to): Collection
+    private function installmentPaymentActivities(?Carbon $from, ?Carbon $to, ?int $limit = null): Collection
     {
         if (! Schema::hasTable('installments')) {
             return collect();
         }
 
-        return \App\Models\Installment::query()
+        $query = \App\Models\Installment::query()
             ->with(['user', 'payment.course'])
             ->where('status', 'paid')
             ->where('paid_amount', '>', 0)
             ->orderByDesc('paid_date')
-            ->orderByDesc('updated_at')
+            ->orderByDesc('updated_at');
+
+        if ($limit) {
+            $query->limit($limit);
+        }
+
+        return $query
             ->get()
             ->filter(function ($installment) use ($from, $to) {
                 $at = $installment->paid_date ?? $installment->updated_at;

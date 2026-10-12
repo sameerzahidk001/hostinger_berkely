@@ -144,7 +144,10 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                <h4 class="modal-title" id="contentReportModalLabel">Report details</h4>
+                <h4 class="modal-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                    <span id="contentReportModalLabel">Report details</span>
+                    <span id="contentReportModalCount" style="display:inline-block;min-width:42px;padding:4px 10px;border:1px solid #cfd4d8;border-radius:3px;background:#f5f5f5;font-size:14px;font-weight:700;color:#333;text-align:center;">0</span>
+                </h4>
             </div>
             <div class="modal-body">
                 <div class="row" style="margin-bottom:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;">
@@ -320,6 +323,7 @@
         $('#contentReportModalLabel').text(
             String(currentModule || '').toUpperCase() + ' -> ' + String(currentLabel || '').toUpperCase()
         );
+        $('#contentReportModalCount').text('…');
 
         $('#contentReportExportExcel').attr('href', buildUrl(exportUrl, {
             module: currentModule,
@@ -348,9 +352,12 @@
                 }
                 return row;
             });
+            var total = typeof resp.count === 'number' ? resp.count : allRows.length;
+            $('#contentReportModalCount').text(total);
             renderRows(allRows);
         }).fail(function () {
             allRows = [];
+            $('#contentReportModalCount').text('0');
             $('#contentReportTable tbody').html('<tr><td colspan="' + colCount + '" class="text-center text-danger">Failed to load report details.</td></tr>');
         });
     }
