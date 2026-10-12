@@ -23,14 +23,32 @@
     padding: 10px 18px;
     font-weight: 600;
 }
-#activities-panel .activity-module-tabs > li > a.tab-staff { background: #2f4f4f; }
-#activities-panel .activity-module-tabs > li > a.tab-student { background: #4a1942; }
+#activities-panel .activity-module-tabs > li > a.tab-staff { background: #6fa8a8; }
+#activities-panel .activity-module-tabs > li > a.tab-student { background: #c48bb8; }
 #activities-panel .activity-module-tabs > li.active > a.tab-staff,
 #activities-panel .activity-module-tabs > li > a.tab-staff:hover,
-#activities-panel .activity-module-tabs > li > a.tab-staff:focus { background: #1f3535; color: #fff !important; }
+#activities-panel .activity-module-tabs > li > a.tab-staff:focus { background: #5a9494; color: #fff !important; }
 #activities-panel .activity-module-tabs > li.active > a.tab-student,
 #activities-panel .activity-module-tabs > li > a.tab-student:hover,
-#activities-panel .activity-module-tabs > li > a.tab-student:focus { background: #32102c; color: #fff !important; }
+#activities-panel .activity-module-tabs > li > a.tab-student:focus { background: #b077a4; color: #fff !important; }
+#activities-panel .activity-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+#activities-panel .activity-filter-row .form-group { margin: 0; }
+#activities-panel #role + .select2-container { width: 150px !important; min-width: 150px !important; }
+#activities-panel #user_id + .select2-container,
+#activities-panel #student_user_id + .select2-container { width: 220px !important; min-width: 220px !important; }
+#activities-panel .activity-filter-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+}
 </style>
 @endpush
 
@@ -268,7 +286,7 @@
 
                 <div class="tab-content">
                     <div role="tabpanel" class="tab-pane {{ $activityTab === 'staff' || !($showStudentTable ?? false) ? 'active' : '' }}" id="activity-staff">
-                        <form method="GET" action="{{ route('admin.home') }}" class="form-inline" style="flex-wrap:wrap;margin-bottom:12px;" id="staffActivityFilterForm">
+                        <form method="GET" action="{{ route('admin.home') }}" class="activity-filter-row" id="staffActivityFilterForm">
                             <input type="hidden" name="activity_tab" value="staff">
                             @if($preserveReportUser)
                                 <input type="hidden" name="report_user" value="{{ $preserveReportUser }}">
@@ -277,18 +295,18 @@
                                 <input type="hidden" name="student_user_id" value="{{ request('student_user_id') }}">
                             @endif
                             @if($showUserFilter ?? false)
-                            <div class="form-group m-r-sm m-b-sm">
+                            <div class="form-group">
                                 <label for="role" class="m-r-xs">Role</label>
-                                <select id="role" name="role" class="form-control activity-filter-select">
+                                <select id="role" name="role" class="form-control activity-filter-select" style="width:150px;">
                                     <option value="" @selected(!request()->filled('role'))>None</option>
                                     <option value="content_writer" @selected(request('role') === 'content_writer')>Content Writers</option>
                                     <option value="accountant" @selected(request('role') === 'accountant')>Accountants</option>
                                     <option value="instructor" @selected(request('role') === 'instructor')>Instructors</option>
                                 </select>
                             </div>
-                            <div class="form-group m-r-sm m-b-sm">
+                            <div class="form-group">
                                 <label for="user_id" class="m-r-xs">User</label>
-                                <select id="user_id" name="user_id" class="form-control activity-filter-select" style="min-width: 220px;">
+                                <select id="user_id" name="user_id" class="form-control activity-filter-select" style="width:220px;">
                                     <option value="" @selected(!request()->filled('user_id'))>None</option>
                                     @foreach($filterUsers ?? [] as $filterUser)
                                         @php $roleName = $filterUser->roles->first()?->name; @endphp
@@ -299,24 +317,26 @@
                                 </select>
                             </div>
                             @endif
-                            <div class="form-group m-r-sm m-b-sm">
+                            <div class="form-group">
                                 <label for="staff_date_from" class="m-r-xs">From</label>
                                 <input type="date" id="staff_date_from" name="date_from" class="form-control" value="{{ request('date_from') }}">
                             </div>
-                            <div class="form-group m-r-sm m-b-sm">
+                            <div class="form-group">
                                 <label for="staff_date_to" class="m-r-xs">To</label>
                                 <input type="date" id="staff_date_to" name="date_to" class="form-control" value="{{ request('date_to') }}">
                             </div>
-                            <button type="submit" class="btn btn-primary m-r-sm m-b-sm">Filter</button>
-                            <a href="{{ route('admin.home', $staffClearQuery) }}" class="btn btn-default m-b-sm">Clear</a>
-                            <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'staff', 'format' => 'excel'])) }}"
-                                class="btn btn-success btn-sm m-b-sm" style="margin-left:auto;">
-                                <i class="fa fa-file-excel-o"></i> Export Excel
-                            </a>
-                            <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'staff', 'format' => 'pdf'])) }}"
-                                class="btn btn-danger btn-sm m-b-sm">
-                                <i class="fa fa-file-pdf-o"></i> Export PDF
-                            </a>
+                            <div class="activity-filter-actions">
+                                <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+                                <a href="{{ route('admin.home', $staffClearQuery) }}" class="btn btn-default btn-sm">Clear</a>
+                                <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'staff', 'format' => 'excel'])) }}"
+                                    class="btn btn-success btn-sm">
+                                    <i class="fa fa-file-excel-o"></i> Export Excel
+                                </a>
+                                <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'staff', 'format' => 'pdf'])) }}"
+                                    class="btn btn-danger btn-sm">
+                                    <i class="fa fa-file-pdf-o"></i> Export PDF
+                                </a>
+                            </div>
                         </form>
                         <p class="text-muted small m-b-sm">Leave any dropdown on <strong>None</strong> to skip that filter. Use dates only when needed.</p>
                         <div class="table-responsive">
@@ -382,7 +402,7 @@
 
                     @if($showStudentTable ?? false)
                     <div role="tabpanel" class="tab-pane {{ $activityTab === 'student' ? 'active' : '' }}" id="activity-student">
-                        <form method="GET" action="{{ route('admin.home') }}" class="form-inline" style="flex-wrap:wrap;margin-bottom:12px;" id="studentActivityFilterForm">
+                        <form method="GET" action="{{ route('admin.home') }}" class="activity-filter-row" id="studentActivityFilterForm">
                             <input type="hidden" name="activity_tab" value="student">
                             @if($preserveReportUser)
                                 <input type="hidden" name="report_user" value="{{ $preserveReportUser }}">
@@ -393,9 +413,9 @@
                             @if(request()->filled('user_id'))
                                 <input type="hidden" name="user_id" value="{{ request('user_id') }}">
                             @endif
-                            <div class="form-group m-r-sm m-b-sm">
+                            <div class="form-group">
                                 <label for="student_user_id" class="m-r-xs">Student</label>
-                                <select id="student_user_id" name="student_user_id" class="form-control activity-filter-select" style="min-width: 220px;">
+                                <select id="student_user_id" name="student_user_id" class="form-control activity-filter-select" style="width:220px;">
                                     <option value="" @selected(!request()->filled('student_user_id'))>None</option>
                                     @foreach($studentFilterUsers ?? [] as $studentUser)
                                         <option value="{{ $studentUser->id }}" @selected((string) request('student_user_id') === (string) $studentUser->id)>
@@ -404,24 +424,26 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="form-group m-r-sm m-b-sm">
+                            <div class="form-group">
                                 <label for="student_date_from" class="m-r-xs">From</label>
                                 <input type="date" id="student_date_from" name="date_from" class="form-control" value="{{ request('date_from') }}">
                             </div>
-                            <div class="form-group m-r-sm m-b-sm">
+                            <div class="form-group">
                                 <label for="student_date_to" class="m-r-xs">To</label>
                                 <input type="date" id="student_date_to" name="date_to" class="form-control" value="{{ request('date_to') }}">
                             </div>
-                            <button type="submit" class="btn btn-primary m-r-sm m-b-sm">Filter</button>
-                            <a href="{{ route('admin.home', $studentClearQuery) }}" class="btn btn-default m-b-sm">Clear</a>
-                            <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'student', 'format' => 'excel'])) }}"
-                                class="btn btn-success btn-sm m-b-sm" style="margin-left:auto;">
-                                <i class="fa fa-file-excel-o"></i> Export Excel
-                            </a>
-                            <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'student', 'format' => 'pdf'])) }}"
-                                class="btn btn-danger btn-sm m-b-sm">
-                                <i class="fa fa-file-pdf-o"></i> Export PDF
-                            </a>
+                            <div class="activity-filter-actions">
+                                <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+                                <a href="{{ route('admin.home', $studentClearQuery) }}" class="btn btn-default btn-sm">Clear</a>
+                                <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'student', 'format' => 'excel'])) }}"
+                                    class="btn btn-success btn-sm">
+                                    <i class="fa fa-file-excel-o"></i> Export Excel
+                                </a>
+                                <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'student', 'format' => 'pdf'])) }}"
+                                    class="btn btn-danger btn-sm">
+                                    <i class="fa fa-file-pdf-o"></i> Export PDF
+                                </a>
+                            </div>
                         </form>
                         <p class="text-muted small m-b-sm">Leave Student on <strong>None</strong> to see all students. Use dates only when needed.</p>
                         <div class="table-responsive">
@@ -504,21 +526,21 @@ $(document).ready(function() {
     }, 300);
     toastr.success('Welcome, {{ addslashes(panel_profile_name() ?: 'User') }}');
 
-    function initTypeFind($el, placeholder) {
+    function initTypeFind($el, placeholder, width) {
         if (!$el.length || $el.hasClass('select2-hidden-accessible')) {
             return;
         }
         $el.select2({
             placeholder: placeholder,
             allowClear: true,
-            width: '100%',
+            width: width || '100%',
             minimumResultsForSearch: 0
         });
     }
 
-    initTypeFind($('#role'), 'Type to find role');
-    initTypeFind($('#user_id'), 'Type to find user');
-    initTypeFind($('#student_user_id'), 'Type to find student');
+    initTypeFind($('#role'), 'Type to find role', '150px');
+    initTypeFind($('#user_id'), 'Type to find user', '220px');
+    initTypeFind($('#student_user_id'), 'Type to find student', '220px');
     initTypeFind($('#content_report_user'), 'Type to find user');
 
     $('#content_report_user').on('change', function () {
