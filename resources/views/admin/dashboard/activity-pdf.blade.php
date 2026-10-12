@@ -27,7 +27,7 @@
                 <th>Date &amp; Time</th>
                 <th>User</th>
                 <th>Activity</th>
-                <th>Item</th>
+                <th>Description</th>
                 <th>Session</th>
                 <th>URL</th>
             </tr>

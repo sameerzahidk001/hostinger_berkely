@@ -27,6 +27,7 @@
                 <th>#</th>
                 <th>Title</th>
                 <th>Status</th>
+                <th>Type</th>
                 <th>SEO Status</th>
                 <th>SEO Score</th>
                 <th>Created By</th>
@@ -41,6 +42,7 @@
                     <td>{{ $index + 1 }}</td>
                     <td>{{ $row['title'] ?? '' }}</td>
                     <td>{{ $row['status'] ?? '' }}</td>
+                    <td>{{ $row['type'] ?? '' }}</td>
                     <td>{{ $row['seo_status'] ?? '' }}</td>
                     <td>{{ $row['seo_score'] ?? '' }}</td>
                     <td>{{ ($row['created_by'] ?? '') === '-' || ($row['created_by'] ?? '') === '' || ($row['created_by'] ?? '') === '—' ? 'Admin' : ($row['created_by'] ?? 'Admin') }}</td>
@@ -50,7 +52,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="9">No records found.</td>
+                    <td colspan="10">No records found.</td>
                 </tr>
             @endforelse
         </tbody>

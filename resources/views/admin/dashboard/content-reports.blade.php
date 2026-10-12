@@ -139,6 +139,7 @@
                                 <th data-sort-key="#" style="width:50px;cursor:pointer;"># <span class="sort-ind"></span></th>
                                 <th data-sort-key="title" style="cursor:pointer;">Title <span class="sort-ind"></span></th>
                                 <th data-sort-key="status" style="width:90px;cursor:pointer;">Status <span class="sort-ind"></span></th>
+                                <th data-sort-key="type" style="width:90px;cursor:pointer;">Type <span class="sort-ind"></span></th>
                                 <th data-sort-key="seo_status" style="width:110px;cursor:pointer;">SEO Status <span class="sort-ind"></span></th>
                                 <th data-sort-key="seo_score" style="width:90px;cursor:pointer;">SEO Score <span class="sort-ind"></span></th>
                                 <th data-sort-key="created_by" style="width:130px;cursor:pointer;">Created By <span class="sort-ind"></span></th>
@@ -148,7 +149,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr><td colspan="9" class="text-center text-muted">Loading…</td></tr>
+                            <tr><td colspan="10" class="text-center text-muted">Loading…</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -166,7 +167,7 @@
     var searchTimer = null;
     var detailsUrl = @json(route('admin.home.content-report-details'));
     var exportUrl = @json(route('admin.home.content-report-export'));
-    var colCount = 9;
+    var colCount = 10;
     var allRows = [];
     var sortKey = '#';
     var sortDir = 'asc';
@@ -261,6 +262,7 @@
                 '<td>' + (idx + 1) + '</td>' +
                 '<td>' + title + '</td>' +
                 '<td>' + $('<div>').text(row.status || '—').html() + '</td>' +
+                '<td>' + $('<div>').text(row.type || '—').html() + '</td>' +
                 '<td>' + $('<div>').text(row.seo_status || '—').html() + '</td>' +
                 '<td>' + $('<div>').text(row.seo_score || '—').html() + '</td>' +
                 '<td>' + $('<div>').text(row.created_by || 'Admin').html() + '</td>' +
