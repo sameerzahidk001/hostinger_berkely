@@ -87,7 +87,7 @@
                     <div class="col-sm-3" style="padding-left:0;">
                         <input type="text" id="contentReportSearch" class="form-control" placeholder="Search title / keyword...">
                     </div>
-                    <div id="contentReportRangeFilters" style="display:none;display:none;flex-wrap:wrap;gap:8px;align-items:flex-end;">
+                    <div id="contentReportRangeFilters" style="display:none;flex-wrap:wrap;gap:8px;align-items:flex-end;">
                         <div class="form-group" style="margin:0;">
                             <label for="content_report_date_from" class="m-r-xs" style="font-weight:normal;font-size:12px;">From</label>
                             <input type="date" id="content_report_date_from" class="form-control" value="{{ $rangeFrom }}">
