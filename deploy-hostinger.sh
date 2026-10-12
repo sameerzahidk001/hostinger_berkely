@@ -124,7 +124,6 @@ php artisan migrate --path=database/migrations/2026_09_16_000001_add_head_of_fac
 php artisan migrate --path=database/migrations/2026_10_04_000001_add_lms_permissions_to_users.php --force
 php artisan migrate --path=database/migrations/2026_10_05_000001_add_indexes_to_page_views_table.php --force
 php artisan migrate --path=database/migrations/2026_10_09_000001_add_head_of_faculty_to_study_material_folders.php --force
-php artisan migrate --path=database/migrations/2026_10_12_000001_backfill_missing_audit_users_as_admin.php --force
 php artisan berkely:fetch-geoip-db || true
 
 php artisan config:clear
