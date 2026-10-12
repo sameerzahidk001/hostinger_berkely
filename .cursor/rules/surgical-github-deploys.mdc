@@ -1,0 +1,13 @@
+---
+description: GitHub-only deploys; surgical changes only; never disturb existing data or unrelated features
+alwaysApply: true
+---
+
+# Deploy and change policy
+
+- Hostinger is connected to GitHub only. Do **not** require `bash deploy-hostinger.sh`, `php artisan migrate`, or SSH steps unless the user explicitly asks.
+- Dual-push code to `feature/hostinger-seo-activity-jul2026` and `deploy/lms-zoho-meeting-only` when shipping live fixes.
+- Prefer **display/code fixes** over database rewrites. Do not mass-update or delete existing rows/columns unless the user explicitly asks for that data change.
+- When adding or updating anything: change **only** what was requested. Do not reverse, rewrite, or “cleanup” unrelated finalized work (HoF, instructors, access grants, idle logout, invoices, etc.).
+- Avoid migrations that rewrite historical `created_by` / `updated_by` or other live content. Show fallbacks in the UI instead (e.g. missing audit → “Admin”).
+- If a feature needs a new DB column, keep it additive and nullable with safe runtime guards (`Schema::hasColumn` / `class_exists`) so GitHub pull alone does not break the site.
