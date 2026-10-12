@@ -383,13 +383,12 @@
                 }
                 return row;
             });
-            var loaded = typeof resp.count === 'number' ? resp.count : allRows.length;
-            var total = q ? loaded : Math.max(loaded, currentCountHint || 0);
-            $('#contentReportModalCount').text(total);
+            // Box count must match rows currently shown in the table.
+            $('#contentReportModalCount').text(allRows.length);
             renderRows(allRows);
         }).fail(function () {
             allRows = [];
-            $('#contentReportModalCount').text(currentCountHint || '0');
+            $('#contentReportModalCount').text('0');
             $('#contentReportTable tbody').html('<tr><td colspan="' + colCount + '" class="text-center text-danger">Failed to load report details.</td></tr>');
         });
     }
@@ -405,7 +404,7 @@
         $('#contentReportModalLabel').text(
             String(currentModule || '').toUpperCase() + ' -> ' + String(currentLabel || '').toUpperCase()
         );
-        $('#contentReportModalCount').text(currentCountHint || '…');
+        $('#contentReportModalCount').text('…');
         syncRangeFilterVisibility();
         $('#contentReportModal').modal('show');
         loadDetails();
