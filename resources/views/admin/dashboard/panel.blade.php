@@ -190,80 +190,6 @@
     @include('admin.dashboard.content-reports')
 @endif
 
-<div class="row" style="padding: 0 10px 12px;">
-    <div class="col-lg-12">
-        <div class="ibox float-e-margins">
-            <div class="ibox-title">
-                <h5>Filter activity</h5>
-            </div>
-            <div class="ibox-content">
-                <form method="GET" action="{{ route('admin.home') }}" class="form-inline" style="flex-wrap: wrap;" id="activityFilterForm">
-                    @if($showUserFilter ?? false)
-                    <div class="form-group m-r-sm m-b-sm">
-                        <label for="role" class="m-r-xs">Role</label>
-                        <select id="role" name="role" class="form-control activity-filter-select">
-                            <option value="" @selected(!request()->filled('role'))>None</option>
-                            <option value="content_writer" @selected(request('role') === 'content_writer')>Content Writers</option>
-                            <option value="accountant" @selected(request('role') === 'accountant')>Accountants</option>
-                            <option value="instructor" @selected(request('role') === 'instructor')>Instructors</option>
-                        </select>
-                    </div>
-                    <div class="form-group m-r-sm m-b-sm">
-                        <label for="user_id" class="m-r-xs">User</label>
-                        <select id="user_id" name="user_id" class="form-control activity-filter-select" style="min-width: 220px;">
-                            <option value="" @selected(!request()->filled('user_id'))>None</option>
-                            @foreach($filterUsers ?? [] as $filterUser)
-                                @php $roleName = $filterUser->roles->first()?->name; @endphp
-                                <option value="{{ $filterUser->id }}" @selected((string) request('user_id') === (string) $filterUser->id)>
-                                    {{ $filterUser->name }} ({{ role_display_name($roleName) }})
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    @endif
-                    @if($showStudentTable ?? false)
-                    <div class="form-group m-r-sm m-b-sm">
-                        <label for="student_user_id" class="m-r-xs">Student</label>
-                        <select id="student_user_id" name="student_user_id" class="form-control activity-filter-select" style="min-width: 220px;">
-                            <option value="" @selected(!request()->filled('student_user_id'))>None</option>
-                            @foreach($studentFilterUsers ?? [] as $studentUser)
-                                <option value="{{ $studentUser->id }}" @selected((string) request('student_user_id') === (string) $studentUser->id)>
-                                    {{ $studentUser->name }} ({{ $studentUser->email }})
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    @endif
-                    <div class="form-group m-r-sm m-b-sm">
-                        <label for="date_from" class="m-r-xs">From</label>
-                        <input type="date" id="date_from" name="date_from" class="form-control"
-                            value="{{ request('date_from') }}">
-                    </div>
-                    <div class="form-group m-r-sm m-b-sm">
-                        <label for="date_to" class="m-r-xs">To</label>
-                        <input type="date" id="date_to" name="date_to" class="form-control"
-                            value="{{ request('date_to') }}">
-                    </div>
-                    <button type="submit" class="btn btn-primary m-r-sm m-b-sm">Filter</button>
-                    <a href="{{ route('admin.home') }}" class="btn btn-default m-b-sm">Clear</a>
-                </form>
-                <p class="text-muted small m-t-sm m-b-none">Leave any dropdown on <strong>None</strong> to skip that filter. Use dates only when needed.</p>
-
-                <div class="m-t-md">
-                    <span class="label label-primary m-r-xs">Courses created: {{ $summary['courses_created'] }}</span>
-                    <span class="label label-info m-r-xs">Pages created: {{ $summary['pages_created'] }}</span>
-                    @if($includePayments)
-                        <span class="label label-success m-r-xs">Invoices recorded: {{ $summary['invoices_recorded'] ?? $summary['payments_recorded'] }}</span>
-                    @endif
-                    @if(request()->hasAny(['date_from', 'date_to', 'user_id', 'role', 'student_user_id']))
-                        <small class="text-muted m-l-sm">Counts above match the selected filters.</small>
-                    @endif
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
 @php
     $activityTab = request('activity_tab', 'staff');
     if (! in_array($activityTab, ['staff', 'student'], true)) {
@@ -275,6 +201,18 @@
     $staffColspan = 4
         + (($showUserColumn ?? false) ? 1 : 0)
         + (($showSessionColumn ?? false) ? 1 : 0);
+    $preserveReportUser = request('report_user');
+    $staffClearQuery = array_filter([
+        'report_user' => $preserveReportUser,
+        'activity_tab' => 'staff',
+        'student_user_id' => request('student_user_id'),
+    ], fn ($v) => $v !== null && $v !== '');
+    $studentClearQuery = array_filter([
+        'report_user' => $preserveReportUser,
+        'activity_tab' => 'student',
+        'role' => request('role'),
+        'user_id' => request('user_id'),
+    ], fn ($v) => $v !== null && $v !== '');
 @endphp
 
 <div class="row" style="padding: 0 10px 12px;">
@@ -297,11 +235,59 @@
 
                 <div class="tab-content">
                     <div role="tabpanel" class="tab-pane {{ $activityTab === 'staff' || !($showStudentTable ?? false) ? 'active' : '' }}" id="activity-staff">
-                        <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+                        <form method="GET" action="{{ route('admin.home') }}" class="form-inline" style="flex-wrap:wrap;margin-bottom:12px;" id="staffActivityFilterForm">
+                            <input type="hidden" name="activity_tab" value="staff">
+                            @if($preserveReportUser)
+                                <input type="hidden" name="report_user" value="{{ $preserveReportUser }}">
+                            @endif
+                            @if(request()->filled('student_user_id'))
+                                <input type="hidden" name="student_user_id" value="{{ request('student_user_id') }}">
+                            @endif
+                            @if($showUserFilter ?? false)
+                            <div class="form-group m-r-sm m-b-sm">
+                                <label for="role" class="m-r-xs">Role</label>
+                                <select id="role" name="role" class="form-control activity-filter-select">
+                                    <option value="" @selected(!request()->filled('role'))>None</option>
+                                    <option value="content_writer" @selected(request('role') === 'content_writer')>Content Writers</option>
+                                    <option value="accountant" @selected(request('role') === 'accountant')>Accountants</option>
+                                    <option value="instructor" @selected(request('role') === 'instructor')>Instructors</option>
+                                </select>
+                            </div>
+                            <div class="form-group m-r-sm m-b-sm">
+                                <label for="user_id" class="m-r-xs">User</label>
+                                <select id="user_id" name="user_id" class="form-control activity-filter-select" style="min-width: 220px;">
+                                    <option value="" @selected(!request()->filled('user_id'))>None</option>
+                                    @foreach($filterUsers ?? [] as $filterUser)
+                                        @php $roleName = $filterUser->roles->first()?->name; @endphp
+                                        <option value="{{ $filterUser->id }}" @selected((string) request('user_id') === (string) $filterUser->id)>
+                                            {{ $filterUser->name }} ({{ role_display_name($roleName) }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            @endif
+                            <div class="form-group m-r-sm m-b-sm">
+                                <label for="staff_date_from" class="m-r-xs">From</label>
+                                <input type="date" id="staff_date_from" name="date_from" class="form-control" value="{{ request('date_from') }}">
+                            </div>
+                            <div class="form-group m-r-sm m-b-sm">
+                                <label for="staff_date_to" class="m-r-xs">To</label>
+                                <input type="date" id="staff_date_to" name="date_to" class="form-control" value="{{ request('date_to') }}">
+                            </div>
+                            <button type="submit" class="btn btn-primary m-r-sm m-b-sm">Filter</button>
+                            <a href="{{ route('admin.home', $staffClearQuery) }}" class="btn btn-default m-b-sm">Clear</a>
                             <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'staff'])) }}"
-                                class="btn btn-success btn-sm">
+                                class="btn btn-success btn-sm m-b-sm" style="margin-left:auto;">
                                 <i class="fa fa-file-excel-o"></i> Export to Excel
                             </a>
+                        </form>
+                        <p class="text-muted small m-b-sm">Leave any dropdown on <strong>None</strong> to skip that filter. Use dates only when needed.</p>
+                        <div class="m-b-md">
+                            <span class="label label-primary m-r-xs">Courses created: {{ $summary['courses_created'] }}</span>
+                            <span class="label label-info m-r-xs">Pages created: {{ $summary['pages_created'] }}</span>
+                            @if($includePayments ?? false)
+                                <span class="label label-success m-r-xs">Invoices recorded: {{ $summary['invoices_recorded'] ?? $summary['payments_recorded'] }}</span>
+                            @endif
                         </div>
                         <div class="table-responsive">
                             <table class="table table-striped table-bordered table-hover">
@@ -366,12 +352,44 @@
 
                     @if($showStudentTable ?? false)
                     <div role="tabpanel" class="tab-pane {{ $activityTab === 'student' ? 'active' : '' }}" id="activity-student">
-                        <div style="display:flex;justify-content:flex-end;margin-bottom:10px;">
+                        <form method="GET" action="{{ route('admin.home') }}" class="form-inline" style="flex-wrap:wrap;margin-bottom:12px;" id="studentActivityFilterForm">
+                            <input type="hidden" name="activity_tab" value="student">
+                            @if($preserveReportUser)
+                                <input type="hidden" name="report_user" value="{{ $preserveReportUser }}">
+                            @endif
+                            @if(request()->filled('role'))
+                                <input type="hidden" name="role" value="{{ request('role') }}">
+                            @endif
+                            @if(request()->filled('user_id'))
+                                <input type="hidden" name="user_id" value="{{ request('user_id') }}">
+                            @endif
+                            <div class="form-group m-r-sm m-b-sm">
+                                <label for="student_user_id" class="m-r-xs">Student</label>
+                                <select id="student_user_id" name="student_user_id" class="form-control activity-filter-select" style="min-width: 220px;">
+                                    <option value="" @selected(!request()->filled('student_user_id'))>None</option>
+                                    @foreach($studentFilterUsers ?? [] as $studentUser)
+                                        <option value="{{ $studentUser->id }}" @selected((string) request('student_user_id') === (string) $studentUser->id)>
+                                            {{ $studentUser->name }} ({{ $studentUser->email }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="form-group m-r-sm m-b-sm">
+                                <label for="student_date_from" class="m-r-xs">From</label>
+                                <input type="date" id="student_date_from" name="date_from" class="form-control" value="{{ request('date_from') }}">
+                            </div>
+                            <div class="form-group m-r-sm m-b-sm">
+                                <label for="student_date_to" class="m-r-xs">To</label>
+                                <input type="date" id="student_date_to" name="date_to" class="form-control" value="{{ request('date_to') }}">
+                            </div>
+                            <button type="submit" class="btn btn-primary m-r-sm m-b-sm">Filter</button>
+                            <a href="{{ route('admin.home', $studentClearQuery) }}" class="btn btn-default m-b-sm">Clear</a>
                             <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'student'])) }}"
-                                class="btn btn-success btn-sm">
+                                class="btn btn-success btn-sm m-b-sm" style="margin-left:auto;">
                                 <i class="fa fa-file-excel-o"></i> Export to Excel
                             </a>
-                        </div>
+                        </form>
+                        <p class="text-muted small m-b-sm">Leave Student on <strong>None</strong> to see all students. Use dates only when needed.</p>
                         <div class="table-responsive">
                             <table class="table table-striped table-bordered table-hover">
                                 <thead>
