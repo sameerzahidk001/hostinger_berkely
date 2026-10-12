@@ -317,7 +317,9 @@
     function loadDetails() {
         var q = $('#contentReportSearch').val() || '';
         $('#contentReportTable tbody').html('<tr><td colspan="' + colCount + '" class="text-center text-muted">Loading…</td></tr>');
-        $('#contentReportModalLabel').text(currentLabel + ' — ' + currentModule.charAt(0).toUpperCase() + currentModule.slice(1));
+        $('#contentReportModalLabel').text(
+            String(currentModule || '').toUpperCase() + ' -> ' + String(currentLabel || '').toUpperCase()
+        );
 
         $('#contentReportExportExcel').attr('href', buildUrl(exportUrl, {
             module: currentModule,
