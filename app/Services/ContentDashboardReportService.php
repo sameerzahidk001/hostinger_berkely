@@ -618,6 +618,7 @@ class ContentDashboardReportService
                 'created_at' => optional($row->created_at)?->format('M d, Y H:i'),
                 'updated_at' => optional($row->updated_at)?->format('M d, Y H:i'),
                 'url' => route('admin.course-agendas.edit', ['training_calendar' => $row->id]),
+                'web_url' => $row->course ? course_details_url($row->course) : null,
             ];
         });
     }
@@ -709,6 +710,7 @@ class ContentDashboardReportService
                 'created_at' => optional($fee->created_at)?->format('Y-m-d H:i'),
                 'updated_at' => optional($fee->updated_at)?->format('Y-m-d H:i'),
                 'url' => route('course.edit-fee', ['id' => $fee->id]),
+                'web_url' => $fee->course ? course_details_url($fee->course) : null,
             ];
         });
     }
@@ -1029,6 +1031,7 @@ class ContentDashboardReportService
                 'created_at' => optional($course->created_at)?->format('M d, Y H:i'),
                 'updated_at' => optional($course->updated_at)?->format('M d, Y H:i'),
                 'url' => $url,
+                'web_url' => course_details_url($course),
             ];
         });
     }

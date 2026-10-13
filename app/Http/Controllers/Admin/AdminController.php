@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Session;
 use App\Models\Admin;
 use App\Models\User;
 use App\Models\Country;
+use App\Services\AccountantDashboardService;
 use App\Services\ContentDashboardReportService;
 use App\Services\PanelActivityService;
 use App\Services\UserActivityLogService;
@@ -99,19 +100,7 @@ class AdminController extends Controller
         }
 
         if ($role === 'accountant') {
-            return $this->activityDashboard($request, [
-                'userId' => null,
-                'roleFilter' => 'accountant',
-                'showMyStats' => false,
-                'showSiteStats' => false,
-                'showInvoiceStats' => true,
-                'includePayments' => true,
-                'showUserColumn' => true,
-                'showUserFilter' => false,
-                'showSessionColumn' => false,
-                'logAudience' => 'staff',
-                'activityTitle' => $this->namedActivityTitle('Accountants'),
-            ]);
+            return redirect()->route('admin.dashboard.accountant');
         }
 
         $reportActor = $this->resolveContentReportActor($request);
@@ -137,6 +126,92 @@ class AdminController extends Controller
             'activityTitle' => $this->adminActivityTitle($request),
             'studentActivityTitle' => $this->studentActivityTitle($request),
         ]);
+    }
+
+    public function contentWritersDashboard(Request $request)
+    {
+        $this->ensureDashboardAccess(['admin', 'content_writer']);
+
+        $role = normalize_panel_role(panel_role_name());
+        $isContentWriter = $role === 'content_writer';
+        $isAdmin = $role === null || $role === 'admin';
+
+        if ($isContentWriter) {
+            return $this->activityDashboard($request, [
+                'userId' => audit_user_id(),
+                'showMyStats' => true,
+                'showSiteStats' => true,
+                'includePayments' => false,
+                'showUserColumn' => true,
+                'showUserFilter' => false,
+                'showSessionColumn' => false,
+                'showContentReports' => true,
+                'showContentReportUserFilter' => false,
+                'contentReportActorId' => audit_user_id(),
+                'logAudience' => 'staff',
+                'activityTitle' => $this->namedActivityTitle(panel_profile_name() ?: 'Content Writer'),
+            ]);
+        }
+
+        // Admin viewing Content Writers Dashboard (site-wide content activity + reports).
+        $reportActor = $this->resolveContentReportActor($request);
+
+        return $this->activityDashboard($request, [
+            'userId' => $request->filled('user_id') ? (int) $request->query('user_id') : null,
+            'roleFilter' => $request->filled('role') ? $request->query('role') : 'content_writer',
+            'showMyStats' => false,
+            'showSiteStats' => true,
+            'showInvoiceStats' => false,
+            'includePayments' => false,
+            'showUserColumn' => true,
+            'showUserFilter' => $isAdmin,
+            'showStudentTable' => false,
+            'showSessionColumn' => false,
+            'showContentReports' => true,
+            'showContentReportUserFilter' => $isAdmin,
+            'contentReportActorId' => $reportActor['id'],
+            'contentReportActorName' => $reportActor['name'],
+            'contentReportActorKey' => $reportActor['key'],
+            'logAudience' => 'staff',
+            'activityTitle' => $this->namedActivityTitle('Content Writers'),
+        ]);
+    }
+
+    public function accountantDashboard(Request $request)
+    {
+        $this->ensureDashboardAccess(['admin', 'content_writer', 'accountant']);
+
+        $tab = (string) $request->query('tab', 'overview');
+        if (! in_array($tab, ['overview', 'this_month', 'last_month', 'this_year', 'custom'], true)) {
+            $tab = 'overview';
+        }
+
+        $dateFrom = $request->filled('date_from') ? (string) $request->query('date_from') : now()->startOfMonth()->toDateString();
+        $dateTo = $request->filled('date_to') ? (string) $request->query('date_to') : now()->toDateString();
+
+        $service = app(AccountantDashboardService::class);
+        $stats = $service->overviewStats();
+        [$from, $to] = $service->rangeForTab($tab, $dateFrom, $dateTo);
+        $rows = $tab === 'overview' ? collect() : $service->invoiceRows($from, $to);
+
+        return view('admin.dashboard.accountant', [
+            'activeTab' => $tab,
+            'stats' => $stats,
+            'rows' => $rows,
+            'dateFrom' => $dateFrom,
+            'dateTo' => $dateTo,
+        ]);
+    }
+
+    private function ensureDashboardAccess(array $allowedRoles): void
+    {
+        $role = normalize_panel_role(panel_role_name());
+        if ($role === null || $role === 'admin') {
+            return;
+        }
+        if (! in_array($role, $allowedRoles, true)) {
+            abort(403);
+        }
     }
 
     private function namedActivityTitle(string $name): string
