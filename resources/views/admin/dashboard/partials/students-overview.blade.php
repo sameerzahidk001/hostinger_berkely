@@ -129,80 +129,8 @@
     </div>
 </div>
 
-<div class="modal fade" id="studentMetricModal" tabindex="-1" role="dialog" aria-labelledby="studentMetricModalLabel">
-    <div class="modal-dialog modal-lg" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                <h4 class="modal-title" id="studentMetricModalLabel">People</h4>
-            </div>
-            <div class="modal-body">
-                <div class="table-responsive" style="max-height:60vh;overflow:auto;">
-                    <table class="table table-striped table-bordered table-hover">
-                        <thead>
-                            <tr>
-                                <th style="width:50px;">#</th>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Gender</th>
-                                <th>Country</th>
-                                <th>City</th>
-                                <th>Nationality</th>
-                                <th>Registered date</th>
-                                <th style="width:80px;">Profile</th>
-                            </tr>
-                        </thead>
-                        <tbody id="studentMetricModalBody">
-                            <tr><td colspan="9" class="text-center text-muted">No people found.</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script>
-(function () {
-    var details = @json($details);
-    document.querySelectorAll('#students-overview-panel .js-student-metric').forEach(function (el) {
-        el.addEventListener('click', function () {
-            var key = el.getAttribute('data-metric') || '';
-            var title = el.getAttribute('data-title') || 'People';
-            var bucket = details[key] || {};
-            var people = bucket.people || [];
-            var modalTitle = document.getElementById('studentMetricModalLabel');
-            var body = document.getElementById('studentMetricModalBody');
-            if (modalTitle) {
-                modalTitle.textContent = (bucket.title || title) + ' (' + people.length + ')';
-            }
-            if (!body) {
-                return;
-            }
-            if (!people.length) {
-                body.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No people found for this metric.</td></tr>';
-            } else {
-                body.innerHTML = people.map(function (person, index) {
-                    var profile = person.url
-                        ? '<a href="' + person.url + '" target="_blank" rel="noopener">Open</a>'
-                        : '—';
-                    return '<tr>'
-                        + '<td>' + (index + 1) + '</td>'
-                        + '<td>' + (person.name || '—') + '</td>'
-                        + '<td>' + (person.email || '—') + '</td>'
-                        + '<td>' + (person.gender || '—') + '</td>'
-                        + '<td>' + (person.country || '—') + '</td>'
-                        + '<td>' + (person.city || '—') + '</td>'
-                        + '<td>' + (person.nationality || '—') + '</td>'
-                        + '<td>' + (person.registered_at || '—') + '</td>'
-                        + '<td>' + profile + '</td>'
-                        + '</tr>';
-                }).join('');
-            }
-            if (window.jQuery) {
-                window.jQuery('#studentMetricModal').modal('show');
-            }
-        });
-    });
-})();
-</script>
+@include('admin.dashboard.partials.people-metric-modal', [
+    'modalId' => 'studentMetricModal',
+    'details' => $details,
+    'triggerSelector' => '#students-overview-panel .js-student-metric',
+])

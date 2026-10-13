@@ -111,10 +111,16 @@
         'studentOverviewDetails' => $studentOverviewDetails ?? [],
     ])
 @endif
+@if($showInstructorOverview ?? false)
+    @include('admin.dashboard.partials.instructors-overview', [
+        'instructorOverviewStats' => $instructorOverviewStats ?? [],
+        'instructorOverviewDetails' => $instructorOverviewDetails ?? [],
+    ])
+@endif
 <div class="wrapper wrapper-content animated fadeInRight" style="padding: 20px 10px 0px;">
     <div class="row">
         {{-- Colored summary cards duplicate Content performance reports; hide when reports are shown. --}}
-        @if(!($showContentReports ?? false) && !($showStudentOverview ?? false))
+        @if(!($showContentReports ?? false) && !($showStudentOverview ?? false) && !($showInstructorOverview ?? false))
         @if($showMyStats ?? false)
         <div class="col-lg-3 col-md-6">
             <div class="widget style1 navy-bg">
