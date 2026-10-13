@@ -10,6 +10,9 @@ use Illuminate\Support\Facades\Schema;
 
 class StudentsDashboardService
 {
+    /** @var array<string, string>|null */
+    private ?array $countryNameByIso = null;
+
     public function overviewStats(): array
     {
         $ranges = $this->registrationRanges();
@@ -46,8 +49,8 @@ class StudentsDashboardService
             $people = $this->registrationQuery($range['from'] ?? null, $range['to'] ?? null)
                 ->orderByDesc('created_at')
                 ->limit(500)
-                ->get(['id', 'name', 'email', 'created_at'])
-                ->map(fn (User $user) => $this->personRow($user, 'Registered: ' . optional($user->created_at)->format('Y-m-d H:i')))
+                ->get($this->personSelectColumns())
+                ->map(fn (User $user) => $this->personRow($user))
                 ->values()
                 ->all();
 
@@ -70,8 +73,8 @@ class StudentsDashboardService
             $people = User::query()
                 ->whereIn('id', $ids->take(500)->all())
                 ->orderBy('name')
-                ->get(['id', 'name', 'email', 'created_at'])
-                ->map(fn (User $user) => $this->personRow($user, $title))
+                ->get($this->personSelectColumns())
+                ->map(fn (User $user) => $this->personRow($user))
                 ->values()
                 ->all();
 
@@ -229,14 +232,62 @@ class StudentsDashboardService
         ];
     }
 
-    private function personRow(User $user, string $note): array
+    /**
+     * @return list<string>
+     */
+    private function personSelectColumns(): array
     {
+        $columns = ['id', 'name', 'email', 'created_at'];
+        foreach (['gender', 'country', 'city', 'nationality'] as $column) {
+            if (Schema::hasColumn('users', $column)) {
+                $columns[] = $column;
+            }
+        }
+
+        return $columns;
+    }
+
+    private function personRow(User $user): array
+    {
+        $country = trim((string) ($user->country ?? ''));
+        if ($country !== '') {
+            $map = $this->countryNameMap();
+            $country = $map[strtoupper($country)] ?? $country;
+        }
+
         return [
             'id' => $user->id,
             'name' => $user->name ?: '—',
             'email' => $user->email ?: '—',
-            'note' => $note,
+            'gender' => $user->gender ?: '—',
+            'country' => $country !== '' ? $country : '—',
+            'city' => $user->city ?: '—',
+            'nationality' => $user->nationality ?: '—',
+            'registered_at' => optional($user->created_at)->format('Y-m-d H:i') ?: '—',
             'url' => route('users.edit', $user->id),
         ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function countryNameMap(): array
+    {
+        if ($this->countryNameByIso !== null) {
+            return $this->countryNameByIso;
+        }
+
+        $this->countryNameByIso = [];
+        if (! class_exists(\App\Models\Country::class) || ! Schema::hasTable('countries')) {
+            return $this->countryNameByIso;
+        }
+
+        $this->countryNameByIso = \App\Models\Country::query()
+            ->get(['iso_code', 'name'])
+            ->filter(fn ($row) => filled($row->iso_code))
+            ->mapWithKeys(fn ($row) => [strtoupper((string) $row->iso_code) => (string) $row->name])
+            ->all();
+
+        return $this->countryNameByIso;
     }
 }

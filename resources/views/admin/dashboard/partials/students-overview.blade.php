@@ -141,15 +141,19 @@
                     <table class="table table-striped table-bordered table-hover">
                         <thead>
                             <tr>
-                                <th style="width:60px;">#</th>
+                                <th style="width:50px;">#</th>
                                 <th>Name</th>
                                 <th>Email</th>
-                                <th>Details</th>
+                                <th>Gender</th>
+                                <th>Country</th>
+                                <th>City</th>
+                                <th>Nationality</th>
+                                <th>Registered date</th>
                                 <th style="width:80px;">Profile</th>
                             </tr>
                         </thead>
                         <tbody id="studentMetricModalBody">
-                            <tr><td colspan="5" class="text-center text-muted">No people found.</td></tr>
+                            <tr><td colspan="9" class="text-center text-muted">No people found.</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -176,7 +180,7 @@
                 return;
             }
             if (!people.length) {
-                body.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No people found for this metric.</td></tr>';
+                body.innerHTML = '<tr><td colspan="9" class="text-center text-muted">No people found for this metric.</td></tr>';
             } else {
                 body.innerHTML = people.map(function (person, index) {
                     var profile = person.url
@@ -186,7 +190,11 @@
                         + '<td>' + (index + 1) + '</td>'
                         + '<td>' + (person.name || '—') + '</td>'
                         + '<td>' + (person.email || '—') + '</td>'
-                        + '<td>' + (person.note || '—') + '</td>'
+                        + '<td>' + (person.gender || '—') + '</td>'
+                        + '<td>' + (person.country || '—') + '</td>'
+                        + '<td>' + (person.city || '—') + '</td>'
+                        + '<td>' + (person.nationality || '—') + '</td>'
+                        + '<td>' + (person.registered_at || '—') + '</td>'
                         + '<td>' + profile + '</td>'
                         + '</tr>';
                 }).join('');
