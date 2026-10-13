@@ -94,16 +94,7 @@
             });
         });
 
-        $('#head_of_faculty_id').on('change', function () {
-            const hof = String($(this).val() || '');
-            if (!hof) {
-                return;
-            }
-            const vals = ($instructorSelect.val() || []).filter(function (id) {
-                return String(id) !== hof;
-            });
-            $instructorSelect.val(vals).trigger('change');
-        });
+        // Same person may be Head of Faculty and Instructor at the same time — do not strip.
     }
 
     function packageLabel(row) {

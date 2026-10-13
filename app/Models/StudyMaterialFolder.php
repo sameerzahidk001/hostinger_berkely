@@ -295,10 +295,37 @@ class StudyMaterialFolder extends Model
         $people = $this->displayInstructors();
         $hof = $this->displayHeadOfFaculty();
         $hofId = $hof ? (int) $hof->id : 0;
+        $hasTrainerFlag = StudyMaterialInstructorAccess::ensureIsTrainerColumn();
 
-        return $people
+        if ($hasTrainerFlag) {
+            $access = $this->relationLoaded('instructorAccess')
+                ? $this->instructorAccess
+                : $this->instructorAccess()->with('instructor')->get();
+
+            $trainers = $access
+                ->filter(fn ($row) => (bool) ($row->is_trainer ?? true))
+                ->map(fn ($row) => $row->instructor)
+                ->filter()
+                ->unique('id')
+                ->values();
+
+            if ($trainers->isNotEmpty()) {
+                return $trainers;
+            }
+
+            // Same person as HoF + Instructor: keep them visible in Instructor column.
+            return $hof ? collect([$hof]) : collect();
+        }
+
+        $trainers = $people
             ->reject(fn ($user) => $hofId > 0 && (int) $user->id === $hofId)
             ->values();
+
+        if ($trainers->isEmpty() && $hof) {
+            return collect([$hof]);
+        }
+
+        return $trainers;
     }
 
     public function displayInstructors()
