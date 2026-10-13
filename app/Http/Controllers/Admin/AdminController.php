@@ -219,7 +219,9 @@ class AdminController extends Controller
         $this->ensureDashboardAccess(['admin']);
 
         $baseUrl = route('admin.dashboard.students');
-        $studentStats = app(StudentsDashboardService::class)->overviewStats();
+        $studentService = app(StudentsDashboardService::class);
+        $studentStats = $studentService->overviewStats();
+        $studentDetails = $studentService->overviewDetails();
 
         return $this->activityDashboard($request, [
             'userId' => null,
@@ -236,6 +238,7 @@ class AdminController extends Controller
             'showContentReports' => false,
             'showStudentOverview' => true,
             'studentOverviewStats' => $studentStats,
+            'studentOverviewDetails' => $studentDetails,
             'logAudience' => 'student',
             'activityTitle' => $this->namedActivityTitle('Students'),
             'studentActivityTitle' => $this->namedActivityTitle('Students'),
@@ -459,6 +462,7 @@ class AdminController extends Controller
             'showContentReportUserFilter' => $showContentReportUserFilter,
             'showStudentOverview' => (bool) ($options['showStudentOverview'] ?? false),
             'studentOverviewStats' => $options['studentOverviewStats'] ?? [],
+            'studentOverviewDetails' => $options['studentOverviewDetails'] ?? [],
             'studentActivitiesOnly' => (bool) ($options['studentActivitiesOnly'] ?? false),
             'contentReports' => $contentReports,
             'contentReportActorId' => $contentReportActorId,
