@@ -17,13 +17,41 @@ class AccountantDashboardService
             ? (int) Installment::query()->where('status', 'paid')->where('paid_amount', '>', 0)->count()
             : 0;
 
+        [$thisMonthFrom, $thisMonthTo] = $this->rangeForTab('this_month', null, null);
+        [$lastMonthFrom, $lastMonthTo] = $this->rangeForTab('last_month', null, null);
+        [$thisYearFrom, $thisYearTo] = $this->rangeForTab('this_year', null, null);
+
         return [
             'invoice_total' => (int) ($invoice['invoice_total'] ?? 0),
             'invoice_unpaid' => (int) ($invoice['invoice_unpaid'] ?? 0),
             'invoice_partial' => (int) ($invoice['invoice_partial'] ?? 0),
             'invoice_paid' => (int) ($invoice['invoice_paid'] ?? 0),
             'receipts_total' => $receipts,
+            'sales_this_month' => $this->salesTotalAed($thisMonthFrom, $thisMonthTo),
+            'sales_last_month' => $this->salesTotalAed($lastMonthFrom, $lastMonthTo),
+            'sales_this_year' => $this->salesTotalAed($thisYearFrom, $thisYearTo),
         ];
+    }
+
+    public function salesTotalAed(?Carbon $from, ?Carbon $to): float
+    {
+        if (! Schema::hasTable('installments')) {
+            return 0.0;
+        }
+
+        $query = Installment::query()->where('paid_amount', '>', 0);
+
+        // Use paid_date when present; otherwise fall back to created_at.
+        $saleDate = "COALESCE(paid_date, DATE(created_at))";
+
+        if ($from) {
+            $query->whereRaw("{$saleDate} >= ?", [$from->toDateString()]);
+        }
+        if ($to) {
+            $query->whereRaw("{$saleDate} <= ?", [$to->toDateString()]);
+        }
+
+        return round((float) $query->sum('paid_amount'), 2);
     }
 
     /**

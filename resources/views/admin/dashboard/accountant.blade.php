@@ -2,25 +2,30 @@
 @section('title', 'Accountant Dashboard')
 @push('style')
 <style>
+    #accountant-dashboard .accountant-tabs {
+        border-bottom: 1px solid #e5e5e5;
+        margin-bottom: 20px;
+    }
+    #accountant-dashboard .accountant-tabs > li {
+        margin-bottom: 0;
+    }
     #accountant-dashboard .accountant-tabs > li > a {
-        color: #fff !important;
-        border: none !important;
+        color: #676a6c !important;
+        background: #fff !important;
+        border: 1px solid #ddd !important;
         border-radius: 3px;
         margin-right: 6px;
+        margin-bottom: 8px;
         padding: 8px 14px;
         font-weight: 700;
         text-transform: uppercase;
         font-size: 12px;
     }
-    #accountant-dashboard .tab-overview { background: #1ab394; }
-    #accountant-dashboard .tab-this-month { background: #1c84c6; }
-    #accountant-dashboard .tab-last-month { background: #f8ac59; }
-    #accountant-dashboard .tab-this-year { background: #23c6c8; }
-    #accountant-dashboard .tab-custom { background: #ed5565; }
     #accountant-dashboard .accountant-tabs > li.active > a,
     #accountant-dashboard .accountant-tabs > li > a:hover {
-        opacity: 0.9;
-        color: #fff !important;
+        color: #1ab394 !important;
+        background: #fff !important;
+        border-color: #1ab394 !important;
     }
     #accountant-dashboard .stat-card {
         display: block;
@@ -41,6 +46,34 @@
         text-transform: uppercase;
         margin-top: 8px;
         display: block;
+    }
+    #accountant-dashboard .sales-card {
+        display: block;
+        background: #fff;
+        border: 1px solid #000;
+        border-radius: 2px;
+        padding: 28px 16px;
+        margin-bottom: 16px;
+        min-height: 110px;
+        text-align: center;
+        color: #000;
+        text-decoration: none !important;
+    }
+    #accountant-dashboard .sales-card:hover {
+        background: #fafafa;
+        color: #000;
+    }
+    #accountant-dashboard .sales-card .sales-value {
+        display: block;
+        font-size: 22px;
+        font-weight: 700;
+        line-height: 1.2;
+        margin-bottom: 8px;
+    }
+    #accountant-dashboard .sales-card .sales-label {
+        display: block;
+        font-size: 13px;
+        font-weight: 700;
     }
 </style>
 @endpush
@@ -63,21 +96,21 @@
 <div class="wrapper wrapper-content animated fadeInRight" id="accountant-dashboard">
     <div class="ibox">
         <div class="ibox-content">
-            <ul class="nav nav-tabs accountant-tabs" role="tablist" style="margin-bottom:16px;border-bottom:none;">
+            <ul class="nav nav-tabs accountant-tabs" role="tablist">
                 <li class="{{ $activeTab === 'overview' ? 'active' : '' }}">
-                    <a class="tab-overview" href="{{ route('admin.dashboard.accountant', ['tab' => 'overview']) }}">Overview</a>
+                    <a href="{{ route('admin.dashboard.accountant', ['tab' => 'overview']) }}">Overview</a>
                 </li>
                 <li class="{{ $activeTab === 'this_month' ? 'active' : '' }}">
-                    <a class="tab-this-month" href="{{ route('admin.dashboard.accountant', ['tab' => 'this_month']) }}">This Month Sales</a>
+                    <a href="{{ route('admin.dashboard.accountant', ['tab' => 'this_month']) }}">This Month Sales</a>
                 </li>
                 <li class="{{ $activeTab === 'last_month' ? 'active' : '' }}">
-                    <a class="tab-last-month" href="{{ route('admin.dashboard.accountant', ['tab' => 'last_month']) }}">Last Month Sales</a>
+                    <a href="{{ route('admin.dashboard.accountant', ['tab' => 'last_month']) }}">Last Month Sales</a>
                 </li>
                 <li class="{{ $activeTab === 'this_year' ? 'active' : '' }}">
-                    <a class="tab-this-year" href="{{ route('admin.dashboard.accountant', ['tab' => 'this_year']) }}">This Year Sales</a>
+                    <a href="{{ route('admin.dashboard.accountant', ['tab' => 'this_year']) }}">This Year Sales</a>
                 </li>
                 <li class="{{ $activeTab === 'custom' ? 'active' : '' }}">
-                    <a class="tab-custom" href="{{ route('admin.dashboard.accountant', ['tab' => 'custom', 'date_from' => $dateFrom, 'date_to' => $dateTo]) }}">Custom Date Range</a>
+                    <a href="{{ route('admin.dashboard.accountant', ['tab' => 'custom', 'date_from' => $dateFrom, 'date_to' => $dateTo]) }}">Custom Date Sales</a>
                 </li>
             </ul>
 
@@ -105,6 +138,27 @@
                         <a href="{{ route('admin.payments.receipts') }}" class="stat-card" style="background:#1ab394;">
                             <span class="stat-value">{{ $stats['receipts_total'] ?? 0 }}</span>
                             <span class="stat-label">All Receipts</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="row" style="margin-top:8px;">
+                    <div class="col-lg-4 col-md-4">
+                        <a href="{{ route('admin.dashboard.accountant', ['tab' => 'this_month']) }}" class="sales-card">
+                            <span class="sales-value">AED {{ number_format((float) ($stats['sales_this_month'] ?? 0), 2) }}</span>
+                            <span class="sales-label">This Month's Sales</span>
+                        </a>
+                    </div>
+                    <div class="col-lg-4 col-md-4">
+                        <a href="{{ route('admin.dashboard.accountant', ['tab' => 'last_month']) }}" class="sales-card">
+                            <span class="sales-value">AED {{ number_format((float) ($stats['sales_last_month'] ?? 0), 2) }}</span>
+                            <span class="sales-label">Last Month Sales</span>
+                        </a>
+                    </div>
+                    <div class="col-lg-4 col-md-4">
+                        <a href="{{ route('admin.dashboard.accountant', ['tab' => 'this_year']) }}" class="sales-card">
+                            <span class="sales-value">AED {{ number_format((float) ($stats['sales_this_year'] ?? 0), 2) }}</span>
+                            <span class="sales-label">This Year</span>
                         </a>
                     </div>
                 </div>
