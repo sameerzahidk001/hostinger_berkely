@@ -770,6 +770,18 @@ if (!function_exists('instructor_can_view_site_analytics')) {
             return false;
         }
 
+        return is_musa_shaikh_user($user);
+    }
+}
+
+if (!function_exists('is_musa_shaikh_user')) {
+    function is_musa_shaikh_user($user = null): bool
+    {
+        $user = $user ?? panel_profile_user();
+        if (! $user) {
+            return false;
+        }
+
         $hay = strtolower(trim(($user->name ?? '') . ' ' . ($user->email ?? '') . ' ' . ($user->username ?? '')));
 
         if (str_contains($hay, 'musa') && (str_contains($hay, 'shaikh') || str_contains($hay, 'sheikh'))) {
@@ -777,6 +789,18 @@ if (!function_exists('instructor_can_view_site_analytics')) {
         }
 
         return str_contains($hay, 'musa');
+    }
+}
+
+if (!function_exists('panel_sees_all_dashboards')) {
+    function panel_sees_all_dashboards(): bool
+    {
+        $role = normalize_panel_role(panel_role_name());
+        if ($role === null || $role === 'admin') {
+            return true;
+        }
+
+        return is_musa_shaikh_user();
     }
 }
 

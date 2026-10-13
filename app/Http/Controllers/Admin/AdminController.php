@@ -12,6 +12,7 @@ use App\Models\Country;
 use App\Services\AccountantDashboardService;
 use App\Services\ContentDashboardReportService;
 use App\Services\PanelActivityService;
+use App\Services\StudentsDashboardService;
 use App\Services\UserActivityLogService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Hash;
@@ -103,6 +104,11 @@ class AdminController extends Controller
             return redirect()->route('admin.dashboard.accountant');
         }
 
+        // Main Dashboard removed — Admin / Musa land on Content Writers Dashboard.
+        if (panel_sees_all_dashboards()) {
+            return redirect()->route('admin.dashboard.content-writers', $request->query());
+        }
+
         $reportActor = $this->resolveContentReportActor($request);
 
         return $this->activityDashboard($request, [
@@ -125,6 +131,7 @@ class AdminController extends Controller
             'logAudience' => 'staff',
             'activityTitle' => $this->adminActivityTitle($request),
             'studentActivityTitle' => $this->studentActivityTitle($request),
+            'panelBaseUrl' => route('admin.home'),
         ]);
     }
 
@@ -134,9 +141,10 @@ class AdminController extends Controller
 
         $role = normalize_panel_role(panel_role_name());
         $isContentWriter = $role === 'content_writer';
-        $isAdmin = $role === null || $role === 'admin';
+        $isAdminView = panel_sees_all_dashboards();
+        $baseUrl = route('admin.dashboard.content-writers');
 
-        if ($isContentWriter) {
+        if ($isContentWriter && ! $isAdminView) {
             return $this->activityDashboard($request, [
                 'userId' => audit_user_id(),
                 'showMyStats' => true,
@@ -150,10 +158,12 @@ class AdminController extends Controller
                 'contentReportActorId' => audit_user_id(),
                 'logAudience' => 'staff',
                 'activityTitle' => $this->namedActivityTitle(panel_profile_name() ?: 'Content Writer'),
+                'panelBaseUrl' => $baseUrl,
+                'pageTitle' => 'Content Writers Dashboard',
             ]);
         }
 
-        // Admin viewing Content Writers Dashboard (site-wide content activity + reports).
+        // Admin / Musa viewing Content Writers Dashboard (site-wide content activity + reports).
         $reportActor = $this->resolveContentReportActor($request);
 
         return $this->activityDashboard($request, [
@@ -164,16 +174,73 @@ class AdminController extends Controller
             'showInvoiceStats' => false,
             'includePayments' => false,
             'showUserColumn' => true,
-            'showUserFilter' => $isAdmin,
+            'showUserFilter' => $isAdminView,
             'showStudentTable' => false,
             'showSessionColumn' => false,
             'showContentReports' => true,
-            'showContentReportUserFilter' => $isAdmin,
+            'showContentReportUserFilter' => $isAdminView,
             'contentReportActorId' => $reportActor['id'],
             'contentReportActorName' => $reportActor['name'],
             'contentReportActorKey' => $reportActor['key'],
             'logAudience' => 'staff',
             'activityTitle' => $this->namedActivityTitle('Content Writers'),
+            'panelBaseUrl' => $baseUrl,
+            'pageTitle' => 'Content Writers Dashboard',
+        ]);
+    }
+
+    public function instructorsDashboard(Request $request)
+    {
+        $this->ensureDashboardAccess(['admin']);
+
+        $baseUrl = route('admin.dashboard.instructors');
+
+        return $this->activityDashboard($request, [
+            'userId' => $request->filled('user_id') ? (int) $request->query('user_id') : null,
+            'roleFilter' => $request->filled('role') ? $request->query('role') : 'instructor',
+            'showMyStats' => false,
+            'showSiteStats' => false,
+            'showInvoiceStats' => false,
+            'includePayments' => false,
+            'showUserColumn' => true,
+            'showUserFilter' => true,
+            'showStudentTable' => false,
+            'showSessionColumn' => false,
+            'showContentReports' => false,
+            'logAudience' => 'staff',
+            'activityTitle' => $this->namedActivityTitle('Instructors'),
+            'panelBaseUrl' => $baseUrl,
+            'pageTitle' => 'Instructors Dashboard',
+        ]);
+    }
+
+    public function studentsDashboard(Request $request)
+    {
+        $this->ensureDashboardAccess(['admin']);
+
+        $baseUrl = route('admin.dashboard.students');
+        $studentStats = app(StudentsDashboardService::class)->overviewStats();
+
+        return $this->activityDashboard($request, [
+            'userId' => null,
+            'roleFilter' => null,
+            'showMyStats' => false,
+            'showSiteStats' => false,
+            'showInvoiceStats' => false,
+            'includePayments' => false,
+            'showUserColumn' => true,
+            'showUserFilter' => false,
+            'showStudentTable' => true,
+            'studentActivitiesOnly' => true,
+            'showSessionColumn' => false,
+            'showContentReports' => false,
+            'showStudentOverview' => true,
+            'studentOverviewStats' => $studentStats,
+            'logAudience' => 'student',
+            'activityTitle' => $this->namedActivityTitle('Students'),
+            'studentActivityTitle' => $this->namedActivityTitle('Students'),
+            'panelBaseUrl' => $baseUrl,
+            'pageTitle' => 'Students Dashboard',
         ]);
     }
 
@@ -197,6 +264,27 @@ class AdminController extends Controller
             ? 0.0
             : round((float) $rows->sum('amount_aed'), 2);
 
+        $activityFrom = $request->filled('activity_date_from')
+            ? (string) $request->query('activity_date_from')
+            : now()->toDateString();
+        $activityTo = $request->filled('activity_date_to')
+            ? (string) $request->query('activity_date_to')
+            : now()->toDateString();
+
+        $activities = app(PanelActivityService::class)->paginatedFeedWithLogs(
+            null,
+            $activityFrom,
+            $activityTo,
+            true,
+            'staff',
+            15,
+            (int) $request->query('page', 1),
+            $request->url(),
+            $request->query(),
+            null,
+            true
+        );
+
         return view('admin.dashboard.accountant', [
             'activeTab' => $tab,
             'stats' => $stats,
@@ -204,11 +292,19 @@ class AdminController extends Controller
             'salesTotalAed' => $salesTotalAed,
             'dateFrom' => $dateFrom,
             'dateTo' => $dateTo,
+            'activities' => $activities,
+            'activityDateFrom' => $activityFrom,
+            'activityDateTo' => $activityTo,
+            'activityTitle' => $this->namedActivityTitle('Accountant'),
         ]);
     }
 
     private function ensureDashboardAccess(array $allowedRoles): void
     {
+        if (panel_sees_all_dashboards()) {
+            return;
+        }
+
         $role = normalize_panel_role(panel_role_name());
         if ($role === null || $role === 'admin') {
             return;
@@ -361,6 +457,9 @@ class AdminController extends Controller
             'showSessionColumn' => (bool) ($options['showSessionColumn'] ?? false),
             'showContentReports' => $showContentReports,
             'showContentReportUserFilter' => $showContentReportUserFilter,
+            'showStudentOverview' => (bool) ($options['showStudentOverview'] ?? false),
+            'studentOverviewStats' => $options['studentOverviewStats'] ?? [],
+            'studentActivitiesOnly' => (bool) ($options['studentActivitiesOnly'] ?? false),
             'contentReports' => $contentReports,
             'contentReportActorId' => $contentReportActorId,
             'contentReportActorName' => $contentReportActorName,
@@ -373,6 +472,8 @@ class AdminController extends Controller
             'studentActivityTitle' => $options['studentActivityTitle'] ?? 'Student activity history',
             'activityDateFrom' => $dateFrom,
             'activityDateTo' => $dateTo,
+            'panelBaseUrl' => $options['panelBaseUrl'] ?? route('admin.home'),
+            'pageTitle' => $options['pageTitle'] ?? 'Dashboard',
         ]);
     }
 

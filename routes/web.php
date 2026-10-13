@@ -181,6 +181,8 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
         Route::post('/home-banner/update', [HomepageController::class, 'bannerUpdate'])->name('home.banner.update');
         Route::get('home', [AdminController::class, 'dashboard'])->name('admin.home');
         Route::get('dashboard/content-writers', [AdminController::class, 'contentWritersDashboard'])->name('admin.dashboard.content-writers');
+        Route::get('dashboard/instructors', [AdminController::class, 'instructorsDashboard'])->name('admin.dashboard.instructors');
+        Route::get('dashboard/students', [AdminController::class, 'studentsDashboard'])->name('admin.dashboard.students');
         Route::get('dashboard/accountant', [AdminController::class, 'accountantDashboard'])->name('admin.dashboard.accountant');
         Route::get('home/activity-export', [AdminController::class, 'exportActivity'])->name('admin.home.activity-export');
         Route::get('home/content-report-details', [AdminController::class, 'contentReportDetails'])->name('admin.home.content-report-details');

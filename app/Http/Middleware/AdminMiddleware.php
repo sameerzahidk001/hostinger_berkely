@@ -41,15 +41,18 @@ class AdminMiddleware
             }
 
             // Instructors manage LMS from the admin UI while logged in as a portal user.
+            // Musa Shaikh also gets the multi-dashboard suite under admin/dashboard/*.
             if (normalize_panel_role($role) === 'instructor' && (
                 $request->is('admin/study-materials*')
                 || $request->is('admin/class-schedules*')
                 || $request->is('admin/class-batches*')
                 || $request->is('admin/home')
+                || $request->is('admin/home/*')
                 || $request->is('admin/profile')
                 || $request->is('admin/logout')
                 || $request->is('admin/csrf-token')
                 || $request->is('admin/session/ping')
+                || ($request->is('admin/dashboard*') && is_musa_shaikh_user($user))
                 || ($request->is('admin/analytics*') && instructor_can_view_site_analytics($user))
             )) {
                 $freshUser = $user?->fresh(['roles']);
