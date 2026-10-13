@@ -122,7 +122,12 @@
                         </div>
                         <div id="installmentsContainer">
                             @foreach($payment->installments as $index => $installment)
-                                <div class="row installment-row" data-index="{{ $index + 1 }}">
+                                @php
+                                    $hasReceipt = (float) $installment->paid_amount > 0
+                                        || in_array($installment->status, ['paid', 'partial'], true);
+                                @endphp
+                                <div class="row installment-row" data-index="{{ $index + 1 }}" data-has-receipt="{{ $hasReceipt ? '1' : '0' }}">
+                                    <input type="hidden" name="installment_id[]" value="{{ $installment->id }}">
                                     <div class="col-md-6">
                                         <label for="due_date_{{ $index + 1 }}">Due Date</label>
                                         <input type="date" class="form-control" name="due_date[]" id="due_date_{{ $index + 1 }}"
@@ -130,6 +135,9 @@
                                         @error("due_date.$index")
                                             <p class="text-danger text-xs italic">{{ $message }}</p>
                                         @enderror
+                                        @if($hasReceipt)
+                                            <small class="text-success">Receipt kept ({{ ucfirst($installment->status) }})</small>
+                                        @endif
                                     </div>
                                     <div class="col-md-6">
                                         <label for="amount_{{ $index + 1 }}">Amount</label>
@@ -143,7 +151,9 @@
                                             <p class="text-danger text-xs italic">{{ $message }}</p>
                                         @enderror
                                     </div>
-                                    <button type="button" class="remove-installment" title="Remove">&times;</button>
+                                    @if(! $hasReceipt)
+                                        <button type="button" class="remove-installment" title="Remove">&times;</button>
+                                    @endif
                                 </div>
                             @endforeach
                         </div>
@@ -178,10 +188,18 @@
         $(document).ready(function () {
             $('#fullAmountInFirstInstallment').on('change', function () {
                 if ($(this).is(':checked')) {
+                    const $rowsWithReceipt = $('#installmentsContainer .installment-row[data-has-receipt="1"]');
+                    if ($rowsWithReceipt.length > 1 || ($rowsWithReceipt.length === 1 && !$rowsWithReceipt.first().is(':first-child'))) {
+                        $(this).prop('checked', false);
+                        alert('Cannot collapse to one installment while paid receipts exist on later installments.');
+                        return;
+                    }
                     let totalAmount = parseFloat($('#total_amount').val()) || 0;
                     $('#amount_1').val(totalAmount);
-                    $('#installmentsContainer .installment-row').slice(1).remove();
-                    installmentIndex = 1;
+                    $('#installmentsContainer .installment-row').slice(1).filter(function () {
+                        return $(this).attr('data-has-receipt') !== '1';
+                    }).remove();
+                    installmentIndex = $('#installmentsContainer .installment-row').length || 1;
                 }
             });
 
@@ -274,7 +292,8 @@
                 const currencySymbol = $('.currency-addon').first().text().trim();
 
                 const installmentHtml = `
-                    <div class="row installment-row" data-index="${installmentIndex}">
+                    <div class="row installment-row" data-index="${installmentIndex}" data-has-receipt="0">
+                        <input type="hidden" name="installment_id[]" value="">
                         <div class="col-md-6">
                             <label for="due_date_${installmentIndex}">Due Date</label>
                             <input type="date" class="form-control" name="due_date[]" id="due_date_${installmentIndex}">
@@ -294,10 +313,15 @@
             });
 
             $('#installmentsContainer').on('click', '.remove-installment', function () {
+                const $row = $(this).closest('.installment-row');
+                if ($row.attr('data-has-receipt') === '1') {
+                    alert('Paid installments with receipts cannot be removed.');
+                    return;
+                }
                 const totalRows = $('#installmentsContainer .installment-row').length;
                 if (totalRows > 1) {
-                    $(this).closest('.installment-row').remove();
-                    installmentIndex--;
+                    $row.remove();
+                    installmentIndex = $('#installmentsContainer .installment-row').length;
                 }
             });
 
