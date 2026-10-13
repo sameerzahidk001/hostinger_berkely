@@ -356,6 +356,9 @@
                                 </a>
                             </div>
                         </form>
+                        <p class="m-b-xs" style="font-weight:600;">
+                            Report for: {{ $activityDateFrom ?? request('date_from', now()->toDateString()) }} - {{ $activityDateTo ?? request('date_to', now()->toDateString()) }}
+                        </p>
                         <p class="text-muted small m-b-sm">Leave any dropdown on <strong>None</strong> to skip that filter. Use dates only when needed.</p>
                         <div class="table-responsive">
                             <table class="table table-striped table-bordered table-hover js-sortable-table" id="staffActivityTable">
@@ -465,6 +468,9 @@
                                 </a>
                             </div>
                         </form>
+                        <p class="m-b-xs" style="font-weight:600;">
+                            Report for: {{ $activityDateFrom ?? request('date_from', now()->toDateString()) }} - {{ $activityDateTo ?? request('date_to', now()->toDateString()) }}
+                        </p>
                         <p class="text-muted small m-b-sm">Leave Student on <strong>None</strong> to see all students. Use dates only when needed.</p>
                         <div class="table-responsive">
                             <table class="table table-striped table-bordered table-hover js-sortable-table" id="studentActivityTable">
