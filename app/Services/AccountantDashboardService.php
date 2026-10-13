@@ -110,11 +110,15 @@ class AccountantDashboardService
 
     private function paidSalesQuery(?Carbon $from, ?Carbon $to)
     {
+        // Sales = fully paid installment amounts only (pending/partial unpaid rows excluded).
         $query = Installment::query()
             ->where('paid_amount', '>', 0)
             ->where(function ($q) {
-                $q->whereIn('status', ['paid', 'partial'])
-                    ->orWhereNull('status');
+                $q->where('status', 'paid')
+                    ->orWhere(function ($inner) {
+                        $inner->where('remaining_amount', '<=', 0)
+                            ->where('paid_amount', '>', 0);
+                    });
             });
 
         // Use paid_date when present; otherwise fall back to created_at.
