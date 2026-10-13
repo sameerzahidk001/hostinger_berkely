@@ -75,7 +75,7 @@
                                 <select name="course" id="course" class="form-control js-type-find" data-placeholder="Type to find batch / course">
                                     <option value="">Select Course</option>
                                     @foreach($courses as $course)
-                                        <option value="{{ $course->id }}" {{ old('course') == $course->id ? 'selected' : '' }}>{{ $course->title }}</option>
+                                        <option value="{{ $course->id }}" {{ (string) old('course', request('course')) === (string) $course->id ? 'selected' : '' }}>{{ $course->title }}</option>
                                     @endforeach
                                 </select>
                                 @error('course')

@@ -330,7 +330,7 @@ class AdminController extends Controller
         $username = panel_profile_name() ?: 'User';
         $filenameBase = 'content-report-' . $module . '-' . $metric . '_' . now()->format('Y-m-d');
         $columns = $service->detailColumns($module, $metric);
-        $linkCol = collect($columns)->first(fn ($col) => in_array($col['key'], ['course', 'title'], true));
+        $linkCol = collect($columns)->first(fn ($col) => in_array($col['key'], ['package_name', 'course', 'title'], true));
         $linkKey = is_array($linkCol) ? ($linkCol['key'] ?? 'title') : 'title';
 
         if ($format === 'pdf') {
