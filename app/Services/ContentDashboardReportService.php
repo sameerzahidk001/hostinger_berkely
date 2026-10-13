@@ -295,6 +295,23 @@ class ContentDashboardReportService
             ];
         }
 
+        if ($module === 'fees') {
+            return [
+                ['key' => 'package_name', 'label' => 'Package Name'],
+                ['key' => 'course', 'label' => 'Course'],
+                ['key' => 'price', 'label' => 'Price'],
+                ['key' => 'currency', 'label' => 'Currency'],
+                ['key' => 'discount_amount', 'label' => 'Discount Amount'],
+                ['key' => 'short_description', 'label' => 'Short Description'],
+                ['key' => 'priority', 'label' => 'Priority'],
+                ['key' => 'show_on_website', 'label' => 'Show on Website'],
+                ['key' => 'created_by', 'label' => 'Created By'],
+                ['key' => 'created_at', 'label' => 'Created Date'],
+                ['key' => 'updated_by', 'label' => 'Updated By'],
+                ['key' => 'updated_at', 'label' => 'Updated Date'],
+            ];
+        }
+
         return [
             ['key' => 'title', 'label' => 'Title'],
             ['key' => 'status', 'label' => 'Status'],
@@ -666,16 +683,23 @@ class ContentDashboardReportService
 
         return $query->orderByDesc('updated_at')->limit(10000)->get()->map(function (CourseFee $fee) use ($hasShow, $hasAudit) {
             $courseTitle = $fee->course?->title ?: ('Course #' . $fee->courses_id);
-            $title = trim(($fee->package_name ?: 'Fee Package') . ' — ' . $courseTitle);
+            $packageName = $fee->package_name ?: 'Fee Package';
             $isActive = $hasShow ? (int) ($fee->showonwebsite ?? 0) === 1 : true;
 
             return [
                 'id' => $fee->id,
-                'title' => $title,
+                'title' => $packageName,
+                'package_name' => $packageName,
+                'course' => $courseTitle,
+                'price' => $fee->price !== null && $fee->price !== '' ? (string) $fee->price : '—',
+                'currency' => $fee->currency ?: '—',
+                'discount_amount' => $fee->discount_amount !== null && $fee->discount_amount !== ''
+                    ? (string) $fee->discount_amount
+                    : '—',
+                'short_description' => $fee->short_description ?: '—',
+                'priority' => $fee->priority !== null && $fee->priority !== '' ? (string) $fee->priority : '—',
+                'show_on_website' => $hasShow ? ($isActive ? 'Yes' : 'No') : '—',
                 'status' => $isActive ? 'Active' : 'Inactive',
-                'type' => 'Fee Package',
-                'seo_status' => '—',
-                'seo_score' => '—',
                 'created_by' => $hasAudit
                     ? audit_user_name(null, $fee->created_by ?? null)
                     : 'Admin',
@@ -980,8 +1004,12 @@ class ContentDashboardReportService
             default => '—',
         };
 
-        return $query->orderByDesc('updated_at')->limit(10000)->get()->map(function (Course $course) use ($coverageLabel) {
+        return $query->orderByDesc('updated_at')->limit(10000)->get()->map(function (Course $course) use ($coverageLabel, $metric) {
             $title = $course->title ?: ('Course #' . $course->id);
+            // Coverage rows should open Training Calendar (create with course preselected when missing).
+            $url = $metric === 'courses_without_training'
+                ? route('admin.course-agendas.create', ['course' => $course->id])
+                : route('admin.course-agendas.index');
 
             return [
                 'id' => $course->id,
@@ -992,7 +1020,7 @@ class ContentDashboardReportService
                 'updated_by' => audit_user_name($course->updatedBy, $course->updated_by ?? null),
                 'created_at' => optional($course->created_at)?->format('M d, Y H:i'),
                 'updated_at' => optional($course->updated_at)?->format('M d, Y H:i'),
-                'url' => route('course.edit', $course->id),
+                'url' => $url,
             ];
         });
     }

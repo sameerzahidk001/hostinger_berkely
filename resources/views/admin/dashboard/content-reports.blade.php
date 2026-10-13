@@ -276,7 +276,7 @@
 
     function linkColumnKey(columns) {
         for (var i = 0; i < columns.length; i++) {
-            if (columns[i].key === 'course' || columns[i].key === 'title') {
+            if (columns[i].key === 'package_name' || columns[i].key === 'course' || columns[i].key === 'title') {
                 return columns[i].key;
             }
         }
