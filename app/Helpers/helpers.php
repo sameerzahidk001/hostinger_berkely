@@ -1829,11 +1829,7 @@ if (!function_exists('activity_audience_for_role')) {
     {
         $normalized = normalize_panel_role($role);
 
-        if (in_array($normalized, ['content_writer', 'accountant'], true)) {
-            return 'staff';
-        }
-
-        if ($normalized === 'instructor') {
+        if (in_array($normalized, ['admin', 'instructor', 'content_writer', 'accountant'], true)) {
             return 'staff';
         }
 
@@ -1916,7 +1912,15 @@ if (!function_exists('activity_audience_for_user')) {
             return 'staff';
         }
 
-        return activity_audience_for_role($user->roles()->value('name'));
+        // Prefer staff when the user has any staff role (e.g. instructor + student).
+        $roleNames = $user->roles()->pluck('name')->all();
+        foreach ($roleNames as $roleName) {
+            if (activity_audience_for_role($roleName) === 'staff') {
+                return 'staff';
+            }
+        }
+
+        return activity_audience_for_role($roleNames[0] ?? null);
     }
 }
 

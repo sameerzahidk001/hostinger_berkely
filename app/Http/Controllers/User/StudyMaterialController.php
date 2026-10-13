@@ -64,11 +64,12 @@ class StudyMaterialController extends Controller
                 ->first();
         }
 
+        $actor = Auth::user();
         record_user_activity(
             'Opened study folder',
             $folder->name,
             route('user.study-materials.show', $folder->id),
-            'student',
+            activity_audience_for_user($actor),
             Auth::id()
         );
 

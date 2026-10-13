@@ -66,10 +66,10 @@ class CourseAgendasController extends Controller
             'subject'      => $validated['subject'],
             'delivery_type'=> $validated['delivery_type'],
             'country_id'   => $validated['country'],
-            'city'         => $validated['city'],
+            'city'         => $validated['city'] ?? null,
             'from'         => $validated['from'],
             'to'           => $validated['to'],
-            'inquiry'      => $validated['inquiry'],
+            'inquiry'      => $validated['inquiry'] ?? null,
             'description'  => $validated['description'] ?? null,
         ]);
 
@@ -130,17 +130,21 @@ class CourseAgendasController extends Controller
 
         $validated = $validator->validated();
 
-        $course_agenda->update([
+        $payload = [
             'course_id'    => $validated['course'],
             'subject'      => $validated['subject'],
             'delivery_type'=> $validated['delivery_type'],
             'country_id'   => $validated['country'],
-            'city'         => $validated['city'],
+            'city'         => $validated['city'] ?? null,
             'from'         => $validated['from'],
             'to'           => $validated['to'],
-            'inquiry'      => $validated['inquiry'],
             'description'  => $validated['description'] ?? null,
-        ]);
+        ];
+        // Preserve existing inquiry/iframe when the field is hidden from the form.
+        if (array_key_exists('inquiry', $validated)) {
+            $payload['inquiry'] = $validated['inquiry'];
+        }
+        $course_agenda->update($payload);
 
         return redirect()->route('admin.course-agendas.index')->with('success', 'Course Agenda updated successfully.');
     }
