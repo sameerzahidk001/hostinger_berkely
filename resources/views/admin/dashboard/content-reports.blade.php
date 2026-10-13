@@ -220,18 +220,7 @@
                 <div class="table-responsive" style="max-height:65vh;overflow:auto;">
                     <table class="table table-striped table-bordered table-hover" id="contentReportTable">
                         <thead>
-                            <tr>
-                                <th data-sort-key="#" style="width:50px;cursor:pointer;"># <span class="sort-ind"></span></th>
-                                <th data-sort-key="title" style="cursor:pointer;">Title <span class="sort-ind"></span></th>
-                                <th data-sort-key="status" style="width:90px;cursor:pointer;">Status <span class="sort-ind"></span></th>
-                                <th data-sort-key="type" style="width:90px;cursor:pointer;">Type <span class="sort-ind"></span></th>
-                                <th data-sort-key="seo_status" style="width:110px;cursor:pointer;">SEO Status <span class="sort-ind"></span></th>
-                                <th data-sort-key="seo_score" style="width:90px;cursor:pointer;">SEO Score <span class="sort-ind"></span></th>
-                                <th data-sort-key="created_by" style="width:130px;cursor:pointer;">Created By <span class="sort-ind"></span></th>
-                                <th data-sort-key="created_at" style="width:130px;cursor:pointer;">Created Date <span class="sort-ind"></span></th>
-                                <th data-sort-key="updated_by" style="width:130px;cursor:pointer;">Updated By <span class="sort-ind"></span></th>
-                                <th data-sort-key="updated_at" style="width:130px;cursor:pointer;">Updated Date <span class="sort-ind"></span></th>
-                            </tr>
+                            <tr id="contentReportTableHeadRow"></tr>
                         </thead>
                         <tbody>
                             <tr><td colspan="10" class="text-center text-muted">Loading…</td></tr>
@@ -264,7 +253,19 @@
     var searchTimer = null;
     var detailsUrl = @json(route('admin.home.content-report-details'));
     var exportUrl = @json(route('admin.home.content-report-export'));
-    var colCount = 10;
+    var defaultColumns = [
+        { key: 'title', label: 'Title' },
+        { key: 'status', label: 'Status' },
+        { key: 'type', label: 'Type' },
+        { key: 'seo_status', label: 'SEO Status' },
+        { key: 'seo_score', label: 'SEO Score' },
+        { key: 'created_by', label: 'Created By' },
+        { key: 'created_at', label: 'Created Date' },
+        { key: 'updated_by', label: 'Updated By' },
+        { key: 'updated_at', label: 'Updated Date' }
+    ];
+    var currentColumns = defaultColumns.slice();
+    var colCount = currentColumns.length + 1;
     var allRows = [];
     var sortKey = '#';
     var sortDir = 'asc';
@@ -272,6 +273,30 @@
     function isSelectedRangeMetric(metric) {
         return metric === 'created_in_range' || metric === 'updated_in_range';
     }
+
+    function linkColumnKey(columns) {
+        for (var i = 0; i < columns.length; i++) {
+            if (columns[i].key === 'course' || columns[i].key === 'title') {
+                return columns[i].key;
+            }
+        }
+        return columns.length ? columns[0].key : 'title';
+    }
+
+    function renderTableHead(columns) {
+        currentColumns = columns && columns.length ? columns : defaultColumns.slice();
+        colCount = currentColumns.length + 1;
+        var html = '<th data-sort-key="#" style="width:50px;cursor:pointer;"># <span class="sort-ind"></span></th>';
+        currentColumns.forEach(function (col) {
+            html += '<th data-sort-key="' + col.key + '" style="cursor:pointer;">'
+                + $('<div>').text(col.label || col.key).html()
+                + ' <span class="sort-ind"></span></th>';
+        });
+        $('#contentReportTableHeadRow').html(html);
+        updateSortIndicators();
+    }
+
+    renderTableHead(defaultColumns);
 
     function syncRangeFilterVisibility() {
         var show = isSelectedRangeMetric(currentMetric);
@@ -351,22 +376,22 @@
             return;
         }
         var sorted = sortRows(rows);
+        var linkKey = linkColumnKey(currentColumns);
         var html = sorted.map(function (row, idx) {
-            var title = row.url
-                ? '<a href="' + row.url + '" target="_blank" rel="noopener">' + $('<div>').text(row.title || '').html() + '</a>'
-                : $('<div>').text(row.title || '').html();
-            return '<tr>' +
-                '<td>' + (idx + 1) + '</td>' +
-                '<td>' + title + '</td>' +
-                '<td>' + $('<div>').text(row.status || '—').html() + '</td>' +
-                '<td>' + $('<div>').text(row.type || '—').html() + '</td>' +
-                '<td>' + $('<div>').text(row.seo_status || '—').html() + '</td>' +
-                '<td>' + $('<div>').text(row.seo_score || '—').html() + '</td>' +
-                '<td>' + $('<div>').text(row.created_by || 'Admin').html() + '</td>' +
-                '<td>' + $('<div>').text(row.created_at || '—').html() + '</td>' +
-                '<td>' + $('<div>').text(row.updated_by || 'Admin').html() + '</td>' +
-                '<td>' + $('<div>').text(row.updated_at || '—').html() + '</td>' +
-                '</tr>';
+            var cells = '<td>' + (idx + 1) + '</td>';
+            currentColumns.forEach(function (col) {
+                var key = col.key;
+                var raw = row[key];
+                if (raw === null || raw === undefined || raw === '' || raw === '-' || raw === '—') {
+                    raw = (key === 'created_by' || key === 'updated_by') ? 'Admin' : '—';
+                }
+                var text = $('<div>').text(String(raw)).html();
+                if (key === linkKey && row.url) {
+                    text = '<a href="' + row.url + '" target="_blank" rel="noopener">' + text + '</a>';
+                }
+                cells += '<td>' + text + '</td>';
+            });
+            return '<tr>' + cells + '</tr>';
         }).join('');
         $('#contentReportTable tbody').html(html);
         updateSortIndicators();
@@ -401,6 +426,7 @@
             $('#contentReportModalLabel').text(
                 moduleTitle(currentModule) + ' -> ' + String(currentLabel || '').toUpperCase()
             );
+            renderTableHead(resp.columns || defaultColumns);
             allRows = (resp.rows || []).map(function (row) {
                 if (!row.created_by || row.created_by === '-' || row.created_by === '—') {
                     row.created_by = 'Admin';

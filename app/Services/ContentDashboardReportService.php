@@ -261,15 +261,61 @@ class ContentDashboardReportService
         };
     }
 
+    /**
+     * Column definitions for detail modal / Excel / PDF.
+     * Each item: ['key' => string, 'label' => string]
+     *
+     * @return array<int, array{key: string, label: string}>
+     */
+    public function detailColumns(string $module, string $metric = 'total'): array
+    {
+        if ($module === 'training') {
+            if (in_array($metric, ['courses_with_training', 'courses_without_training', 'courses_past_only_training'], true)) {
+                return [
+                    ['key' => 'course', 'label' => 'Course'],
+                    ['key' => 'coverage', 'label' => 'Coverage'],
+                    ['key' => 'created_by', 'label' => 'Created By'],
+                    ['key' => 'created_at', 'label' => 'Created'],
+                    ['key' => 'updated_by', 'label' => 'Modified By'],
+                    ['key' => 'updated_at', 'label' => 'Last Modified'],
+                ];
+            }
+
+            return [
+                ['key' => 'course', 'label' => 'Course'],
+                ['key' => 'subject', 'label' => 'Subject'],
+                ['key' => 'delivery_type', 'label' => 'Delivery Option'],
+                ['key' => 'location', 'label' => 'Location'],
+                ['key' => 'from', 'label' => 'From'],
+                ['key' => 'to', 'label' => 'To'],
+                ['key' => 'created_at', 'label' => 'Created'],
+                ['key' => 'created_by', 'label' => 'Created By'],
+                ['key' => 'updated_at', 'label' => 'Last Modified'],
+                ['key' => 'updated_by', 'label' => 'Modified By'],
+            ];
+        }
+
+        return [
+            ['key' => 'title', 'label' => 'Title'],
+            ['key' => 'status', 'label' => 'Status'],
+            ['key' => 'type', 'label' => 'Type'],
+            ['key' => 'seo_status', 'label' => 'SEO Status'],
+            ['key' => 'seo_score', 'label' => 'SEO Score'],
+            ['key' => 'created_by', 'label' => 'Created By'],
+            ['key' => 'created_at', 'label' => 'Created Date'],
+            ['key' => 'updated_by', 'label' => 'Updated By'],
+            ['key' => 'updated_at', 'label' => 'Updated Date'],
+        ];
+    }
+
     public function metricLabels(string $module, string $actorName = 'All Users'): array
     {
         $who = trim($actorName) !== '' ? trim($actorName) : 'All Users';
 
         if ($module === 'training') {
+            // No Active/Inactive status on Training Calendar — omit those cards.
             return [
                 'total' => 'Total Training Calendar entries',
-                'active' => 'Active Training Calendars',
-                'inactive' => 'Training Calendars with Past Dates',
                 'courses_with_training' => 'Courses with Training Calendar (Active)',
                 'courses_without_training' => 'Courses without Training Calendar (Active)',
                 'courses_past_only_training' => 'Courses with Only Past Training Calendars (Active)',
@@ -542,22 +588,25 @@ class ContentDashboardReportService
             });
         }
 
-        return $query->orderByDesc('updated_at')->limit(10000)->get()->map(function (CourseAgenda $row) use ($today) {
+        return $query->orderByDesc('updated_at')->limit(10000)->get()->map(function (CourseAgenda $row) {
             $courseTitle = $row->course?->title ?: ('Course #' . $row->course_id);
-            $title = trim(($row->subject ?: 'Training') . ' — ' . $courseTitle);
-            $isActive = $row->to && Carbon::parse($row->to)->startOfDay()->gte($today);
+            $country = $row->country?->name ?: 'International';
+            $city = trim((string) ($row->city ?? ''));
+            $location = $city !== '' ? ($country . ' / ' . $city) : $country;
 
             return [
                 'id' => $row->id,
-                'title' => $title,
-                'status' => $isActive ? 'Active' : 'Inactive',
-                'type' => 'Training',
-                'seo_status' => '—',
-                'seo_score' => '—',
+                'title' => $courseTitle,
+                'course' => $courseTitle,
+                'subject' => $row->subject ?: '—',
+                'delivery_type' => $row->delivery_type_label ?: '—',
+                'location' => $location,
+                'from' => $row->from ? Carbon::parse($row->from)->format('M d, Y') : '—',
+                'to' => $row->to ? Carbon::parse($row->to)->format('M d, Y') : '—',
                 'created_by' => audit_user_name($row->createdBy, $row->created_by ?? null),
                 'updated_by' => audit_user_name($row->updatedBy, $row->updated_by ?? null),
-                'created_at' => optional($row->created_at)?->format('Y-m-d H:i'),
-                'updated_at' => optional($row->updated_at)?->format('Y-m-d H:i'),
+                'created_at' => optional($row->created_at)?->format('M d, Y H:i'),
+                'updated_at' => optional($row->updated_at)?->format('M d, Y H:i'),
                 'url' => route('admin.course-agendas.edit', ['training_calendar' => $row->id]),
             ];
         });
@@ -944,17 +993,17 @@ class ContentDashboardReportService
         };
 
         return $query->orderByDesc('updated_at')->limit(10000)->get()->map(function (Course $course) use ($coverageLabel) {
+            $title = $course->title ?: ('Course #' . $course->id);
+
             return [
                 'id' => $course->id,
-                'title' => $course->title ?: ('Course #' . $course->id),
-                'status' => 'Active',
-                'type' => 'Course',
-                'seo_status' => $coverageLabel,
-                'seo_score' => '—',
+                'title' => $title,
+                'course' => $title,
+                'coverage' => $coverageLabel,
                 'created_by' => audit_user_name($course->createdBy, $course->created_by ?? null),
                 'updated_by' => audit_user_name($course->updatedBy, $course->updated_by ?? null),
-                'created_at' => optional($course->created_at)?->format('Y-m-d H:i'),
-                'updated_at' => optional($course->updated_at)?->format('Y-m-d H:i'),
+                'created_at' => optional($course->created_at)?->format('M d, Y H:i'),
+                'updated_at' => optional($course->updated_at)?->format('M d, Y H:i'),
                 'url' => route('course.edit', $course->id),
             ];
         });
