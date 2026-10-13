@@ -186,11 +186,11 @@
                                 <th>Student</th>
                                 <th>Course</th>
                                 <th>Package</th>
-                                <th>Amount</th>
-                                <th>Installments</th>
+                                <th>Amount (Paid)</th>
+                                <th>Installment</th>
                                 <th>Payment Status</th>
-                                <th>Invoice</th>
-                                <th>Created</th>
+                                <th>Action</th>
+                                <th>Paid Date</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -198,26 +198,35 @@
                                 <tr>
                                     <td>{{ $index + 1 }}</td>
                                     <td>{{ $row['student'] }}</td>
-                                    <td>
-                                        @if(!empty($row['url']))
-                                            <a href="{{ $row['url'] }}">{{ $row['course'] }}</a>
-                                        @else
-                                            {{ $row['course'] }}
-                                        @endif
-                                    </td>
+                                    <td>{{ $row['course'] }}</td>
                                     <td>{{ $row['package'] }}</td>
                                     <td>{{ $row['amount'] }}</td>
                                     <td>{{ $row['installments'] ?? '—' }}</td>
                                     <td>{{ $row['status'] }}</td>
-                                    <td>{{ $row['invoice_status'] }}</td>
+                                    <td>
+                                        @if(!empty($row['url']))
+                                            <a href="{{ $row['url'] }}">View</a>
+                                        @else
+                                            —
+                                        @endif
+                                    </td>
                                     <td>{{ $row['created_at'] }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="9" class="text-center text-muted">No invoices found for this range.</td>
+                                    <td colspan="9" class="text-center text-muted">No paid sales found for this range.</td>
                                 </tr>
                             @endforelse
                         </tbody>
+                        @if($rows->isNotEmpty())
+                            <tfoot>
+                                <tr style="font-weight:700;background:#f9f9f9;">
+                                    <td colspan="4" class="text-right">Total</td>
+                                    <td>AED {{ number_format((float) ($salesTotalAed ?? 0), 2) }}</td>
+                                    <td colspan="4"></td>
+                                </tr>
+                            </tfoot>
+                        @endif
                     </table>
                 </div>
             @endif

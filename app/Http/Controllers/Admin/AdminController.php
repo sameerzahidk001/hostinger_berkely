@@ -192,12 +192,16 @@ class AdminController extends Controller
         $service = app(AccountantDashboardService::class);
         $stats = $service->overviewStats();
         [$from, $to] = $service->rangeForTab($tab, $dateFrom, $dateTo);
-        $rows = $tab === 'overview' ? collect() : $service->invoiceRows($from, $to);
+        $rows = $tab === 'overview' ? collect() : $service->salesRows($from, $to);
+        $salesTotalAed = $tab === 'overview'
+            ? 0.0
+            : round((float) $rows->sum('amount_aed'), 2);
 
         return view('admin.dashboard.accountant', [
             'activeTab' => $tab,
             'stats' => $stats,
             'rows' => $rows,
+            'salesTotalAed' => $salesTotalAed,
             'dateFrom' => $dateFrom,
             'dateTo' => $dateTo,
         ]);
