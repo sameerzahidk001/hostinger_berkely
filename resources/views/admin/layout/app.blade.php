@@ -80,9 +80,38 @@
                   </li>
                   @endif
                   @if(admin_menu_allowed('dashboard'))
+                  @php
+                     $dashRole = normalize_panel_role(panel_role_name());
+                     $showDashSubmenus = $dashRole === null || in_array($dashRole, ['admin', 'content_writer'], true);
+                     $dashMenuActive = request()->is('admin/home')
+                        || request()->is('admin/dashboard/*');
+                  @endphp
+                  @if($showDashSubmenus)
+                  <li class="{{ $dashMenuActive ? 'active' : '' }}">
+                     <a href="javascript:void(0)"><i class="fa fa-th-large"></i> <span class="nav-label">Dashboard</span> <span class="fa arrow"></span></a>
+                     <ul class="nav nav-second-level">
+                        @if($dashRole === null || $dashRole === 'admin')
+                        <li class="{{ request()->is('admin/home') ? 'active' : '' }}">
+                           <a href="{{ route('admin.home') }}">Main Dashboard</a>
+                        </li>
+                        @endif
+                        <li class="{{ request()->routeIs('admin.dashboard.content-writers') ? 'active' : '' }}">
+                           <a href="{{ route('admin.dashboard.content-writers') }}">Content Writers Dashboard</a>
+                        </li>
+                        <li class="{{ request()->routeIs('admin.dashboard.accountant') ? 'active' : '' }}">
+                           <a href="{{ route('admin.dashboard.accountant') }}">Accountant Dashboard</a>
+                        </li>
+                     </ul>
+                  </li>
+                  @elseif($dashRole === 'accountant')
+                  <li class="{{ request()->routeIs('admin.dashboard.accountant') || request()->is('admin/home') ? 'active' : '' }}">
+                     <a href="{{ route('admin.dashboard.accountant') }}"><i class="fa fa-th-large"></i> <span class="nav-label">Dashboard</span></a>
+                  </li>
+                  @else
                   <li class="{{ request()->is('admin/home') ? 'active' : '' }}">
                      <a href="{{ route('admin.home') }}"><i class="fa fa-th-large"></i> <span class="nav-label">Dashboard</span></a>
                   </li>
+                  @endif
                   @endif
                   @if(admin_menu_allowed('school'))
                   <li class="{{ request()->is('school/*') ? 'active' : '' }}">
