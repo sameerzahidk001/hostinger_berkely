@@ -183,6 +183,7 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
         Route::get('home/activity-export', [AdminController::class, 'exportActivity'])->name('admin.home.activity-export');
         Route::get('home/content-report-details', [AdminController::class, 'contentReportDetails'])->name('admin.home.content-report-details');
         Route::get('home/content-report-export', [AdminController::class, 'contentReportExport'])->name('admin.home.content-report-export');
+        Route::post('home/content-report-activity', [AdminController::class, 'contentReportActivity'])->name('admin.home.content-report-activity');
         Route::get('profile', [AdminController::class, 'profile'])->name('admin.profile');
         Route::post('profile/update', [AdminController::class, 'profile_update'])->name('admin.profile.update');
         Route::get('logout', [AdminController::class, 'logout'])->name('admin.logout');

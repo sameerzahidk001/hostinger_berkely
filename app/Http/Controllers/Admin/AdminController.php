@@ -304,6 +304,20 @@ class AdminController extends Controller
         $actor = $this->resolveContentReportActor($request);
         $actorId = $actor['id'];
         $service = app(ContentDashboardReportService::class);
+        $labels = $service->metricLabels($module, $actor['name']);
+        $label = $labels[$metric] ?? ucfirst(str_replace('_', ' ', $metric));
+        $detailAction = 'Opened content report';
+        if ($request->filled('q')) {
+            $detailAction = 'Searched content report';
+        } elseif (in_array($metric, ['created_in_range', 'updated_in_range'], true)
+            && ($request->filled('date_from') || $request->filled('date_to'))) {
+            $detailAction = 'Applied content report date range';
+        }
+        $this->logContentReportActivity(
+            $detailAction,
+            $this->contentReportModuleTitle($module) . ' -> ' . strtoupper($label),
+            $request
+        );
         $rows = $service->detailRows(
             $module,
             $metric,
@@ -313,16 +327,37 @@ class AdminController extends Controller
             $request->query('q')
         );
 
-        $labels = $service->metricLabels($module, $actor['name']);
-
         return response()->json([
             'module' => $module,
             'metric' => $metric,
-            'label' => $labels[$metric] ?? ucfirst(str_replace('_', ' ', $metric)),
+            'label' => $label,
             'columns' => $service->detailColumns($module, $metric),
             'count' => $rows->count(),
             'rows' => $rows->values(),
         ]);
+    }
+
+    public function contentReportActivity(Request $request)
+    {
+        $action = trim((string) $request->input('action', 'Opened content report'));
+        $item = trim((string) $request->input('item', 'Content Performance Reports'));
+        $allowed = [
+            'Opened content report tab',
+            'Filtered content report user',
+            'Opened content report',
+            'Searched content report',
+            'Applied content report date range',
+        ];
+        if (! in_array($action, $allowed, true)) {
+            $action = 'Opened content report';
+        }
+        if ($item === '') {
+            $item = 'Content Performance Reports';
+        }
+
+        $this->logContentReportActivity($action, $item, $request);
+
+        return response()->json(['ok' => true]);
     }
 
     public function contentReportExport(Request $request)
@@ -335,6 +370,11 @@ class AdminController extends Controller
         $service = app(ContentDashboardReportService::class);
         $labels = $service->metricLabels($module, $actor['name']);
         $label = $labels[$metric] ?? ucfirst(str_replace('_', ' ', $metric));
+        $this->logContentReportActivity(
+            'Exported content report ' . strtoupper($format === 'pdf' ? 'PDF' : 'Excel'),
+            $this->contentReportModuleTitle($module) . ' -> ' . strtoupper($label),
+            $request
+        );
         $rows = $service->detailRows(
             $module,
             $metric,
@@ -420,6 +460,22 @@ class AdminController extends Controller
             'fees' => 'FEE PACKAGE',
             default => strtoupper($module),
         };
+    }
+
+    private function logContentReportActivity(string $action, string $item, Request $request): void
+    {
+        try {
+            record_panel_activity(
+                $action,
+                $item,
+                route('admin.home', array_filter([
+                    'report_user' => $request->input('report_user', $request->query('report_user')),
+                ], fn ($v) => $v !== null && $v !== '')),
+                $request
+            );
+        } catch (\Throwable $e) {
+            // Activity logging must never break report browsing.
+        }
     }
 
     private function resolveContentReportActorId(Request $request): ?int

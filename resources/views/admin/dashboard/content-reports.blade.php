@@ -133,19 +133,19 @@
                 </style>
                 <ul class="nav nav-tabs content-report-module-tabs" role="tablist" style="margin-bottom:16px;border-bottom:none;">
                     <li class="{{ $activeTab === 'courses' ? 'active' : '' }}">
-                        <a href="#report-courses" data-toggle="tab" class="tab-courses">Courses</a>
+                        <a href="#report-courses" data-toggle="tab" data-module="courses" class="tab-courses">Courses</a>
                     </li>
                     <li class="{{ $activeTab === 'pages' ? 'active' : '' }}">
-                        <a href="#report-pages" data-toggle="tab" class="tab-pages">Pages</a>
+                        <a href="#report-pages" data-toggle="tab" data-module="pages" class="tab-pages">Pages</a>
                     </li>
                     <li class="{{ $activeTab === 'seo' ? 'active' : '' }}">
-                        <a href="#report-seo" data-toggle="tab" class="tab-seo">SEO Active</a>
+                        <a href="#report-seo" data-toggle="tab" data-module="seo" class="tab-seo">SEO Active</a>
                     </li>
                     <li class="{{ $activeTab === 'training' ? 'active' : '' }}">
-                        <a href="#report-training" data-toggle="tab" class="tab-training">Training Calendar</a>
+                        <a href="#report-training" data-toggle="tab" data-module="training" class="tab-training">Training Calendar</a>
                     </li>
                     <li class="{{ $activeTab === 'fees' ? 'active' : '' }}">
-                        <a href="#report-fees" data-toggle="tab" class="tab-fees">Fee Package</a>
+                        <a href="#report-fees" data-toggle="tab" data-module="fees" class="tab-fees">Fee Package</a>
                     </li>
                 </ul>
 
@@ -253,6 +253,8 @@
     var searchTimer = null;
     var detailsUrl = @json(route('admin.home.content-report-details'));
     var exportUrl = @json(route('admin.home.content-report-export'));
+    var activityUrl = @json(route('admin.home.content-report-activity'));
+    var csrfToken = @json(csrf_token());
     var defaultColumns = [
         { key: 'title', label: 'Title' },
         { key: 'status', label: 'Status' },
@@ -272,6 +274,29 @@
 
     function isSelectedRangeMetric(metric) {
         return metric === 'created_in_range' || metric === 'updated_in_range';
+    }
+
+    function logContentReportActivity(action, item) {
+        try {
+            var payload = {
+                _token: csrfToken,
+                action: action,
+                item: item,
+                report_user: (filterQuery().report_user || '')
+            };
+            // Prefer beacon so filter-change navigation still records the click.
+            if (navigator.sendBeacon) {
+                var body = new Blob([$.param(payload)], { type: 'application/x-www-form-urlencoded;charset=UTF-8' });
+                navigator.sendBeacon(activityUrl, body);
+                return;
+            }
+            $.ajax({
+                url: activityUrl,
+                method: 'POST',
+                async: false,
+                data: payload
+            });
+        } catch (e) {}
     }
 
     function linkColumnKey(columns) {
@@ -464,6 +489,16 @@
         syncRangeFilterVisibility();
         $('#contentReportModal').modal('show');
         loadDetails();
+    });
+
+    $('a[data-toggle="tab"][data-module]', '#content-reports-panel').on('shown.bs.tab', function () {
+        var module = $(this).data('module');
+        logContentReportActivity('Opened content report tab', moduleTitle(module));
+    });
+
+    $('#content_report_user').on('change', function () {
+        var label = $.trim($(this).find('option:selected').text() || 'All Users');
+        logContentReportActivity('Filtered content report user', label);
     });
 
     $('#contentReportSearch').on('keyup', function () {
