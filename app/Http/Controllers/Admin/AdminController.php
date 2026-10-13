@@ -11,6 +11,7 @@ use App\Models\User;
 use App\Models\Country;
 use App\Services\AccountantDashboardService;
 use App\Services\ContentDashboardReportService;
+use App\Services\InstructorsDashboardService;
 use App\Services\PanelActivityService;
 use App\Services\StudentsDashboardService;
 use App\Services\UserActivityLogService;
@@ -194,6 +195,9 @@ class AdminController extends Controller
         $this->ensureDashboardAccess(['admin']);
 
         $baseUrl = route('admin.dashboard.instructors');
+        $instructorService = app(InstructorsDashboardService::class);
+        $instructorStats = $instructorService->overviewStats();
+        $instructorDetails = $instructorService->overviewDetails();
 
         return $this->activityDashboard($request, [
             'userId' => $request->filled('user_id') ? (int) $request->query('user_id') : null,
@@ -207,6 +211,9 @@ class AdminController extends Controller
             'showStudentTable' => false,
             'showSessionColumn' => false,
             'showContentReports' => false,
+            'showInstructorOverview' => true,
+            'instructorOverviewStats' => $instructorStats,
+            'instructorOverviewDetails' => $instructorDetails,
             'logAudience' => 'staff',
             'activityTitle' => $this->namedActivityTitle('Instructors'),
             'panelBaseUrl' => $baseUrl,
@@ -463,6 +470,9 @@ class AdminController extends Controller
             'showStudentOverview' => (bool) ($options['showStudentOverview'] ?? false),
             'studentOverviewStats' => $options['studentOverviewStats'] ?? [],
             'studentOverviewDetails' => $options['studentOverviewDetails'] ?? [],
+            'showInstructorOverview' => (bool) ($options['showInstructorOverview'] ?? false),
+            'instructorOverviewStats' => $options['instructorOverviewStats'] ?? [],
+            'instructorOverviewDetails' => $options['instructorOverviewDetails'] ?? [],
             'studentActivitiesOnly' => (bool) ($options['studentActivitiesOnly'] ?? false),
             'contentReports' => $contentReports,
             'contentReportActorId' => $contentReportActorId,

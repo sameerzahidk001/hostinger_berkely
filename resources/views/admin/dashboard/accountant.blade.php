@@ -19,40 +19,21 @@
         text-transform: uppercase;
         font-size: 12px;
     }
-    #accountant-dashboard .tab-overview { background: #1ab394; }
+    #accountant-dashboard .tab-overview { background: #2f4050; }
     #accountant-dashboard .tab-this-month { background: #1c84c6; }
-    #accountant-dashboard .tab-last-month { background: #f8ac59; }
-    #accountant-dashboard .tab-this-year { background: #23c6c8; }
-    #accountant-dashboard .tab-custom { background: #ed5565; }
+    #accountant-dashboard .tab-last-month { background: #23c6c8; }
+    #accountant-dashboard .tab-this-year { background: #1ab394; }
+    #accountant-dashboard .tab-custom { background: #676a6c; }
     #accountant-dashboard .accountant-tabs > li.active > a,
     #accountant-dashboard .accountant-tabs > li > a:hover {
         opacity: 0.9;
         color: #fff !important;
     }
-    #accountant-dashboard .stat-card {
-        display: block;
-        color: #fff;
-        border-radius: 4px;
-        padding: 18px 16px;
-        margin-bottom: 16px;
-        min-height: 110px;
-    }
-    #accountant-dashboard .stat-card .stat-value {
-        font-size: 28px;
-        font-weight: 700;
-        line-height: 1.1;
-    }
-    #accountant-dashboard .stat-card .stat-label {
-        font-size: 12px;
-        font-weight: 700;
-        text-transform: uppercase;
-        margin-top: 8px;
-        display: block;
-    }
     #accountant-dashboard a.widget {
         display: block;
         color: #fff !important;
         text-decoration: none !important;
+        margin-bottom: 16px;
     }
     #accountant-dashboard a.widget:hover {
         color: #fff !important;
@@ -100,27 +81,55 @@
             @if($activeTab === 'overview')
                 <div class="row">
                     <div class="col-lg-3 col-md-6">
-                        <a href="{{ route('admin.payments.index') }}" class="stat-card" style="background:#ed5565;">
-                            <span class="stat-value">{{ $stats['invoice_total'] ?? 0 }}</span>
-                            <span class="stat-label">All Invoices</span>
+                        <a href="{{ route('admin.payments.index') }}" class="widget style1 navy-bg">
+                            <div class="row">
+                                <div class="col-xs-4">
+                                    <i class="fa fa-file-text-o fa-3x"></i>
+                                </div>
+                                <div class="col-xs-8 text-right">
+                                    <span>All Invoices</span>
+                                    <h2 class="font-bold">{{ $stats['invoice_total'] ?? 0 }}</h2>
+                                </div>
+                            </div>
                         </a>
                     </div>
                     <div class="col-lg-3 col-md-6">
-                        <a href="{{ route('admin.payments.index', ['status' => 'pending']) }}" class="stat-card" style="background:#f8ac59;">
-                            <span class="stat-value">{{ $stats['invoice_unpaid'] ?? 0 }}</span>
-                            <span class="stat-label">Unpaid Invoices</span>
+                        <a href="{{ route('admin.payments.index', ['status' => 'pending']) }}" class="widget style1 yellow-bg">
+                            <div class="row">
+                                <div class="col-xs-4">
+                                    <i class="fa fa-clock-o fa-3x"></i>
+                                </div>
+                                <div class="col-xs-8 text-right">
+                                    <span>Unpaid Invoices</span>
+                                    <h2 class="font-bold">{{ $stats['invoice_unpaid'] ?? 0 }}</h2>
+                                </div>
+                            </div>
                         </a>
                     </div>
                     <div class="col-lg-3 col-md-6">
-                        <a href="{{ route('admin.payments.index', ['status' => 'partial']) }}" class="stat-card" style="background:#1c84c6;">
-                            <span class="stat-value">{{ $stats['invoice_partial'] ?? 0 }}</span>
-                            <span class="stat-label">Partially Paid Invoices</span>
+                        <a href="{{ route('admin.payments.index', ['status' => 'partial']) }}" class="widget style1 blue-bg">
+                            <div class="row">
+                                <div class="col-xs-4">
+                                    <i class="fa fa-adjust fa-3x"></i>
+                                </div>
+                                <div class="col-xs-8 text-right">
+                                    <span>Partially Paid</span>
+                                    <h2 class="font-bold">{{ $stats['invoice_partial'] ?? 0 }}</h2>
+                                </div>
+                            </div>
                         </a>
                     </div>
                     <div class="col-lg-3 col-md-6">
-                        <a href="{{ route('admin.payments.receipts') }}" class="stat-card" style="background:#1ab394;">
-                            <span class="stat-value">{{ $stats['receipts_total'] ?? 0 }}</span>
-                            <span class="stat-label">All Receipts</span>
+                        <a href="{{ route('admin.payments.receipts') }}" class="widget style1 lazur-bg">
+                            <div class="row">
+                                <div class="col-xs-4">
+                                    <i class="fa fa-list-alt fa-3x"></i>
+                                </div>
+                                <div class="col-xs-8 text-right">
+                                    <span>All Receipts</span>
+                                    <h2 class="font-bold">{{ $stats['receipts_total'] ?? 0 }}</h2>
+                                </div>
+                            </div>
                         </a>
                     </div>
                 </div>
