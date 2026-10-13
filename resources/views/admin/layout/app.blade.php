@@ -92,7 +92,7 @@
                      <a href="javascript:void(0)"><i class="fa fa-th-large"></i> <span class="nav-label">Dashboard</span> <span class="fa arrow"></span></a>
                      <ul class="nav nav-second-level">
                         <li class="{{ request()->routeIs('admin.dashboard.content-writers') ? 'active' : '' }}">
-                           <a href="{{ route('admin.dashboard.content-writers') }}">Content Writers Dashboard</a>
+                           <a href="{{ route('admin.dashboard.content-writers') }}">Staff Dashboard</a>
                         </li>
                         @if($seesAllDashboards)
                         <li class="{{ request()->routeIs('admin.dashboard.instructors') ? 'active' : '' }}">

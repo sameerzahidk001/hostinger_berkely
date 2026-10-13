@@ -104,7 +104,7 @@ class AdminController extends Controller
             return redirect()->route('admin.dashboard.accountant');
         }
 
-        // Main Dashboard removed — Admin / Musa land on Content Writers Dashboard.
+        // Main Dashboard removed — Admin / Musa land on Staff Dashboard.
         if (panel_sees_all_dashboards()) {
             return redirect()->route('admin.dashboard.content-writers', $request->query());
         }
@@ -159,11 +159,11 @@ class AdminController extends Controller
                 'logAudience' => 'staff',
                 'activityTitle' => $this->namedActivityTitle(panel_profile_name() ?: 'Content Writer'),
                 'panelBaseUrl' => $baseUrl,
-                'pageTitle' => 'Content Writers Dashboard',
+                'pageTitle' => 'Staff Dashboard',
             ]);
         }
 
-        // Admin / Musa viewing Content Writers Dashboard (site-wide content activity + reports).
+        // Admin / Musa viewing Staff Dashboard (site-wide content activity + reports).
         $reportActor = $this->resolveContentReportActor($request);
 
         return $this->activityDashboard($request, [
@@ -183,9 +183,9 @@ class AdminController extends Controller
             'contentReportActorName' => $reportActor['name'],
             'contentReportActorKey' => $reportActor['key'],
             'logAudience' => 'staff',
-            'activityTitle' => $this->namedActivityTitle('Content Writers'),
+            'activityTitle' => $this->namedActivityTitle('Staff'),
             'panelBaseUrl' => $baseUrl,
-            'pageTitle' => 'Content Writers Dashboard',
+            'pageTitle' => 'Staff Dashboard',
         ]);
     }
 
