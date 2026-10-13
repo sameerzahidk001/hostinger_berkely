@@ -891,8 +891,9 @@ class AdminController extends Controller
             // On some servers role/user filtering can hide log rows (admin_id vs user_id),
             // which previously made "Page Updated" / "Course Updated" disappear entirely.
 
-            $rows = $activities
-                ->merge($logs)
+            // concat/support rows — never Eloquent Collection::merge() (getKey on arrays).
+            $rows = collect($activities->values()->all())
+                ->concat(collect($logs->values()->all()))
                 ->sortByDesc(fn (array $row) => $row['occurred_at']->timestamp)
                 ->unique(function (array $row) {
                     return implode('|', [
