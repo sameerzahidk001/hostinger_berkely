@@ -12,9 +12,11 @@ use App\Services\StudyMaterialService;
 use App\Services\ZohoLmsService;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use App\Models\StudyMaterialInstructorAccess;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
@@ -244,6 +246,8 @@ class StudyMaterialFolderController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'email']);
 
+        StudyMaterialInstructorAccess::ensureIsTrainerColumn();
+
         $accessIds = $folder->instructorAccess
             ->pluck('instructor_id')
             ->map(fn ($id) => (int) $id)
@@ -258,10 +262,23 @@ class StudyMaterialFolderController extends Controller
                 : (int) $accessIds->first();
         }
         $selectedHeadOfFacultyId = old('head_of_faculty_id', $hofId ?: '');
-        $selectedInstructorIds = collect(old(
-            'instructor_ids',
-            $accessIds->reject(fn ($id) => $hofId > 0 && (int) $id === $hofId)->values()->all()
-        ))
+
+        // Keep dual-role faculty (same person as HoF + Instructor) selected in Instructors.
+        $trainerIds = $folder->instructorAccess
+            ->filter(function ($row) use ($hofId) {
+                if (Schema::hasColumn('study_material_instructor_access', 'is_trainer')) {
+                    return (bool) ($row->is_trainer ?? false);
+                }
+
+                return (int) $row->instructor_id !== $hofId;
+            })
+            ->pluck('instructor_id')
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->values()
+            ->all();
+
+        $selectedInstructorIds = collect(old('instructor_ids', $trainerIds))
             ->map(fn ($id) => (int) $id)
             ->filter()
             ->unique()
@@ -579,6 +596,7 @@ class StudyMaterialFolderController extends Controller
     protected function syncFolderFacultyAccess(StudyMaterialFolder $folder, Request $request, $accessTill = null): void
     {
         StudyMaterialFolder::ensureHeadOfFacultyColumn();
+        $hasTrainerFlag = StudyMaterialInstructorAccess::ensureIsTrainerColumn();
 
         $hofId = (int) ($request->input('head_of_faculty_id') ?: 0);
         $folder->head_of_faculty_id = $hofId > 0 ? $hofId : null;
@@ -588,25 +606,30 @@ class StudyMaterialFolderController extends Controller
             $accessTill = $this->lms->computeAccessTill(now(), $folder->validity_months);
         }
 
-        // Only rewrite trainers when real instructor_ids[] values were posted.
-        // Select2 often omits an empty multi-select — never treat that as "clear all"
-        // or existing instructors get wiped on Save (looks like the change was reversed).
+        // Allow the same person as Head of Faculty and Instructor (dual role).
+        // Select2 often omits an empty multi-select — only clear trainers when
+        // instructor_ids_clear is posted, otherwise keep existing trainers.
         $postedTrainerIds = collect((array) $request->input('instructor_ids', []))
             ->push($request->input('instructor_id'))
             ->filter(fn ($id) => $id !== null && $id !== '')
             ->map(fn ($id) => (int) $id)
             ->filter(fn ($id) => $id > 0)
-            ->reject(fn ($id) => $hofId > 0 && $id === $hofId)
             ->unique()
             ->values();
 
         $instructorsSubmitted = $postedTrainerIds->isNotEmpty()
-            || $request->boolean('instructor_ids_clear');
+            || $request->boolean('instructor_ids_clear')
+            || $request->boolean('instructor_ids_present');
 
         if ($instructorsSubmitted) {
             $trainerIds = $request->boolean('instructor_ids_clear')
                 ? collect()
                 : $postedTrainerIds;
+
+            // Empty multi-select + present flag means "clear trainers" (HoF may remain).
+            if ($request->boolean('instructor_ids_present') && $postedTrainerIds->isEmpty()) {
+                $trainerIds = collect();
+            }
 
             $facultyIds = collect($hofId > 0 ? [$hofId] : [])
                 ->merge($trainerIds)
@@ -623,8 +646,10 @@ class StudyMaterialFolderController extends Controller
                 ->whereNotIn('instructor_id', $facultyIds->all())
                 ->delete();
 
+            $trainerIdSet = $trainerIds->all();
+
             foreach ($facultyIds as $instructorId) {
-                $folder->instructorAccess()->firstOrCreate(
+                $row = $folder->instructorAccess()->firstOrCreate(
                     ['instructor_id' => $instructorId],
                     [
                         'status' => 'disabled',
@@ -632,6 +657,11 @@ class StudyMaterialFolderController extends Controller
                         'access_till' => $accessTill?->toDateString(),
                     ]
                 );
+
+                if ($hasTrainerFlag) {
+                    $row->is_trainer = in_array((int) $instructorId, $trainerIdSet, true);
+                    $row->save();
+                }
             }
 
             return;
@@ -639,7 +669,7 @@ class StudyMaterialFolderController extends Controller
 
         // HoF-only update: keep existing trainers, ensure HoF access row exists.
         if ($hofId > 0) {
-            $folder->instructorAccess()->firstOrCreate(
+            $row = $folder->instructorAccess()->firstOrCreate(
                 ['instructor_id' => $hofId],
                 [
                     'status' => 'disabled',
@@ -647,6 +677,12 @@ class StudyMaterialFolderController extends Controller
                     'access_till' => $accessTill?->toDateString(),
                 ]
             );
+
+            // Do not force is_trainer=false here — preserve dual-role if already set.
+            if ($hasTrainerFlag && $row->wasRecentlyCreated) {
+                $row->is_trainer = false;
+                $row->save();
+            }
         }
     }
 

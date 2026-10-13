@@ -122,7 +122,7 @@
                                 <option value="{{ $ins->id }}" @selected(in_array((int) $ins->id, array_map('intval', $selectedInstructorIds ?? []), true))>{{ $ins->name }}</option>
                             @endforeach
                         </select>
-                        <span class="help-block">Type to search and select multiple. Access stays disabled until you Send from Access list or Send to instructors.</span>
+                        <span class="help-block">Type to search and select multiple. The same person can be Head of Faculty and Instructor. Access stays disabled until you Send from Access list or Send to instructors.</span>
                     </div>
                     @endif
                 </div>
