@@ -39,10 +39,86 @@ class AccountantDashboardService
             return 0.0;
         }
 
-        $query = Installment::query()->where('paid_amount', '>', 0);
+        return round((float) $this->paidSalesQuery($from, $to)->sum('paid_amount'), 2);
+    }
+
+    /**
+     * Sales rows = paid installment amounts only (unpaid invoices/installments excluded).
+     *
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function salesRows(?Carbon $from, ?Carbon $to): Collection
+    {
+        if (! Schema::hasTable('installments')) {
+            return collect();
+        }
+
+        return $this->paidSalesQuery($from, $to)
+            ->with(['user', 'payment.course', 'payment.courseFee'])
+            ->orderByDesc('paid_date')
+            ->orderByDesc('id')
+            ->limit(5000)
+            ->get()
+            ->map(function (Installment $installment) {
+                $payment = $installment->payment;
+                $paidAed = (float) $installment->paid_amount;
+                $currency = $payment ? payment_display_currency($payment) : 'AED';
+                $displayAmount = $payment
+                    ? payment_display_amount_from_aed($payment, $paidAed)
+                    : $paidAed;
+                $installmentNo = (int) ($installment->installment_number ?: 1);
+                $totalInstallments = max(1, (int) ($payment?->total_installment ?: 1));
+
+                return [
+                    'id' => $installment->id,
+                    'payment_id' => $payment?->id,
+                    'student' => $installment->user?->name
+                        ?: ($installment->user?->email ?: ($payment?->user?->name ?: '—')),
+                    'course' => $payment?->course?->title ?: ('Course #' . ($payment?->course_id ?: '—')),
+                    'package' => $payment?->courseFee?->package_name ?: '—',
+                    'amount' => $currency . ' ' . number_format((float) $displayAmount, 2),
+                    'amount_aed' => round($paidAed, 2),
+                    'installments' => 'Installment ' . $installmentNo . ' of ' . $totalInstallments,
+                    'status' => ucfirst((string) ($installment->status ?: 'paid')),
+                    'invoice_status' => $payment?->status ?: '—',
+                    'created_at' => $this->formatSaleDate($installment->paid_date ?? $installment->created_at),
+                    'url' => $payment ? route('admin.payments.edit', $payment->id) : null,
+                ];
+            });
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    public function invoiceRows(?Carbon $from, ?Carbon $to): Collection
+    {
+        return $this->salesRows($from, $to);
+    }
+
+    private function formatSaleDate(mixed $value): string
+    {
+        if (! $value) {
+            return '—';
+        }
+
+        try {
+            return Carbon::parse($value)->format('Y-m-d H:i');
+        } catch (\Throwable $e) {
+            return (string) $value;
+        }
+    }
+
+    private function paidSalesQuery(?Carbon $from, ?Carbon $to)
+    {
+        $query = Installment::query()
+            ->where('paid_amount', '>', 0)
+            ->where(function ($q) {
+                $q->whereIn('status', ['paid', 'partial'])
+                    ->orWhereNull('status');
+            });
 
         // Use paid_date when present; otherwise fall back to created_at.
-        $saleDate = "COALESCE(paid_date, DATE(created_at))";
+        $saleDate = 'COALESCE(paid_date, DATE(created_at))';
 
         if ($from) {
             $query->whereRaw("{$saleDate} >= ?", [$from->toDateString()]);
@@ -51,55 +127,7 @@ class AccountantDashboardService
             $query->whereRaw("{$saleDate} <= ?", [$to->toDateString()]);
         }
 
-        return round((float) $query->sum('paid_amount'), 2);
-    }
-
-    /**
-     * @return Collection<int, array<string, mixed>>
-     */
-    public function invoiceRows(?Carbon $from, ?Carbon $to): Collection
-    {
-        if (! Schema::hasTable('payments')) {
-            return collect();
-        }
-
-        $query = Payment::query()
-            ->with(['user', 'course', 'courseFee', 'installments'])
-            ->orderByDesc('created_at');
-
-        if ($from) {
-            $query->where('created_at', '>=', $from);
-        }
-        if ($to) {
-            $query->where('created_at', '<=', $to);
-        }
-
-        return $query->limit(5000)->get()->map(function (Payment $payment) {
-            $status = payment_invoice_status($payment);
-            $amount = format_payment_amount($payment);
-            $installmentCount = max(1, (int) $payment->installments->count());
-            $paidInstallments = (int) $payment->installments
-                ->filter(function ($installment) {
-                    return (float) $installment->paid_amount > 0
-                        || in_array($installment->status, ['paid', 'partial'], true);
-                })
-                ->count();
-
-            return [
-                'id' => $payment->id,
-                'student' => $payment->user?->name ?: ($payment->user?->email ?: '—'),
-                'course' => $payment->course?->title ?: ('Course #' . $payment->course_id),
-                'package' => $payment->courseFee?->package_name ?: '—',
-                'amount' => $amount['display'] ?? ('AED ' . number_format((float) ($payment->price ?? 0), 2)),
-                'installments' => $installmentCount === 1
-                    ? '1 installment'
-                    : $installmentCount . ' installments (' . $paidInstallments . ' with receipt)',
-                'status' => $status,
-                'invoice_status' => $payment->status ?: '—',
-                'created_at' => optional($payment->created_at)?->format('Y-m-d H:i'),
-                'url' => route('admin.payments.edit', $payment->id),
-            ];
-        });
+        return $query;
     }
 
     public function rangeForTab(string $tab, ?string $dateFrom, ?string $dateTo): array
