@@ -82,7 +82,8 @@
                   @if(admin_menu_allowed('dashboard'))
                   @php
                      $dashRole = normalize_panel_role(panel_role_name());
-                     $showDashSubmenus = $dashRole === null || in_array($dashRole, ['admin', 'content_writer'], true);
+                     $seesAllDashboards = panel_sees_all_dashboards();
+                     $showDashSubmenus = $seesAllDashboards || $dashRole === 'content_writer';
                      $dashMenuActive = request()->is('admin/home')
                         || request()->is('admin/dashboard/*');
                   @endphp
@@ -90,14 +91,17 @@
                   <li class="{{ $dashMenuActive ? 'active' : '' }}">
                      <a href="javascript:void(0)"><i class="fa fa-th-large"></i> <span class="nav-label">Dashboard</span> <span class="fa arrow"></span></a>
                      <ul class="nav nav-second-level">
-                        @if($dashRole === null || $dashRole === 'admin')
-                        <li class="{{ request()->is('admin/home') ? 'active' : '' }}">
-                           <a href="{{ route('admin.home') }}">Main Dashboard</a>
-                        </li>
-                        @endif
                         <li class="{{ request()->routeIs('admin.dashboard.content-writers') ? 'active' : '' }}">
                            <a href="{{ route('admin.dashboard.content-writers') }}">Content Writers Dashboard</a>
                         </li>
+                        @if($seesAllDashboards)
+                        <li class="{{ request()->routeIs('admin.dashboard.instructors') ? 'active' : '' }}">
+                           <a href="{{ route('admin.dashboard.instructors') }}">Instructors Dashboard</a>
+                        </li>
+                        <li class="{{ request()->routeIs('admin.dashboard.students') ? 'active' : '' }}">
+                           <a href="{{ route('admin.dashboard.students') }}">Students Dashboard</a>
+                        </li>
+                        @endif
                         <li class="{{ request()->routeIs('admin.dashboard.accountant') ? 'active' : '' }}">
                            <a href="{{ route('admin.dashboard.accountant') }}">Accountant Dashboard</a>
                         </li>

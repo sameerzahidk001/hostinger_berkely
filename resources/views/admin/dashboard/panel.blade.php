@@ -1,5 +1,5 @@
 @extends('admin.layout.app')
-@section('title', 'Dashboard')
+@section('title', $pageTitle ?? 'Dashboard')
 
 @push('style')
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -92,10 +92,27 @@
     </div>
 </div>
 @endif
+@php
+    $panelBaseUrl = $panelBaseUrl ?? route('admin.home');
+@endphp
+@if(!empty($pageTitle) && ($pageTitle ?? '') !== 'Dashboard')
+<div class="row wrapper border-bottom white-bg page-heading" style="margin:0;">
+    <div class="col-lg-12">
+        <h2>{{ $pageTitle }}</h2>
+        <ol class="breadcrumb">
+            <li><a href="{{ route('admin.dashboard.content-writers') }}">Dashboard</a></li>
+            <li class="active"><strong>{{ $pageTitle }}</strong></li>
+        </ol>
+    </div>
+</div>
+@endif
+@if($showStudentOverview ?? false)
+    @include('admin.dashboard.partials.students-overview', ['studentOverviewStats' => $studentOverviewStats ?? []])
+@endif
 <div class="wrapper wrapper-content animated fadeInRight" style="padding: 20px 10px 0px;">
     <div class="row">
         {{-- Colored summary cards duplicate Content performance reports; hide when reports are shown. --}}
-        @if(!($showContentReports ?? false))
+        @if(!($showContentReports ?? false) && !($showStudentOverview ?? false))
         @if($showMyStats ?? false)
         <div class="col-lg-3 col-md-6">
             <div class="widget style1 navy-bg">
@@ -258,7 +275,7 @@
 @endif
 
 @php
-    $activityTab = request('activity_tab', 'staff');
+    $activityTab = request('activity_tab', ($studentActivitiesOnly ?? false) ? 'student' : 'staff');
     if (! in_array($activityTab, ['staff', 'student'], true)) {
         $activityTab = 'staff';
     }
@@ -289,7 +306,7 @@
                 <h5>Activities</h5>
             </div>
             <div class="ibox-content">
-                @if($showStudentTable ?? false)
+                @if(($showStudentTable ?? false) && !($studentActivitiesOnly ?? false))
                 <ul class="nav nav-tabs activity-module-tabs" role="tablist" style="margin-bottom:16px;border-bottom:none;">
                     <li class="{{ $activityTab === 'staff' ? 'active' : '' }}">
                         <a href="#activity-staff" data-toggle="tab" class="tab-staff">{{ $activityTitle ?? 'Staff activity' }}</a>
@@ -301,8 +318,9 @@
                 @endif
 
                 <div class="tab-content">
+                    @if(!($studentActivitiesOnly ?? false))
                     <div role="tabpanel" class="tab-pane {{ $activityTab === 'staff' || !($showStudentTable ?? false) ? 'active' : '' }}" id="activity-staff">
-                        <form method="GET" action="{{ route('admin.home') }}" class="activity-filter-row" id="staffActivityFilterForm">
+                        <form method="GET" action="{{ $panelBaseUrl }}" class="activity-filter-row" id="staffActivityFilterForm">
                             <input type="hidden" name="activity_tab" value="staff">
                             @if($preserveReportUser)
                                 <input type="hidden" name="report_user" value="{{ $preserveReportUser }}">
@@ -343,7 +361,7 @@
                             </div>
                             <div class="activity-filter-search">
                                 <button type="submit" class="btn btn-primary btn-sm">Search</button>
-                                <a href="{{ route('admin.home', $staffClearQuery) }}" class="btn btn-default btn-sm">RESET</a>
+                                <a href="{{ url($panelBaseUrl) . (empty($staffClearQuery) ? '' : ('?' . http_build_query($staffClearQuery))) }}" class="btn btn-default btn-sm">RESET</a>
                             </div>
                             <div class="activity-filter-exports">
                                 <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'staff', 'format' => 'excel'])) }}"
@@ -420,10 +438,11 @@
                             {!! $activities->appends(array_merge(request()->query(), ['activity_tab' => 'staff']))->links() !!}
                         </div>
                     </div>
+                    @endif
 
                     @if($showStudentTable ?? false)
-                    <div role="tabpanel" class="tab-pane {{ $activityTab === 'student' ? 'active' : '' }}" id="activity-student">
-                        <form method="GET" action="{{ route('admin.home') }}" class="activity-filter-row" id="studentActivityFilterForm">
+                    <div role="tabpanel" class="tab-pane {{ ($activityTab === 'student' || ($studentActivitiesOnly ?? false)) ? 'active' : '' }}" id="activity-student">
+                        <form method="GET" action="{{ $panelBaseUrl }}" class="activity-filter-row" id="studentActivityFilterForm">
                             <input type="hidden" name="activity_tab" value="student">
                             @if($preserveReportUser)
                                 <input type="hidden" name="report_user" value="{{ $preserveReportUser }}">
@@ -455,7 +474,7 @@
                             </div>
                             <div class="activity-filter-search">
                                 <button type="submit" class="btn btn-primary btn-sm">Search</button>
-                                <a href="{{ route('admin.home', $studentClearQuery) }}" class="btn btn-default btn-sm">RESET</a>
+                                <a href="{{ url($panelBaseUrl) . (empty($studentClearQuery) ? '' : ('?' . http_build_query($studentClearQuery))) }}" class="btn btn-default btn-sm">RESET</a>
                             </div>
                             <div class="activity-filter-exports">
                                 <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'student', 'format' => 'excel'])) }}"

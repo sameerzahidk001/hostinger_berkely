@@ -236,5 +236,71 @@
             @endif
         </div>
     </div>
+
+    <div class="ibox" style="margin-top:16px;" id="accountant-activities">
+        <div class="ibox-title">
+            <h5 style="margin:0;font-weight:700;text-transform:uppercase;">{{ $activityTitle ?? 'Accountant - ACTIVITY REPORT' }}</h5>
+        </div>
+        <div class="ibox-content">
+            <form method="GET" action="{{ route('admin.dashboard.accountant') }}" class="form-inline" style="margin-bottom:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;">
+                <input type="hidden" name="tab" value="{{ $activeTab }}">
+                @if($activeTab === 'custom')
+                    <input type="hidden" name="date_from" value="{{ $dateFrom }}">
+                    <input type="hidden" name="date_to" value="{{ $dateTo }}">
+                @endif
+                <div class="form-group">
+                    <label for="activity_date_from" class="m-r-xs">From</label>
+                    <input type="date" id="activity_date_from" name="activity_date_from" class="form-control" value="{{ $activityDateFrom ?? now()->toDateString() }}">
+                </div>
+                <div class="form-group">
+                    <label for="activity_date_to" class="m-r-xs">To</label>
+                    <input type="date" id="activity_date_to" name="activity_date_to" class="form-control" value="{{ $activityDateTo ?? now()->toDateString() }}">
+                </div>
+                <button type="submit" class="btn btn-primary btn-sm">Search</button>
+            </form>
+            <p class="m-b-sm" style="font-weight:600;">
+                Report for: {{ $activityDateFrom ?? now()->toDateString() }} - {{ $activityDateTo ?? now()->toDateString() }}
+            </p>
+            <div class="table-responsive">
+                <table class="table table-striped table-bordered table-hover">
+                    <thead>
+                        <tr>
+                            <th style="width:170px;">Date &amp; Time</th>
+                            <th>Activity</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse(($activities ?? collect()) as $activity)
+                            <tr>
+                                <td>
+                                    @if(!empty($activity['occurred_at']) && is_object($activity['occurred_at']))
+                                        {{ $activity['occurred_at']->format('M j, Y g:i A') }}
+                                    @else
+                                        —
+                                    @endif
+                                </td>
+                                <td>{{ activity_action_label($activity['action'] ?? '') }}</td>
+                                <td>
+                                    @if(!empty($activity['url']))
+                                        <a href="{{ $activity['url'] }}">{{ $activity['item'] ?? 'View' }}</a>
+                                    @else
+                                        {{ $activity['item'] ?? '—' }}
+                                    @endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="3" class="text-center text-muted">No accountant activities for this range.</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+            @if(method_exists($activities ?? null, 'links'))
+                <div class="text-right">{{ $activities->appends(request()->query())->links() }}</div>
+            @endif
+        </div>
+    </div>
 </div>
 @endsection
