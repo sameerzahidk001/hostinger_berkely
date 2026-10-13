@@ -149,7 +149,8 @@ class UserActivityLogService
             $query->limit($limit);
         }
 
-        return $query->get()->map(function (UserActivityLog $log) {
+        // Support Collection of arrays — Eloquent\Collection::merge() would call getKey().
+        return collect($query->get()->map(function (UserActivityLog $log) {
             return [
                 'action' => activity_action_label($log->action),
                 'item' => $log->item ?? '',
@@ -159,7 +160,7 @@ class UserActivityLogService
                 'user_name' => $this->resolveActorName($log),
                 'occurred_at' => Carbon::parse($log->created_at),
             ];
-        });
+        })->all());
     }
 
     public function studentFilterUsers(): Collection

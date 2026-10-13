@@ -163,7 +163,10 @@ class PanelActivityService
         // On some servers role/user filtering can hide log rows (admin_id vs user_id),
         // which previously made "Page Updated" / "Course Updated" disappear entirely.
 
-        $merged = $this->mergeActivityRows($activities, $logs);
+        $merged = $this->mergeActivityRows(
+            $this->supportRows($activities),
+            $this->supportRows($logs)
+        );
 
         $total = $merged->count();
         $items = $merged->slice(($page - 1) * $perPage, $perPage)->values();
@@ -192,22 +195,27 @@ class PanelActivityService
             : null;
 
         if ($paymentsOnly) {
-            $feed = collect($this->invoiceActivities($from, $to, $sourceLimit)->all())
-                ->merge(collect($this->installmentPaymentActivities($from, $to, $sourceLimit)->all()))
-                ->sortByDesc(fn (array $row) => $row['occurred_at']->timestamp)
+            $feed = $this->concatActivityRows(
+                $this->invoiceActivities($from, $to, $sourceLimit),
+                $this->installmentPaymentActivities($from, $to, $sourceLimit)
+            )->sortByDesc(fn (array $row) => $row['occurred_at']->timestamp)
                 ->values();
 
             return $limit ? $feed->take($limit)->values() : $feed;
         }
 
-        $feed = collect($this->courseActivities($userId, $from, $to, $sourceLimit)->all())
-            ->merge(collect($this->pageActivities($userId, $from, $to, $sourceLimit)->all()))
-            ->merge(collect($this->seoActivities($userId, $from, $to, $sourceLimit)->all()));
+        $feed = $this->concatActivityRows(
+            $this->courseActivities($userId, $from, $to, $sourceLimit),
+            $this->pageActivities($userId, $from, $to, $sourceLimit),
+            $this->seoActivities($userId, $from, $to, $sourceLimit)
+        );
 
         if ($includePayments && $userId === null && $restrictToUserIds === null) {
-            $feed = $feed
-                ->merge(collect($this->invoiceActivities($from, $to, $sourceLimit)->all()))
-                ->merge(collect($this->installmentPaymentActivities($from, $to, $sourceLimit)->all()));
+            $feed = $this->concatActivityRows(
+                $feed,
+                $this->invoiceActivities($from, $to, $sourceLimit),
+                $this->installmentPaymentActivities($from, $to, $sourceLimit)
+            );
         }
 
         if ($restrictToUserIds !== null) {
@@ -291,7 +299,7 @@ class PanelActivityService
             $query->orderByDesc('updated_at')->limit($limit);
         }
 
-        return $query->get()->flatMap(function (Course $course) use ($userId, $from, $to) {
+        return $this->supportRows($query->get()->flatMap(function (Course $course) use ($userId, $from, $to) {
             $rows = collect();
 
             if ((! $userId || (int) $course->created_by === $userId)
@@ -318,7 +326,7 @@ class PanelActivityService
             }
 
             return $rows;
-        });
+        }));
     }
 
     private function pageActivities(?int $userId, ?Carbon $from, ?Carbon $to, ?int $limit = null): Collection
@@ -339,7 +347,7 @@ class PanelActivityService
             $query->orderByDesc('updated_at')->limit($limit);
         }
 
-        return $query->get()->flatMap(function (Page $page) use ($userId, $from, $to) {
+        return $this->supportRows($query->get()->flatMap(function (Page $page) use ($userId, $from, $to) {
             $rows = collect();
             $label = $page->page_name ?: $page->url;
 
@@ -367,7 +375,7 @@ class PanelActivityService
             }
 
             return $rows;
-        });
+        }));
     }
 
     private function seoActivities(?int $userId, ?Carbon $from, ?Carbon $to, ?int $limit = null): Collection
@@ -388,7 +396,7 @@ class PanelActivityService
             $query->orderByDesc('updated_at')->limit($limit);
         }
 
-        return $query->get()->flatMap(function (PagesSEO $seo) use ($userId, $from, $to) {
+        return $this->supportRows($query->get()->flatMap(function (PagesSEO $seo) use ($userId, $from, $to) {
             $rows = collect();
             $type = $seo->course_id ? 'Course' : 'Page';
             $name = $seo->course_id
@@ -421,7 +429,7 @@ class PanelActivityService
             }
 
             return $rows;
-        });
+        }));
     }
 
     private function invoiceActivities(?Carbon $from, ?Carbon $to, ?int $limit = null): Collection
@@ -444,8 +452,7 @@ class PanelActivityService
             $query->limit($limit);
         }
 
-        // Support Collection (not Eloquent) — Eloquent\Collection::merge() calls getKey() on items.
-        return collect($query
+        return $this->supportRows($query
             ->get()
             ->filter(fn (Payment $payment) => $this->inRange($payment->created_at, $from, $to))
             ->map(function (Payment $payment) {
@@ -459,8 +466,7 @@ class PanelActivityService
                     null,
                     $payment->created_at
                 );
-            })
-            ->all());
+            }));
     }
 
     private function installmentPaymentActivities(?Carbon $from, ?Carbon $to, ?int $limit = null): Collection
@@ -480,7 +486,7 @@ class PanelActivityService
             $query->limit($limit);
         }
 
-        return collect($query
+        return $this->supportRows($query
             ->get()
             ->filter(function ($installment) use ($from, $to) {
                 $at = $installment->paid_date ?? $installment->updated_at;
@@ -499,8 +505,7 @@ class PanelActivityService
                     null,
                     $installment->paid_date ?? $installment->updated_at
                 );
-            })
-            ->all());
+            }));
     }
 
     private function countCoursesCreated(?int $userId, ?Carbon $from, ?Carbon $to): int
@@ -570,9 +575,7 @@ class PanelActivityService
 
     private function mergeActivityRows(Collection $activities, Collection $logs): Collection
     {
-        // Always merge as Support collections of arrays (never Eloquent\Collection).
-        return collect($activities->all())
-            ->merge(collect($logs->all()))
+        return $this->concatActivityRows($activities, $logs)
             ->sortByDesc(fn (array $row) => $row['occurred_at']->timestamp)
             ->unique(function (array $row) {
                 return implode('|', [
@@ -583,6 +586,34 @@ class PanelActivityService
                 ]);
             })
             ->values();
+    }
+
+    /**
+     * Forever-safe activity row bags: plain Support\Collection of arrays.
+     * Never use Eloquent\Collection::merge() — it calls getKey() on each item.
+     */
+    private function supportRows(mixed $items): Collection
+    {
+        if ($items instanceof Collection) {
+            return collect($items->values()->all());
+        }
+
+        if (is_array($items)) {
+            return collect(array_values($items));
+        }
+
+        return collect();
+    }
+
+    private function concatActivityRows(mixed ...$bags): Collection
+    {
+        $feed = collect();
+
+        foreach ($bags as $bag) {
+            $feed = $feed->concat($this->supportRows($bag));
+        }
+
+        return $feed->values();
     }
 
     private function activityRow(
