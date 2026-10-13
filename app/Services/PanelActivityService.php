@@ -192,22 +192,22 @@ class PanelActivityService
             : null;
 
         if ($paymentsOnly) {
-            $feed = $this->invoiceActivities($from, $to, $sourceLimit)
-                ->merge($this->installmentPaymentActivities($from, $to, $sourceLimit))
+            $feed = collect($this->invoiceActivities($from, $to, $sourceLimit)->all())
+                ->merge(collect($this->installmentPaymentActivities($from, $to, $sourceLimit)->all()))
                 ->sortByDesc(fn (array $row) => $row['occurred_at']->timestamp)
                 ->values();
 
             return $limit ? $feed->take($limit)->values() : $feed;
         }
 
-        $feed = $this->courseActivities($userId, $from, $to, $sourceLimit)
-            ->merge($this->pageActivities($userId, $from, $to, $sourceLimit))
-            ->merge($this->seoActivities($userId, $from, $to, $sourceLimit));
+        $feed = collect($this->courseActivities($userId, $from, $to, $sourceLimit)->all())
+            ->merge(collect($this->pageActivities($userId, $from, $to, $sourceLimit)->all()))
+            ->merge(collect($this->seoActivities($userId, $from, $to, $sourceLimit)->all()));
 
         if ($includePayments && $userId === null && $restrictToUserIds === null) {
             $feed = $feed
-                ->merge($this->invoiceActivities($from, $to, $sourceLimit))
-                ->merge($this->installmentPaymentActivities($from, $to, $sourceLimit));
+                ->merge(collect($this->invoiceActivities($from, $to, $sourceLimit)->all()))
+                ->merge(collect($this->installmentPaymentActivities($from, $to, $sourceLimit)->all()));
         }
 
         if ($restrictToUserIds !== null) {
@@ -444,7 +444,8 @@ class PanelActivityService
             $query->limit($limit);
         }
 
-        return $query
+        // Support Collection (not Eloquent) — Eloquent\Collection::merge() calls getKey() on items.
+        return collect($query
             ->get()
             ->filter(fn (Payment $payment) => $this->inRange($payment->created_at, $from, $to))
             ->map(function (Payment $payment) {
@@ -458,7 +459,8 @@ class PanelActivityService
                     null,
                     $payment->created_at
                 );
-            });
+            })
+            ->all());
     }
 
     private function installmentPaymentActivities(?Carbon $from, ?Carbon $to, ?int $limit = null): Collection
@@ -478,7 +480,7 @@ class PanelActivityService
             $query->limit($limit);
         }
 
-        return $query
+        return collect($query
             ->get()
             ->filter(function ($installment) use ($from, $to) {
                 $at = $installment->paid_date ?? $installment->updated_at;
@@ -497,7 +499,8 @@ class PanelActivityService
                     null,
                     $installment->paid_date ?? $installment->updated_at
                 );
-            });
+            })
+            ->all());
     }
 
     private function countCoursesCreated(?int $userId, ?Carbon $from, ?Carbon $to): int
@@ -567,8 +570,9 @@ class PanelActivityService
 
     private function mergeActivityRows(Collection $activities, Collection $logs): Collection
     {
-        return $activities
-            ->merge($logs)
+        // Always merge as Support collections of arrays (never Eloquent\Collection).
+        return collect($activities->all())
+            ->merge(collect($logs->all()))
             ->sortByDesc(fn (array $row) => $row['occurred_at']->timestamp)
             ->unique(function (array $row) {
                 return implode('|', [

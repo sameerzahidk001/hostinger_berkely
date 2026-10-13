@@ -49,7 +49,6 @@
     margin-bottom: 12px;
 }
 #activities-panel .activity-filter-row .form-group { margin: 0; }
-#activities-panel #role + .select2-container { width: 150px !important; min-width: 150px !important; }
 #activities-panel #user_id + .select2-container,
 #activities-panel #student_user_id + .select2-container { width: 220px !important; min-width: 220px !important; }
 #activities-panel .activity-filter-search {
@@ -107,7 +106,10 @@
 </div>
 @endif
 @if($showStudentOverview ?? false)
-    @include('admin.dashboard.partials.students-overview', ['studentOverviewStats' => $studentOverviewStats ?? []])
+    @include('admin.dashboard.partials.students-overview', [
+        'studentOverviewStats' => $studentOverviewStats ?? [],
+        'studentOverviewDetails' => $studentOverviewDetails ?? [],
+    ])
 @endif
 <div class="wrapper wrapper-content animated fadeInRight" style="padding: 20px 10px 0px;">
     <div class="row">
@@ -329,15 +331,6 @@
                                 <input type="hidden" name="student_user_id" value="{{ request('student_user_id') }}">
                             @endif
                             @if($showUserFilter ?? false)
-                            <div class="form-group">
-                                <label for="role" class="m-r-xs">Role</label>
-                                <select id="role" name="role" class="form-control activity-filter-select" style="width:150px;">
-                                    <option value="" @selected(!request()->filled('role'))>None</option>
-                                    <option value="content_writer" @selected(request('role') === 'content_writer')>Content Writers</option>
-                                    <option value="accountant" @selected(request('role') === 'accountant')>Accountants</option>
-                                    <option value="instructor" @selected(request('role') === 'instructor')>Instructors</option>
-                                </select>
-                            </div>
                             <div class="form-group">
                                 <label for="user_id" class="m-r-xs">User</label>
                                 <select id="user_id" name="user_id" class="form-control activity-filter-select" style="width:220px;">
@@ -583,7 +576,6 @@ $(document).ready(function() {
         });
     }
 
-    initTypeFind($('#role'), 'Type to find role', '150px');
     initTypeFind($('#user_id'), 'Type to find user', '220px');
     initTypeFind($('#student_user_id'), 'Type to find student', '220px');
     initTypeFind($('#content_report_user'), 'Type to find user');
@@ -594,23 +586,6 @@ $(document).ready(function() {
             $form.trigger('submit');
         }
     });
-
-    var $role = $('#role');
-    var $user = $('#user_id');
-
-    if ($role.length && $user.length) {
-        $role.on('change', function() {
-            if ($(this).val() !== '') {
-                $user.val(null).trigger('change');
-            }
-        });
-
-        $user.on('change', function() {
-            if ($(this).val() !== '') {
-                $role.val(null).trigger('change');
-            }
-        });
-    }
 
     // Keep Activities tab in the URL so pagination stays on the same tab.
     $('#activities-panel a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
