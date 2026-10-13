@@ -199,9 +199,11 @@ class PaymentController extends Controller
             'due_date.*' => 'required|date',
             'amount' => 'required|array|min:1',
             'amount.*' => 'required|numeric|min:1',
+            'installment_id' => 'nullable|array',
+            'installment_id.*' => 'nullable|integer',
         ]);
 
-        $validator->after(function ($validator) use ($request) {
+        $validator->after(function ($validator) use ($request, $id) {
             $expectedTotal = floatval($request->total_amount);
             $sumOfAmounts = collect($request->amount)->sum(function ($val) {
                 return floatval($val);
@@ -215,6 +217,67 @@ class PaymentController extends Controller
                 $packageCourseId = CourseFee::where('id', $request->package)->value('courses_id');
                 if ((string) $packageCourseId !== (string) $request->course) {
                     $validator->errors()->add('package', 'Selected package does not belong to the selected course.');
+                }
+            }
+
+            $payment = Payment::with('installments')->find($id);
+            if (! $payment) {
+                return;
+            }
+
+            $rawInstallmentIds = collect($request->input('installment_id', []));
+            $keptIds = $rawInstallmentIds
+                ->filter(function ($value) {
+                    return filled($value);
+                })
+                ->map(function ($value) {
+                    return (int) $value;
+                })
+                ->values()
+                ->all();
+
+            $existingById = $payment->installments->keyBy('id');
+            foreach ($keptIds as $submittedId) {
+                if (! $existingById->has($submittedId)) {
+                    $validator->errors()->add('installment_id', 'One or more installments do not belong to this invoice.');
+                    break;
+                }
+            }
+
+            $removedPaid = $payment->installments
+                ->filter(function ($installment) use ($keptIds) {
+                    $hasReceipt = (float) $installment->paid_amount > 0
+                        || in_array($installment->status, ['paid', 'partial'], true);
+
+                    return $hasReceipt && ! in_array((int) $installment->id, $keptIds, true);
+                });
+
+            if ($removedPaid->isNotEmpty()) {
+                $validator->errors()->add(
+                    'installment_id',
+                    'Paid installments with receipts cannot be removed. Keep those rows or clear the receipt first.'
+                );
+            }
+
+            $package = CourseFee::find($request->package);
+            $displayCurrency = $package ? package_currency_code($package->currency) : 'AED';
+            foreach ($rawInstallmentIds as $index => $rawId) {
+                if (! filled($rawId)) {
+                    continue;
+                }
+
+                $existing = $existingById->get((int) $rawId);
+                if (! $existing) {
+                    continue;
+                }
+
+                $newTotal = package_settling_amount($request->amount[$index] ?? 0, $displayCurrency);
+                $paid = round((float) $existing->paid_amount, 2);
+                if ($paid > 0 && round($newTotal, 2) < $paid) {
+                    $validator->errors()->add(
+                        "amount.$index",
+                        'Installment amount cannot be lower than the already paid receipt amount.'
+                    );
                 }
             }
         });
@@ -234,7 +297,7 @@ class PaymentController extends Controller
                 return package_settling_amount($val, $displayCurrency);
             });
 
-            $payment = Payment::findOrFail($id);
+            $payment = Payment::with('installments')->findOrFail($id);
             $payment->user_id = $request->student;
             $payment->course_id = $request->course;
             $payment->package_id = $request->package;
@@ -244,24 +307,79 @@ class PaymentController extends Controller
             $payment->terms_conditions = $request->terms_conditions;
             $payment->save();
 
-            Installment::where('payment_id', $payment->id)->delete();
+            $existingById = $payment->installments->keyBy('id');
+            $existingOrdered = $payment->installments->sortBy('installment_number')->values();
+            $submittedIds = collect($request->input('installment_id', []));
+            $hasExplicitIds = $submittedIds->contains(function ($value) {
+                return filled($value);
+            });
+            $keptIds = [];
 
             foreach ($installmentAmounts as $i => $amount) {
-                Installment::create([
-                    'name' => 'Installment ' . ($i + 1),
-                    'duration_months' => $i + 1,
+                $installmentId = (int) ($submittedIds[$i] ?? 0);
+                $dueDate = $request->due_date[$i];
+                $number = $i + 1;
+
+                $installment = null;
+                if ($installmentId > 0 && $existingById->has($installmentId)) {
+                    $installment = $existingById->get($installmentId);
+                } elseif (! $hasExplicitIds && $existingOrdered->has($i)) {
+                    $installment = $existingOrdered->get($i);
+                }
+
+                if ($installment) {
+                    $paid = round((float) $installment->paid_amount, 2);
+                    $remaining = round(max($amount - $paid, 0), 2);
+
+                    $installment->name = 'Installment ' . $number;
+                    $installment->duration_months = $number;
+                    $installment->installment_number = $number;
+                    $installment->due_date = $dueDate;
+                    $installment->remaining_amount = $remaining;
+                    $installment->payment_id = $payment->id;
+                    $installment->user_id = $request->student;
+
+                    if ($remaining <= 0 && $paid > 0) {
+                        $installment->status = 'paid';
+                        $installment->remaining_amount = 0;
+                    } elseif ($paid > 0) {
+                        $installment->status = 'partial';
+                    } elseif (! in_array($installment->status, ['paid', 'partial'], true)) {
+                        $installment->status = 'pending';
+                    }
+
+                    $installment->save();
+                    $keptIds[] = $installment->id;
+                    continue;
+                }
+
+                $created = Installment::create([
+                    'name' => 'Installment ' . $number,
+                    'duration_months' => $number,
                     'remaining_amount' => $amount,
                     'paid_amount' => 0,
-                    'installment_number' => $i + 1,
-                    'due_date' => $request->due_date[$i],
+                    'installment_number' => $number,
+                    'due_date' => $dueDate,
                     'payment_id' => $payment->id,
                     'user_id' => $request->student,
                     'status' => 'pending',
                 ]);
+                $keptIds[] = $created->id;
             }
 
+            Installment::where('payment_id', $payment->id)
+                ->whereNotIn('id', $keptIds)
+                ->where(function ($query) {
+                    $query->where('paid_amount', '<=', 0)
+                        ->where(function ($inner) {
+                            $inner->whereNull('status')
+                                ->orWhereNotIn('status', ['paid', 'partial']);
+                        });
+                })
+                ->delete();
+
             DB::commit();
-            return redirect()->route('admin.payments.index')->with('success', 'Payment updated successfully.');
+            return redirect()->route('admin.payments.index')->with('success', 'Payment updated successfully. Existing receipts were kept.');
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->with('fail', 'Something went wrong: ' . $e->getMessage());

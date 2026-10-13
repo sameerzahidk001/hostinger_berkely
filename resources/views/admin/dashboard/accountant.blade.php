@@ -133,6 +133,7 @@
                                 <th>Course</th>
                                 <th>Package</th>
                                 <th>Amount</th>
+                                <th>Installments</th>
                                 <th>Payment Status</th>
                                 <th>Invoice</th>
                                 <th>Created</th>
@@ -152,13 +153,14 @@
                                     </td>
                                     <td>{{ $row['package'] }}</td>
                                     <td>{{ $row['amount'] }}</td>
+                                    <td>{{ $row['installments'] ?? '—' }}</td>
                                     <td>{{ $row['status'] }}</td>
                                     <td>{{ $row['invoice_status'] }}</td>
                                     <td>{{ $row['created_at'] }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="text-center text-muted">No invoices found for this range.</td>
+                                    <td colspan="9" class="text-center text-muted">No invoices found for this range.</td>
                                 </tr>
                             @endforelse
                         </tbody>

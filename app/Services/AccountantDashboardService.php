@@ -49,6 +49,13 @@ class AccountantDashboardService
         return $query->limit(5000)->get()->map(function (Payment $payment) {
             $status = payment_invoice_status($payment);
             $amount = format_payment_amount($payment);
+            $installmentCount = max(1, (int) $payment->installments->count());
+            $paidInstallments = (int) $payment->installments
+                ->filter(function ($installment) {
+                    return (float) $installment->paid_amount > 0
+                        || in_array($installment->status, ['paid', 'partial'], true);
+                })
+                ->count();
 
             return [
                 'id' => $payment->id,
@@ -56,6 +63,9 @@ class AccountantDashboardService
                 'course' => $payment->course?->title ?: ('Course #' . $payment->course_id),
                 'package' => $payment->courseFee?->package_name ?: '—',
                 'amount' => $amount['display'] ?? ('AED ' . number_format((float) ($payment->price ?? 0), 2)),
+                'installments' => $installmentCount === 1
+                    ? '1 installment'
+                    : $installmentCount . ' installments (' . $paidInstallments . ' with receipt)',
                 'status' => $status,
                 'invoice_status' => $payment->status ?: '—',
                 'created_at' => optional($payment->created_at)?->format('Y-m-d H:i'),
