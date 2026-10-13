@@ -112,9 +112,23 @@ class UserActivityLogService
         [$from, $to] = $this->parseDateRange($dateFrom, $dateTo);
 
         $query = UserActivityLog::query()
-            ->with(['user', 'admin'])
+            ->with(['user.roles', 'admin'])
             ->where('audience', $audience)
             ->orderByDesc('created_at');
+
+        // Student history must not list instructors/staff even if older rows were mis-tagged.
+        if ($audience === 'student') {
+            $query->whereDoesntHave('user.roles', function ($rq) {
+                $rq->whereRaw('LOWER(name) in (?, ?, ?, ?, ?, ?)', [
+                    'instructor',
+                    'admin',
+                    'content_writer',
+                    'content-writer',
+                    'librarian',
+                    'accountant',
+                ]);
+            });
+        }
 
         if ($userId) {
             $query->where(function ($q) use ($userId) {

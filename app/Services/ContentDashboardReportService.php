@@ -270,7 +270,7 @@ class ContentDashboardReportService
     public function detailColumns(string $module, string $metric = 'total'): array
     {
         if ($module === 'training') {
-            if (in_array($metric, ['courses_with_training', 'courses_without_training', 'courses_past_only_training'], true)) {
+            if (in_array($metric, ['courses_with_training', 'courses_without_training'], true)) {
                 return [
                     ['key' => 'course', 'label' => 'Course'],
                     ['key' => 'coverage', 'label' => 'Coverage'],
@@ -313,12 +313,12 @@ class ContentDashboardReportService
         $who = trim($actorName) !== '' ? trim($actorName) : 'All Users';
 
         if ($module === 'training') {
-            // No Active/Inactive status on Training Calendar — omit those cards.
+            // No Active/Inactive status cards — past dates is a date filter, not a status flag.
             return [
                 'total' => 'Total Training Calendar entries',
                 'courses_with_training' => 'Courses with Training Calendar (Active)',
                 'courses_without_training' => 'Courses without Training Calendar (Active)',
-                'courses_past_only_training' => 'Courses with Only Past Training Calendars (Active)',
+                'past_dates' => 'Training Calendars with Past Dates',
                 'created_by_me' => 'Total Training Calendar entries created by ' . $who,
                 'updated_by_me' => 'Total Training Calendar entries updated by ' . $who,
                 'created_today' => 'Created Today by ' . $who,
@@ -407,29 +407,22 @@ class ContentDashboardReportService
             return array_merge($this->emptyStandardStats(), [
                 'courses_with_training' => 0,
                 'courses_without_training' => 0,
-                'courses_past_only_training' => 0,
+                'past_dates' => 0,
             ]);
         }
 
         $hasAudit = Schema::hasColumn('course_agendas', 'created_by');
         $today = now()->startOfDay();
         $total = (int) CourseAgenda::count();
-        $active = (int) CourseAgenda::query()->whereDate('to', '>=', $today)->count();
-        $inactive = (int) CourseAgenda::query()->whereDate('to', '<', $today)->count();
+        $pastDates = (int) CourseAgenda::query()->whereDate('to', '<', $today)->count();
         $coursesWithTraining = (int) $this->activeCoursesQuery()->whereHas('agendas')->count();
         $coursesWithoutTraining = (int) $this->activeCoursesQuery()->whereDoesntHave('agendas')->count();
-        $coursesPastOnlyTraining = (int) $this->activeCoursesQuery()
-            ->whereHas('agendas')
-            ->whereDoesntHave('agendas', fn ($q) => $q->whereDate('to', '>=', $today))
-            ->count();
 
         return [
             'total' => $total,
-            'active' => $active,
-            'inactive' => $inactive,
+            'past_dates' => $pastDates,
             'courses_with_training' => $coursesWithTraining,
             'courses_without_training' => $coursesWithoutTraining,
-            'courses_past_only_training' => $coursesPastOnlyTraining,
             'created_by_me' => $hasAudit
                 ? (int) ($actorUserId
                     ? CourseAgenda::where('created_by', $actorUserId)->count()
@@ -530,7 +523,7 @@ class ContentDashboardReportService
 
     private function trainingDetailRows(string $metric, ?int $actorUserId, ?Carbon $from, ?Carbon $to, ?string $search): Collection
     {
-        if (in_array($metric, ['courses_with_training', 'courses_without_training', 'courses_past_only_training'], true)) {
+        if (in_array($metric, ['courses_with_training', 'courses_without_training'], true)) {
             return $this->trainingCourseCoverageRows($metric, $search);
         }
 
@@ -543,8 +536,8 @@ class ContentDashboardReportService
         $today = now()->startOfDay();
 
         match ($metric) {
+            'past_dates', 'inactive' => $query->whereDate('to', '<', $today),
             'active' => $query->whereDate('to', '>=', $today),
-            'inactive' => $query->whereDate('to', '<', $today),
             'created_by_me' => $hasAudit
                 ? ($actorUserId ? $query->where('created_by', $actorUserId) : null)
                 : ($actorUserId ? $query->whereRaw('1 = 0') : null),
@@ -966,15 +959,11 @@ class ContentDashboardReportService
             return collect();
         }
 
-        $today = now()->startOfDay();
         $query = $this->activeCoursesQuery()->with(['createdBy', 'updatedBy']);
 
         match ($metric) {
             'courses_with_training' => $query->whereHas('agendas'),
             'courses_without_training' => $query->whereDoesntHave('agendas'),
-            'courses_past_only_training' => $query
-                ->whereHas('agendas')
-                ->whereDoesntHave('agendas', fn ($q) => $q->whereDate('to', '>=', $today)),
             default => $query->whereRaw('1 = 0'),
         };
 
@@ -988,7 +977,6 @@ class ContentDashboardReportService
         $coverageLabel = match ($metric) {
             'courses_with_training' => 'Has Calendar',
             'courses_without_training' => 'Missing',
-            'courses_past_only_training' => 'Past Only',
             default => '—',
         };
 

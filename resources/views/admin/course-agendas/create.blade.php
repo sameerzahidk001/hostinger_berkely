@@ -134,13 +134,7 @@
                                     <p class="text-danger text-xs italic">{{ $message }}</p>
                                 @enderror
                             </div>
-                            <div class="col-lg-12" style="margin-bottom: 15px;">
-                                <label for="to">Inquiry</label>
-                                    <textarea name="inquiry" id="inquiry" rows="3" class="form-control">{{ old('inquiry') }}</textarea>
-                                @error('inquiry')
-                                    <p class="text-danger text-xs italic">{{ $message }}</p>
-                                @enderror
-                            </div>
+                            {{-- Inquiry/iframe embed field hidden from UI. --}}
                             <div class="col-lg-12 mb">
                                 <label class="mb-1">Description</label>
                                 <textarea name="description" class="form-control text-editor"
