@@ -10,7 +10,7 @@
 @endpush
 @section('content')
     <div class="row wrapper border-bottom white-bg page-heading">
-        <div class="col-lg-10">
+        <div class="col-lg-8">
             <h2>{{ $course->title }}</h2>
             <ol class="breadcrumb">
                 <li>
@@ -27,8 +27,20 @@
                 </li>
             </ol>
         </div>
-        <div class="col-lg-2">
-
+        <div class="col-lg-4" style="padding-top: 28px; text-align: right; white-space: nowrap;">
+            @php $courseVisitUrl = empty($course->deleted_at) ? course_details_url($course) : null; @endphp
+            @if($courseVisitUrl)
+                <a href="{{ $courseVisitUrl }}" target="_blank" rel="noopener" class="btn btn-primary btn-sm" style="margin-right:6px;">
+                    <i class="fa fa-external-link"></i> Visit Page
+                </a>
+            @endif
+            <form action="{{ route('course.duplicate', $course->id) }}" method="POST" style="display:inline;">
+                @csrf
+                <button type="submit" class="btn btn-info btn-sm"
+                    onclick="return confirm('Duplicate this course as a disabled draft? Original stays unchanged.');">
+                    <i class="fa fa-copy"></i> Duplicate
+                </button>
+            </form>
         </div>
     </div>
 

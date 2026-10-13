@@ -66,6 +66,9 @@
                             @else
                                 {{ $value }}
                             @endif
+                            @if($key === $linkKey && !empty($row['web_url']))
+                                <a href="{{ $row['web_url'] }}"> (Visit Web)</a>
+                            @endif
                         </td>
                     @endforeach
                 </tr>

@@ -89,12 +89,12 @@ class AdminController extends Controller
                 'includePayments' => false,
                 'showUserColumn' => true,
                 'showUserFilter' => false,
-                'showSessionColumn' => true,
+                'showSessionColumn' => false,
                 'showContentReports' => true,
                 'showContentReportUserFilter' => false,
                 'contentReportActorId' => audit_user_id(),
                 'logAudience' => 'staff',
-                'activityTitle' => 'My activity history',
+                'activityTitle' => $this->namedActivityTitle(panel_profile_name() ?: 'User'),
             ]);
         }
 
@@ -108,9 +108,9 @@ class AdminController extends Controller
                 'includePayments' => true,
                 'showUserColumn' => true,
                 'showUserFilter' => false,
-                'showSessionColumn' => true,
+                'showSessionColumn' => false,
                 'logAudience' => 'staff',
-                'activityTitle' => 'Accountant activities',
+                'activityTitle' => $this->namedActivityTitle('Accountants'),
             ]);
         }
 
@@ -127,7 +127,7 @@ class AdminController extends Controller
             'showUserColumn' => true,
             'showUserFilter' => true,
             'showStudentTable' => true,
-            'showSessionColumn' => true,
+            'showSessionColumn' => false,
             'showContentReports' => true,
             'showContentReportUserFilter' => true,
             'contentReportActorId' => $reportActor['id'],
@@ -135,8 +135,15 @@ class AdminController extends Controller
             'contentReportActorKey' => $reportActor['key'],
             'logAudience' => 'staff',
             'activityTitle' => $this->adminActivityTitle($request),
-            'studentActivityTitle' => 'Student activity history',
+            'studentActivityTitle' => $this->studentActivityTitle($request),
         ]);
+    }
+
+    private function namedActivityTitle(string $name): string
+    {
+        $name = trim($name) !== '' ? trim($name) : 'User';
+
+        return $name . ' - ACTIVITY REPORT';
     }
 
     private function adminActivityTitle(Request $request): string
@@ -144,17 +151,26 @@ class AdminController extends Controller
         if ($request->filled('user_id')) {
             $user = User::find($request->query('user_id'));
 
-            return $user
-                ? 'Activity history - ' . ($user->name ?? $user->email)
-                : 'User activity history';
+            return $this->namedActivityTitle($user?->name ?? $user?->email ?? 'User');
         }
 
         return match ($request->query('role')) {
-            'content_writer' => 'Content writer activities',
-            'accountant' => 'Payment activities',
-            'instructor' => 'Instructor activities',
-            default => 'Staff & panel user activity',
+            'content_writer' => $this->namedActivityTitle('Content Writers'),
+            'accountant' => $this->namedActivityTitle('Accountants'),
+            'instructor' => $this->namedActivityTitle('Instructors'),
+            default => $this->namedActivityTitle('Staff & Panel Users'),
         };
+    }
+
+    private function studentActivityTitle(Request $request): string
+    {
+        if ($request->filled('student_user_id')) {
+            $user = User::find($request->query('student_user_id'));
+
+            return $this->namedActivityTitle($user?->name ?? $user?->email ?? 'Student');
+        }
+
+        return $this->namedActivityTitle('Students');
     }
 
     private function activityDashboard(Request $request, array $options)
@@ -349,7 +365,7 @@ class AdminController extends Controller
             return $pdf->download($filenameBase . '.pdf');
         }
 
-        $headers = array_merge(['#'], array_column($columns, 'label'), ['URL']);
+        $headers = array_merge(['#'], array_column($columns, 'label'), ['Admin URL', 'Visit Web']);
         $callback = function () use ($rows, $headers, $username, $module, $label, $columns, $linkKey) {
             $handle = fopen('php://output', 'w');
             fputcsv($handle, ['Report', $this->contentReportModuleTitle($module) . ' -> ' . strtoupper($label)]);
@@ -382,6 +398,7 @@ class AdminController extends Controller
                     $line[] = $value;
                 }
                 $line[] = $row['url'] ?? '';
+                $line[] = $row['web_url'] ?? '';
                 fputcsv($handle, $line);
             }
 
@@ -653,7 +670,16 @@ class AdminController extends Controller
         }
 
         $username = panel_profile_name() ?: 'User';
-        $title = $exportType === 'student' ? 'Student activity history' : 'Staff & panel user activity';
+        if ($exportType === 'student') {
+            $title = $this->studentActivityTitle($request);
+        } else {
+            $role = normalize_panel_role(panel_role_name());
+            $title = match (true) {
+                $role === 'content_writer' => $this->namedActivityTitle($username),
+                $role === 'accountant' => $this->namedActivityTitle('Accountants'),
+                default => $this->adminActivityTitle($request),
+            };
+        }
         $fileStamp = $filename . '_' . now()->format('Y-m-d');
 
         if ($format === 'pdf') {
@@ -669,9 +695,13 @@ class AdminController extends Controller
             return $pdf->download($fileStamp . '.pdf');
         }
 
-        $headers = ['Date & Time', 'User', 'Activity', 'Description', 'Session', 'URL'];
-        $callback = function () use ($rows, $headers) {
+        $headers = ['Date & Time', 'User', 'Activity', 'Description', 'URL'];
+        $callback = function () use ($rows, $headers, $title, $dateFrom, $dateTo, $username) {
             $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Report', $title]);
+            fputcsv($handle, ['Report for', ($dateFrom ?: '—') . ' - ' . ($dateTo ?: '—')]);
+            fputcsv($handle, ['Generated by', $username]);
+            fputcsv($handle, []);
             fputcsv($handle, $headers);
 
             foreach ($rows as $activity) {
@@ -680,7 +710,6 @@ class AdminController extends Controller
                     $activity['user_name'] ?? '—',
                     activity_action_label($activity['action'] ?? ''),
                     $activity['item'] ?? '',
-                    $activity['session_id'] ?? '',
                     $activity['url'] ?? '',
                 ]);
             }

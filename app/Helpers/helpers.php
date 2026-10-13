@@ -1891,6 +1891,31 @@ if (!function_exists('course_details_url')) {
     }
 }
 
+if (!function_exists('page_public_url')) {
+    function page_public_url($page): ?string
+    {
+        if (! $page) {
+            return null;
+        }
+
+        if (method_exists($page, 'loadMissing')) {
+            $page->loadMissing('parent');
+        }
+
+        $categoryPerma = \App\Models\SiteSettings::value('category_perma') ?? 'category';
+
+        if (! empty($page->parent_id) && $page->parent) {
+            $path = trim((string) ($page->parent->url . '/' . $page->url), '/');
+        } elseif (! empty($page->category_id)) {
+            $path = trim((string) (($categoryPerma ?: 'category') . '/' . $page->url), '/');
+        } else {
+            $path = trim((string) ($page->url ?? ''), '/');
+        }
+
+        return $path !== '' ? url($path) : null;
+    }
+}
+
 if (!function_exists('courses_for_instructor')) {
     function courses_for_instructor(int $instructorId): \Illuminate\Support\Collection
     {

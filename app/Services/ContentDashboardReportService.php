@@ -758,7 +758,7 @@ class ContentDashboardReportService
 
         $analyzer = app(SeoAnalyzerService::class);
 
-        return $query->orderByDesc('updated_at')->limit(10000)->get()->map(function (Page $page) use ($analyzer) {
+        return $query->with(['parent'])->orderByDesc('updated_at')->limit(10000)->get()->map(function (Page $page) use ($analyzer) {
             $status = pages_status_enabled()
                 ? (((int) ($page->status ?? 1) === 1) ? 'Active' : 'Inactive')
                 : 'Active';
@@ -777,6 +777,7 @@ class ContentDashboardReportService
                 'created_at' => optional($page->created_at)?->format('Y-m-d H:i'),
                 'updated_at' => optional($page->updated_at)?->format('Y-m-d H:i'),
                 'url' => route('pages.edit', $page->id),
+                'web_url' => $status === 'Active' ? page_public_url($page) : null,
             ];
         });
     }
@@ -803,11 +804,12 @@ class ContentDashboardReportService
         return $query->orderByDesc('updated_at')->limit(10000)->get()->map(function (Course $course) use ($analyzer) {
             $seo = PagesSEO::query()->where('course_id', $course->id)->first();
             [$seoStatus, $seoScore] = $this->seoStatusAndScore($seo, $analyzer);
+            $isActive = empty($course->deleted_at);
 
             return [
                 'id' => $course->id,
                 'title' => $course->title ?: ('Course #' . $course->id),
-                'status' => $course->deleted_at ? 'Inactive' : 'Active',
+                'status' => $isActive ? 'Active' : 'Inactive',
                 'type' => 'Course',
                 'seo_status' => $seoStatus,
                 'seo_score' => $seoScore,
@@ -816,6 +818,7 @@ class ContentDashboardReportService
                 'created_at' => optional($course->created_at)?->format('Y-m-d H:i'),
                 'updated_at' => optional($course->updated_at)?->format('Y-m-d H:i'),
                 'url' => route('course.edit', $course->id),
+                'web_url' => $isActive ? course_details_url($course) : null,
             ];
         });
     }
@@ -913,6 +916,9 @@ class ContentDashboardReportService
                 'created_at' => optional($seo->created_at)?->format('Y-m-d H:i'),
                 'updated_at' => optional($seo->updated_at)?->format('Y-m-d H:i'),
                 'url' => route('courses-pages-seo.edit', $seo->id),
+                'web_url' => $status === 'Active'
+                    ? (seo_list_item_public_href($seo) ?: null)
+                    : null,
             ];
         });
     }
@@ -921,7 +927,7 @@ class ContentDashboardReportService
     {
         $query = $this->activePagesQuery()
             ->whereDoesntHave('seo')
-            ->with(['createdBy', 'updatedBy']);
+            ->with(['createdBy', 'updatedBy', 'parent']);
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -943,6 +949,7 @@ class ContentDashboardReportService
                 'created_at' => optional($page->created_at)?->format('Y-m-d H:i'),
                 'updated_at' => optional($page->updated_at)?->format('Y-m-d H:i'),
                 'url' => route('pages.edit', $page->id),
+                'web_url' => page_public_url($page),
             ];
         });
     }
@@ -973,6 +980,7 @@ class ContentDashboardReportService
                 'created_at' => optional($course->created_at)?->format('Y-m-d H:i'),
                 'updated_at' => optional($course->updated_at)?->format('Y-m-d H:i'),
                 'url' => route('course.edit', $course->id),
+                'web_url' => course_details_url($course),
             ];
         });
     }

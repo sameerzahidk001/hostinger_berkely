@@ -389,6 +389,9 @@
                 if (key === linkKey && row.url) {
                     text = '<a href="' + row.url + '" target="_blank" rel="noopener">' + text + '</a>';
                 }
+                if (key === linkKey && row.web_url) {
+                    text += ' <a href="' + row.web_url + '" target="_blank" rel="noopener" style="font-weight:normal;">(Visit Web)</a>';
+                }
                 cells += '<td>' + text + '</td>';
             });
             return '<tr>' + cells + '</tr>';
