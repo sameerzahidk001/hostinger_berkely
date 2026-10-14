@@ -1,18 +1,17 @@
 @php
     $reg = $instructorOverviewStats['registration'] ?? [];
     $details = $instructorOverviewDetails ?? [];
-    $overviewFrom = $instructorOverviewDateFrom ?? now()->startOfMonth()->toDateString();
-    $overviewTo = $instructorOverviewDateTo ?? now()->toDateString();
     $cards = [
-        ['key' => 'reg_total', 'value' => (int) ($reg['total'] ?? 0), 'label' => 'Total Registered'],
-        ['key' => 'reg_today', 'value' => (int) ($reg['today'] ?? 0), 'label' => 'Registered Today'],
-        ['key' => 'reg_yesterday', 'value' => (int) ($reg['yesterday'] ?? 0), 'label' => 'Registered Yesterday'],
-        ['key' => 'reg_this_week', 'value' => (int) ($reg['this_week'] ?? 0), 'label' => 'Registered This Week'],
-        ['key' => 'reg_last_week', 'value' => (int) ($reg['last_week'] ?? 0), 'label' => 'Registered Last Week'],
-        ['key' => 'reg_this_month', 'value' => (int) ($reg['this_month'] ?? 0), 'label' => 'Registered This Month'],
-        ['key' => 'reg_last_month', 'value' => (int) ($reg['last_month'] ?? 0), 'label' => 'Registered Last Month'],
-        ['key' => 'reg_this_year', 'value' => (int) ($reg['this_year'] ?? 0), 'label' => 'Registered This Year'],
-        ['key' => 'reg_custom', 'value' => (int) ($reg['custom'] ?? 0), 'label' => 'Registered Custom Date Range', 'is_custom' => true],
+        ['key' => 'reg_total', 'value' => (int) ($reg['total'] ?? 0), 'label' => 'Total Registered Instructors'],
+        ['key' => 'reg_on_website', 'value' => (int) ($reg['on_website'] ?? 0), 'label' => 'Instructors Shows on website'],
+        ['key' => 'reg_today', 'value' => (int) ($reg['today'] ?? 0), 'label' => 'Registered Instructors Today'],
+        ['key' => 'reg_yesterday', 'value' => (int) ($reg['yesterday'] ?? 0), 'label' => 'Registered Instructors Yesterday'],
+        ['key' => 'reg_this_week', 'value' => (int) ($reg['this_week'] ?? 0), 'label' => 'Registered Instructors This Week'],
+        ['key' => 'reg_last_week', 'value' => (int) ($reg['last_week'] ?? 0), 'label' => 'Registered Instructors Last Week'],
+        ['key' => 'reg_this_month', 'value' => (int) ($reg['this_month'] ?? 0), 'label' => 'Registered Instructors This Month'],
+        ['key' => 'reg_last_month', 'value' => (int) ($reg['last_month'] ?? 0), 'label' => 'Registered Instructors Last Month'],
+        ['key' => 'reg_this_year', 'value' => (int) ($reg['this_year'] ?? 0), 'label' => 'Registered Instructors This Year'],
+        ['key' => 'reg_custom', 'value' => (int) ($reg['custom'] ?? 0), 'label' => 'Registered Instructors - Custom Date Range', 'is_custom' => true],
     ];
 @endphp
 <div class="row" style="padding: 0 10px 12px;" id="instructors-overview-panel">
@@ -120,7 +119,7 @@
                                 </div>
                             @endforeach
                         </div>
-                        <p class="text-muted small m-t-sm m-b-none">Click a box to view the list. Use Custom Date Range for From/To dates inside the popup.</p>
+                        <p class="text-muted small m-t-sm m-b-none">Click a box to view the list. Custom Date Range asks for From/To inside the popup (no default dates).</p>
                     </div>
                 </div>
             </div>
@@ -134,7 +133,8 @@
     'triggerSelector' => '#instructors-overview-panel .js-instructor-metric',
     'enableCustomRange' => true,
     'customMetricKey' => 'reg_custom',
-    'customFrom' => $overviewFrom,
-    'customTo' => $overviewTo,
+    'customFrom' => '',
+    'customTo' => '',
     'customFetchUrl' => route('admin.dashboard.instructors.people'),
+    'showPhone' => true,
 ])

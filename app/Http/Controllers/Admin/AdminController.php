@@ -195,12 +195,13 @@ class AdminController extends Controller
         $this->ensureDashboardAccess(['admin']);
 
         $baseUrl = route('admin.dashboard.instructors');
+        // Custom range has no default dates — only applied when both are supplied (popup search).
         $overviewFrom = $request->filled('overview_date_from')
             ? (string) $request->query('overview_date_from')
-            : ($request->filled('date_from') ? (string) $request->query('date_from') : now()->startOfMonth()->toDateString());
+            : null;
         $overviewTo = $request->filled('overview_date_to')
             ? (string) $request->query('overview_date_to')
-            : ($request->filled('date_to') ? (string) $request->query('date_to') : now()->toDateString());
+            : null;
         $instructorService = app(InstructorsDashboardService::class);
         $instructorStats = $instructorService->overviewStats($overviewFrom, $overviewTo);
         $instructorDetails = $instructorService->overviewDetails($overviewFrom, $overviewTo);
@@ -233,12 +234,8 @@ class AdminController extends Controller
     {
         $this->ensureDashboardAccess(['admin']);
 
-        $from = $request->filled('date_from')
-            ? (string) $request->query('date_from')
-            : now()->startOfMonth()->toDateString();
-        $to = $request->filled('date_to')
-            ? (string) $request->query('date_to')
-            : now()->toDateString();
+        $from = $request->filled('date_from') ? (string) $request->query('date_from') : null;
+        $to = $request->filled('date_to') ? (string) $request->query('date_to') : null;
 
         return response()->json(
             app(InstructorsDashboardService::class)->customRangePeople($from, $to)

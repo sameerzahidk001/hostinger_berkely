@@ -13,11 +13,21 @@ class InstructorsDashboardService
 
     public function overviewStats(?string $customFrom = null, ?string $customTo = null): array
     {
-        $ranges = $this->registrationRanges($customFrom, $customTo);
+        $ranges = $this->registrationRanges();
         $registration = [];
         foreach ($ranges as $key => $range) {
             $registration[$key] = $this->registrationQuery($range['from'] ?? null, $range['to'] ?? null)->count();
         }
+
+        // Custom range has no default dates — count stays 0 until the admin searches in the popup.
+        $registration['custom'] = ($customFrom && $customTo)
+            ? $this->registrationQuery(
+                Carbon::parse($customFrom)->startOfDay(),
+                Carbon::parse($customTo)->endOfDay()
+            )->count()
+            : 0;
+
+        $registration['on_website'] = $this->onWebsiteQuery()->count();
 
         return ['registration' => $registration];
     }
@@ -27,19 +37,10 @@ class InstructorsDashboardService
      */
     public function overviewDetails(?string $customFrom = null, ?string $customTo = null): array
     {
-        $ranges = $this->registrationRanges($customFrom, $customTo);
+        $ranges = $this->registrationRanges();
         $details = [];
 
         foreach ($ranges as $key => $range) {
-            // Custom list is loaded on demand inside the popup (From/To at top).
-            if ($key === 'custom') {
-                $details['reg_' . $key] = [
-                    'title' => $range['title'],
-                    'people' => [],
-                ];
-                continue;
-            }
-
             $people = $this->registrationQuery($range['from'] ?? null, $range['to'] ?? null)
                 ->orderByDesc('created_at')
                 ->limit(500)
@@ -54,6 +55,25 @@ class InstructorsDashboardService
             ];
         }
 
+        // Loaded on demand inside the popup when From/To are chosen.
+        $details['reg_custom'] = [
+            'title' => 'Registered Instructors - Custom Date Range',
+            'people' => [],
+        ];
+
+        $onWebPeople = $this->onWebsiteQuery()
+            ->orderBy('name')
+            ->limit(500)
+            ->get($this->personSelectColumns())
+            ->map(fn (User $user) => $this->personRow($user))
+            ->values()
+            ->all();
+
+        $details['reg_on_website'] = [
+            'title' => 'Instructors Shows on website',
+            'people' => $onWebPeople,
+        ];
+
         return $details;
     }
 
@@ -62,8 +82,18 @@ class InstructorsDashboardService
      */
     public function customRangePeople(?string $customFrom = null, ?string $customTo = null): array
     {
-        $from = $customFrom ? Carbon::parse($customFrom)->startOfDay() : now()->copy()->startOfMonth();
-        $to = $customTo ? Carbon::parse($customTo)->endOfDay() : now()->copy()->endOfDay();
+        $title = 'Registered Instructors - Custom Date Range';
+
+        if (! $customFrom || ! $customTo) {
+            return [
+                'title' => $title,
+                'count' => 0,
+                'people' => [],
+            ];
+        }
+
+        $from = Carbon::parse($customFrom)->startOfDay();
+        $to = Carbon::parse($customTo)->endOfDay();
         $query = $this->registrationQuery($from, $to);
         $count = (clone $query)->count();
         $people = $query->orderByDesc('created_at')
@@ -74,44 +104,37 @@ class InstructorsDashboardService
             ->all();
 
         return [
-            'title' => 'Registered Custom Date Range',
+            'title' => $title,
             'count' => $count,
             'people' => $people,
         ];
     }
 
-    private function registrationRanges(?string $customFrom = null, ?string $customTo = null): array
+    private function registrationRanges(): array
     {
         $now = now();
-        $customStart = $customFrom ? Carbon::parse($customFrom)->startOfDay() : $now->copy()->startOfMonth();
-        $customEnd = $customTo ? Carbon::parse($customTo)->endOfDay() : $now->copy()->endOfDay();
 
         return [
-            'total' => ['title' => 'Total Registered', 'from' => null, 'to' => null],
-            'today' => ['title' => 'Registered Today', 'from' => $now->copy()->startOfDay(), 'to' => null],
+            'total' => ['title' => 'Total Registered Instructors', 'from' => null, 'to' => null],
+            'today' => ['title' => 'Registered Instructors Today', 'from' => $now->copy()->startOfDay(), 'to' => null],
             'yesterday' => [
-                'title' => 'Registered Yesterday',
+                'title' => 'Registered Instructors Yesterday',
                 'from' => $now->copy()->subDay()->startOfDay(),
                 'to' => $now->copy()->subDay()->endOfDay(),
             ],
-            'this_week' => ['title' => 'Registered This Week', 'from' => $now->copy()->startOfWeek(Carbon::MONDAY), 'to' => null],
+            'this_week' => ['title' => 'Registered Instructors This Week', 'from' => $now->copy()->startOfWeek(Carbon::MONDAY), 'to' => null],
             'last_week' => [
-                'title' => 'Registered Last Week',
+                'title' => 'Registered Instructors Last Week',
                 'from' => $now->copy()->subWeek()->startOfWeek(Carbon::MONDAY),
                 'to' => $now->copy()->subWeek()->endOfWeek(Carbon::SUNDAY),
             ],
-            'this_month' => ['title' => 'Registered This Month', 'from' => $now->copy()->startOfMonth(), 'to' => null],
+            'this_month' => ['title' => 'Registered Instructors This Month', 'from' => $now->copy()->startOfMonth(), 'to' => null],
             'last_month' => [
-                'title' => 'Registered Last Month',
+                'title' => 'Registered Instructors Last Month',
                 'from' => $now->copy()->subMonthNoOverflow()->startOfMonth(),
                 'to' => $now->copy()->subMonthNoOverflow()->endOfMonth(),
             ],
-            'this_year' => ['title' => 'Registered This Year', 'from' => $now->copy()->startOfYear(), 'to' => null],
-            'custom' => [
-                'title' => 'Registered Custom Date Range',
-                'from' => $customStart,
-                'to' => $customEnd,
-            ],
+            'this_year' => ['title' => 'Registered Instructors This Year', 'from' => $now->copy()->startOfYear(), 'to' => null],
         ];
     }
 
@@ -131,13 +154,28 @@ class InstructorsDashboardService
         return $query;
     }
 
+    private function onWebsiteQuery()
+    {
+        $query = $this->registrationQuery(null, null);
+
+        if (Schema::hasColumn('users', 'is_on_web')) {
+            $query->where('is_on_web', 1);
+        }
+
+        if (Schema::hasColumn('users', 'approved')) {
+            $query->where('approved', 1);
+        }
+
+        return $query;
+    }
+
     /**
      * @return list<string>
      */
     private function personSelectColumns(): array
     {
         $columns = ['id', 'name', 'email', 'created_at'];
-        foreach (['gender', 'country', 'city', 'nationality'] as $column) {
+        foreach (['mobile_number', 'gender', 'country', 'city', 'nationality', 'is_on_web'] as $column) {
             if (Schema::hasColumn('users', $column)) {
                 $columns[] = $column;
             }
@@ -154,10 +192,13 @@ class InstructorsDashboardService
             $country = $map[strtoupper($country)] ?? $country;
         }
 
+        $phone = trim((string) ($user->mobile_number ?? ''));
+
         return [
             'id' => $user->id,
             'name' => $user->name ?: '—',
             'email' => $user->email ?: '—',
+            'phone' => $phone !== '' ? $phone : '—',
             'gender' => $user->gender ?: '—',
             'country' => $country !== '' ? $country : '—',
             'city' => $user->city ?: '—',
