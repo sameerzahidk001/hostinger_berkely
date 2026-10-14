@@ -55,9 +55,26 @@
     <div class="row">
         <div class="col-lg-12">
             <div class="ibox float-e-margins" style="margin-bottom: 0;">
-                <div class="ibox-title">
-                    <h5>Edit Payment</h5>
+                <div class="ibox-title" style="display:flex;justify-content:space-between;align-items:center;">
+                    <h5 style="margin:0;">Edit Payment</h5>
+                    <form method="POST" action="{{ route('admin.payments.push-crm', $payment->id) }}" style="margin:0;">
+                        @csrf
+                        <button type="submit" class="btn btn-info btn-sm">Push to Zoho CRM</button>
+                    </form>
                 </div>
+                @if(\Illuminate\Support\Facades\Schema::hasColumn('payments', 'zoho_crm_sync_status'))
+                    <div class="alert alert-{{ ($payment->zoho_crm_sync_status ?? '') === 'failed' ? 'danger' : 'info' }}" style="margin:12px 15px 0;">
+                        <strong>CRM:</strong>
+                        INV-{{ str_pad((string) $payment->id, 6, '0', STR_PAD_LEFT) }}
+                        · Status: {{ $payment->zoho_crm_sync_status ?: 'not synced' }}
+                        @if(!empty($payment->zoho_crm_invoice_id))
+                            · CRM Invoice ID: {{ $payment->zoho_crm_invoice_id }}
+                        @endif
+                        @if(!empty($payment->zoho_crm_last_error))
+                            <br><span class="text-danger">{{ $payment->zoho_crm_last_error }}</span>
+                        @endif
+                    </div>
+                @endif
 
                 <div class="ibox-content">
                     <form role="form" action="{{ route('admin.payments.update', $payment->id) }}" method="POST">

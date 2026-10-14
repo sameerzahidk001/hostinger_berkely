@@ -8,6 +8,7 @@ use App\Models\CartItem;
 use App\Models\Installment;
 use App\Services\InvoiceService;
 use App\Services\PageFeeStructureService;
+use App\Services\PaymentCrmDispatcher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
@@ -105,6 +106,7 @@ class CheckoutController extends Controller
 
         $this->createPendingInstallment($payment);
         app(InvoiceService::class)->sendInvoiceEmail($payment);
+        PaymentCrmDispatcher::syncPayment($payment->fresh(['installments', 'user', 'course', 'courseFee']));
 
         $courseName = $fee->course?->title ?? 'Course #' . $fee->courses_id;
         $amountLabel = format_payment_amount($payment)['display'];
@@ -153,6 +155,9 @@ class CheckoutController extends Controller
 
         $this->createPendingInstallment($payment);
         app(InvoiceService::class)->sendInvoiceEmail($payment);
+        PaymentCrmDispatcher::syncPayment($payment->fresh([
+            'installments', 'user', 'page', 'pageFeeService', 'pageFeePackage',
+        ]));
 
         $label = ($page?->page_name ?? 'Page') . ' / ' . ($fee->package_name ?? 'Package');
         $amountLabel = format_payment_amount($payment)['display'];

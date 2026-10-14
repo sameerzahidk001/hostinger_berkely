@@ -275,6 +275,8 @@ class NoonCheckoutService
             }
         }
 
+        PaymentCrmDispatcher::syncReceipt($installment->fresh(['payment.installments', 'payment.user', 'user']));
+
         return $installment->fresh(['payment.course', 'payment.courseFee']);
     }
 

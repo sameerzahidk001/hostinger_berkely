@@ -50,6 +50,7 @@ use App\Http\Controllers\Admin\ClassScheduleController;
 use App\Http\Controllers\Admin\ClassBatchController;
 use App\Http\Controllers\Admin\LmsInstallController;
 use App\Http\Controllers\Admin\ZohoSettingsController;
+use App\Http\Controllers\Admin\ZohoCrmSettingsController;
 use App\Http\Controllers\Admin\MeetingAccountController;
 
 //student controllers starts
@@ -211,6 +212,10 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
             return redirect()->route('admin.meeting-accounts.index');
         })->name('admin.zoho.settings');
         Route::post('/zoho-settings', [ZohoSettingsController::class, 'save'])->name('admin.zoho.settings.save');
+        Route::get('/zoho-crm-settings', [ZohoCrmSettingsController::class, 'show'])->name('admin.zoho-crm.settings');
+        Route::post('/zoho-crm-settings', [ZohoCrmSettingsController::class, 'save'])->name('admin.zoho-crm.settings.save');
+        Route::post('/zoho-crm-settings/retry', [ZohoCrmSettingsController::class, 'retry'])->name('admin.zoho-crm.retry');
+        Route::post('/zoho-crm-settings/backfill', [ZohoCrmSettingsController::class, 'backfill'])->name('admin.zoho-crm.backfill');
 
         Route::prefix('meeting-accounts')->name('admin.meeting-accounts.')->group(function () {
             Route::get('/', [MeetingAccountController::class, 'index'])->name('index');
@@ -326,6 +331,8 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
         Route::resource('payments', AdminPaymentController::class)->names('admin.payments');
         Route::get('/payments/send-invoice/{id}', [AdminPaymentController::class, 'sendInvoice'])->name('admin.payments.send-invoice');
         Route::get('/payments/send-receipt/{id}', [AdminPaymentController::class, 'sendReceipt'])->name('admin.payments.send-receipt');
+        Route::post('/payments/{id}/push-crm', [AdminPaymentController::class, 'pushToCrm'])->name('admin.payments.push-crm');
+        Route::post('/installments/{id}/push-crm', [AdminPaymentController::class, 'pushReceiptToCrm'])->name('admin.installments.push-crm');
         Route::get('/payments/details', [AdminPaymentController::class, 'getPaymentDetails'])->name('payments.details');
         Route::post('/payments/stripe', [AdminPaymentController::class, 'payWithStripe'])->name('stripe.pay');
         Route::post('/payments/paypal', [AdminPaymentController::class, 'payWithPaypal'])->name('paypal.pay');

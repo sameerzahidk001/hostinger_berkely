@@ -176,6 +176,8 @@ class RakBankCheckoutService
             app(StudyMaterialService::class)->tryGrantAccessForPaidPayment($installment->payment);
         }
 
+        PaymentCrmDispatcher::syncReceipt($installment->fresh(['payment.installments', 'payment.user', 'user']));
+
         return $installment->fresh(['payment.course', 'payment.courseFee']);
     }
 

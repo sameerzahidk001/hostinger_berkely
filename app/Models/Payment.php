@@ -102,7 +102,11 @@ class Payment extends Model
             if (! Schema::hasColumn($payment->getTable(), 'source')) {
                 unset($payment->source);
             }
-            foreach (['page_id', 'page_fee_service_id', 'page_fee_category_id', 'page_fee_package_id'] as $col) {
+            foreach ([
+                'page_id', 'page_fee_service_id', 'page_fee_category_id', 'page_fee_package_id',
+                'zoho_crm_contact_id', 'zoho_crm_deal_id', 'zoho_crm_invoice_id',
+                'zoho_crm_sync_status', 'zoho_crm_last_error', 'zoho_crm_synced_at',
+            ] as $col) {
                 if (! Schema::hasColumn($payment->getTable(), $col)) {
                     unset($payment->{$col});
                 }

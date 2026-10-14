@@ -22,6 +22,7 @@ use App\Models\Email;
 use App\Mail\UserMail;
 use App\Services\InvoiceService;
 use App\Services\PageFeeStructureService;
+use App\Services\PaymentCrmDispatcher;
 use Illuminate\Support\Facades\Schema;
 
 class PaymentController extends Controller
@@ -192,13 +193,15 @@ class PaymentController extends Controller
                 ]);
             }
 
-            $payment->load(['user', 'course', 'page', 'pageFeeService', 'pageFeePackage']);
+            $payment->load(['user', 'course', 'page', 'pageFeeService', 'pageFeePackage', 'installments']);
             record_panel_activity(
                 'Invoice Created',
                 $this->paymentActivityLabel($payment),
                 route('admin.payments.edit', $payment->id),
                 $request
             );
+
+            PaymentCrmDispatcher::syncPayment($payment);
 
             return redirect()->route('admin.payments.index')->with('success', 'Invoice created in inactive mode. Click Send to email the student.');
         } catch (\Exception $e) {
@@ -209,7 +212,7 @@ class PaymentController extends Controller
 
     public function edit($id)
     {
-        $payment = Payment::with('installments', 'user', 'course', 'courseFee')->findOrFail($id);
+        $payment = Payment::with('installments', 'user', 'course', 'courseFee', 'page', 'pageFeePackage')->findOrFail($id);
         $users = User::with('roles')->whereHas('roles', function ($query) {
             $query->where('name', 'student');
         })->get();
@@ -433,6 +436,7 @@ class PaymentController extends Controller
             DB::beginTransaction();
 
             $payment = Payment::findOrFail($id);
+            PaymentCrmDispatcher::cancelPayment($payment);
             Installment::where('payment_id', $id)->delete();
             $payment->delete();
 
@@ -442,6 +446,32 @@ class PaymentController extends Controller
             DB::rollBack();
             return redirect()->back()->with('fail', 'Something went wrong: ' . $e->getMessage());
         }
+    }
+
+    public function pushToCrm($id)
+    {
+        $payment = Payment::with('installments', 'user', 'course', 'courseFee', 'page', 'pageFeePackage')->findOrFail($id);
+        PaymentCrmDispatcher::syncPayment($payment);
+        $payment->refresh();
+
+        if (($payment->zoho_crm_sync_status ?? null) === 'failed') {
+            return redirect()->back()->with('fail', 'CRM push failed: ' . ($payment->zoho_crm_last_error ?: 'unknown error'));
+        }
+
+        return redirect()->back()->with('success', 'Invoice pushed to Zoho CRM (INV-' . str_pad((string) $payment->id, 6, '0', STR_PAD_LEFT) . ').');
+    }
+
+    public function pushReceiptToCrm($id)
+    {
+        $installment = Installment::with('payment.user', 'payment.course', 'payment.courseFee')->findOrFail($id);
+        PaymentCrmDispatcher::syncReceipt($installment);
+        $installment->refresh();
+
+        if (($installment->zoho_crm_sync_status ?? null) === 'failed') {
+            return redirect()->back()->with('fail', 'CRM receipt push failed: ' . ($installment->zoho_crm_last_error ?: 'unknown error'));
+        }
+
+        return redirect()->back()->with('success', 'Receipt pushed to Zoho CRM (RC-' . str_pad((string) $installment->id, 6, '0', STR_PAD_LEFT) . ').');
     }
 
     public function getPaymentDetails(Request $request)
@@ -655,6 +685,8 @@ class PaymentController extends Controller
             app(\App\Services\StudyMaterialService::class)->tryGrantAccessForPaidPayment($installment->payment);
         }
 
+        PaymentCrmDispatcher::syncReceipt($installment->fresh(['payment.installments', 'payment.user', 'user']));
+
         return response()->json([
             'success' => true,
             'message' => $installment->status === 'paid' ? 'Installment fully paid.' : 'Payment applied.',
@@ -678,6 +710,10 @@ class PaymentController extends Controller
         $installment->notes = null;
         $installment->status = 'pending';
         $installment->save();
+
+        if ($installment->payment) {
+            PaymentCrmDispatcher::syncPayment($installment->payment->fresh(['installments', 'user', 'course', 'courseFee']));
+        }
 
         return redirect()->back()->with('success', 'Receipt deleted successfully!');
     }
@@ -723,6 +759,8 @@ class PaymentController extends Controller
             $this->paymentActivityLabel($payment),
             route('admin.payments.index')
         );
+
+        PaymentCrmDispatcher::syncPayment($payment->fresh(['installments', 'user', 'course', 'courseFee', 'page', 'pageFeePackage']));
 
         return redirect()->back()->with('success', 'Invoice emailed to the student successfully.');
     }
