@@ -54,7 +54,14 @@ class AccountantDashboardService
         }
 
         return $this->paidSalesQuery($from, $to)
-            ->with(['user', 'payment.course', 'payment.courseFee'])
+            ->with([
+                'user',
+                'payment.course',
+                'payment.courseFee',
+                'payment.page',
+                'payment.pageFeeService',
+                'payment.pageFeePackage',
+            ])
             ->orderByDesc('paid_date')
             ->orderByDesc('id')
             ->limit(5000)
@@ -69,19 +76,33 @@ class AccountantDashboardService
                 $installmentNo = (int) ($installment->installment_number ?: 1);
                 $totalInstallments = max(1, (int) ($payment?->total_installment ?: 1));
 
+                $receiptDate = $this->formatSaleDate($installment->paid_date ?? $installment->created_at);
+                $invoiceNo = $payment
+                    ? ('INV-' . str_pad((string) $payment->id, 6, '0', STR_PAD_LEFT))
+                    : '—';
+                $receiptNo = 'RC-' . str_pad((string) $installment->id, 6, '0', STR_PAD_LEFT);
+
                 return [
                     'id' => $installment->id,
                     'payment_id' => $payment?->id,
+                    'receipt_date' => $receiptDate,
+                    'receipt_no' => $receiptNo,
+                    'invoice_no' => $invoiceNo,
                     'student' => $installment->user?->name
                         ?: ($installment->user?->email ?: ($payment?->user?->name ?: '—')),
-                    'course' => $payment?->course?->title ?: ('Course #' . ($payment?->course_id ?: '—')),
-                    'package' => $payment?->courseFee?->package_name ?: '—',
+                    'course' => $payment
+                        ? (method_exists($payment, 'programTitle')
+                            ? $payment->programTitle()
+                            : ($payment->course?->title ?: ('Course #' . ($payment->course_id ?: '—'))))
+                        : '—',
+                    'package' => $payment?->courseFee?->package_name
+                        ?: ($payment?->pageFeePackage?->package_name ?: '—'),
                     'amount' => $currency . ' ' . number_format((float) $displayAmount, 2),
                     'amount_aed' => round($paidAed, 2),
                     'installments' => 'Installment ' . $installmentNo . ' of ' . $totalInstallments,
                     'status' => ucfirst((string) ($installment->status ?: 'paid')),
                     'invoice_status' => $payment?->status ?: '—',
-                    'created_at' => $this->formatSaleDate($installment->paid_date ?? $installment->created_at),
+                    'created_at' => $receiptDate,
                     'url' => $payment ? route('admin.payments.edit', $payment->id) : null,
                 ];
             });

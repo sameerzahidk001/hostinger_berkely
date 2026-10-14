@@ -197,6 +197,9 @@
                         <thead>
                             <tr>
                                 <th>#</th>
+                                <th>Receipt Date</th>
+                                <th>Receipt Number</th>
+                                <th>Invoice No#</th>
                                 <th>Student</th>
                                 <th>Course</th>
                                 <th>Package</th>
@@ -204,13 +207,15 @@
                                 <th>Installment</th>
                                 <th>Payment Status</th>
                                 <th>Action</th>
-                                <th>Paid Date</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($rows as $index => $row)
                                 <tr>
                                     <td>{{ $index + 1 }}</td>
+                                    <td>{{ $row['receipt_date'] ?? $row['created_at'] ?? '—' }}</td>
+                                    <td>{{ $row['receipt_no'] ?? '—' }}</td>
+                                    <td>{{ $row['invoice_no'] ?? '—' }}</td>
                                     <td>{{ $row['student'] }}</td>
                                     <td>{{ $row['course'] }}</td>
                                     <td>{{ $row['package'] }}</td>
@@ -224,20 +229,19 @@
                                             —
                                         @endif
                                     </td>
-                                    <td>{{ $row['created_at'] }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="9" class="text-center text-muted">No paid sales found for this range.</td>
+                                    <td colspan="11" class="text-center text-muted">No paid sales found for this range.</td>
                                 </tr>
                             @endforelse
                         </tbody>
                         @if($rows->isNotEmpty())
                             <tfoot>
                                 <tr style="font-weight:700;background:#f9f9f9;">
-                                    <td colspan="4" class="text-right">Total</td>
+                                    <td colspan="7" class="text-right">Total</td>
                                     <td>AED {{ number_format((float) ($salesTotalAed ?? 0), 2) }}</td>
-                                    <td colspan="4"></td>
+                                    <td colspan="3"></td>
                                 </tr>
                             </tfoot>
                         @endif
