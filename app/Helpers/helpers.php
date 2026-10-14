@@ -795,11 +795,16 @@ if (!function_exists('is_musa_shaikh_user')) {
 if (!function_exists('panel_sees_all_dashboards')) {
     function panel_sees_all_dashboards(): bool
     {
+        if (Auth::guard('admin')->check()) {
+            return true;
+        }
+
         $role = normalize_panel_role(panel_role_name());
         if ($role === null || $role === 'admin') {
             return true;
         }
 
+        // Head of Faculty (Musa) sees Staff / Instructors / Students / Accountant like Admin.
         return is_musa_shaikh_user();
     }
 }

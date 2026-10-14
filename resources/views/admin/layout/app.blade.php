@@ -82,7 +82,7 @@
                   @if(admin_menu_allowed('dashboard'))
                   @php
                      $dashRole = normalize_panel_role(panel_role_name());
-                     $seesAllDashboards = panel_sees_all_dashboards();
+                     $seesAllDashboards = panel_sees_all_dashboards() || is_musa_shaikh_user();
                      $showDashSubmenus = $seesAllDashboards || $dashRole === 'content_writer';
                      $dashMenuActive = request()->is('admin/home')
                         || request()->is('admin/dashboard/*');
@@ -90,8 +90,8 @@
                   @if($showDashSubmenus)
                   <li class="{{ $dashMenuActive ? 'active' : '' }}">
                      <a href="javascript:void(0)"><i class="fa fa-th-large"></i> <span class="nav-label">Dashboard</span> <span class="fa arrow"></span></a>
-                     <ul class="nav nav-second-level">
-                        <li class="{{ request()->routeIs('admin.dashboard.content-writers') ? 'active' : '' }}">
+                     <ul class="nav nav-second-level collapse in" style="height:auto;">
+                        <li class="{{ request()->routeIs('admin.dashboard.content-writers') || (request()->is('admin/home') && $seesAllDashboards) ? 'active' : '' }}">
                            <a href="{{ route('admin.dashboard.content-writers') }}">Staff Dashboard</a>
                         </li>
                         @if($seesAllDashboards)
