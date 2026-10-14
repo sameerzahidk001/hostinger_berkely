@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\Admin;
+use App\Models\Course;
+use App\Models\Page;
 use App\Models\User;
 use App\Models\UserActivityLog;
 use Carbon\Carbon;
@@ -179,58 +181,94 @@ class UserActivityLogService
     }
 
     /**
-     * Content-report / training-calendar log rows only store one URL — infer Visit/Edit for Activities.
+     * Log rows only store one URL — infer Visit/Edit for Activities (courses, pages, training).
      */
     private function withInferredContentLinks(array $row): array
     {
         $item = strtoupper((string) ($row['item'] ?? ''));
         $action = strtolower((string) ($row['action'] ?? ''));
+        $url = (string) ($row['url'] ?? $row['edit_url'] ?? '');
         $mentionsTraining = str_contains($item, 'TRAINING CALENDAR')
             || str_contains($action, 'training calendar');
 
-        if (! $mentionsTraining) {
-            return $row;
+        if (empty($row['visit_url']) && $url !== '') {
+            $row['visit_url'] = $this->resolveVisitUrlFromEditUrl($url);
         }
 
-        if (empty($row['visit_url'])) {
-            // Public training calendar / related course listing on the website.
-            try {
-                $row['visit_url'] = route('agenda_search');
-            } catch (\Throwable $e) {
-                $row['visit_url'] = url('/agenda_search');
-            }
-        }
-
-        if (empty($row['edit_url'])) {
-            $url = (string) ($row['url'] ?? '');
-            if ($url !== '' && (
-                str_contains($url, '/training-calendar/')
-                || str_contains($url, '/course-agendas/')
-            )) {
-                $row['edit_url'] = $url;
-            } else {
+        if ($mentionsTraining) {
+            if (empty($row['visit_url'])) {
+                // Public training calendar listing on the website.
                 try {
-                    $row['edit_url'] = route('admin.course-agendas.index');
+                    $row['visit_url'] = route('agenda_search');
                 } catch (\Throwable $e) {
-                    $row['edit_url'] = $url !== '' ? $url : null;
+                    $row['visit_url'] = url('/agenda_search');
+                }
+            }
+
+            if (empty($row['edit_url'])) {
+                if ($url !== '' && (
+                    str_contains($url, '/training-calendar/')
+                    || str_contains($url, '/course-agendas/')
+                )) {
+                    $row['edit_url'] = $url;
+                } else {
+                    try {
+                        $row['edit_url'] = route('admin.course-agendas.index');
+                    } catch (\Throwable $e) {
+                        $row['edit_url'] = $url !== '' ? $url : null;
+                    }
+                }
+            }
+
+            if (empty($row['url'])) {
+                $row['url'] = $row['edit_url'];
+            } elseif (! empty($row['edit_url'])) {
+                $current = (string) $row['url'];
+                // Older content-report logs pointed at admin home — prefer Training Calendar edit link.
+                if ($current === ''
+                    || str_contains($current, '/admin/home')
+                    || str_contains($current, '/dashboard/content-writers')
+                ) {
+                    $row['url'] = $row['edit_url'];
                 }
             }
         }
 
-        if (empty($row['url'])) {
-            $row['url'] = $row['edit_url'];
-        } elseif (! empty($row['edit_url'])) {
-            $current = (string) $row['url'];
-            // Older content-report logs pointed at admin home — prefer Training Calendar edit link.
-            if ($current === ''
-                || str_contains($current, '/admin/home')
-                || str_contains($current, '/dashboard/content-writers')
-            ) {
-                $row['url'] = $row['edit_url'];
+        return $row;
+    }
+
+    private function resolveVisitUrlFromEditUrl(string $url): ?string
+    {
+        // /admin/course/{id}/edit
+        if (preg_match('#/admin/course/(\d+)/edit#i', $url, $m)) {
+            $course = Course::query()->withTrashed()->find((int) $m[1]);
+            if ($course && empty($course->deleted_at)) {
+                return course_details_url($course);
+            }
+
+            return null;
+        }
+
+        // /admin/pages/{id}/edit (and similar page edit paths)
+        if (preg_match('#/admin/pages?/(\d+)/edit#i', $url, $m)
+            || preg_match('#/pages/(\d+)/edit#i', $url, $m)) {
+            $page = Page::query()->find((int) $m[1]);
+
+            return $page ? page_public_url($page) : null;
+        }
+
+        // Training calendar edit → related course public page when possible.
+        if (preg_match('#/admin/(?:training-calendar|course-agendas)/(\d+)/edit#i', $url, $m)) {
+            if (! class_exists(\App\Models\CourseAgenda::class)) {
+                return null;
+            }
+            $agenda = \App\Models\CourseAgenda::query()->with('course')->find((int) $m[1]);
+            if ($agenda?->course) {
+                return course_details_url($agenda->course);
             }
         }
 
-        return $row;
+        return null;
     }
 
     public function studentFilterUsers(): Collection
