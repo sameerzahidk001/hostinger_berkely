@@ -6,6 +6,9 @@ use App\Models\Course;
 use App\Models\CourseAgenda;
 use App\Models\CourseFee;
 use App\Models\Page;
+use App\Models\PageFeeCategory;
+use App\Models\PageFeePackage;
+use App\Models\PageFeeService;
 use App\Models\PagesSEO;
 use App\Models\Payment;
 use App\Models\User;
@@ -211,7 +214,8 @@ class PanelActivityService
             $this->pageActivities($userId, $from, $to, $sourceLimit),
             $this->seoActivities($userId, $from, $to, $sourceLimit),
             $this->trainingCalendarActivities($userId, $from, $to, $sourceLimit),
-            $this->feePackageActivities($userId, $from, $to, $sourceLimit)
+            $this->feePackageActivities($userId, $from, $to, $sourceLimit),
+            $this->pageFeePackageActivities($userId, $from, $to, $sourceLimit)
         );
 
         if ($includePayments && $userId === null && $restrictToUserIds === null) {
@@ -465,6 +469,158 @@ class PanelActivityService
 
             return $rows;
         }));
+    }
+
+    /**
+     * Historical Fee Update in Page rows (services / categories / packages).
+     * Tables may lack created_by — when filtering by a specific user, skip unaudited rows.
+     */
+    private function pageFeePackageActivities(?int $userId, ?Carbon $from, ?Carbon $to, ?int $limit = null): Collection
+    {
+        // Individual actor filter needs audit columns; without them we cannot attribute.
+        if ($userId) {
+            return collect();
+        }
+
+        $rows = collect();
+
+        if (Schema::hasTable('page_fee_services')) {
+            $query = PageFeeService::query()->with('page');
+            if ($limit) {
+                $query->orderByDesc('updated_at')->limit($limit);
+            }
+            $rows = $rows->concat($query->get()->flatMap(function (PageFeeService $service) use ($from, $to) {
+                $out = collect();
+                $pageName = $service->page?->page_name ?: ('Page #' . $service->page_id);
+                $label = trim($pageName . ' — ' . ($service->name ?: 'Service'));
+                $editUrl = $service->page_id
+                    ? route('admin.pages.fees.edit', $service->page_id)
+                    : route('admin.pages.fees.index');
+                $visitUrl = $service->page ? page_public_url($service->page) : null;
+
+                if ($this->inRange($service->created_at, $from, $to)) {
+                    $out->push($this->activityRow(
+                        'Page Fee Service Created',
+                        $label,
+                        $editUrl,
+                        null,
+                        $service->created_at,
+                        $visitUrl
+                    ));
+                }
+
+                if ($this->wasUpdated($service->created_at, $service->updated_at)
+                    && $this->inRange($service->updated_at, $from, $to)) {
+                    $out->push($this->activityRow(
+                        'Page Fee Service Updated',
+                        $label,
+                        $editUrl,
+                        null,
+                        $service->updated_at,
+                        $visitUrl
+                    ));
+                }
+
+                return $out;
+            }));
+        }
+
+        if (Schema::hasTable('page_fee_categories')) {
+            $query = PageFeeCategory::query()->with(['service.page']);
+            if ($limit) {
+                $query->orderByDesc('updated_at')->limit($limit);
+            }
+            $rows = $rows->concat($query->get()->flatMap(function (PageFeeCategory $category) use ($from, $to) {
+                $out = collect();
+                $page = $category->service?->page;
+                $pageName = $page?->page_name ?: ('Page #' . ($category->service?->page_id ?? ''));
+                $serviceName = $category->service?->name ?: 'Service';
+                $label = trim($pageName . ' — ' . $serviceName . ' — ' . ($category->name ?: 'Category'));
+                $pageId = $category->service?->page_id;
+                $editUrl = $pageId
+                    ? route('admin.pages.fees.edit', $pageId)
+                    : route('admin.pages.fees.index');
+                $visitUrl = $page ? page_public_url($page) : null;
+
+                if ($this->inRange($category->created_at, $from, $to)) {
+                    $out->push($this->activityRow(
+                        'Page Fee Category Created',
+                        $label,
+                        $editUrl,
+                        null,
+                        $category->created_at,
+                        $visitUrl
+                    ));
+                }
+
+                if ($this->wasUpdated($category->created_at, $category->updated_at)
+                    && $this->inRange($category->updated_at, $from, $to)) {
+                    $out->push($this->activityRow(
+                        'Page Fee Category Updated',
+                        $label,
+                        $editUrl,
+                        null,
+                        $category->updated_at,
+                        $visitUrl
+                    ));
+                }
+
+                return $out;
+            }));
+        }
+
+        if (Schema::hasTable('page_fee_packages')) {
+            $query = PageFeePackage::query()->with(['category.service.page']);
+            if ($limit) {
+                $query->orderByDesc('updated_at')->limit($limit);
+            }
+            $rows = $rows->concat($query->get()->flatMap(function (PageFeePackage $package) use ($from, $to) {
+                $out = collect();
+                $page = $package->category?->service?->page;
+                $pageName = $page?->page_name ?: 'Page';
+                $serviceName = $package->category?->service?->name ?: 'Service';
+                $categoryName = $package->category?->name ?: 'Category';
+                $packageName = trim((string) ($package->package_name ?? $package->name ?? ''));
+                $label = trim(implode(' — ', array_filter([
+                    $pageName,
+                    $serviceName,
+                    $categoryName,
+                    $packageName !== '' ? $packageName : 'Package',
+                ])));
+                $pageId = $package->category?->service?->page_id;
+                $editUrl = $pageId
+                    ? route('admin.pages.fees.edit', $pageId)
+                    : route('admin.pages.fees.index');
+                $visitUrl = $page ? page_public_url($page) : null;
+
+                if ($this->inRange($package->created_at, $from, $to)) {
+                    $out->push($this->activityRow(
+                        'Page Fee Package Created',
+                        $label,
+                        $editUrl,
+                        null,
+                        $package->created_at,
+                        $visitUrl
+                    ));
+                }
+
+                if ($this->wasUpdated($package->created_at, $package->updated_at)
+                    && $this->inRange($package->updated_at, $from, $to)) {
+                    $out->push($this->activityRow(
+                        'Page Fee Package Updated',
+                        $label,
+                        $editUrl,
+                        null,
+                        $package->updated_at,
+                        $visitUrl
+                    ));
+                }
+
+                return $out;
+            }));
+        }
+
+        return $this->supportRows($rows);
     }
 
     private function trainingCalendarActivities(?int $userId, ?Carbon $from, ?Carbon $to, ?int $limit = null): Collection

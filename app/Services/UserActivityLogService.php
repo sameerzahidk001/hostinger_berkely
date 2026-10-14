@@ -41,10 +41,16 @@ class UserActivityLogService
             'Admin Log out', 'Staff Log out', 'User Log out',
         ];
 
-        if (in_array($action, $sessionActions, true)) {
+        $isOpenAction = str_starts_with($action, 'Opened');
+
+        if (in_array($action, $sessionActions, true) || $isOpenAction) {
             $duplicateQuery = UserActivityLog::query()
                 ->where('action', $action)
-                ->where('created_at', '>=', now()->subMinute());
+                ->where('created_at', '>=', now()->subMinutes($isOpenAction ? 2 : 1));
+
+            if ($isOpenAction && $url) {
+                $duplicateQuery->where('url', $url);
+            }
 
             if ($userId) {
                 $duplicateQuery->where('user_id', $userId);
