@@ -24,7 +24,7 @@
                         @endif
                     @endforeach
                     <label for="content_report_user" class="m-r-xs" style="margin:0;font-weight:700;text-transform:uppercase;font-size:12px;">Search by User</label>
-                    <select id="content_report_user" name="report_user" class="form-control" style="min-width:240px;">
+                    <select id="content_report_user" name="report_user" class="form-control" style="width:280px;max-width:280px;">
                         @foreach($reportUsers as $ru)
                             <option value="{{ $ru['key'] }}" @selected((string) $reportActorKey === (string) $ru['key'])>{{ $ru['label'] }}</option>
                         @endforeach

@@ -125,10 +125,10 @@
                         src="{{ asset('frontend/images/pngs/header-logo-white.png') }}" alt=""
                         style="width: 220px; padding: 8px 12px;"></a>
                </li>
-               <li style="padding: 16px 12px;">
-                  <div style="display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;">
+               <li style="padding: 8px 12px 12px;">
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;">
                      <img src="{{ user_avatar_url(auth()->user()) }}" alt="{{ auth()->user()->name ?? 'User' }}"
-                        style="width:225px;height:225px;border-radius:999px;object-fit:cover;border:3px solid rgba(255,255,255,0.25);" />
+                        style="width:96px;height:96px;border-radius:999px;object-fit:cover;border:2px solid rgba(255,255,255,0.25);" />
                      <div style="color:#fff;line-height:1.3;">
                         <div style="font-weight:600;font-size:14px;">{{ auth()->user()->name ?? 'User' }}</div>
                         <div style="font-size:12px;opacity:0.85;">
