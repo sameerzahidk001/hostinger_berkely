@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
+use App\Traits\TracksAudit;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class CourseFee extends Model
 {
-    use HasFactory;
+    use HasFactory, TracksAudit;
 
     protected $fillable = [
         'courses_id', 'package_name', 'currency', 'price',

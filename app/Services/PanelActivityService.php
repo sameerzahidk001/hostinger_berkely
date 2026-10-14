@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Course;
 use App\Models\CourseAgenda;
+use App\Models\CourseFee;
 use App\Models\Page;
 use App\Models\PagesSEO;
 use App\Models\Payment;
@@ -209,7 +210,8 @@ class PanelActivityService
             $this->courseActivities($userId, $from, $to, $sourceLimit),
             $this->pageActivities($userId, $from, $to, $sourceLimit),
             $this->seoActivities($userId, $from, $to, $sourceLimit),
-            $this->trainingCalendarActivities($userId, $from, $to, $sourceLimit)
+            $this->trainingCalendarActivities($userId, $from, $to, $sourceLimit),
+            $this->feePackageActivities($userId, $from, $to, $sourceLimit)
         );
 
         if ($includePayments && $userId === null && $restrictToUserIds === null) {
@@ -393,6 +395,70 @@ class PanelActivityService
                     $editUrl,
                     $page->updated_by ?: $page->created_by,
                     $page->updated_at,
+                    $visitUrl
+                ));
+            }
+
+            return $rows;
+        }));
+    }
+
+    private function feePackageActivities(?int $userId, ?Carbon $from, ?Carbon $to, ?int $limit = null): Collection
+    {
+        if (! Schema::hasTable('course_fees')) {
+            return collect();
+        }
+
+        $hasAudit = Schema::hasColumn('course_fees', 'created_by');
+        $query = CourseFee::query()->with('course');
+
+        if ($userId) {
+            if (! $hasAudit) {
+                return collect();
+            }
+            $query->where(function ($q) use ($userId) {
+                $q->where('created_by', $userId)->orWhere('updated_by', $userId);
+            });
+        }
+
+        if ($limit) {
+            $query->orderByDesc('updated_at')->limit($limit);
+        }
+
+        return $this->supportRows($query->get()->flatMap(function (CourseFee $fee) use ($userId, $from, $to, $hasAudit) {
+            $rows = collect();
+            $course = $fee->course;
+            $courseTitle = $course?->title ?: ('Course #' . $fee->courses_id);
+            $packageName = trim((string) ($fee->package_name ?? ''));
+            $label = $packageName !== ''
+                ? ($courseTitle . ' — ' . $packageName)
+                : $courseTitle;
+            $editUrl = route('course.edit-fee', ['id' => $fee->id]);
+            $visitUrl = $course ? course_details_url($course) : null;
+            $createdBy = $hasAudit ? ($fee->created_by ?? null) : null;
+            $updatedBy = $hasAudit ? ($fee->updated_by ?? $fee->created_by ?? null) : null;
+
+            if ((! $userId || (int) $createdBy === $userId)
+                && $this->inRange($fee->created_at, $from, $to)) {
+                $rows->push($this->activityRow(
+                    'Fee Package Created',
+                    $label,
+                    $editUrl,
+                    $createdBy ? (int) $createdBy : null,
+                    $fee->created_at,
+                    $visitUrl
+                ));
+            }
+
+            if ($this->wasUpdated($fee->created_at, $fee->updated_at)
+                && (! $userId || (int) $updatedBy === $userId)
+                && $this->inRange($fee->updated_at, $from, $to)) {
+                $rows->push($this->activityRow(
+                    'Fee Package Updated',
+                    $label,
+                    $editUrl,
+                    $updatedBy ? (int) $updatedBy : null,
+                    $fee->updated_at,
                     $visitUrl
                 ));
             }

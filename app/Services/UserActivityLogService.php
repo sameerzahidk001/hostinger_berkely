@@ -161,6 +161,7 @@ class UserActivityLogService
                 || str_contains($url, '/seo/')
                 || str_contains($url, '/training-calendar/')
                 || str_contains($url, '/course-agendas/')
+                || str_contains($url, '/fee/')
             );
 
             $row = [
@@ -239,6 +240,24 @@ class UserActivityLogService
 
     private function resolveVisitUrlFromEditUrl(string $url): ?string
     {
+        // /admin/course/{feeId}/fee/edit  OR  .../fee/edit?id=
+        if (preg_match('#/admin/course/(\d+)/fee/edit#i', $url, $m)
+            || preg_match('#/fee/edit(?:\?|/)?#i', $url)) {
+            $feeId = null;
+            if (! empty($m[1])) {
+                $feeId = (int) $m[1];
+            } elseif (preg_match('#[?&]id=(\d+)#i', $url, $qm)) {
+                $feeId = (int) $qm[1];
+            }
+            // route('course.edit-fee', ['id' => $fee->id]) → /admin/course/{feeId}/fee/edit
+            if ($feeId && class_exists(\App\Models\CourseFee::class)) {
+                $fee = \App\Models\CourseFee::query()->with('course')->find($feeId);
+                if ($fee?->course) {
+                    return course_details_url($fee->course);
+                }
+            }
+        }
+
         // /admin/course/{id}/edit
         if (preg_match('#/admin/course/(\d+)/edit#i', $url, $m)) {
             $course = Course::query()->withTrashed()->find((int) $m[1]);
