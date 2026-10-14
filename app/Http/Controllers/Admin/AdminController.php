@@ -920,12 +920,22 @@ class AdminController extends Controller
                 $item = 'Website Content Reports → ' . $item;
             }
 
+            $upper = strtoupper($item);
+            // Training Calendar report clicks should open admin Training Calendar (Edit Page).
+            // Visit Page (public agenda) is inferred when the activity feed is rendered.
+            if (str_contains($upper, 'TRAINING CALENDAR')) {
+                $url = route('admin.course-agendas.index');
+            } else {
+                $url = route('admin.dashboard.content-writers', array_filter([
+                    'report_user' => $request->input('report_user', $request->query('report_user')),
+                    'role' => 'content_writer',
+                ], fn ($v) => $v !== null && $v !== ''));
+            }
+
             record_panel_activity(
                 $action,
                 $item !== '' ? $item : 'Website Content Reports',
-                route('admin.home', array_filter([
-                    'report_user' => $request->input('report_user', $request->query('report_user')),
-                ], fn ($v) => $v !== null && $v !== '')),
+                $url,
                 $request
             );
         } catch (\Throwable $e) {
