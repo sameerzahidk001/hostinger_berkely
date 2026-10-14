@@ -144,5 +144,6 @@
     'customFrom' => '',
     'customTo' => '',
     'customFetchUrl' => route('admin.dashboard.instructors.people'),
+    'exportUrl' => route('admin.dashboard.instructors.people-export'),
     'showPhone' => true,
 ])

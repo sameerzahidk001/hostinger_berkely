@@ -132,6 +132,44 @@ class StudentsDashboardService
         ];
     }
 
+    /**
+     * @return array{title: string, count: int, people: array<int, array<string, mixed>>, date_from: ?string, date_to: ?string}
+     */
+    public function peopleForMetric(string $metric, ?string $customFrom = null, ?string $customTo = null): array
+    {
+        $metric = trim($metric);
+        if ($metric === 'reg_custom' || $metric === 'custom') {
+            $payload = $this->customRangePeople($customFrom, $customTo);
+
+            return $payload + [
+                'date_from' => $customFrom,
+                'date_to' => $customTo,
+            ];
+        }
+
+        $key = str_starts_with($metric, 'reg_') ? substr($metric, 4) : $metric;
+        $ranges = $this->registrationRanges();
+        if (! isset($ranges[$key])) {
+            $key = 'total';
+        }
+        $range = $ranges[$key];
+        $people = $this->registrationQuery($range['from'] ?? null, $range['to'] ?? null)
+            ->orderByDesc('created_at')
+            ->limit(5000)
+            ->get($this->personSelectColumns())
+            ->map(fn (User $user) => $this->personRow($user))
+            ->values()
+            ->all();
+
+        return [
+            'title' => $range['title'],
+            'count' => count($people),
+            'people' => $people,
+            'date_from' => isset($range['from']) ? $range['from']->toDateString() : null,
+            'date_to' => isset($range['to']) ? $range['to']->toDateString() : null,
+        ];
+    }
+
     private function registrationRanges(): array
     {
         $now = now();

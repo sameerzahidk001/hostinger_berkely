@@ -8,15 +8,26 @@
     $customFrom = $customFrom ?? '';
     $customTo = $customTo ?? '';
     $customFetchUrl = $customFetchUrl ?? '';
+    $exportUrl = $exportUrl ?? '';
     $showPhone = (bool) ($showPhone ?? false);
     $colCount = $showPhone ? 10 : 9;
 @endphp
 <div class="modal fade" id="{{ $modalId }}" tabindex="-1" role="dialog" aria-labelledby="{{ $modalId }}Label">
     <div class="modal-dialog people-metric-modal-dialog" role="document" style="width:96%;max-width:1400px;margin:20px auto;">
         <div class="modal-content">
-            <div class="modal-header">
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                <h4 class="modal-title" id="{{ $modalId }}Label">People</h4>
+            <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+                <h4 class="modal-title" id="{{ $modalId }}Label" style="margin:0;">People</h4>
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                    @if($exportUrl)
+                    <a href="#" id="{{ $modalId }}ExportExcel" class="btn btn-success btn-sm" target="_blank" rel="noopener">
+                        <i class="fa fa-file-excel-o"></i> Export Excel
+                    </a>
+                    <a href="#" id="{{ $modalId }}ExportPdf" class="btn btn-danger btn-sm" target="_blank" rel="noopener">
+                        <i class="fa fa-file-pdf-o"></i> Export PDF
+                    </a>
+                    @endif
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="margin:0;opacity:1;"><span aria-hidden="true">&times;</span></button>
+                </div>
             </div>
             <div class="modal-body" style="padding:12px 16px;">
                 @if($enableCustomRange)
@@ -79,8 +90,33 @@
     var enableCustomRange = @json($enableCustomRange);
     var customMetricKey = @json($customMetricKey);
     var customFetchUrl = @json($customFetchUrl);
+    var exportUrl = @json($exportUrl);
     var showPhone = @json($showPhone);
     var colCount = @json($colCount);
+    var currentMetric = 'reg_total';
+
+    function syncExportLinks() {
+        if (!exportUrl) {
+            return;
+        }
+        var fromEl = document.getElementById(modalId + 'From');
+        var toEl = document.getElementById(modalId + 'To');
+        var from = fromEl ? fromEl.value : '';
+        var to = toEl ? toEl.value : '';
+        var qs = 'metric=' + encodeURIComponent(currentMetric || 'reg_total');
+        if (currentMetric === customMetricKey) {
+            if (from) qs += '&date_from=' + encodeURIComponent(from);
+            if (to) qs += '&date_to=' + encodeURIComponent(to);
+        }
+        var excel = document.getElementById(modalId + 'ExportExcel');
+        var pdf = document.getElementById(modalId + 'ExportPdf');
+        if (excel) {
+            excel.href = exportUrl + (exportUrl.indexOf('?') === -1 ? '?' : '&') + qs + '&format=excel';
+        }
+        if (pdf) {
+            pdf.href = exportUrl + (exportUrl.indexOf('?') === -1 ? '?' : '&') + qs + '&format=pdf';
+        }
+    }
 
     function renderPeople(people, title, emptyMessage) {
         var modalTitle = document.getElementById(modalId + 'Label');
@@ -89,6 +125,7 @@
         if (modalTitle) {
             modalTitle.textContent = (title || 'People') + ' (' + people.length + ')';
         }
+        syncExportLinks();
         if (!body) {
             return;
         }
@@ -168,6 +205,7 @@
         el.addEventListener('click', function () {
             var key = el.getAttribute('data-metric') || '';
             var title = el.getAttribute('data-title') || 'People';
+            currentMetric = key || 'reg_total';
             var isCustom = enableCustomRange && (el.getAttribute('data-custom') === '1' || key === customMetricKey);
             var rangeBox = document.getElementById(modalId + 'CustomRange');
             if (rangeBox) {

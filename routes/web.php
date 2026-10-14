@@ -188,8 +188,10 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
         Route::get('dashboard/content-writers', [AdminController::class, 'contentWritersDashboard'])->name('admin.dashboard.content-writers');
         Route::get('dashboard/instructors', [AdminController::class, 'instructorsDashboard'])->name('admin.dashboard.instructors');
         Route::get('dashboard/instructors/people', [AdminController::class, 'instructorsPeople'])->name('admin.dashboard.instructors.people');
+        Route::get('dashboard/instructors/people-export', [AdminController::class, 'exportInstructorsPeople'])->name('admin.dashboard.instructors.people-export');
         Route::get('dashboard/students', [AdminController::class, 'studentsDashboard'])->name('admin.dashboard.students');
         Route::get('dashboard/students/people', [AdminController::class, 'studentsPeople'])->name('admin.dashboard.students.people');
+        Route::get('dashboard/students/people-export', [AdminController::class, 'exportStudentsPeople'])->name('admin.dashboard.students.people-export');
         Route::get('dashboard/accountant', [AdminController::class, 'accountantDashboard'])->name('admin.dashboard.accountant');
         Route::get('dashboard/accountant/export', [AdminController::class, 'exportAccountant'])->name('admin.dashboard.accountant.export');
         Route::get('home/activity-export', [AdminController::class, 'exportActivity'])->name('admin.home.activity-export');
