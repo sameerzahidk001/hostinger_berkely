@@ -15,10 +15,9 @@
 <div class="row" style="padding: 0 10px 12px;" id="content-reports-panel">
     <div class="col-lg-12">
         <div class="ibox float-e-margins">
-            <div class="ibox-title" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-                <h5 style="margin:0;font-weight:700;text-transform:uppercase;letter-spacing:.02em;">Website Content Reports</h5>
+            <div class="ibox-content">
                 @if($showReportUserFilter)
-                <form method="GET" action="{{ $panelBaseUrl ?? route('admin.home') }}" class="form-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0;" id="contentReportUserForm">
+                <form method="GET" action="{{ $panelBaseUrl ?? route('admin.home') }}" class="form-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end;margin:0 0 12px;" id="contentReportUserForm">
                     @foreach(request()->except(['report_user', 'page']) as $key => $value)
                         @if(is_scalar($value))
                             <input type="hidden" name="{{ $key }}" value="{{ $value }}">
@@ -32,8 +31,6 @@
                     </select>
                 </form>
                 @endif
-            </div>
-            <div class="ibox-content">
                 <style>
                     #content-reports-panel .content-report-module-tabs > li > a {
                         color: #fff !important;
@@ -43,6 +40,7 @@
                         padding: 10px 18px;
                         font-weight: 700;
                         text-transform: uppercase;
+                        letter-spacing: .02em;
                     }
                     #content-reports-panel .btn {
                         font-weight: 700;
@@ -136,6 +134,9 @@
                     }
                 </style>
                 <ul class="nav nav-tabs content-report-module-tabs" role="tablist" style="margin-bottom:16px;border-bottom:none;">
+                    <li style="pointer-events:none;">
+                        <a href="javascript:void(0);" class="tab-section-label" style="background:#2f4050 !important;cursor:default;">Website Content Reports</a>
+                    </li>
                     <li class="{{ $activeTab === 'courses' ? 'active' : '' }}">
                         <a href="#report-courses" data-toggle="tab" data-module="courses" class="tab-courses">Courses</a>
                     </li>
@@ -193,9 +194,9 @@
         <div class="modal-content">
             <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-                <h4 class="modal-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                    <span id="contentReportModalLabel">Report details</span>
-                    <span id="contentReportModalCount" style="display:inline-block;min-width:42px;padding:4px 10px;border:1px solid #cfd4d8;border-radius:3px;background:#f5f5f5;font-size:14px;font-weight:700;color:#333;text-align:center;">0</span>
+                <h4 class="modal-title" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0;font-weight:700;text-transform:uppercase;letter-spacing:.02em;">
+                    <span id="contentReportModalLabel">Website Content Reports</span>
+                    <span id="contentReportModalCount" style="display:inline-block;min-width:42px;padding:4px 10px;border:1px solid #cfd4d8;border-radius:3px;background:#f5f5f5;font-size:14px;font-weight:700;color:#333;text-align:center;text-transform:none;letter-spacing:0;">0</span>
                 </h4>
             </div>
             <div class="modal-body">

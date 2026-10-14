@@ -17,9 +17,6 @@
 <div class="row" style="padding: 0 10px 12px;" id="instructors-overview-panel">
     <div class="col-lg-12">
         <div class="ibox float-e-margins">
-            <div class="ibox-title">
-                <h5 style="margin:0;font-weight:700;text-transform:uppercase;letter-spacing:.02em;">Instructors Overview</h5>
-            </div>
             <div class="ibox-content">
                 <style>
                     #instructors-overview-panel .instructor-overview-tabs > li > a {
@@ -30,6 +27,7 @@
                         padding: 10px 18px;
                         font-weight: 700;
                         text-transform: uppercase;
+                        letter-spacing: .02em;
                         background: #1c84c6;
                     }
                     #instructors-overview-panel .instructor-overview-tabs > li.active > a,
@@ -103,7 +101,7 @@
 
                 <ul class="nav nav-tabs instructor-overview-tabs" role="tablist" style="margin-bottom:16px;border-bottom:none;">
                     <li class="active">
-                        <a href="#instructor-overview-registration" data-toggle="tab">Overview</a>
+                        <a href="#instructor-overview-registration" data-toggle="tab">Instructors Overview</a>
                     </li>
                 </ul>
 
@@ -145,5 +143,6 @@
     'customTo' => '',
     'customFetchUrl' => route('admin.dashboard.instructors.people'),
     'exportUrl' => route('admin.dashboard.instructors.people-export'),
+    'titlePrefix' => 'INSTRUCTORS',
     'showPhone' => true,
 ])
