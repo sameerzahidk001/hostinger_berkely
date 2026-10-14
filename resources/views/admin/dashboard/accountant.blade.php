@@ -10,8 +10,9 @@
         margin-bottom: 8px;
     }
     #accountant-dashboard .accountant-tabs > li > a {
-        color: #fff !important;
-        border: none !important;
+        color: #333 !important;
+        border: 1px solid #d2d2d2 !important;
+        background: #f5f5f5 !important;
         border-radius: 3px;
         margin-right: 6px;
         padding: 8px 14px;
@@ -19,25 +20,49 @@
         text-transform: uppercase;
         font-size: 12px;
     }
-    #accountant-dashboard .tab-overview { background: #2f4050; }
-    #accountant-dashboard .tab-this-month { background: #1c84c6; }
-    #accountant-dashboard .tab-last-month { background: #23c6c8; }
-    #accountant-dashboard .tab-this-year { background: #1ab394; }
-    #accountant-dashboard .tab-custom { background: #676a6c; }
     #accountant-dashboard .accountant-tabs > li.active > a,
     #accountant-dashboard .accountant-tabs > li > a:hover {
-        opacity: 0.9;
-        color: #fff !important;
+        background: #e7eaec !important;
+        color: #1ab394 !important;
+        border-color: #1ab394 !important;
     }
-    #accountant-dashboard a.widget {
+    #accountant-dashboard a.accountant-stat-card {
         display: block;
-        color: #fff !important;
         text-decoration: none !important;
+        color: #676a6c !important;
+        background: #fff;
+        border: 1px solid #e7eaec;
+        border-radius: 4px;
+        padding: 16px;
         margin-bottom: 16px;
+        min-height: 110px;
     }
-    #accountant-dashboard a.widget:hover {
-        color: #fff !important;
-        opacity: 0.95;
+    #accountant-dashboard a.accountant-stat-card:hover {
+        border-color: #1ab394;
+        background: #fafafa;
+    }
+    #accountant-dashboard .accountant-stat-card .stat-label {
+        display: block;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .02em;
+        margin-bottom: 8px;
+        color: #676a6c;
+    }
+    #accountant-dashboard .accountant-stat-card .stat-value {
+        display: block;
+        font-size: 26px;
+        font-weight: 700;
+        line-height: 1.15;
+        color: #2f4050;
+    }
+    #accountant-dashboard .accountant-export-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 14px;
     }
 </style>
 @endpush
@@ -46,6 +71,13 @@
     $activeTab = $activeTab ?? 'overview';
     $stats = $stats ?? [];
     $rows = $rows ?? collect();
+    $exportBase = [
+        'tab' => $activeTab,
+        'date_from' => $dateFrom ?? now()->startOfMonth()->toDateString(),
+        'date_to' => $dateTo ?? now()->toDateString(),
+        'activity_date_from' => $activityDateFrom ?? now()->toDateString(),
+        'activity_date_to' => $activityDateTo ?? now()->toDateString(),
+    ];
 @endphp
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-12">
@@ -62,116 +94,84 @@
         <div class="ibox-content">
             <ul class="nav nav-tabs accountant-tabs" role="tablist">
                 <li class="{{ $activeTab === 'overview' ? 'active' : '' }}">
-                    <a class="tab-overview" href="{{ route('admin.dashboard.accountant', ['tab' => 'overview']) }}">Overview</a>
+                    <a href="{{ route('admin.dashboard.accountant', ['tab' => 'overview']) }}">Overview</a>
                 </li>
                 <li class="{{ $activeTab === 'this_month' ? 'active' : '' }}">
-                    <a class="tab-this-month" href="{{ route('admin.dashboard.accountant', ['tab' => 'this_month']) }}">This Month Sales</a>
+                    <a href="{{ route('admin.dashboard.accountant', ['tab' => 'this_month']) }}">This Month Sales</a>
                 </li>
                 <li class="{{ $activeTab === 'last_month' ? 'active' : '' }}">
-                    <a class="tab-last-month" href="{{ route('admin.dashboard.accountant', ['tab' => 'last_month']) }}">Last Month Sales</a>
+                    <a href="{{ route('admin.dashboard.accountant', ['tab' => 'last_month']) }}">Last Month Sales</a>
                 </li>
                 <li class="{{ $activeTab === 'this_year' ? 'active' : '' }}">
-                    <a class="tab-this-year" href="{{ route('admin.dashboard.accountant', ['tab' => 'this_year']) }}">This Year Sales</a>
+                    <a href="{{ route('admin.dashboard.accountant', ['tab' => 'this_year']) }}">This Year Sales</a>
                 </li>
                 <li class="{{ $activeTab === 'custom' ? 'active' : '' }}">
-                    <a class="tab-custom" href="{{ route('admin.dashboard.accountant', ['tab' => 'custom', 'date_from' => $dateFrom, 'date_to' => $dateTo]) }}">Custom Date Sales</a>
+                    <a href="{{ route('admin.dashboard.accountant', ['tab' => 'custom', 'date_from' => $dateFrom, 'date_to' => $dateTo]) }}">Custom Date Sales</a>
                 </li>
             </ul>
+
+            <div class="accountant-export-bar">
+                <a class="btn btn-success btn-sm"
+                   href="{{ route('admin.dashboard.accountant.export', array_merge($exportBase, [
+                       'scope' => $activeTab === 'overview' ? 'overview' : 'sales',
+                       'format' => 'excel',
+                   ])) }}">
+                    <i class="fa fa-file-excel-o"></i> Export Excel
+                </a>
+                <a class="btn btn-danger btn-sm"
+                   href="{{ route('admin.dashboard.accountant.export', array_merge($exportBase, [
+                       'scope' => $activeTab === 'overview' ? 'overview' : 'sales',
+                       'format' => 'pdf',
+                   ])) }}">
+                    <i class="fa fa-file-pdf-o"></i> Export PDF
+                </a>
+            </div>
 
             @if($activeTab === 'overview')
                 <div class="row">
                     <div class="col-lg-3 col-md-6">
-                        <a href="{{ route('admin.payments.index') }}" class="widget style1 navy-bg">
-                            <div class="row">
-                                <div class="col-xs-4">
-                                    <i class="fa fa-file-text-o fa-3x"></i>
-                                </div>
-                                <div class="col-xs-8 text-right">
-                                    <span>All Invoices</span>
-                                    <h2 class="font-bold">{{ $stats['invoice_total'] ?? 0 }}</h2>
-                                </div>
-                            </div>
+                        <a href="{{ route('admin.payments.index') }}" class="accountant-stat-card">
+                            <span class="stat-label">All Invoices</span>
+                            <span class="stat-value">{{ $stats['invoice_total'] ?? 0 }}</span>
                         </a>
                     </div>
                     <div class="col-lg-3 col-md-6">
-                        <a href="{{ route('admin.payments.index', ['status' => 'pending']) }}" class="widget style1 yellow-bg">
-                            <div class="row">
-                                <div class="col-xs-4">
-                                    <i class="fa fa-clock-o fa-3x"></i>
-                                </div>
-                                <div class="col-xs-8 text-right">
-                                    <span>Unpaid Invoices</span>
-                                    <h2 class="font-bold">{{ $stats['invoice_unpaid'] ?? 0 }}</h2>
-                                </div>
-                            </div>
+                        <a href="{{ route('admin.payments.index', ['status' => 'pending']) }}" class="accountant-stat-card">
+                            <span class="stat-label">Unpaid Invoices</span>
+                            <span class="stat-value">{{ $stats['invoice_unpaid'] ?? 0 }}</span>
                         </a>
                     </div>
                     <div class="col-lg-3 col-md-6">
-                        <a href="{{ route('admin.payments.index', ['status' => 'partial']) }}" class="widget style1 blue-bg">
-                            <div class="row">
-                                <div class="col-xs-4">
-                                    <i class="fa fa-adjust fa-3x"></i>
-                                </div>
-                                <div class="col-xs-8 text-right">
-                                    <span>Partially Paid</span>
-                                    <h2 class="font-bold">{{ $stats['invoice_partial'] ?? 0 }}</h2>
-                                </div>
-                            </div>
+                        <a href="{{ route('admin.payments.index', ['status' => 'partial']) }}" class="accountant-stat-card">
+                            <span class="stat-label">Partially Paid Invoices</span>
+                            <span class="stat-value">{{ $stats['invoice_partial'] ?? 0 }}</span>
                         </a>
                     </div>
                     <div class="col-lg-3 col-md-6">
-                        <a href="{{ route('admin.payments.receipts') }}" class="widget style1 lazur-bg">
-                            <div class="row">
-                                <div class="col-xs-4">
-                                    <i class="fa fa-list-alt fa-3x"></i>
-                                </div>
-                                <div class="col-xs-8 text-right">
-                                    <span>All Receipts</span>
-                                    <h2 class="font-bold">{{ $stats['receipts_total'] ?? 0 }}</h2>
-                                </div>
-                            </div>
+                        <a href="{{ route('admin.payments.receipts') }}" class="accountant-stat-card">
+                            <span class="stat-label">All Receipts</span>
+                            <span class="stat-value">{{ $stats['receipts_total'] ?? 0 }}</span>
                         </a>
                     </div>
                 </div>
 
-                <div class="row" style="margin-top:8px;">
+                <div class="row">
                     <div class="col-lg-4 col-md-4">
-                        <a href="{{ route('admin.dashboard.accountant', ['tab' => 'this_month']) }}" class="widget style1 navy-bg">
-                            <div class="row">
-                                <div class="col-xs-4">
-                                    <i class="fa fa-line-chart fa-3x"></i>
-                                </div>
-                                <div class="col-xs-8 text-right">
-                                    <span>This Month's Sales</span>
-                                    <h2 class="font-bold">AED {{ number_format((float) ($stats['sales_this_month'] ?? 0), 2) }}</h2>
-                                </div>
-                            </div>
+                        <a href="{{ route('admin.dashboard.accountant', ['tab' => 'this_month']) }}" class="accountant-stat-card">
+                            <span class="stat-label">This Month's Sales</span>
+                            <span class="stat-value">AED {{ number_format((float) ($stats['sales_this_month'] ?? 0), 2) }}</span>
                         </a>
                     </div>
                     <div class="col-lg-4 col-md-4">
-                        <a href="{{ route('admin.dashboard.accountant', ['tab' => 'last_month']) }}" class="widget style1 yellow-bg">
-                            <div class="row">
-                                <div class="col-xs-4">
-                                    <i class="fa fa-calendar fa-3x"></i>
-                                </div>
-                                <div class="col-xs-8 text-right">
-                                    <span>Last Month Sales</span>
-                                    <h2 class="font-bold">AED {{ number_format((float) ($stats['sales_last_month'] ?? 0), 2) }}</h2>
-                                </div>
-                            </div>
+                        <a href="{{ route('admin.dashboard.accountant', ['tab' => 'last_month']) }}" class="accountant-stat-card">
+                            <span class="stat-label">Last Month Sales</span>
+                            <span class="stat-value">AED {{ number_format((float) ($stats['sales_last_month'] ?? 0), 2) }}</span>
                         </a>
                     </div>
                     <div class="col-lg-4 col-md-4">
-                        <a href="{{ route('admin.dashboard.accountant', ['tab' => 'this_year']) }}" class="widget style1 lazur-bg">
-                            <div class="row">
-                                <div class="col-xs-4">
-                                    <i class="fa fa-money fa-3x"></i>
-                                </div>
-                                <div class="col-xs-8 text-right">
-                                    <span>This Year</span>
-                                    <h2 class="font-bold">AED {{ number_format((float) ($stats['sales_this_year'] ?? 0), 2) }}</h2>
-                                </div>
-                            </div>
+                        <a href="{{ route('admin.dashboard.accountant', ['tab' => 'this_year']) }}" class="accountant-stat-card">
+                            <span class="stat-label">This Year Sales</span>
+                            <span class="stat-value">AED {{ number_format((float) ($stats['sales_this_year'] ?? 0), 2) }}</span>
                         </a>
                     </div>
                 </div>
@@ -266,6 +266,14 @@
                     <input type="date" id="activity_date_to" name="activity_date_to" class="form-control" value="{{ $activityDateTo ?? now()->toDateString() }}">
                 </div>
                 <button type="submit" class="btn btn-primary btn-sm">Search</button>
+                <a class="btn btn-success btn-sm"
+                   href="{{ route('admin.dashboard.accountant.export', array_merge($exportBase, ['scope' => 'activity', 'format' => 'excel'])) }}">
+                    <i class="fa fa-file-excel-o"></i> Export Excel
+                </a>
+                <a class="btn btn-danger btn-sm"
+                   href="{{ route('admin.dashboard.accountant.export', array_merge($exportBase, ['scope' => 'activity', 'format' => 'pdf'])) }}">
+                    <i class="fa fa-file-pdf-o"></i> Export PDF
+                </a>
             </form>
             <p class="m-b-sm" style="font-weight:600;">
                 Report for: {{ $activityDateFrom ?? now()->toDateString() }} - {{ $activityDateTo ?? now()->toDateString() }}
