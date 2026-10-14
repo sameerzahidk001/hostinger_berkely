@@ -147,6 +147,9 @@
                      <ul class="nav nav-second-level">
                         <li><a href="{{ route('pages.index') }}">Pages List</a></li>
                         <li><a href="{{ route('admin.pages.disabled') }}">Disabled Pages</a></li>
+                        <li class="{{ request()->is('admin/pages/fees*') || request()->is('admin/pages/*/fees*') ? 'active' : '' }}">
+                           <a href="{{ route('admin.pages.fees.index') }}">Fee Update in Page</a>
+                        </li>
                         @if(admin_menu_allowed('faq'))
                         <li><a href="{{ route('faq.index') }}">FAQs</a></li>
                         @endif

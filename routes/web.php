@@ -498,6 +498,7 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
         Route::get('pages/disabled/list', [PagesController::class, 'disabledPages'])->name('admin.pages.disabled');
         Route::post('pages/{id}/update-status', [PagesController::class, 'updateStatus'])->name('pages.update-status');
         Route::post('pages/{id}/duplicate', [PagesController::class, 'duplicate'])->name('pages.duplicate');
+        Route::get('pages/fees', [PageFeeController::class, 'index'])->name('admin.pages.fees.index');
         Route::get('pages/{pageId}/fees', [PageFeeController::class, 'edit'])->name('admin.pages.fees.edit');
         Route::post('pages/{pageId}/fees/heading', [PageFeeController::class, 'updateHeading'])->name('admin.pages.fees.heading');
         Route::post('pages/{pageId}/fees/services', [PageFeeController::class, 'storeService'])->name('admin.pages.fees.services.store');
