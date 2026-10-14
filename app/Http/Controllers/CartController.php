@@ -10,10 +10,13 @@ use App\Models\CartItem;
 use App\Models\InstallmentRequest;
 use App\Models\Country;
 use App\Models\Payment;
+use App\Models\PageFeePackage;
+use App\Services\PageFeeStructureService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Http;
 use Akaunting\Money\Money;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 
 class CartController extends Controller
@@ -23,6 +26,7 @@ class CartController extends Controller
         $carts = collect();
 
         if (auth()->check()) {
+            app(PageFeeStructureService::class)->ensureCommerceColumns();
             $carts = CartItem::forUser(Auth::id());
         }
 
@@ -31,16 +35,36 @@ class CartController extends Controller
 
     public function create(Request $request)
     {
+        app(PageFeeStructureService::class)->ensureTables();
+
+        $packageType = $request->input('package_type', 'course') === 'page' ? 'page' : 'course';
+
         if (!Auth::check()) {
-            session(['intended_package_id' => $request->input('package_id')]);
+            if ($packageType === 'page') {
+                session([
+                    'intended_page_fee_package_id' => $request->input('package_id'),
+                    'intended_package_type' => 'page',
+                ]);
+            } else {
+                session([
+                    'intended_package_id' => $request->input('package_id'),
+                    'intended_package_type' => 'course',
+                ]);
+            }
 
             return redirect()->route('login')
                 ->with('warning', 'Please login to continue.');
         }
 
-        $validator = Validator::make($request->all(), [
-            'package_id' => 'required|exists:course_fees,id',
-        ]);
+        if ($packageType === 'page') {
+            $validator = Validator::make($request->all(), [
+                'package_id' => 'required|exists:page_fee_packages,id',
+            ]);
+        } else {
+            $validator = Validator::make($request->all(), [
+                'package_id' => 'required|exists:course_fees,id',
+            ]);
+        }
 
         if ($validator->fails()) {
             return redirect()->back()->withErrors($validator)->withInput();
@@ -48,12 +72,31 @@ class CartController extends Controller
 
         $validated = $validator->validated();
 
-        $cartItem = CartItem::firstOrCreate([
-            'user_id' => Auth::id(),
-            'course_fee_package_id' => $validated['package_id'],
-        ], [
-            'quantity' => 0
-        ]);
+        if ($packageType === 'page') {
+            if (! Schema::hasColumn('cart_items', 'page_fee_package_id')) {
+                return redirect()->back()->with('fail', 'Page fee cart is not available yet.');
+            }
+
+            $package = PageFeePackage::findOrFail($validated['package_id']);
+            if (! $package->showonwebsite || ! $package->status) {
+                return redirect()->back()->with('fail', 'This package is not available.');
+            }
+
+            $cartItem = CartItem::firstOrCreate([
+                'user_id' => Auth::id(),
+                'page_fee_package_id' => $validated['package_id'],
+                'course_fee_package_id' => null,
+            ], [
+                'quantity' => 0,
+            ]);
+        } else {
+            $cartItem = CartItem::firstOrCreate([
+                'user_id' => Auth::id(),
+                'course_fee_package_id' => $validated['package_id'],
+            ], [
+                'quantity' => 0,
+            ]);
+        }
 
         $cartItem->increment('quantity');
 

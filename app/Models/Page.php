@@ -10,7 +10,7 @@ use Illuminate\Support\Str;
 class Page extends Model
 {
     use HasFactory, TracksAudit;
-    protected $fillable = ['page_name', 'url', 'parent_id', 'category_id', 'status'];
+    protected $fillable = ['page_name', 'url', 'parent_id', 'category_id', 'status', 'fee_heading'];
 
     public function faqs()
     {

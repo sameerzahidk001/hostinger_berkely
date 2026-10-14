@@ -118,8 +118,10 @@ class WelcomeController extends Controller
                 'feeServices.categories.packages' => fn ($q) => $q->where('showonwebsite', true)->where('status', true)->orderBy('priority'),
             ]);
             $page->setAttribute('pageFeeServices', $page->feeServices);
+            $page->setAttribute('pageFeeHeading', $page->fee_heading ?: 'Fee Update in Page');
         } catch (\Throwable $e) {
             $page->setAttribute('pageFeeServices', collect());
+            $page->setAttribute('pageFeeHeading', 'Fee Update in Page');
         }
 
         $page->sections = $page->sections->sortBy('order')->values()->map(function ($section) {

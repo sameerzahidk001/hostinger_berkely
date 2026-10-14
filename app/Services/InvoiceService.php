@@ -32,7 +32,16 @@ class InvoiceService
 
     public function sendInvoiceEmail(Payment $payment): bool
     {
-        $payment->loadMissing(['user.roles', 'course', 'courseFee', 'installments']);
+        $payment->loadMissing([
+            'user.roles',
+            'course',
+            'courseFee',
+            'page',
+            'pageFeeService',
+            'pageFeeCategory',
+            'pageFeePackage',
+            'installments',
+        ]);
 
         if (!$payment->user) {
             Log::warning('Invoice email skipped: payment has no user', ['payment_id' => $payment->id]);
@@ -44,12 +53,13 @@ class InvoiceService
         $installments = $payment->installments;
         $user = $payment->user;
         $course = $payment->course;
-        $coursefee = $payment->courseFee;
+        $coursefee = $payment->isPageFee() ? $payment->pageFeePackage : $payment->courseFee;
+        $programTitle = $payment->programTitle();
 
         $invoiceNo = 'INV-' . str_pad($payments->id, 6, '0', STR_PAD_LEFT);
 
         try {
-            $pdf = PDF::loadView('admin.payments.invoice-pdf', compact('payments', 'installments', 'user', 'course', 'coursefee'))
+            $pdf = PDF::loadView('admin.payments.invoice-pdf', compact('payments', 'installments', 'user', 'course', 'coursefee', 'programTitle'))
                 ->setPaper('a4');
         } catch (\Throwable $e) {
             Log::error('Invoice PDF generation failed', ['payment_id' => $payment->id, 'error' => $e->getMessage()]);

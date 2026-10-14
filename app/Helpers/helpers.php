@@ -2306,9 +2306,15 @@ if (!function_exists('cart_item_count')) {
             return 0;
         }
 
-        return (int) \App\Models\CartItem::where('user_id', Auth::id())
-            ->whereHas('courseFee')
-            ->sum('quantity');
+        $query = \App\Models\CartItem::where('user_id', Auth::id())
+            ->where(function ($q) {
+                $q->whereHas('courseFee');
+                if (\Illuminate\Support\Facades\Schema::hasColumn('cart_items', 'page_fee_package_id')) {
+                    $q->orWhereHas('pageFeePackage');
+                }
+            });
+
+        return (int) $query->sum('quantity');
     }
 }
 

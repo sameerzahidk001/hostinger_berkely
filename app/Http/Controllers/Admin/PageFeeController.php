@@ -9,6 +9,7 @@ use App\Models\PageFeePackage;
 use App\Models\PageFeeService;
 use App\Services\PageFeeStructureService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 
 class PageFeeController extends Controller
 {
@@ -28,14 +29,25 @@ class PageFeeController extends Controller
         return view('admin.pages.fees.edit', compact('page', 'services'));
     }
 
-    public function storeService(Request $request, string $pageId)
+    public function updateHeading(Request $request, string $pageId)
     {
         $page = Page::findOrFail($pageId);
         $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'sort_order' => 'nullable|integer|min:0',
-            'is_visible' => 'nullable|in:0,1',
+            'fee_heading' => 'nullable|string|max:255',
         ]);
+
+        if (Schema::hasColumn('pages', 'fee_heading')) {
+            $page->fee_heading = $data['fee_heading'] ?? null;
+            $page->save();
+        }
+
+        return redirect()->back()->with('success', 'Fee heading saved.');
+    }
+
+    public function storeService(Request $request, string $pageId)
+    {
+        $page = Page::findOrFail($pageId);
+        $data = $this->validateService($request);
 
         PageFeeService::create([
             'page_id' => $page->id,
@@ -47,14 +59,24 @@ class PageFeeController extends Controller
         return redirect()->back()->with('success', 'Service added.');
     }
 
+    public function updateService(Request $request, string $serviceId)
+    {
+        $service = PageFeeService::findOrFail($serviceId);
+        $data = $this->validateService($request);
+
+        $service->update([
+            'name' => $data['name'],
+            'sort_order' => (int) ($data['sort_order'] ?? 0),
+            'is_visible' => (string) ($data['is_visible'] ?? '1') === '1',
+        ]);
+
+        return redirect()->back()->with('success', 'Service updated.');
+    }
+
     public function storeCategory(Request $request, string $serviceId)
     {
         $service = PageFeeService::findOrFail($serviceId);
-        $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'sort_order' => 'nullable|integer|min:0',
-            'is_visible' => 'nullable|in:0,1',
-        ]);
+        $data = $this->validateCategory($request);
 
         PageFeeCategory::create([
             'service_id' => $service->id,
@@ -66,43 +88,36 @@ class PageFeeController extends Controller
         return redirect()->back()->with('success', 'Category added.');
     }
 
+    public function updateCategory(Request $request, string $categoryId)
+    {
+        $category = PageFeeCategory::findOrFail($categoryId);
+        $data = $this->validateCategory($request);
+
+        $category->update([
+            'name' => $data['name'],
+            'sort_order' => (int) ($data['sort_order'] ?? 0),
+            'is_visible' => (string) ($data['is_visible'] ?? '1') === '1',
+        ]);
+
+        return redirect()->back()->with('success', 'Category updated.');
+    }
+
     public function storePackage(Request $request, string $categoryId)
     {
         $category = PageFeeCategory::findOrFail($categoryId);
-        $data = $request->validate([
-            'package_name' => 'required|string|max:255',
-            'currency' => 'required|string|max:10',
-            'price' => 'required|numeric|min:0',
-            'tax_percentage' => 'nullable|numeric|min:0',
-            'discount_amount' => 'nullable|numeric|min:0',
-            'short_description' => 'nullable|string|max:2000',
-            'key_point' => 'nullable|string|max:2000',
-            'package_includes' => 'nullable|string|max:5000',
-            'priority' => 'nullable|integer|min:0',
-            'installments' => 'nullable|integer|min:0',
-            'showonwebsite' => 'nullable|in:0,1',
-            'status' => 'nullable|in:0,1',
-        ]);
-
-        $includes = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', (string) ($data['package_includes'] ?? '')))));
-
-        PageFeePackage::create([
-            'category_id' => $category->id,
-            'package_name' => $data['package_name'],
-            'currency' => $data['currency'],
-            'price' => $data['price'],
-            'tax_percentage' => $data['tax_percentage'] ?? null,
-            'discount_amount' => $data['discount_amount'] ?? null,
-            'short_description' => $data['short_description'] ?? null,
-            'key_point' => $data['key_point'] ?? null,
-            'package_includes' => $includes,
-            'priority' => (int) ($data['priority'] ?? 0),
-            'installments' => $data['installments'] ?? null,
-            'showonwebsite' => (string) ($data['showonwebsite'] ?? '1') === '1',
-            'status' => (string) ($data['status'] ?? '1') === '1',
-        ]);
+        $payload = $this->packagePayload($request);
+        $payload['category_id'] = $category->id;
+        PageFeePackage::create($payload);
 
         return redirect()->back()->with('success', 'Fee package added.');
+    }
+
+    public function updatePackage(Request $request, string $packageId)
+    {
+        $package = PageFeePackage::findOrFail($packageId);
+        $package->update($this->packagePayload($request));
+
+        return redirect()->back()->with('success', 'Fee package updated.');
     }
 
     public function duplicateService(string $serviceId)
@@ -168,5 +183,58 @@ class PageFeeController extends Controller
         PageFeePackage::findOrFail($id)->delete();
 
         return redirect()->back()->with('success', 'Package deleted.');
+    }
+
+    private function validateService(Request $request): array
+    {
+        return $request->validate([
+            'name' => 'required|string|max:255',
+            'sort_order' => 'nullable|integer|min:0',
+            'is_visible' => 'nullable|in:0,1',
+        ]);
+    }
+
+    private function validateCategory(Request $request): array
+    {
+        return $request->validate([
+            'name' => 'required|string|max:255',
+            'sort_order' => 'nullable|integer|min:0',
+            'is_visible' => 'nullable|in:0,1',
+        ]);
+    }
+
+    private function packagePayload(Request $request): array
+    {
+        $data = $request->validate([
+            'package_name' => 'required|string|max:255',
+            'currency' => 'required|string|max:10',
+            'price' => 'required|numeric|min:0',
+            'tax_percentage' => 'nullable|numeric|min:0',
+            'discount_amount' => 'nullable|numeric|min:0',
+            'short_description' => 'nullable|string|max:2000',
+            'key_point' => 'nullable|string|max:2000',
+            'package_includes' => 'nullable|string|max:5000',
+            'priority' => 'nullable|integer|min:0',
+            'installments' => 'nullable|integer|min:0',
+            'showonwebsite' => 'nullable|in:0,1',
+            'status' => 'nullable|in:0,1',
+        ]);
+
+        $includes = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', (string) ($data['package_includes'] ?? '')))));
+
+        return [
+            'package_name' => $data['package_name'],
+            'currency' => $data['currency'],
+            'price' => $data['price'],
+            'tax_percentage' => $data['tax_percentage'] ?? null,
+            'discount_amount' => $data['discount_amount'] ?? null,
+            'short_description' => $data['short_description'] ?? null,
+            'key_point' => $data['key_point'] ?? null,
+            'package_includes' => $includes,
+            'priority' => (int) ($data['priority'] ?? 0),
+            'installments' => $data['installments'] ?? null,
+            'showonwebsite' => (string) ($data['showonwebsite'] ?? '1') === '1',
+            'status' => (string) ($data['status'] ?? '1') === '1',
+        ];
     }
 }

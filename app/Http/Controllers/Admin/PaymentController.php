@@ -15,17 +15,21 @@ use App\Models\Installment;
 use App\Models\CourseFee;
 use App\Models\Payment;
 use App\Models\Course;
+use App\Models\Page;
+use App\Models\PageFeePackage;
 use App\Models\User;
 use App\Models\Email;
 use App\Mail\UserMail;
 use App\Services\InvoiceService;
+use App\Services\PageFeeStructureService;
+use Illuminate\Support\Facades\Schema;
 
 class PaymentController extends Controller
 {
     public function index(Request $request)
     {
         $installments = Installment::get();
-        $payments = Payment::with('user', 'course', 'courseFee', 'installments', 'installment_request')
+        $payments = Payment::with('user', 'course', 'courseFee', 'page', 'pageFeeService', 'pageFeePackage', 'installments', 'installment_request')
             ->orderByDesc('created_at')
             ->get();
 
@@ -59,6 +63,8 @@ class PaymentController extends Controller
 
     public function create()
     {
+        app(PageFeeStructureService::class)->ensureTables();
+
         $users = User::with('roles')->whereHas('roles', function ($query) {
             $query->where('name', 'student');
         })->orderByDesc('created_at')->get();
@@ -70,24 +76,43 @@ class PaymentController extends Controller
             ->orderBy('package_name')
             ->get();
 
-        return view('admin.payments.create', compact('users', 'courses', 'packages'));
+        $pageFeePackages = collect();
+        if (Schema::hasTable('page_fee_packages')) {
+            $pageFeePackages = PageFeePackage::with(['category.service.page'])
+                ->where('status', true)
+                ->orderBy('package_name')
+                ->get();
+        }
+
+        return view('admin.payments.create', compact('users', 'courses', 'packages', 'pageFeePackages'));
     }
 
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
+        app(PageFeeStructureService::class)->ensureTables();
+
+        $invoiceSource = $request->input('invoice_source', 'course') === 'page' ? 'page' : 'course';
+
+        $rules = [
             'student' => 'required|exists:users,id',
-            'course' => 'required|exists:courses,id',
-            'package' => 'required|exists:course_fees,id',
             'total_amount' => 'required|numeric|min:1',
             'due_date' => 'required|array|min:1',
             'due_date.*' => 'required|date',
             'amount' => 'required|array|min:1',
             'amount.*' => 'required|numeric|min:1',
-        ]);
+        ];
+
+        if ($invoiceSource === 'page') {
+            $rules['page_fee_package'] = 'required|exists:page_fee_packages,id';
+        } else {
+            $rules['course'] = 'required|exists:courses,id';
+            $rules['package'] = 'required|exists:course_fees,id';
+        }
+
+        $validator = Validator::make($request->all(), $rules);
 
         // Custom validation for matching total
-        $validator->after(function ($validator) use ($request) {
+        $validator->after(function ($validator) use ($request, $invoiceSource) {
             $expectedTotal = floatval($request->total_amount);
             $sumOfAmounts = collect($request->amount)->sum(function ($val) {
                 return floatval($val);
@@ -97,7 +122,7 @@ class PaymentController extends Controller
                 $validator->errors()->add('amount', 'The sum of all installment amounts must equal the total amount.');
             }
 
-            if ($request->filled('package') && $request->filled('course')) {
+            if ($invoiceSource === 'course' && $request->filled('package') && $request->filled('course')) {
                 $packageCourseId = CourseFee::where('id', $request->package)->value('courses_id');
                 if ((string) $packageCourseId !== (string) $request->course) {
                     $validator->errors()->add('package', 'Selected package does not belong to the selected course.');
@@ -110,7 +135,12 @@ class PaymentController extends Controller
         }
 
         try {
-            $package = CourseFee::findOrFail($request->package);
+            if ($invoiceSource === 'page') {
+                $package = PageFeePackage::with(['category.service.page'])->findOrFail($request->page_fee_package);
+            } else {
+                $package = CourseFee::findOrFail($request->package);
+            }
+
             $displayCurrency = package_currency_code($package->currency);
             $totalSettling = package_settling_amount($request->total_amount, $displayCurrency);
 
@@ -126,8 +156,19 @@ class PaymentController extends Controller
 
             $payment = new Payment();
             $payment->user_id = $request->student;
-            $payment->course_id = $request->course;
-            $payment->package_id = $request->package;
+            if ($invoiceSource === 'page') {
+                $payment->course_id = null;
+                $payment->package_id = null;
+                if (Schema::hasColumn('payments', 'page_fee_package_id')) {
+                    $payment->page_id = $package->category?->service?->page_id;
+                    $payment->page_fee_service_id = $package->category?->service_id;
+                    $payment->page_fee_category_id = $package->category_id;
+                    $payment->page_fee_package_id = $package->id;
+                }
+            } else {
+                $payment->course_id = $request->course;
+                $payment->package_id = $request->package;
+            }
             $payment->price = $totalSettling;
             $payment->currency = $displayCurrency;
             $payment->payment_method = 'invoice';
@@ -151,7 +192,7 @@ class PaymentController extends Controller
                 ]);
             }
 
-            $payment->load(['user', 'course']);
+            $payment->load(['user', 'course', 'page', 'pageFeeService', 'pageFeePackage']);
             record_panel_activity(
                 'Invoice Created',
                 $this->paymentActivityLabel($payment),
@@ -742,21 +783,21 @@ class PaymentController extends Controller
     private function paymentActivityLabel(Payment $payment): string
     {
         $student = $payment->user?->name ?? $payment->user?->email ?? 'Student';
-        $course = $payment->course?->title ?? 'Course #' . $payment->course_id;
+        $program = $payment->programTitle();
         $invoiceNo = 'INV-' . str_pad((string) $payment->id, 6, '0', STR_PAD_LEFT);
 
-        return $course . ' — ' . $student . ' (' . $invoiceNo . ')';
+        return $program . ' — ' . $student . ' (' . $invoiceNo . ')';
     }
 
     private function receiptActivityLabel(Installment $installment): string
     {
-        $installment->loadMissing(['user', 'payment.course']);
+        $installment->loadMissing(['user', 'payment.course', 'payment.page', 'payment.pageFeeService']);
 
         $student = $installment->user?->name ?? $installment->user?->email ?? 'Student';
-        $course = $installment->payment?->course?->title ?? 'Course';
+        $program = $installment->payment?->programTitle() ?? 'Program';
         $invoiceNo = 'INV-' . str_pad((string) $installment->payment_id, 6, '0', STR_PAD_LEFT);
         $receiptNo = 'RC-' . str_pad((string) $installment->id, 6, '0', STR_PAD_LEFT);
 
-        return $course . ' — ' . $student . ' (' . $invoiceNo . ', ' . $receiptNo . ')';
+        return $program . ' — ' . $student . ' (' . $invoiceNo . ', ' . $receiptNo . ')';
     }
 }
