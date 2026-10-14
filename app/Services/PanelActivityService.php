@@ -266,16 +266,27 @@ class PanelActivityService
             ->all();
     }
 
-    public function filterUsers(): Collection
+    public function filterUsers(?string $roleScope = null): Collection
     {
+        $normalized = $roleScope ? normalize_role_key($roleScope) : null;
+
+        $roleNames = match ($normalized) {
+            'content_writer' => [
+                'content_writer', 'Content Writer', 'librarian', 'content-writer',
+            ],
+            'instructor' => ['instructor', 'Instructor'],
+            'accountant' => ['accountant', 'Accountant'],
+            default => [
+                'content_writer', 'Content Writer', 'librarian', 'content-writer',
+                'accountant', 'Accountant',
+                'instructor', 'Instructor',
+            ],
+        };
+
         return User::query()
             ->with('roles')
-            ->whereHas('roles', function ($q) {
-                $q->whereIn('name', [
-                    'content_writer', 'Content Writer', 'librarian', 'content-writer',
-                    'accountant', 'Accountant',
-                    'instructor', 'Instructor',
-                ]);
+            ->whereHas('roles', function ($q) use ($roleNames) {
+                $q->whereIn('name', $roleNames);
             })
             ->orderBy('name')
             ->get(['id', 'name', 'email']);
