@@ -40,7 +40,95 @@ class StudentsDashboardService
                 'partially_paid_students' => $enrollment['partially_paid_students']->count(),
             ],
             'locations' => $this->locationStatsByCountry(),
+            'enrolled_courses' => $this->enrolledCoursesStats(),
         ];
+    }
+
+    /**
+     * Enrolled student counts by course/page fee for the doughnut under overview.
+     *
+     * @return array{labels: list<string>, values: list<int>, percents: list<int>, colors: list<string>, total: int}
+     */
+    public function enrolledCoursesStats(): array
+    {
+        $empty = [
+            'labels' => ['No data'],
+            'values' => [1],
+            'percents' => [100],
+            'colors' => ['#e0e0e0'],
+            'total' => 0,
+        ];
+
+        if (! Schema::hasTable('payments')) {
+            return $empty;
+        }
+
+        $with = ['installments'];
+        if (Schema::hasTable('courses')) {
+            $with[] = 'course:id,title';
+        }
+        if (Schema::hasTable('pages')) {
+            $with[] = 'page:id,page_name';
+        }
+        if (Schema::hasTable('page_fee_services')) {
+            $with[] = 'pageFeeService:id,name';
+        }
+
+        $columns = ['id', 'user_id', 'price'];
+        foreach (['course_id', 'page_id', 'page_fee_service_id', 'page_fee_package_id', 'package_id', 'status'] as $column) {
+            if (Schema::hasColumn('payments', $column)) {
+                $columns[] = $column;
+            }
+        }
+
+        $byLabel = [];
+        Payment::query()
+            ->with($with)
+            ->whereNotNull('user_id')
+            ->get($columns)
+            ->each(function (Payment $payment) use (&$byLabel) {
+                $status = payment_invoice_status($payment);
+                if (! in_array($status, ['Paid', 'Partial'], true)) {
+                    return;
+                }
+
+                $userId = (int) $payment->user_id;
+                if ($userId <= 0) {
+                    return;
+                }
+
+                $label = trim((string) $payment->programTitle());
+                if ($label === '' || $label === 'Course #') {
+                    $label = 'Unknown course';
+                }
+
+                if (! isset($byLabel[$label])) {
+                    $byLabel[$label] = [];
+                }
+                $byLabel[$label][$userId] = true;
+            });
+
+        $totals = [];
+        foreach ($byLabel as $label => $users) {
+            $count = count($users);
+            if ($count > 0) {
+                $totals[$label] = $count;
+            }
+        }
+
+        arsort($totals);
+
+        // Keep the chart readable: top 12 courses, fold the rest into Other.
+        if (count($totals) > 12) {
+            $top = array_slice($totals, 0, 12, true);
+            $other = array_sum(array_slice($totals, 12, null, true));
+            $totals = $top;
+            if ($other > 0) {
+                $totals['Other'] = ($totals['Other'] ?? 0) + $other;
+            }
+        }
+
+        return $this->toDonutSlices($totals);
     }
 
     /**
@@ -81,7 +169,19 @@ class StudentsDashboardService
 
         arsort($totals);
 
+        return $this->toDonutSlices($totals, $colors);
+    }
+
+    /**
+     * @param  array<string, int>  $totals
+     * @param  list<string>|null  $colors
+     * @return array{labels: list<string>, values: list<int>, percents: list<int>, colors: list<string>, total: int}
+     */
+    private function toDonutSlices(array $totals, ?array $colors = null): array
+    {
+        $colors = $colors ?? ['#4285f4', '#34a853', '#f4b400', '#ea4335', '#9c27b0', '#00acc1', '#ff6d00', '#5c6bc0', '#00897b', '#c0ca33'];
         $total = array_sum($totals);
+
         if ($total === 0) {
             return [
                 'labels' => ['No data'],

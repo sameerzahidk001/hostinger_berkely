@@ -1,13 +1,15 @@
 @php
     $reg = $studentOverviewStats['registration'] ?? [];
     $enr = $studentOverviewStats['enrollment'] ?? [];
-    $locations = $studentOverviewStats['locations'] ?? [
+    $emptyChart = [
         'labels' => ['No data'],
         'values' => [1],
         'percents' => [100],
         'colors' => ['#e0e0e0'],
         'total' => 0,
     ];
+    $locations = $studentOverviewStats['locations'] ?? $emptyChart;
+    $enrolledCourses = $studentOverviewStats['enrolled_courses'] ?? $emptyChart;
     $details = $studentOverviewStatsDetails ?? ($studentOverviewDetails ?? []);
     $cards = [
         ['key' => 'reg_total', 'value' => (int) ($reg['total'] ?? 0), 'label' => 'Total Registered Students'],
@@ -108,43 +110,50 @@
                         letter-spacing: .02em;
                         line-height: 1.35;
                     }
-                    #students-overview-panel .student-locations {
+                    #students-overview-panel .student-charts {
                         margin-top: 22px;
                         padding-top: 18px;
                         border-top: 1px solid #e7eaec;
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 28px;
                     }
-                    #students-overview-panel .student-locations-title {
+                    #students-overview-panel .student-chart-block {
+                        flex: 1 1 420px;
+                        min-width: 280px;
+                    }
+                    #students-overview-panel .student-chart-title {
                         margin: 0 0 14px;
                         font-size: 15px;
                         font-weight: 700;
                         color: #676a6c;
                     }
-                    #students-overview-panel .student-locations-body {
+                    #students-overview-panel .student-chart-body {
                         display: flex;
                         align-items: flex-start;
                         gap: 20px;
                         flex-wrap: wrap;
                     }
-                    #students-overview-panel .student-locations-donut {
+                    #students-overview-panel .student-chart-donut {
                         position: relative;
                         flex: 0 0 220px;
                         width: 220px;
                         height: 220px;
                         margin: 0;
                     }
-                    #students-overview-panel .student-locations-side {
+                    #students-overview-panel .student-chart-side {
                         flex: 1 1 200px;
                         min-width: 180px;
                         max-width: 420px;
                     }
-                    #students-overview-panel .student-locations-legend {
+                    #students-overview-panel .student-chart-legend {
                         list-style: none;
                         padding: 0;
                         margin: 0;
                         max-height: 280px;
                         overflow: auto;
                     }
-                    #students-overview-panel .student-locations-legend li {
+                    #students-overview-panel .student-chart-legend li {
                         display: flex;
                         justify-content: space-between;
                         align-items: center;
@@ -154,15 +163,24 @@
                         font-size: 13px;
                         color: #676a6c;
                     }
-                    #students-overview-panel .student-locations-legend li:last-child {
+                    #students-overview-panel .student-chart-legend li:last-child {
                         border-bottom: none;
                     }
-                    #students-overview-panel .student-locations-legend .dot {
+                    #students-overview-panel .student-chart-legend .dot {
                         display: inline-block;
                         width: 10px;
                         height: 10px;
                         border-radius: 50%;
                         margin-right: 8px;
+                        vertical-align: middle;
+                    }
+                    #students-overview-panel .student-chart-legend .label-text {
+                        min-width: 0;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
+                        max-width: 280px;
+                        display: inline-block;
                         vertical-align: middle;
                     }
                 </style>
@@ -195,29 +213,58 @@
                         </div>
                         <p class="text-muted small m-t-sm m-b-none">Click a box to view the list. Custom Date Range has no default count — pick From/To inside the popup.</p>
 
-                        <div class="student-locations">
-                            <h4 class="student-locations-title">Locations</h4>
-                            <div class="student-locations-body">
-                                <div>
-                                    <div class="student-locations-donut">
-                                        <canvas id="studentLocationsDonut"></canvas>
+                        <div class="student-charts">
+                            <div class="student-chart-block">
+                                <h4 class="student-chart-title">Locations</h4>
+                                <div class="student-chart-body">
+                                    <div>
+                                        <div class="student-chart-donut">
+                                            <canvas id="studentLocationsDonut"></canvas>
+                                        </div>
+                                        @if((int) ($locations['total'] ?? 0) > 0)
+                                            <p class="text-center text-muted small m-b-none" style="margin-top:6px;">{{ (int) $locations['total'] }} students</p>
+                                        @endif
                                     </div>
-                                    @if((int) ($locations['total'] ?? 0) > 0)
-                                        <p class="text-center text-muted small m-b-none" style="margin-top:6px;">{{ (int) $locations['total'] }} students</p>
-                                    @endif
+                                    <div class="student-chart-side">
+                                        <ul class="student-chart-legend">
+                                            @foreach(($locations['labels'] ?? []) as $i => $label)
+                                                <li>
+                                                    <span>
+                                                        <span class="dot" style="background:{{ $locations['colors'][$i] ?? '#ccc' }}"></span>
+                                                        <span class="label-text" title="{{ $label }}">{{ $label }}</span>
+                                                    </span>
+                                                    <strong>{{ (int) ($locations['values'][$i] ?? 0) }}</strong>
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    </div>
                                 </div>
-                                <div class="student-locations-side">
-                                    <ul class="student-locations-legend">
-                                        @foreach(($locations['labels'] ?? []) as $i => $label)
-                                            <li>
-                                                <span>
-                                                    <span class="dot" style="background:{{ $locations['colors'][$i] ?? '#ccc' }}"></span>
-                                                    {{ $label }}
-                                                </span>
-                                                <strong>{{ (int) ($locations['values'][$i] ?? 0) }}</strong>
-                                            </li>
-                                        @endforeach
-                                    </ul>
+                            </div>
+
+                            <div class="student-chart-block">
+                                <h4 class="student-chart-title">Enrolled Courses</h4>
+                                <div class="student-chart-body">
+                                    <div>
+                                        <div class="student-chart-donut">
+                                            <canvas id="studentEnrolledCoursesDonut"></canvas>
+                                        </div>
+                                        @if((int) ($enrolledCourses['total'] ?? 0) > 0)
+                                            <p class="text-center text-muted small m-b-none" style="margin-top:6px;">{{ (int) $enrolledCourses['total'] }} enrollments</p>
+                                        @endif
+                                    </div>
+                                    <div class="student-chart-side">
+                                        <ul class="student-chart-legend">
+                                            @foreach(($enrolledCourses['labels'] ?? []) as $i => $label)
+                                                <li>
+                                                    <span>
+                                                        <span class="dot" style="background:{{ $enrolledCourses['colors'][$i] ?? '#ccc' }}"></span>
+                                                        <span class="label-text" title="{{ $label }}">{{ $label }}</span>
+                                                    </span>
+                                                    <strong>{{ (int) ($enrolledCourses['values'][$i] ?? 0) }}</strong>
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -230,35 +277,41 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    var el = document.getElementById('studentLocationsDonut');
-    if (!el || typeof Chart === 'undefined') return;
-    var payload = @json($locations);
-    new Chart(el.getContext('2d'), {
-        type: 'doughnut',
-        data: {
-            labels: payload.labels || [],
-            datasets: [{
-                data: payload.values || [],
-                backgroundColor: payload.colors || [],
-                borderWidth: 0
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutoutPercentage: 68,
-            legend: { display: false },
-            tooltips: {
-                callbacks: {
-                    label: function (tooltipItem, data) {
-                        var label = (data.labels && data.labels[tooltipItem.index]) || '';
-                        var value = (data.datasets[0].data && data.datasets[0].data[tooltipItem.index]) || 0;
-                        return label + ': ' + value;
+    if (typeof Chart === 'undefined') return;
+
+    function makeStudentDonut(canvasId, payload) {
+        var el = document.getElementById(canvasId);
+        if (!el) return;
+        new Chart(el.getContext('2d'), {
+            type: 'doughnut',
+            data: {
+                labels: payload.labels || [],
+                datasets: [{
+                    data: payload.values || [],
+                    backgroundColor: payload.colors || [],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutoutPercentage: 68,
+                legend: { display: false },
+                tooltips: {
+                    callbacks: {
+                        label: function (tooltipItem, data) {
+                            var label = (data.labels && data.labels[tooltipItem.index]) || '';
+                            var value = (data.datasets[0].data && data.datasets[0].data[tooltipItem.index]) || 0;
+                            return label + ': ' + value;
+                        }
                     }
                 }
             }
-        }
-    });
+        });
+    }
+
+    makeStudentDonut('studentLocationsDonut', @json($locations));
+    makeStudentDonut('studentEnrolledCoursesDonut', @json($enrolledCourses));
 });
 </script>
 
