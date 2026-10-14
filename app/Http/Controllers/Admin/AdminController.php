@@ -1350,9 +1350,10 @@ class AdminController extends Controller
                     || str_contains($fallbackUrl, '/pages/')
                     || str_contains($fallbackUrl, '/courses-pages-seo/')
                     || str_contains($fallbackUrl, '/seo/')
+                    || str_contains($fallbackUrl, '/training-calendar/')
+                    || str_contains($fallbackUrl, '/course-agendas/')
+                    || str_contains($fallbackUrl, '/fee/')
                 )) {
-                    $editUrl = $fallbackUrl;
-                } elseif ($editUrl === '' && $fallbackUrl !== '') {
                     $editUrl = $fallbackUrl;
                 }
 
