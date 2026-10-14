@@ -158,6 +158,7 @@ class UserActivityLogService
                 'session_id' => $log->session_id,
                 'actor_id' => $log->user_id ?? $log->admin_id,
                 'user_name' => $this->resolveActorName($log),
+                'contact_number' => $this->resolveActorContact($log),
                 'occurred_at' => Carbon::parse($log->created_at),
             ];
         })->all());
@@ -201,6 +202,20 @@ class UserActivityLogService
         }
 
         return '-';
+    }
+
+    private function resolveActorContact(UserActivityLog $log): string
+    {
+        $mobile = null;
+        if ($log->user) {
+            $mobile = $log->user->mobile_number ?? null;
+        } elseif ($log->user_id) {
+            $mobile = User::query()->whereKey($log->user_id)->value('mobile_number');
+        }
+
+        $mobile = trim((string) $mobile);
+
+        return $mobile !== '' ? $mobile : '—';
     }
 
     private function parseDateRange(?string $dateFrom, ?string $dateTo): array

@@ -11,9 +11,9 @@ class InstructorsDashboardService
     /** @var array<string, string>|null */
     private ?array $countryNameByIso = null;
 
-    public function overviewStats(): array
+    public function overviewStats(?string $customFrom = null, ?string $customTo = null): array
     {
-        $ranges = $this->registrationRanges();
+        $ranges = $this->registrationRanges($customFrom, $customTo);
         $registration = [];
         foreach ($ranges as $key => $range) {
             $registration[$key] = $this->registrationQuery($range['from'] ?? null, $range['to'] ?? null)->count();
@@ -25,9 +25,9 @@ class InstructorsDashboardService
     /**
      * @return array<string, array{title: string, people: array<int, array<string, mixed>>}>
      */
-    public function overviewDetails(): array
+    public function overviewDetails(?string $customFrom = null, ?string $customTo = null): array
     {
-        $ranges = $this->registrationRanges();
+        $ranges = $this->registrationRanges($customFrom, $customTo);
         $details = [];
 
         foreach ($ranges as $key => $range) {
@@ -48,9 +48,11 @@ class InstructorsDashboardService
         return $details;
     }
 
-    private function registrationRanges(): array
+    private function registrationRanges(?string $customFrom = null, ?string $customTo = null): array
     {
         $now = now();
+        $customStart = $customFrom ? Carbon::parse($customFrom)->startOfDay() : $now->copy()->startOfMonth();
+        $customEnd = $customTo ? Carbon::parse($customTo)->endOfDay() : $now->copy()->endOfDay();
 
         return [
             'total' => ['title' => 'Total Registered', 'from' => null, 'to' => null],
@@ -73,6 +75,11 @@ class InstructorsDashboardService
                 'to' => $now->copy()->subMonthNoOverflow()->endOfMonth(),
             ],
             'this_year' => ['title' => 'Registered This Year', 'from' => $now->copy()->startOfYear(), 'to' => null],
+            'custom' => [
+                'title' => 'Registered Custom Date Range',
+                'from' => $customStart,
+                'to' => $customEnd,
+            ],
         ];
     }
 
