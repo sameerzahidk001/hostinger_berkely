@@ -138,10 +138,42 @@
                   </div>
                </li>
                @if(auth()->user()->hasPermission('dashboard-read') || auth()->user()->roles()->where('name', 'instructor')->exists())
+                  @if(is_musa_shaikh_user())
+                  @php
+                     $musaDashActive = request()->routeIs('user.home')
+                        || request()->is('admin/home')
+                        || request()->is('admin/dashboard/*');
+                  @endphp
+                  <li class="{{ $musaDashActive ? 'active' : '' }}">
+                     <a href="javascript:void(0)">
+                        <i class="fa fa-th-large"></i>
+                        <span class="nav-label">Dashboard</span>
+                        <span class="fa arrow"></span>
+                     </a>
+                     <ul class="nav nav-second-level collapse in" style="height:auto;">
+                        <li class="{{ request()->routeIs('user.home') ? 'active' : '' }}">
+                           <a href="{{ route('user.home') }}">My Dashboard</a>
+                        </li>
+                        <li class="{{ request()->routeIs('admin.dashboard.content-writers') || request()->is('admin/home') ? 'active' : '' }}">
+                           <a href="{{ route('admin.dashboard.content-writers') }}">Staff Dashboard</a>
+                        </li>
+                        <li class="{{ request()->routeIs('admin.dashboard.instructors') ? 'active' : '' }}">
+                           <a href="{{ route('admin.dashboard.instructors') }}">Instructors Dashboard</a>
+                        </li>
+                        <li class="{{ request()->routeIs('admin.dashboard.students') ? 'active' : '' }}">
+                           <a href="{{ route('admin.dashboard.students') }}">Students Dashboard</a>
+                        </li>
+                        <li class="{{ request()->routeIs('admin.dashboard.accountant') ? 'active' : '' }}">
+                           <a href="{{ route('admin.dashboard.accountant') }}">Accountant Dashboard</a>
+                        </li>
+                     </ul>
+                  </li>
+                  @else
                   <li class="{{ request()->routeIs('user.home') ? 'active' : '' }}">
                      <a href="{{ route('user.home') }}"><i class="fa fa-th-large"></i> <span
                            class="nav-label">Dashboard</span></a>
                   </li>
+                  @endif
                @endif
                {{-- @if(auth()->user()->hasPermission('installment-list'))
                <li class="{{ request()->routeIs('user.installments.index') ? 'active' : '' }}">
