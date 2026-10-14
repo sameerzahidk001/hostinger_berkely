@@ -74,6 +74,10 @@
                         line-height: 1.15;
                         margin: 0 0 6px;
                     }
+                    #content-reports-panel .content-report-stat-value.is-custom-icon {
+                        color: #1c84c6 !important;
+                        font-size: 26px;
+                    }
                     #report-pages .content-report-stat-value { color: #800000; }
                     #report-courses .content-report-stat-value { color: #000080; }
                     #report-seo .content-report-stat-value { color: #b8860b; }
@@ -166,7 +170,9 @@
                                             data-metric="{{ $metricKey }}"
                                             data-label="{{ $metricLabel }}"
                                             data-count="{{ $hideValue ? 0 : $value }}">
-                                            @if(! $hideValue)
+                                            @if($hideValue)
+                                                <div class="content-report-stat-value is-custom-icon"><i class="fa fa-calendar"></i></div>
+                                            @else
                                                 <div class="content-report-stat-value">{{ $value }}</div>
                                             @endif
                                             <div class="content-report-stat-label">{{ $metricLabel }}</div>

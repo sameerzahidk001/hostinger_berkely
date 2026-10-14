@@ -332,32 +332,32 @@ class ContentDashboardReportService
         if ($module === 'training') {
             // No Active/Inactive status cards — past dates is a date filter, not a status flag.
             return [
-                'total' => 'Total Training Calendar entries',
-                'courses_with_training' => 'Courses with Training Calendar (Active)',
-                'courses_without_training' => 'Courses without Training Calendar (Active)',
-                'past_dates' => 'Training Calendars with Past Dates',
-                'created_by_me' => 'Total Training Calendar entries created by ' . $who,
-                'updated_by_me' => 'Total Training Calendar entries updated by ' . $who,
-                'created_today' => 'Created Today by ' . $who,
-                'created_this_year' => 'Total Created This Year by ' . $who,
-                'created_yesterday' => 'Created Yesterday by ' . $who,
-                'created_this_week' => 'Created This Week by ' . $who,
-                'created_last_week' => 'Created Last Week by ' . $who,
-                'created_this_month' => 'Created This Month by ' . $who,
-                'created_last_month' => 'Created Last Month by ' . $who,
-                'updated_today' => 'Updated Today by ' . $who,
-                'updated_yesterday' => 'Updated Yesterday by ' . $who,
-                'updated_this_week' => 'Updated This Week by ' . $who,
-                'updated_last_week' => 'Updated Last Week by ' . $who,
-                'updated_this_month' => 'Updated This Month by ' . $who,
-                'updated_last_month' => 'Updated Last Month by ' . $who,
-                'created_in_range' => 'Created Custom Date Range',
-                'updated_in_range' => 'Updated Custom Date Range',
+                'total' => 'Total Training Calendar Entries',
+                'courses_with_training' => 'Courses With Training Calendar (Active)',
+                'courses_without_training' => 'Courses Without Training Calendar (Active)',
+                'past_dates' => 'Training Calendars With Past Dates',
+                'created_by_me' => 'Created Training Calendar By ' . $who,
+                'updated_by_me' => 'Updated Training Calendar By ' . $who,
+                'created_today' => 'Created Training Calendar Today By ' . $who,
+                'created_this_year' => 'Created Training Calendar This Year By ' . $who,
+                'created_yesterday' => 'Created Training Calendar Yesterday By ' . $who,
+                'created_this_week' => 'Created Training Calendar This Week By ' . $who,
+                'created_last_week' => 'Created Training Calendar Last Week By ' . $who,
+                'created_this_month' => 'Created Training Calendar This Month By ' . $who,
+                'created_last_month' => 'Created Training Calendar Last Month By ' . $who,
+                'updated_today' => 'Updated Training Calendar Today By ' . $who,
+                'updated_yesterday' => 'Updated Training Calendar Yesterday By ' . $who,
+                'updated_this_week' => 'Updated Training Calendar This Week By ' . $who,
+                'updated_last_week' => 'Updated Training Calendar Last Week By ' . $who,
+                'updated_this_month' => 'Updated Training Calendar This Month By ' . $who,
+                'updated_last_month' => 'Updated Training Calendar Last Month By ' . $who,
+                'created_in_range' => 'Created Training Calendar - Custom Date Range',
+                'updated_in_range' => 'Updated Training Calendar - Custom Date Range',
             ];
         }
 
         if ($module === 'fees') {
-            return $this->standardMetricLabels('Fee Packages', 'Fee Packages', $who);
+            return $this->standardMetricLabels('Fee Packages', $who);
         }
 
         if ($module === 'seo') {
@@ -367,54 +367,54 @@ class ContentDashboardReportService
                 'seo_entered_courses' => 'SEO Entered Courses',
                 'seo_missing_pages' => 'SEO Missing Pages',
                 'seo_missing_courses' => 'SEO Missing Courses',
-                'created_by_me' => 'Total SEO created by ' . $who,
-                'updated_by_me' => 'Total SEO updated by ' . $who,
-                'created_today' => 'Created Today by ' . $who,
-                'created_this_year' => 'Total Created This Year by ' . $who,
-                'created_yesterday' => 'Created Yesterday by ' . $who,
-                'created_this_week' => 'Created This Week by ' . $who,
-                'created_last_week' => 'Created Last Week by ' . $who,
-                'created_this_month' => 'Created This Month by ' . $who,
-                'created_last_month' => 'Created Last Month by ' . $who,
-                'updated_today' => 'Updated Today by ' . $who,
-                'updated_yesterday' => 'Updated Yesterday by ' . $who,
-                'updated_this_week' => 'Updated This Week by ' . $who,
-                'updated_last_week' => 'Updated Last Week by ' . $who,
-                'updated_this_month' => 'Updated This Month by ' . $who,
-                'updated_last_month' => 'Updated Last Month by ' . $who,
-                'created_in_range' => 'Created Custom Date Range',
-                'updated_in_range' => 'Updated Custom Date Range',
+                'created_by_me' => 'Created SEO By ' . $who,
+                'updated_by_me' => 'Updated SEO By ' . $who,
+                'created_today' => 'Created SEO Today By ' . $who,
+                'created_this_year' => 'Created SEO This Year By ' . $who,
+                'created_yesterday' => 'Created SEO Yesterday By ' . $who,
+                'created_this_week' => 'Created SEO This Week By ' . $who,
+                'created_last_week' => 'Created SEO Last Week By ' . $who,
+                'created_this_month' => 'Created SEO This Month By ' . $who,
+                'created_last_month' => 'Created SEO Last Month By ' . $who,
+                'updated_today' => 'Updated SEO Today By ' . $who,
+                'updated_yesterday' => 'Updated SEO Yesterday By ' . $who,
+                'updated_this_week' => 'Updated SEO This Week By ' . $who,
+                'updated_last_week' => 'Updated SEO Last Week By ' . $who,
+                'updated_this_month' => 'Updated SEO This Month By ' . $who,
+                'updated_last_month' => 'Updated SEO Last Month By ' . $who,
+                'created_in_range' => 'Created SEO - Custom Date Range',
+                'updated_in_range' => 'Updated SEO - Custom Date Range',
             ];
         }
 
         $noun = $module === 'courses' ? 'Courses' : 'Pages';
 
-        return $this->standardMetricLabels($noun, $noun, $who);
+        return $this->standardMetricLabels($noun, $who);
     }
 
-    private function standardMetricLabels(string $totalNoun, string $statusNoun, string $who): array
+    private function standardMetricLabels(string $noun, string $who): array
     {
         return [
-            'total' => 'Total ' . $totalNoun,
-            'active' => 'Active ' . $statusNoun,
-            'inactive' => 'Inactive ' . $statusNoun,
-            'created_by_me' => 'Total ' . $totalNoun . ' created by ' . $who,
-            'updated_by_me' => 'Total ' . $totalNoun . ' updated by ' . $who,
-            'created_today' => 'Created Today by ' . $who,
-            'created_this_year' => 'Total Created This Year by ' . $who,
-            'created_yesterday' => 'Created Yesterday by ' . $who,
-            'created_this_week' => 'Created This Week by ' . $who,
-            'created_last_week' => 'Created Last Week by ' . $who,
-            'created_this_month' => 'Created This Month by ' . $who,
-            'created_last_month' => 'Created Last Month by ' . $who,
-            'updated_today' => 'Updated Today by ' . $who,
-            'updated_yesterday' => 'Updated Yesterday by ' . $who,
-            'updated_this_week' => 'Updated This Week by ' . $who,
-            'updated_last_week' => 'Updated Last Week by ' . $who,
-            'updated_this_month' => 'Updated This Month by ' . $who,
-            'updated_last_month' => 'Updated Last Month by ' . $who,
-            'created_in_range' => 'Created Custom Date Range',
-            'updated_in_range' => 'Updated Custom Date Range',
+            'total' => 'Total ' . $noun,
+            'active' => 'Active ' . $noun,
+            'inactive' => 'Inactive ' . $noun,
+            'created_by_me' => 'Created ' . $noun . ' By ' . $who,
+            'updated_by_me' => 'Updated ' . $noun . ' By ' . $who,
+            'created_today' => 'Created ' . $noun . ' Today By ' . $who,
+            'created_this_year' => 'Created ' . $noun . ' This Year By ' . $who,
+            'created_yesterday' => 'Created ' . $noun . ' Yesterday By ' . $who,
+            'created_this_week' => 'Created ' . $noun . ' This Week By ' . $who,
+            'created_last_week' => 'Created ' . $noun . ' Last Week By ' . $who,
+            'created_this_month' => 'Created ' . $noun . ' This Month By ' . $who,
+            'created_last_month' => 'Created ' . $noun . ' Last Month By ' . $who,
+            'updated_today' => 'Updated ' . $noun . ' Today By ' . $who,
+            'updated_yesterday' => 'Updated ' . $noun . ' Yesterday By ' . $who,
+            'updated_this_week' => 'Updated ' . $noun . ' This Week By ' . $who,
+            'updated_last_week' => 'Updated ' . $noun . ' Last Week By ' . $who,
+            'updated_this_month' => 'Updated ' . $noun . ' This Month By ' . $who,
+            'updated_last_month' => 'Updated ' . $noun . ' Last Month By ' . $who,
+            'created_in_range' => 'Created ' . $noun . ' - Custom Date Range',
+            'updated_in_range' => 'Updated ' . $noun . ' - Custom Date Range',
         ];
     }
 
