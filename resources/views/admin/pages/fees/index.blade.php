@@ -5,7 +5,7 @@
         <div class="col-lg-10">
             <h2>Fee Update in Page</h2>
             <ol class="breadcrumb">
-                <li><a href="{{ route('admin.dashboard') }}">Home</a></li>
+                <li><a href="{{ route('admin.home') }}">Home</a></li>
                 <li><a href="{{ route('pages.index') }}">Pages</a></li>
                 <li class="active"><strong>Fee Update in Page</strong></li>
             </ol>
