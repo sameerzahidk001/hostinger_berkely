@@ -119,16 +119,28 @@
                         font-weight: 700;
                         color: #676a6c;
                     }
+                    #students-overview-panel .student-locations-body {
+                        display: flex;
+                        align-items: flex-start;
+                        gap: 20px;
+                        flex-wrap: wrap;
+                    }
                     #students-overview-panel .student-locations-donut {
                         position: relative;
-                        height: 240px;
-                        max-width: 240px;
-                        margin: 0 auto 8px;
+                        flex: 0 0 220px;
+                        width: 220px;
+                        height: 220px;
+                        margin: 0;
+                    }
+                    #students-overview-panel .student-locations-side {
+                        flex: 1 1 200px;
+                        min-width: 180px;
+                        max-width: 420px;
                     }
                     #students-overview-panel .student-locations-legend {
                         list-style: none;
                         padding: 0;
-                        margin: 12px 0 0;
+                        margin: 0;
                         max-height: 280px;
                         overflow: auto;
                     }
@@ -185,16 +197,16 @@
 
                         <div class="student-locations">
                             <h4 class="student-locations-title">Locations</h4>
-                            <div class="row">
-                                <div class="col-md-5">
+                            <div class="student-locations-body">
+                                <div>
                                     <div class="student-locations-donut">
                                         <canvas id="studentLocationsDonut"></canvas>
                                     </div>
                                     @if((int) ($locations['total'] ?? 0) > 0)
-                                        <p class="text-center text-muted small m-b-none">{{ (int) $locations['total'] }} students</p>
+                                        <p class="text-center text-muted small m-b-none" style="margin-top:6px;">{{ (int) $locations['total'] }} students</p>
                                     @endif
                                 </div>
-                                <div class="col-md-7">
+                                <div class="student-locations-side">
                                     <ul class="student-locations-legend">
                                         @foreach(($locations['labels'] ?? []) as $i => $label)
                                             <li>

@@ -221,6 +221,10 @@
                                                         class="btn-primary btn btn-xs" target="_blank">
                                                         <i class="fa fa-pencil"></i> Edit
                                                     </a>
+                                                    <a href="{{ route('admin.pages.fees.edit', $page->id) }}"
+                                                        class="btn btn-warning btn-xs" title="Fee Update in Page">
+                                                        <i class="fa fa-money"></i> Fee
+                                                    </a>
                                                     @if(!$pageName)
                                                         @include('admin.layout.partials.delete-button', [
                                                             'id' => $page->id,

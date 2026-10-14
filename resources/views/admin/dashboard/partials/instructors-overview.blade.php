@@ -115,16 +115,28 @@
                         font-weight: 700;
                         color: #676a6c;
                     }
+                    #instructors-overview-panel .instructor-locations-body {
+                        display: flex;
+                        align-items: flex-start;
+                        gap: 20px;
+                        flex-wrap: wrap;
+                    }
                     #instructors-overview-panel .instructor-locations-donut {
                         position: relative;
-                        height: 240px;
-                        max-width: 240px;
-                        margin: 0 auto 8px;
+                        flex: 0 0 220px;
+                        width: 220px;
+                        height: 220px;
+                        margin: 0;
+                    }
+                    #instructors-overview-panel .instructor-locations-side {
+                        flex: 1 1 200px;
+                        min-width: 180px;
+                        max-width: 420px;
                     }
                     #instructors-overview-panel .instructor-locations-legend {
                         list-style: none;
                         padding: 0;
-                        margin: 12px 0 0;
+                        margin: 0;
                         max-height: 280px;
                         overflow: auto;
                     }
@@ -181,16 +193,16 @@
 
                         <div class="instructor-locations">
                             <h4 class="instructor-locations-title">Locations</h4>
-                            <div class="row">
-                                <div class="col-md-5">
+                            <div class="instructor-locations-body">
+                                <div>
                                     <div class="instructor-locations-donut">
                                         <canvas id="instructorLocationsDonut"></canvas>
                                     </div>
                                     @if((int) ($locations['total'] ?? 0) > 0)
-                                        <p class="text-center text-muted small m-b-none">{{ (int) $locations['total'] }} instructors</p>
+                                        <p class="text-center text-muted small m-b-none" style="margin-top:6px;">{{ (int) $locations['total'] }} instructors</p>
                                     @endif
                                 </div>
-                                <div class="col-md-7">
+                                <div class="instructor-locations-side">
                                     <ul class="instructor-locations-legend">
                                         @foreach(($locations['labels'] ?? []) as $i => $label)
                                             <li>

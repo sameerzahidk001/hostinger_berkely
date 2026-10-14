@@ -18,6 +18,31 @@ class PageFeeController extends Controller
         $this->fees->ensureTables();
     }
 
+    public function index()
+    {
+        $columns = ['id', 'page_name', 'url'];
+        if (Schema::hasColumn('pages', 'fee_heading')) {
+            $columns[] = 'fee_heading';
+        }
+
+        $pagesQuery = Page::query()->orderBy('page_name');
+        if (Schema::hasColumn('pages', 'status')) {
+            $pagesQuery->where('status', 1);
+        }
+
+        $pages = $pagesQuery->get($columns);
+
+        $serviceCounts = collect();
+        if (Schema::hasTable('page_fee_services')) {
+            $serviceCounts = PageFeeService::query()
+                ->selectRaw('page_id, COUNT(*) as total')
+                ->groupBy('page_id')
+                ->pluck('total', 'page_id');
+        }
+
+        return view('admin.pages.fees.index', compact('pages', 'serviceCounts'));
+    }
+
     public function edit(string $pageId)
     {
         $page = Page::findOrFail($pageId);
