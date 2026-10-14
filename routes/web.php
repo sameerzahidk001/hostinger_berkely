@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\CourseDynamicLabels;
 use App\Http\Controllers\Admin\CourseAgendasController as AdminCourseAgendasController;
 use App\Http\Controllers\Admin\SeoController;
 use App\Http\Controllers\Admin\PagesController;
+use App\Http\Controllers\Admin\PageFeeController;
 use App\Http\Controllers\Admin\SchoolController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\CourseTestimonialController;
@@ -56,10 +57,14 @@ use Illuminate\Support\Facades\File;
 use App\Models\SiteSettings;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ZohoController;
+use App\Http\Controllers\SitemapController;
 use Illuminate\Support\Facades\Artisan;
 
 Route::view('/sample', 'sample');
 Route::view('/test', 'test');
+
+Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
+Route::get('/robots.txt', [SitemapController::class, 'robots'])->name('robots');
 
 // Route::view('/visa', 'visa');
 Route::get('/', [WelcomeController::class, 'index'])->middleware('set.seo')->name('welcome');
@@ -476,6 +481,15 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
         Route::resource('faq', FaqController::class);
         Route::get('pages/disabled/list', [PagesController::class, 'disabledPages'])->name('admin.pages.disabled');
         Route::post('pages/{id}/update-status', [PagesController::class, 'updateStatus'])->name('pages.update-status');
+        Route::get('pages/{pageId}/fees', [PageFeeController::class, 'edit'])->name('admin.pages.fees.edit');
+        Route::post('pages/{pageId}/fees/services', [PageFeeController::class, 'storeService'])->name('admin.pages.fees.services.store');
+        Route::post('pages/fees/services/{serviceId}/categories', [PageFeeController::class, 'storeCategory'])->name('admin.pages.fees.categories.store');
+        Route::post('pages/fees/categories/{categoryId}/packages', [PageFeeController::class, 'storePackage'])->name('admin.pages.fees.packages.store');
+        Route::post('pages/fees/services/{serviceId}/duplicate', [PageFeeController::class, 'duplicateService'])->name('admin.pages.fees.services.duplicate');
+        Route::post('pages/fees/categories/{categoryId}/duplicate', [PageFeeController::class, 'duplicateCategory'])->name('admin.pages.fees.categories.duplicate');
+        Route::delete('pages/fees/services/{id}', [PageFeeController::class, 'destroyService'])->name('admin.pages.fees.services.destroy');
+        Route::delete('pages/fees/categories/{id}', [PageFeeController::class, 'destroyCategory'])->name('admin.pages.fees.categories.destroy');
+        Route::delete('pages/fees/packages/{id}', [PageFeeController::class, 'destroyPackage'])->name('admin.pages.fees.packages.destroy');
         // Some hosts/WAFs block method spoofing to PUT/PATCH; allow a POST update endpoint too.
         Route::post('pages/{id}/update', [PagesController::class, 'update'])->name('pages.update.post');
         Route::post('user/{id}/update', [UserController::class, 'update'])->name('users.update.post');

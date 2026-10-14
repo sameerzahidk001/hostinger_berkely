@@ -19,7 +19,8 @@
                     @if(isset($card['image']))
                         <div class="overflow-hidden max-h-[300px] sm:max-h-[480px]">
                             <img src="{{ $card['image'] }}" alt="{{ image_alt($card['image_alt'] ?? null, $card['title'] ?? 'Card image') }}"
-                                class="h-full w-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-105">
+                                class="h-full w-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-105"
+                                loading="lazy" decoding="async" width="800" height="480">
                         </div>
                     @endif
                     <div class="p-4">
@@ -58,6 +59,7 @@
                         <img src="{{ $card['image'] }}"
                             alt="{{ image_alt($card['image_alt'] ?? null, $card['title'] ?? 'Card image') }}"
                             class="h-full transition-all delay-300 duration-400 ease-in w-full absolute group-hover:scale-105 object-cover"
+                            loading="lazy" decoding="async" width="800" height="500"
                             onerror="window.cmsCardImageError&&window.cmsCardImageError(this)">
                     @endif
                     @if($hasImage)
@@ -95,7 +97,7 @@
                 <div>
                     @if(isset($card['image']))
                         <div class="overflow-hidden h-[500px]">
-                            <img src="{{ $card['image'] }}" alt="{{ image_alt($card['image_alt'] ?? null, $card['title'] ?? 'Card image') }}" class="h-full w-full transition-all delay-300 duration-400 ease-in group-hover:scale-105 object-cover">
+                            <img src="{{ $card['image'] }}" alt="{{ image_alt($card['image_alt'] ?? null, $card['title'] ?? 'Card image') }}" class="h-full w-full transition-all delay-300 duration-400 ease-in group-hover:scale-105 object-cover" loading="lazy" decoding="async" width="800" height="500">
                         </div>
                     @endif
                     @if(isset($card['title']) || isset($card['description']) || isset($card['url']))
@@ -133,7 +135,7 @@
                 <div class="flex flex-col lg:flex-row items-start gap-6 border border-gray-200 rounded-lg shadow-md bg-white">
                     @if(isset($card['image']))
                         <div class="max-w-[125px] h-full">
-                            <img src="{{ $card['image'] }}" alt="{{ image_alt($card['image_alt'] ?? null, $card['title'] ?? 'Card image') }}" class="h-full w-full object-cover rounded-md">
+                            <img src="{{ $card['image'] }}" alt="{{ image_alt($card['image_alt'] ?? null, $card['title'] ?? 'Card image') }}" class="h-full w-full object-cover rounded-md" loading="lazy" decoding="async" width="800" height="500">
                         </div>
                     @endif
                     <div class="flex-1 py-4 pr-3">

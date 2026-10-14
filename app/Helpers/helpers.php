@@ -492,6 +492,51 @@ if (!function_exists('public_upload_move')) {
 
         $file->move($destinationPath, $fileName);
         persist_moved_upload($destinationPath, $fileName);
+
+        // Compress + WebP/variants when GD is available (never deletes the original path).
+        try {
+            $absolute = rtrim($destinationPath, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $fileName;
+            app(\App\Services\ImageOptimizationService::class)->optimizeExistingPath($absolute);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Upload image optimize skipped: ' . $e->getMessage());
+        }
+    }
+}
+
+if (!function_exists('optimized_image_tag')) {
+    /**
+     * Responsive <picture> with WebP when available + lazy-load by default.
+     */
+    function optimized_image_tag(?string $src, string $alt = '', array $attrs = []): string
+    {
+        $src = trim((string) $src);
+        if ($src === '') {
+            return '';
+        }
+
+        $url = str_starts_with($src, 'http') ? $src : asset(ltrim($src, '/'));
+        $webp = app(\App\Services\ImageOptimizationService::class)->webpUrl(
+            str_starts_with($src, 'http') ? null : ltrim($src, '/')
+        );
+
+        $lazy = ($attrs['loading'] ?? 'lazy') !== 'eager';
+        $loading = $lazy ? 'lazy' : 'eager';
+        $class = e($attrs['class'] ?? '');
+        $width = isset($attrs['width']) ? ' width="' . (int) $attrs['width'] . '"' : '';
+        $height = isset($attrs['height']) ? ' height="' . (int) $attrs['height'] . '"' : '';
+        $style = isset($attrs['style']) ? ' style="' . e($attrs['style']) . '"' : '';
+        $decoding = ' decoding="async"';
+
+        $img = '<img src="' . e($url) . '" alt="' . e($alt) . '" loading="' . $loading . '"'
+            . $decoding . $width . $height . $style
+            . ($class !== '' ? ' class="' . $class . '"' : '')
+            . '>';
+
+        if ($webp) {
+            return '<picture><source srcset="' . e($webp) . '" type="image/webp">' . $img . '</picture>';
+        }
+
+        return $img;
     }
 }
 
@@ -1042,6 +1087,8 @@ if (!function_exists('seo_validation_rules')) {
             'keywords' => 'nullable|string|max:' . $limits['priority_keywords_max_total'],
             'additional_keywords' => 'nullable|string|max:' . $limits['additional_keywords_max_total'],
             'thumbnail_alt' => 'nullable|string|max:125',
+            'robots_index' => 'nullable|in:index,noindex',
+            'robots_follow' => 'nullable|in:follow,nofollow',
         ];
     }
 }
@@ -1469,6 +1516,7 @@ if (!function_exists('seo_prepare_save_data')) {
     {
         ensure_seo_focus_keyword_column_exists();
         ensure_seo_thumbnail_alt_column_exists();
+        ensure_seo_robots_columns_exist();
 
         if (! \Illuminate\Support\Facades\Schema::hasColumn('pages_s_e_o_s', 'focus_keyword')) {
             unset($data['focus_keyword']);
@@ -1478,7 +1526,73 @@ if (!function_exists('seo_prepare_save_data')) {
             unset($data['thumbnail_alt']);
         }
 
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('pages_s_e_o_s', 'robots_index')) {
+            unset($data['robots_index'], $data['robots_follow']);
+        } else {
+            $data['robots_index'] = in_array(($data['robots_index'] ?? 'index'), ['index', 'noindex'], true)
+                ? $data['robots_index']
+                : 'index';
+            $data['robots_follow'] = in_array(($data['robots_follow'] ?? 'follow'), ['follow', 'nofollow'], true)
+                ? $data['robots_follow']
+                : 'follow';
+        }
+
         return $data;
+    }
+}
+
+if (!function_exists('ensure_seo_robots_columns_exist')) {
+    function ensure_seo_robots_columns_exist(): bool
+    {
+        static $ready = null;
+
+        if ($ready === true) {
+            return true;
+        }
+
+        if ($ready === false) {
+            return false;
+        }
+
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('pages_s_e_o_s')
+                && ! \Illuminate\Support\Facades\Schema::hasColumn('pages_s_e_o_s', 'robots_index')) {
+                \Illuminate\Support\Facades\Schema::table('pages_s_e_o_s', function (\Illuminate\Database\Schema\Blueprint $table) {
+                    $table->string('robots_index', 20)->default('index')->nullable();
+                    $table->string('robots_follow', 20)->default('follow')->nullable();
+                });
+            }
+
+            $ready = true;
+
+            return true;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Could not ensure SEO robots columns: ' . $e->getMessage());
+            $ready = false;
+
+            return false;
+        }
+    }
+}
+
+if (!function_exists('seo_robots_content')) {
+    function seo_robots_content(?\App\Models\PagesSEO $seo): string
+    {
+        ensure_seo_robots_columns_exist();
+
+        $index = 'index';
+        $follow = 'follow';
+
+        if ($seo) {
+            $index = in_array((string) ($seo->robots_index ?? 'index'), ['index', 'noindex'], true)
+                ? (string) $seo->robots_index
+                : 'index';
+            $follow = in_array((string) ($seo->robots_follow ?? 'follow'), ['follow', 'nofollow'], true)
+                ? (string) $seo->robots_follow
+                : 'follow';
+        }
+
+        return $index . ', ' . $follow;
     }
 }
 

@@ -123,6 +123,13 @@
                 <div class="col-lg-12">
                     <div class="ibox float-e-margins" style="margin-bottom: 0;">
                         <div class="ibox-content">
+                            <div class="row" style="margin-bottom: 12px;">
+                                <div class="col-lg-12 text-right">
+                                    <a href="{{ route('admin.pages.fees.edit', $page->id) }}" class="btn btn-warning btn-sm">
+                                        <i class="fa fa-money"></i> Fee Update in Page
+                                    </a>
+                                </div>
+                            </div>
                             <div class="row">
                                 <div class="col-lg-4">
                                     <label for="">Page Name</label>

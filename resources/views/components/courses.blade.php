@@ -4,7 +4,8 @@
             <div class="relative overflow-hidden group h-[500px] bg-primary">
                 <img src="{{ media_url($course['image']) ?? asset($course['image']) }}"
                     alt="{{ image_alt($course['image_alt'] ?? null, $course['title'] ?? 'Course') }}"
-                    class="h-full transition-all delay-300 duration-400 ease-in w-full absolute group-hover:scale-105 object-cover">
+                    class="h-full transition-all delay-300 duration-400 ease-in w-full absolute group-hover:scale-105 object-cover"
+                    loading="lazy" decoding="async" width="800" height="500">
                 
                 <div class="absolute px-4 py-8 z-50 gap-4 flex flex-col justify-end bg-opacity-45 h-full w-full bottom-0">
                     <span class="text-[20px] sm:text-[24px] text-white md:text-[32px] font-canela">{{ $course['title'] }}</span>

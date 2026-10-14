@@ -71,6 +71,20 @@
                                 <textarea class="form-control" name="meta_description" placeholder="Add meta description"
                                     data-maxlength="{{ seo_field_limits()['meta_description_max'] }}" maxlength="{{ seo_field_limits()['meta_description_max'] }}">{{ old('meta_description') }}</textarea>
                             </div>
+                            <div class="col-lg-6 mb">
+                                <label for="robots_index">Index / No Index</label>
+                                <select class="form-control" name="robots_index" id="robots_index">
+                                    <option value="index" @selected(old('robots_index', 'index') === 'index')>Index (allow Google to list)</option>
+                                    <option value="noindex" @selected(old('robots_index') === 'noindex')>No Index (hide from Google)</option>
+                                </select>
+                            </div>
+                            <div class="col-lg-6 mb">
+                                <label for="robots_follow">Follow / No Follow</label>
+                                <select class="form-control" name="robots_follow" id="robots_follow">
+                                    <option value="follow" @selected(old('robots_follow', 'follow') === 'follow')>Follow links</option>
+                                    <option value="nofollow" @selected(old('robots_follow') === 'nofollow')>No Follow links</option>
+                                </select>
+                            </div>
                             <div class="col-lg-12 mb">
                                 <label for="focus_keyword">Focus Keyword <small>(max {{ seo_field_limits()['focus_keyword_max'] }} characters)</small></label>
                                 <input type="text" class="form-control" name="focus_keyword" id="focus_keyword"
