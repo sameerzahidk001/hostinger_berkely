@@ -290,7 +290,7 @@ class AdminController extends Controller
 
     public function accountantDashboard(Request $request)
     {
-        $this->ensureDashboardAccess(['admin', 'content_writer', 'accountant']);
+        $this->ensureDashboardAccess(['admin', 'accountant']);
 
         $tab = (string) $request->query('tab', 'overview');
         if (! in_array($tab, ['overview', 'this_month', 'last_month', 'this_year', 'custom'], true)) {
@@ -347,7 +347,7 @@ class AdminController extends Controller
 
     public function exportAccountant(Request $request)
     {
-        $this->ensureDashboardAccess(['admin', 'content_writer', 'accountant']);
+        $this->ensureDashboardAccess(['admin', 'accountant']);
         @set_time_limit(120);
 
         $format = strtolower((string) $request->query('format', 'excel'));
@@ -1172,18 +1172,30 @@ class AdminController extends Controller
             // On some servers role/user filtering can hide log rows (admin_id vs user_id),
             // which previously made "Page Updated" / "Course Updated" disappear entirely.
 
-            // concat/support rows — never Eloquent Collection::merge() (getKey on arrays).
-            $rows = collect($activities->values()->all())
-                ->concat(collect($logs->values()->all()))
+            // Prefer detailed log rows ("Title — Banner") over bare DB update rows.
+            $rows = collect($logs->values()->all())
+                ->concat(collect($activities->values()->all()))
                 ->sortByDesc(fn (array $row) => $row['occurred_at']->timestamp)
-                ->unique(function (array $row) {
+                ->groupBy(function (array $row) {
+                    $action = strtolower(trim((string) ($row['action'] ?? '')));
+                    $item = trim((string) ($row['item'] ?? ''));
+                    if (preg_match('/\b(updated|created)\b/i', $action)) {
+                        $item = trim((string) preg_replace('/\s+[—–-]\s+.+$/u', '', $item));
+                    }
+
                     return implode('|', [
-                        $row['action'] ?? '',
-                        $row['item'] ?? '',
-                        $row['actor_id'] ?? '',
+                        $action,
+                        strtolower($item),
+                        (string) ($row['actor_id'] ?? ''),
                         $row['occurred_at']?->format('Y-m-d H:i') ?? '',
                     ]);
                 })
+                ->map(function ($group) {
+                    return collect($group)
+                        ->sortByDesc(fn (array $row) => strlen((string) ($row['item'] ?? '')))
+                        ->first();
+                })
+                ->sortByDesc(fn (array $row) => $row['occurred_at']->timestamp)
                 ->take($maxRows)
                 ->values();
 
