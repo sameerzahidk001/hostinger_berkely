@@ -65,13 +65,16 @@ class StudentsDashboardService
 
         $with = ['installments'];
         if (Schema::hasTable('courses')) {
-            $with[] = 'course:id,title';
+            $with[] = 'course:id,title,deleted_at';
         }
         if (Schema::hasTable('pages')) {
             $with[] = 'page:id,page_name';
         }
         if (Schema::hasTable('page_fee_services')) {
             $with[] = 'pageFeeService:id,name';
+        }
+        if (Schema::hasTable('page_fee_packages')) {
+            $with[] = 'pageFeePackage:id,package_name,category_id';
         }
 
         $columns = ['id', 'user_id', 'price'];
@@ -97,9 +100,10 @@ class StudentsDashboardService
                     return;
                 }
 
+                // Paid/partial invoices: course packages and Fee Update in Page packages.
                 $label = trim((string) $payment->programTitle());
-                if ($label === '' || $label === 'Course #') {
-                    $label = 'Unknown course';
+                if ($label === '' || preg_match('/^Course\s*#\s*$/i', $label)) {
+                    $label = 'Unknown program';
                 }
 
                 if (! isset($byLabel[$label])) {
@@ -118,13 +122,14 @@ class StudentsDashboardService
 
         arsort($totals);
 
-        // Keep the chart readable: top 12 courses, fold the rest into Other.
+        // Keep the chart readable: top 12 programs, fold the rest into one bucket.
         if (count($totals) > 12) {
-            $top = array_slice($totals, 0, 12, true);
-            $other = array_sum(array_slice($totals, 12, null, true));
-            $totals = $top;
-            if ($other > 0) {
-                $totals['Other'] = ($totals['Other'] ?? 0) + $other;
+            $remainder = array_slice($totals, 12, null, true);
+            $otherCount = (int) array_sum($remainder);
+            $otherPrograms = count($remainder);
+            $totals = array_slice($totals, 0, 12, true);
+            if ($otherCount > 0) {
+                $totals['Other programs (' . $otherPrograms . ')'] = $otherCount;
             }
         }
 

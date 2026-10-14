@@ -33,7 +33,8 @@ class Payment extends Model
 
     public function course()
     {
-        return $this->belongsTo(Course::class, 'course_id');
+        // Soft-deleted courses still belong on paid invoices — keep the real title on dashboards.
+        return $this->belongsTo(Course::class, 'course_id')->withTrashed();
     }
 
     public function page()
@@ -74,16 +75,28 @@ class Payment extends Model
     public function programTitle(): string
     {
         if ($this->isPageFee()) {
-            $page = $this->page?->page_name;
-            $service = $this->pageFeeService?->name;
-            if ($page && $service) {
-                return $page . ' — ' . $service;
+            $page = trim((string) ($this->page?->page_name ?? ''));
+            $service = trim((string) ($this->pageFeeService?->name ?? ''));
+            $package = trim((string) ($this->pageFeePackage?->package_name ?? ''));
+
+            $parts = array_values(array_filter([$page, $service, $package], fn ($p) => $p !== ''));
+            if ($parts !== []) {
+                return implode(' — ', $parts);
             }
 
-            return $page ?: ($service ?: 'Page Fee');
+            return 'Page fee program';
         }
 
-        return $this->course?->title ?? ('Course #' . ($this->course_id ?: ''));
+        $title = trim((string) ($this->course?->title ?? ''));
+        if ($title !== '') {
+            return $title;
+        }
+
+        if (! empty($this->course_id)) {
+            return 'Untitled course (#' . $this->course_id . ')';
+        }
+
+        return 'Unknown program';
     }
 
     public function installment_request()
