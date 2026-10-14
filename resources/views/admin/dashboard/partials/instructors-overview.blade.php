@@ -1,5 +1,12 @@
 @php
     $reg = $instructorOverviewStats['registration'] ?? [];
+    $locations = $instructorOverviewStats['locations'] ?? [
+        'labels' => ['No data'],
+        'values' => [1],
+        'percents' => [100],
+        'colors' => ['#e0e0e0'],
+        'total' => 0,
+    ];
     $details = $instructorOverviewDetails ?? [];
     $cards = [
         ['key' => 'reg_total', 'value' => (int) ($reg['total'] ?? 0), 'label' => 'Total Registered Instructors'],
@@ -97,6 +104,51 @@
                         letter-spacing: .02em;
                         line-height: 1.35;
                     }
+                    #instructors-overview-panel .instructor-locations {
+                        margin-top: 22px;
+                        padding-top: 18px;
+                        border-top: 1px solid #e7eaec;
+                    }
+                    #instructors-overview-panel .instructor-locations-title {
+                        margin: 0 0 14px;
+                        font-size: 15px;
+                        font-weight: 700;
+                        color: #676a6c;
+                    }
+                    #instructors-overview-panel .instructor-locations-donut {
+                        position: relative;
+                        height: 240px;
+                        max-width: 240px;
+                        margin: 0 auto 8px;
+                    }
+                    #instructors-overview-panel .instructor-locations-legend {
+                        list-style: none;
+                        padding: 0;
+                        margin: 12px 0 0;
+                        max-height: 280px;
+                        overflow: auto;
+                    }
+                    #instructors-overview-panel .instructor-locations-legend li {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        gap: 12px;
+                        padding: 6px 0;
+                        border-bottom: 1px solid #f0f0f0;
+                        font-size: 13px;
+                        color: #676a6c;
+                    }
+                    #instructors-overview-panel .instructor-locations-legend li:last-child {
+                        border-bottom: none;
+                    }
+                    #instructors-overview-panel .instructor-locations-legend .dot {
+                        display: inline-block;
+                        width: 10px;
+                        height: 10px;
+                        border-radius: 50%;
+                        margin-right: 8px;
+                        vertical-align: middle;
+                    }
                 </style>
 
                 <ul class="nav nav-tabs instructor-overview-tabs" role="tablist" style="margin-bottom:16px;border-bottom:none;">
@@ -126,12 +178,73 @@
                             @endforeach
                         </div>
                         <p class="text-muted small m-t-sm m-b-none">Click a box to view the list. Custom Date Range asks for From/To inside the popup (no default dates).</p>
+
+                        <div class="instructor-locations">
+                            <h4 class="instructor-locations-title">Locations</h4>
+                            <div class="row">
+                                <div class="col-md-5">
+                                    <div class="instructor-locations-donut">
+                                        <canvas id="instructorLocationsDonut"></canvas>
+                                    </div>
+                                    @if((int) ($locations['total'] ?? 0) > 0)
+                                        <p class="text-center text-muted small m-b-none">{{ (int) $locations['total'] }} instructors</p>
+                                    @endif
+                                </div>
+                                <div class="col-md-7">
+                                    <ul class="instructor-locations-legend">
+                                        @foreach(($locations['labels'] ?? []) as $i => $label)
+                                            <li>
+                                                <span>
+                                                    <span class="dot" style="background:{{ $locations['colors'][$i] ?? '#ccc' }}"></span>
+                                                    {{ $label }}
+                                                </span>
+                                                <strong>{{ (int) ($locations['values'][$i] ?? 0) }}</strong>
+                                            </li>
+                                        @endforeach
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var el = document.getElementById('instructorLocationsDonut');
+    if (!el || typeof Chart === 'undefined') return;
+    var payload = @json($locations);
+    new Chart(el.getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: payload.labels || [],
+            datasets: [{
+                data: payload.values || [],
+                backgroundColor: payload.colors || [],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutoutPercentage: 68,
+            legend: { display: false },
+            tooltips: {
+                callbacks: {
+                    label: function (tooltipItem, data) {
+                        var label = (data.labels && data.labels[tooltipItem.index]) || '';
+                        var value = (data.datasets[0].data && data.datasets[0].data[tooltipItem.index]) || 0;
+                        return label + ': ' + value;
+                    }
+                }
+            }
+        }
+    });
+});
+</script>
 
 @include('admin.dashboard.partials.people-metric-modal', [
     'modalId' => 'instructorMetricModal',
