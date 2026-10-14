@@ -148,5 +148,6 @@
     'customFrom' => '',
     'customTo' => '',
     'customFetchUrl' => route('admin.dashboard.students.people'),
+    'exportUrl' => route('admin.dashboard.students.people-export'),
     'showPhone' => true,
 ])
