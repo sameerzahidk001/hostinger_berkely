@@ -133,10 +133,10 @@
                         margin: 0;
                     }
                 </style>
+                <h3 class="content-reports-heading" style="margin:0 0 12px;font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:#2f4050;">
+                    Website Content Reports
+                </h3>
                 <ul class="nav nav-tabs content-report-module-tabs" role="tablist" style="margin-bottom:16px;border-bottom:none;">
-                    <li style="pointer-events:none;">
-                        <a href="javascript:void(0);" class="tab-section-label" style="background:#2f4050 !important;cursor:default;">Website Content Reports</a>
-                    </li>
                     <li class="{{ $activeTab === 'courses' ? 'active' : '' }}">
                         <a href="#report-courses" data-toggle="tab" data-module="courses" class="tab-courses">Courses</a>
                     </li>

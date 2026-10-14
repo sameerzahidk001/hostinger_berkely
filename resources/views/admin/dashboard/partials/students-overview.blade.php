@@ -242,7 +242,8 @@
                             </div>
 
                             <div class="student-chart-block">
-                                <h4 class="student-chart-title">Enrolled Courses</h4>
+                                <h4 class="student-chart-title">Paid Enrollments</h4>
+                                <p class="text-muted small m-b-sm" style="margin-top:-4px;">Paid/partial invoices by course or page fee program</p>
                                 <div class="student-chart-body">
                                     <div>
                                         <div class="student-chart-donut">
