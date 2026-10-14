@@ -143,7 +143,7 @@ Route::get('admin/login', [AdminController::class, 'login'])->name('admin.login'
 Route::post('admin/login', [AdminController::class, 'adminAuth'])->name('admin.auth');
 
 
-Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
+Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']], function () {
 
     // Define routes for each section type
     Route::post('ckeditor-image-upload', [CourseController::class, 'ckeditorImageUpload']);
@@ -595,7 +595,7 @@ Route::get('/login/captcha', [\App\Http\Controllers\Auth\LoginController::class,
 
 Route::post('/noon/webhook', [NoonWebhookController::class, 'handle'])->name('noon.webhook');
 
-Route::prefix('user')->middleware(['auth', 'approved', 'redirect.panel.from.student'])->group(function () {
+Route::prefix('user')->middleware(['auth', 'approved', 'redirect.panel.from.student', 'log.admin.activity'])->group(function () {
 
     // Dashboard
     Route::get('/', [UserHomeController::class, 'index'])->name('user.home');

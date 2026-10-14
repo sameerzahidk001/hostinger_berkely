@@ -2131,6 +2131,11 @@ if (!function_exists('record_panel_activity')) {
     ): void {
         $request = $request ?? request();
 
+        // Prevent LogAdminPanelActivity middleware from double-writing the same request.
+        if ($request) {
+            $request->attributes->set('panel_activity_recorded', true);
+        }
+
         if (\Illuminate\Support\Facades\Auth::guard('admin')->check()) {
             record_user_activity(
                 $action,
