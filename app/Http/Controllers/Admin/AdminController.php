@@ -275,6 +275,18 @@ class AdminController extends Controller
         ]);
     }
 
+    public function studentsPeople(Request $request)
+    {
+        $this->ensureDashboardAccess(['admin']);
+
+        $from = $request->filled('date_from') ? (string) $request->query('date_from') : null;
+        $to = $request->filled('date_to') ? (string) $request->query('date_to') : null;
+
+        return response()->json(
+            app(StudentsDashboardService::class)->customRangePeople($from, $to)
+        );
+    }
+
     public function accountantDashboard(Request $request)
     {
         $this->ensureDashboardAccess(['admin', 'content_writer', 'accountant']);

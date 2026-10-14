@@ -70,7 +70,7 @@ class InstructorsDashboardService
             ->all();
 
         $details['reg_on_website'] = [
-            'title' => 'Instructors Shows on website',
+            'title' => 'Instructors Showing on Website',
             'people' => $onWebPeople,
         ];
 

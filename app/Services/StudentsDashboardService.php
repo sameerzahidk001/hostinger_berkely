@@ -13,13 +13,20 @@ class StudentsDashboardService
     /** @var array<string, string>|null */
     private ?array $countryNameByIso = null;
 
-    public function overviewStats(): array
+    public function overviewStats(?string $customFrom = null, ?string $customTo = null): array
     {
         $ranges = $this->registrationRanges();
         $registration = [];
         foreach ($ranges as $key => $range) {
             $registration[$key] = $this->registrationQuery($range['from'] ?? null, $range['to'] ?? null)->count();
         }
+
+        $registration['custom'] = ($customFrom && $customTo)
+            ? $this->registrationQuery(
+                Carbon::parse($customFrom)->startOfDay(),
+                Carbon::parse($customTo)->endOfDay()
+            )->count()
+            : 0;
 
         $enrollment = $this->enrollmentBuckets();
 
@@ -40,7 +47,7 @@ class StudentsDashboardService
      *
      * @return array<string, array{title: string, people: array<int, array<string, mixed>>}>
      */
-    public function overviewDetails(): array
+    public function overviewDetails(?string $customFrom = null, ?string $customTo = null): array
     {
         $ranges = $this->registrationRanges();
         $details = [];
@@ -60,12 +67,17 @@ class StudentsDashboardService
             ];
         }
 
+        $details['reg_custom'] = [
+            'title' => 'Registered Students - Custom Date Range',
+            'people' => [],
+        ];
+
         $enrollment = $this->enrollmentBuckets();
         $map = [
             'enrolled_total' => 'Enrolled Total Students',
-            'enrolled_paid' => 'Invoice Fully Paid',
+            'enrolled_paid' => 'Invoice Fully Paid Students',
             'partially_paid_students' => 'Partially Paid Students',
-            'invoice_unpaid_students' => 'Invoice Issued And Unpaid',
+            'invoice_unpaid_students' => 'Invoice Issued And Unpaid Students',
         ];
 
         foreach ($map as $key => $title) {
@@ -87,48 +99,81 @@ class StudentsDashboardService
         return $details;
     }
 
+    /**
+     * @return array{title: string, count: int, people: array<int, array<string, mixed>>}
+     */
+    public function customRangePeople(?string $customFrom = null, ?string $customTo = null): array
+    {
+        $title = 'Registered Students - Custom Date Range';
+
+        if (! $customFrom || ! $customTo) {
+            return [
+                'title' => $title,
+                'count' => 0,
+                'people' => [],
+            ];
+        }
+
+        $from = Carbon::parse($customFrom)->startOfDay();
+        $to = Carbon::parse($customTo)->endOfDay();
+        $query = $this->registrationQuery($from, $to);
+        $count = (clone $query)->count();
+        $people = $query->orderByDesc('created_at')
+            ->limit(500)
+            ->get($this->personSelectColumns())
+            ->map(fn (User $user) => $this->personRow($user))
+            ->values()
+            ->all();
+
+        return [
+            'title' => $title,
+            'count' => $count,
+            'people' => $people,
+        ];
+    }
+
     private function registrationRanges(): array
     {
         $now = now();
 
         return [
             'total' => [
-                'title' => 'Total Registered',
+                'title' => 'Total Registered Students',
                 'from' => null,
                 'to' => null,
             ],
             'today' => [
-                'title' => 'Registered Today',
+                'title' => 'Registered Students Today',
                 'from' => $now->copy()->startOfDay(),
                 'to' => null,
             ],
             'yesterday' => [
-                'title' => 'Registered Yesterday',
+                'title' => 'Registered Students Yesterday',
                 'from' => $now->copy()->subDay()->startOfDay(),
                 'to' => $now->copy()->subDay()->endOfDay(),
             ],
             'this_week' => [
-                'title' => 'Registered This Week',
+                'title' => 'Registered Students This Week',
                 'from' => $now->copy()->startOfWeek(Carbon::MONDAY),
                 'to' => null,
             ],
             'last_week' => [
-                'title' => 'Registered Last Week',
+                'title' => 'Registered Students Last Week',
                 'from' => $now->copy()->subWeek()->startOfWeek(Carbon::MONDAY),
                 'to' => $now->copy()->subWeek()->endOfWeek(Carbon::SUNDAY),
             ],
             'this_month' => [
-                'title' => 'Registered This Month',
+                'title' => 'Registered Students This Month',
                 'from' => $now->copy()->startOfMonth(),
                 'to' => null,
             ],
             'last_month' => [
-                'title' => 'Registered Last Month',
+                'title' => 'Registered Students Last Month',
                 'from' => $now->copy()->subMonthNoOverflow()->startOfMonth(),
                 'to' => $now->copy()->subMonthNoOverflow()->endOfMonth(),
             ],
             'this_year' => [
-                'title' => 'Registered This Year',
+                'title' => 'Registered Students This Year',
                 'from' => $now->copy()->startOfYear(),
                 'to' => null,
             ],
@@ -238,7 +283,7 @@ class StudentsDashboardService
     private function personSelectColumns(): array
     {
         $columns = ['id', 'name', 'email', 'created_at'];
-        foreach (['gender', 'country', 'city', 'nationality'] as $column) {
+        foreach (['mobile_number', 'gender', 'country', 'city', 'nationality'] as $column) {
             if (Schema::hasColumn('users', $column)) {
                 $columns[] = $column;
             }
@@ -255,10 +300,13 @@ class StudentsDashboardService
             $country = $map[strtoupper($country)] ?? $country;
         }
 
+        $phone = trim((string) ($user->mobile_number ?? ''));
+
         return [
             'id' => $user->id,
             'name' => $user->name ?: '—',
             'email' => $user->email ?: '—',
+            'phone' => $phone !== '' ? $phone : '—',
             'gender' => $user->gender ?: '—',
             'country' => $country !== '' ? $country : '—',
             'city' => $user->city ?: '—',

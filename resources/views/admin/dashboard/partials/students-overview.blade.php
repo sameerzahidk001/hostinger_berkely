@@ -3,18 +3,19 @@
     $enr = $studentOverviewStats['enrollment'] ?? [];
     $details = $studentOverviewStatsDetails ?? ($studentOverviewDetails ?? []);
     $cards = [
-        ['key' => 'reg_total', 'value' => (int) ($reg['total'] ?? 0), 'label' => 'Total Registered'],
-        ['key' => 'reg_today', 'value' => (int) ($reg['today'] ?? 0), 'label' => 'Registered Today'],
-        ['key' => 'reg_yesterday', 'value' => (int) ($reg['yesterday'] ?? 0), 'label' => 'Registered Yesterday'],
-        ['key' => 'reg_this_week', 'value' => (int) ($reg['this_week'] ?? 0), 'label' => 'Registered This Week'],
-        ['key' => 'reg_last_week', 'value' => (int) ($reg['last_week'] ?? 0), 'label' => 'Registered Last Week'],
-        ['key' => 'reg_this_month', 'value' => (int) ($reg['this_month'] ?? 0), 'label' => 'Registered This Month'],
-        ['key' => 'reg_last_month', 'value' => (int) ($reg['last_month'] ?? 0), 'label' => 'Registered Last Month'],
-        ['key' => 'reg_this_year', 'value' => (int) ($reg['this_year'] ?? 0), 'label' => 'Registered This Year'],
+        ['key' => 'reg_total', 'value' => (int) ($reg['total'] ?? 0), 'label' => 'Total Registered Students'],
+        ['key' => 'reg_today', 'value' => (int) ($reg['today'] ?? 0), 'label' => 'Registered Students Today'],
+        ['key' => 'reg_yesterday', 'value' => (int) ($reg['yesterday'] ?? 0), 'label' => 'Registered Students Yesterday'],
+        ['key' => 'reg_this_week', 'value' => (int) ($reg['this_week'] ?? 0), 'label' => 'Registered Students This Week'],
+        ['key' => 'reg_last_week', 'value' => (int) ($reg['last_week'] ?? 0), 'label' => 'Registered Students Last Week'],
+        ['key' => 'reg_this_month', 'value' => (int) ($reg['this_month'] ?? 0), 'label' => 'Registered Students This Month'],
+        ['key' => 'reg_last_month', 'value' => (int) ($reg['last_month'] ?? 0), 'label' => 'Registered Students Last Month'],
+        ['key' => 'reg_this_year', 'value' => (int) ($reg['this_year'] ?? 0), 'label' => 'Registered Students This Year'],
+        ['key' => 'reg_custom', 'value' => null, 'label' => 'Registered Students - Custom Date Range', 'is_custom' => true],
         ['key' => 'enr_enrolled_total', 'value' => (int) ($enr['enrolled_total'] ?? 0), 'label' => 'Enrolled Total Students'],
-        ['key' => 'enr_enrolled_paid', 'value' => (int) ($enr['enrolled_paid'] ?? 0), 'label' => 'Invoice Fully Paid'],
+        ['key' => 'enr_enrolled_paid', 'value' => (int) ($enr['enrolled_paid'] ?? 0), 'label' => 'Invoice Fully Paid Students'],
         ['key' => 'enr_partially_paid_students', 'value' => (int) ($enr['partially_paid_students'] ?? 0), 'label' => 'Partially Paid Students'],
-        ['key' => 'enr_invoice_unpaid_students', 'value' => (int) ($enr['invoice_unpaid_students'] ?? 0), 'label' => 'Invoice Issued And Unpaid'],
+        ['key' => 'enr_invoice_unpaid_students', 'value' => (int) ($enr['invoice_unpaid_students'] ?? 0), 'label' => 'Invoice Issued And Unpaid Students'],
     ];
 @endphp
 <div class="row" style="padding: 0 10px 12px;" id="students-overview-panel">
@@ -46,6 +47,10 @@
                         line-height: 1.15;
                         margin: 0 0 6px;
                         color: #ed5565;
+                    }
+                    #students-overview-panel .student-stat-value.is-custom-icon {
+                        color: #1c84c6;
+                        font-size: 26px;
                     }
                     #students-overview-panel .student-stat-row {
                         display: flex;
@@ -114,14 +119,19 @@
                                     <a href="javascript:void(0)"
                                        class="student-stat js-student-metric"
                                        data-metric="{{ $card['key'] }}"
-                                       data-title="{{ $card['label'] }}">
-                                        <div class="student-stat-value">{{ $card['value'] }}</div>
+                                       data-title="{{ $card['label'] }}"
+                                       data-custom="{{ !empty($card['is_custom']) ? '1' : '0' }}">
+                                        @if(!empty($card['is_custom']))
+                                            <div class="student-stat-value is-custom-icon student-stat-custom-value"><i class="fa fa-calendar"></i></div>
+                                        @else
+                                            <div class="student-stat-value">{{ $card['value'] }}</div>
+                                        @endif
                                         <div class="student-stat-label">{{ $card['label'] }}</div>
                                     </a>
                                 </div>
                             @endforeach
                         </div>
-                        <p class="text-muted small m-t-sm m-b-none">Click a box to view the list of people in that count.</p>
+                        <p class="text-muted small m-t-sm m-b-none">Click a box to view the list. Custom Date Range has no default count — pick From/To inside the popup.</p>
                     </div>
                 </div>
             </div>
@@ -133,4 +143,10 @@
     'modalId' => 'studentMetricModal',
     'details' => $details,
     'triggerSelector' => '#students-overview-panel .js-student-metric',
+    'enableCustomRange' => true,
+    'customMetricKey' => 'reg_custom',
+    'customFrom' => '',
+    'customTo' => '',
+    'customFetchUrl' => route('admin.dashboard.students.people'),
+    'showPhone' => true,
 ])
