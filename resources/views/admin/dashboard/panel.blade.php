@@ -301,6 +301,8 @@
         'report_user' => $preserveReportUser,
         'activity_tab' => 'staff',
         'student_user_id' => request('student_user_id'),
+        'date_from' => now()->toDateString(),
+        'date_to' => now()->toDateString(),
     ], fn ($v) => $v !== null && $v !== '');
     $studentClearQuery = array_filter([
         'report_user' => $preserveReportUser,
@@ -343,7 +345,7 @@
                             <div class="form-group">
                                 <label for="user_id" class="m-r-xs">User</label>
                                 <select id="user_id" name="user_id" class="form-control activity-filter-select" style="width:220px;">
-                                    <option value="" @selected(!request()->filled('user_id'))>None</option>
+                                    <option value="" @selected(!request()->filled('user_id'))>{{ $userFilterEmptyLabel ?? 'None' }}</option>
                                     @foreach($filterUsers ?? [] as $filterUser)
                                         @php $roleName = $filterUser->roles->first()?->name; @endphp
                                         <option value="{{ $filterUser->id }}" @selected((string) request('user_id') === (string) $filterUser->id)>
@@ -379,7 +381,7 @@
                         <p class="m-b-xs" style="font-weight:600;">
                             Report for: {{ $activityDateFrom ?? request('date_from', now()->toDateString()) }} - {{ $activityDateTo ?? request('date_to', now()->toDateString()) }}
                         </p>
-                        <p class="text-muted small m-b-sm">Leave any dropdown on <strong>None</strong> to skip that filter. Use dates only when needed.</p>
+                        <p class="text-muted small m-b-sm">Leave the user dropdown on <strong>{{ $userFilterEmptyLabel ?? 'None' }}</strong> to show everyone in this list. Dates default to today.</p>
                         <div class="table-responsive">
                             <table class="table table-striped table-bordered table-hover js-sortable-table" id="staffActivityTable">
                                 <thead>

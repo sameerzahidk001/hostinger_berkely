@@ -51,7 +51,7 @@
                     #content-reports-panel .content-report-module-tabs > li > a.tab-pages { background: #800000; }
                     #content-reports-panel .content-report-module-tabs > li > a.tab-courses { background: #000080; }
                     #content-reports-panel .content-report-module-tabs > li > a.tab-seo { background: #b8860b; }
-                    #content-reports-panel .content-report-module-tabs > li > a.tab-training { background: #0d7377; }
+                    #content-reports-panel .content-report-module-tabs > li > a.tab-training { background: #6f2dbd; }
                     #content-reports-panel .content-report-module-tabs > li > a.tab-fees { background: #2d6a4f; }
                     #content-reports-panel .content-report-module-tabs > li.active > a.tab-pages,
                     #content-reports-panel .content-report-module-tabs > li > a.tab-pages:hover,
@@ -64,7 +64,7 @@
                     #content-reports-panel .content-report-module-tabs > li > a.tab-seo:focus { background: #8b6914; color: #fff !important; }
                     #content-reports-panel .content-report-module-tabs > li.active > a.tab-training,
                     #content-reports-panel .content-report-module-tabs > li > a.tab-training:hover,
-                    #content-reports-panel .content-report-module-tabs > li > a.tab-training:focus { background: #095c5f; color: #fff !important; }
+                    #content-reports-panel .content-report-module-tabs > li > a.tab-training:focus { background: #551a99; color: #fff !important; }
                     #content-reports-panel .content-report-module-tabs > li.active > a.tab-fees,
                     #content-reports-panel .content-report-module-tabs > li > a.tab-fees:hover,
                     #content-reports-panel .content-report-module-tabs > li > a.tab-fees:focus { background: #1b4332; color: #fff !important; }
@@ -81,7 +81,7 @@
                     #report-pages .content-report-stat-value { color: #800000; }
                     #report-courses .content-report-stat-value { color: #000080; }
                     #report-seo .content-report-stat-value { color: #b8860b; }
-                    #report-training .content-report-stat-value { color: #0d7377; }
+                    #report-training .content-report-stat-value { color: #6f2dbd; }
                     #report-fees .content-report-stat-value { color: #2d6a4f; }
                     #content-reports-panel .content-report-stat-row {
                         display: flex;

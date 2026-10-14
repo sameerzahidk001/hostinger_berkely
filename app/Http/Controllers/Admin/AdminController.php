@@ -185,6 +185,7 @@ class AdminController extends Controller
             'contentReportActorKey' => $reportActor['key'],
             'logAudience' => 'staff',
             'activityTitle' => $this->namedActivityTitle('Staff'),
+            'userFilterEmptyLabel' => 'All content writers',
             'panelBaseUrl' => $baseUrl,
             'pageTitle' => 'Staff Dashboard',
         ]);
@@ -730,7 +731,11 @@ class AdminController extends Controller
             'contentReportActorKey' => $contentReportActorKey,
             'contentReportMetricLabels' => $contentReportMetricLabels,
             'contentReportUsers' => $showContentReportUserFilter ? $this->contentReportFilterUsers() : collect(),
-            'filterUsers' => ($options['showUserFilter'] ?? false) ? $service->filterUsers() : collect(),
+            'filterUsers' => ($options['showUserFilter'] ?? false)
+                ? $service->filterUsers(is_string($roleFilter) ? $roleFilter : null)
+                : collect(),
+            'userFilterEmptyLabel' => $options['userFilterEmptyLabel']
+                ?? (($roleFilter === 'content_writer') ? 'All content writers' : 'None'),
             'studentFilterUsers' => $showStudentTable ? $logService->studentFilterUsers() : collect(),
             'activityTitle' => $options['activityTitle'] ?? 'Activity history',
             'studentActivityTitle' => $options['studentActivityTitle'] ?? 'Student activity history',
