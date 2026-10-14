@@ -68,10 +68,10 @@
                     <a href="{{route('welcome')}}" style="padding:0px;"> <img src="{{ asset('frontend/images/pngs/header-logo-white.png') }}" alt="" style="width: 220px; padding: 8px 12px;"></a>
                   </li>
                   @if(panel_profile_user())
-                  <li style="padding: 16px 12px;">
-                     <a href="{{ route('admin.profile') }}" style="display:flex;flex-direction:column;align-items:center;gap:8px;padding:0;color:#fff;text-align:center;">
+                  <li style="padding: 8px 12px 12px;">
+                     <a href="{{ route('admin.profile') }}" style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:0;color:#fff;text-align:center;">
                         <img src="{{ user_avatar_url() }}" alt="{{ panel_profile_name() }}"
-                           style="width:225px;height:225px;border-radius:999px;object-fit:cover;border:3px solid rgba(255,255,255,0.25);" />
+                           style="width:96px;height:96px;border-radius:999px;object-fit:cover;border:2px solid rgba(255,255,255,0.25);" />
                         <span style="line-height:1.3;">
                            <span style="display:block;font-weight:600;font-size:14px;">{{ panel_profile_name() }}</span>
                            <span style="display:block;font-size:12px;opacity:0.85;">Profile</span>

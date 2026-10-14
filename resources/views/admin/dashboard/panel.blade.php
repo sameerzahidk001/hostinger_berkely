@@ -50,7 +50,18 @@
 }
 #activities-panel .activity-filter-row .form-group { margin: 0; }
 #activities-panel #user_id + .select2-container,
-#activities-panel #student_user_id + .select2-container { width: 220px !important; min-width: 220px !important; }
+#activities-panel #student_user_id + .select2-container { width: 220px !important; min-width: 220px !important; max-width: 280px !important; }
+#content-reports-panel #content_report_user + .select2-container {
+    width: 280px !important;
+    min-width: 280px !important;
+    max-width: 280px !important;
+}
+#content-reports-panel #contentReportUserForm .select2-selection__rendered {
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
 #activities-panel .activity-filter-search {
     display: flex;
     flex-wrap: wrap;
@@ -627,7 +638,7 @@ $(document).ready(function() {
 
     initTypeFind($('#user_id'), @json($userFilterEmptyLabel ?? 'Type to find user'), '220px');
     initTypeFind($('#student_user_id'), 'Type to find student', '220px');
-    initTypeFind($('#content_report_user'), 'Type to find user');
+    initTypeFind($('#content_report_user'), 'Type to find user', '280px');
 
     $('#content_report_user').on('change', function () {
         var $form = $(this).closest('form');
