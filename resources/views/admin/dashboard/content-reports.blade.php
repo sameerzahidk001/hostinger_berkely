@@ -16,7 +16,7 @@
     <div class="col-lg-12">
         <div class="ibox float-e-margins">
             <div class="ibox-title" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-                <h5 style="margin:0;font-weight:700;text-transform:uppercase;letter-spacing:.02em;">Content performance reports</h5>
+                <h5 style="margin:0;font-weight:700;text-transform:uppercase;letter-spacing:.02em;">Website Content Reports</h5>
                 @if($showReportUserFilter)
                 <form method="GET" action="{{ $panelBaseUrl ?? route('admin.home') }}" class="form-inline" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0;" id="contentReportUserForm">
                     @foreach(request()->except(['report_user', 'page']) as $key => $value)
