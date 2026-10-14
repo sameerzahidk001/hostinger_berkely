@@ -74,7 +74,7 @@
                                     <button type="submit"
                                         class="w-full py-3 bg-[#000435] text-white font-semibold rounded-xl
                                         hover:bg-yellow hover:text-[#000435] transition duration-300 transform hover:scale-105">
-                                        Enroll
+                                        Add to Cart
                                     </button>
                                 </form>
                             </div>
