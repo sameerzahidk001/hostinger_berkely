@@ -1191,9 +1191,23 @@ class AdminController extends Controller
                     ]);
                 })
                 ->map(function ($group) {
-                    return collect($group)
+                    $group = collect($group);
+                    $preferred = $group
                         ->sortByDesc(fn (array $row) => strlen((string) ($row['item'] ?? '')))
                         ->first();
+                    foreach ($group as $row) {
+                        if (empty($preferred['visit_url']) && ! empty($row['visit_url'])) {
+                            $preferred['visit_url'] = $row['visit_url'];
+                        }
+                        if (empty($preferred['edit_url']) && ! empty($row['edit_url'])) {
+                            $preferred['edit_url'] = $row['edit_url'];
+                        }
+                        if (empty($preferred['url']) && ! empty($row['url'])) {
+                            $preferred['url'] = $row['url'];
+                        }
+                    }
+
+                    return $preferred;
                 })
                 ->sortByDesc(fn (array $row) => $row['occurred_at']->timestamp)
                 ->take($maxRows)

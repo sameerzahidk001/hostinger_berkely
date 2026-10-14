@@ -664,9 +664,23 @@ class PanelActivityService
             ->sortByDesc(fn (array $row) => $row['occurred_at']->timestamp)
             ->groupBy(fn (array $row) => $this->activityDedupeKey($row))
             ->map(function (Collection $group) {
-                return $group
+                $preferred = $group
                     ->sortByDesc(fn (array $row) => strlen((string) ($row['item'] ?? '')))
                     ->first();
+                // Keep Visit/Edit URLs from sibling rows (log has detail text; DB row has visit_url).
+                foreach ($group as $row) {
+                    if (empty($preferred['visit_url']) && ! empty($row['visit_url'])) {
+                        $preferred['visit_url'] = $row['visit_url'];
+                    }
+                    if (empty($preferred['edit_url']) && ! empty($row['edit_url'])) {
+                        $preferred['edit_url'] = $row['edit_url'];
+                    }
+                    if (empty($preferred['url']) && ! empty($row['url'])) {
+                        $preferred['url'] = $row['url'];
+                    }
+                }
+
+                return $preferred;
             })
             ->sortByDesc(fn (array $row) => $row['occurred_at']->timestamp)
             ->values();
