@@ -42,6 +42,9 @@
                         || str_contains((string) $fallbackUrl, '/pages/')
                         || str_contains((string) $fallbackUrl, '/courses-pages-seo/')
                         || str_contains((string) $fallbackUrl, '/seo/')
+                        || str_contains((string) $fallbackUrl, '/training-calendar/')
+                        || str_contains((string) $fallbackUrl, '/course-agendas/')
+                        || str_contains((string) $fallbackUrl, '/fee/')
                     )) {
                         $editUrl = $fallbackUrl;
                     }
@@ -61,8 +64,6 @@
                     <td>
                         @if(!empty($editUrl))
                             <a href="{{ $editUrl }}">Edit Page</a>
-                        @elseif(!empty($fallbackUrl))
-                            <a href="{{ $fallbackUrl }}">Open</a>
                         @else
                             —
                         @endif
