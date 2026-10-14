@@ -289,8 +289,13 @@ class PagesController extends Controller
             }
 
             // Get the existing section based on ID (if available)
-            $existingSection = isset($section['section_id']) ? $existingSections->get($section['section_id']) : null;
-            $oldData = $existingSection ? (json_decode($existingSection->data, true) ?? []) : [];
+            $sectionId = $section['section_id'] ?? $section['id'] ?? null;
+            $existingSection = null;
+            if ($sectionId !== null && $sectionId !== '') {
+                $existingSection = $existingSections->get($sectionId)
+                    ?? $existingSections->get((int) $sectionId);
+            }
+            $oldData = $this->decodeSectionData($existingSection?->data);
 
             if (empty($section['section_type'])) {
                 $section['section_type'] = $existingSection->section_type
@@ -300,118 +305,61 @@ class PagesController extends Controller
             $section['section_type'] = normalize_section_type_key($section['section_type'] ?? '')
                 ?? ($section['section_type'] ?? null);
 
-            // 🔹 Preserve old images for cards before updating
-            if (isset($section['cards'])) {
+            // Preserve media from the submitted payload first, then fall back to stored data.
+            // (Do not rely only on oldData — duplicated/reordered sections can miss a lookup.)
+            if (isset($section['cards']) && is_array($section['cards'])) {
                 foreach ($section['cards'] as $cardIndex => $card) {
-                    if ($request->input("sections.$order.cards.$cardIndex.icon_source") === 'upload') {
-                        if ($request->hasFile("sections.$order.cards.$cardIndex.icon")) {
-                            $uploadedFile = $request->file("sections.$order.cards.$cardIndex.icon");
-                            $filename = generateFileName($uploadedFile);
-                            public_upload_move($uploadedFile, public_path('images/library'), $filename);
-
-                            $section['cards'][$cardIndex]['icon'] = $filename;
-                        } else {
-                            // Preserve the old image if no new file is uploaded
-                            $section['cards'][$cardIndex]['icon'] = $oldData['cards'][$cardIndex]['icon'] ?? null;
-                        }
-                    } elseif ($request->input("sections.$order.cards.$cardIndex.icon_source") === 'library') {
-                        $section['cards'][$cardIndex]['icon'] = $request->input("sections.$order.cards.$cardIndex.icon");
-                    } elseif ($request->input("sections.$order.cards.$cardIndex.icon_source") === 'remove') {
-                        $section['cards'][$cardIndex]['icon'] = null;
-                    } else {
-                        $section['cards'][$cardIndex]['icon'] = $section['cards'][$cardIndex]['icon']
-                            ?? ($oldData['cards'][$cardIndex]['icon'] ?? null);
+                    if (! is_array($card)) {
+                        continue;
                     }
 
-                    if ($request->input("sections.$order.cards.$cardIndex.image_source") === 'upload') {
-                        if ($request->hasFile("sections.$order.cards.$cardIndex.image")) {
-                            $uploadedFile = $request->file("sections.$order.cards.$cardIndex.image");
-                            $filename = generateFileName($uploadedFile);
-                            public_upload_move($uploadedFile, public_path('images/library'), $filename);
-
-                            $section['cards'][$cardIndex]['image'] = $filename;
-                        } else {
-                            // Preserve the old image if no new file is uploaded
-                            $section['cards'][$cardIndex]['image'] = $oldData['cards'][$cardIndex]['image'] ?? null;
-                        }
-                    } elseif ($request->input("sections.$order.cards.$cardIndex.image_source") === 'library') {
-                        $section['cards'][$cardIndex]['image'] = $request->input("sections.$order.cards.$cardIndex.image");
-                    } elseif ($request->input("sections.$order.cards.$cardIndex.image_source") === 'remove') {
-                        $section['cards'][$cardIndex]['image'] = null;
-                    } else {
-                        $section['cards'][$cardIndex]['image'] = $section['cards'][$cardIndex]['image']
-                            ?? ($oldData['cards'][$cardIndex]['image'] ?? null);
-                    }
-
-                    if (empty($section['cards'][$cardIndex]['image']) && ! empty($oldData['cards'][$cardIndex]['image'])) {
-                        $section['cards'][$cardIndex]['image'] = $oldData['cards'][$cardIndex]['image'];
-                    }
-                    if (empty($section['cards'][$cardIndex]['icon']) && ! empty($oldData['cards'][$cardIndex]['icon'])) {
-                        $section['cards'][$cardIndex]['icon'] = $oldData['cards'][$cardIndex]['icon'];
-                    }
+                    $section['cards'][$cardIndex]['icon'] = $this->resolveMediaField(
+                        $request,
+                        "sections.{$order}.cards.{$cardIndex}.icon",
+                        (string) ($card['icon_source'] ?? ''),
+                        $card['icon'] ?? null,
+                        $oldData['cards'][$cardIndex]['icon'] ?? null
+                    );
+                    $section['cards'][$cardIndex]['image'] = $this->resolveMediaField(
+                        $request,
+                        "sections.{$order}.cards.{$cardIndex}.image",
+                        (string) ($card['image_source'] ?? ''),
+                        $card['image'] ?? null,
+                        $oldData['cards'][$cardIndex]['image'] ?? null
+                    );
                 }
             }
 
-            if (isset($section['list_items'])) {
+            if (isset($section['list_items']) && is_array($section['list_items'])) {
                 foreach ($section['list_items'] as $itemIndex => $item) {
-                    if ($request->input("sections.$order.list_items.$itemIndex.icon_source") === 'upload') {
-                        if ($request->hasFile("sections.$order.list_items.$itemIndex.icon")) {
-                            $uploadedFile = $request->file("sections.$order.list_items.$itemIndex.icon");
-                            $filename = generateFileName($uploadedFile);
-                            public_upload_move($uploadedFile, public_path('images/library'), $filename);
-
-                            $section['list_items'][$itemIndex]['icon'] = $filename;
-                        } else {
-                            // Preserve the old image if no new file is uploaded
-                            $section['list_items'][$itemIndex]['icon'] = $oldData['list_items'][$itemIndex]['icon'] ?? null;
-                        }
-                    } elseif ($request->input("sections.$order.list_items.$itemIndex.icon_source") === 'library') {
-                        $section['list_items'][$itemIndex]['icon'] = $request->input("sections.$order.list_items.$itemIndex.icon");
-                    } elseif ($request->input("sections.$order.list_items.$itemIndex.icon_source") === 'remove') {
-                        $section['list_items'][$itemIndex]['icon'] = null;
+                    if (! is_array($item)) {
+                        continue;
                     }
+
+                    $section['list_items'][$itemIndex]['icon'] = $this->resolveMediaField(
+                        $request,
+                        "sections.{$order}.list_items.{$itemIndex}.icon",
+                        (string) ($item['icon_source'] ?? ''),
+                        $item['icon'] ?? null,
+                        $oldData['list_items'][$itemIndex]['icon'] ?? null
+                    );
                 }
             }
 
-            if ($request->input("sections.$order.image_source") === 'upload') {
-                if ($request->hasFile("sections.$order.image")) {
-
-                    $uploadedFile = $request->file("sections.$order.image");
-                    $filename = generateFileName($uploadedFile);
-                    public_upload_move($uploadedFile, public_path('images/library'), $filename);
-
-                    $section['image'] = $filename;
-                } else {
-                    $section['image'] = $oldData['image'] ?? null;
-                }
-            } elseif ($request->input("sections.$order.image_source") === 'library') {
-                $section['image'] = $request->input("sections.$order.image");
-            } elseif ($request->input("sections.$order.image_source") === 'remove') {
-                $section['image'] = null;
-            }
-
-            if ($request->input("sections.$order.icon_source") === 'upload') {
-                if ($request->hasFile("sections.$order.icon")) {
-                    $uploadedFile = $request->file("sections.$order.icon");
-                    $filename = generateFileName($uploadedFile);
-                    public_upload_move($uploadedFile, public_path('images/library'), $filename);
-
-                    $section['icon'] = $filename;
-                } else {
-                    $section['icon'] = $oldData['icon'] ?? null;
-                }
-            } elseif ($request->input("sections.$order.icon_source") === 'library') {
-                $section['icon'] = $request->input("sections.$order.icon");
-            } elseif ($request->input("sections.$order.icon_source") === 'remove') {
-                $section['icon'] = null;
-            }
-
-            if (empty($section['image']) && ! empty($oldData['image'])) {
-                $section['image'] = $oldData['image'];
-            }
-            if (empty($section['icon']) && ! empty($oldData['icon'])) {
-                $section['icon'] = $oldData['icon'];
-            }
+            $section['image'] = $this->resolveMediaField(
+                $request,
+                "sections.{$order}.image",
+                (string) ($section['image_source'] ?? ''),
+                $section['image'] ?? null,
+                $oldData['image'] ?? null
+            );
+            $section['icon'] = $this->resolveMediaField(
+                $request,
+                "sections.{$order}.icon",
+                (string) ($section['icon_source'] ?? ''),
+                $section['icon'] ?? null,
+                $oldData['icon'] ?? null
+            );
 
             foreach (['image_alt', 'icon_alt'] as $altField) {
                 if (trim((string) ($section[$altField] ?? '')) === '' && ! empty($oldData[$altField])) {
@@ -437,7 +385,6 @@ class PagesController extends Controller
 
             $section = normalize_section_backgrounds($section);
 
-            $sectionId = $section['section_id'] ?? $section['id'] ?? null;
             $sectionPayload = [
                 'order' => $order,
                 'section_type' => $section['section_type'],
@@ -505,6 +452,64 @@ class PagesController extends Controller
         }
 
         $request->merge(['sections' => $sections]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function decodeSectionData(mixed $raw): array
+    {
+        if (is_array($raw)) {
+            return $raw;
+        }
+
+        if (! is_string($raw) || trim($raw) === '') {
+            return [];
+        }
+
+        $decoded = json_decode($raw, true);
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    /**
+     * Keep existing media unless the editor explicitly removes it or uploads a replacement.
+     */
+    private function resolveMediaField(
+        Request $request,
+        string $fileKey,
+        string $source,
+        mixed $submitted,
+        mixed $previous
+    ): ?string {
+        if ($source === 'remove') {
+            return null;
+        }
+
+        if ($source === 'upload' && $request->hasFile($fileKey)) {
+            $uploadedFile = $request->file($fileKey);
+            $filename = generateFileName($uploadedFile);
+            public_upload_move($uploadedFile, public_path('images/library'), $filename);
+
+            return $filename;
+        }
+
+        return $this->preferMediaValue($submitted, $previous);
+    }
+
+    private function preferMediaValue(mixed $submitted, mixed $previous): ?string
+    {
+        foreach ([$submitted, $previous] as $candidate) {
+            if (! is_string($candidate)) {
+                continue;
+            }
+            $value = trim($candidate);
+            if ($value !== '' && strtolower($value) !== 'null') {
+                return $value;
+            }
+        }
+
+        return null;
     }
 
     private function decodeSectionsPayload(string $payload): ?array

@@ -28,12 +28,19 @@ class PageDuplicationService
             $copy->save();
 
             foreach ($source->sections as $section) {
+                $data = $section->data;
+                if (is_array($data)) {
+                    $data = json_encode($data, JSON_UNESCAPED_UNICODE);
+                } elseif (! is_string($data) || trim($data) === '') {
+                    $data = '{}';
+                }
+
                 PageSection::create([
                     'page_id' => $copy->id,
                     'section_type' => $section->section_type,
                     'order' => $section->order,
                     // Keep media paths as-is — do not delete or rewrite original files.
-                    'data' => $section->data,
+                    'data' => $data,
                 ]);
             }
 
