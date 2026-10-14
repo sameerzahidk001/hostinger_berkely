@@ -313,14 +313,18 @@ class PanelActivityService
         return $this->supportRows($query->get()->flatMap(function (Course $course) use ($userId, $from, $to) {
             $rows = collect();
 
+            $visitUrl = empty($course->deleted_at) ? course_details_url($course) : null;
+            $editUrl = route('course.edit', $course->id);
+
             if ((! $userId || (int) $course->created_by === $userId)
                 && $this->inRange($course->created_at, $from, $to)) {
                 $rows->push($this->activityRow(
                     'Course Created',
                     $course->title ?: 'Course #' . $course->id,
-                    route('course.edit', $course->id),
+                    $editUrl,
                     $course->created_by,
-                    $course->created_at
+                    $course->created_at,
+                    $visitUrl
                 ));
             }
 
@@ -330,9 +334,10 @@ class PanelActivityService
                 $rows->push($this->activityRow(
                     'Course Updated',
                     $course->title ?: 'Course #' . $course->id,
-                    route('course.edit', $course->id),
+                    $editUrl,
                     $course->updated_by ?: $course->created_by,
-                    $course->updated_at
+                    $course->updated_at,
+                    $visitUrl
                 ));
             }
 
@@ -362,14 +367,18 @@ class PanelActivityService
             $rows = collect();
             $label = $page->page_name ?: $page->url;
 
+            $visitUrl = page_public_url($page);
+            $editUrl = route('pages.edit', $page->id);
+
             if ((! $userId || (int) $page->created_by === $userId)
                 && $this->inRange($page->created_at, $from, $to)) {
                 $rows->push($this->activityRow(
                     'Page Created',
                     $label,
-                    route('pages.edit', $page->id),
+                    $editUrl,
                     $page->created_by,
-                    $page->created_at
+                    $page->created_at,
+                    $visitUrl
                 ));
             }
 
@@ -379,9 +388,10 @@ class PanelActivityService
                 $rows->push($this->activityRow(
                     'Page Updated',
                     $label,
-                    route('pages.edit', $page->id),
+                    $editUrl,
                     $page->updated_by ?: $page->created_by,
-                    $page->updated_at
+                    $page->updated_at,
+                    $visitUrl
                 ));
             }
 
@@ -414,16 +424,20 @@ class PanelActivityService
                 ? ($seo->course?->title ?: 'Course #' . $seo->course_id)
                 : ($seo->page?->page_name ?: 'Page #' . $seo->page_id);
             $item = $type . ': ' . $name;
-            $url = $seo->id ? route('courses-pages-seo.edit', $seo->id) : '#';
+            $editUrl = $seo->id ? route('courses-pages-seo.edit', $seo->id) : '#';
+            $visitUrl = $seo->course_id
+                ? course_details_url($seo->course)
+                : page_public_url($seo->page);
 
             if ((! $userId || (int) $seo->created_by === $userId)
                 && $this->inRange($seo->created_at, $from, $to)) {
                 $rows->push($this->activityRow(
                     'SEO Created',
                     $item,
-                    $url,
+                    $editUrl,
                     $seo->created_by,
-                    $seo->created_at
+                    $seo->created_at,
+                    $visitUrl
                 ));
             }
 
@@ -433,9 +447,10 @@ class PanelActivityService
                 $rows->push($this->activityRow(
                     'SEO Updated',
                     $item,
-                    $url,
+                    $editUrl,
                     $seo->updated_by ?: $seo->created_by,
-                    $seo->updated_at
+                    $seo->updated_at,
+                    $visitUrl
                 ));
             }
 
@@ -632,12 +647,17 @@ class PanelActivityService
         string $item,
         string $url,
         ?int $actorId,
-        $occurredAt
+        $occurredAt,
+        ?string $visitUrl = null
     ): array {
+        $editUrl = ($url !== '' && $url !== '#') ? $url : null;
+
         return [
             'action' => $action,
             'item' => $item,
-            'url' => $url,
+            'url' => $editUrl ?? $url,
+            'edit_url' => $editUrl,
+            'visit_url' => $visitUrl ?: null,
             'session_id' => null,
             'actor_id' => $actorId ? (int) $actorId : null,
             'user_name' => audit_user_name(null, $actorId),

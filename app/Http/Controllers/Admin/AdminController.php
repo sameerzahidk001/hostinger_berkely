@@ -589,7 +589,7 @@ class AdminController extends Controller
         }
 
         return match ($request->query('role')) {
-            'content_writer' => $this->namedActivityTitle('Content Writers'),
+            'content_writer' => $this->namedActivityTitle('Staff'),
             'accountant' => $this->namedActivityTitle('Accountants'),
             'instructor' => $this->namedActivityTitle('Instructors'),
             default => $this->namedActivityTitle('Staff & Panel Users'),
@@ -736,6 +736,7 @@ class AdminController extends Controller
                 : collect(),
             'userFilterEmptyLabel' => $options['userFilterEmptyLabel']
                 ?? (($roleFilter === 'content_writer') ? 'All content writers' : 'None'),
+            'activityRoleFilter' => is_string($roleFilter) ? $roleFilter : null,
             'studentFilterUsers' => $showStudentTable ? $logService->studentFilterUsers() : collect(),
             'activityTitle' => $options['activityTitle'] ?? 'Activity history',
             'studentActivityTitle' => $options['studentActivityTitle'] ?? 'Student activity history',
@@ -914,9 +915,14 @@ class AdminController extends Controller
     private function logContentReportActivity(string $action, string $item, Request $request): void
     {
         try {
+            $item = trim($item);
+            if ($item !== '' && ! str_starts_with($item, 'Website Content Reports')) {
+                $item = 'Website Content Reports → ' . $item;
+            }
+
             record_panel_activity(
                 $action,
-                $item,
+                $item !== '' ? $item : 'Website Content Reports',
                 route('admin.home', array_filter([
                     'report_user' => $request->input('report_user', $request->query('report_user')),
                 ], fn ($v) => $v !== null && $v !== '')),
@@ -1201,7 +1207,7 @@ class AdminController extends Controller
             return $pdf->download($fileStamp . '.pdf');
         }
 
-        $headers = ['Date & Time', 'User', 'Activity', 'Description', 'URL'];
+        $headers = ['Date & Time', 'User', 'Activity', 'Description', 'Visit Page', 'Edit Page'];
         $callback = function () use ($rows, $headers, $title, $dateFrom, $dateTo, $username) {
             $handle = fopen('php://output', 'w');
             fputcsv($handle, ['Report', $title]);
@@ -1211,12 +1217,27 @@ class AdminController extends Controller
             fputcsv($handle, $headers);
 
             foreach ($rows as $activity) {
+                $visitUrl = $activity['visit_url'] ?? '';
+                $editUrl = $activity['edit_url'] ?? '';
+                $fallbackUrl = $activity['url'] ?? '';
+                if ($editUrl === '' && $fallbackUrl !== '' && (
+                    str_contains($fallbackUrl, '/course/')
+                    || str_contains($fallbackUrl, '/pages/')
+                    || str_contains($fallbackUrl, '/courses-pages-seo/')
+                    || str_contains($fallbackUrl, '/seo/')
+                )) {
+                    $editUrl = $fallbackUrl;
+                } elseif ($editUrl === '' && $fallbackUrl !== '') {
+                    $editUrl = $fallbackUrl;
+                }
+
                 fputcsv($handle, [
                     $activity['occurred_at']->format('Y-m-d H:i:s'),
                     $activity['user_name'] ?? '—',
                     activity_action_label($activity['action'] ?? ''),
                     $activity['item'] ?? '',
-                    $activity['url'] ?? '',
+                    $visitUrl !== '' ? $visitUrl : '—',
+                    $editUrl !== '' ? $editUrl : '—',
                 ]);
             }
 
