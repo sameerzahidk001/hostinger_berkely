@@ -208,6 +208,9 @@
                         <li class="{{ request()->is('admin/meeting-accounts*') || request()->is('admin/zoho-settings*') ? 'active' : '' }}">
                            <a href="{{ route('admin.meeting-accounts.index') }}">Meeting Accounts</a>
                         </li>
+                        <li class="{{ request()->is('admin/zoho-crm-settings*') ? 'active' : '' }}">
+                           <a href="{{ route('admin.zoho-crm.settings') }}">Zoho CRM (Invoices)</a>
+                        </li>
                         @endif
                      </ul>
                   </li>
