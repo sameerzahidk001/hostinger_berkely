@@ -29,6 +29,9 @@ class SetSEO
 
         $seo = $seoData?->seo;
 
+        // Always emit robots meta on public pages/courses (defaults to index, follow).
+        SEOTools::metatags()->addMeta('robots', seo_robots_content($seo));
+
         if ($seoData && $seo) {
             $title = (string) $seo->title;
             $description = (string) $seo->meta_description;

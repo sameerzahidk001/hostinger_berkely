@@ -128,6 +128,9 @@
                         <div class="ibox-content">
                             <div class="row" style="margin-bottom: 12px;">
                                 <div class="col-lg-12 text-right">
+                                    <a href="{{ route('admin.pages.fees.edit', $page->id) }}" class="btn btn-warning btn-sm" style="margin-right:6px;">
+                                        <i class="fa fa-money"></i> Fee Update in Page
+                                    </a>
                                     <button type="button" class="btn btn-info btn-sm"
                                        onclick="if(confirm('Duplicate this page as a draft? Original stays unchanged.')){ document.getElementById('page-duplicate-form').submit(); }">
                                         <i class="fa fa-copy"></i> Duplicate Page

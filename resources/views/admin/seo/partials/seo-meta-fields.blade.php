@@ -40,6 +40,24 @@
     @enderror
 </div>
 
+<div class="col-lg-6 mb">
+    <label for="robots_index">Index / No Index</label>
+    <select class="form-control" name="robots_index" id="robots_index">
+        <option value="index" @selected(old('robots_index', $seoMeta->robots_index ?? 'index') === 'index')>Index (allow Google to list)</option>
+        <option value="noindex" @selected(old('robots_index', $seoMeta->robots_index ?? 'index') === 'noindex')>No Index (hide from Google)</option>
+    </select>
+    <p class="help-block text-muted" style="margin-top:4px;">Controls whether search engines may list this URL.</p>
+</div>
+
+<div class="col-lg-6 mb">
+    <label for="robots_follow">Follow / No Follow</label>
+    <select class="form-control" name="robots_follow" id="robots_follow">
+        <option value="follow" @selected(old('robots_follow', $seoMeta->robots_follow ?? 'follow') === 'follow')>Follow links</option>
+        <option value="nofollow" @selected(old('robots_follow', $seoMeta->robots_follow ?? 'follow') === 'nofollow')>No Follow links</option>
+    </select>
+    <p class="help-block text-muted" style="margin-top:4px;">Controls whether crawlers should follow links on this page.</p>
+</div>
+
 <div class="col-lg-12 mb">
     <label for="{{ $names['focus_keyword'] }}">Focus Keyword <small>(primary phrase for SEO scoring — max {{ $limits['focus_keyword_max'] }} characters)</small></label>
     <input type="text" class="form-control" name="{{ $names['focus_keyword'] }}" id="{{ $names['focus_keyword'] }}"

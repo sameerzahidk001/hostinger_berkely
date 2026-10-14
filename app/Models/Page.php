@@ -27,6 +27,11 @@ class Page extends Model
         return $this->hasMany(PageSection::class)->orderBy('order');
     }
 
+    public function feeServices()
+    {
+        return $this->hasMany(PageFeeService::class)->orderBy('sort_order');
+    }
+
     public function parent()
     {
         return $this->belongsTo(Page::class, 'parent_id');

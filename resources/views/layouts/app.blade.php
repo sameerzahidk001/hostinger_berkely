@@ -9,9 +9,11 @@
 
     {!! SEOTools::generate() !!}
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="preload" href="{{ asset('frontend/fonts/Trade_Gothic/Trade-Gothic.woff2') }}" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="{{ asset('frontend/output.css') }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/css/intlTelInput.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"></noscript>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/css/intlTelInput.css" media="print" onload="this.media='all'">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         @font-face {
@@ -178,7 +180,8 @@
             <a href="{{ url('/') }}" class="self-center">
                 <img src="{{ asset('images/' . ($settings->header_logo == 'logo' ? $settings->logo : $settings->white_logo)) }}"
                     class="max-w-[220px] self-center object-contain min-h-[48px] sm:min-w-[200px] lg:min-w-[240px] lg:min-h-[48px]"
-                    alt="">
+                    width="240" height="48" decoding="async" fetchpriority="high"
+                    alt="{{ config('app.name') }}">
             </a>
             <ul class="hidden list-none min-[980px]:flex font-ghothic text-[19px] gap-4">
                 @php
@@ -504,7 +507,7 @@
     </script>
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/intlTelInput.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/intlTelInput.min.js" defer></script>
     <script>
         // JS for Search bar start
         document.addEventListener('DOMContentLoaded', function () {
@@ -563,12 +566,28 @@
         });
 
         const input = document.querySelector("#phone2");
-        window.intlTelInput(input, {
-            initialCountry: "gb", // Set default country to UK
-            separateDialCode: true,
-            utilsScript: "/intl-tel-input/js/utils.js?1716383386062" // just for formatting/placeholders etc
-        });
+        if (input && window.intlTelInput) {
+            window.intlTelInput(input, {
+                initialCountry: "gb",
+                separateDialCode: true,
+                utilsScript: "/intl-tel-input/js/utils.js?1716383386062"
+            });
+        }
         // tel End
+    </script>
+    <script>
+        // Re-run tel init after deferred intl-tel-input loads
+        window.addEventListener('load', function () {
+            const input = document.querySelector("#phone2");
+            if (input && window.intlTelInput && !input.getAttribute('data-intl-ready')) {
+                window.intlTelInput(input, {
+                    initialCountry: "gb",
+                    separateDialCode: true,
+                    utilsScript: "/intl-tel-input/js/utils.js?1716383386062"
+                });
+                input.setAttribute('data-intl-ready', '1');
+            }
+        });
     </script>
 
     <script>

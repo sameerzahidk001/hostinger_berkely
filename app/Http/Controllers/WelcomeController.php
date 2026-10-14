@@ -110,6 +110,18 @@ class WelcomeController extends Controller
     {
         $page->load('sections');
 
+        try {
+            app(\App\Services\PageFeeStructureService::class)->ensureTables();
+            $page->load([
+                'feeServices' => fn ($q) => $q->where('is_visible', true)->orderBy('sort_order'),
+                'feeServices.categories' => fn ($q) => $q->where('is_visible', true)->orderBy('sort_order'),
+                'feeServices.categories.packages' => fn ($q) => $q->where('showonwebsite', true)->where('status', true)->orderBy('priority'),
+            ]);
+            $page->setAttribute('pageFeeServices', $page->feeServices);
+        } catch (\Throwable $e) {
+            $page->setAttribute('pageFeeServices', collect());
+        }
+
         $page->sections = $page->sections->sortBy('order')->values()->map(function ($section) {
             $decoded = is_string($section->data) ? json_decode($section->data, true) : $section->data;
             $section->data = is_array($decoded) ? $decoded : [];

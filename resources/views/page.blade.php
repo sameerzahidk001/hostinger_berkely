@@ -166,4 +166,11 @@
         @endif
     @endforeach
 
+    @php
+        $pageFeeServices = $pageFeeServices ?? $page->pageFeeServices ?? $page->feeServices ?? collect();
+    @endphp
+    @if($pageFeeServices && count($pageFeeServices))
+        <x-page-fees :services="$pageFeeServices" heading="{{ $pageFeeHeading ?? 'Fee Update in Page' }}" />
+    @endif
+
 @endsection
