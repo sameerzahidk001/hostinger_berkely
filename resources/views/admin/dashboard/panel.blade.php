@@ -115,6 +115,9 @@
     @include('admin.dashboard.partials.instructors-overview', [
         'instructorOverviewStats' => $instructorOverviewStats ?? [],
         'instructorOverviewDetails' => $instructorOverviewDetails ?? [],
+        'instructorOverviewDateFrom' => $instructorOverviewDateFrom ?? null,
+        'instructorOverviewDateTo' => $instructorOverviewDateTo ?? null,
+        'panelBaseUrl' => $panelBaseUrl ?? route('admin.dashboard.instructors'),
     ])
 @endif
 <div class="wrapper wrapper-content animated fadeInRight" style="padding: 20px 10px 0px;">

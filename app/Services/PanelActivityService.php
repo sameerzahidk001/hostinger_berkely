@@ -630,8 +630,23 @@ class PanelActivityService
             'session_id' => null,
             'actor_id' => $actorId ? (int) $actorId : null,
             'user_name' => audit_user_name(null, $actorId),
+            'contact_number' => $this->actorContactNumber($actorId),
             'occurred_at' => Carbon::parse($occurredAt),
         ];
+    }
+
+    private function actorContactNumber(?int $actorId): string
+    {
+        if (! $actorId) {
+            return '—';
+        }
+
+        $mobile = '';
+        if (Schema::hasColumn('users', 'mobile_number')) {
+            $mobile = trim((string) (User::query()->whereKey($actorId)->value('mobile_number') ?? ''));
+        }
+
+        return $mobile !== '' ? $mobile : '—';
     }
 
     private function parseDateRange(?string $dateFrom, ?string $dateTo): array

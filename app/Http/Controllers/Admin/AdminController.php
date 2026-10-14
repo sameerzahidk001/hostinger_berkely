@@ -195,9 +195,15 @@ class AdminController extends Controller
         $this->ensureDashboardAccess(['admin']);
 
         $baseUrl = route('admin.dashboard.instructors');
+        $overviewFrom = $request->filled('overview_date_from')
+            ? (string) $request->query('overview_date_from')
+            : ($request->filled('date_from') ? (string) $request->query('date_from') : now()->startOfMonth()->toDateString());
+        $overviewTo = $request->filled('overview_date_to')
+            ? (string) $request->query('overview_date_to')
+            : ($request->filled('date_to') ? (string) $request->query('date_to') : now()->toDateString());
         $instructorService = app(InstructorsDashboardService::class);
-        $instructorStats = $instructorService->overviewStats();
-        $instructorDetails = $instructorService->overviewDetails();
+        $instructorStats = $instructorService->overviewStats($overviewFrom, $overviewTo);
+        $instructorDetails = $instructorService->overviewDetails($overviewFrom, $overviewTo);
 
         return $this->activityDashboard($request, [
             'userId' => $request->filled('user_id') ? (int) $request->query('user_id') : null,
@@ -214,6 +220,8 @@ class AdminController extends Controller
             'showInstructorOverview' => true,
             'instructorOverviewStats' => $instructorStats,
             'instructorOverviewDetails' => $instructorDetails,
+            'instructorOverviewDateFrom' => $overviewFrom,
+            'instructorOverviewDateTo' => $overviewTo,
             'logAudience' => 'staff',
             'activityTitle' => $this->namedActivityTitle('Instructors'),
             'panelBaseUrl' => $baseUrl,
@@ -281,7 +289,9 @@ class AdminController extends Controller
             ? (string) $request->query('activity_date_to')
             : now()->toDateString();
 
-        $activities = app(PanelActivityService::class)->paginatedFeedWithLogs(
+        $panelActivity = app(PanelActivityService::class);
+        $accountantUserIds = $panelActivity->userIdsForRole('accountant') ?? [];
+        $activities = $panelActivity->paginatedFeedWithLogs(
             null,
             $activityFrom,
             $activityTo,
@@ -291,7 +301,7 @@ class AdminController extends Controller
             (int) $request->query('page', 1),
             $request->url(),
             $request->query(),
-            null,
+            $accountantUserIds,
             true
         );
 
@@ -473,6 +483,8 @@ class AdminController extends Controller
             'showInstructorOverview' => (bool) ($options['showInstructorOverview'] ?? false),
             'instructorOverviewStats' => $options['instructorOverviewStats'] ?? [],
             'instructorOverviewDetails' => $options['instructorOverviewDetails'] ?? [],
+            'instructorOverviewDateFrom' => $options['instructorOverviewDateFrom'] ?? null,
+            'instructorOverviewDateTo' => $options['instructorOverviewDateTo'] ?? null,
             'studentActivitiesOnly' => (bool) ($options['studentActivitiesOnly'] ?? false),
             'contentReports' => $contentReports,
             'contentReportActorId' => $contentReportActorId,

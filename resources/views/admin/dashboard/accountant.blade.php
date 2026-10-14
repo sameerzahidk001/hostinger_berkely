@@ -275,6 +275,8 @@
                     <thead>
                         <tr>
                             <th style="width:170px;">Date &amp; Time</th>
+                            <th style="width:160px;">Name</th>
+                            <th style="width:140px;">Contact Number</th>
                             <th>Activity</th>
                             <th>Details</th>
                         </tr>
@@ -289,6 +291,8 @@
                                         —
                                     @endif
                                 </td>
+                                <td>{{ $activity['user_name'] ?? '—' }}</td>
+                                <td>{{ $activity['contact_number'] ?? '—' }}</td>
                                 <td>{{ activity_action_label($activity['action'] ?? '') }}</td>
                                 <td>
                                     @if(!empty($activity['url']))
@@ -300,7 +304,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="3" class="text-center text-muted">No accountant activities for this range.</td>
+                                <td colspan="5" class="text-center text-muted">No accountant activities for this range.</td>
                             </tr>
                         @endforelse
                     </tbody>

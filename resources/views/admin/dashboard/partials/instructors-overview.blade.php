@@ -1,6 +1,9 @@
 @php
     $reg = $instructorOverviewStats['registration'] ?? [];
     $details = $instructorOverviewDetails ?? [];
+    $overviewFrom = $instructorOverviewDateFrom ?? now()->startOfMonth()->toDateString();
+    $overviewTo = $instructorOverviewDateTo ?? now()->toDateString();
+    $overviewAction = $panelBaseUrl ?? route('admin.dashboard.instructors');
     $cards = [
         ['key' => 'reg_total', 'value' => (int) ($reg['total'] ?? 0), 'label' => 'Total Registered'],
         ['key' => 'reg_today', 'value' => (int) ($reg['today'] ?? 0), 'label' => 'Registered Today'],
@@ -10,6 +13,7 @@
         ['key' => 'reg_this_month', 'value' => (int) ($reg['this_month'] ?? 0), 'label' => 'Registered This Month'],
         ['key' => 'reg_last_month', 'value' => (int) ($reg['last_month'] ?? 0), 'label' => 'Registered Last Month'],
         ['key' => 'reg_this_year', 'value' => (int) ($reg['this_year'] ?? 0), 'label' => 'Registered This Year'],
+        ['key' => 'reg_custom', 'value' => (int) ($reg['custom'] ?? 0), 'label' => 'Registered Custom Date Range'],
     ];
 @endphp
 <div class="row" style="padding: 0 10px 12px;" id="instructors-overview-panel">
@@ -50,9 +54,9 @@
                         display: flex;
                         float: none;
                         margin-bottom: 12px;
-                        width: 25%;
-                        max-width: 25%;
-                        flex: 0 0 25%;
+                        width: 20%;
+                        max-width: 20%;
+                        flex: 0 0 20%;
                     }
                     @media (max-width: 1199px) {
                         #instructors-overview-panel .instructor-stat-row > [class*="col-"] {
@@ -93,6 +97,16 @@
                         letter-spacing: .02em;
                         line-height: 1.35;
                     }
+                    #instructors-overview-panel .instructor-overview-range {
+                        display: flex;
+                        flex-wrap: wrap;
+                        align-items: flex-end;
+                        gap: 8px;
+                        margin-bottom: 14px;
+                    }
+                    #instructors-overview-panel .instructor-overview-range .form-group {
+                        margin: 0;
+                    }
                 </style>
 
                 <ul class="nav nav-tabs instructor-overview-tabs" role="tablist" style="margin-bottom:16px;border-bottom:none;">
@@ -103,6 +117,26 @@
 
                 <div class="tab-content">
                     <div role="tabpanel" class="tab-pane active" id="instructor-overview-registration">
+                        <form method="GET" action="{{ $overviewAction }}" class="instructor-overview-range">
+                            @foreach(request()->except(['overview_date_from', 'overview_date_to', 'page']) as $qKey => $qVal)
+                                @if(is_array($qVal))
+                                    @continue
+                                @endif
+                                <input type="hidden" name="{{ $qKey }}" value="{{ $qVal }}">
+                            @endforeach
+                            <div class="form-group">
+                                <label for="overview_date_from" class="m-r-xs">From</label>
+                                <input type="date" id="overview_date_from" name="overview_date_from" class="form-control" value="{{ $overviewFrom }}">
+                            </div>
+                            <div class="form-group">
+                                <label for="overview_date_to" class="m-r-xs">To</label>
+                                <input type="date" id="overview_date_to" name="overview_date_to" class="form-control" value="{{ $overviewTo }}">
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-sm">Search</button>
+                        </form>
+                        <p class="text-muted small m-b-sm">
+                            Custom range: {{ $overviewFrom }} - {{ $overviewTo }}
+                        </p>
                         <div class="row instructor-stat-row">
                             @foreach($cards as $card)
                                 <div class="col-sm-3">
