@@ -39,6 +39,81 @@ class StudentsDashboardService
                 'invoice_unpaid_students' => $enrollment['invoice_unpaid_students']->count(),
                 'partially_paid_students' => $enrollment['partially_paid_students']->count(),
             ],
+            'locations' => $this->locationStatsByCountry(),
+        ];
+    }
+
+    /**
+     * Student counts by country for the Locations doughnut under overview.
+     *
+     * @return array{labels: list<string>, values: list<int>, percents: list<int>, colors: list<string>, total: int}
+     */
+    public function locationStatsByCountry(): array
+    {
+        $colors = ['#4285f4', '#34a853', '#f4b400', '#ea4335', '#9c27b0', '#00acc1', '#ff6d00', '#5c6bc0', '#00897b', '#c0ca33'];
+
+        if (! Schema::hasColumn('users', 'country')) {
+            return [
+                'labels' => ['No data'],
+                'values' => [1],
+                'percents' => [100],
+                'colors' => ['#e0e0e0'],
+                'total' => 0,
+            ];
+        }
+
+        $rows = $this->registrationQuery(null, null)
+            ->select('country')
+            ->selectRaw('COUNT(*) as total')
+            ->groupBy('country')
+            ->orderByDesc('total')
+            ->get();
+
+        $map = $this->countryNameMap();
+        $totals = [];
+        foreach ($rows as $row) {
+            $raw = trim((string) ($row->country ?? ''));
+            $label = $raw === ''
+                ? 'Unknown'
+                : ($map[strtoupper($raw)] ?? $raw);
+            $totals[$label] = ($totals[$label] ?? 0) + (int) $row->total;
+        }
+
+        arsort($totals);
+
+        $total = array_sum($totals);
+        if ($total === 0) {
+            return [
+                'labels' => ['No data'],
+                'values' => [1],
+                'percents' => [100],
+                'colors' => ['#e0e0e0'],
+                'total' => 0,
+            ];
+        }
+
+        $labels = [];
+        $values = [];
+        $percents = [];
+        $sliceColors = [];
+        $i = 0;
+        foreach ($totals as $label => $value) {
+            if ($value <= 0) {
+                continue;
+            }
+            $labels[] = $label;
+            $values[] = $value;
+            $percents[] = (int) round(($value / $total) * 100);
+            $sliceColors[] = $colors[$i % count($colors)];
+            $i++;
+        }
+
+        return [
+            'labels' => $labels,
+            'values' => $values,
+            'percents' => $percents,
+            'colors' => $sliceColors,
+            'total' => $total,
         ];
     }
 
