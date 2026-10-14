@@ -1427,6 +1427,14 @@ class CourseController extends Controller
         $updateRecord = $courseFee->update($validated);
 
         if ($updateRecord) {
+            $courseFee->loadMissing('course');
+            $courseTitle = $courseFee->course?->title ?: ('Course #' . $courseFee->courses_id);
+            $packageName = trim((string) ($courseFee->package_name ?? ''));
+            record_panel_activity(
+                'Fee Package Updated',
+                $packageName !== '' ? ($courseTitle . ' — ' . $packageName) : $courseTitle,
+                route('course.edit-fee', ['id' => $courseFee->id])
+            );
             session()->flash('success', 'Record updated successfully!');
         } else {
             session()->flash('warning', 'Failed to update record!');
@@ -1475,6 +1483,14 @@ class CourseController extends Controller
         $saveRecord = CourseFee::create($validated);
 
         if ($saveRecord) {
+            $saveRecord->loadMissing('course');
+            $courseTitle = $saveRecord->course?->title ?: ('Course #' . $id);
+            $packageName = trim((string) ($saveRecord->package_name ?? ''));
+            record_panel_activity(
+                'Fee Package Created',
+                $packageName !== '' ? ($courseTitle . ' — ' . $packageName) : $courseTitle,
+                route('course.edit-fee', ['id' => $saveRecord->id])
+            );
             session()->flash('success', 'Record added successfully!');
         } else {
             session()->flash('warning', 'Failed to add record!');
