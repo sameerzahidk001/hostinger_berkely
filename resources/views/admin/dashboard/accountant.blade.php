@@ -131,25 +131,25 @@
             @if($activeTab === 'overview')
                 <div class="row">
                     <div class="col-lg-3 col-md-6">
-                        <a href="{{ route('admin.payments.index') }}" class="accountant-stat-card">
+                        <a href="{{ route('admin.payments.index') }}" class="accountant-stat-card" target="_blank" rel="noopener noreferrer">
                             <span class="stat-label">All Invoices</span>
                             <span class="stat-value">{{ $stats['invoice_total'] ?? 0 }}</span>
                         </a>
                     </div>
                     <div class="col-lg-3 col-md-6">
-                        <a href="{{ route('admin.payments.index', ['status' => 'pending']) }}" class="accountant-stat-card">
+                        <a href="{{ route('admin.payments.index', ['status' => 'pending']) }}" class="accountant-stat-card" target="_blank" rel="noopener noreferrer">
                             <span class="stat-label">Unpaid Invoices</span>
                             <span class="stat-value">{{ $stats['invoice_unpaid'] ?? 0 }}</span>
                         </a>
                     </div>
                     <div class="col-lg-3 col-md-6">
-                        <a href="{{ route('admin.payments.index', ['status' => 'partial']) }}" class="accountant-stat-card">
+                        <a href="{{ route('admin.payments.index', ['status' => 'partial']) }}" class="accountant-stat-card" target="_blank" rel="noopener noreferrer">
                             <span class="stat-label">Partially Paid Invoices</span>
                             <span class="stat-value">{{ $stats['invoice_partial'] ?? 0 }}</span>
                         </a>
                     </div>
                     <div class="col-lg-3 col-md-6">
-                        <a href="{{ route('admin.payments.receipts') }}" class="accountant-stat-card">
+                        <a href="{{ route('admin.payments.receipts') }}" class="accountant-stat-card" target="_blank" rel="noopener noreferrer">
                             <span class="stat-label">All Receipts</span>
                             <span class="stat-value">{{ $stats['receipts_total'] ?? 0 }}</span>
                         </a>
@@ -158,19 +158,19 @@
 
                 <div class="row">
                     <div class="col-lg-4 col-md-4">
-                        <a href="{{ route('admin.dashboard.accountant', ['tab' => 'this_month']) }}" class="accountant-stat-card">
+                        <a href="{{ route('admin.dashboard.accountant', ['tab' => 'this_month']) }}" class="accountant-stat-card" target="_blank" rel="noopener noreferrer">
                             <span class="stat-label">This Month's Sales</span>
                             <span class="stat-value">AED {{ number_format((float) ($stats['sales_this_month'] ?? 0), 2) }}</span>
                         </a>
                     </div>
                     <div class="col-lg-4 col-md-4">
-                        <a href="{{ route('admin.dashboard.accountant', ['tab' => 'last_month']) }}" class="accountant-stat-card">
+                        <a href="{{ route('admin.dashboard.accountant', ['tab' => 'last_month']) }}" class="accountant-stat-card" target="_blank" rel="noopener noreferrer">
                             <span class="stat-label">Last Month Sales</span>
                             <span class="stat-value">AED {{ number_format((float) ($stats['sales_last_month'] ?? 0), 2) }}</span>
                         </a>
                     </div>
                     <div class="col-lg-4 col-md-4">
-                        <a href="{{ route('admin.dashboard.accountant', ['tab' => 'this_year']) }}" class="accountant-stat-card">
+                        <a href="{{ route('admin.dashboard.accountant', ['tab' => 'this_year']) }}" class="accountant-stat-card" target="_blank" rel="noopener noreferrer">
                             <span class="stat-label">This Year Sales</span>
                             <span class="stat-value">AED {{ number_format((float) ($stats['sales_this_year'] ?? 0), 2) }}</span>
                         </a>
