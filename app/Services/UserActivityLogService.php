@@ -157,9 +157,11 @@ class UserActivityLogService
                 || str_contains($url, '/pages/')
                 || str_contains($url, '/courses-pages-seo/')
                 || str_contains($url, '/seo/')
+                || str_contains($url, '/training-calendar/')
+                || str_contains($url, '/course-agendas/')
             );
 
-            return [
+            $row = [
                 'action' => activity_action_label($log->action),
                 'item' => $log->item ?? '',
                 'url' => $url,
@@ -171,7 +173,64 @@ class UserActivityLogService
                 'contact_number' => $this->resolveActorContact($log),
                 'occurred_at' => Carbon::parse($log->created_at),
             ];
+
+            return $this->withInferredContentLinks($row);
         })->all());
+    }
+
+    /**
+     * Content-report / training-calendar log rows only store one URL — infer Visit/Edit for Activities.
+     */
+    private function withInferredContentLinks(array $row): array
+    {
+        $item = strtoupper((string) ($row['item'] ?? ''));
+        $action = strtolower((string) ($row['action'] ?? ''));
+        $mentionsTraining = str_contains($item, 'TRAINING CALENDAR')
+            || str_contains($action, 'training calendar');
+
+        if (! $mentionsTraining) {
+            return $row;
+        }
+
+        if (empty($row['visit_url'])) {
+            // Public training calendar / related course listing on the website.
+            try {
+                $row['visit_url'] = route('agenda_search');
+            } catch (\Throwable $e) {
+                $row['visit_url'] = url('/agenda_search');
+            }
+        }
+
+        if (empty($row['edit_url'])) {
+            $url = (string) ($row['url'] ?? '');
+            if ($url !== '' && (
+                str_contains($url, '/training-calendar/')
+                || str_contains($url, '/course-agendas/')
+            )) {
+                $row['edit_url'] = $url;
+            } else {
+                try {
+                    $row['edit_url'] = route('admin.course-agendas.index');
+                } catch (\Throwable $e) {
+                    $row['edit_url'] = $url !== '' ? $url : null;
+                }
+            }
+        }
+
+        if (empty($row['url'])) {
+            $row['url'] = $row['edit_url'];
+        } elseif (! empty($row['edit_url'])) {
+            $current = (string) $row['url'];
+            // Older content-report logs pointed at admin home — prefer Training Calendar edit link.
+            if ($current === ''
+                || str_contains($current, '/admin/home')
+                || str_contains($current, '/dashboard/content-writers')
+            ) {
+                $row['url'] = $row['edit_url'];
+            }
+        }
+
+        return $row;
     }
 
     public function studentFilterUsers(): Collection

@@ -61,7 +61,7 @@ class CourseAgendasController extends Controller
 
         $validated = $validator->validated();
 
-        CourseAgenda::create([
+        $agenda = CourseAgenda::create([
             'course_id'    => $validated['course'],
             'subject'      => $validated['subject'],
             'delivery_type'=> $validated['delivery_type'],
@@ -72,6 +72,15 @@ class CourseAgendasController extends Controller
             'inquiry'      => $validated['inquiry'] ?? null,
             'description'  => $validated['description'] ?? null,
         ]);
+
+        $agenda->loadMissing('course');
+        $courseTitle = $agenda->course?->title ?: ('Course #' . $agenda->course_id);
+        $subject = trim((string) ($agenda->subject ?? ''));
+        record_panel_activity(
+            'Training Calendar Created',
+            $subject !== '' ? ($courseTitle . ' — ' . $subject) : $courseTitle,
+            route('admin.course-agendas.edit', ['training_calendar' => $agenda->id])
+        );
 
         return redirect()->route('admin.course-agendas.index')->with('success', 'Course Agenda created successfully.');
     }
@@ -145,6 +154,14 @@ class CourseAgendasController extends Controller
             $payload['inquiry'] = $validated['inquiry'];
         }
         $course_agenda->update($payload);
+        $course_agenda->loadMissing('course');
+        $courseTitle = $course_agenda->course?->title ?: ('Course #' . $course_agenda->course_id);
+        $subject = trim((string) ($course_agenda->subject ?? ''));
+        record_panel_activity(
+            'Training Calendar Updated',
+            $subject !== '' ? ($courseTitle . ' — ' . $subject) : $courseTitle,
+            route('admin.course-agendas.edit', ['training_calendar' => $course_agenda->id])
+        );
 
         return redirect()->route('admin.course-agendas.index')->with('success', 'Course Agenda updated successfully.');
     }

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Course;
+use App\Models\CourseAgenda;
 use App\Models\Page;
 use App\Models\PagesSEO;
 use App\Models\Payment;
@@ -207,7 +208,8 @@ class PanelActivityService
         $feed = $this->concatActivityRows(
             $this->courseActivities($userId, $from, $to, $sourceLimit),
             $this->pageActivities($userId, $from, $to, $sourceLimit),
-            $this->seoActivities($userId, $from, $to, $sourceLimit)
+            $this->seoActivities($userId, $from, $to, $sourceLimit),
+            $this->trainingCalendarActivities($userId, $from, $to, $sourceLimit)
         );
 
         if ($includePayments && $userId === null && $restrictToUserIds === null) {
@@ -391,6 +393,62 @@ class PanelActivityService
                     $editUrl,
                     $page->updated_by ?: $page->created_by,
                     $page->updated_at,
+                    $visitUrl
+                ));
+            }
+
+            return $rows;
+        }));
+    }
+
+    private function trainingCalendarActivities(?int $userId, ?Carbon $from, ?Carbon $to, ?int $limit = null): Collection
+    {
+        if (! Schema::hasTable('course_agendas') || ! Schema::hasColumn('course_agendas', 'created_by')) {
+            return collect();
+        }
+
+        $query = CourseAgenda::query()->with('course');
+
+        if ($userId) {
+            $query->where(function ($q) use ($userId) {
+                $q->where('created_by', $userId)->orWhere('updated_by', $userId);
+            });
+        }
+
+        if ($limit) {
+            $query->orderByDesc('updated_at')->limit($limit);
+        }
+
+        return $this->supportRows($query->get()->flatMap(function (CourseAgenda $agenda) use ($userId, $from, $to) {
+            $rows = collect();
+            $course = $agenda->course;
+            $courseTitle = $course?->title ?: ('Course #' . $agenda->course_id);
+            $subject = trim((string) ($agenda->subject ?? ''));
+            $label = $subject !== '' ? ($courseTitle . ' — ' . $subject) : $courseTitle;
+            $editUrl = route('admin.course-agendas.edit', ['training_calendar' => $agenda->id]);
+            $visitUrl = $course ? course_details_url($course) : null;
+
+            if ((! $userId || (int) $agenda->created_by === $userId)
+                && $this->inRange($agenda->created_at, $from, $to)) {
+                $rows->push($this->activityRow(
+                    'Training Calendar Created',
+                    $label,
+                    $editUrl,
+                    $agenda->created_by,
+                    $agenda->created_at,
+                    $visitUrl
+                ));
+            }
+
+            if ($this->wasUpdated($agenda->created_at, $agenda->updated_at)
+                && (! $userId || (int) $agenda->updated_by === $userId)
+                && $this->inRange($agenda->updated_at, $from, $to)) {
+                $rows->push($this->activityRow(
+                    'Training Calendar Updated',
+                    $label,
+                    $editUrl,
+                    $agenda->updated_by ?: $agenda->created_by,
+                    $agenda->updated_at,
                     $visitUrl
                 ));
             }
