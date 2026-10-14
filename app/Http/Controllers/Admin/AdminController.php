@@ -775,7 +775,7 @@ class AdminController extends Controller
     public function contentReportActivity(Request $request)
     {
         $action = trim((string) $request->input('action', 'Opened content report'));
-        $item = trim((string) $request->input('item', 'Content Performance Reports'));
+        $item = trim((string) $request->input('item', 'Website Content Reports'));
         $allowed = [
             'Opened content report tab',
             'Filtered content report user',
@@ -787,7 +787,7 @@ class AdminController extends Controller
             $action = 'Opened content report';
         }
         if ($item === '') {
-            $item = 'Content Performance Reports';
+            $item = 'Website Content Reports';
         }
 
         $this->logContentReportActivity($action, $item, $request);
