@@ -3,7 +3,7 @@
     $details = $instructorOverviewDetails ?? [];
     $cards = [
         ['key' => 'reg_total', 'value' => (int) ($reg['total'] ?? 0), 'label' => 'Total Registered Instructors'],
-        ['key' => 'reg_on_website', 'value' => (int) ($reg['on_website'] ?? 0), 'label' => 'Instructors Shows on website'],
+        ['key' => 'reg_on_website', 'value' => (int) ($reg['on_website'] ?? 0), 'label' => 'Instructors Showing on Website'],
         ['key' => 'reg_today', 'value' => (int) ($reg['today'] ?? 0), 'label' => 'Registered Instructors Today'],
         ['key' => 'reg_yesterday', 'value' => (int) ($reg['yesterday'] ?? 0), 'label' => 'Registered Instructors Yesterday'],
         ['key' => 'reg_this_week', 'value' => (int) ($reg['this_week'] ?? 0), 'label' => 'Registered Instructors This Week'],
@@ -11,7 +11,7 @@
         ['key' => 'reg_this_month', 'value' => (int) ($reg['this_month'] ?? 0), 'label' => 'Registered Instructors This Month'],
         ['key' => 'reg_last_month', 'value' => (int) ($reg['last_month'] ?? 0), 'label' => 'Registered Instructors Last Month'],
         ['key' => 'reg_this_year', 'value' => (int) ($reg['this_year'] ?? 0), 'label' => 'Registered Instructors This Year'],
-        ['key' => 'reg_custom', 'value' => (int) ($reg['custom'] ?? 0), 'label' => 'Registered Instructors - Custom Date Range', 'is_custom' => true],
+        ['key' => 'reg_custom', 'value' => null, 'label' => 'Registered Instructors - Custom Date Range', 'is_custom' => true],
     ];
 @endphp
 <div class="row" style="padding: 0 10px 12px;" id="instructors-overview-panel">
@@ -43,6 +43,10 @@
                         line-height: 1.15;
                         margin: 0 0 6px;
                         color: #ed5565;
+                    }
+                    #instructors-overview-panel .instructor-stat-value.is-custom-icon {
+                        color: #1c84c6;
+                        font-size: 26px;
                     }
                     #instructors-overview-panel .instructor-stat-row {
                         display: flex;
@@ -113,7 +117,11 @@
                                        data-metric="{{ $card['key'] }}"
                                        data-title="{{ $card['label'] }}"
                                        data-custom="{{ !empty($card['is_custom']) ? '1' : '0' }}">
-                                        <div class="instructor-stat-value">{{ $card['value'] }}</div>
+                                        @if(!empty($card['is_custom']))
+                                            <div class="instructor-stat-value is-custom-icon instructor-stat-custom-value"><i class="fa fa-calendar"></i></div>
+                                        @else
+                                            <div class="instructor-stat-value">{{ $card['value'] }}</div>
+                                        @endif
                                         <div class="instructor-stat-label">{{ $card['label'] }}</div>
                                     </a>
                                 </div>

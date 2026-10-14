@@ -149,10 +149,13 @@
         fetch(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
             .then(function (res) { return res.json(); })
             .then(function (data) {
-                renderPeople(data.people || [], data.title || 'Registered Instructors - Custom Date Range');
-                var cardValue = document.querySelector(triggerSelector + '[data-metric="' + customMetricKey + '"] .instructor-stat-value, '
-                    + triggerSelector + '[data-metric="' + customMetricKey + '"] .student-stat-value');
+                renderPeople(data.people || [], data.title || 'Registered Custom Date Range');
+                var cardValue = document.querySelector(
+                    triggerSelector + '[data-metric="' + customMetricKey + '"] .instructor-stat-value, '
+                    + triggerSelector + '[data-metric="' + customMetricKey + '"] .student-stat-value'
+                );
                 if (cardValue && typeof data.count !== 'undefined') {
+                    cardValue.classList.remove('is-custom-icon');
                     cardValue.textContent = String(data.count);
                 }
             })
