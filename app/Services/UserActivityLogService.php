@@ -151,10 +151,20 @@ class UserActivityLogService
 
         // Support Collection of arrays — Eloquent\Collection::merge() would call getKey().
         return collect($query->get()->map(function (UserActivityLog $log) {
+            $url = $log->url;
+            $isContentEdit = is_string($url) && (
+                str_contains($url, '/course/')
+                || str_contains($url, '/pages/')
+                || str_contains($url, '/courses-pages-seo/')
+                || str_contains($url, '/seo/')
+            );
+
             return [
                 'action' => activity_action_label($log->action),
                 'item' => $log->item ?? '',
-                'url' => $log->url,
+                'url' => $url,
+                'edit_url' => $isContentEdit ? $url : null,
+                'visit_url' => null,
                 'session_id' => $log->session_id,
                 'actor_id' => $log->user_id ?? $log->admin_id,
                 'user_name' => $this->resolveActorName($log),

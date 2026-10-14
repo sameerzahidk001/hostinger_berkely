@@ -297,19 +297,27 @@
         + (($showUserColumn ?? false) ? 1 : 0)
         + (($showSessionColumn ?? false) ? 1 : 0);
     $preserveReportUser = request('report_user');
+    $activityRoleFilter = $activityRoleFilter ?? request('role');
     $staffClearQuery = array_filter([
         'report_user' => $preserveReportUser,
         'activity_tab' => 'staff',
         'student_user_id' => request('student_user_id'),
+        'role' => $activityRoleFilter,
         'date_from' => now()->toDateString(),
         'date_to' => now()->toDateString(),
     ], fn ($v) => $v !== null && $v !== '');
     $studentClearQuery = array_filter([
         'report_user' => $preserveReportUser,
         'activity_tab' => 'student',
-        'role' => request('role'),
+        'role' => $activityRoleFilter ?? request('role'),
         'user_id' => request('user_id'),
     ], fn ($v) => $v !== null && $v !== '');
+    $staffExportQuery = array_filter(array_merge(request()->query(), [
+        'type' => 'staff',
+        'role' => $activityRoleFilter ?? request('role'),
+        'date_from' => $activityDateFrom ?? request('date_from', now()->toDateString()),
+        'date_to' => $activityDateTo ?? request('date_to', now()->toDateString()),
+    ]), fn ($v) => $v !== null && $v !== '');
 @endphp
 
 <div class="row" style="padding: 0 10px 12px;">
@@ -337,6 +345,9 @@
                             <input type="hidden" name="activity_tab" value="staff">
                             @if($preserveReportUser)
                                 <input type="hidden" name="report_user" value="{{ $preserveReportUser }}">
+                            @endif
+                            @if(!empty($activityRoleFilter))
+                                <input type="hidden" name="role" value="{{ $activityRoleFilter }}">
                             @endif
                             @if(request()->filled('student_user_id'))
                                 <input type="hidden" name="student_user_id" value="{{ request('student_user_id') }}">
@@ -368,18 +379,19 @@
                                 <a href="{{ url($panelBaseUrl) . (empty($staffClearQuery) ? '' : ('?' . http_build_query($staffClearQuery))) }}" class="btn btn-default btn-sm">RESET</a>
                             </div>
                             <div class="activity-filter-exports">
-                                <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'staff', 'format' => 'excel'])) }}"
+                                <a href="{{ route('admin.home.activity-export', array_merge($staffExportQuery, ['format' => 'excel'])) }}"
                                     class="btn btn-success btn-sm">
                                     <i class="fa fa-file-excel-o"></i> Export Excel
                                 </a>
-                                <a href="{{ route('admin.home.activity-export', array_merge(request()->query(), ['type' => 'staff', 'format' => 'pdf'])) }}"
+                                <a href="{{ route('admin.home.activity-export', array_merge($staffExportQuery, ['format' => 'pdf'])) }}"
                                     class="btn btn-danger btn-sm">
                                     <i class="fa fa-file-pdf-o"></i> Export PDF
                                 </a>
                             </div>
                         </form>
                         <p class="m-b-xs" style="font-weight:600;">
-                            Report for: {{ $activityDateFrom ?? request('date_from', now()->toDateString()) }} - {{ $activityDateTo ?? request('date_to', now()->toDateString()) }}
+                            {{ $activityTitle ?? 'Activity history' }}
+                            · Report for: {{ $activityDateFrom ?? request('date_from', now()->toDateString()) }} - {{ $activityDateTo ?? request('date_to', now()->toDateString()) }}
                         </p>
                         <p class="text-muted small m-b-sm">Leave the user dropdown on <strong>{{ $userFilterEmptyLabel ?? 'None' }}</strong> to show everyone in this list. Dates default to today.</p>
                         <div class="table-responsive">
@@ -422,10 +434,29 @@
                                                     @endif
                                                 </td>
                                             @endif
-                                            <td>
-                                                @if(!empty($activity['url']))
-                                                    <a href="{{ $activity['url'] }}" target="_blank" rel="noopener">Open</a>
-                                                @else
+                                            <td style="white-space:nowrap;">
+                                                @php
+                                                    $visitUrl = $activity['visit_url'] ?? null;
+                                                    $editUrl = $activity['edit_url'] ?? null;
+                                                    $fallbackUrl = $activity['url'] ?? null;
+                                                    if (! $editUrl && $fallbackUrl && (
+                                                        str_contains((string) $fallbackUrl, '/course/')
+                                                        || str_contains((string) $fallbackUrl, '/pages/')
+                                                        || str_contains((string) $fallbackUrl, '/courses-pages-seo/')
+                                                        || str_contains((string) $fallbackUrl, '/seo/')
+                                                    )) {
+                                                        $editUrl = $fallbackUrl;
+                                                    }
+                                                @endphp
+                                                @if(!empty($visitUrl))
+                                                    <a href="{{ $visitUrl }}" target="_blank" rel="noopener">Visit Page</a>
+                                                @endif
+                                                @if(!empty($editUrl))
+                                                    @if(!empty($visitUrl))<span class="text-muted"> · </span>@endif
+                                                    <a href="{{ $editUrl }}" target="_blank" rel="noopener">Edit Page</a>
+                                                @elseif(!empty($fallbackUrl) && empty($visitUrl))
+                                                    <a href="{{ $fallbackUrl }}" target="_blank" rel="noopener">Open</a>
+                                                @elseif(empty($visitUrl))
                                                     <span class="text-muted">—</span>
                                                 @endif
                                             </td>

@@ -10,6 +10,7 @@
         table { width: 100%; border-collapse: collapse; }
         th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; vertical-align: top; }
         th { background: #f3f3f3; }
+        a { color: #1c84c6; text-decoration: underline; }
     </style>
 </head>
 <body>
@@ -24,21 +25,48 @@
             <tr>
                 <th>Date &amp; Time</th>
                 <th>User</th>
-                <th>Contact Number</th>
                 <th>Activity</th>
                 <th>Description</th>
-                <th>URL</th>
+                <th>Visit Page</th>
+                <th>Edit Page</th>
             </tr>
         </thead>
         <tbody>
             @forelse($rows as $activity)
+                @php
+                    $visitUrl = $activity['visit_url'] ?? null;
+                    $editUrl = $activity['edit_url'] ?? null;
+                    $fallbackUrl = $activity['url'] ?? null;
+                    if (! $editUrl && $fallbackUrl && (
+                        str_contains((string) $fallbackUrl, '/course/')
+                        || str_contains((string) $fallbackUrl, '/pages/')
+                        || str_contains((string) $fallbackUrl, '/courses-pages-seo/')
+                        || str_contains((string) $fallbackUrl, '/seo/')
+                    )) {
+                        $editUrl = $fallbackUrl;
+                    }
+                @endphp
                 <tr>
                     <td>{{ optional($activity['occurred_at'] ?? null)?->format('Y-m-d H:i:s') }}</td>
                     <td>{{ $activity['user_name'] ?? '—' }}</td>
-                    <td>{{ $activity['contact_number'] ?? '—' }}</td>
                     <td>{{ activity_action_label($activity['action'] ?? '') }}</td>
                     <td>{{ $activity['item'] ?? '' }}</td>
-                    <td>{{ $activity['url'] ?? '' }}</td>
+                    <td>
+                        @if(!empty($visitUrl))
+                            <a href="{{ $visitUrl }}">Visit Page</a>
+                        @else
+                            —
+                        @endif
+                    </td>
+                    <td>
+                        @if(!empty($editUrl))
+                            <a href="{{ $editUrl }}">Edit Page</a>
+                        @elseif(!empty($fallbackUrl))
+                            <a href="{{ $fallbackUrl }}">Open</a>
+                        @else
+                            —
+                        @endif
+                    </td>
                 </tr>
             @empty
                 <tr>
