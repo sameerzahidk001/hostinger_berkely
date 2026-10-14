@@ -74,7 +74,9 @@
                             @php $displayTotals = []; @endphp
                             @foreach($carts as $item)
                                 @php
-                                    $package = $item->courseFee;
+                                    $package = $item->feePackage();
+                                    $isPageFee = $item->isPageFee();
+                                    $pageCtx = $isPageFee ? $item->pageFeePackage?->category?->service : null;
                                 @endphp
                                 @if(!$package)
                                     @continue
@@ -83,14 +85,24 @@
                                     $unitPriceAed = format_package_price($package->price, $package->currency ?? 'AED');
                                     $linePrice = format_package_price($package->price, $package->currency ?? 'AED', $item->quantity);
                                     $displayTotals[$linePrice['currency']] = ($displayTotals[$linePrice['currency']] ?? 0) + ((float) $package->price * $item->quantity);
+                                    $includes = $isPageFee
+                                        ? (is_array($package->package_includes) ? $package->package_includes : [])
+                                        : (is_array($package->package_feature ?? null) ? $package->package_feature : []);
                                 @endphp
                                 <tr class="{{ $isPanel ? '' : 'hover:bg-gray-50 transition' }}">
                                     <td>
                                         @if($isPanel)
                                             <div>
                                                 <strong>{{ $package->package_name }}</strong>
-                                                @if($package->course)
+                                                @if(!$isPageFee && $package->course)
                                                     <div style="margin-top:4px;">@include('partials.course_link', ['course' => $package->course])</div>
+                                                @endif
+                                                @if($isPageFee && $pageCtx)
+                                                    <div class="text-muted" style="margin-top:4px;">
+                                                        {{ $pageCtx->page?->page_name ?? 'Page' }}
+                                                        @if($pageCtx->name) — {{ $pageCtx->name }} @endif
+                                                        @if($item->pageFeePackage?->category?->name) / {{ $item->pageFeePackage->category->name }} @endif
+                                                    </div>
                                                 @endif
                                                 @if(!empty($package->short_description))
                                                     <div class="text-muted" style="margin-top: 4px;">{{ $package->short_description }}</div>
@@ -115,9 +127,9 @@
                                         @endif
                                     </td>
                                     <td class="{{ $isPanel ? '' : 'p-4 font-medium' }}">
-                                        @if($package->package_feature)
+                                        @if(!empty($includes))
                                             <ul class="{{ $isPanel ? '' : 'space-y-3 text-left' }}">
-                                                @foreach($package->package_feature as $data)
+                                                @foreach($includes as $data)
                                                     @if($isPanel)
                                                         <li>{{ $data }}</li>
                                                     @else
@@ -236,7 +248,7 @@
                 <h3 class="text-xl font-bold mb-4">Create a student account to pay and complete the package</h3>
                 <ul class="mb-4 list-disc pl-5">
                     @foreach($carts as $item)
-                        <li>{{ $item->courseFee->package_name ?? 'Package' }}</li>
+                        <li>{{ $item->feePackage()?->package_name ?? 'Package' }}</li>
                     @endforeach
                 </ul>
                 <div class="flex gap-3">

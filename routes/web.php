@@ -482,9 +482,13 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
         Route::get('pages/disabled/list', [PagesController::class, 'disabledPages'])->name('admin.pages.disabled');
         Route::post('pages/{id}/update-status', [PagesController::class, 'updateStatus'])->name('pages.update-status');
         Route::get('pages/{pageId}/fees', [PageFeeController::class, 'edit'])->name('admin.pages.fees.edit');
+        Route::post('pages/{pageId}/fees/heading', [PageFeeController::class, 'updateHeading'])->name('admin.pages.fees.heading');
         Route::post('pages/{pageId}/fees/services', [PageFeeController::class, 'storeService'])->name('admin.pages.fees.services.store');
+        Route::post('pages/fees/services/{serviceId}', [PageFeeController::class, 'updateService'])->name('admin.pages.fees.services.update');
         Route::post('pages/fees/services/{serviceId}/categories', [PageFeeController::class, 'storeCategory'])->name('admin.pages.fees.categories.store');
+        Route::post('pages/fees/categories/{categoryId}', [PageFeeController::class, 'updateCategory'])->name('admin.pages.fees.categories.update');
         Route::post('pages/fees/categories/{categoryId}/packages', [PageFeeController::class, 'storePackage'])->name('admin.pages.fees.packages.store');
+        Route::post('pages/fees/packages/{packageId}', [PageFeeController::class, 'updatePackage'])->name('admin.pages.fees.packages.update');
         Route::post('pages/fees/services/{serviceId}/duplicate', [PageFeeController::class, 'duplicateService'])->name('admin.pages.fees.services.duplicate');
         Route::post('pages/fees/categories/{categoryId}/duplicate', [PageFeeController::class, 'duplicateCategory'])->name('admin.pages.fees.categories.duplicate');
         Route::delete('pages/fees/services/{id}', [PageFeeController::class, 'destroyService'])->name('admin.pages.fees.services.destroy');

@@ -79,6 +79,13 @@
                                 @enderror
                             </div>
                             <div class="col-lg-4" style="margin-bottom: 15px;">
+                                <label for="invoice_source">Invoice source</label>
+                                <select name="invoice_source" id="invoice_source" class="form-control">
+                                    <option value="course" @selected(old('invoice_source', 'course') === 'course')>Course package</option>
+                                    <option value="page" @selected(old('invoice_source') === 'page')>Page fee package (no Course)</option>
+                                </select>
+                            </div>
+                            <div class="col-lg-4 js-course-invoice-fields" style="margin-bottom: 15px;">
                                 <label for="course">Batch / Course</label>
                                 <select name="course" id="course" class="form-control js-type-find" data-placeholder="Type to find batch / course">
                                     <option value="">Select Course</option>
@@ -93,12 +100,33 @@
                                 @enderror
                             </div>
 
-                            <div class="col-lg-4" style="margin-bottom: 15px;">
+                            <div class="col-lg-4 js-course-invoice-fields" style="margin-bottom: 15px;">
                                 <label for="package">Packages</label>
                                 <select name="package" id="package" class="form-control js-type-find" data-placeholder="Type to find package">
                                     <option value="">Select Package</option>
                                 </select>
                                 @error('package')
+                                    <p class="text-danger text-xs italic">{{ $message }}</p>
+                                @enderror
+                            </div>
+
+                            <div class="col-lg-4 js-page-invoice-fields" style="margin-bottom: 15px; display:none;">
+                                <label for="page_fee_package">Page fee package</label>
+                                <select name="page_fee_package" id="page_fee_package" class="form-control js-type-find" data-placeholder="Type to find page package">
+                                    <option value="">Select Page Package</option>
+                                    @foreach(($pageFeePackages ?? []) as $pkg)
+                                        <option value="{{ $pkg->id }}"
+                                            data-price="{{ $pkg->price }}"
+                                            data-currency="{{ $pkg->currency }}"
+                                            {{ (string) old('page_fee_package') === (string) $pkg->id ? 'selected' : '' }}>
+                                            {{ $pkg->category?->service?->page?->page_name ?? 'Page' }}
+                                            / {{ $pkg->category?->service?->name ?? 'Service' }}
+                                            / {{ $pkg->category?->name ?? 'Category' }}
+                                            — {{ $pkg->package_name }} ({{ $pkg->currency }})
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('page_fee_package')
                                     <p class="text-danger text-xs italic">{{ $message }}</p>
                                 @enderror
                             </div>
@@ -333,6 +361,36 @@
             } else {
                 filterPackagesByCourse('', null);
             }
+
+            function toggleInvoiceSource() {
+                const source = $('#invoice_source').val();
+                if (source === 'page') {
+                    $('.js-course-invoice-fields').hide();
+                    $('.js-page-invoice-fields').show();
+                    $('#course').val('');
+                    $('#package').val('');
+                } else {
+                    $('.js-course-invoice-fields').show();
+                    $('.js-page-invoice-fields').hide();
+                    $('#page_fee_package').val('');
+                }
+            }
+
+            $('#invoice_source').on('change', toggleInvoiceSource);
+            toggleInvoiceSource();
+
+            $('#page_fee_package').on('change', function () {
+                const $selected = $(this).find(':selected');
+                const price = $selected.data('price') || 0;
+                const currency = $selected.data('currency') || 'AED';
+                const currencySymbol = currency === 'AED' ? 'AED' : currency;
+                $('#total_amount').val(price);
+                if ($('#fullAmountInFirstInstallment').is(':checked')) {
+                    $('#amount_1').val(price);
+                }
+                $('.currency').val(currency);
+                $('.currency-addon').text(currencySymbol);
+            });
         });
     </script>
 @endpush

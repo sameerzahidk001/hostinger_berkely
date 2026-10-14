@@ -84,16 +84,17 @@
 
                             <div class="space-y-4 mb-6">
                                 @foreach($carts as $item)
-                                    @if(!$item->courseFee)
+                                    @php $fee = $item->feePackage(); @endphp
+                                    @if(!$fee)
                                         @continue
                                     @endif
                                     @php
-                                        $linePrice = format_package_price($item->courseFee->price, $item->courseFee->currency ?? 'AED', $item->quantity);
+                                        $linePrice = format_package_price($fee->price, $fee->currency ?? 'AED', $item->quantity);
                                     @endphp
                                     <div class="flex justify-between items-start pb-4 border-b border-gray-200">
                                         <div>
                                             <input type="hidden" name="cart_id[]" value="{{ $item->id }}">
-                                            <h4 class="text-sm font-medium text-gray-900">{{ $item->courseFee->package_name }}</h4>
+                                            <h4 class="text-sm font-medium text-gray-900">{{ $fee->package_name }}</h4>
                                         </div>
                                         <div class="text-right">
                                             <p class="text-sm font-medium text-gray-900 whitespace-nowrap">{{ $linePrice['display'] }}</p>

@@ -111,8 +111,29 @@ class RegisterController extends Controller
 
         Auth::login($user);
 
+        if (session()->has('intended_page_fee_package_id') || session('intended_package_type') === 'page') {
+            $packageId = session()->pull('intended_page_fee_package_id') ?: session()->pull('intended_package_id');
+            session()->forget('intended_package_type');
+            if ($packageId) {
+                app(\App\Services\PageFeeStructureService::class)->ensureCommerceColumns();
+                if (\Illuminate\Support\Facades\Schema::hasColumn('cart_items', 'page_fee_package_id')) {
+                    $cartItem = CartItem::firstOrCreate([
+                        'user_id' => Auth::id(),
+                        'page_fee_package_id' => $packageId,
+                        'course_fee_package_id' => null,
+                    ], [
+                        'quantity' => 0,
+                    ]);
+                    $cartItem->increment('quantity');
+
+                    return redirect()->route('cart.index')->with('success', 'Item automatically added to cart after login.');
+                }
+            }
+        }
+
         if (session()->has('intended_package_id')) {
             $packageId = session()->pull('intended_package_id');
+            session()->forget('intended_package_type');
 
             // Only add if not already in cart
             $cartItem = CartItem::firstOrCreate([

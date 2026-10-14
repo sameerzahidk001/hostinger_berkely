@@ -285,7 +285,7 @@
                 <tr>
                     <td>1</td>
                     <td>
-                        <strong>{{ $course->title ?? 'Course' }}</strong><br>
+                        <strong>{{ $programTitle ?? ($course->title ?? 'Program') }}</strong><br>
                         {{ $coursefee?->package_name ?? '' }}<br>
                         @if (!empty($coursefee?->short_description))
                             {{ $coursefee->short_description }}<br>
@@ -293,13 +293,19 @@
                         @if (!empty($coursefee?->key_point))
                             {{ $coursefee->key_point }}<br>
                         @endif
-                        @if (!empty($coursefee?->package_includes))
-                            <strong>{{ $coursefee->package_includes }}</strong>
-                        @endif
-
-                        @if (!empty($coursefee?->package_feature) && is_array($coursefee->package_feature))
+                        @php
+                            $includeItems = [];
+                            if (!empty($coursefee?->package_feature) && is_array($coursefee->package_feature)) {
+                                $includeItems = $coursefee->package_feature;
+                            } elseif (!empty($coursefee?->package_includes) && is_array($coursefee->package_includes)) {
+                                $includeItems = $coursefee->package_includes;
+                            } elseif (!empty($coursefee?->package_includes) && is_string($coursefee->package_includes)) {
+                                echo '<strong>' . e($coursefee->package_includes) . '</strong>';
+                            }
+                        @endphp
+                        @if (!empty($includeItems))
                             <ul class="feature-list">
-                                @foreach ($coursefee->package_feature as $feature)
+                                @foreach ($includeItems as $feature)
                                     @php $featureText = trim(strip_tags((string) $feature)); @endphp
                                     @if ($featureText !== '')
                                         <li>• {{ $featureText }}</li>

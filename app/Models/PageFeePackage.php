@@ -34,4 +34,10 @@ class PageFeePackage extends Model
     {
         return $this->belongsTo(PageFeeCategory::class, 'category_id');
     }
+
+    /** Alias so invoice/cart views can reuse course fee field names. */
+    public function getPackageFeatureAttribute()
+    {
+        return $this->package_includes;
+    }
 }

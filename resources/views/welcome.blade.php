@@ -386,9 +386,10 @@
 
     @php
         $pageFeeServices = $page->pageFeeServices ?? $page->feeServices ?? collect();
+        $pageFeeHeading = $page->pageFeeHeading ?? $page->fee_heading ?? 'Fee Update in Page';
     @endphp
     @if($pageFeeServices && count($pageFeeServices))
-        <x-page-fees :services="$pageFeeServices" heading="Fee Update in Page" />
+        <x-page-fees :services="$pageFeeServices" heading="{{ $pageFeeHeading }}" />
     @endif
 
 @endsection
