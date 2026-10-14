@@ -66,6 +66,12 @@ class PageFeeController extends Controller
             $page->save();
         }
 
+        $this->logPageFeeActivity(
+            'Page Fee Heading Updated',
+            $page->page_name ?: ('Page #' . $page->id),
+            $page->id
+        );
+
         return redirect()->back()->with('success', 'Fee heading saved.');
     }
 
@@ -81,12 +87,18 @@ class PageFeeController extends Controller
             'is_visible' => (string) ($data['is_visible'] ?? '1') === '1',
         ]);
 
+        $this->logPageFeeActivity(
+            'Page Fee Service Created',
+            $this->pageFeeItemLabel($page->page_name, $data['name'] ?? null),
+            $page->id
+        );
+
         return redirect()->back()->with('success', 'Service added.');
     }
 
     public function updateService(Request $request, string $serviceId)
     {
-        $service = PageFeeService::findOrFail($serviceId);
+        $service = PageFeeService::with('page')->findOrFail($serviceId);
         $data = $this->validateService($request);
 
         $service->update([
@@ -95,12 +107,18 @@ class PageFeeController extends Controller
             'is_visible' => (string) ($data['is_visible'] ?? '1') === '1',
         ]);
 
+        $this->logPageFeeActivity(
+            'Page Fee Service Updated',
+            $this->pageFeeItemLabel($service->page?->page_name, $data['name'] ?? $service->name),
+            $service->page_id
+        );
+
         return redirect()->back()->with('success', 'Service updated.');
     }
 
     public function storeCategory(Request $request, string $serviceId)
     {
-        $service = PageFeeService::findOrFail($serviceId);
+        $service = PageFeeService::with('page')->findOrFail($serviceId);
         $data = $this->validateCategory($request);
 
         PageFeeCategory::create([
@@ -110,12 +128,18 @@ class PageFeeController extends Controller
             'is_visible' => (string) ($data['is_visible'] ?? '1') === '1',
         ]);
 
+        $this->logPageFeeActivity(
+            'Page Fee Category Created',
+            $this->pageFeeItemLabel($service->page?->page_name, $service->name, $data['name'] ?? null),
+            $service->page_id
+        );
+
         return redirect()->back()->with('success', 'Category added.');
     }
 
     public function updateCategory(Request $request, string $categoryId)
     {
-        $category = PageFeeCategory::findOrFail($categoryId);
+        $category = PageFeeCategory::with('service.page')->findOrFail($categoryId);
         $data = $this->validateCategory($request);
 
         $category->update([
@@ -124,30 +148,66 @@ class PageFeeController extends Controller
             'is_visible' => (string) ($data['is_visible'] ?? '1') === '1',
         ]);
 
+        $pageId = $category->service?->page_id;
+        $this->logPageFeeActivity(
+            'Page Fee Category Updated',
+            $this->pageFeeItemLabel(
+                $category->service?->page?->page_name,
+                $category->service?->name,
+                $data['name'] ?? $category->name
+            ),
+            $pageId
+        );
+
         return redirect()->back()->with('success', 'Category updated.');
     }
 
     public function storePackage(Request $request, string $categoryId)
     {
-        $category = PageFeeCategory::findOrFail($categoryId);
+        $category = PageFeeCategory::with('service.page')->findOrFail($categoryId);
         $payload = $this->packagePayload($request);
         $payload['category_id'] = $category->id;
         PageFeePackage::create($payload);
+
+        $pageId = $category->service?->page_id;
+        $this->logPageFeeActivity(
+            'Fee Package Created',
+            $this->pageFeeItemLabel(
+                $category->service?->page?->page_name,
+                $category->service?->name,
+                $category->name,
+                $payload['package_name'] ?? null
+            ),
+            $pageId
+        );
 
         return redirect()->back()->with('success', 'Fee package added.');
     }
 
     public function updatePackage(Request $request, string $packageId)
     {
-        $package = PageFeePackage::findOrFail($packageId);
-        $package->update($this->packagePayload($request));
+        $package = PageFeePackage::with('category.service.page')->findOrFail($packageId);
+        $payload = $this->packagePayload($request);
+        $package->update($payload);
+
+        $pageId = $package->category?->service?->page_id;
+        $this->logPageFeeActivity(
+            'Fee Package Updated',
+            $this->pageFeeItemLabel(
+                $package->category?->service?->page?->page_name,
+                $package->category?->service?->name,
+                $package->category?->name,
+                $payload['package_name'] ?? $package->package_name
+            ),
+            $pageId
+        );
 
         return redirect()->back()->with('success', 'Fee package updated.');
     }
 
     public function duplicateService(string $serviceId)
     {
-        $service = PageFeeService::with(['categories.packages'])->findOrFail($serviceId);
+        $service = PageFeeService::with(['page', 'categories.packages'])->findOrFail($serviceId);
         $copy = $service->replicate();
         $copy->name = 'Copy of ' . $service->name;
         $copy->save();
@@ -163,12 +223,18 @@ class PageFeeController extends Controller
             }
         }
 
+        $this->logPageFeeActivity(
+            'Page Fee Service Duplicated',
+            $this->pageFeeItemLabel($service->page?->page_name, $copy->name),
+            $service->page_id
+        );
+
         return redirect()->back()->with('success', 'Service duplicated with categories and packages.');
     }
 
     public function duplicateCategory(string $categoryId)
     {
-        $category = PageFeeCategory::with('packages')->findOrFail($categoryId);
+        $category = PageFeeCategory::with(['service.page', 'packages'])->findOrFail($categoryId);
         $copy = $category->replicate();
         $copy->name = 'Copy of ' . $category->name;
         $copy->save();
@@ -179,35 +245,93 @@ class PageFeeController extends Controller
             $pkgCopy->save();
         }
 
+        $pageId = $category->service?->page_id;
+        $this->logPageFeeActivity(
+            'Page Fee Category Duplicated',
+            $this->pageFeeItemLabel(
+                $category->service?->page?->page_name,
+                $category->service?->name,
+                $copy->name
+            ),
+            $pageId
+        );
+
         return redirect()->back()->with('success', 'Category duplicated with packages.');
     }
 
     public function destroyService(string $id)
     {
-        $service = PageFeeService::with('categories.packages')->findOrFail($id);
+        $service = PageFeeService::with(['page', 'categories.packages'])->findOrFail($id);
+        $pageId = $service->page_id;
+        $label = $this->pageFeeItemLabel($service->page?->page_name, $service->name);
+
         foreach ($service->categories as $category) {
             $category->packages()->delete();
             $category->delete();
         }
         $service->delete();
 
+        $this->logPageFeeActivity('Page Fee Service Deleted', $label, $pageId);
+
         return redirect()->back()->with('success', 'Service deleted.');
     }
 
     public function destroyCategory(string $id)
     {
-        $category = PageFeeCategory::with('packages')->findOrFail($id);
+        $category = PageFeeCategory::with(['service.page', 'packages'])->findOrFail($id);
+        $pageId = $category->service?->page_id;
+        $label = $this->pageFeeItemLabel(
+            $category->service?->page?->page_name,
+            $category->service?->name,
+            $category->name
+        );
+
         $category->packages()->delete();
         $category->delete();
+
+        $this->logPageFeeActivity('Page Fee Category Deleted', $label, $pageId);
 
         return redirect()->back()->with('success', 'Category deleted.');
     }
 
     public function destroyPackage(string $id)
     {
-        PageFeePackage::findOrFail($id)->delete();
+        $package = PageFeePackage::with('category.service.page')->findOrFail($id);
+        $pageId = $package->category?->service?->page_id;
+        $label = $this->pageFeeItemLabel(
+            $package->category?->service?->page?->page_name,
+            $package->category?->service?->name,
+            $package->category?->name,
+            $package->package_name
+        );
+
+        $package->delete();
+
+        $this->logPageFeeActivity('Fee Package Deleted', $label, $pageId);
 
         return redirect()->back()->with('success', 'Package deleted.');
+    }
+
+    private function pageFeeItemLabel(?string ...$parts): string
+    {
+        $clean = [];
+        foreach ($parts as $part) {
+            $part = trim((string) $part);
+            if ($part !== '') {
+                $clean[] = $part;
+            }
+        }
+
+        return $clean !== [] ? implode(' — ', $clean) : 'Page Fee';
+    }
+
+    private function logPageFeeActivity(string $action, string $item, $pageId = null): void
+    {
+        $url = $pageId
+            ? route('admin.pages.fees.edit', $pageId)
+            : route('admin.pages.fees.index');
+
+        record_panel_activity($action, $item, $url);
     }
 
     private function validateService(Request $request): array
