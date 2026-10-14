@@ -101,10 +101,10 @@
                         <li class="{{ request()->routeIs('admin.dashboard.students') ? 'active' : '' }}">
                            <a href="{{ route('admin.dashboard.students') }}">Students Dashboard</a>
                         </li>
-                        @endif
                         <li class="{{ request()->routeIs('admin.dashboard.accountant') ? 'active' : '' }}">
                            <a href="{{ route('admin.dashboard.accountant') }}">Accountant Dashboard</a>
                         </li>
+                        @endif
                      </ul>
                   </li>
                   @elseif($dashRole === 'accountant')

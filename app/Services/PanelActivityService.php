@@ -659,17 +659,34 @@ class PanelActivityService
 
     private function mergeActivityRows(Collection $activities, Collection $logs): Collection
     {
-        return $this->concatActivityRows($activities, $logs)
+        // Prefer log rows with section detail ("Title — Banner") over bare DB update rows.
+        return $this->concatActivityRows($logs, $activities)
             ->sortByDesc(fn (array $row) => $row['occurred_at']->timestamp)
-            ->unique(function (array $row) {
-                return implode('|', [
-                    $row['action'] ?? '',
-                    $row['item'] ?? '',
-                    $row['actor_id'] ?? '',
-                    $row['occurred_at']?->format('Y-m-d H:i') ?? '',
-                ]);
+            ->groupBy(fn (array $row) => $this->activityDedupeKey($row))
+            ->map(function (Collection $group) {
+                return $group
+                    ->sortByDesc(fn (array $row) => strlen((string) ($row['item'] ?? '')))
+                    ->first();
             })
+            ->sortByDesc(fn (array $row) => $row['occurred_at']->timestamp)
             ->values();
+    }
+
+    private function activityDedupeKey(array $row): string
+    {
+        $action = strtolower(trim((string) ($row['action'] ?? '')));
+        $item = trim((string) ($row['item'] ?? ''));
+        // "Course Updated" + "Title — Banner" collapses with bare "Title" for same actor/minute.
+        if (preg_match('/\b(updated|created)\b/i', $action)) {
+            $item = trim((string) preg_replace('/\s+[—–-]\s+.+$/u', '', $item));
+        }
+
+        return implode('|', [
+            $action,
+            strtolower($item),
+            (string) ($row['actor_id'] ?? ''),
+            $row['occurred_at']?->format('Y-m-d H:i') ?? '',
+        ]);
     }
 
     /**

@@ -618,7 +618,7 @@ $(document).ready(function() {
         });
     }
 
-    initTypeFind($('#user_id'), 'Type to find user', '220px');
+    initTypeFind($('#user_id'), @json($userFilterEmptyLabel ?? 'Type to find user'), '220px');
     initTypeFind($('#student_user_id'), 'Type to find student', '220px');
     initTypeFind($('#content_report_user'), 'Type to find user');
 
