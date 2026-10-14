@@ -162,6 +162,7 @@ class UserActivityLogService
                 || str_contains($url, '/training-calendar/')
                 || str_contains($url, '/course-agendas/')
                 || str_contains($url, '/fee/')
+                || preg_match('#/pages/\d+/fees#i', $url)
             );
 
             $row = [
@@ -268,9 +269,9 @@ class UserActivityLogService
             return null;
         }
 
-        // /admin/pages/{id}/edit (and similar page edit paths)
-        if (preg_match('#/admin/pages?/(\d+)/edit#i', $url, $m)
-            || preg_match('#/pages/(\d+)/edit#i', $url, $m)) {
+        // /admin/pages/{id}/edit or /admin/pages/{id}/fees (Fee Update in Page)
+        if (preg_match('#/admin/pages?/(\d+)/(?:edit|fees)#i', $url, $m)
+            || preg_match('#/pages/(\d+)/(?:edit|fees)#i', $url, $m)) {
             $page = Page::query()->find((int) $m[1]);
 
             return $page ? page_public_url($page) : null;
