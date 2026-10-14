@@ -1,0 +1,6 @@
+User-agent: *
+Disallow:
+
+# Absolute sitemap URL is also served dynamically at /robots.txt by the app.
+# Keep this file in sync if your host serves public/robots.txt before Laravel.
+Sitemap: /sitemap.xml
