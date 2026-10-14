@@ -9,6 +9,7 @@
     $customTo = $customTo ?? '';
     $customFetchUrl = $customFetchUrl ?? '';
     $exportUrl = $exportUrl ?? '';
+    $titlePrefix = strtoupper(trim((string) ($titlePrefix ?? '')));
     $showPhone = (bool) ($showPhone ?? false);
     $colCount = $showPhone ? 10 : 9;
 @endphp
@@ -16,7 +17,7 @@
     <div class="modal-dialog people-metric-modal-dialog" role="document" style="width:96%;max-width:1400px;margin:20px auto;">
         <div class="modal-content">
             <div class="modal-header" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-                <h4 class="modal-title" id="{{ $modalId }}Label" style="margin:0;">People</h4>
+                <h4 class="modal-title" id="{{ $modalId }}Label" style="margin:0;font-weight:700;text-transform:uppercase;letter-spacing:.02em;">People</h4>
                 <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                     @if($exportUrl)
                     <a href="#" id="{{ $modalId }}ExportExcel" class="btn btn-success btn-sm" target="_blank" rel="noopener">
@@ -91,9 +92,20 @@
     var customMetricKey = @json($customMetricKey);
     var customFetchUrl = @json($customFetchUrl);
     var exportUrl = @json($exportUrl);
+    var titlePrefix = @json($titlePrefix);
     var showPhone = @json($showPhone);
     var colCount = @json($colCount);
     var currentMetric = 'reg_total';
+
+    function formatPopupTitle(title, count) {
+        var label = String(title || 'People').replace(/\s+\(\d+\)\s*$/, '').trim();
+        var upper = label.toUpperCase();
+        var head = titlePrefix ? (titlePrefix + ' -> ' + upper) : upper;
+        if (typeof count === 'number') {
+            return head + ' (' + count + ')';
+        }
+        return head;
+    }
 
     function syncExportLinks() {
         if (!exportUrl) {
@@ -123,7 +135,7 @@
         var body = document.getElementById(modalId + 'Body');
         people = people || [];
         if (modalTitle) {
-            modalTitle.textContent = (title || 'People') + ' (' + people.length + ')';
+            modalTitle.textContent = formatPopupTitle(title || 'People', people.length);
         }
         syncExportLinks();
         if (!body) {

@@ -21,9 +21,6 @@
 <div class="row" style="padding: 0 10px 12px;" id="students-overview-panel">
     <div class="col-lg-12">
         <div class="ibox float-e-margins">
-            <div class="ibox-title">
-                <h5 style="margin:0;font-weight:700;text-transform:uppercase;letter-spacing:.02em;">Students Overview</h5>
-            </div>
             <div class="ibox-content">
                 <style>
                     #students-overview-panel .student-overview-tabs > li > a {
@@ -34,6 +31,7 @@
                         padding: 10px 18px;
                         font-weight: 700;
                         text-transform: uppercase;
+                        letter-spacing: .02em;
                         background: #1c84c6;
                     }
                     #students-overview-panel .student-overview-tabs > li.active > a,
@@ -107,7 +105,7 @@
 
                 <ul class="nav nav-tabs student-overview-tabs" role="tablist" style="margin-bottom:16px;border-bottom:none;">
                     <li class="active">
-                        <a href="#student-overview-registration" data-toggle="tab">Overview</a>
+                        <a href="#student-overview-registration" data-toggle="tab">Students Overview</a>
                     </li>
                 </ul>
 
@@ -149,5 +147,6 @@
     'customTo' => '',
     'customFetchUrl' => route('admin.dashboard.students.people'),
     'exportUrl' => route('admin.dashboard.students.people-export'),
+    'titlePrefix' => 'STUDENTS',
     'showPhone' => true,
 ])
