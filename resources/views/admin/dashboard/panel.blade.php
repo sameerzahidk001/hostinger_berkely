@@ -293,7 +293,8 @@
     if (! ($showStudentTable ?? false)) {
         $activityTab = 'staff';
     }
-    $staffColspan = 4
+    // Date, Activity, Description, Visit Page, Edit Page (+ optional User / Session).
+    $staffColspan = 5
         + (($showUserColumn ?? false) ? 1 : 0)
         + (($showSessionColumn ?? false) ? 1 : 0);
     $preserveReportUser = request('report_user');
@@ -402,28 +403,45 @@
                                         @if($showUserColumn ?? false)
                                             <th data-sort-col="1" style="width: 180px;cursor:pointer;">User <span class="sort-ind"></span></th>
                                         @endif
-                                        <th data-sort-col="{{ ($showUserColumn ?? false) ? 2 : 1 }}" style="width: 160px;cursor:pointer;">Activity <span class="sort-ind"></span></th>
-                                        <th data-sort-col="{{ ($showUserColumn ?? false) ? 3 : 2 }}" style="cursor:pointer;">Description <span class="sort-ind"></span></th>
+                                        @php
+                                            $staffActCol = ($showUserColumn ?? false) ? 2 : 1;
+                                            $staffDescCol = $staffActCol + 1;
+                                            $staffSessionCol = $staffDescCol + 1;
+                                            $staffVisitCol = ($showSessionColumn ?? false) ? ($staffSessionCol + 1) : $staffDescCol + 1;
+                                            $staffEditCol = $staffVisitCol + 1;
+                                        @endphp
+                                        <th data-sort-col="{{ $staffActCol }}" style="width: 160px;cursor:pointer;">Activity <span class="sort-ind"></span></th>
+                                        <th data-sort-col="{{ $staffDescCol }}" style="cursor:pointer;">Description <span class="sort-ind"></span></th>
                                         @if($showSessionColumn ?? false)
-                                            <th data-sort-col="{{ ($showUserColumn ?? false) ? 4 : 3 }}" style="width: 140px;cursor:pointer;">Session <span class="sort-ind"></span></th>
+                                            <th data-sort-col="{{ $staffSessionCol }}" style="width: 140px;cursor:pointer;">Session <span class="sort-ind"></span></th>
                                         @endif
-                                        <th data-sort-col="{{ $staffColspan - 1 }}" style="width: 90px;cursor:pointer;">Link <span class="sort-ind"></span></th>
+                                        <th data-sort-col="{{ $staffVisitCol }}" style="width: 100px;cursor:pointer;">Visit Page <span class="sort-ind"></span></th>
+                                        <th data-sort-col="{{ $staffEditCol }}" style="width: 100px;cursor:pointer;">Edit Page <span class="sort-ind"></span></th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @forelse($activities as $activity)
+                                        @php
+                                            $visitUrl = $activity['visit_url'] ?? null;
+                                            $editUrl = $activity['edit_url'] ?? null;
+                                            $fallbackUrl = $activity['url'] ?? null;
+                                            if (! $editUrl && $fallbackUrl && (
+                                                str_contains((string) $fallbackUrl, '/course/')
+                                                || str_contains((string) $fallbackUrl, '/pages/')
+                                                || str_contains((string) $fallbackUrl, '/courses-pages-seo/')
+                                                || str_contains((string) $fallbackUrl, '/seo/')
+                                                || str_contains((string) $fallbackUrl, '/training-calendar/')
+                                                || str_contains((string) $fallbackUrl, '/course-agendas/')
+                                            )) {
+                                                $editUrl = $fallbackUrl;
+                                            }
+                                        @endphp
                                         <tr>
                                             <td data-sort="{{ $activity['occurred_at']->timestamp }}">{{ $activity['occurred_at']->format('M j, Y g:i A') }}</td>
                                             @if($showUserColumn ?? false)
                                                 <td>{{ $activity['user_name'] ?? '—' }}</td>
                                             @endif
-                                            <td>
-                                                @if(!empty($activity['url']))
-                                                    <a href="{{ $activity['url'] }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">{{ activity_action_label($activity['action'] ?? '') }}</a>
-                                                @else
-                                                    {{ activity_action_label($activity['action'] ?? '') }}
-                                                @endif
-                                            </td>
+                                            <td>{{ activity_action_label($activity['action'] ?? '') }}</td>
                                             <td>{{ $activity['item'] }}</td>
                                             @if($showSessionColumn ?? false)
                                                 <td>
@@ -435,28 +453,18 @@
                                                 </td>
                                             @endif
                                             <td style="white-space:nowrap;">
-                                                @php
-                                                    $visitUrl = $activity['visit_url'] ?? null;
-                                                    $editUrl = $activity['edit_url'] ?? null;
-                                                    $fallbackUrl = $activity['url'] ?? null;
-                                                    if (! $editUrl && $fallbackUrl && (
-                                                        str_contains((string) $fallbackUrl, '/course/')
-                                                        || str_contains((string) $fallbackUrl, '/pages/')
-                                                        || str_contains((string) $fallbackUrl, '/courses-pages-seo/')
-                                                        || str_contains((string) $fallbackUrl, '/seo/')
-                                                    )) {
-                                                        $editUrl = $fallbackUrl;
-                                                    }
-                                                @endphp
                                                 @if(!empty($visitUrl))
-                                                    <a href="{{ $visitUrl }}" target="_blank" rel="noopener">Visit Page</a>
+                                                    <a href="{{ $visitUrl }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">Visit Page</a>
+                                                @else
+                                                    <span class="text-muted">—</span>
                                                 @endif
+                                            </td>
+                                            <td style="white-space:nowrap;">
                                                 @if(!empty($editUrl))
-                                                    @if(!empty($visitUrl))<span class="text-muted"> · </span>@endif
-                                                    <a href="{{ $editUrl }}" target="_blank" rel="noopener">Edit Page</a>
-                                                @elseif(!empty($fallbackUrl) && empty($visitUrl))
-                                                    <a href="{{ $fallbackUrl }}" target="_blank" rel="noopener">Open</a>
-                                                @elseif(empty($visitUrl))
+                                                    <a href="{{ $editUrl }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">Edit Page</a>
+                                                @elseif(!empty($fallbackUrl))
+                                                    <a href="{{ $fallbackUrl }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">Open</a>
+                                                @else
                                                     <span class="text-muted">—</span>
                                                 @endif
                                             </td>
