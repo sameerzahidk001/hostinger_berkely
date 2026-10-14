@@ -7,6 +7,8 @@ use App\Http\Controllers\Admin\EmailController;
 use App\Http\Controllers\Admin\InstallmentController;
 use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Admin\SettingController;
+use App\Http\Controllers\Admin\ContentEditorSettingsController;
+use App\Http\Controllers\Admin\AiContentController;
 use App\Http\Controllers\Admin\SubjectController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\FaqController;
@@ -182,8 +184,10 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
         Route::get('home', [AdminController::class, 'dashboard'])->name('admin.home');
         Route::get('dashboard/content-writers', [AdminController::class, 'contentWritersDashboard'])->name('admin.dashboard.content-writers');
         Route::get('dashboard/instructors', [AdminController::class, 'instructorsDashboard'])->name('admin.dashboard.instructors');
+        Route::get('dashboard/instructors/people', [AdminController::class, 'instructorsPeople'])->name('admin.dashboard.instructors.people');
         Route::get('dashboard/students', [AdminController::class, 'studentsDashboard'])->name('admin.dashboard.students');
         Route::get('dashboard/accountant', [AdminController::class, 'accountantDashboard'])->name('admin.dashboard.accountant');
+        Route::get('dashboard/accountant/export', [AdminController::class, 'exportAccountant'])->name('admin.dashboard.accountant.export');
         Route::get('home/activity-export', [AdminController::class, 'exportActivity'])->name('admin.home.activity-export');
         Route::get('home/content-report-details', [AdminController::class, 'contentReportDetails'])->name('admin.home.content-report-details');
         Route::get('home/content-report-export', [AdminController::class, 'contentReportExport'])->name('admin.home.content-report-export');
@@ -294,6 +298,9 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
 
         Route::get('smtp-settings', [SettingController::class, 'smtpSettings'])->name('admin.smtpSettings.index');
         Route::post('smtp-settings/store', [SettingController::class, 'smtpSettingsStore'])->name('admin.smtpSettings.store');
+        Route::get('/content-editor-settings', [ContentEditorSettingsController::class, 'edit'])->name('admin.content-editor.edit');
+        Route::post('/content-editor-settings', [ContentEditorSettingsController::class, 'update'])->name('admin.content-editor.update');
+        Route::post('/ai-content/generate', [AiContentController::class, 'generate'])->name('admin.ai-content.generate');
         Route::get('/site-settings', [SettingController::class, 'siteSettings'])->name('site-settings.index');
         Route::post('/site-settings', [SettingController::class, 'siteSettingsUpdate'])->name('site-settings.update');
         Route::get('/widget', [SettingController::class, 'widget'])->name('widget.index');
@@ -351,6 +358,7 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
                 Route::get('create', 'create')->name('course.create');
                 Route::get('/{id}/edit', 'edit')->name('course.edit');
                 Route::put('/{id}/update', 'update')->name('course.update');
+                Route::post('/{id}/duplicate', 'duplicate')->name('course.duplicate');
                 Route::post('{id}/update-status', 'updateStatus')->name('courses.update-status');
                 Route::get('disabled', 'disabledCourses')->name('admin.course.disabled');
                 Route::post('{id}/update-lecture-plan', 'updateStatusLecturePlan')->name('courses.update-status-lecture-plan-ajax');
@@ -474,6 +482,7 @@ Route::group(['middleware' => ['admin', 'restrict.delete']], function () {
         Route::resource('faq', FaqController::class);
         Route::get('pages/disabled/list', [PagesController::class, 'disabledPages'])->name('admin.pages.disabled');
         Route::post('pages/{id}/update-status', [PagesController::class, 'updateStatus'])->name('pages.update-status');
+        Route::post('pages/{id}/duplicate', [PagesController::class, 'duplicate'])->name('pages.duplicate');
         // Some hosts/WAFs block method spoofing to PUT/PATCH; allow a POST update endpoint too.
         Route::post('pages/{id}/update', [PagesController::class, 'update'])->name('pages.update.post');
         Route::post('user/{id}/update', [UserController::class, 'update'])->name('users.update.post');

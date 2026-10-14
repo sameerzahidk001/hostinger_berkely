@@ -12,13 +12,14 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
 use App\Models\{Currency, Subject, Course, School, CourseObjective, CourseReward, CourseFaq, CourseEnrollment, CourseSyllabus, CourseBeneficiaries, CourseFeePackages, FeePackagesFeatures, CourseStructure, CourseFee};
+use App\Services\CourseDuplicationService;
 use App\Services\SeoAnalyzerService;
 
 class CourseController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('long.running')->only(['store', 'update']);
+        $this->middleware('long.running')->only(['store', 'update', 'duplicate']);
     }
 
     function index(Request $request)
@@ -258,6 +259,12 @@ class CourseController extends Controller
 
         if ($saveResult) {
             session()->flash('sucess', 'Record added successfullly!');
+            record_panel_activity(
+                'Course Created',
+                $course->title ?: 'Course #' . $course->id,
+                route('course.edit', $course->id),
+                $request
+            );
         } else {
             session()->flash('failed', 'Failed to add Record!');
         }
@@ -265,6 +272,19 @@ class CourseController extends Controller
             $course->subjects()->attach($request->input('subject'));
         }
         return redirect()->route('admin.courses');
+    }
+
+    public function duplicate(string $id, CourseDuplicationService $duplicator)
+    {
+        $source = Course::withTrashed()->findOrFail($id);
+        $copy = $duplicator->duplicate($source);
+
+        session()->flash(
+            'success',
+            'Course duplicated as a disabled draft: "' . $copy->title . '". Original course was not changed.'
+        );
+
+        return redirect()->route('course.edit', $copy->id);
     }
 
     public function addInstructor(Request $request)

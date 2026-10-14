@@ -12,6 +12,7 @@ use App\Models\SiteSettings;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use App\Http\Controllers\Controller;
+use App\Services\PageDuplicationService;
 use App\Services\SeoAnalyzerService;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
@@ -20,7 +21,7 @@ class PagesController extends Controller
 {
     public function __construct()
     {
-        $this->middleware('long.running')->only(['store', 'update']);
+        $this->middleware('long.running')->only(['store', 'update', 'duplicate']);
     }
 
     /**
@@ -529,6 +530,19 @@ class PagesController extends Controller
         return is_array($sections) ? $sections : null;
     }
 
+
+    public function duplicate(string $id, PageDuplicationService $duplicator)
+    {
+        $source = Page::findOrFail($id);
+        $copy = $duplicator->duplicate($source);
+
+        session()->flash(
+            'success',
+            'Page duplicated as a draft: "' . $copy->page_name . '". Original page was not changed.'
+        );
+
+        return redirect()->route('pages.edit', $copy->id);
+    }
 
     /**
      * Remove the specified resource from storage.

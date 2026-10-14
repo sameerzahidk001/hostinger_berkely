@@ -2221,3 +2221,5 @@
     </script>
 
 @endpush
+
+@include('admin.partials.content-editor-enhancements', ['editorModule' => 'courses'])

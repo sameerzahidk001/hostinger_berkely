@@ -221,6 +221,14 @@
                                                         class="btn-primary btn btn-xs" target="_blank">
                                                         <i class="fa fa-pencil"></i> Edit
                                                     </a>
+                                                    <form action="{{ route('pages.duplicate', $page->id) }}" method="POST" style="display:inline;">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-info btn-xs"
+                                                            onclick="return confirm('Duplicate this page as a draft? Original stays unchanged.');"
+                                                            title="Duplicate page">
+                                                            <i class="fa fa-copy"></i> Duplicate
+                                                        </button>
+                                                    </form>
                                                     @if(!$pageName)
                                                         @include('admin.layout.partials.delete-button', [
                                                             'id' => $page->id,

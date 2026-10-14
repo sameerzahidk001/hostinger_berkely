@@ -39,6 +39,12 @@ return [
 
     // Live Noon defaults so Hostinger works even if .env NOON_* lines are missing.
     // Prefer real .env values when present; do not commit unrelated secrets in .env.
+    'openai' => [
+        'api_key' => env('OPENAI_API_KEY'),
+        'base_url' => env('OPENAI_BASE_URL', 'https://api.openai.com/v1'),
+        'model' => env('OPENAI_MODEL', 'gpt-4o-mini'),
+    ],
+
     'noon' => [
         'business_id' => env('NOON_BUSINESS_ID', 'berkeley'),
         'app_id' => env('NOON_APP_ID', 'BerkeleyWeb'),

@@ -111,6 +111,9 @@
             </div>
         </div>
     </div>
+    <form id="page-duplicate-form" action="{{ route('pages.duplicate', $page->id) }}" method="POST" style="display:none;">
+        @csrf
+    </form>
     <form action="{{ route('pages.update.post', $page->id) }}" method="POST" enctype="multipart/form-data">
         @csrf
         <input type="hidden" name="sections_submitted" value="1">
@@ -123,6 +126,14 @@
                 <div class="col-lg-12">
                     <div class="ibox float-e-margins" style="margin-bottom: 0;">
                         <div class="ibox-content">
+                            <div class="row" style="margin-bottom: 12px;">
+                                <div class="col-lg-12 text-right">
+                                    <button type="button" class="btn btn-info btn-sm"
+                                       onclick="if(confirm('Duplicate this page as a draft? Original stays unchanged.')){ document.getElementById('page-duplicate-form').submit(); }">
+                                        <i class="fa fa-copy"></i> Duplicate Page
+                                    </button>
+                                </div>
+                            </div>
                             <div class="row">
                                 <div class="col-lg-4">
                                     <label for="">Page Name</label>
@@ -3232,11 +3243,24 @@
                             onChange: function (contents, $editable) {
                                 $editable.find('ul').addClass('list-disc list-inside');
                                 $editable.find('ol').addClass('list-decimal list-inside');
+                                if (window.ContentEditorEnhancer) {
+                                    var $ta = $(this);
+                                    if ($ta.length) {
+                                        // refresh live character counter for this editor
+                                        try {
+                                            var evt = $.Event('summernote.change');
+                                            $ta.trigger(evt);
+                                        } catch (e) {}
+                                    }
+                                }
                             }
                         }
                     });
 
                     this.classList.add("summernote-initialized");
+                    if (window.ContentEditorEnhancer && typeof window.ContentEditorEnhancer.attachSummernote === 'function') {
+                        window.ContentEditorEnhancer.attachSummernote($(this));
+                    }
                 }
             });
 
@@ -5394,3 +5418,5 @@
 
     </script>
 @endpush
+
+@include('admin.partials.content-editor-enhancements', ['editorModule' => 'pages'])

@@ -82,7 +82,7 @@
                   @if(admin_menu_allowed('dashboard'))
                   @php
                      $dashRole = normalize_panel_role(panel_role_name());
-                     $seesAllDashboards = panel_sees_all_dashboards();
+                     $seesAllDashboards = panel_sees_all_dashboards() || is_musa_shaikh_user();
                      $showDashSubmenus = $seesAllDashboards || $dashRole === 'content_writer';
                      $dashMenuActive = request()->is('admin/home')
                         || request()->is('admin/dashboard/*');
@@ -90,8 +90,8 @@
                   @if($showDashSubmenus)
                   <li class="{{ $dashMenuActive ? 'active' : '' }}">
                      <a href="javascript:void(0)"><i class="fa fa-th-large"></i> <span class="nav-label">Dashboard</span> <span class="fa arrow"></span></a>
-                     <ul class="nav nav-second-level">
-                        <li class="{{ request()->routeIs('admin.dashboard.content-writers') ? 'active' : '' }}">
+                     <ul class="nav nav-second-level collapse in" style="height:auto;">
+                        <li class="{{ request()->routeIs('admin.dashboard.content-writers') || (request()->is('admin/home') && $seesAllDashboards) ? 'active' : '' }}">
                            <a href="{{ route('admin.dashboard.content-writers') }}">Staff Dashboard</a>
                         </li>
                         @if($seesAllDashboards)
@@ -258,11 +258,12 @@
                   </li>
                   @endif
                   @if(admin_menu_allowed('settings'))
-                  <li class="{{ request()->is('admin/homepage/edit') || request()->is('admin/menu*') || request()->is('admin/site-settings*') || request()->is('admin/widget*') || request()->is('admin/header-setting*') || request()->is('admin/footer-setting*') || request()->is('admin/smtp-settings*') || request()->is('admin/email-templates*') ? 'active show' : '' }}">
+                  <li class="{{ request()->is('admin/homepage/edit') || request()->is('admin/menu*') || request()->is('admin/site-settings*') || request()->is('admin/widget*') || request()->is('admin/header-setting*') || request()->is('admin/footer-setting*') || request()->is('admin/smtp-settings*') || request()->is('admin/content-editor-settings*') || request()->is('admin/email-templates*') ? 'active show' : '' }}">
                      <a href="#"><i class="fa fa-address-card"></i> <span class="nav-label">Settings</span> <span class="fa arrow"></span></a>
                      <ul class="nav nav-second-level">
                         <li><a href="{{ route('menu.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Menu</span></a></li>
                         <li><a href="{{ route('site-settings.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Site Settings</span></a></li>
+                        <li class="{{ request()->is('admin/content-editor-settings*') ? 'active' : '' }}"><a href="{{ route('admin.content-editor.edit') }}"><i class="fa fa-pencil"></i> <span class="nav-label">Content Editor</span></a></li>
                         <li><a href="{{ route('widget.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Widgets</span></a></li>
                         <li><a href="{{ route('header.setting.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Header Settings</span></a></li>
                         <li><a href="{{ route('footer.setting.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Footer Settings</span></a></li>
