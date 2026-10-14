@@ -31,6 +31,15 @@ class InstructorsDashboardService
         $details = [];
 
         foreach ($ranges as $key => $range) {
+            // Custom list is loaded on demand inside the popup (From/To at top).
+            if ($key === 'custom') {
+                $details['reg_' . $key] = [
+                    'title' => $range['title'],
+                    'people' => [],
+                ];
+                continue;
+            }
+
             $people = $this->registrationQuery($range['from'] ?? null, $range['to'] ?? null)
                 ->orderByDesc('created_at')
                 ->limit(500)
@@ -46,6 +55,29 @@ class InstructorsDashboardService
         }
 
         return $details;
+    }
+
+    /**
+     * @return array{title: string, count: int, people: array<int, array<string, mixed>>}
+     */
+    public function customRangePeople(?string $customFrom = null, ?string $customTo = null): array
+    {
+        $from = $customFrom ? Carbon::parse($customFrom)->startOfDay() : now()->copy()->startOfMonth();
+        $to = $customTo ? Carbon::parse($customTo)->endOfDay() : now()->copy()->endOfDay();
+        $query = $this->registrationQuery($from, $to);
+        $count = (clone $query)->count();
+        $people = $query->orderByDesc('created_at')
+            ->limit(500)
+            ->get($this->personSelectColumns())
+            ->map(fn (User $user) => $this->personRow($user))
+            ->values()
+            ->all();
+
+        return [
+            'title' => 'Registered Custom Date Range',
+            'count' => $count,
+            'people' => $people,
+        ];
     }
 
     private function registrationRanges(?string $customFrom = null, ?string $customTo = null): array

@@ -24,6 +24,7 @@
             <tr>
                 <th>Date &amp; Time</th>
                 <th>User</th>
+                <th>Contact Number</th>
                 <th>Activity</th>
                 <th>Description</th>
                 <th>URL</th>
@@ -34,13 +35,14 @@
                 <tr>
                     <td>{{ optional($activity['occurred_at'] ?? null)?->format('Y-m-d H:i:s') }}</td>
                     <td>{{ $activity['user_name'] ?? '—' }}</td>
+                    <td>{{ $activity['contact_number'] ?? '—' }}</td>
                     <td>{{ activity_action_label($activity['action'] ?? '') }}</td>
                     <td>{{ $activity['item'] ?? '' }}</td>
                     <td>{{ $activity['url'] ?? '' }}</td>
                 </tr>
             @empty
                 <tr>
-                    <td colspan="5">No activity found.</td>
+                    <td colspan="6">No activity found.</td>
                 </tr>
             @endforelse
         </tbody>
