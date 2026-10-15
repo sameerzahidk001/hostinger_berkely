@@ -1,6 +1,7 @@
 @extends(lms_portal_layout())
 @section('title', 'Import MCQ')
 @section('content')
+@include('admin.assessments.partials.searchable-select-assets')
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
         <h2>Import MCQ from Excel / CSV</h2>
@@ -21,18 +22,18 @@
     <div class="ibox">
         <div class="ibox-content">
             <p>Upload a <strong>.csv</strong> file (Excel → Save As → CSV). Columns:</p>
-            <pre style="background:#f5f5f5;padding:10px;">topic,stem,option_a,option_b,option_c,option_d,correct,max_marks,course_id
-Unit 1,"What is 2+2?",2,3,4,5,C,1,
+            <pre style="background:#f5f5f5;padding:10px;">topic,stem,option_a,option_b,option_c,option_d,option_e,correct,max_marks,course_id
+Unit 1,"What is 2+2?",2,3,4,5,6,C,1,
 </pre>
             <p class="text-muted">
-                <code>correct</code> = A/B/C/D (or 1–4). Leave <code>course_id</code> blank for no course.
+                <code>correct</code> = A/B/C/D/E (or 1–5). <code>option_e</code> is optional (5th answer). Leave <code>course_id</code> blank for no course.
                 Download a blank template: <a href="{{ route('admin.assessments.questions.import-template') }}">mcq-import-template.csv</a>
             </p>
             <form method="POST" action="{{ route('admin.assessments.questions.import.store') }}" enctype="multipart/form-data">
                 @csrf
                 <div class="form-group">
                     <label>Default course (optional, used when course_id column is empty)</label>
-                    <select name="course_id" class="form-control">
+                    <select name="course_id" class="form-control lms-searchable" data-placeholder="Type to find course">
                         <option value="">—</option>
                         @foreach($courses as $course)
                             <option value="{{ $course->id }}">{{ $course->title }}</option>
