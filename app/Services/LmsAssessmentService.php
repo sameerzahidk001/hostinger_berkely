@@ -26,16 +26,42 @@ class LmsAssessmentService
 
     public function canManageAssessments(): bool
     {
+        return $this->canManageQuestionBank()
+            || $this->canManageStudentAssessments()
+            || $this->canManageSkillTests();
+    }
+
+    /** Question Bank create/edit (instructors need Admin LMS tick). */
+    public function canManageQuestionBank(): bool
+    {
         if ($this->lms->isAdminActor() || panel_sees_all_dashboards()) {
             return true;
         }
 
-        return $this->lms->isInstructorActor();
+        return $this->lms->isInstructorActor()
+            && $this->lms->actorHasLmsPermission('manage_question_bank');
+    }
+
+    /** Practice / Mock create & assign for instructor’s assigned courses. */
+    public function canManageStudentAssessments(): bool
+    {
+        if ($this->lms->isAdminActor() || panel_sees_all_dashboards()) {
+            return true;
+        }
+
+        return $this->lms->isInstructorActor()
+            && $this->lms->actorHasLmsPermission('manage_student_assessments');
     }
 
     public function canManageSkillTests(): bool
     {
         return $this->lms->isAdminActor() || panel_sees_all_dashboards();
+    }
+
+    /** Staff roles that can be assigned assessments (CW, Accountant, Instructor). */
+    public function staffRoleNames(): array
+    {
+        return ['instructor', 'accountant', 'content_writer', 'content-writer'];
     }
 
     /**
@@ -47,7 +73,7 @@ class LmsAssessmentService
     {
         $this->ensure();
         $userId = (int) $user->id;
-        $isStaff = $user->roles()->whereIn('name', ['instructor', 'accountant', 'content_writer'])->exists();
+        $isStaff = $user->roles()->whereIn('name', $this->staffRoleNames())->exists();
 
         $batchIds = [];
         if (Schema::hasTable('class_batch_student')) {
@@ -70,29 +96,6 @@ class LmsAssessmentService
         $out = collect();
 
         foreach ($assessments as $assessment) {
-            if ($assessment->isSkill() || $assessment->audience === LmsAssessment::AUDIENCE_STAFF) {
-                if (! $isStaff) {
-                    continue;
-                }
-                $assignment = $assessment->assignments->first(function (LmsAssessmentAssignment $a) use ($userId, $batchIds) {
-                    if ($a->student_id && (int) $a->student_id === $userId) {
-                        return true;
-                    }
-                    if ($a->class_batch_id && in_array((int) $a->class_batch_id, $batchIds, true)) {
-                        return true;
-                    }
-
-                    return false;
-                });
-                // Unassigned skill tests are available to all staff; assigned ones must match.
-                if ($assessment->assignments->isNotEmpty() && ! $assignment) {
-                    continue;
-                }
-                $out->push(['assessment' => $assessment, 'assignment' => $assignment]);
-                continue;
-            }
-
-            // Student-facing: must be assigned by batch or student
             $assignment = $assessment->assignments->first(function (LmsAssessmentAssignment $a) use ($userId, $batchIds) {
                 if ($a->student_id && (int) $a->student_id === $userId) {
                     return true;
@@ -104,7 +107,19 @@ class LmsAssessmentService
                 return false;
             });
 
-            // Practice/general with no assignments: allow if student has any batch/course link? Spec says assign — require assignment.
+            if ($assessment->isSkill() || $assessment->audience === LmsAssessment::AUDIENCE_STAFF) {
+                if (! $isStaff) {
+                    continue;
+                }
+                // Unassigned skill tests are available to all staff; assigned ones must match.
+                if ($assessment->assignments->isNotEmpty() && ! $assignment) {
+                    continue;
+                }
+                $out->push(['assessment' => $assessment, 'assignment' => $assignment]);
+                continue;
+            }
+
+            // Practice / Mock / General: assignable to students and staff (CW, Accountant, Instructor).
             if (! $assignment) {
                 continue;
             }

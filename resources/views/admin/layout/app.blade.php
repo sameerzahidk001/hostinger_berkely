@@ -198,19 +198,44 @@
                      </ul>
                   </li>
                   @endif
-                  @if(admin_menu_allowed('assessments') || admin_menu_allowed('study-materials') || admin_menu_allowed('class-schedules'))
-                  <li class="{{ request()->is('admin/assessments*') ? 'active' : '' }}">
+                  @php
+                      $canQbankMenu = admin_menu_allowed('assessments') && (
+                          !auth()->check()
+                          || !auth()->user()->roles()->where('name', 'instructor')->exists()
+                          || (method_exists(auth()->user(), 'hasLmsPermission') && auth()->user()->hasLmsPermission('manage_question_bank'))
+                          || panel_sees_all_dashboards()
+                      );
+                      $canTestsMenu = admin_menu_allowed('assessments') && (
+                          !auth()->check()
+                          || !auth()->user()->roles()->where('name', 'instructor')->exists()
+                          || (method_exists(auth()->user(), 'hasLmsPermission') && auth()->user()->hasLmsPermission('manage_student_assessments'))
+                          || panel_sees_all_dashboards()
+                      );
+                      $isStaffPanelRole = auth()->check() && in_array(normalize_panel_role(auth()->user()->roles()->value('name')), ['content_writer', 'accountant'], true);
+                      $showAssessmentsMenu = $canQbankMenu || $canTestsMenu || admin_menu_allowed('assessments') || $isStaffPanelRole;
+                  @endphp
+                  @if($showAssessmentsMenu)
+                  <li class="{{ request()->is('admin/assessments*') || request()->routeIs('user.assessments.*') ? 'active' : '' }}">
                      <a href="javascript:void(0)"><i class="fa fa-pencil-square-o"></i> <span class="nav-label">Assessments</span> <span class="fa arrow"></span></a>
                      <ul class="nav nav-second-level">
+                        @if($canQbankMenu)
                         <li class="{{ request()->routeIs('admin.assessments.questions.*') ? 'active' : '' }}">
                            <a href="{{ route('admin.assessments.questions.index') }}">Question Bank</a>
                         </li>
+                        @endif
+                        @if($canTestsMenu)
                         <li class="{{ request()->routeIs('admin.assessments.tests.*') ? 'active' : '' }}">
                            <a href="{{ route('admin.assessments.tests.index') }}">Practice / Mock / Tests</a>
                         </li>
                         <li class="{{ request()->routeIs('admin.assessments.reports.*') ? 'active' : '' }}">
                            <a href="{{ route('admin.assessments.reports.index') }}">Reports</a>
                         </li>
+                        @endif
+                        @if($isStaffPanelRole || (auth()->check() && auth()->user()->roles()->where('name', 'instructor')->exists()))
+                        <li class="{{ request()->routeIs('user.assessments.*') ? 'active' : '' }}">
+                           <a href="{{ route('user.assessments.index') }}">My assigned assessments</a>
+                        </li>
+                        @endif
                      </ul>
                   </li>
                   @endif

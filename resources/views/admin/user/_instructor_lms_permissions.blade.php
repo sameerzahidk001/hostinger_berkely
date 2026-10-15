@@ -4,7 +4,7 @@
     $selectedLms = old('lms_permissions', method_exists($user, 'lmsPermissionList') ? $user->lmsPermissionList() : []);
 @endphp
 <input type="hidden" name="lms_permissions_present" value="1">
-<p class="help-block" style="margin-top:0;">Admin must grant each permission. The instructor can take the action only when it is ticked.</p>
+<p class="help-block" style="margin-top:0;">Admin must grant each permission. The instructor can take the action only when it is ticked. Question Bank and Practice/Mock are limited to courses assigned to that instructor.</p>
 <div class="form-group">
     @foreach($lmsOptions as $key => $label)
         <div class="checkbox">

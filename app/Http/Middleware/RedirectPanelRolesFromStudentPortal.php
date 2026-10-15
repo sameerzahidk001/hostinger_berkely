@@ -15,6 +15,11 @@ class RedirectPanelRolesFromStudentPortal
             $role = Auth::user()->roles()->value('name');
 
             if (is_restricted_panel_role($role)) {
+                // Allow Content Writers / Accountants to take assigned assessments.
+                if ($request->is('user/assessments*') || $request->is('user/mock-exams*')) {
+                    return $next($request);
+                }
+
                 return redirect()->route('admin.home');
             }
         }

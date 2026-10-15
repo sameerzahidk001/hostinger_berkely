@@ -244,6 +244,11 @@
                </li>
                @endif
                @if(auth()->user()->roles()->where('name', 'instructor')->exists())
+               @php
+                   $u = auth()->user();
+                   $canQbank = method_exists($u, 'hasLmsPermission') && $u->hasLmsPermission('manage_question_bank');
+                   $canTests = method_exists($u, 'hasLmsPermission') && $u->hasLmsPermission('manage_student_assessments');
+               @endphp
                <li class="{{ request()->routeIs('user.assessments.*') || request()->is('admin/assessments*') ? 'active' : '' }}">
                   <a href="javascript:void(0)">
                      <i class="fa fa-pencil-square-o"></i>
@@ -251,17 +256,21 @@
                      <span class="fa arrow"></span>
                   </a>
                   <ul class="nav nav-second-level">
+                     @if($canQbank)
                      <li class="{{ request()->is('admin/assessments/questions*') ? 'active' : '' }}">
                         <a href="{{ route('admin.assessments.questions.index') }}">Question Bank</a>
                      </li>
+                     @endif
+                     @if($canTests)
                      <li class="{{ request()->is('admin/assessments/tests*') ? 'active' : '' }}">
                         <a href="{{ route('admin.assessments.tests.index') }}">Create / Assign</a>
                      </li>
-                     <li class="{{ request()->routeIs('user.assessments.*') ? 'active' : '' }}">
-                        <a href="{{ route('user.assessments.index', ['section' => 'skill']) }}">My skill tests</a>
-                     </li>
                      <li class="{{ request()->is('admin/assessments/reports*') ? 'active' : '' }}">
                         <a href="{{ route('admin.assessments.reports.index') }}">Reports</a>
+                     </li>
+                     @endif
+                     <li class="{{ request()->routeIs('user.assessments.*') ? 'active' : '' }}">
+                        <a href="{{ route('user.assessments.index') }}">My assigned assessments</a>
                      </li>
                   </ul>
                </li>

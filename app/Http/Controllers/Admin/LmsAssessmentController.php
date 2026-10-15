@@ -26,7 +26,7 @@ class LmsAssessmentController extends Controller
 
     public function index(Request $request)
     {
-        abort_unless($this->assessments->canManageAssessments(), 403);
+        abort_unless($this->assessments->canManageStudentAssessments() || $this->assessments->canManageSkillTests(), 403);
         $this->assessments->ensure();
 
         $kind = trim((string) $request->get('kind', ''));
@@ -39,6 +39,10 @@ class LmsAssessmentController extends Controller
         if (! $this->assessments->canManageSkillTests()) {
             $query->where('kind', '!=', LmsAssessment::KIND_SKILL)
                 ->where('audience', '!=', LmsAssessment::AUDIENCE_STAFF);
+        }
+        if ($this->lms->isInstructorActor() && ! $this->lms->isAdminActor() && ! panel_sees_all_dashboards()) {
+            $courseIds = $this->lms->coursesForActor()->pluck('id')->map(fn ($id) => (int) $id)->all();
+            $query->whereIn('course_id', $courseIds ?: [0]);
         }
         if ($search !== '') {
             $like = '%' . addcslashes($search, '%_\\') . '%';
@@ -56,12 +60,13 @@ class LmsAssessmentController extends Controller
 
     public function create(Request $request)
     {
-        abort_unless($this->assessments->canManageAssessments(), 403);
-        $this->assessments->ensure();
         $kind = $request->get('kind', LmsAssessment::KIND_PRACTICE);
         if ($kind === LmsAssessment::KIND_SKILL) {
             abort_unless($this->assessments->canManageSkillTests(), 403);
+        } else {
+            abort_unless($this->assessments->canManageStudentAssessments(), 403);
         }
+        $this->assessments->ensure();
 
         return view('admin.assessments.tests.form', $this->formData(new LmsAssessment([
             'kind' => $kind,
@@ -74,14 +79,15 @@ class LmsAssessmentController extends Controller
 
     public function store(Request $request)
     {
-        abort_unless($this->assessments->canManageAssessments(), 403);
-        $this->assessments->ensure();
-        $validator = Validator::make($request->all(), $this->rules());
-        if ($validator->fails()) {
-            return back()->withErrors($validator)->withInput();
-        }
         if ($request->input('kind') === LmsAssessment::KIND_SKILL) {
             abort_unless($this->assessments->canManageSkillTests(), 403);
+        } else {
+            abort_unless($this->assessments->canManageStudentAssessments(), 403);
+        }
+        $this->assessments->ensure();
+        $validator = Validator::make($request->all(), $this->rules($request));
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
         }
 
         $a = new LmsAssessment();
@@ -95,11 +101,13 @@ class LmsAssessmentController extends Controller
 
     public function edit($id)
     {
-        abort_unless($this->assessments->canManageAssessments(), 403);
         $this->assessments->ensure();
         $assessment = LmsAssessment::with(['questions', 'assignments.batch', 'assignments.student'])->findOrFail($id);
         if ($assessment->isSkill()) {
             abort_unless($this->assessments->canManageSkillTests(), 403);
+        } else {
+            abort_unless($this->assessments->canManageStudentAssessments(), 403);
+            $this->assertInstructorOwnsCourse((int) $assessment->course_id);
         }
 
         return view('admin.assessments.tests.form', $this->formData($assessment));
@@ -107,13 +115,15 @@ class LmsAssessmentController extends Controller
 
     public function update(Request $request, $id)
     {
-        abort_unless($this->assessments->canManageAssessments(), 403);
         $this->assessments->ensure();
         $a = LmsAssessment::findOrFail($id);
         if ($a->isSkill()) {
             abort_unless($this->assessments->canManageSkillTests(), 403);
+        } else {
+            abort_unless($this->assessments->canManageStudentAssessments(), 403);
+            $this->assertInstructorOwnsCourse((int) $a->course_id);
         }
-        $validator = Validator::make($request->all(), $this->rules());
+        $validator = Validator::make($request->all(), $this->rules($request));
         if ($validator->fails()) {
             return back()->withErrors($validator)->withInput();
         }
@@ -136,9 +146,15 @@ class LmsAssessmentController extends Controller
 
     public function attempts(Request $request, $id)
     {
-        abort_unless($this->assessments->canManageAssessments(), 403);
+        abort_unless($this->assessments->canManageStudentAssessments() || $this->assessments->canManageSkillTests(), 403);
         $this->assessments->ensure();
         $assessment = LmsAssessment::findOrFail($id);
+        if ($assessment->isSkill()) {
+            abort_unless($this->assessments->canManageSkillTests(), 403);
+        } else {
+            abort_unless($this->assessments->canManageStudentAssessments(), 403);
+            $this->assertInstructorOwnsCourse((int) $assessment->course_id);
+        }
         $rows = LmsAssessmentAttempt::query()
             ->with('user:id,name,email')
             ->where('assessment_id', $assessment->id)
@@ -151,16 +167,22 @@ class LmsAssessmentController extends Controller
 
     public function mark($attemptId)
     {
-        abort_unless($this->assessments->canManageAssessments(), 403);
+        abort_unless($this->assessments->canManageStudentAssessments() || $this->assessments->canManageSkillTests(), 403);
         $this->assessments->ensure();
         $attempt = LmsAssessmentAttempt::with(['assessment.questions', 'answers.question', 'user'])->findOrFail($attemptId);
+        if ($attempt->assessment?->isSkill()) {
+            abort_unless($this->assessments->canManageSkillTests(), 403);
+        } else {
+            abort_unless($this->assessments->canManageStudentAssessments(), 403);
+            $this->assertInstructorOwnsCourse((int) ($attempt->assessment?->course_id ?? 0));
+        }
 
         return view('admin.assessments.tests.mark', compact('attempt'));
     }
 
     public function saveMarks(Request $request, $attemptId)
     {
-        abort_unless($this->assessments->canManageAssessments(), 403);
+        abort_unless($this->assessments->canManageStudentAssessments() || $this->assessments->canManageSkillTests(), 403);
         $this->assessments->ensure();
         $attempt = LmsAssessmentAttempt::with(['answers.question', 'assessment'])->findOrFail($attemptId);
 
@@ -184,7 +206,7 @@ class LmsAssessmentController extends Controller
 
     public function publishAttempt($attemptId)
     {
-        abort_unless($this->assessments->canManageAssessments(), 403);
+        abort_unless($this->assessments->canManageStudentAssessments() || $this->assessments->canManageSkillTests(), 403);
         $this->assessments->ensure();
         $attempt = LmsAssessmentAttempt::findOrFail($attemptId);
         $this->assessments->publishResults($attempt);
@@ -192,13 +214,18 @@ class LmsAssessmentController extends Controller
         return back()->with('success', 'Results published.');
     }
 
-    protected function rules(): array
+    protected function rules(Request $request): array
     {
+        $courseRequired = $this->lms->isInstructorActor()
+            && ! $this->lms->isAdminActor()
+            && ! panel_sees_all_dashboards()
+            && $request->input('kind') !== LmsAssessment::KIND_SKILL;
+
         return [
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'kind' => 'required|in:practice,mock,general,skill',
-            'course_id' => 'nullable|exists:courses,id',
+            'course_id' => ($courseRequired ? 'required' : 'nullable') . '|exists:courses,id',
             'duration_minutes' => 'nullable|integer|min:1',
             'pass_percent' => 'nullable|numeric|min:0|max:100',
             'max_attempts' => 'nullable|integer|min:1',
@@ -216,6 +243,17 @@ class LmsAssessmentController extends Controller
         ];
     }
 
+    protected function assertInstructorOwnsCourse(int $courseId): void
+    {
+        if ($this->lms->isAdminActor() || panel_sees_all_dashboards()) {
+            return;
+        }
+        if (! $this->lms->isInstructorActor()) {
+            return;
+        }
+        abort_unless($courseId > 0 && $this->lms->instructorAssignedToCourse($courseId), 403);
+    }
+
     protected function fill(LmsAssessment $a, Request $request, bool $creating): void
     {
         $a->title = trim((string) $request->input('title'));
@@ -225,6 +263,9 @@ class LmsAssessmentController extends Controller
             ? LmsAssessment::AUDIENCE_STAFF
             : LmsAssessment::AUDIENCE_STUDENT;
         $a->course_id = $request->input('course_id') ?: null;
+        if ($a->course_id) {
+            $this->assertInstructorOwnsCourse((int) $a->course_id);
+        }
         $a->duration_minutes = $request->filled('duration_minutes') ? (int) $request->input('duration_minutes') : null;
         $a->pass_percent = $request->filled('pass_percent') ? (float) $request->input('pass_percent') : null;
         $a->max_attempts = $request->filled('max_attempts') ? (int) $request->input('max_attempts') : null;
@@ -286,14 +327,24 @@ class LmsAssessmentController extends Controller
 
     protected function formData(LmsAssessment $assessment): array
     {
-        $questions = LmsQuestion::query()->where('status', 'active')->orderByDesc('id')->get(['id', 'type', 'stem', 'topic', 'max_marks']);
+        $questionQuery = LmsQuestion::query()->where('status', 'active')->orderByDesc('id');
+        if ($this->lms->isInstructorActor() && ! $this->lms->isAdminActor() && ! panel_sees_all_dashboards()) {
+            $courseIds = $this->lms->coursesForActor()->pluck('id')->map(fn ($id) => (int) $id)->all();
+            $questionQuery->whereIn('course_id', $courseIds ?: [0]);
+        }
+        $questions = $questionQuery->get(['id', 'type', 'stem', 'topic', 'max_marks', 'course_id']);
         $batches = Schema::hasTable('class_batches')
             ? ClassBatch::query()->orderByDesc('id')->get(['id', 'code', 'name'])
             : collect();
-        $students = User::query()
-            ->whereHas('roles', fn ($q) => $q->where('name', 'student'))
+
+        // Assignable users: students + staff (CW, Accountant, Instructor).
+        $assignableUsers = User::query()
+            ->with('roles:id,name')
+            ->whereHas('roles', function ($q) {
+                $q->whereIn('name', array_merge(['student'], $this->assessments->staffRoleNames()));
+            })
             ->orderBy('name')
-            ->limit(500)
+            ->limit(800)
             ->get(['id', 'name', 'email']);
 
         return [
@@ -305,11 +356,12 @@ class LmsAssessmentController extends Controller
             'courses' => $this->lms->coursesForActor(),
             'questions' => $questions,
             'batches' => $batches,
-            'students' => $students,
+            'students' => $assignableUsers,
             'selectedQuestionIds' => old('question_ids', $assessment->questions->pluck('id')->all()),
             'selectedBatchIds' => old('batch_ids', $assessment->assignments->whereNotNull('class_batch_id')->pluck('class_batch_id')->all()),
             'selectedStudentIds' => old('student_ids', $assessment->assignments->whereNotNull('student_id')->pluck('student_id')->all()),
             'canSkill' => $this->assessments->canManageSkillTests(),
+            'courseRequired' => $this->lms->isInstructorActor() && ! $this->lms->isAdminActor() && ! panel_sees_all_dashboards(),
         ];
     }
 }

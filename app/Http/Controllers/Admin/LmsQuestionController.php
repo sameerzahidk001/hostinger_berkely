@@ -21,7 +21,7 @@ class LmsQuestionController extends Controller
 
     public function index(Request $request)
     {
-        abort_unless($this->assessments->canManageAssessments(), 403);
+        abort_unless($this->assessments->canManageQuestionBank(), 403);
         $this->assessments->ensure();
 
         $type = trim((string) $request->get('type', ''));
@@ -29,6 +29,14 @@ class LmsQuestionController extends Controller
         $query = LmsQuestion::query()->with(['course' => function ($q) {
             $q->withTrashed()->select('id', 'title');
         }])->orderByDesc('id');
+
+        // Instructors only manage QBANK for courses Admin assigned them.
+        if ($this->lms->isInstructorActor() && ! $this->lms->isAdminActor() && ! panel_sees_all_dashboards()) {
+            $courseIds = $this->lms->coursesForActor()->pluck('id')->map(fn ($id) => (int) $id)->all();
+            $query->where(function ($q) use ($courseIds) {
+                $q->whereIn('course_id', $courseIds ?: [0]);
+            });
+        }
         if ($type !== '' && array_key_exists($type, LmsQuestion::types())) {
             $query->where('type', $type);
         }
@@ -53,7 +61,7 @@ class LmsQuestionController extends Controller
 
     public function create()
     {
-        abort_unless($this->assessments->canManageAssessments(), 403);
+        abort_unless($this->assessments->canManageQuestionBank(), 403);
         $this->assessments->ensure();
 
         return view('admin.assessments.questions.form', $this->formData(new LmsQuestion([
@@ -65,7 +73,7 @@ class LmsQuestionController extends Controller
 
     public function store(Request $request)
     {
-        abort_unless($this->assessments->canManageAssessments(), 403);
+        abort_unless($this->assessments->canManageQuestionBank(), 403);
         $this->assessments->ensure();
 
         $rows = $request->input('questions');
@@ -130,15 +138,19 @@ class LmsQuestionController extends Controller
 
     public function edit($id)
     {
-        abort_unless($this->assessments->canManageAssessments(), 403);
+        abort_unless($this->assessments->canManageQuestionBank(), 403);
         $this->assessments->ensure();
+        $question = LmsQuestion::findOrFail($id);
+        if ($this->instructorMustPickCourse()) {
+            abort_unless($question->course_id && $this->lms->instructorAssignedToCourse((int) $question->course_id), 403);
+        }
 
-        return view('admin.assessments.questions.form', $this->formData(LmsQuestion::findOrFail($id)));
+        return view('admin.assessments.questions.form', $this->formData($question));
     }
 
     public function update(Request $request, $id)
     {
-        abort_unless($this->assessments->canManageAssessments(), 403);
+        abort_unless($this->assessments->canManageQuestionBank(), 403);
         $this->assessments->ensure();
         $q = LmsQuestion::findOrFail($id);
         $validator = Validator::make($request->all(), $this->rules());
@@ -165,13 +177,22 @@ class LmsQuestionController extends Controller
         return back()->with('success', 'Question removed.');
     }
 
+    protected function instructorMustPickCourse(): bool
+    {
+        return $this->lms->isInstructorActor()
+            && ! $this->lms->isAdminActor()
+            && ! panel_sees_all_dashboards();
+    }
+
     protected function rules(): array
     {
+        $courseRule = $this->instructorMustPickCourse() ? 'required|exists:courses,id' : 'nullable|exists:courses,id';
+
         return [
             'type' => 'required|in:mcq,essay,simulation',
             'stem' => 'nullable|string',
             'topic' => 'nullable|string|max:255',
-            'course_id' => 'nullable|exists:courses,id',
+            'course_id' => $courseRule,
             'max_marks' => 'required|numeric|min:0.1',
             'explanation' => 'nullable|string',
             'status' => 'required|in:active,disabled',
@@ -184,8 +205,10 @@ class LmsQuestionController extends Controller
 
     protected function bulkRules(): array
     {
+        $courseRule = $this->instructorMustPickCourse() ? 'required|exists:courses,id' : 'nullable|exists:courses,id';
+
         return [
-            'course_id' => 'nullable|exists:courses,id',
+            'course_id' => $courseRule,
             'topic' => 'nullable|string|max:255',
             'status' => 'required|in:active,disabled',
             'questions' => 'required|array|min:1',
@@ -232,6 +255,9 @@ class LmsQuestionController extends Controller
         $q->course_id = array_key_exists('course_id', $defaults)
             ? ($defaults['course_id'] ?: null)
             : (($row['course_id'] ?? null) ?: null);
+        if ($q->course_id && $this->instructorMustPickCourse()) {
+            abort_unless($this->lms->instructorAssignedToCourse((int) $q->course_id), 403);
+        }
         $q->max_marks = (float) ($row['max_marks'] ?? 1);
         $explanation = trim((string) ($row['explanation'] ?? ''));
         $q->explanation = $this->isBlankHtml($explanation) ? null : $explanation;
