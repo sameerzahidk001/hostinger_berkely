@@ -678,6 +678,7 @@ Route::prefix('user')->middleware(['auth', 'approved', 'redirect.panel.from.stud
     Route::get('/assessments/attempts/{attemptId}', [LmsAssessmentPortalController::class, 'take'])->name('user.assessments.take');
     Route::post('/assessments/attempts/{attemptId}', [LmsAssessmentPortalController::class, 'save'])->name('user.assessments.save');
     Route::get('/assessments/attempts/{attemptId}/result', [LmsAssessmentPortalController::class, 'result'])->name('user.assessments.result');
+    Route::get('/assessments/attempts/{attemptId}/pdf', [LmsAssessmentPortalController::class, 'resultPdf'])->name('user.assessments.result-pdf');
     Route::get('/history', [UserHistoryController::class, 'index'])->name('user.history');
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('user.analytics');
 

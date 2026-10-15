@@ -68,6 +68,9 @@
         @endforeach
     @endif
 
+    @if($canSeeScore)
+        <a class="btn btn-success" href="{{ route('user.assessments.result-pdf', $attempt->id) }}" target="_blank"><i class="fa fa-file-pdf-o"></i> Download PDF</a>
+    @endif
     <a href="{{ route('user.assessments.index', ['tab' => 'results']) }}" class="btn btn-default">Back to results</a>
 </div>
 @endsection

@@ -19,7 +19,9 @@
 <body>
     <h1>{{ $attempt->assessment->title ?? 'Assessment attempt' }}</h1>
     <table class="meta">
-        <tr><td class="muted">Student</td><td>{{ $attempt->user->name ?? '—' }} ({{ $attempt->user->email ?? '' }})</td></tr>
+        <tr><td class="muted">Test Taker</td><td>{{ $attempt->user->name ?? '—' }} ({{ $attempt->user->email ?? '' }})</td></tr>
+        <tr><td class="muted">Course</td><td>{{ $attempt->assessment->course->title ?? '—' }}</td></tr>
+        <tr><td class="muted">Type</td><td>{{ $attempt->assessment->kindLabel() }}</td></tr>
         <tr><td class="muted">Status</td><td>{{ $attempt->statusLabel() }}</td></tr>
         <tr><td class="muted">Score</td><td class="score">
             @if($attempt->score_raw !== null)
@@ -27,8 +29,10 @@
                 @if($attempt->percent() !== null) ({{ number_format((float) $attempt->percent(), 2) }}%) @endif
             @else — @endif
         </td></tr>
-        <tr><td class="muted">Published</td><td>{{ $attempt->results_published ? 'Yes' : 'No' }}</td></tr>
+        <tr><td class="muted">Duration given</td><td>{{ $attempt->assessment->duration_minutes ? $attempt->assessment->duration_minutes . ' min' : '—' }}</td></tr>
+        <tr><td class="muted">Started</td><td>{{ optional($attempt->started_at)->format('d/m/Y H:i') ?? '—' }}</td></tr>
         <tr><td class="muted">Submitted</td><td>{{ optional($attempt->submitted_at)->format('d/m/Y H:i') ?? '—' }}</td></tr>
+        <tr><td class="muted">Published</td><td>{{ $attempt->results_published ? 'Yes' : 'No' }}</td></tr>
         <tr><td class="muted">Generated</td><td>{{ now()->format('d/m/Y H:i') }}</td></tr>
     </table>
 

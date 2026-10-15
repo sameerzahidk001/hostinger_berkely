@@ -28,6 +28,8 @@ class LmsAssessmentReportController extends Controller
         $assessmentId = (int) $request->get('assessment_id', 0);
         $batchId = (int) $request->get('batch_id', 0);
         $courseId = (int) $request->get('course_id', 0);
+        $kind = trim((string) $request->get('kind', ''));
+        $search = trim((string) $request->get('search', ''));
 
         $selectedAssessment = $assessmentId > 0
             ? LmsAssessment::query()->find($assessmentId)
@@ -44,7 +46,8 @@ class LmsAssessmentReportController extends Controller
 
         $assignQuery = LmsAssessmentAssignment::query()
             ->with([
-                'assessment:id,title,kind,course_id,audience',
+                'assessment:id,title,kind,course_id,audience,duration_minutes',
+                'assessment.course:id,title',
                 'student:id,name,email',
                 'batch:id,code,name',
             ])
@@ -65,6 +68,20 @@ class LmsAssessmentReportController extends Controller
         if ($courseId > 0) {
             $assignQuery->whereHas('assessment', fn ($q) => $q->where('course_id', $courseId));
         }
+        if ($kind !== '' && array_key_exists($kind, LmsAssessment::kinds())) {
+            $assignQuery->whereHas('assessment', fn ($q) => $q->where('kind', $kind));
+        }
+        if ($search !== '') {
+            $like = '%' . addcslashes($search, '%_\\') . '%';
+            $assignQuery->where(function ($q) use ($like) {
+                $q->whereHas('assessment', function ($aq) use ($like) {
+                    $aq->where('title', 'like', $like)
+                        ->orWhereHas('course', fn ($cq) => $cq->where('title', 'like', $like));
+                })
+                    ->orWhereHas('student', fn ($sq) => $sq->where('name', 'like', $like)->orWhere('email', 'like', $like))
+                    ->orWhereHas('batch', fn ($bq) => $bq->where('name', 'like', $like)->orWhere('code', 'like', $like));
+            });
+        }
 
         $assignQuery->whereHas('assessment', function ($q) use ($courseIdsScope) {
             if ($courseIdsScope !== null) {
@@ -83,7 +100,6 @@ class LmsAssessmentReportController extends Controller
 
         $assignments = $assignQuery->limit(400)->get();
 
-        // Expand batch assignments to individual students.
         $rowsByKey = [];
         $batchStudentCache = [];
 
@@ -112,16 +128,26 @@ class LmsAssessmentReportController extends Controller
             }
 
             if ($batchId > 0 && $assignment->student_id) {
-                // Direct student assign: include only if student is in filtered batch.
                 $inBatch = ClassBatch::find($batchId)?->students()->where('users.id', $assignment->student_id)->exists();
                 if (! $inBatch) {
                     continue;
                 }
             }
 
+            if ($search !== '') {
+                $needle = mb_strtolower($search);
+                $students = $students->filter(function ($student) use ($needle, $assessment, $search) {
+                    $hay = mb_strtolower(
+                        ($student->name ?? '') . ' ' . ($student->email ?? '') . ' '
+                        . ($assessment->title ?? '') . ' ' . ($assessment->course->title ?? '')
+                    );
+
+                    return str_contains($hay, $needle);
+                });
+            }
+
             foreach ($students as $student) {
                 $key = (int) $assessment->id . ':' . (int) $student->id;
-                // Keep the newest assignment row for the pair.
                 if (isset($rowsByKey[$key]) && (int) $rowsByKey[$key]['assignment']->id >= (int) $assignment->id) {
                     continue;
                 }
@@ -134,7 +160,6 @@ class LmsAssessmentReportController extends Controller
             }
         }
 
-        // Attach latest attempt per assessment+user.
         $pairs = collect($rowsByKey)->values();
         if ($pairs->isNotEmpty()) {
             $assessmentIds = $pairs->pluck('assessment.id')->unique()->all();
@@ -175,7 +200,10 @@ class LmsAssessmentReportController extends Controller
                 ->where('audience', '!=', LmsAssessment::AUDIENCE_STAFF);
         }
 
-        $courses = $this->lms->coursesForActor();
+        $kinds = LmsAssessment::kinds();
+        if (! $this->assessments->canManageSkillTests()) {
+            unset($kinds[LmsAssessment::KIND_SKILL]);
+        }
 
         return view('admin.assessments.reports.index', [
             'rows' => $rows,
@@ -184,19 +212,21 @@ class LmsAssessmentReportController extends Controller
             'batches' => Schema::hasTable('class_batches')
                 ? ClassBatch::query()->orderByDesc('id')->get(['id', 'code', 'name'])
                 : collect(),
-            'courses' => $courses,
+            'courses' => $this->lms->coursesForActor(),
+            'kinds' => $kinds,
             'canDeleteAttempts' => $this->lms->isAdminActor() || panel_sees_all_dashboards(),
             'filters' => [
                 'assessment_id' => $assessmentId,
                 'batch_id' => $batchId,
                 'course_id' => $courseId,
+                'kind' => $kind,
+                'search' => $search,
             ],
         ]);
     }
 
     public function destroyAttempt($attemptId)
     {
-        // Instructors must not delete attempts — Admin (or full panel) only.
         abort_unless($this->lms->isAdminActor() || panel_sees_all_dashboards(), 403);
         $this->assessments->ensure();
 
