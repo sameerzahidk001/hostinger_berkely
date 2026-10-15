@@ -118,6 +118,19 @@ class LmsAssessmentPortalController extends Controller
         abort_unless($user, 403);
         $this->assessments->ensure();
         $attempt = LmsAssessmentAttempt::where('user_id', $user->id)->findOrFail($attemptId);
+
+        $essayMax = 15000;
+        $errors = [];
+        foreach ((array) $request->input('answers', []) as $questionId => $payload) {
+            $text = is_array($payload) ? ($payload['text'] ?? null) : null;
+            if ($text !== null && mb_strlen((string) $text) > $essayMax) {
+                $errors['answers.' . $questionId . '.text'] = 'Answer exceeds ' . number_format($essayMax) . ' characters.';
+            }
+        }
+        if ($errors !== []) {
+            return back()->withErrors($errors)->withInput();
+        }
+
         $this->assessments->saveAnswers($attempt, (array) $request->input('answers', []));
 
         if ($request->boolean('submit')) {

@@ -186,6 +186,21 @@ class LmsAssessmentController extends Controller
         $this->assessments->ensure();
         $attempt = LmsAssessmentAttempt::with(['answers.question', 'assessment'])->findOrFail($attemptId);
 
+        $feedbackMax = 2000;
+        $overallMax = 5000;
+        $errors = [];
+        foreach ((array) $request->input('feedback', []) as $answerId => $feedback) {
+            if ($this->plainTextLen($feedback) > $feedbackMax) {
+                $errors['feedback.' . $answerId] = 'Feedback exceeds ' . number_format($feedbackMax) . ' characters.';
+            }
+        }
+        if ($this->plainTextLen($request->input('grader_feedback')) > $overallMax) {
+            $errors['grader_feedback'] = 'Overall feedback exceeds ' . number_format($overallMax) . ' characters.';
+        }
+        if ($errors !== []) {
+            return back()->withErrors($errors)->withInput();
+        }
+
         foreach ((array) $request->input('manual', []) as $answerId => $score) {
             $answer = $attempt->answers->firstWhere('id', (int) $answerId);
             if (! $answer || ! $answer->question || ! $answer->question->needsManualMark()) {
@@ -195,6 +210,12 @@ class LmsAssessmentController extends Controller
             $this->assessments->markManualAnswer($answer, (float) $score, $feedback !== null ? (string) $feedback : null);
         }
 
+        $graderFeedback = $request->input('grader_feedback');
+        if ($graderFeedback !== null) {
+            $attempt->grader_feedback = trim((string) $graderFeedback) === '' ? null : (string) $graderFeedback;
+            $attempt->save();
+        }
+
         if ($request->boolean('publish')) {
             $this->assessments->publishResults($attempt->fresh(), $request->input('grader_feedback'));
             return redirect()->route('admin.assessments.tests.attempts', $attempt->assessment_id)
@@ -202,6 +223,14 @@ class LmsAssessmentController extends Controller
         }
 
         return back()->with('success', 'Marks saved.');
+    }
+
+    protected function plainTextLen(?string $html): int
+    {
+        $text = html_entity_decode(strip_tags((string) $html));
+        $text = str_replace("\xc2\xa0", ' ', $text);
+
+        return mb_strlen(trim($text));
     }
 
     public function publishAttempt($attemptId)
@@ -223,7 +252,7 @@ class LmsAssessmentController extends Controller
 
         return [
             'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
+            'description' => 'nullable|string|max:5000',
             'kind' => 'required|in:practice,mock,general,skill',
             'course_id' => ($courseRequired ? 'required' : 'nullable') . '|exists:courses,id',
             'duration_minutes' => 'nullable|integer|min:1',

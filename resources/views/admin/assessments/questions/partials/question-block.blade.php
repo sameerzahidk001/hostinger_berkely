@@ -26,20 +26,20 @@
                 </select>
             </div>
             <div class="col-md-3 form-group">
-                <label>Topic (optional override)</label>
-                <input type="text" name="{{ $prefix }}[topic]" class="form-control js-topic" value="{{ $topic }}">
+                <label>Topic (optional override) <span class="lms-char-hint">(max 255)</span></label>
+                <input type="text" name="{{ $prefix }}[topic]" class="form-control js-topic" data-max="255" maxlength="255" value="{{ $topic }}">
             </div>
             <div class="col-md-3 form-group">
                 <label>Max marks *</label>
                 <input type="number" step="0.1" min="0.1" name="{{ $prefix }}[max_marks]" class="form-control js-max-marks" value="{{ $marks }}" required>
             </div>
             <div class="col-md-12 form-group">
-                <label>Question stem *</label>
-                <textarea name="{{ $prefix }}[stem]" class="form-control text-editor" rows="4">{{ $stem }}</textarea>
+                <label>Question stem * <span class="lms-char-hint">(max 10,000 characters)</span></label>
+                <textarea name="{{ $prefix }}[stem]" class="form-control text-editor" rows="4" data-max="10000" data-height="160" data-rich="1">{{ $stem }}</textarea>
             </div>
             <div class="col-md-12 form-group">
-                <label>Explanation / model answer notes</label>
-                <textarea name="{{ $prefix }}[explanation]" class="form-control text-editor" rows="3">{{ $explanation }}</textarea>
+                <label>Explanation / model answer notes <span class="lms-char-hint">(max 10,000 characters)</span></label>
+                <textarea name="{{ $prefix }}[explanation]" class="form-control text-editor" rows="3" data-max="10000" data-height="120" data-rich="1">{{ $explanation }}</textarea>
             </div>
         </div>
         <div class="js-mcq-options" style="{{ $type === 'mcq' ? '' : 'display:none;' }}">
@@ -49,7 +49,7 @@
                     <label>
                         <input type="radio" name="{{ $prefix }}[correct_option]" value="{{ $i }}" @checked($correct === (int)$i)> Correct
                     </label>
-                    <input type="text" name="{{ $prefix }}[options][{{ $i }}][text]" class="form-control" value="{{ $opt['text'] ?? '' }}" placeholder="Option {{ $i + 1 }}">
+                    <input type="text" name="{{ $prefix }}[options][{{ $i }}][text]" class="form-control" data-max="500" maxlength="500" value="{{ $opt['text'] ?? '' }}" placeholder="Option {{ $i + 1 }} (max 500)">
                 </div>
             @endforeach
         </div>
