@@ -310,6 +310,7 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
             Route::post('/tests/{id}/assign', [LmsAssessmentController::class, 'saveAssign'])->name('tests.assign.save');
             Route::get('/tests/{id}/attempts', [LmsAssessmentController::class, 'attempts'])->name('tests.attempts');
             Route::get('/attempts/{attemptId}/mark', [LmsAssessmentController::class, 'mark'])->name('tests.mark');
+            Route::get('/attempts/{attemptId}/pdf', [LmsAssessmentController::class, 'attemptPdf'])->name('tests.attempt-pdf');
             Route::post('/attempts/{attemptId}/marks', [LmsAssessmentController::class, 'saveMarks'])->name('tests.save-marks');
             Route::post('/attempts/{attemptId}/publish', [LmsAssessmentController::class, 'publishAttempt'])->name('tests.publish-attempt');
 

@@ -89,6 +89,7 @@
         </div>
         <button type="submit" class="btn btn-default" name="publish" value="0">Save marks</button>
         <button type="submit" class="btn btn-primary" name="publish" value="1">Save &amp; publish results</button>
+        <a class="btn btn-success" href="{{ route('admin.assessments.tests.attempt-pdf', $attempt->id) }}" target="_blank"><i class="fa fa-file-pdf-o"></i> Download PDF</a>
         <a href="{{ route('admin.assessments.tests.attempts', $attempt->assessment_id) }}" class="btn btn-white">Back</a>
     </form>
 </div>
