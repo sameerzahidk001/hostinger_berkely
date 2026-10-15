@@ -35,17 +35,28 @@ class LmsAssessmentAssignment extends Model
         return $this->belongsTo(User::class, 'student_id');
     }
 
-    public function isAvailableNow(): bool
+    public function isNotYetOpen(): bool
     {
-        $now = now();
-        if ($this->available_from && $now->lt($this->available_from)) {
-            return false;
-        }
-        if ($this->available_until && $now->gt($this->available_until)) {
+        return $this->available_from && now()->lt($this->available_from);
+    }
+
+    public function isExpired(): bool
+    {
+        if (! $this->available_until) {
             return false;
         }
 
-        return true;
+        // Same from/until (zero-length window) expires as soon as that timestamp is reached.
+        if ($this->available_from && $this->available_from->equalTo($this->available_until)) {
+            return now()->gte($this->available_until);
+        }
+
+        return now()->gt($this->available_until);
+    }
+
+    public function isAvailableNow(): bool
+    {
+        return ! $this->isNotYetOpen() && ! $this->isExpired();
     }
 
     public function scopeLabel(): string

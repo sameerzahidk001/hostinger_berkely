@@ -22,7 +22,10 @@ class LmsAssessmentPortalController extends Controller
         $this->assessments->ensure();
 
         $section = $request->get('section', 'all'); // all|mocks|practice|skill
-        $tab = $request->get('tab', 'upcoming'); // upcoming|in_progress|submitted|results
+        $tab = $request->get('tab', 'available'); // available|upcoming|in_progress|submitted|results|missed
+        if (! in_array($tab, ['available', 'upcoming', 'in_progress', 'submitted', 'results', 'missed'], true)) {
+            $tab = 'available';
+        }
         $kind = match ($section) {
             'mocks' => LmsAssessment::KIND_MOCK,
             'practice' => LmsAssessment::KIND_PRACTICE,
@@ -34,25 +37,29 @@ class LmsAssessmentPortalController extends Controller
         $buckets = $this->assessments->bucketForUser($user, $kind);
         if ($section === 'practice') {
             $general = $this->assessments->bucketForUser($user, LmsAssessment::KIND_GENERAL);
-            foreach (['upcoming', 'inProgress', 'submitted', 'results'] as $key) {
+            foreach (['available', 'upcoming', 'inProgress', 'submitted', 'results', 'missed'] as $key) {
                 $buckets[$key] = $buckets[$key]->merge($general[$key])->unique(fn ($row) => $row['assessment']->id);
             }
         }
 
         $list = match ($tab) {
+            'upcoming' => $buckets['upcoming'],
             'in_progress' => $buckets['inProgress'],
             'submitted' => $buckets['submitted'],
             'results' => $buckets['results'],
-            default => $buckets['upcoming'],
+            'missed' => $buckets['missed'],
+            default => $buckets['available'],
         };
 
         return view('user.assessments.index', [
             'list' => $list,
             'counts' => [
+                'available' => $buckets['available']->count(),
                 'upcoming' => $buckets['upcoming']->count(),
                 'in_progress' => $buckets['inProgress']->count(),
                 'submitted' => $buckets['submitted']->count(),
                 'results' => $buckets['results']->count(),
+                'missed' => $buckets['missed']->count(),
             ],
             'section' => $section,
             'tab' => $tab,
