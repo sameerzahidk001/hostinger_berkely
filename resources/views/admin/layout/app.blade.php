@@ -198,6 +198,22 @@
                      </ul>
                   </li>
                   @endif
+                  @if(admin_menu_allowed('assessments') || admin_menu_allowed('study-materials') || admin_menu_allowed('class-schedules'))
+                  <li class="{{ request()->is('admin/assessments*') ? 'active' : '' }}">
+                     <a href="javascript:void(0)"><i class="fa fa-pencil-square-o"></i> <span class="nav-label">Assessments</span> <span class="fa arrow"></span></a>
+                     <ul class="nav nav-second-level">
+                        <li class="{{ request()->routeIs('admin.assessments.questions.*') ? 'active' : '' }}">
+                           <a href="{{ route('admin.assessments.questions.index') }}">Question Bank</a>
+                        </li>
+                        <li class="{{ request()->routeIs('admin.assessments.tests.*') ? 'active' : '' }}">
+                           <a href="{{ route('admin.assessments.tests.index') }}">Practice / Mock / Tests</a>
+                        </li>
+                        <li class="{{ request()->routeIs('admin.assessments.reports.*') ? 'active' : '' }}">
+                           <a href="{{ route('admin.assessments.reports.index') }}">Reports</a>
+                        </li>
+                     </ul>
+                  </li>
+                  @endif
                   @if(admin_menu_allowed('class-schedules') || admin_menu_allowed('study-materials'))
                   <li class="{{ request()->is('admin/rate-review*') ? 'active' : '' }}">
                      <a href="{{ route('admin.rate-review.index') }}"><i class="fa fa-star"></i> <span class="nav-label">Rate and Review</span></a>

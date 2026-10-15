@@ -1,0 +1,65 @@
+@extends('user.layout.app')
+@section('title', 'Result')
+@section('content')
+<div class="row wrapper border-bottom white-bg page-heading">
+    <div class="col-lg-10">
+        <h2>{{ $attempt->assessment->title ?? 'Result' }}</h2>
+        <ol class="breadcrumb">
+            <li><a href="{{ route('user.assessments.index', ['tab' => 'results']) }}">Assessments</a></li>
+            <li class="active"><strong>Result</strong></li>
+        </ol>
+    </div>
+</div>
+<div class="wrapper wrapper-content">
+    @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
+    @if(session('fail'))<div class="alert alert-warning">{{ session('fail') }}</div>@endif
+
+    <div class="ibox">
+        <div class="ibox-title"><h5>Summary</h5></div>
+        <div class="ibox-content">
+            <p>Status: <strong>{{ $attempt->statusLabel() }}</strong></p>
+            @if($canSeeScore)
+                <p style="font-size:22px;margin:8px 0;">
+                    Score: <strong>{{ $attempt->score_raw }} / {{ $attempt->score_max }}</strong>
+                    @if($attempt->percent() !== null) ({{ $attempt->percent() }}%) @endif
+                    · {{ $attempt->passFailLabel() }}
+                </p>
+                @if($attempt->grader_feedback)
+                    <p><strong>Feedback:</strong> {{ $attempt->grader_feedback }}</p>
+                @endif
+            @else
+                <p class="text-muted">Submitted. Your score and pass/fail will appear here when Admin / Instructor publishes results.</p>
+            @endif
+            <p class="text-muted">Submitted: {{ optional($attempt->submitted_at)->format('d M Y H:i') ?? '—' }}</p>
+        </div>
+    </div>
+
+    @if($canSeeScore)
+        @foreach($attempt->assessment->questions as $i => $question)
+            @php $answer = $attempt->answers->firstWhere('question_id', $question->id); @endphp
+            <div class="ibox">
+                <div class="ibox-title"><h5>Q{{ $i + 1 }} · {{ $question->typeLabel() }}</h5></div>
+                <div class="ibox-content">
+                    <p>{!! nl2br(e($question->stem)) !!}</p>
+                    @if($question->isMcq())
+                        <p>Your answer: {{ $answer?->selectedKey() ?? '—' }}
+                            @if($answer && $answer->is_correct !== null)
+                                · {{ $answer->is_correct ? 'Correct' : 'Incorrect' }}
+                            @endif
+                            · {{ $answer?->finalScore() ?? 0 }} / {{ $answer->max_marks ?? $question->max_marks }}
+                        </p>
+                    @else
+                        <div class="well well-sm">{{ $answer?->textAnswer() ?: '—' }}</div>
+                        <p>Score: {{ $answer?->finalScore() ?? '—' }} / {{ $answer->max_marks ?? $question->max_marks }}</p>
+                        @if($answer && $answer->feedback)
+                            <p><em>Feedback:</em> {{ $answer->feedback }}</p>
+                        @endif
+                    @endif
+                </div>
+            </div>
+        @endforeach
+    @endif
+
+    <a href="{{ route('user.assessments.index', ['tab' => 'results']) }}" class="btn btn-default">Back to results</a>
+</div>
+@endsection

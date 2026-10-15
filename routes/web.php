@@ -56,6 +56,10 @@ use App\Http\Controllers\Admin\InstructorReviewController as AdminInstructorRevi
 use App\Http\Controllers\User\InstructorReviewController as UserInstructorReviewController;
 use App\Http\Controllers\Admin\InstructorBatchPaymentController as AdminInstructorBatchPaymentController;
 use App\Http\Controllers\User\InstructorBatchPaymentController as UserInstructorBatchPaymentController;
+use App\Http\Controllers\Admin\LmsQuestionController;
+use App\Http\Controllers\Admin\LmsAssessmentController;
+use App\Http\Controllers\Admin\LmsAssessmentReportController;
+use App\Http\Controllers\User\LmsAssessmentPortalController;
 
 //student controllers starts
 use App\Http\Controllers\Student\HomeController as StudentHomeController;
@@ -285,6 +289,28 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
             Route::post('/{id}/unlock', [AdminInstructorReviewController::class, 'unlock'])->name('unlock');
             Route::post('/{id}/toggle-name', [AdminInstructorReviewController::class, 'toggleStudentName'])->name('toggle-name');
             Route::delete('/{id}', [AdminInstructorReviewController::class, 'destroy'])->name('destroy');
+        });
+
+        Route::prefix('assessments')->name('admin.assessments.')->group(function () {
+            Route::get('/questions', [LmsQuestionController::class, 'index'])->name('questions.index');
+            Route::get('/questions/create', [LmsQuestionController::class, 'create'])->name('questions.create');
+            Route::post('/questions', [LmsQuestionController::class, 'store'])->name('questions.store');
+            Route::get('/questions/{id}/edit', [LmsQuestionController::class, 'edit'])->name('questions.edit');
+            Route::put('/questions/{id}', [LmsQuestionController::class, 'update'])->name('questions.update');
+            Route::delete('/questions/{id}', [LmsQuestionController::class, 'destroy'])->name('questions.destroy');
+
+            Route::get('/tests', [LmsAssessmentController::class, 'index'])->name('tests.index');
+            Route::get('/tests/create', [LmsAssessmentController::class, 'create'])->name('tests.create');
+            Route::post('/tests', [LmsAssessmentController::class, 'store'])->name('tests.store');
+            Route::get('/tests/{id}/edit', [LmsAssessmentController::class, 'edit'])->name('tests.edit');
+            Route::put('/tests/{id}', [LmsAssessmentController::class, 'update'])->name('tests.update');
+            Route::delete('/tests/{id}', [LmsAssessmentController::class, 'destroy'])->name('tests.destroy');
+            Route::get('/tests/{id}/attempts', [LmsAssessmentController::class, 'attempts'])->name('tests.attempts');
+            Route::get('/attempts/{attemptId}/mark', [LmsAssessmentController::class, 'mark'])->name('tests.mark');
+            Route::post('/attempts/{attemptId}/marks', [LmsAssessmentController::class, 'saveMarks'])->name('tests.save-marks');
+            Route::post('/attempts/{attemptId}/publish', [LmsAssessmentController::class, 'publishAttempt'])->name('tests.publish-attempt');
+
+            Route::get('/reports', [LmsAssessmentReportController::class, 'index'])->name('reports.index');
         });
 
         Route::prefix('class-schedules')->name('admin.class-schedules.')->group(function () {
@@ -648,6 +674,12 @@ Route::prefix('user')->middleware(['auth', 'approved', 'redirect.panel.from.stud
     Route::get('/my-instructor-rating', [UserInstructorReviewController::class, 'myScore'])->name('user.rate-review.my-score');
     Route::get('/instructor-payments', [UserInstructorBatchPaymentController::class, 'index'])->name('user.instructor-payments.index');
     Route::get('/instructor-payments/{id}/slip', [UserInstructorBatchPaymentController::class, 'slip'])->name('user.instructor-payments.slip');
+    Route::get('/assessments', [LmsAssessmentPortalController::class, 'index'])->name('user.assessments.index');
+    Route::get('/mock-exams', [LmsAssessmentPortalController::class, 'mocks'])->name('user.assessments.mocks');
+    Route::get('/assessments/{id}/start', [LmsAssessmentPortalController::class, 'start'])->name('user.assessments.start');
+    Route::get('/assessments/attempts/{attemptId}', [LmsAssessmentPortalController::class, 'take'])->name('user.assessments.take');
+    Route::post('/assessments/attempts/{attemptId}', [LmsAssessmentPortalController::class, 'save'])->name('user.assessments.save');
+    Route::get('/assessments/attempts/{attemptId}/result', [LmsAssessmentPortalController::class, 'result'])->name('user.assessments.result');
     Route::get('/history', [UserHistoryController::class, 'index'])->name('user.history');
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('user.analytics');
 
