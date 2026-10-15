@@ -38,13 +38,16 @@
                     <textarea name="description" class="form-control" rows="3">{{ old('description', $assessment->description) }}</textarea>
                 </div>
                 <div class="col-md-4 form-group">
-                    <label>Course</label>
-                    <select name="course_id" class="form-control">
+                    <label>Course{{ !empty($courseRequired) ? ' *' : '' }}</label>
+                    <select name="course_id" class="form-control" @if(!empty($courseRequired)) required @endif>
                         <option value="">—</option>
                         @foreach($courses as $course)
                             <option value="{{ $course->id }}" @selected((string) old('course_id', $assessment->course_id) === (string) $course->id)>{{ $course->title }}</option>
                         @endforeach
                     </select>
+                    @if(!empty($courseRequired))
+                        <p class="help-block m-b-none">Instructors may only create Practice/Mock for courses Admin assigned them.</p>
+                    @endif
                 </div>
                 <div class="col-md-2 form-group">
                     <label>Duration (min)</label>
@@ -88,7 +91,8 @@
             </select>
             <p class="help-block">Hold Ctrl/Cmd to multi-select. Add questions in Question Bank first.</p>
 
-            <h4>Assign to batch and/or student</h4>
+            <h4>Assign to batch and/or users</h4>
+            <p class="help-block">Students and staff (Content Writers, Accountants, Instructors) can be assigned.</p>
             <div class="row">
                 <div class="col-md-6 form-group">
                     <label>Batches</label>
@@ -99,10 +103,15 @@
                     </select>
                 </div>
                 <div class="col-md-6 form-group">
-                    <label>Individual students</label>
-                    <select name="student_ids[]" class="form-control" multiple size="6">
+                    <label>Individual users (students &amp; staff)</label>
+                    <select name="student_ids[]" class="form-control" multiple size="8">
                         @foreach($students as $student)
-                            <option value="{{ $student->id }}" @selected(collect($selectedStudentIds)->contains($student->id))>{{ $student->name }} ({{ $student->email }})</option>
+                            @php
+                                $roleLabel = $student->roles->pluck('name')->map(fn ($n) => ucwords(str_replace(['_', '-'], ' ', $n)))->implode(', ');
+                            @endphp
+                            <option value="{{ $student->id }}" @selected(collect($selectedStudentIds)->contains($student->id))>
+                                {{ $student->name }} ({{ $student->email }}){{ $roleLabel ? ' — '.$roleLabel : '' }}
+                            </option>
                         @endforeach
                     </select>
                 </div>

@@ -885,6 +885,8 @@ class User extends Authenticatable implements MustVerifyEmail
             'assign_student_access' => 'Provide student access',
             'manage_batch' => 'Create / Edit Batch',
             'manage_schedule' => 'Create / Edit / Delete Schedule',
+            'manage_question_bank' => 'Manage Question Bank',
+            'manage_student_assessments' => 'Create / Assign Practice & Mock (assigned courses)',
         ];
     }
 

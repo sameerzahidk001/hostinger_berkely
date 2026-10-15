@@ -64,6 +64,7 @@ class LmsAssessmentPortalController extends Controller
             'section' => $section,
             'tab' => $tab,
             'isInstructor' => $user->roles()->where('name', 'instructor')->exists(),
+            'isStaff' => $user->roles()->whereIn('name', $this->assessments->staffRoleNames())->exists(),
         ]);
     }
 

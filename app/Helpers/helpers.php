@@ -1287,12 +1287,12 @@ if (!function_exists('admin_menu_allowed')) {
 
         $contentWriterMenus = [
             'dashboard', 'courses', 'training-calendar', 'school', 'categories',
-            'pages', 'faq', 'seo', 'analytics', 'clients', 'profile', 'logout',
+            'pages', 'faq', 'seo', 'analytics', 'clients', 'assessments', 'profile', 'logout',
         ];
 
         $accountantMenus = [
             'dashboard', 'courses', 'currency-rate-setup',
-            'payments', 'payment-gateway', 'profile', 'logout',
+            'payments', 'payment-gateway', 'assessments', 'profile', 'logout',
         ];
 
         $instructorMenus = [

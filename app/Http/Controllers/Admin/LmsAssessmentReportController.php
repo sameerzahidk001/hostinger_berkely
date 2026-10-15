@@ -18,7 +18,7 @@ class LmsAssessmentReportController extends Controller
 
     public function index(Request $request)
     {
-        abort_unless($this->assessments->canManageAssessments(), 403);
+        abort_unless($this->assessments->canManageStudentAssessments() || $this->assessments->canManageSkillTests(), 403);
         $this->assessments->ensure();
 
         $assessmentId = (int) $request->get('assessment_id', 0);
