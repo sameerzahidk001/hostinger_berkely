@@ -202,7 +202,7 @@ class LmsAssessmentController extends Controller
             'student_ids.*' => 'exists:users,id',
             'marker_user_id' => 'nullable|exists:users,id',
             'available_from' => 'nullable|date',
-            'available_until' => 'nullable|date|after:available_from',
+            'available_until' => 'nullable|date',
         ]);
         if ($validator->fails()) {
             return back()->withErrors($validator)->withInput();
@@ -686,7 +686,15 @@ class LmsAssessmentController extends Controller
         $deleteQuery->delete();
 
         $from = $request->filled('available_from') ? $request->input('available_from') : null;
-        $until = $request->filled('available_until') ? $request->input('available_until') : null;
+        // Appointment window length = exam duration from start (student may start within that window).
+        $until = null;
+        if ($from && $a->duration_minutes) {
+            $until = \Carbon\Carbon::parse($from)
+                ->addMinutes((int) $a->duration_minutes)
+                ->format('Y-m-d H:i:s');
+        } elseif ($request->filled('available_until')) {
+            $until = $request->input('available_until');
+        }
         $byAdmin = $this->lms->isAdminActor() ? Auth::guard('admin')->id() : null;
         $byUser = ! $byAdmin ? Auth::id() : null;
         $markerId = $request->filled('marker_user_id') ? (int) $request->input('marker_user_id') : null;
