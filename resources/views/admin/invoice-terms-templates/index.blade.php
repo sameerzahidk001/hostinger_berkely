@@ -29,7 +29,10 @@
                             <th>ID</th>
                             <th>Name</th>
                             <th>Status</th>
-                            @include('admin.layout.partials.audit-columns-head')
+                            <th>Created Date</th>
+                            <th>Created By</th>
+                            <th>Modified Date</th>
+                            <th>Modified By</th>
                             <th style="width:120px;">Action</th>
                         </tr>
                     </thead>

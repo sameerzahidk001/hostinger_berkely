@@ -30,6 +30,7 @@ class PaymentController extends Controller
     public function index(Request $request)
     {
         Payment::ensureAuditColumns();
+        \App\Models\InvoiceTermsTemplate::ensureTable();
         $installments = Installment::get();
         $payments = Payment::with('user', 'course', 'courseFee', 'page', 'pageFeeService', 'pageFeePackage', 'installments', 'installment_request', 'createdBy', 'updatedBy')
             ->orderByDesc('created_at')
@@ -73,6 +74,8 @@ class PaymentController extends Controller
         $pageFees->ensureTables();
         $pageFees->ensureTermsConditionsColumn();
         CourseFee::ensureTermsColumn();
+        // Link PAYTC1 to packages still missing a template, then load packages for the form.
+        \App\Models\InvoiceTermsTemplate::ensureTable();
 
         $users = User::with('roles')->whereHas('roles', function ($query) {
             $query->where('name', 'student');

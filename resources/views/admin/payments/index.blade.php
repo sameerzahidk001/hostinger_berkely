@@ -15,6 +15,23 @@
         flex: 1;
     }
 
+    /* Keep invoices grid readable without forced horizontal scroll when audit cols are added */
+    .ibox-content .table-responsive { overflow-x: auto; }
+    table.dataTables-example {
+        width: 100% !important;
+        table-layout: fixed;
+        font-size: 12px;
+    }
+    table.dataTables-example > thead > tr > th,
+    table.dataTables-example > tbody > tr > td {
+        padding: 6px 6px;
+        vertical-align: middle;
+        word-wrap: break-word;
+        overflow-wrap: anywhere;
+        white-space: normal;
+    }
+    table.dataTables-example .btn { margin: 1px 0; padding: 3px 6px; font-size: 11px; }
+
     .switch {
         position: relative;
         display: inline-block;
@@ -118,7 +135,10 @@
                                     <th>Payment Status</th>
                                     <th>Status</th>
                                     <th>CRM Sync</th>
-                                    @include('admin.layout.partials.audit-columns-head')
+                                    <th>Created Date</th>
+                                    <th>Created By</th>
+                                    <th>Modified Date</th>
+                                    <th>Modified By</th>
                                     <th>Action</th>
                                 </tr>
                             </thead>
