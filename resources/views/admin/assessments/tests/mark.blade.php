@@ -28,6 +28,26 @@
     </p>
     <form method="POST" action="{{ route('admin.assessments.tests.save-marks', $attempt->id) }}" id="markAttemptForm">
         @csrf
+        <div class="ibox">
+            <div class="ibox-title"><h5>Overall feedback to student *</h5></div>
+            <div class="ibox-content">
+                <div class="form-group m-b-none">
+                    <label class="lms-char-hint">max {{ number_format($overallMax) }} characters</label>
+                    <textarea
+                        name="grader_feedback"
+                        class="form-control lms-text-editor"
+                        rows="4"
+                        data-max="{{ $overallMax }}"
+                        data-height="160"
+                        data-rich="1"
+                        required
+                    >{{ old('grader_feedback', $attempt->grader_feedback) }}</textarea>
+                    @error('grader_feedback')
+                        <span class="help-block text-danger">{{ $message }}</span>
+                    @enderror
+                </div>
+            </div>
+        </div>
         @foreach($attempt->assessment->questions as $question)
             @php $answer = $attempt->answers->firstWhere('question_id', $question->id); @endphp
             <div class="ibox">
@@ -69,24 +89,6 @@
                 </div>
             </div>
         @endforeach
-        <div class="form-group">
-            <label>
-                Overall feedback to student *
-                <span class="lms-char-hint">(max {{ number_format($overallMax) }} characters)</span>
-            </label>
-            <textarea
-                name="grader_feedback"
-                class="form-control lms-text-editor"
-                rows="4"
-                data-max="{{ $overallMax }}"
-                data-height="160"
-                data-rich="1"
-                required
-            >{{ old('grader_feedback', $attempt->grader_feedback) }}</textarea>
-            @error('grader_feedback')
-                <span class="help-block text-danger">{{ $message }}</span>
-            @enderror
-        </div>
         <button type="submit" class="btn btn-default" name="publish" value="0">Save marks</button>
         <button type="submit" class="btn btn-primary" name="publish" value="1">Save &amp; publish results</button>
         <a class="btn btn-success" href="{{ route('admin.assessments.tests.attempt-pdf', $attempt->id) }}" target="_blank"><i class="fa fa-file-pdf-o"></i> Download PDF</a>

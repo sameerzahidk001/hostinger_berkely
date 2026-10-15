@@ -36,6 +36,11 @@
         <tr><td class="muted">Generated</td><td>{{ now()->format('d/m/Y H:i') }}</td></tr>
     </table>
 
+    @if($attempt->grader_feedback)
+        <h2>Overall feedback</h2>
+        <div class="feedback">{!! strip_tags($attempt->grader_feedback, '<p><br><strong><em><ul><ol><li><b><i>') !!}</div>
+    @endif
+
     <h2>Questions &amp; answers</h2>
     @foreach($attempt->assessment->questions as $i => $question)
         @php $answer = $attempt->answers->firstWhere('question_id', $question->id); @endphp
@@ -64,10 +69,5 @@
             @endif
         </div>
     @endforeach
-
-    @if($attempt->grader_feedback)
-        <h2>Overall feedback</h2>
-        <div class="feedback">{!! strip_tags($attempt->grader_feedback, '<p><br><strong><em><ul><ol><li><b><i>') !!}</div>
-    @endif
 </body>
 </html>
