@@ -212,7 +212,7 @@ class LmsAssessmentController extends Controller
             'student_ids' => 'nullable|array',
             'student_ids.*' => 'exists:users,id',
             'available_from' => 'nullable|date',
-            'available_until' => 'nullable|date|after_or_equal:available_from',
+            'available_until' => 'nullable|date|after:available_from',
         ];
     }
 

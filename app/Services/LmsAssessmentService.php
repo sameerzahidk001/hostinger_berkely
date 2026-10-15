@@ -127,6 +127,15 @@ class LmsAssessmentService
         abort_unless($assessment->isPublished(), 403);
         abort_unless($this->userCanAccessAssessment($user, $assessment), 403);
 
+        $access = $this->availableAssessmentsForUser($user, $assessment->kind)
+            ->first(fn ($row) => (int) $row['assessment']->id === (int) $assessment->id);
+        $assignment = $access['assignment'] ?? null;
+        if ($assignment && ! $assignment->isAvailableNow()) {
+            abort(403, $assignment->isNotYetOpen()
+                ? 'This exam is not open yet.'
+                : 'The availability window for this exam has ended.');
+        }
+
         $open = LmsAssessmentAttempt::query()
             ->where('assessment_id', $assessment->id)
             ->where('user_id', $user->id)
@@ -403,10 +412,12 @@ class LmsAssessmentService
     public function bucketForUser(User $user, ?string $kind = null): array
     {
         $items = $this->availableAssessmentsForUser($user, $kind);
+        $available = collect();
         $upcoming = collect();
         $inProgress = collect();
         $submitted = collect();
         $results = collect();
+        $missed = collect();
 
         foreach ($items as $row) {
             /** @var LmsAssessment $assessment */
@@ -436,14 +447,16 @@ class LmsAssessmentService
                 $results->push(['assessment' => $assessment, 'assignment' => $assignment, 'attempt' => $done]);
             } elseif ($done) {
                 $submitted->push(['assessment' => $assessment, 'assignment' => $assignment, 'attempt' => $done]);
+            } elseif ($assignment && $assignment->isExpired()) {
+                $missed->push(['assessment' => $assessment, 'assignment' => $assignment, 'attempt' => null]);
+            } elseif ($assignment && $assignment->isNotYetOpen()) {
+                $upcoming->push(['assessment' => $assessment, 'assignment' => $assignment, 'attempt' => null]);
             } else {
-                $available = ! $assignment || $assignment->isAvailableNow();
-                if ($available) {
-                    $upcoming->push(['assessment' => $assessment, 'assignment' => $assignment, 'attempt' => null]);
-                }
+                // Open window (or no schedule) — ready to start, not "upcoming".
+                $available->push(['assessment' => $assessment, 'assignment' => $assignment, 'attempt' => null]);
             }
         }
 
-        return compact('upcoming', 'inProgress', 'submitted', 'results');
+        return compact('available', 'upcoming', 'inProgress', 'submitted', 'results', 'missed');
     }
 }

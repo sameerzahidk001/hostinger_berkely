@@ -109,10 +109,12 @@
                 <div class="col-md-3 form-group">
                     <label>Available from</label>
                     <input type="datetime-local" name="available_from" class="form-control" value="{{ old('available_from', optional($assessment->assignments->first()?->available_from)->format('Y-m-d\TH:i')) }}">
+                    <p class="help-block m-b-none">Leave blank to open immediately after assign.</p>
                 </div>
                 <div class="col-md-3 form-group">
                     <label>Available until</label>
                     <input type="datetime-local" name="available_until" class="form-control" value="{{ old('available_until', optional($assessment->assignments->first()?->available_until)->format('Y-m-d\TH:i')) }}">
+                    <p class="help-block m-b-none">Must be after “from”. Leave blank for no end time.</p>
                 </div>
             </div>
 

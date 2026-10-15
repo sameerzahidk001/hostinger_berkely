@@ -55,17 +55,23 @@
     </ul>
 
     <ul class="nav nav-pills" style="margin-bottom:15px;">
+        <li class="{{ $tab === 'available' ? 'active' : '' }}">
+            <a href="{{ request()->fullUrlWithQuery(['tab' => 'available']) }}">Available ({{ $counts['available'] ?? 0 }})</a>
+        </li>
         <li class="{{ $tab === 'upcoming' ? 'active' : '' }}">
-            <a href="{{ request()->fullUrlWithQuery(['tab' => 'upcoming']) }}">Upcoming ({{ $counts['upcoming'] }})</a>
+            <a href="{{ request()->fullUrlWithQuery(['tab' => 'upcoming']) }}">Upcoming ({{ $counts['upcoming'] ?? 0 }})</a>
         </li>
         <li class="{{ $tab === 'in_progress' ? 'active' : '' }}">
-            <a href="{{ request()->fullUrlWithQuery(['tab' => 'in_progress']) }}">In progress ({{ $counts['in_progress'] }})</a>
+            <a href="{{ request()->fullUrlWithQuery(['tab' => 'in_progress']) }}">In progress ({{ $counts['in_progress'] ?? 0 }})</a>
         </li>
         <li class="{{ $tab === 'submitted' ? 'active' : '' }}">
-            <a href="{{ request()->fullUrlWithQuery(['tab' => 'submitted']) }}">Submitted ({{ $counts['submitted'] }})</a>
+            <a href="{{ request()->fullUrlWithQuery(['tab' => 'submitted']) }}">Submitted ({{ $counts['submitted'] ?? 0 }})</a>
         </li>
         <li class="{{ $tab === 'results' ? 'active' : '' }}">
-            <a href="{{ request()->fullUrlWithQuery(['tab' => 'results']) }}">Results ({{ $counts['results'] }})</a>
+            <a href="{{ request()->fullUrlWithQuery(['tab' => 'results']) }}">Results ({{ $counts['results'] ?? 0 }})</a>
+        </li>
+        <li class="{{ $tab === 'missed' ? 'active' : '' }}">
+            <a href="{{ request()->fullUrlWithQuery(['tab' => 'missed']) }}">Missed ({{ $counts['missed'] ?? 0 }})</a>
         </li>
     </ul>
 
@@ -107,17 +113,25 @@
                                 @if($att->results_published && $att->score_raw !== null)
                                     · {{ $att->score_raw }}/{{ $att->score_max }} · {{ $att->passFailLabel() }}
                                 @endif
+                            @elseif($tab === 'missed')
+                                Missed
+                            @elseif($tab === 'upcoming')
+                                Opens {{ optional($asg?->available_from)->format('d M Y H:i') ?: 'soon' }}
                             @else
-                                Upcoming
+                                Available
                             @endif
                         </td>
                         <td>
-                            @if($tab === 'upcoming')
+                            @if($tab === 'available')
                                 <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.start', $a->id) }}">Start</a>
                             @elseif($tab === 'in_progress' && $att)
                                 <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.take', $att->id) }}">Continue</a>
                             @elseif($att)
                                 <a class="btn btn-xs btn-default" href="{{ route('user.assessments.result', $att->id) }}">View</a>
+                            @elseif($tab === 'upcoming')
+                                <span class="text-muted">Not open yet</span>
+                            @elseif($tab === 'missed')
+                                <span class="text-muted">Window ended</span>
                             @endif
                         </td>
                     </tr>
