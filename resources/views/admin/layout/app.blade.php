@@ -242,7 +242,7 @@
                   </li>
                   @endif
                   @if(admin_menu_allowed('payments'))
-                  <li class="{{ request()->is('admin/payments*') || request()->is('admin/currency-rate-setup') || request()->is('admin/payment-gateways*') ? 'active show' : '' }}">
+                  <li class="{{ request()->is('admin/payments*') || request()->is('admin/instructor-payments*') || request()->is('admin/currency-rate-setup') || request()->is('admin/payment-gateways*') ? 'active show' : '' }}">
                      <a href="javascript:void(0)"><i class="fa fa-address-card"></i> <span class="nav-label">Payments</span> <span class="fa arrow"></span></a>
                      <ul class="nav nav-second-level">
                         <li class="{{ request()->routeIs('admin.payments.index') && request('status') === null ? 'active' : '' }}"><a href="{{ route('admin.payments.index') }}">Invoice List</a></li>
@@ -250,6 +250,7 @@
                         <li class="{{ request()->routeIs('admin.payments.index') && request('status') === 'partial' ? 'active' : '' }}"><a href="{{ route('admin.payments.index', ['status' => 'partial']) }}">Partial Paid Invoices</a></li>
                         <li><a href="{{ route('admin.payments.create') }}">Create Invoice</a></li>
                         <li><a href="{{ route('admin.payments.receipts') }}">Receipts</a></li>
+                        <li class="{{ request()->is('admin/instructor-payments*') ? 'active' : '' }}"><a href="{{ route('admin.instructor-payments.index') }}">Instructor Payments</a></li>
                         @if(admin_menu_allowed('currency-rate-setup'))
                         <li class="{{ request()->is('admin/currency-rate-setup') ? 'active' : '' }}"><a href="{{ route('currency-rates.index') }}">Currency Rate Setup</a></li>
                         @endif

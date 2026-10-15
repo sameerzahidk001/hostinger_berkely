@@ -54,6 +54,8 @@ use App\Http\Controllers\Admin\ZohoCrmSettingsController;
 use App\Http\Controllers\Admin\MeetingAccountController;
 use App\Http\Controllers\Admin\InstructorReviewController as AdminInstructorReviewController;
 use App\Http\Controllers\User\InstructorReviewController as UserInstructorReviewController;
+use App\Http\Controllers\Admin\InstructorBatchPaymentController as AdminInstructorBatchPaymentController;
+use App\Http\Controllers\User\InstructorBatchPaymentController as UserInstructorBatchPaymentController;
 
 //student controllers starts
 use App\Http\Controllers\Student\HomeController as StudentHomeController;
@@ -340,6 +342,16 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
         Route::post('/stripe-configure/store', [SettingController::class, 'stripeStore'])->name('stripe-configure.store');
 
         Route::get('/payments/receipts', [AdminPaymentController::class, 'receipt'])->name('admin.payments.receipts');
+        Route::prefix('instructor-payments')->name('admin.instructor-payments.')->group(function () {
+            Route::get('/', [AdminInstructorBatchPaymentController::class, 'index'])->name('index');
+            Route::get('/create', [AdminInstructorBatchPaymentController::class, 'create'])->name('create');
+            Route::post('/', [AdminInstructorBatchPaymentController::class, 'store'])->name('store');
+            Route::get('/batch-instructors', [AdminInstructorBatchPaymentController::class, 'batchInstructors'])->name('batch-instructors');
+            Route::get('/{id}/edit', [AdminInstructorBatchPaymentController::class, 'edit'])->name('edit');
+            Route::put('/{id}', [AdminInstructorBatchPaymentController::class, 'update'])->name('update');
+            Route::delete('/{id}', [AdminInstructorBatchPaymentController::class, 'destroy'])->name('destroy');
+            Route::get('/{id}/slip', [AdminInstructorBatchPaymentController::class, 'slip'])->name('slip');
+        });
         Route::resource('payments', AdminPaymentController::class)->names('admin.payments');
         Route::get('/payments/send-invoice/{id}', [AdminPaymentController::class, 'sendInvoice'])->name('admin.payments.send-invoice');
         Route::get('/payments/send-receipt/{id}', [AdminPaymentController::class, 'sendReceipt'])->name('admin.payments.send-receipt');
@@ -634,6 +646,8 @@ Route::prefix('user')->middleware(['auth', 'approved', 'redirect.panel.from.stud
     Route::get('/rate-review/create', [UserInstructorReviewController::class, 'create'])->name('user.rate-review.create');
     Route::post('/rate-review', [UserInstructorReviewController::class, 'store'])->name('user.rate-review.store');
     Route::get('/my-instructor-rating', [UserInstructorReviewController::class, 'myScore'])->name('user.rate-review.my-score');
+    Route::get('/instructor-payments', [UserInstructorBatchPaymentController::class, 'index'])->name('user.instructor-payments.index');
+    Route::get('/instructor-payments/{id}/slip', [UserInstructorBatchPaymentController::class, 'slip'])->name('user.instructor-payments.slip');
     Route::get('/history', [UserHistoryController::class, 'index'])->name('user.history');
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('user.analytics');
 
