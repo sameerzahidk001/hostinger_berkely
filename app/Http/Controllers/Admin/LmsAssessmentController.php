@@ -333,7 +333,7 @@ class LmsAssessmentController extends Controller
     {
         abort_unless($this->assessments->canManageStudentAssessments() || $this->assessments->canManageSkillTests(), 403);
         $this->assessments->ensure();
-        $attempt = LmsAssessmentAttempt::with(['assessment.questions', 'answers.question', 'user'])->findOrFail($attemptId);
+        $attempt = LmsAssessmentAttempt::with(['assessment.course', 'assessment.questions', 'answers.question', 'user'])->findOrFail($attemptId);
         if ($attempt->assessment?->isSkill()) {
             abort_unless($this->assessments->canManageSkillTests(), 403);
         } else {

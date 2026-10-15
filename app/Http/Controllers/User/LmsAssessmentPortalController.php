@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Models\LmsAssessment;
 use App\Models\LmsAssessmentAttempt;
 use App\Services\LmsAssessmentService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 
 class LmsAssessmentPortalController extends Controller
 {
@@ -156,5 +158,26 @@ class LmsAssessmentPortalController extends Controller
             || ($attempt->assessment->results_mode === 'instant_mcq' && $attempt->status === 'graded');
 
         return view('user.assessments.result', compact('attempt', 'canSeeScore'));
+    }
+
+    public function resultPdf($attemptId)
+    {
+        $user = Auth::user();
+        abort_unless($user, 403);
+        $this->assessments->ensure();
+        $attempt = LmsAssessmentAttempt::with(['assessment.course', 'assessment.questions', 'answers.question', 'user'])
+            ->where('user_id', $user->id)
+            ->findOrFail($attemptId);
+
+        $canSeeScore = $attempt->results_published
+            || ($attempt->assessment->results_mode === 'instant_mcq' && $attempt->status === 'graded');
+        abort_unless($canSeeScore, 403, 'Results are not published yet.');
+
+        $title = Str::slug($attempt->assessment->title ?? 'attempt', '-');
+        $filename = 'my-result-' . $attempt->id . '-' . $title . '.pdf';
+
+        return Pdf::loadView('admin.assessments.tests.attempt-pdf', compact('attempt'))
+            ->setPaper('a4')
+            ->download($filename);
     }
 }

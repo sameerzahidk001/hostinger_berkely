@@ -2,15 +2,30 @@
 @section('title', 'Test Results')
 @section('content')
 <style>
-    .lms-status-completed { color: #f59e0b; font-weight: 700; } /* Completed — orange */
-    .lms-status-marked { color: #1ab394; font-weight: 700; } /* Completed and Marked — green */
+    .lms-status-completed { color: #f59e0b; font-weight: 700; }
+    .lms-status-marked { color: #1ab394; font-weight: 700; }
     .lms-status-in_progress { color: #f0ad4e; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
-    .lms-status-missed { color: #ed5565; font-weight: 700; } /* Missed — red */
-    .lms-pub-yes { color: #1ab394; font-weight: 700; } /* Yes — green */
-    .lms-pub-no { color: inherit; font-weight: 600; } /* No — plain */
+    .lms-status-missed { color: #ed5565; font-weight: 700; }
+    .lms-pub-yes { color: #1ab394; font-weight: 700; }
+    .lms-pub-no { color: inherit; font-weight: 600; }
 </style>
+@php
+    $fmtDuration = function ($minutes) {
+        if ($minutes === null || $minutes === '') {
+            return '—';
+        }
+        $m = (int) round((float) $minutes);
+        if ($m < 60) {
+            return $m . ' min';
+        }
+        $h = intdiv($m, 60);
+        $r = $m % 60;
+
+        return $r ? ($h . 'h ' . $r . 'm') : ($h . 'h');
+    };
+@endphp
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
         <h2>Test Results</h2>
@@ -26,16 +41,16 @@
     <div class="ibox"><div class="ibox-content">
         <form method="GET" class="m-b-md" style="margin-bottom:15px;">
             <div class="row">
-                <div class="col-sm-3 form-group">
+                <div class="col-sm-2 form-group">
                     <label>Assessment</label>
                     <select name="assessment_id" class="form-control">
                         <option value="0">All</option>
                         @foreach($assessments as $a)
-                            <option value="{{ $a->id }}" @selected((int)$filters['assessment_id'] === (int)$a->id)>{{ $a->title }} ({{ $a->kind }})</option>
+                            <option value="{{ $a->id }}" @selected((int)$filters['assessment_id'] === (int)$a->id)>{{ $a->title }}</option>
                         @endforeach
                     </select>
                 </div>
-                <div class="col-sm-3 form-group">
+                <div class="col-sm-2 form-group">
                     <label>Batch</label>
                     <select name="batch_id" class="form-control">
                         <option value="0">All</option>
@@ -44,7 +59,7 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-sm-3 form-group">
+                <div class="col-sm-2 form-group">
                     <label>Course</label>
                     <select name="course_id" class="form-control">
                         <option value="0">All</option>
@@ -53,7 +68,20 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-sm-3 form-group" style="padding-top:24px;">
+                <div class="col-sm-2 form-group">
+                    <label>Type</label>
+                    <select name="kind" class="form-control">
+                        <option value="">All</option>
+                        @foreach($kinds as $k => $label)
+                            <option value="{{ $k }}" @selected(($filters['kind'] ?? '') === $k)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-sm-2 form-group">
+                    <label>Search</label>
+                    <input type="text" name="search" class="form-control" value="{{ $filters['search'] ?? '' }}" placeholder="Course, test, taker…">
+                </div>
+                <div class="col-sm-2 form-group" style="padding-top:24px;">
                     <button class="btn btn-primary" type="submit">Show Results</button>
                 </div>
             </div>
@@ -76,7 +104,13 @@
                     <tr>
                         <th>Date</th>
                         <th>Test</th>
-                        <th>Student</th>
+                        <th>Test Taker</th>
+                        <th>Course</th>
+                        <th>Test date</th>
+                        <th>Start time</th>
+                        <th>End time</th>
+                        <th>Duration given</th>
+                        <th>Duration taken</th>
                         <th>Status</th>
                         <th>Score</th>
                         <th>Published</th>
@@ -88,6 +122,7 @@
                         @php
                             $attempt = $row['attempt'];
                             $assignment = $row['assignment'];
+                            $assessment = $row['assessment'];
                             if ($attempt) {
                                 $statusClass = $attempt->statusColorClass();
                                 $statusText = $attempt->statusLabel();
@@ -101,19 +136,34 @@
                                 $statusClass = 'lms-status-available';
                                 $statusText = 'Assigned';
                             }
-                            if ($attempt) {
-                                $dateText = optional($attempt->submitted_at ?: $attempt->updated_at)->format('d/m/Y H:i') ?? '—';
-                            } else {
-                                $dateText = optional($assignment->created_at)->format('d/m/Y H:i') ?? '—';
+                            $dateText = $attempt
+                                ? (optional($attempt->submitted_at ?: $attempt->updated_at)->format('d/m/Y H:i') ?? '—')
+                                : (optional($assignment->created_at)->format('d/m/Y H:i') ?? '—');
+                            $testDate = optional($assignment->available_from ?: $attempt?->started_at)->format('d/m/Y') ?? '—';
+                            $startTime = optional($attempt?->started_at ?: $assignment->available_from)->format('H:i') ?? '—';
+                            $endTime = optional($attempt?->submitted_at ?: $assignment->available_until)->format('H:i') ?? '—';
+                            $durationGiven = $fmtDuration($assessment->duration_minutes ?? null);
+                            $durationTaken = '—';
+                            if ($attempt && $attempt->started_at && $attempt->submitted_at) {
+                                $durationTaken = $fmtDuration($attempt->started_at->diffInMinutes($attempt->submitted_at));
                             }
                         @endphp
                         <tr>
                             <td>{{ $dateText }}</td>
-                            <td>{{ $row['assessment']->title ?? '—' }}</td>
+                            <td>
+                                {{ $assessment->title ?? '—' }}
+                                <br><small class="text-muted">{{ $assessment->kindLabel() }}</small>
+                            </td>
                             <td>
                                 {{ $row['student']->name ?? '—' }}
                                 <br><small class="text-muted">{{ $row['student']->email ?? '' }}</small>
                             </td>
+                            <td>{{ $assessment->course->title ?? '—' }}</td>
+                            <td>{{ $testDate }}</td>
+                            <td>{{ $startTime }}</td>
+                            <td>{{ $endTime }}</td>
+                            <td>{{ $durationGiven }}</td>
+                            <td>{{ $durationTaken }}</td>
                             <td><span class="{{ $statusClass }}">{{ $statusText }}</span></td>
                             <td>
                                 @if($attempt && $attempt->score_raw !== null)
@@ -134,11 +184,11 @@
                                 @if($attempt && in_array($attempt->status, ['submitted', 'graded', 'expired'], true))
                                     <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.mark', $attempt->id) }}">View</a>
                                     <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.mark', $attempt->id) }}">Update</a>
-                                    <a class="btn btn-xs btn-success" href="{{ route('admin.assessments.tests.attempt-pdf', $attempt->id) }}" target="_blank"><i class="fa fa-file-pdf-o"></i> PDF</a>
+                                    <a class="btn btn-xs btn-success" href="{{ route('admin.assessments.tests.attempt-pdf', $attempt->id) }}" target="_blank"><i class="fa fa-file-pdf-o"></i> Download PDF</a>
                                     @unless($attempt->results_published)
                                         <form action="{{ route('admin.assessments.tests.publish-attempt', $attempt->id) }}" method="POST" style="display:inline;">
                                             @csrf
-                                            <button class="btn btn-xs btn-success" type="submit">Publish</button>
+                                            <button class="btn btn-xs btn-default" type="submit">Publish</button>
                                         </form>
                                     @endunless
                                     @if(!empty($canDeleteAttempts))
@@ -157,7 +207,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center text-muted">No assigned tests found for this filter.</td>
+                            <td colspan="13" class="text-center text-muted">No assigned tests found for this filter.</td>
                         </tr>
                     @endforelse
                 </tbody>

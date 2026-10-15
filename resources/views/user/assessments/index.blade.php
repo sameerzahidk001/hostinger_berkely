@@ -164,6 +164,9 @@
                                 <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.take', $att->id) }}">Continue</a>
                             @elseif($att)
                                 <a class="btn btn-xs btn-default" href="{{ route('user.assessments.result', $att->id) }}">View</a>
+                                @if($att->results_published || ($a->results_mode === 'instant_mcq' && $att->status === 'graded'))
+                                    <a class="btn btn-xs btn-success" href="{{ route('user.assessments.result-pdf', $att->id) }}" target="_blank"><i class="fa fa-file-pdf-o"></i> Download PDF</a>
+                                @endif
                             @elseif($tab === 'upcoming')
                                 <span class="text-muted">Not open yet</span>
                             @elseif($tab === 'missed')
