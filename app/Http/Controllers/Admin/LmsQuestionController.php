@@ -26,14 +26,20 @@ class LmsQuestionController extends Controller
 
         $type = trim((string) $request->get('type', ''));
         $search = trim((string) $request->get('search', ''));
-        $query = LmsQuestion::query()->with('course:id,title')->orderByDesc('id');
+        $query = LmsQuestion::query()->with(['course' => function ($q) {
+            $q->withTrashed()->select('id', 'title');
+        }])->orderByDesc('id');
         if ($type !== '' && array_key_exists($type, LmsQuestion::types())) {
             $query->where('type', $type);
         }
         if ($search !== '') {
             $like = '%' . addcslashes($search, '%_\\') . '%';
             $query->where(function ($q) use ($like) {
-                $q->where('stem', 'like', $like)->orWhere('topic', 'like', $like);
+                $q->where('stem', 'like', $like)
+                    ->orWhere('topic', 'like', $like)
+                    ->orWhereHas('course', function ($cq) use ($like) {
+                        $cq->withTrashed()->where('title', 'like', $like);
+                    });
             });
         }
 
