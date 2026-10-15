@@ -124,6 +124,23 @@
                         </select>
                         <span class="help-block">Type to search and select multiple. The same person can be Head of Faculty and Instructor. Access stays disabled until you Send from Access list or Send to instructors.</span>
                     </div>
+                    @php \App\Models\StudyMaterialFolder::ensureRateAndReviewColumns(); @endphp
+                    @if(\Illuminate\Support\Facades\Schema::hasColumn('study_material_folders', 'rate_and_review_enabled'))
+                    <div class="col-md-6 form-group">
+                        <label>Rate and Review</label>
+                        <select name="rate_and_review_enabled" class="form-control">
+                            <option value="1" @selected((string) old('rate_and_review_enabled', $folder->rate_and_review_enabled ?? true) === '1')>On</option>
+                            <option value="0" @selected((string) old('rate_and_review_enabled', $folder->rate_and_review_enabled ?? true) === '0')>Off</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 form-group">
+                        <label>Written review required</label>
+                        <select name="rate_review_text_required" class="form-control">
+                            <option value="0" @selected((string) old('rate_review_text_required', $folder->rate_review_text_required ?? false) === '0')>Optional</option>
+                            <option value="1" @selected((string) old('rate_review_text_required', $folder->rate_review_text_required ?? false) === '1')>Required</option>
+                        </select>
+                    </div>
+                    @endif
                     @endif
                 </div>
                 <button type="submit" class="btn btn-primary">Save details</button>

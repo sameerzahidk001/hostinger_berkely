@@ -198,6 +198,11 @@
                      </ul>
                   </li>
                   @endif
+                  @if(admin_menu_allowed('class-schedules') || admin_menu_allowed('study-materials'))
+                  <li class="{{ request()->is('admin/rate-review*') ? 'active' : '' }}">
+                     <a href="{{ route('admin.rate-review.index') }}"><i class="fa fa-star"></i> <span class="nav-label">Rate and Review</span></a>
+                  </li>
+                  @endif
                   @if(admin_menu_allowed('class-schedules'))
                   <li class="{{ request()->is('admin/class-schedules*') || request()->is('admin/class-batches*') || request()->is('admin/meeting-accounts*') || request()->is('admin/zoho-settings*') ? 'active' : '' }}">
                      <a href="javascript:void(0)"><i class="fa fa-calendar"></i> <span class="nav-label">Class Schedule</span> <span class="fa arrow"></span></a>

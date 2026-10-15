@@ -47,6 +47,7 @@ class AdminMiddleware
                 $request->is('admin/study-materials*')
                 || $request->is('admin/class-schedules*')
                 || $request->is('admin/class-batches*')
+                || $request->is('admin/rate-review*')
                 || $request->is('admin/home')
                 || $request->is('admin/home/*')
                 || $request->is('admin/profile')

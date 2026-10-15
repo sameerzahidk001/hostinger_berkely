@@ -80,6 +80,23 @@
                             <option value="disabled" @selected(old('status', $batch->status) === 'disabled')>Disabled</option>
                         </select>
                     </div>
+                    @php \App\Models\ClassBatch::ensureRateAndReviewColumns(); @endphp
+                    @if(\Illuminate\Support\Facades\Schema::hasColumn('class_batches', 'rate_and_review_enabled'))
+                    <div class="col-md-4 form-group">
+                        <label>Rate and Review</label>
+                        <select name="rate_and_review_enabled" class="form-control">
+                            <option value="1" @selected((string) old('rate_and_review_enabled', $batch->rate_and_review_enabled ?? true) === '1')>On</option>
+                            <option value="0" @selected((string) old('rate_and_review_enabled', $batch->rate_and_review_enabled ?? true) === '0')>Off</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Written review required</label>
+                        <select name="rate_review_text_required" class="form-control">
+                            <option value="0" @selected((string) old('rate_review_text_required', $batch->rate_review_text_required ?? false) === '0')>Optional</option>
+                            <option value="1" @selected((string) old('rate_review_text_required', $batch->rate_review_text_required ?? false) === '1')>Required</option>
+                        </select>
+                    </div>
+                    @endif
                     @endif
                 </div>
                 @unless($readOnly)

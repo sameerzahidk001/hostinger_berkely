@@ -243,6 +243,21 @@
                   </a>
                </li>
                @endif
+               @if(auth()->user()->roles()->where('name', 'instructor')->exists())
+               <li class="{{ request()->routeIs('user.rate-review.my-score') || request()->is('admin/rate-review*') ? 'active' : '' }}">
+                  <a href="{{ route('user.rate-review.my-score') }}">
+                     <i class="fa fa-star"></i>
+                     <span class="nav-label">My Rating</span>
+                  </a>
+               </li>
+               @elseif(auth()->user()->roles()->where('name', 'student')->exists())
+               <li class="{{ request()->routeIs('user.rate-review.*') ? 'active' : '' }}">
+                  <a href="{{ route('user.rate-review.index') }}">
+                     <i class="fa fa-star"></i>
+                     <span class="nav-label">Rate and Review</span>
+                  </a>
+               </li>
+               @endif
                @if(instructor_can_view_site_analytics())
                <li class="{{ request()->routeIs('user.analytics') || request()->is('admin/analytics*') ? 'active' : '' }}">
                   <a href="{{ route('user.analytics') }}"><i class="fa fa-line-chart"></i> <span

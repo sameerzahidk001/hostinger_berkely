@@ -74,11 +74,38 @@ class StudyMaterialFolder extends Model
         'fee_package_id',
         'validity_months',
         'status',
+        'rate_and_review_enabled',
+        'rate_review_text_required',
         'owner_type',
         'owner_id',
         'created_by_admin_id',
         'created_by_user_id',
     ];
+
+    protected $casts = [
+        'rate_and_review_enabled' => 'boolean',
+        'rate_review_text_required' => 'boolean',
+    ];
+
+    public static function ensureRateAndReviewColumns(): bool
+    {
+        if (! Schema::hasTable('study_material_folders')) {
+            return false;
+        }
+
+        if (! Schema::hasColumn('study_material_folders', 'rate_and_review_enabled')) {
+            Schema::table('study_material_folders', function (Blueprint $table) {
+                $table->boolean('rate_and_review_enabled')->default(true);
+            });
+        }
+        if (! Schema::hasColumn('study_material_folders', 'rate_review_text_required')) {
+            Schema::table('study_material_folders', function (Blueprint $table) {
+                $table->boolean('rate_review_text_required')->default(false);
+            });
+        }
+
+        return Schema::hasColumn('study_material_folders', 'rate_and_review_enabled');
+    }
 
     protected static function booted(): void
     {

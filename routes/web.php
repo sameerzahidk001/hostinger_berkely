@@ -50,6 +50,8 @@ use App\Http\Controllers\Admin\LmsInstallController;
 use App\Http\Controllers\Admin\ZohoSettingsController;
 use App\Http\Controllers\Admin\ZohoCrmSettingsController;
 use App\Http\Controllers\Admin\MeetingAccountController;
+use App\Http\Controllers\Admin\InstructorReviewController as AdminInstructorReviewController;
+use App\Http\Controllers\User\InstructorReviewController as UserInstructorReviewController;
 
 //student controllers starts
 use App\Http\Controllers\Student\HomeController as StudentHomeController;
@@ -269,6 +271,16 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
             Route::get('/{id}/edit', [ClassBatchController::class, 'edit'])->name('edit');
             Route::put('/{id}', [ClassBatchController::class, 'update'])->name('update');
             Route::delete('/{id}', [ClassBatchController::class, 'destroy'])->name('destroy');
+        });
+
+        Route::prefix('rate-review')->name('admin.rate-review.')->group(function () {
+            Route::get('/', [AdminInstructorReviewController::class, 'index'])->name('index');
+            Route::post('/{id}/publish', [AdminInstructorReviewController::class, 'publish'])->name('publish');
+            Route::post('/{id}/hide', [AdminInstructorReviewController::class, 'hide'])->name('hide');
+            Route::post('/{id}/lock', [AdminInstructorReviewController::class, 'lock'])->name('lock');
+            Route::post('/{id}/unlock', [AdminInstructorReviewController::class, 'unlock'])->name('unlock');
+            Route::post('/{id}/toggle-name', [AdminInstructorReviewController::class, 'toggleStudentName'])->name('toggle-name');
+            Route::delete('/{id}', [AdminInstructorReviewController::class, 'destroy'])->name('destroy');
         });
 
         Route::prefix('class-schedules')->name('admin.class-schedules.')->group(function () {
@@ -611,6 +623,10 @@ Route::prefix('user')->middleware(['auth', 'approved', 'redirect.panel.from.stud
     Route::get('/class-schedules/batch/{batchKey}/lecture-plan.pdf', [UserStudyMaterialController::class, 'lecturePlanPdf'])->name('user.class-schedules.lecture-plan');
     Route::get('/class-schedules.ics', [UserStudyMaterialController::class, 'schedulesIcs'])->name('user.class-schedules.ics');
     Route::get('/class-schedules/{id}.ics', [UserStudyMaterialController::class, 'scheduleIcs'])->name('user.class-schedules.item-ics');
+    Route::get('/rate-review', [UserInstructorReviewController::class, 'index'])->name('user.rate-review.index');
+    Route::get('/rate-review/create', [UserInstructorReviewController::class, 'create'])->name('user.rate-review.create');
+    Route::post('/rate-review', [UserInstructorReviewController::class, 'store'])->name('user.rate-review.store');
+    Route::get('/my-instructor-rating', [UserInstructorReviewController::class, 'myScore'])->name('user.rate-review.my-score');
     Route::get('/history', [UserHistoryController::class, 'index'])->name('user.history');
     Route::get('/analytics', [AnalyticsController::class, 'index'])->name('user.analytics');
 
