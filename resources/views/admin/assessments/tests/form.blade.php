@@ -1,6 +1,8 @@
 @extends(lms_portal_layout())
 @section('title', ($assessment->exists ? 'Edit' : 'Create') . ' Assessment')
 @section('content')
+@include('admin.assessments.partials.limited-editor-assets')
+@php $descriptionMax = 5000; @endphp
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
         <h2>{{ $assessment->exists ? 'Edit' : 'Create' }} assessment</h2>
@@ -34,8 +36,8 @@
                     </select>
                 </div>
                 <div class="col-md-12 form-group">
-                    <label>Description</label>
-                    <textarea name="description" class="form-control" rows="3">{{ old('description', $assessment->description) }}</textarea>
+                    <label>Description <span class="lms-char-hint">(max {{ number_format($descriptionMax) }} characters)</span></label>
+                    <textarea name="description" class="form-control" rows="3" data-max="{{ $descriptionMax }}" maxlength="{{ $descriptionMax }}">{{ old('description', $assessment->description) }}</textarea>
                 </div>
                 <div class="col-md-4 form-group">
                     <label>Course{{ !empty($courseRequired) ? ' *' : '' }}</label>

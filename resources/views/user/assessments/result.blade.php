@@ -25,7 +25,10 @@
                     · {{ $attempt->passFailLabel() }}
                 </p>
                 @if($attempt->grader_feedback)
-                    <p><strong>Feedback:</strong> {{ $attempt->grader_feedback }}</p>
+                    <div class="m-t-sm">
+                        <strong>Overall feedback:</strong>
+                        <div class="well well-sm m-t-xs">{!! $attempt->grader_feedback !!}</div>
+                    </div>
                 @endif
             @else
                 <p class="text-muted">Submitted. Your score and pass/fail will appear here when Admin / Instructor publishes results.</p>
@@ -40,7 +43,7 @@
             <div class="ibox">
                 <div class="ibox-title"><h5>Q{{ $i + 1 }} · {{ $question->typeLabel() }}</h5></div>
                 <div class="ibox-content">
-                    <p>{!! nl2br(e($question->stem)) !!}</p>
+                    <div class="m-b-sm">{!! $question->stem !!}</div>
                     @if($question->isMcq())
                         <p>Your answer: {{ $answer?->selectedKey() ?? '—' }}
                             @if($answer && $answer->is_correct !== null)
@@ -49,10 +52,10 @@
                             · {{ $answer?->finalScore() ?? 0 }} / {{ $answer->max_marks ?? $question->max_marks }}
                         </p>
                     @else
-                        <div class="well well-sm">{{ $answer?->textAnswer() ?: '—' }}</div>
+                        <div class="well well-sm">{!! nl2br(e($answer?->textAnswer() ?: '—')) !!}</div>
                         <p>Score: {{ $answer?->finalScore() ?? '—' }} / {{ $answer->max_marks ?? $question->max_marks }}</p>
                         @if($answer && $answer->feedback)
-                            <p><em>Feedback:</em> {{ $answer->feedback }}</p>
+                            <div class="m-t-sm"><em>Feedback:</em><div class="well well-sm m-t-xs">{!! $answer->feedback !!}</div></div>
                         @endif
                     @endif
                 </div>

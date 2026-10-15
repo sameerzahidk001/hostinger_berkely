@@ -79,12 +79,13 @@ class LmsQuestionController extends Controller
         $rows = $request->input('questions');
         if (is_array($rows) && $rows !== []) {
             $validator = Validator::make($request->all(), $this->bulkRules());
-            $validator->after(function ($v) use ($rows) {
+            $validator->after(function ($v) use ($request, $rows) {
                 foreach ($rows as $i => $row) {
                     if ($this->isBlankHtml($row['stem'] ?? null)) {
                         $v->errors()->add('questions.' . $i . '.stem', 'Question ' . ($i + 1) . ' stem is required.');
                     }
                 }
+                $this->assertRichTextLimits($v, $request, $rows);
             });
             if ($validator->fails()) {
                 return back()->withErrors($validator)->withInput();
@@ -124,6 +125,7 @@ class LmsQuestionController extends Controller
             if ($this->isBlankHtml($request->input('stem'))) {
                 $v->errors()->add('stem', 'Question stem is required.');
             }
+            $this->assertRichTextLimits($v, $request);
         });
         if ($validator->fails()) {
             return back()->withErrors($validator)->withInput();
@@ -158,6 +160,7 @@ class LmsQuestionController extends Controller
             if ($this->isBlankHtml($request->input('stem'))) {
                 $v->errors()->add('stem', 'Question stem is required.');
             }
+            $this->assertRichTextLimits($v, $request);
         });
         if ($validator->fails()) {
             return back()->withErrors($validator)->withInput();
@@ -197,7 +200,7 @@ class LmsQuestionController extends Controller
             'explanation' => 'nullable|string',
             'status' => 'required|in:active,disabled',
             'options' => 'nullable|array',
-            'options.*.text' => 'nullable|string',
+            'options.*.text' => 'nullable|string|max:500',
             'options.*.is_correct' => 'nullable',
             'correct_option' => 'nullable|integer|min:0',
         ];
@@ -218,16 +221,48 @@ class LmsQuestionController extends Controller
             'questions.*.max_marks' => 'required|numeric|min:0.1',
             'questions.*.explanation' => 'nullable|string',
             'questions.*.options' => 'nullable|array',
-            'questions.*.options.*.text' => 'nullable|string',
+            'questions.*.options.*.text' => 'nullable|string|max:500',
             'questions.*.correct_option' => 'nullable|integer|min:0',
         ];
     }
 
     protected function isBlankHtml(?string $html): bool
     {
-        $text = trim(html_entity_decode(strip_tags((string) $html)));
+        return $this->plainTextLen($html) === 0;
+    }
 
-        return $text === '';
+    protected function plainTextLen(?string $html): int
+    {
+        $text = html_entity_decode(strip_tags((string) $html));
+        $text = str_replace("\xc2\xa0", ' ', $text);
+
+        return mb_strlen(trim($text));
+    }
+
+    protected function assertRichTextLimits($validator, Request $request, ?array $rows = null): void
+    {
+        $stemMax = 10000;
+        $explanationMax = 10000;
+
+        if (is_array($rows)) {
+            foreach ($rows as $i => $row) {
+                if ($this->plainTextLen($row['stem'] ?? null) > $stemMax) {
+                    $validator->errors()->add('questions.' . $i . '.stem', 'Question ' . ($i + 1) . ' stem exceeds ' . number_format($stemMax) . ' characters.');
+                }
+                if ($this->plainTextLen($row['explanation'] ?? null) > $explanationMax) {
+                    $validator->errors()->add('questions.' . $i . '.explanation', 'Question ' . ($i + 1) . ' explanation exceeds ' . number_format($explanationMax) . ' characters.');
+                }
+            }
+
+            return;
+        }
+
+        if ($this->plainTextLen($request->input('stem')) > $stemMax) {
+            $validator->errors()->add('stem', 'Question stem exceeds ' . number_format($stemMax) . ' characters.');
+        }
+        if ($this->plainTextLen($request->input('explanation')) > $explanationMax) {
+            $validator->errors()->add('explanation', 'Explanation exceeds ' . number_format($explanationMax) . ' characters.');
+        }
     }
 
     protected function fill(LmsQuestion $q, Request $request, bool $creating): void

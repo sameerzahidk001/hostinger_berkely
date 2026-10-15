@@ -1,7 +1,13 @@
 @extends(lms_portal_layout())
 @section('title', ($question->exists ? 'Edit' : 'Add') . ' Question')
 @section('content')
-<link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote.min.css" rel="stylesheet">
+@include('admin.assessments.partials.limited-editor-assets')
+@php
+    $stemMax = 10000;
+    $explanationMax = 10000;
+    $topicMax = 255;
+    $optionMax = 500;
+@endphp
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
         <h2>{{ $question->exists ? 'Edit' : 'Add' }} question{{ $question->exists ? '' : 's' }}</h2>
@@ -33,8 +39,8 @@
                         </select>
                     </div>
                     <div class="col-md-3 form-group">
-                        <label>Topic</label>
-                        <input type="text" name="topic" class="form-control" value="{{ old('topic', $question->topic) }}">
+                        <label>Topic <span class="lms-char-hint">(max {{ $topicMax }})</span></label>
+                        <input type="text" name="topic" class="form-control" data-max="{{ $topicMax }}" maxlength="{{ $topicMax }}" value="{{ old('topic', $question->topic) }}">
                     </div>
                     <div class="col-md-3 form-group">
                         <label>Course</label>
@@ -50,12 +56,12 @@
                         <input type="number" step="0.1" min="0.1" name="max_marks" class="form-control" value="{{ old('max_marks', $question->max_marks ?: 1) }}" required>
                     </div>
                     <div class="col-md-12 form-group">
-                        <label>Question stem *</label>
-                        <textarea name="stem" class="form-control text-editor" rows="4" required>{{ old('stem', $question->stem) }}</textarea>
+                        <label>Question stem * <span class="lms-char-hint">(max {{ number_format($stemMax) }} characters)</span></label>
+                        <textarea name="stem" class="form-control text-editor" rows="4" data-max="{{ $stemMax }}" data-height="180" data-rich="1" required>{{ old('stem', $question->stem) }}</textarea>
                     </div>
                     <div class="col-md-12 form-group">
-                        <label>Explanation / model answer notes</label>
-                        <textarea name="explanation" class="form-control text-editor" rows="3">{{ old('explanation', $question->explanation) }}</textarea>
+                        <label>Explanation / model answer notes <span class="lms-char-hint">(max {{ number_format($explanationMax) }} characters)</span></label>
+                        <textarea name="explanation" class="form-control text-editor" rows="3" data-max="{{ $explanationMax }}" data-height="140" data-rich="1">{{ old('explanation', $question->explanation) }}</textarea>
                     </div>
                     <div class="col-md-3 form-group">
                         <label>Status</label>
@@ -76,7 +82,7 @@
                             <label>
                                 <input type="radio" name="correct_option" value="{{ $i }}" @checked($correct === (int)$i)> Correct
                             </label>
-                            <input type="text" name="options[{{ $i }}][text]" class="form-control" value="{{ $opt['text'] ?? '' }}" placeholder="Option {{ $i + 1 }}">
+                            <input type="text" name="options[{{ $i }}][text]" class="form-control" data-max="{{ $optionMax }}" maxlength="{{ $optionMax }}" value="{{ $opt['text'] ?? '' }}" placeholder="Option {{ $i + 1 }} (max {{ $optionMax }})">
                         </div>
                     @endforeach
                 </div>
@@ -93,8 +99,8 @@
                         </select>
                     </div>
                     <div class="col-md-4 form-group">
-                        <label>Topic (default for all)</label>
-                        <input type="text" name="topic" id="shared_topic" class="form-control" value="{{ old('topic') }}" placeholder="Optional shared topic">
+                        <label>Topic (default for all) <span class="lms-char-hint">(max {{ $topicMax }})</span></label>
+                        <input type="text" name="topic" id="shared_topic" class="form-control" data-max="{{ $topicMax }}" maxlength="{{ $topicMax }}" value="{{ old('topic') }}" placeholder="Optional shared topic">
                     </div>
                     <div class="col-md-2 form-group">
                         <label>Status</label>
@@ -166,36 +172,8 @@
 @endunless
 @endsection
 @push('script')
-<script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote.min.js"></script>
 <script>
 (function () {
-    function initEditors(scope) {
-        $(scope).find('textarea.text-editor').each(function () {
-            if (this.classList.contains('summernote-initialized') || $(this).next('.note-editor').length) {
-                return;
-            }
-            $(this).summernote({
-                height: 160,
-                toolbar: [
-                    ['style', ['style']],
-                    ['font', ['bold', 'italic', 'underline', 'clear']],
-                    ['para', ['ul', 'ol', 'paragraph']],
-                    ['insert', ['link', 'picture']],
-                    ['view', ['codeview']]
-                ]
-            });
-            this.classList.add('summernote-initialized');
-        });
-    }
-
-    function syncEditors(scope) {
-        $(scope).find('textarea.text-editor').each(function () {
-            if ($(this).next('.note-editor').length) {
-                $(this).val($(this).summernote('code'));
-            }
-        });
-    }
-
     function updateTotalMarks() {
         var total = 0;
         $('#questionBlocks').find('input.js-max-marks').each(function () {
@@ -238,7 +216,6 @@
         });
     }
 
-    initEditors(document);
     $('#q_type').on('change', function () {
         $('#mcq_options').toggle($(this).val() === 'mcq');
     });
@@ -255,17 +232,15 @@
         var $block = $(html);
         $('#questionBlocks').append($block);
         reindexBlocks();
-        initEditors($block);
+        if (window.LmsLimitedEditor) {
+            window.LmsLimitedEditor.init($block);
+        }
         bindBlock($block);
         var topic = $('#shared_topic').val();
         if (topic) {
             $block.find('.js-topic').val(topic);
         }
         updateTotalMarks();
-    });
-
-    $('#questionForm').on('submit', function () {
-        syncEditors(this);
     });
 })();
 </script>
