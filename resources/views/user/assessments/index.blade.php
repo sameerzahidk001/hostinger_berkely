@@ -10,7 +10,37 @@
         </ol>
     </div>
 </div>
-<div class="wrapper wrapper-content">
+<div class="wrapper wrapper-content" id="assessments-portal">
+    <style>
+        /* Student theme sets .nav > li > a { color: white } for the sidebar —
+           that makes content tabs invisible on a light background. */
+        #assessments-portal .nav-tabs > li > a,
+        #assessments-portal .nav-pills > li > a {
+            color: #2f4050 !important;
+            font-weight: 600;
+            background: #f5f5f5;
+            border: 1px solid #e7eaec;
+            margin-right: 4px;
+            padding: 8px 14px;
+        }
+        #assessments-portal .nav-tabs > li > a:hover,
+        #assessments-portal .nav-pills > li > a:hover,
+        #assessments-portal .nav-tabs > li > a:focus,
+        #assessments-portal .nav-pills > li > a:focus {
+            color: #1ab394 !important;
+            background: #fff;
+        }
+        #assessments-portal .nav-tabs > li.active > a,
+        #assessments-portal .nav-tabs > li.active > a:hover,
+        #assessments-portal .nav-tabs > li.active > a:focus,
+        #assessments-portal .nav-pills > li.active > a,
+        #assessments-portal .nav-pills > li.active > a:hover,
+        #assessments-portal .nav-pills > li.active > a:focus {
+            color: #fff !important;
+            background: #1ab394;
+            border-color: #1ab394;
+        }
+    </style>
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if(session('fail'))<div class="alert alert-danger">{{ session('fail') }}</div>@endif
 
