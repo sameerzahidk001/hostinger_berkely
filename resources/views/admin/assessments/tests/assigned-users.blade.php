@@ -27,13 +27,15 @@
         white-space: normal;
     }
     .lms-assigned-table .col-date { width: 8%; }
-    .lms-assigned-table .col-test { width: 13%; }
+    .lms-assigned-table .col-test { width: 14%; }
     .lms-assigned-table .col-taker { width: 16%; }
+    .lms-assigned-table .col-timing { width: 22%; }
     .lms-assigned-table .col-assessor { width: 9%; }
-    .lms-assigned-table .col-status { width: 9%; }
+    .lms-assigned-table .col-status { width: 10%; }
     .lms-assigned-table .col-score { width: 8%; }
-    .lms-assigned-table .col-actions { width: 12%; white-space: nowrap; }
+    .lms-assigned-table .col-actions { width: 13%; white-space: nowrap; }
     .lms-assigned-table .col-actions .btn { margin: 1px 0; padding: 2px 5px; font-size: 11px; }
+    .lms-assigned-table .col-timing .lms-timing-line { display: block; line-height: 1.35; }
 </style>
 @php
     $fmtDuration = function ($minutes) {
@@ -137,11 +139,7 @@
                         <th class="col-date">Date</th>
                         <th class="col-test">Test</th>
                         <th class="col-taker">Test Taker</th>
-                        <th>Available</th>
-                        <th>Start</th>
-                        <th>End</th>
-                        <th>Duration</th>
-                        <th>Spend</th>
+                        <th class="col-timing">Timing</th>
                         <th class="col-assessor">Assessor</th>
                         <th class="col-status">Status</th>
                         <th class="col-score">Score</th>
@@ -172,6 +170,17 @@
                                 ? (optional($attempt->submitted_at ?: $attempt->updated_at)->format('d/m/y H:i') ?? '—')
                                 : (optional($assignment->created_at)->format('d/m/y H:i') ?? '—');
                             $spend = $attempt?->spendMinutes();
+                            $from = optional($assignment->available_from)->format('d/m/y H:i');
+                            $until = optional($assignment->available_until)->format('d/m/y H:i');
+                            if ($from && $until) {
+                                $appointment = $from . ' → ' . $until;
+                            } elseif ($from) {
+                                $appointment = $from;
+                            } elseif ($until) {
+                                $appointment = 'Until ' . $until;
+                            } else {
+                                $appointment = '—';
+                            }
                         @endphp
                         <tr>
                             <td class="col-date">{{ $dateText }}</td>
@@ -186,14 +195,13 @@
                                     <br><small class="text-muted">{{ $assessment->course->title }}</small>
                                 @endif
                             </td>
-                            <td>
-                                {{ optional($assignment->available_from)->format('d/m/y H:i') ?? '—' }}
-                                <br><span class="text-muted">→ {{ optional($assignment->available_until)->format('d/m/y H:i') ?? '—' }}</span>
+                            <td class="col-timing">
+                                <span class="lms-timing-line"><strong>Exam Appointment Timing:</strong> {{ $appointment }}</span>
+                                <span class="lms-timing-line"><strong>Exam Duration:</strong> {{ $fmtDuration($assessment->duration_minutes ?? null) }}</span>
+                                <span class="lms-timing-line"><strong>Started:</strong> {{ optional($attempt?->started_at)->format('d/m/y H:i') ?? '—' }}</span>
+                                <span class="lms-timing-line"><strong>Ended:</strong> {{ optional($attempt?->submitted_at)->format('d/m/y H:i') ?? '—' }}</span>
+                                <span class="lms-timing-line"><strong>Duration spent:</strong> {{ $spend !== null ? $fmtDuration($spend) : '—' }}</span>
                             </td>
-                            <td>{{ optional($attempt?->started_at)->format('H:i') ?? '—' }}</td>
-                            <td>{{ optional($attempt?->submitted_at)->format('H:i') ?? '—' }}</td>
-                            <td>{{ $fmtDuration($assessment->duration_minutes ?? null) }}</td>
-                            <td>{{ $spend !== null ? $fmtDuration($spend) : '—' }}</td>
                             <td class="col-assessor">{{ $attempt ? $attempt->assessorLabel($assignment) : ($assignment->marker->name ?? 'Admin / course instructors') }}</td>
                             <td class="col-status"><span class="{{ $statusClass }}">{{ $statusText }}</span></td>
                             <td class="col-score">
@@ -236,7 +244,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="13" class="text-center text-muted">No assigned test takers found.</td></tr>
+                        <tr><td colspan="9" class="text-center text-muted">No assigned test takers found.</td></tr>
                     @endforelse
                 </tbody>
             </table>
