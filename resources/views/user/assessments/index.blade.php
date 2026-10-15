@@ -71,6 +71,16 @@
         #assessments-portal .lms-row-marked { color: #1ab394; } /* Completed and Marked — green */
         #assessments-portal .lms-row-missed,
         #assessments-portal .lms-row-expired { color: #ed5565; } /* Missed — red */
+        #assessments-portal .lms-assess-table { min-width: 1180px; width: 100%; margin-bottom: 0; }
+        #assessments-portal .lms-assess-table > thead > tr > th,
+        #assessments-portal .lms-assess-table > tbody > tr > td {
+            vertical-align: middle;
+            padding: 10px 12px;
+            white-space: nowrap;
+        }
+        #assessments-portal .lms-assess-table .col-title { min-width: 200px; max-width: 280px; white-space: normal; }
+        #assessments-portal .lms-assess-table .col-window { min-width: 220px; white-space: normal; }
+        #assessments-portal .lms-assess-table .col-status { min-width: 140px; white-space: normal; }
     </style>
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if(session('fail'))<div class="alert alert-danger">{{ session('fail') }}</div>@endif
@@ -106,18 +116,18 @@
     </ul>
 
     <div class="ibox"><div class="ibox-content table-responsive">
-        <table class="table table-striped table-bordered">
+        <table class="table table-striped table-bordered lms-assess-table">
             <thead>
                 <tr>
                     <th>Date</th>
-                    <th>Title</th>
+                    <th class="col-title">Title</th>
                     <th>Type</th>
                     <th>Duration given</th>
-                    <th>Exam Appointment Time</th>
+                    <th class="col-window">Exam Appointment Time</th>
                     <th>Start time</th>
                     <th>End time</th>
                     <th>Spend duration</th>
-                    <th>Status</th>
+                    <th class="col-status">Status</th>
                     <th></th>
                 </tr>
             </thead>
@@ -134,10 +144,10 @@
                     @endphp
                     <tr>
                         <td>{{ $dateText }}</td>
-                        <td>{{ $a->title }} <small class="text-muted">({{ $a->displayCode() }})</small></td>
+                        <td class="col-title">{{ $a->title }} <small class="text-muted">({{ $a->displayCode() }})</small></td>
                         <td>{{ $a->kindLabel() }}</td>
                         <td>{{ $a->duration_minutes ? $a->duration_minutes.' min' : '—' }}</td>
-                        <td>
+                        <td class="col-window">
                             @if($asg)
                                 {{ optional($asg->available_from)->format('d/m/Y H:i') ?? 'Open' }}
                                 —
