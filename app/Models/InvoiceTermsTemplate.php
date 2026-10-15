@@ -73,8 +73,9 @@ class InvoiceTermsTemplate extends Model
     }
 
     /**
-     * Once PAYTC1 exists: assign it to all fee packages and refresh existing invoice T&C.
-     * Later only fills packages that still have no template selected.
+     * PAYTC1 (first template): attach to fee packages that have no template yet,
+     * and when any package is linked, refresh existing invoice T&C bodies.
+     * Driven by DB state (not a cache flag) so Hostinger pull fixes Create Invoice.
      */
     public static function ensureDefaultLinkedOnce(): void
     {
@@ -88,15 +89,13 @@ class InvoiceTermsTemplate extends Model
                 return;
             }
 
-            $cacheKey = 'invoice_tnc_default_linked_v1';
-            if (! cache()->get($cacheKey)) {
-                $template->assignToAllPackagesAndRefreshInvoices();
-                cache()->forever($cacheKey, (int) $template->id);
-
-                return;
+            $linkedPackages = self::assignDefaultToUnlinkedPackages($template);
+            if ($linkedPackages > 0
+                && Schema::hasTable('payments')
+                && Schema::hasColumn('payments', 'terms_conditions')
+            ) {
+                Payment::query()->update(['terms_conditions' => $template->body]);
             }
-
-            self::assignDefaultToUnlinkedPackages($template);
         } catch (\Throwable $e) {
             Log::warning('invoice_tnc default link failed: ' . $e->getMessage());
         }
@@ -131,15 +130,19 @@ class InvoiceTermsTemplate extends Model
         return ['packages' => (int) $packages, 'invoices' => (int) $invoices];
     }
 
-    /** New packages created later with no template yet get the default (PAYTC1). */
-    public static function assignDefaultToUnlinkedPackages(self $template): void
+    /**
+     * Packages with no template yet get PAYTC1. Returns how many package rows were updated.
+     */
+    public static function assignDefaultToUnlinkedPackages(self $template): int
     {
+        $updated = 0;
+
         if (Schema::hasTable('course_fees') && Schema::hasColumn('course_fees', 'invoice_terms_template_id')) {
             $payload = ['invoice_terms_template_id' => $template->id];
             if (Schema::hasColumn('course_fees', 'terms_conditions')) {
                 $payload['terms_conditions'] = $template->body;
             }
-            CourseFee::query()->whereNull('invoice_terms_template_id')->update($payload);
+            $updated += (int) CourseFee::query()->whereNull('invoice_terms_template_id')->update($payload);
         }
 
         if (Schema::hasTable('page_fee_packages') && Schema::hasColumn('page_fee_packages', 'invoice_terms_template_id')) {
@@ -147,8 +150,10 @@ class InvoiceTermsTemplate extends Model
             if (Schema::hasColumn('page_fee_packages', 'terms_conditions')) {
                 $payload['terms_conditions'] = $template->body;
             }
-            PageFeePackage::query()->whereNull('invoice_terms_template_id')->update($payload);
+            $updated += (int) PageFeePackage::query()->whereNull('invoice_terms_template_id')->update($payload);
         }
+
+        return $updated;
     }
 
     /** Public display code, e.g. PAYTC1 */
