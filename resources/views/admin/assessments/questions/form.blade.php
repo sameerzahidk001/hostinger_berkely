@@ -43,21 +43,21 @@
                         <label>Topic <span class="lms-char-hint">(max {{ $topicMax }})</span></label>
                         <input type="text" name="topic" class="form-control" data-max="{{ $topicMax }}" maxlength="{{ $topicMax }}" value="{{ old('topic', $question->topic) }}">
                     </div>
-                    <div class="col-md-3 form-group">
-                        <label>Course</label>
-                        <select name="course_id" id="q_course_id" class="form-control lms-searchable" data-placeholder="Type to find course">
-                            <option value="">— (no course)</option>
-                            @foreach($courses as $course)
-                                <option value="{{ $course->id }}" @selected((string) old('course_id', $question->course_id) === (string) $course->id)>{{ $course->title }}</option>
-                            @endforeach
-                        </select>
-                    </div>
                     <div class="col-md-3 form-group js-q-target-role" style="{{ old('course_id', $question->course_id) ? 'display:none;' : '' }}">
                         <label>Question for <span class="text-muted">(user type when no course)</span></label>
                         <select name="target_role" class="form-control lms-searchable" data-placeholder="Type to find user type">
                             <option value="">—</option>
                             @foreach(($targetRoles ?? []) as $rk => $rl)
                                 <option value="{{ $rk }}" @selected(old('target_role', $question->target_role) === $rk)>{{ $rl }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-3 form-group">
+                        <label>Course</label>
+                        <select name="course_id" id="q_course_id" class="form-control lms-searchable" data-placeholder="Type to find course">
+                            <option value="">— (no course)</option>
+                            @foreach($courses as $course)
+                                <option value="{{ $course->id }}" @selected((string) old('course_id', $question->course_id) === (string) $course->id)>{{ $course->title }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -99,15 +99,6 @@
             @else
                 {{-- Multi create: shared defaults + question blocks --}}
                 <div class="row m-b-md">
-                    <div class="col-md-3 form-group">
-                        <label>Course (applies to all)</label>
-                        <select name="course_id" class="form-control lms-searchable" id="shared_course" data-placeholder="Type to find course">
-                            <option value="">— (no course)</option>
-                            @foreach($courses as $course)
-                                <option value="{{ $course->id }}" @selected((string) old('course_id') === (string) $course->id)>{{ $course->title }}</option>
-                            @endforeach
-                        </select>
-                    </div>
                     <div class="col-md-3 form-group js-shared-target-role" style="{{ old('course_id') ? 'display:none;' : '' }}">
                         <label>Question for (all)</label>
                         <select name="target_role" class="form-control lms-searchable" data-placeholder="Type to find user type">
@@ -117,6 +108,15 @@
                             @endforeach
                         </select>
                         <p class="help-block m-b-none">When there is no course, choose who these questions are for.</p>
+                    </div>
+                    <div class="col-md-3 form-group">
+                        <label>Course (applies to all)</label>
+                        <select name="course_id" class="form-control lms-searchable" id="shared_course" data-placeholder="Type to find course">
+                            <option value="">— (no course)</option>
+                            @foreach($courses as $course)
+                                <option value="{{ $course->id }}" @selected((string) old('course_id') === (string) $course->id)>{{ $course->title }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="col-md-3 form-group">
                         <label>Topic (default for all) <span class="lms-char-hint">(max {{ $topicMax }})</span></label>
