@@ -312,6 +312,7 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
             Route::post('/attempts/{attemptId}/publish', [LmsAssessmentController::class, 'publishAttempt'])->name('tests.publish-attempt');
 
             Route::get('/reports', [LmsAssessmentReportController::class, 'index'])->name('reports.index');
+            Route::delete('/reports/attempts/{attemptId}', [LmsAssessmentReportController::class, 'destroyAttempt'])->name('reports.destroy-attempt');
         });
 
         Route::prefix('class-schedules')->name('admin.class-schedules.')->group(function () {
