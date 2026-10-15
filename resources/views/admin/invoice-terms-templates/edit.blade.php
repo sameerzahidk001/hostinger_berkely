@@ -6,11 +6,12 @@
 @section('content')
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
-        <h2>Edit Invoice T&amp;C Template</h2>
+        <h2>Edit {{ $template->displayCode() }}</h2>
         <ol class="breadcrumb">
             <li><a href="{{ route('admin.home') }}">Home</a></li>
-            <li><a href="{{ route('admin.invoice-terms-templates.index') }}">Invoice T&amp;C Templates</a></li>
-            <li class="active"><strong>{{ $template->name }}</strong></li>
+            <li><a href="{{ route('admin.payments.index') }}">Payments</a></li>
+            <li><a href="{{ route('admin.invoice-terms-templates.index') }}">T&amp;C Templates</a></li>
+            <li class="active"><strong>{{ $template->displayCode() }}</strong></li>
         </ol>
     </div>
 </div>
@@ -23,6 +24,10 @@
             <form method="POST" action="{{ route('admin.invoice-terms-templates.update', $template->id) }}">
                 @csrf
                 @method('PUT')
+                <div class="form-group">
+                    <label>ID</label>
+                    <input type="text" class="form-control" value="{{ $template->displayCode() }}" readonly>
+                </div>
                 <div class="form-group">
                     <label>Name *</label>
                     <input type="text" name="name" class="form-control" value="{{ old('name', $template->name) }}" required>

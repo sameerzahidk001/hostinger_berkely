@@ -1,13 +1,13 @@
 @extends('admin.layout.app')
-@section('title', 'Invoice T&C Templates')
+@section('title', 'T&C Templates')
 @section('content')
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">
-        <h2>Invoice T&amp;C Templates</h2>
+        <h2>T&amp;C Templates</h2>
         <ol class="breadcrumb">
             <li><a href="{{ route('admin.home') }}">Home</a></li>
-            <li>Settings</li>
-            <li class="active"><strong>Invoice T&amp;C Templates</strong></li>
+            <li><a href="{{ route('admin.payments.index') }}">Payments</a></li>
+            <li class="active"><strong>T&amp;C Templates</strong></li>
         </ol>
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
@@ -18,12 +18,16 @@
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     <div class="ibox">
         <div class="ibox-content">
-            <p class="text-muted">These templates are assigned to course packages and page fee packages. When you create an invoice, the package’s template is loaded into Terms &amp; Conditions.</p>
+            <p class="text-muted m-b-md">
+                Admin / Accountant creates payment instruction templates here (IDs like <strong>PAYTC1</strong>, <strong>PAYTC2</strong>).
+                Assign a template on each course fee package or page fee package. New invoices load that package’s template into Terms &amp; Conditions.
+                Existing invoices are left as-is until you ask to apply a specific template ID.
+            </p>
             <div class="table-responsive">
                 <table class="table table-striped table-bordered">
                     <thead>
                         <tr>
-                            <th>#</th>
+                            <th>ID</th>
                             <th>Name</th>
                             <th>Status</th>
                             <th style="width:160px;">Action</th>
@@ -32,7 +36,7 @@
                     <tbody>
                         @forelse($templates as $row)
                             <tr>
-                                <td>{{ $loop->iteration }}</td>
+                                <td><strong>{{ $row->displayCode() }}</strong></td>
                                 <td>{{ $row->name }}</td>
                                 <td>
                                     @if($row->is_active)
@@ -43,7 +47,7 @@
                                 </td>
                                 <td>
                                     <a href="{{ route('admin.invoice-terms-templates.edit', $row->id) }}" class="btn btn-xs btn-primary"><i class="fa fa-pencil"></i> Edit</a>
-                                    <form action="{{ route('admin.invoice-terms-templates.destroy', $row->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this template?');">
+                                    <form action="{{ route('admin.invoice-terms-templates.destroy', $row->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete {{ $row->displayCode() }}?');">
                                         @csrf
                                         @method('DELETE')
                                         <button type="submit" class="btn btn-xs btn-danger"><i class="fa fa-trash"></i> Delete</button>
@@ -51,7 +55,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="4" class="text-center text-muted">No templates yet. Create the first one.</td></tr>
+                            <tr><td colspan="4" class="text-center text-muted">No templates yet. Create PAYTC1 first (e.g. UK bank payment instructions).</td></tr>
                         @endforelse
                     </tbody>
                 </table>
