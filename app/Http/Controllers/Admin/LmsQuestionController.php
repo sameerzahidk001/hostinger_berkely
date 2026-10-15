@@ -67,7 +67,56 @@ class LmsQuestionController extends Controller
     {
         abort_unless($this->assessments->canManageAssessments(), 403);
         $this->assessments->ensure();
+
+        $rows = $request->input('questions');
+        if (is_array($rows) && $rows !== []) {
+            $validator = Validator::make($request->all(), $this->bulkRules());
+            $validator->after(function ($v) use ($rows) {
+                foreach ($rows as $i => $row) {
+                    if ($this->isBlankHtml($row['stem'] ?? null)) {
+                        $v->errors()->add('questions.' . $i . '.stem', 'Question ' . ($i + 1) . ' stem is required.');
+                    }
+                }
+            });
+            if ($validator->fails()) {
+                return back()->withErrors($validator)->withInput();
+            }
+
+            $sharedCourse = $request->input('course_id') ?: null;
+            $sharedTopic = trim((string) $request->input('topic', '')) ?: null;
+            $sharedStatus = $request->input('status', 'active') === 'active' ? 'active' : 'disabled';
+            $saved = 0;
+            $totalMarks = 0.0;
+
+            foreach ($rows as $row) {
+                if ($this->isBlankHtml($row['stem'] ?? null)) {
+                    continue;
+                }
+                $q = new LmsQuestion();
+                $this->fillFromArray($q, $row, [
+                    'course_id' => $sharedCourse,
+                    'topic' => trim((string) ($row['topic'] ?? '')) ?: $sharedTopic,
+                    'status' => $sharedStatus,
+                ], true);
+                $q->save();
+                $saved++;
+                $totalMarks += (float) $q->max_marks;
+            }
+
+            if ($saved < 1) {
+                return back()->withErrors(['questions' => 'Add at least one question with a stem.'])->withInput();
+            }
+
+            return redirect()->route('admin.assessments.questions.index')
+                ->with('success', $saved . ' question' . ($saved === 1 ? '' : 's') . ' saved (total marks ' . number_format($totalMarks, 1) . ').');
+        }
+
         $validator = Validator::make($request->all(), $this->rules());
+        $validator->after(function ($v) use ($request) {
+            if ($this->isBlankHtml($request->input('stem'))) {
+                $v->errors()->add('stem', 'Question stem is required.');
+            }
+        });
         if ($validator->fails()) {
             return back()->withErrors($validator)->withInput();
         }
@@ -93,6 +142,11 @@ class LmsQuestionController extends Controller
         $this->assessments->ensure();
         $q = LmsQuestion::findOrFail($id);
         $validator = Validator::make($request->all(), $this->rules());
+        $validator->after(function ($v) use ($request) {
+            if ($this->isBlankHtml($request->input('stem'))) {
+                $v->errors()->add('stem', 'Question stem is required.');
+            }
+        });
         if ($validator->fails()) {
             return back()->withErrors($validator)->withInput();
         }
@@ -115,7 +169,7 @@ class LmsQuestionController extends Controller
     {
         return [
             'type' => 'required|in:mcq,essay,simulation',
-            'stem' => 'required|string',
+            'stem' => 'nullable|string',
             'topic' => 'nullable|string|max:255',
             'course_id' => 'nullable|exists:courses,id',
             'max_marks' => 'required|numeric|min:0.1',
@@ -128,31 +182,76 @@ class LmsQuestionController extends Controller
         ];
     }
 
+    protected function bulkRules(): array
+    {
+        return [
+            'course_id' => 'nullable|exists:courses,id',
+            'topic' => 'nullable|string|max:255',
+            'status' => 'required|in:active,disabled',
+            'questions' => 'required|array|min:1',
+            'questions.*.type' => 'required|in:mcq,essay,simulation',
+            'questions.*.stem' => 'nullable|string',
+            'questions.*.topic' => 'nullable|string|max:255',
+            'questions.*.max_marks' => 'required|numeric|min:0.1',
+            'questions.*.explanation' => 'nullable|string',
+            'questions.*.options' => 'nullable|array',
+            'questions.*.options.*.text' => 'nullable|string',
+            'questions.*.correct_option' => 'nullable|integer|min:0',
+        ];
+    }
+
+    protected function isBlankHtml(?string $html): bool
+    {
+        $text = trim(html_entity_decode(strip_tags((string) $html)));
+
+        return $text === '';
+    }
+
     protected function fill(LmsQuestion $q, Request $request, bool $creating): void
     {
-        $q->type = $request->input('type');
-        $q->stem = trim((string) $request->input('stem'));
-        $q->topic = trim((string) $request->input('topic', '')) ?: null;
-        $q->course_id = $request->input('course_id') ?: null;
-        $q->max_marks = (float) $request->input('max_marks', 1);
-        $q->explanation = trim((string) $request->input('explanation', '')) ?: null;
-        $q->status = $request->input('status', 'active') === 'active' ? 'active' : 'disabled';
+        $this->fillFromArray($q, [
+            'type' => $request->input('type'),
+            'stem' => $request->input('stem'),
+            'topic' => $request->input('topic'),
+            'course_id' => $request->input('course_id'),
+            'max_marks' => $request->input('max_marks', 1),
+            'explanation' => $request->input('explanation'),
+            'status' => $request->input('status', 'active'),
+            'options' => $request->input('options', []),
+            'correct_option' => $request->input('correct_option', 0),
+        ], [], $creating);
+    }
+
+    protected function fillFromArray(LmsQuestion $q, array $row, array $defaults, bool $creating): void
+    {
+        $q->type = $row['type'] ?? LmsQuestion::TYPE_MCQ;
+        $q->stem = trim((string) ($row['stem'] ?? ''));
+        $q->topic = array_key_exists('topic', $defaults)
+            ? ($defaults['topic'] ?: null)
+            : (trim((string) ($row['topic'] ?? '')) ?: null);
+        $q->course_id = array_key_exists('course_id', $defaults)
+            ? ($defaults['course_id'] ?: null)
+            : (($row['course_id'] ?? null) ?: null);
+        $q->max_marks = (float) ($row['max_marks'] ?? 1);
+        $explanation = trim((string) ($row['explanation'] ?? ''));
+        $q->explanation = $this->isBlankHtml($explanation) ? null : $explanation;
+        $status = $defaults['status'] ?? ($row['status'] ?? 'active');
+        $q->status = $status === 'active' ? 'active' : 'disabled';
 
         if ($q->type === LmsQuestion::TYPE_MCQ) {
             $options = [];
-            $correct = (int) $request->input('correct_option', 0);
-            foreach ((array) $request->input('options', []) as $i => $row) {
-                $text = trim((string) ($row['text'] ?? ''));
+            $correct = (int) ($row['correct_option'] ?? 0);
+            foreach ((array) ($row['options'] ?? []) as $i => $optRow) {
+                $text = trim((string) ($optRow['text'] ?? ''));
                 if ($text === '') {
                     continue;
                 }
                 $options[] = [
                     'key' => (string) count($options),
                     'text' => $text,
-                    'is_correct' => (int) $i === $correct || ! empty($row['is_correct']),
+                    'is_correct' => (int) $i === $correct || ! empty($optRow['is_correct']),
                 ];
             }
-            // Re-key correctness by correct_option index among non-empty options
             if ($options !== []) {
                 foreach ($options as $i => &$opt) {
                     $opt['key'] = (string) $i;
