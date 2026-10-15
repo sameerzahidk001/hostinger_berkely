@@ -5,6 +5,9 @@
     .lms-status-submitted { color: #7a4db5; font-weight: 700; }
     .lms-status-graded { color: #7a4db5; font-weight: 700; }
     .lms-status-in_progress { color: #f0ad4e; font-weight: 700; }
+    .lms-status-available { color: #1ab394; font-weight: 700; }
+    .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
+    .lms-status-missed,
     .lms-status-expired { color: #ed5565; font-weight: 700; }
     .lms-pub-yes { color: #ed5565; font-weight: 700; }
     .lms-pub-no { color: #ed5565; font-weight: 700; }
@@ -24,7 +27,7 @@
     <div class="ibox"><div class="ibox-content">
         <form method="GET" class="m-b-md" style="margin-bottom:15px;">
             <div class="row">
-                <div class="col-sm-4 form-group">
+                <div class="col-sm-3 form-group">
                     <label>Assessment</label>
                     <select name="assessment_id" class="form-control">
                         <option value="0">All</option>
@@ -43,16 +46,15 @@
                     </select>
                 </div>
                 <div class="col-sm-3 form-group">
-                    <label>Status</label>
-                    <select name="status" class="form-control">
-                        <option value="">All</option>
-                        <option value="in_progress" @selected(($filters['status'] ?? '') === 'in_progress')>In progress</option>
-                        <option value="submitted" @selected(($filters['status'] ?? '') === 'submitted')>Submitted</option>
-                        <option value="graded" @selected(($filters['status'] ?? '') === 'graded')>Completed</option>
-                        <option value="expired" @selected(($filters['status'] ?? '') === 'expired')>Expired</option>
+                    <label>Course</label>
+                    <select name="course_id" class="form-control">
+                        <option value="0">All</option>
+                        @foreach($courses as $c)
+                            <option value="{{ $c->id }}" @selected((int)$filters['course_id'] === (int)$c->id)>{{ $c->title }}</option>
+                        @endforeach
                     </select>
                 </div>
-                <div class="col-sm-2 form-group" style="padding-top:24px;">
+                <div class="col-sm-3 form-group" style="padding-top:24px;">
                     <button class="btn btn-primary" type="submit">Show Results</button>
                 </div>
             </div>
@@ -63,9 +65,9 @@
         <div class="ibox-title">
             <h5 style="margin:0;">
                 @if($selectedAssessment)
-                    Student attempts — {{ $selectedAssessment->title }}
+                    Assigned — {{ $selectedAssessment->title }}
                 @else
-                    All test takers and status
+                    All assigned tests and status
                 @endif
             </h5>
         </div>
@@ -73,9 +75,7 @@
             <table class="table table-striped table-bordered">
                 <thead>
                     <tr>
-                        @unless($selectedAssessment)
-                            <th>Test</th>
-                        @endunless
+                        <th>Test</th>
                         <th>Student</th>
                         <th>Status</th>
                         <th>Score</th>
@@ -85,54 +85,80 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($studentAttempts as $row)
+                    @forelse($rows as $row)
                         @php
-                            $statusText = $row->status === 'graded' ? 'Completed' : $row->statusLabel();
+                            /** @var \App\Models\LmsAssessmentAttempt|null $attempt */
+                            $attempt = $row['attempt'];
+                            /** @var \App\Models\LmsAssessmentAssignment $assignment */
+                            $assignment = $row['assignment'];
+                            if ($attempt) {
+                                $statusKey = $attempt->status === 'graded' ? 'graded' : $attempt->status;
+                                $statusText = $attempt->status === 'graded' ? 'Completed' : $attempt->statusLabel();
+                            } elseif ($assignment->isNotYetOpen()) {
+                                $statusKey = 'upcoming';
+                                $statusText = 'Upcoming';
+                            } elseif ($assignment->isExpired()) {
+                                $statusKey = 'missed';
+                                $statusText = 'Missed';
+                            } else {
+                                $statusKey = 'available';
+                                $statusText = 'Assigned';
+                            }
                         @endphp
                         <tr>
-                            @unless($selectedAssessment)
-                                <td>{{ $row->assessment->title ?? '—' }}</td>
-                            @endunless
+                            <td>{{ $row['assessment']->title ?? '—' }}</td>
                             <td>
-                                {{ $row->user->name ?? '—' }}
-                                <br><small class="text-muted">{{ $row->user->email ?? '' }}</small>
+                                {{ $row['student']->name ?? '—' }}
+                                <br><small class="text-muted">{{ $row['student']->email ?? '' }}</small>
                             </td>
-                            <td><span class="lms-status-{{ $row->status }}">{{ $statusText }}</span></td>
+                            <td><span class="lms-status-{{ $statusKey }}">{{ $statusText }}</span></td>
                             <td>
-                                @if($row->score_raw !== null)
-                                    {{ number_format((float) $row->score_raw, 2) }} / {{ number_format((float) $row->score_max, 2) }}
-                                    @if($row->percent() !== null) ({{ number_format((float) $row->percent(), 2) }}%) @endif
+                                @if($attempt && $attempt->score_raw !== null)
+                                    {{ number_format((float) $attempt->score_raw, 2) }} / {{ number_format((float) $attempt->score_max, 2) }}
+                                    @if($attempt->percent() !== null) ({{ number_format((float) $attempt->percent(), 2) }}%) @endif
                                 @else — @endif
                             </td>
                             <td>
-                                <span class="{{ $row->results_published ? 'lms-pub-yes' : 'lms-pub-no' }}">
-                                    {{ $row->results_published ? 'Yes' : 'No' }}
-                                </span>
+                                @if($attempt)
+                                    <span class="{{ $attempt->results_published ? 'lms-pub-yes' : 'lms-pub-no' }}">
+                                        {{ $attempt->results_published ? 'Yes' : 'No' }}
+                                    </span>
+                                @else
+                                    <span class="text-muted">—</span>
+                                @endif
                             </td>
-                            <td>{{ optional($row->submitted_at ?: $row->updated_at)->format('d/m/Y H:i') ?? '—' }}</td>
+                            <td>
+                                @if($attempt)
+                                    {{ optional($attempt->submitted_at ?: $attempt->updated_at)->format('d/m/Y H:i') ?? '—' }}
+                                @else
+                                    {{ optional($assignment->created_at)->format('d/m/Y H:i') ?? '—' }}
+                                @endif
+                            </td>
                             <td style="white-space:nowrap;">
-                                @if(in_array($row->status, ['submitted', 'graded', 'expired'], true))
-                                    <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.mark', $row->id) }}">View</a>
-                                    <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.mark', $row->id) }}">Update</a>
-                                    @unless($row->results_published)
-                                        <form action="{{ route('admin.assessments.tests.publish-attempt', $row->id) }}" method="POST" style="display:inline;">
+                                @if($attempt && in_array($attempt->status, ['submitted', 'graded', 'expired'], true))
+                                    <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.mark', $attempt->id) }}">View</a>
+                                    <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.mark', $attempt->id) }}">Update</a>
+                                    @unless($attempt->results_published)
+                                        <form action="{{ route('admin.assessments.tests.publish-attempt', $attempt->id) }}" method="POST" style="display:inline;">
                                             @csrf
                                             <button class="btn btn-xs btn-success" type="submit">Publish</button>
                                         </form>
                                     @endunless
-                                @elseif($row->status === 'in_progress')
+                                    <form action="{{ route('admin.assessments.reports.destroy-attempt', $attempt->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this attempt?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-xs btn-danger" title="Delete"><i class="fa fa-trash"></i></button>
+                                    </form>
+                                @elseif($attempt && $attempt->status === 'in_progress')
                                     <span class="text-muted">In progress</span>
+                                @else
+                                    <span class="text-muted">No attempt yet</span>
                                 @endif
-                                <form action="{{ route('admin.assessments.reports.destroy-attempt', $row->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this attempt?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-xs btn-danger" title="Delete"><i class="fa fa-trash"></i></button>
-                                </form>
                             </td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ $selectedAssessment ? 6 : 7 }}" class="text-center text-muted">No test takers found for this filter.</td>
+                            <td colspan="7" class="text-center text-muted">No assigned tests found for this filter.</td>
                         </tr>
                     @endforelse
                 </tbody>
