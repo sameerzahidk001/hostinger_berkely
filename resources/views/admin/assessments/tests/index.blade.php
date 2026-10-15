@@ -1,27 +1,57 @@
 @extends(lms_portal_layout())
 @section('title', 'Assessments')
 @section('content')
+<style>
+    .lms-create-tests-row {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 8px;
+        align-items: stretch;
+        margin: 8px 0 4px;
+        overflow-x: auto;
+    }
+    .lms-create-tests-row .btn {
+        flex: 1 1 0;
+        white-space: nowrap;
+        font-size: 12px;
+        padding: 8px 10px;
+        border: none;
+        color: #fff !important;
+    }
+    .lms-btn-practice { background: #d9534f; }
+    .lms-btn-practice:hover, .lms-btn-practice:focus { background: #c9302c; color: #fff !important; }
+    .lms-btn-mock { background: #337ab7; }
+    .lms-btn-mock:hover, .lms-btn-mock:focus { background: #286090; color: #fff !important; }
+    .lms-btn-general { background: #f0ad4e; }
+    .lms-btn-general:hover, .lms-btn-general:focus { background: #ec971f; color: #fff !important; }
+    .lms-btn-skill { background: #5cb85c; }
+    .lms-btn-skill:hover, .lms-btn-skill:focus { background: #449d44; color: #fff !important; }
+</style>
 <div class="row wrapper border-bottom white-bg page-heading">
-    <div class="col-lg-5">
+    <div class="col-lg-8">
         <h2>Assessments</h2>
         <ol class="breadcrumb">
             <li><a href="{{ lms_portal_home() }}">Home</a></li>
             <li class="active"><strong>Practice / Mock / Tests</strong></li>
         </ol>
     </div>
-    <div class="col-lg-7 text-right" style="padding-top:16px;">
-        @if(!empty($canCreate))
-            <a href="{{ route('admin.assessments.tests.create', ['kind' => 'practice']) }}" class="btn btn-primary btn-sm">Create New Practice Test</a>
-            <a href="{{ route('admin.assessments.tests.create', ['kind' => 'mock']) }}" class="btn btn-info btn-sm">Create New Mock Test</a>
-            <a href="{{ route('admin.assessments.tests.create', ['kind' => 'general']) }}" class="btn btn-default btn-sm">Create New General Test</a>
-            @if(!empty($canSkill))
-                <a href="{{ route('admin.assessments.tests.create', ['kind' => 'skill']) }}" class="btn btn-warning btn-sm">Create New Skill Test</a>
-            @endif
-        @endif
+    <div class="col-lg-4 text-right" style="padding-top:20px;">
         @if(!empty($canAssign))
-            <a href="{{ route('admin.assessments.tests.assigned-users') }}" class="btn btn-success btn-sm">Assigned users</a>
+            <a href="{{ route('admin.assessments.tests.assigned-users') }}" class="btn btn-default btn-sm">Assigned users</a>
         @endif
     </div>
+    @if(!empty($canCreate))
+    <div class="col-lg-12">
+        <div class="lms-create-tests-row">
+            <a href="{{ route('admin.assessments.tests.create', ['kind' => 'practice']) }}" class="btn btn-sm lms-btn-practice">Create New Practice Test</a>
+            <a href="{{ route('admin.assessments.tests.create', ['kind' => 'mock']) }}" class="btn btn-sm lms-btn-mock">Create New Mock Test</a>
+            <a href="{{ route('admin.assessments.tests.create', ['kind' => 'general']) }}" class="btn btn-sm lms-btn-general">Create New General Test</a>
+            @if(!empty($canSkill))
+                <a href="{{ route('admin.assessments.tests.create', ['kind' => 'skill']) }}" class="btn btn-sm lms-btn-skill">Create New Skill Test</a>
+            @endif
+        </div>
+    </div>
+    @endif
 </div>
 <div class="wrapper wrapper-content">
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
