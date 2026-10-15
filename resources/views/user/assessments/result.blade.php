@@ -17,7 +17,13 @@
     <div class="ibox">
         <div class="ibox-title"><h5>Summary</h5></div>
         <div class="ibox-content">
-            <p>Status: <strong>{{ $attempt->statusLabel() }}</strong></p>
+            <p>Status: <strong class="{{ $attempt->statusColorClass() }}">{{ $attempt->statusLabel() }}</strong></p>
+<style>
+.lms-status-completed { color: #f59e0b; }
+.lms-status-marked { color: #1ab394; }
+.lms-status-missed { color: #ed5565; }
+.lms-status-in_progress { color: #f0ad4e; }
+</style>
             @if($canSeeScore)
                 <p style="font-size:22px;margin:8px 0;">
                     Score: <strong>{{ $attempt->score_raw }} / {{ $attempt->score_max }}</strong>

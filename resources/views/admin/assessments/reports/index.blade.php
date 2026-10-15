@@ -2,15 +2,14 @@
 @section('title', 'Test Results')
 @section('content')
 <style>
-    .lms-status-submitted { color: #7a4db5; font-weight: 700; }
-    .lms-status-graded { color: #7a4db5; font-weight: 700; }
+    .lms-status-completed { color: #f59e0b; font-weight: 700; } /* Completed — orange */
+    .lms-status-marked { color: #1ab394; font-weight: 700; } /* Completed and Marked — green */
     .lms-status-in_progress { color: #f0ad4e; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
-    .lms-status-missed,
-    .lms-status-expired { color: #ed5565; font-weight: 700; }
-    .lms-pub-yes { color: #ed5565; font-weight: 700; }
-    .lms-pub-no { color: #ed5565; font-weight: 700; }
+    .lms-status-missed { color: #ed5565; font-weight: 700; } /* Missed — red */
+    .lms-pub-yes { color: #1ab394; font-weight: 700; } /* Yes — green */
+    .lms-pub-no { color: inherit; font-weight: 600; } /* No — plain */
 </style>
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
@@ -75,43 +74,47 @@
             <table class="table table-striped table-bordered">
                 <thead>
                     <tr>
+                        <th>Date</th>
                         <th>Test</th>
                         <th>Student</th>
                         <th>Status</th>
                         <th>Score</th>
                         <th>Published</th>
-                        <th>Date</th>
                         <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($rows as $row)
                         @php
-                            /** @var \App\Models\LmsAssessmentAttempt|null $attempt */
                             $attempt = $row['attempt'];
-                            /** @var \App\Models\LmsAssessmentAssignment $assignment */
                             $assignment = $row['assignment'];
                             if ($attempt) {
-                                $statusKey = $attempt->status === 'graded' ? 'graded' : $attempt->status;
-                                $statusText = $attempt->status === 'graded' ? 'Completed' : $attempt->statusLabel();
+                                $statusClass = $attempt->statusColorClass();
+                                $statusText = $attempt->statusLabel();
                             } elseif ($assignment->isNotYetOpen()) {
-                                $statusKey = 'upcoming';
+                                $statusClass = 'lms-status-upcoming';
                                 $statusText = 'Upcoming';
                             } elseif ($assignment->isExpired()) {
-                                $statusKey = 'missed';
+                                $statusClass = 'lms-status-missed';
                                 $statusText = 'Missed';
                             } else {
-                                $statusKey = 'available';
+                                $statusClass = 'lms-status-available';
                                 $statusText = 'Assigned';
+                            }
+                            if ($attempt) {
+                                $dateText = optional($attempt->submitted_at ?: $attempt->updated_at)->format('d/m/Y H:i') ?? '—';
+                            } else {
+                                $dateText = optional($assignment->created_at)->format('d/m/Y H:i') ?? '—';
                             }
                         @endphp
                         <tr>
+                            <td>{{ $dateText }}</td>
                             <td>{{ $row['assessment']->title ?? '—' }}</td>
                             <td>
                                 {{ $row['student']->name ?? '—' }}
                                 <br><small class="text-muted">{{ $row['student']->email ?? '' }}</small>
                             </td>
-                            <td><span class="lms-status-{{ $statusKey }}">{{ $statusText }}</span></td>
+                            <td><span class="{{ $statusClass }}">{{ $statusText }}</span></td>
                             <td>
                                 @if($attempt && $attempt->score_raw !== null)
                                     {{ number_format((float) $attempt->score_raw, 2) }} / {{ number_format((float) $attempt->score_max, 2) }}
@@ -124,14 +127,7 @@
                                         {{ $attempt->results_published ? 'Yes' : 'No' }}
                                     </span>
                                 @else
-                                    <span class="text-muted">—</span>
-                                @endif
-                            </td>
-                            <td>
-                                @if($attempt)
-                                    {{ optional($attempt->submitted_at ?: $attempt->updated_at)->format('d/m/Y H:i') ?? '—' }}
-                                @else
-                                    {{ optional($assignment->created_at)->format('d/m/Y H:i') ?? '—' }}
+                                    <span class="lms-pub-no">No</span>
                                 @endif
                             </td>
                             <td style="white-space:nowrap;">

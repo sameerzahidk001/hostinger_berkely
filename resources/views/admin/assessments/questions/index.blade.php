@@ -39,8 +39,8 @@
             <table class="table table-striped table-bordered">
                 <thead>
                     <tr>
+                        <th>Date</th>
                         <th>ID</th>
-                        <th>Created Date</th>
                         <th>Created by</th>
                         <th>Question for</th>
                         <th>Type</th>
@@ -54,8 +54,8 @@
                 <tbody>
                     @forelse($rows as $row)
                         <tr>
-                            <td>{{ $row->id }}</td>
                             <td>{{ optional($row->created_at)->format('d/m/Y H:i') ?? '—' }}</td>
+                            <td>{{ $row->id }}</td>
                             <td>{{ $row->createdByLabel() }}</td>
                             <td>{{ $row->targetRoleLabel() }}</td>
                             <td>{{ $row->typeLabel() }}</td>
