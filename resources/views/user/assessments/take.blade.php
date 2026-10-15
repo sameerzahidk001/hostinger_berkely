@@ -1,34 +1,77 @@
 @extends('user.layout.app')
 @section('title', 'Taking: ' . ($attempt->assessment->title ?? 'Assessment'))
+@push('style')
+<style>
+    body.lms-take-mode #page-wrapper > .row.border-bottom {
+        position: sticky;
+        top: 0;
+        z-index: 1030;
+        background: #fff;
+    }
+    .lms-take-sticky {
+        position: sticky;
+        top: 52px;
+        z-index: 1020;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(0,0,0,.08);
+        margin-bottom: 12px;
+    }
+    .lms-take-sticky .page-heading {
+        margin: 0;
+        padding: 12px 15px 10px;
+        background: #fff;
+        border-bottom: 1px solid #e7eaec;
+    }
+    .lms-take-sticky .page-heading h2 {
+        margin: 0 0 4px;
+        font-size: 20px;
+    }
+    .lms-take-sticky .breadcrumb {
+        margin-bottom: 0;
+    }
+    .lms-take-sticky .lms-take-timer {
+        margin: 0;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        padding: 10px 15px;
+    }
+    @media (max-width: 768px) {
+        .lms-take-sticky { top: 48px; }
+    }
+</style>
+@endpush
 @section('content')
 @include('admin.assessments.partials.limited-editor-assets')
 @php $essayMax = 15000; @endphp
-<div class="row wrapper border-bottom white-bg page-heading">
-    <div class="col-lg-10">
-        <h2>{{ $attempt->assessment->title }}</h2>
-        <ol class="breadcrumb">
-            <li><a href="{{ route('user.assessments.index') }}">Assessments</a></li>
-            <li class="active"><strong>In progress</strong></li>
-        </ol>
+<div class="lms-take-sticky">
+    <div class="row wrapper border-bottom white-bg page-heading">
+        <div class="col-lg-10">
+            <h2>{{ $attempt->assessment->title }}</h2>
+            <ol class="breadcrumb">
+                <li><a href="{{ route('user.assessments.index') }}">Assessments</a></li>
+                <li class="active"><strong>In progress</strong></li>
+            </ol>
+        </div>
     </div>
+    @if($attempt->expires_at)
+        <div class="alert alert-warning lms-take-timer">
+            Time limit ends: <strong id="expires_at">{{ $attempt->expires_at->toIso8601String() }}</strong>
+            (<span id="countdown"></span>)
+        </div>
+    @endif
 </div>
 <div class="wrapper wrapper-content">
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if($errors->any())
         <div class="alert alert-danger"><ul class="m-b-none">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>
     @endif
-    @if($attempt->expires_at)
-        <div class="alert alert-warning">
-            Time limit ends: <strong id="expires_at">{{ $attempt->expires_at->toIso8601String() }}</strong>
-            (<span id="countdown"></span>)
-        </div>
-    @endif
     <form method="POST" action="{{ route('user.assessments.save', $attempt->id) }}" id="attempt-form">
         @csrf
         @foreach($questions as $i => $question)
             @php $ans = $answers->get($question->id); @endphp
             <div class="ibox">
-                <div class="ibox-title"><h5>Q{{ $i + 1 }}. {{ $question->typeLabel() }} ({{ $question->pivot->marks_override ?? $question->max_marks }} marks)</h5></div>
+                <div class="ibox-title"><h5>Q{{ $i + 1 }}. {{ $question->typeLabel() }} ({{ lms_format_number($question->pivot->marks_override ?? $question->max_marks) }} marks)</h5></div>
                 <div class="ibox-content">
                     <div class="m-b-sm">{!! $question->stem !!}</div>
                     @if($question->isMcq())
@@ -67,6 +110,7 @@
 @endsection
 @push('script')
 <script>
+document.body.classList.add('lms-take-mode');
 (function () {
     var el = document.getElementById('expires_at');
     if (!el) return;

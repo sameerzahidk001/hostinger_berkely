@@ -183,8 +183,8 @@
                             <td class="col-status"><span class="{{ $statusClass }}">{{ $statusText }}</span></td>
                             <td class="col-score">
                                 @if($attempt && $attempt->score_raw !== null)
-                                    {{ number_format((float) $attempt->score_raw, 2) }} / {{ number_format((float) $attempt->score_max, 2) }}
-                                    @if($attempt->percent() !== null) ({{ number_format((float) $attempt->percent(), 2) }}%) @endif
+                                    {{ lms_format_number($attempt->score_raw) }} / {{ lms_format_number($attempt->score_max) }}
+                                    @if($attempt->percent() !== null) ({{ lms_format_number($attempt->percent()) }}%) @endif
                                 @else — @endif
                             </td>
                             <td>

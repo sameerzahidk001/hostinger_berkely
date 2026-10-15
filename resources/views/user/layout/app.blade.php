@@ -37,6 +37,24 @@
 
 <body>
    <style>
+      /* Compact student/instructor sidebar so menus fit without scrolling */
+      .navbar-static-side .nav-header {
+         padding: 12px 16px 10px;
+      }
+      .navbar-static-side .nav-header .profile-element {
+         margin: 0;
+      }
+      .navbar-static-side #side-menu > li > a {
+         padding: 8px 16px 8px 18px;
+         line-height: 1.25;
+      }
+      .navbar-static-side #side-menu .nav-second-level > li > a {
+         padding: 6px 15px 6px 42px;
+         line-height: 1.25;
+      }
+      .navbar-static-side #side-menu > li > a .fa {
+         margin-right: 6px;
+      }
       /* Mobile off-canvas sidebar for user panel */
       @media (max-width: 768px) {
          /* Inspinia hides sidebar on mobile; override it */

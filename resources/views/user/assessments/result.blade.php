@@ -26,8 +26,8 @@
 </style>
             @if($canSeeScore)
                 <p style="font-size:22px;margin:8px 0;">
-                    Score: <strong>{{ $attempt->score_raw }} / {{ $attempt->score_max }}</strong>
-                    @if($attempt->percent() !== null) ({{ $attempt->percent() }}%) @endif
+                    Score: <strong>{{ lms_format_number($attempt->score_raw) }} / {{ lms_format_number($attempt->score_max) }}</strong>
+                    @if($attempt->percent() !== null) ({{ lms_format_number($attempt->percent()) }}%) @endif
                 </p>
                 @if($attempt->grader_feedback)
                     <div class="m-t-sm">
@@ -54,11 +54,11 @@
                             @if($answer && $answer->is_correct !== null)
                                 · {{ $answer->is_correct ? 'Correct' : 'Incorrect' }}
                             @endif
-                            · {{ $answer?->finalScore() ?? 0 }} / {{ $answer->max_marks ?? $question->max_marks }}
+                            · {{ lms_format_number($answer?->finalScore() ?? 0) }} / {{ lms_format_number($answer->max_marks ?? $question->max_marks) }}
                         </p>
                     @else
                         <div class="well well-sm">{!! nl2br(e($answer?->textAnswer() ?: '—')) !!}</div>
-                        <p>Score: {{ $answer?->finalScore() ?? '—' }} / {{ $answer->max_marks ?? $question->max_marks }}</p>
+                        <p>Score: {{ lms_format_number($answer?->finalScore()) }} / {{ lms_format_number($answer->max_marks ?? $question->max_marks) }}</p>
                         @if($answer && $answer->feedback)
                             <div class="m-t-sm"><em>Feedback:</em><div class="well well-sm m-t-xs">{!! $answer->feedback !!}</div></div>
                         @endif

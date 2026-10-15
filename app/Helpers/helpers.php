@@ -799,6 +799,26 @@ if (!function_exists('lms_portal_home')) {
     }
 }
 
+if (!function_exists('lms_format_number')) {
+    /** Format marks/scores: keep fractions, drop trailing .00 (e.g. 80.00 → 80, 53.30 → 53.3). */
+    function lms_format_number($value, string $empty = '—'): string
+    {
+        if ($value === null || $value === '') {
+            return $empty;
+        }
+        if (! is_numeric($value)) {
+            return (string) $value;
+        }
+        $n = (float) $value;
+        if (abs($n - round($n)) < 0.0000001) {
+            return (string) (int) round($n);
+        }
+        $s = rtrim(rtrim(number_format($n, 2, '.', ''), '0'), '.');
+
+        return $s === '' ? '0' : $s;
+    }
+}
+
 if (!function_exists('instructor_can_view_site_analytics')) {
     function instructor_can_view_site_analytics($user = null): bool
     {
