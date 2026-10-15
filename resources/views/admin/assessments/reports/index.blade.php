@@ -11,6 +11,14 @@
     </div>
 </div>
 <div class="wrapper wrapper-content">
+    @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
+    <div class="alert alert-info">
+        <strong>Mark &amp; release (student-wise):</strong>
+        Select an assessment below and use the <em>Student attempts</em> table —
+        open <strong>Mark / feedback</strong> for that student, then
+        <strong>Save &amp; publish results</strong> (or <strong>Publish</strong> on the row).
+        You can also go to <a href="{{ route('admin.assessments.tests.index') }}">Create / Assign → Attempts</a>.
+    </div>
     <div class="ibox"><div class="ibox-content">
         <form method="GET" class="m-b-md" style="margin-bottom:15px;">
             <div class="row">
@@ -38,6 +46,65 @@
             </div>
         </form>
     </div></div>
+
+    @if($selectedAssessment)
+    <div class="ibox">
+        <div class="ibox-title" style="display:flex;justify-content:space-between;align-items:center;">
+            <h5 style="margin:0;">Student attempts — {{ $selectedAssessment->title }}</h5>
+            <a class="btn btn-xs btn-default" href="{{ route('admin.assessments.tests.attempts', $selectedAssessment->id) }}">Full attempts list</a>
+        </div>
+        <div class="ibox-content table-responsive">
+            <table class="table table-striped table-bordered">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Status</th>
+                        <th>Score</th>
+                        <th>Result</th>
+                        <th>Published</th>
+                        <th>Date</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($studentAttempts as $row)
+                        <tr>
+                            <td>
+                                {{ $row->user->name ?? '—' }}
+                                <br><small class="text-muted">{{ $row->user->email ?? '' }}</small>
+                            </td>
+                            <td>{{ $row->statusLabel() }}</td>
+                            <td>
+                                @if($row->score_raw !== null)
+                                    {{ $row->score_raw }} / {{ $row->score_max }}
+                                    @if($row->percent() !== null) ({{ $row->percent() }}%) @endif
+                                @else — @endif
+                            </td>
+                            <td>{{ $row->passFailLabel() }}</td>
+                            <td>{{ $row->results_published ? 'Yes' : 'No' }}</td>
+                            <td>{{ optional($row->submitted_at ?: $row->updated_at)->format('d M Y H:i') ?? '—' }}</td>
+                            <td style="white-space:nowrap;">
+                                @if(in_array($row->status, ['submitted', 'graded', 'expired'], true))
+                                    <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.mark', $row->id) }}">Mark / feedback</a>
+                                    @unless($row->results_published)
+                                        <form action="{{ route('admin.assessments.tests.publish-attempt', $row->id) }}" method="POST" style="display:inline;">
+                                            @csrf
+                                            <button class="btn btn-xs btn-success" type="submit">Publish</button>
+                                        </form>
+                                    @endunless
+                                @elseif($row->status === 'in_progress')
+                                    <span class="text-muted">Still in progress</span>
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="7" class="text-center text-muted">No student attempts for this assessment yet.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @endif
 
     <div class="ibox">
         <div class="ibox-title"><h5>Pass-rate summary</h5></div>
@@ -77,7 +144,7 @@
         <div class="ibox-title"><h5>Staff skill test results</h5></div>
         <div class="ibox-content table-responsive">
             <table class="table table-striped table-bordered">
-                <thead><tr><th>Staff</th><th>Test</th><th>Status</th><th>Score</th><th>Pass</th><th>Date</th></tr></thead>
+                <thead><tr><th>Staff</th><th>Test</th><th>Status</th><th>Score</th><th>Pass</th><th>Date</th><th></th></tr></thead>
                 <tbody>
                     @forelse($skillRows as $row)
                         <tr>
@@ -87,9 +154,14 @@
                             <td>@if($row->score_raw !== null){{ $row->score_raw }} / {{ $row->score_max }}@else — @endif</td>
                             <td>{{ $row->passFailLabel() }}</td>
                             <td>{{ optional($row->submitted_at ?: $row->updated_at)->format('d M Y') }}</td>
+                            <td>
+                                @if(in_array($row->status, ['submitted', 'graded', 'expired'], true))
+                                    <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.mark', $row->id) }}">Mark</a>
+                                @endif
+                            </td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" class="text-center">No skill attempts yet.</td></tr>
+                        <tr><td colspan="7" class="text-center">No skill attempts yet.</td></tr>
                     @endforelse
                 </tbody>
             </table>
