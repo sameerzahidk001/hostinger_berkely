@@ -42,14 +42,30 @@
                 </div>
             </div>
             <div class="ibox">
-                <div class="ibox-title"><h5>OAuth setup</h5></div>
+                <div class="ibox-title"><h5>OAuth setup (CRM-1)</h5></div>
                 <div class="ibox-content">
                     <ol style="padding-left:18px;">
                         <li>Open <a href="https://api-console.zoho.com" target="_blank" rel="noopener">api-console.zoho.com</a> → Self Client (separate from Meeting).</li>
                         <li>Generate a code with scope:<br><code style="word-break:break-all;">{{ $scopes }}</code></li>
                         <li>Run:<br><code>php artisan zoho:crm-connect --client-id=... --client-secret=... --code=GRANT --enable</code></li>
-                        <li>In CRM, add custom fields: Website Invoice ID, Website Receipt ID, Installment No, Balance Due, Package Name, Gateway.</li>
+                        <li>In CRM layouts, add custom fields: Website Invoice ID, Website Receipt ID, Installment No, Balance Due, Package Name, Gateway.</li>
+                        <li>Contact = student · Deal = course/package · Invoice = INV-###### · Receipt = RC-######.</li>
                     </ol>
+                </div>
+            </div>
+            <div class="ibox">
+                <div class="ibox-title"><h5>Delivery order</h5></div>
+                <div class="ibox-content">
+                    <ul class="list-unstyled" style="margin:0;">
+                        <li><span class="label label-primary">done</span> <strong>CRM-1 Setup</strong> — OAuth, fields, sandbox connection</li>
+                        <li style="margin-top:6px;"><span class="label label-primary">done</span> <strong>CRM-2 Sync service</strong> — Contact / Invoice / Receipt upsert + API log</li>
+                        <li style="margin-top:6px;"><span class="label label-primary">done</span> <strong>CRM-3 Live push</strong> — invoice create + payment success</li>
+                        <li style="margin-top:6px;"><span class="label label-primary">done</span> <strong>CRM-4 Backfill</strong> — Active / Partial / Paid (+ receipts)</li>
+                        <li style="margin-top:6px;"><span class="label label-primary">done</span> <strong>CRM-5 Admin</strong> — last sync status + Push to CRM</li>
+                    </ul>
+                    <p class="help-block text-muted" style="margin-top:10px;margin-bottom:0;">
+                        Nightly retry: <code>php artisan zoho:crm-retry</code> (scheduled 02:00). Backfill: <code>php artisan zoho:crm-backfill</code>.
+                    </p>
                 </div>
             </div>
         </div>

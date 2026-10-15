@@ -58,7 +58,11 @@ class PaymentController extends Controller
 
     public function receipt()
     {
-        $installments = Installment::where('status', 'paid')->orderByDesc('created_at')->get();
+        $installments = Installment::with(['payment.user', 'payment.course', 'payment.courseFee', 'user'])
+            ->where('status', 'paid')
+            ->orderByDesc('created_at')
+            ->get();
+
         return view('admin.payments.receipt-list', compact('installments'));
     }
 
