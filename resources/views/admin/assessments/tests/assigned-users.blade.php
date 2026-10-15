@@ -8,34 +8,49 @@
     .lms-status-completed { color: #f59e0b; font-weight: 700; }
     .lms-status-marked { color: #1ab394; font-weight: 700; }
     .lms-status-in_progress { color: #f0ad4e; font-weight: 700; }
+    .lms-pub-yes { color: #1ab394; font-weight: 700; }
+    .lms-pub-no { color: inherit; font-weight: 600; }
     .lms-assigned-wrap { overflow-x: hidden; }
     .lms-assigned-table {
         width: 100%;
         max-width: 100%;
         table-layout: fixed;
         margin-bottom: 0;
+        font-size: 12px;
     }
     .lms-assigned-table > thead > tr > th,
     .lms-assigned-table > tbody > tr > td {
         vertical-align: middle;
-        padding: 6px 6px;
-        font-size: 12px;
+        padding: 6px 5px;
         word-wrap: break-word;
         overflow-wrap: anywhere;
         white-space: normal;
     }
-    .lms-assigned-table .col-date { width: 7%; }
-    .lms-assigned-table .col-id { width: 5%; }
-    .lms-assigned-table .col-test { width: 16%; }
-    .lms-assigned-table .col-scope { width: 12%; }
-    .lms-assigned-table .col-assessor { width: 10%; }
-    .lms-assigned-table .col-window { width: 14%; }
-    .lms-assigned-table .col-time { width: 5%; text-align: center; }
-    .lms-assigned-table .col-spend { width: 6%; text-align: center; }
-    .lms-assigned-table .col-status { width: 10%; }
-    .lms-assigned-table .col-action { width: 10%; white-space: nowrap; }
-    .lms-assigned-table .col-action .btn { margin: 1px 0; }
+    .lms-assigned-table .col-date { width: 8%; }
+    .lms-assigned-table .col-test { width: 12%; }
+    .lms-assigned-table .col-taker { width: 11%; }
+    .lms-assigned-table .col-course { width: 10%; }
+    .lms-assigned-table .col-assessor { width: 9%; }
+    .lms-assigned-table .col-status { width: 9%; }
+    .lms-assigned-table .col-score { width: 8%; }
+    .lms-assigned-table .col-actions { width: 12%; white-space: nowrap; }
+    .lms-assigned-table .col-actions .btn { margin: 1px 0; padding: 2px 5px; font-size: 11px; }
 </style>
+@php
+    $fmtDuration = function ($minutes) {
+        if ($minutes === null || $minutes === '') {
+            return '—';
+        }
+        $m = (int) round((float) $minutes);
+        if ($m < 60) {
+            return $m . ' min';
+        }
+        $h = intdiv($m, 60);
+        $r = $m % 60;
+
+        return $r ? ($h . 'h ' . $r . 'm') : ($h . 'h');
+    };
+@endphp
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">
         <h2>Assigned Tests</h2>
@@ -51,97 +66,181 @@
 </div>
 <div class="wrapper wrapper-content">
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
-    <div class="ibox"><div class="ibox-content lms-assigned-wrap">
+    <p class="text-muted m-b-sm">
+        All assigned test takers (started or not). Status shows <strong>Marking Required</strong> until the assessor marks a submitted sitting.
+    </p>
+    <div class="ibox"><div class="ibox-content">
         <form method="GET" class="m-b-md" style="margin-bottom:15px;">
             <div class="row">
-                <div class="col-sm-6">
-                    <input type="text" name="search" class="form-control" value="{{ $search }}" placeholder="Search test, user, batch, or test ID">
+                <div class="col-sm-2 form-group">
+                    <label>Assessment</label>
+                    <select name="assessment_id" class="form-control">
+                        <option value="0">All</option>
+                        @foreach($assessments as $a)
+                            <option value="{{ $a->id }}" @selected((int)($filters['assessment_id'] ?? 0) === (int)$a->id)>{{ $a->title }}</option>
+                        @endforeach
+                    </select>
                 </div>
-                <div class="col-sm-4">
+                <div class="col-sm-2 form-group">
+                    <label>Batch</label>
+                    <select name="batch_id" class="form-control">
+                        <option value="0">All</option>
+                        @foreach($batches as $b)
+                            <option value="{{ $b->id }}" @selected((int)($filters['batch_id'] ?? 0) === (int)$b->id)>{{ $b->code }} — {{ $b->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-sm-2 form-group">
+                    <label>Course</label>
+                    <select name="course_id" class="form-control">
+                        <option value="0">All</option>
+                        @foreach($courses as $c)
+                            <option value="{{ $c->id }}" @selected((int)($filters['course_id'] ?? 0) === (int)$c->id)>{{ $c->title }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-sm-2 form-group">
+                    <label>Type</label>
+                    <select name="kind" class="form-control">
+                        <option value="">All</option>
+                        @foreach($kinds as $k => $label)
+                            <option value="{{ $k }}" @selected(($filters['kind'] ?? '') === $k)>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-sm-2 form-group">
+                    <label>Search</label>
+                    <input type="text" name="search" class="form-control" value="{{ $filters['search'] ?? '' }}" placeholder="Test, taker, course…">
+                </div>
+                <div class="col-sm-2 form-group" style="padding-top:24px;">
                     <button class="btn btn-primary" type="submit">Filter</button>
                     <a href="{{ route('admin.assessments.tests.assigned-users') }}" class="btn btn-default">Clear</a>
                 </div>
             </div>
         </form>
-        <table class="table table-striped table-bordered lms-assigned-table">
-            <thead>
-                <tr>
-                    <th class="col-date">Date</th>
-                    <th class="col-id">Test ID</th>
-                    <th class="col-test">Test</th>
-                    <th class="col-scope">Assigned to</th>
-                    <th class="col-assessor">Assessor</th>
-                    <th class="col-window">Available</th>
-                    <th class="col-time">Start</th>
-                    <th class="col-time">End</th>
-                    <th class="col-spend">Spend</th>
-                    <th class="col-status">Status</th>
-                    <th class="col-action"></th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($rows as $row)
-                    @php
-                        $attempts = ($attemptsByAssessment ?? collect())->get($row->assessment_id, collect());
-                        $att = null;
-                        if ($row->student_id) {
-                            $att = $attempts->firstWhere('user_id', (int) $row->student_id);
-                        }
-                        if ($att) {
-                            $winLabel = $att->statusLabel();
-                            $winClass = $att->statusColorClass();
-                        } elseif ($row->isNotYetOpen()) {
-                            $winLabel = 'Upcoming';
-                            $winClass = 'lms-status-upcoming';
-                        } elseif ($row->isExpired()) {
-                            $winLabel = 'Missed';
-                            $winClass = 'lms-status-missed';
-                        } else {
-                            $winLabel = 'Available';
-                            $winClass = 'lms-status-available';
-                        }
-                        $cannotReassign = !empty($lockReassign[(int) $row->id]);
-                        $spend = $att?->spendMinutes();
-                    @endphp
-                    <tr>
-                        <td class="col-date">{{ optional($row->created_at)->format('d/m/y H:i') ?? '—' }}</td>
-                        <td class="col-id">{{ $row->assessment?->displayCode() ?? ('BST'.$row->assessment_id) }}</td>
-                        <td class="col-test">{{ $row->assessment->title ?? '—' }}</td>
-                        <td class="col-scope">{{ $row->scopeLabel() }}</td>
-                        <td class="col-assessor">
-                            @if($row->marker)
-                                {{ $row->marker->name }}
-                            @elseif($att)
-                                {{ $att->assessorLabel($row) }}
-                            @else
-                                <span class="text-muted">Admin / course instructors</span>
-                            @endif
-                        </td>
-                        <td class="col-window">
-                            {{ optional($row->available_from)->format('d/m/y H:i') ?? '—' }}
-                            <br><span class="text-muted">→ {{ optional($row->available_until)->format('d/m/y H:i') ?? '—' }}</span>
-                        </td>
-                        <td class="col-time">{{ optional($att?->started_at)->format('H:i') ?? '—' }}</td>
-                        <td class="col-time">{{ optional($att?->submitted_at)->format('H:i') ?? '—' }}</td>
-                        <td class="col-spend">{{ $spend !== null ? $spend . ' min' : '—' }}</td>
-                        <td class="col-status"><span class="{{ $winClass }}">{{ $winLabel }}</span></td>
-                        <td class="col-action">
-                            @if($row->assessment_id)
-                                @unless($cannotReassign)
-                                    <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.assign', $row->assessment_id) }}">Re-assign</a>
-                                @else
-                                    <span class="text-muted" title="Cannot re-assign after Missed / Completed / Marked">—</span>
-                                @endunless
-                                <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.attempts', $row->assessment_id) }}">View</a>
-                            @endif
-                        </td>
-                    </tr>
-                @empty
-                    <tr><td colspan="11" class="text-center">No assignments yet.</td></tr>
-                @endforelse
-            </tbody>
-        </table>
-        {{ $rows->links() }}
     </div></div>
+
+    <div class="ibox">
+        <div class="ibox-title">
+            <h5 style="margin:0;">
+                @if(!empty($selectedAssessment))
+                    {{ $selectedAssessment->title }}
+                @else
+                    All assigned test takers
+                @endif
+                <small class="text-muted">({{ $rows->count() }})</small>
+            </h5>
+        </div>
+        <div class="ibox-content lms-assigned-wrap">
+            <table class="table table-striped table-bordered lms-assigned-table">
+                <thead>
+                    <tr>
+                        <th class="col-date">Date</th>
+                        <th class="col-test">Test</th>
+                        <th class="col-taker">Test Taker</th>
+                        <th class="col-course">Course</th>
+                        <th>Available</th>
+                        <th>Start</th>
+                        <th>End</th>
+                        <th>Duration</th>
+                        <th>Spend</th>
+                        <th class="col-assessor">Assessor</th>
+                        <th class="col-status">Status</th>
+                        <th class="col-score">Score</th>
+                        <th>Published</th>
+                        <th class="col-actions">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($rows as $row)
+                        @php
+                            $attempt = $row['attempt'];
+                            $assignment = $row['assignment'];
+                            $assessment = $row['assessment'];
+                            if ($attempt) {
+                                $statusClass = $attempt->statusColorClass();
+                                $statusText = $attempt->statusLabel();
+                            } elseif ($assignment->isNotYetOpen()) {
+                                $statusClass = 'lms-status-upcoming';
+                                $statusText = 'Upcoming';
+                            } elseif ($assignment->isExpired()) {
+                                $statusClass = 'lms-status-missed';
+                                $statusText = 'Missed';
+                            } else {
+                                $statusClass = 'lms-status-available';
+                                $statusText = 'Assigned';
+                            }
+                            $dateText = $attempt
+                                ? (optional($attempt->submitted_at ?: $attempt->updated_at)->format('d/m/y H:i') ?? '—')
+                                : (optional($assignment->created_at)->format('d/m/y H:i') ?? '—');
+                            $spend = $attempt?->spendMinutes();
+                        @endphp
+                        <tr>
+                            <td class="col-date">{{ $dateText }}</td>
+                            <td class="col-test">
+                                {{ $assessment->title ?? '—' }}
+                                <br><small class="text-muted">{{ $assessment->displayCode() }} · {{ $assessment->kindLabel() }}</small>
+                            </td>
+                            <td class="col-taker">
+                                {{ $row['student']->name ?? '—' }}
+                                <br><small class="text-muted">{{ $row['student']->email ?? '' }}</small>
+                            </td>
+                            <td class="col-course">{{ $assessment->course->title ?? '—' }}</td>
+                            <td>
+                                {{ optional($assignment->available_from)->format('d/m/y H:i') ?? '—' }}
+                                <br><span class="text-muted">→ {{ optional($assignment->available_until)->format('d/m/y H:i') ?? '—' }}</span>
+                            </td>
+                            <td>{{ optional($attempt?->started_at)->format('H:i') ?? '—' }}</td>
+                            <td>{{ optional($attempt?->submitted_at)->format('H:i') ?? '—' }}</td>
+                            <td>{{ $fmtDuration($assessment->duration_minutes ?? null) }}</td>
+                            <td>{{ $spend !== null ? $fmtDuration($spend) : '—' }}</td>
+                            <td class="col-assessor">{{ $attempt ? $attempt->assessorLabel($assignment) : ($assignment->marker->name ?? 'Admin / course instructors') }}</td>
+                            <td class="col-status"><span class="{{ $statusClass }}">{{ $statusText }}</span></td>
+                            <td class="col-score">
+                                @if($attempt && $attempt->score_raw !== null)
+                                    {{ lms_format_number($attempt->score_raw) }} / {{ lms_format_number($attempt->score_max) }}
+                                    @if($attempt->percent() !== null) ({{ lms_format_number($attempt->percent()) }}%) @endif
+                                @else — @endif
+                            </td>
+                            <td>
+                                @if($attempt)
+                                    <span class="{{ $attempt->results_published ? 'lms-pub-yes' : 'lms-pub-no' }}">
+                                        {{ $attempt->results_published ? 'Yes' : 'No' }}
+                                    </span>
+                                @else
+                                    <span class="lms-pub-no">No</span>
+                                @endif
+                            </td>
+                            <td class="col-actions">
+                                @if($attempt && in_array($attempt->status, ['submitted', 'graded', 'expired'], true))
+                                    <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.mark', $attempt->id) }}" title="View / mark"><i class="fa fa-eye"></i> View</a>
+                                    <a class="btn btn-xs btn-success" href="{{ route('admin.assessments.tests.attempt-pdf', $attempt->id) }}" target="_blank" title="PDF"><i class="fa fa-file-pdf-o"></i></a>
+                                    @unless($attempt->results_published)
+                                        <form action="{{ route('admin.assessments.tests.publish-attempt', $attempt->id) }}" method="POST" style="display:inline;">
+                                            @csrf
+                                            <button class="btn btn-xs btn-default" type="submit">Publish</button>
+                                        </form>
+                                    @endunless
+                                    @if(!empty($canDeleteAttempts))
+                                        <form action="{{ route('admin.assessments.reports.destroy-attempt', $attempt->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this sitting?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-xs btn-danger" title="Delete"><i class="fa fa-trash"></i></button>
+                                        </form>
+                                    @endif
+                                @elseif($attempt && $attempt->status === 'in_progress')
+                                    <span class="text-muted">In progress</span>
+                                @else
+                                    <span class="text-muted">Not started</span>
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="14" class="text-center text-muted">No assigned test takers found.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 @endsection

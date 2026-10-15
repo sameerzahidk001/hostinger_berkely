@@ -235,14 +235,9 @@
                            <a href="{{ route('admin.assessments.tests.index') }}">Create Test</a>
                         </li>
                         @endif
-                        @if($canAssignTestsMenu)
-                        <li class="{{ request()->routeIs('admin.assessments.tests.assign*') || request()->routeIs('admin.assessments.tests.assigned-users') ? 'active' : '' }}">
+                        @if($canAssignTestsMenu || $canTestsMenu)
+                        <li class="{{ request()->routeIs('admin.assessments.tests.assign*') || request()->routeIs('admin.assessments.tests.assigned-users') || request()->routeIs('admin.assessments.reports.*') ? 'active' : '' }}">
                            <a href="{{ route('admin.assessments.tests.assigned-users') }}">Assigned Tests</a>
-                        </li>
-                        @endif
-                        @if($canTestsMenu)
-                        <li class="{{ request()->routeIs('admin.assessments.reports.*') ? 'active' : '' }}">
-                           <a href="{{ route('admin.assessments.reports.index') }}">Test Results</a>
                         </li>
                         @endif
                         @if($isStaffPanelRole)
