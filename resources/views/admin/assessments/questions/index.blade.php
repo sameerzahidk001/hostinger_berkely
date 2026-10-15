@@ -39,6 +39,7 @@
             <table class="table table-striped table-bordered">
                 <thead>
                     <tr>
+                        <th>ID</th>
                         <th>Course</th>
                         <th>Type</th>
                         <th>Topic</th>
@@ -51,6 +52,7 @@
                 <tbody>
                     @forelse($rows as $row)
                         <tr>
+                            <td>{{ $row->id }}</td>
                             <td>{{ $row->course?->title ?: '—' }}</td>
                             <td>{{ $row->typeLabel() }}</td>
                             <td>{{ $row->topic ?: '—' }}</td>
@@ -62,7 +64,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="7" class="text-center">No questions yet.</td></tr>
+                        <tr><td colspan="8" class="text-center">No questions yet.</td></tr>
                     @endforelse
                 </tbody>
             </table>

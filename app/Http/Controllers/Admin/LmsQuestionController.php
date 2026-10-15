@@ -192,7 +192,7 @@ class LmsQuestionController extends Controller
         $courseRule = $this->instructorMustPickCourse() ? 'required|exists:courses,id' : 'nullable|exists:courses,id';
 
         return [
-            'type' => 'required|in:mcq,essay,simulation',
+            'type' => 'required|in:mcq,essay,simulation,case_study',
             'stem' => 'nullable|string',
             'topic' => 'nullable|string|max:255',
             'course_id' => $courseRule,
@@ -215,7 +215,7 @@ class LmsQuestionController extends Controller
             'topic' => 'nullable|string|max:255',
             'status' => 'required|in:active,disabled',
             'questions' => 'required|array|min:1',
-            'questions.*.type' => 'required|in:mcq,essay,simulation',
+            'questions.*.type' => 'required|in:mcq,essay,simulation,case_study',
             'questions.*.stem' => 'nullable|string',
             'questions.*.topic' => 'nullable|string|max:255',
             'questions.*.max_marks' => 'required|numeric|min:0.1',

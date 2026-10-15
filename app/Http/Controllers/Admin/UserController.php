@@ -164,7 +164,7 @@ class UserController extends Controller
             'podcasts.*.link' => 'nullable|url|max:500',
             'podcasts.*.image' => 'nullable|file|image|mimes:jpeg,png,jpg,webp|max:4096',
             'lms_permissions' => 'nullable|array',
-            'lms_permissions.*' => 'in:create_folder,edit_folder,assign_student_access,manage_batch,manage_schedule,manage_question_bank,manage_student_assessments',
+            'lms_permissions.*' => 'in:create_folder,edit_folder,assign_student_access,manage_batch,manage_schedule,manage_question_bank,create_student_assessments,assign_student_assessments,manage_student_assessments',
         ]);
 
         if ($validator->fails()) {
@@ -372,7 +372,7 @@ class UserController extends Controller
                 'podcasts.*.link' => 'nullable|url|max:500',
                 'podcasts.*.image' => 'nullable|file|image|mimes:jpeg,png,jpg,webp|max:4096',
                 'lms_permissions' => 'nullable|array',
-                'lms_permissions.*' => 'in:create_folder,edit_folder,assign_student_access,manage_batch,manage_schedule,manage_question_bank,manage_student_assessments',
+                'lms_permissions.*' => 'in:create_folder,edit_folder,assign_student_access,manage_batch,manage_schedule,manage_question_bank,create_student_assessments,assign_student_assessments,manage_student_assessments',
             ];
             if (Auth::guard('admin')->check()) {
                 $rules['email'] = 'required|email|unique:users,email,' . $id;
@@ -451,7 +451,7 @@ class UserController extends Controller
 
         $validator = Validator::make($request->all(), [
             'lms_permissions' => 'nullable|array',
-            'lms_permissions.*' => 'in:create_folder,edit_folder,assign_student_access,manage_batch,manage_schedule,manage_question_bank,manage_student_assessments',
+            'lms_permissions.*' => 'in:create_folder,edit_folder,assign_student_access,manage_batch,manage_schedule,manage_question_bank,create_student_assessments,assign_student_assessments,manage_student_assessments',
         ]);
         if ($validator->fails()) {
             return redirect()

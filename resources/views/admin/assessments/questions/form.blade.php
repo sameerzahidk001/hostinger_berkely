@@ -2,6 +2,7 @@
 @section('title', ($question->exists ? 'Edit' : 'Add') . ' Question')
 @section('content')
 @include('admin.assessments.partials.limited-editor-assets')
+@include('admin.assessments.partials.searchable-select-assets')
 @php
     $stemMax = 10000;
     $explanationMax = 10000;
@@ -32,7 +33,7 @@
                 <div class="row">
                     <div class="col-md-3 form-group">
                         <label>Type *</label>
-                        <select name="type" id="q_type" class="form-control" required>
+                        <select name="type" id="q_type" class="form-control lms-searchable" data-placeholder="Type to find type" data-allow-clear="0" required>
                             @foreach($types as $k => $label)
                                 <option value="{{ $k }}" @selected(old('type', $question->type) === $k)>{{ $label }}</option>
                             @endforeach
@@ -44,7 +45,7 @@
                     </div>
                     <div class="col-md-3 form-group">
                         <label>Course</label>
-                        <select name="course_id" class="form-control">
+                        <select name="course_id" class="form-control lms-searchable" data-placeholder="Type to find course">
                             <option value="">—</option>
                             @foreach($courses as $course)
                                 <option value="{{ $course->id }}" @selected((string) old('course_id', $question->course_id) === (string) $course->id)>{{ $course->title }}</option>
@@ -91,7 +92,7 @@
                 <div class="row m-b-md">
                     <div class="col-md-4 form-group">
                         <label>Course (applies to all)</label>
-                        <select name="course_id" class="form-control" id="shared_course">
+                        <select name="course_id" class="form-control lms-searchable" id="shared_course" data-placeholder="Type to find course">
                             <option value="">—</option>
                             @foreach($courses as $course)
                                 <option value="{{ $course->id }}" @selected((string) old('course_id') === (string) $course->id)>{{ $course->title }}</option>
@@ -234,6 +235,9 @@
         reindexBlocks();
         if (window.LmsLimitedEditor) {
             window.LmsLimitedEditor.init($block);
+        }
+        if (window.LmsSearchableSelect) {
+            window.LmsSearchableSelect.init($block);
         }
         bindBlock($block);
         var topic = $('#shared_topic').val();

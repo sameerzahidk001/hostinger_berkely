@@ -65,9 +65,8 @@ window.LmsLimitedEditor = window.LmsLimitedEditor || (function () {
                 $el.summernote({
                     height: height,
                     toolbar: [
-                        ['style', ['style']],
                         ['font', ['bold', 'italic', 'underline', 'clear']],
-                        ['para', ['ul', 'ol', 'paragraph']],
+                        ['para', ['ul', 'ol']],
                         ['insert', ['link']],
                         ['view', ['codeview']]
                     ],

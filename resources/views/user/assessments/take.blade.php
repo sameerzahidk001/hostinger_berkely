@@ -53,7 +53,7 @@
                                 rows="6"
                                 data-max="{{ $essayMax }}"
                                 maxlength="{{ $essayMax }}"
-                                placeholder="{{ $question->type === 'simulation' ? 'Case / simulation response…' : 'Your essay answer…' }}"
+                                placeholder="{{ in_array($question->type, ['simulation', 'case_study'], true) ? ($question->type === 'case_study' ? 'Your case study response…' : 'Your simulation response…') : 'Your essay answer…' }}"
                             >{{ $ans?->textAnswer() }}</textarea>
                         </div>
                     @endif

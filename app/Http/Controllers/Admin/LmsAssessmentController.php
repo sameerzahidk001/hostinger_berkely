@@ -55,6 +55,7 @@ class LmsAssessmentController extends Controller
             'kind' => $kind,
             'search' => $search,
             'canSkill' => $this->assessments->canManageSkillTests(),
+            'canCreate' => $this->assessments->canCreateStudentAssessments() || $this->assessments->canManageSkillTests(),
         ]);
     }
 
@@ -64,7 +65,7 @@ class LmsAssessmentController extends Controller
         if ($kind === LmsAssessment::KIND_SKILL) {
             abort_unless($this->assessments->canManageSkillTests(), 403);
         } else {
-            abort_unless($this->assessments->canManageStudentAssessments(), 403);
+            abort_unless($this->assessments->canCreateStudentAssessments(), 403);
         }
         $this->assessments->ensure();
 
@@ -82,7 +83,7 @@ class LmsAssessmentController extends Controller
         if ($request->input('kind') === LmsAssessment::KIND_SKILL) {
             abort_unless($this->assessments->canManageSkillTests(), 403);
         } else {
-            abort_unless($this->assessments->canManageStudentAssessments(), 403);
+            abort_unless($this->assessments->canCreateStudentAssessments(), 403);
         }
         $this->assessments->ensure();
         $validator = Validator::make($request->all(), $this->rules($request));
@@ -94,7 +95,9 @@ class LmsAssessmentController extends Controller
         $this->fill($a, $request, true);
         $a->save();
         $this->syncQuestions($a, $request);
-        $this->syncAssignments($a, $request);
+        if ($this->assessments->canAssignStudentAssessments()) {
+            $this->syncAssignments($a, $request);
+        }
 
         return redirect()->route('admin.assessments.tests.edit', $a->id)->with('success', 'Assessment created.');
     }
@@ -123,14 +126,25 @@ class LmsAssessmentController extends Controller
             abort_unless($this->assessments->canManageStudentAssessments(), 403);
             $this->assertInstructorOwnsCourse((int) $a->course_id);
         }
+        $canCreate = $a->isSkill()
+            ? $this->assessments->canManageSkillTests()
+            : $this->assessments->canCreateStudentAssessments();
+        $canAssign = $a->isSkill()
+            ? $this->assessments->canManageSkillTests()
+            : $this->assessments->canAssignStudentAssessments();
+
         $validator = Validator::make($request->all(), $this->rules($request));
         if ($validator->fails()) {
             return back()->withErrors($validator)->withInput();
         }
-        $this->fill($a, $request, false);
-        $a->save();
-        $this->syncQuestions($a, $request);
-        $this->syncAssignments($a, $request);
+        if ($canCreate) {
+            $this->fill($a, $request, false);
+            $a->save();
+            $this->syncQuestions($a, $request);
+        }
+        if ($canAssign) {
+            $this->syncAssignments($a, $request);
+        }
 
         return redirect()->route('admin.assessments.tests.edit', $a->id)->with('success', 'Assessment updated.');
     }
@@ -390,6 +404,12 @@ class LmsAssessmentController extends Controller
             'selectedBatchIds' => old('batch_ids', $assessment->assignments->whereNotNull('class_batch_id')->pluck('class_batch_id')->all()),
             'selectedStudentIds' => old('student_ids', $assessment->assignments->whereNotNull('student_id')->pluck('student_id')->all()),
             'canSkill' => $this->assessments->canManageSkillTests(),
+            'canCreate' => $assessment->isSkill()
+                ? $this->assessments->canManageSkillTests()
+                : $this->assessments->canCreateStudentAssessments(),
+            'canAssign' => $assessment->isSkill()
+                ? $this->assessments->canManageSkillTests()
+                : $this->assessments->canAssignStudentAssessments(),
             'courseRequired' => $this->lms->isInstructorActor() && ! $this->lms->isAdminActor() && ! panel_sees_all_dashboards(),
         ];
     }

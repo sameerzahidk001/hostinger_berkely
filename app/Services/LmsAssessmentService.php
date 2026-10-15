@@ -42,15 +42,32 @@ class LmsAssessmentService
             && $this->lms->actorHasLmsPermission('manage_question_bank');
     }
 
-    /** Practice / Mock create & assign for instructor’s assigned courses. */
+    /** Practice / Mock list, mark, reports (create and/or assign). */
     public function canManageStudentAssessments(): bool
+    {
+        return $this->canCreateStudentAssessments() || $this->canAssignStudentAssessments();
+    }
+
+    /** Create / edit assessment content for instructor’s assigned courses. */
+    public function canCreateStudentAssessments(): bool
     {
         if ($this->lms->isAdminActor() || panel_sees_all_dashboards()) {
             return true;
         }
 
         return $this->lms->isInstructorActor()
-            && $this->lms->actorHasLmsPermission('manage_student_assessments');
+            && $this->lms->actorHasLmsPermission('create_student_assessments');
+    }
+
+    /** Assign assessments to batches / users for instructor’s assigned courses. */
+    public function canAssignStudentAssessments(): bool
+    {
+        if ($this->lms->isAdminActor() || panel_sees_all_dashboards()) {
+            return true;
+        }
+
+        return $this->lms->isInstructorActor()
+            && $this->lms->actorHasLmsPermission('assign_student_assessments');
     }
 
     public function canManageSkillTests(): bool

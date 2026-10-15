@@ -247,7 +247,9 @@
                @php
                    $u = auth()->user();
                    $canQbank = method_exists($u, 'hasLmsPermission') && $u->hasLmsPermission('manage_question_bank');
-                   $canTests = method_exists($u, 'hasLmsPermission') && $u->hasLmsPermission('manage_student_assessments');
+                   $canCreateTests = method_exists($u, 'hasLmsPermission') && $u->hasLmsPermission('create_student_assessments');
+                   $canAssignTests = method_exists($u, 'hasLmsPermission') && $u->hasLmsPermission('assign_student_assessments');
+                   $canTests = $canCreateTests || $canAssignTests;
                @endphp
                <li class="{{ request()->routeIs('user.assessments.*') || request()->is('admin/assessments*') ? 'active' : '' }}">
                   <a href="javascript:void(0)">

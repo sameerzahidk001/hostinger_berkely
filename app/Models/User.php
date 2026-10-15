@@ -886,7 +886,10 @@ class User extends Authenticatable implements MustVerifyEmail
             'manage_batch' => 'Create / Edit Batch',
             'manage_schedule' => 'Create / Edit / Delete Schedule',
             'manage_question_bank' => 'Manage Question Bank',
-            'manage_student_assessments' => 'Create / Assign Practice & Mock (assigned courses)',
+            'create_student_assessments' => 'Create Practice & Mock (assigned courses)',
+            'assign_student_assessments' => 'Assign Practice & Mock (assigned courses)',
+            // Legacy combined key — still recognized via hasLmsPermission(); hidden from new UI.
+            'manage_student_assessments' => 'Create / Assign Practice & Mock (legacy)',
         ];
     }
 
@@ -905,9 +908,29 @@ class User extends Authenticatable implements MustVerifyEmail
         return array_values(array_intersect(array_map('strval', $keys), $allowed));
     }
 
+    /** Options shown on instructor edit (excludes legacy combined key). */
+    public static function lmsPermissionFormOptions(): array
+    {
+        return array_filter(
+            self::lmsPermissionOptions(),
+            fn ($label, $key) => $key !== 'manage_student_assessments',
+            ARRAY_FILTER_USE_BOTH
+        );
+    }
+
     public function hasLmsPermission(string $key): bool
     {
-        return in_array($key, $this->lmsPermissionList(), true);
+        $list = $this->lmsPermissionList();
+        if (in_array($key, $list, true)) {
+            return true;
+        }
+        // Legacy combined tick grants both create and assign.
+        if (in_array($key, ['create_student_assessments', 'assign_student_assessments'], true)
+            && in_array('manage_student_assessments', $list, true)) {
+            return true;
+        }
+
+        return false;
     }
 
     public function applyLmsPermissions(\Illuminate\Http\Request $request): void
