@@ -86,7 +86,7 @@
                     <th>Test Type</th>
                     <th>Questions</th>
                     <th>Assignments</th>
-                    <th>Attempts</th>
+                    <th title="How many times students have started or submitted this test">Attempts</th>
                     <th>Assessor</th>
                     <th></th>
                 </tr>

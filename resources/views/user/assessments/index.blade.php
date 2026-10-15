@@ -71,16 +71,31 @@
         #assessments-portal .lms-row-marked { color: #1ab394; } /* Completed and Marked — green */
         #assessments-portal .lms-row-missed,
         #assessments-portal .lms-row-expired { color: #ed5565; } /* Missed — red */
-        #assessments-portal .lms-assess-table { min-width: 1180px; width: 100%; margin-bottom: 0; }
+        #assessments-portal .lms-assess-wrap { overflow-x: hidden; }
+        #assessments-portal .lms-assess-table {
+            width: 100%;
+            max-width: 100%;
+            table-layout: fixed;
+            margin-bottom: 0;
+        }
         #assessments-portal .lms-assess-table > thead > tr > th,
         #assessments-portal .lms-assess-table > tbody > tr > td {
             vertical-align: middle;
-            padding: 10px 12px;
-            white-space: nowrap;
+            padding: 6px 6px;
+            font-size: 12px;
+            word-wrap: break-word;
+            overflow-wrap: anywhere;
+            white-space: normal;
         }
-        #assessments-portal .lms-assess-table .col-title { min-width: 200px; max-width: 280px; white-space: normal; }
-        #assessments-portal .lms-assess-table .col-window { min-width: 220px; white-space: normal; }
-        #assessments-portal .lms-assess-table .col-status { min-width: 140px; white-space: normal; }
+        #assessments-portal .lms-assess-table .col-date { width: 8%; }
+        #assessments-portal .lms-assess-table .col-title { width: 18%; }
+        #assessments-portal .lms-assess-table .col-type { width: 8%; }
+        #assessments-portal .lms-assess-table .col-dur { width: 7%; }
+        #assessments-portal .lms-assess-table .col-window { width: 16%; }
+        #assessments-portal .lms-assess-table .col-status { width: 14%; }
+        #assessments-portal .lms-assess-table .col-time { width: 5%; text-align: center; }
+        #assessments-portal .lms-assess-table .col-spend { width: 6%; text-align: center; }
+        #assessments-portal .lms-assess-table .col-action { width: 13%; white-space: nowrap; }
     </style>
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if(session('fail'))<div class="alert alert-danger">{{ session('fail') }}</div>@endif
@@ -115,20 +130,35 @@
         </li>
     </ul>
 
-    <div class="ibox"><div class="ibox-content table-responsive">
+    @php
+        $nextOpenAtMs = null;
+        if ($tab === 'upcoming') {
+            foreach ($list as $row) {
+                $from = $row['assignment']->available_from ?? null;
+                if ($from) {
+                    $ms = \Carbon\Carbon::parse($from)->getTimestampMs();
+                    if ($ms > now()->getTimestampMs() && ($nextOpenAtMs === null || $ms < $nextOpenAtMs)) {
+                        $nextOpenAtMs = $ms;
+                    }
+                }
+            }
+        }
+        $availableTabUrl = request()->fullUrlWithQuery(['tab' => 'available']);
+    @endphp
+    <div class="ibox"><div class="ibox-content lms-assess-wrap">
         <table class="table table-striped table-bordered lms-assess-table">
             <thead>
                 <tr>
-                    <th>Date</th>
+                    <th class="col-date">Date</th>
                     <th class="col-title">Title</th>
-                    <th>Type</th>
-                    <th>Duration given</th>
+                    <th class="col-type">Type</th>
+                    <th class="col-dur">Duration</th>
                     <th class="col-window">Exam Appointment Time</th>
-                    <th>Start time</th>
-                    <th>End time</th>
-                    <th>Spend duration</th>
                     <th class="col-status">Status</th>
-                    <th></th>
+                    <th class="col-time">Start</th>
+                    <th class="col-time">End</th>
+                    <th class="col-spend">Spend</th>
+                    <th class="col-action"></th>
                 </tr>
             </thead>
             <tbody>
@@ -138,28 +168,24 @@
                         $asg = $row['assignment'];
                         $att = $row['attempt'] ?? null;
                         $dateText = $att
-                            ? (optional($att->submitted_at ?: $att->updated_at)->format('d/m/Y H:i') ?? '—')
-                            : (optional($asg?->available_from ?: $asg?->created_at)->format('d/m/Y H:i') ?? '—');
+                            ? (optional($att->submitted_at ?: $att->updated_at)->format('d/m/y H:i') ?? '—')
+                            : (optional($asg?->available_from ?: $asg?->created_at)->format('d/m/y H:i') ?? '—');
                         $spend = $att?->spendMinutes();
                     @endphp
                     <tr>
-                        <td>{{ $dateText }}</td>
+                        <td class="col-date">{{ $dateText }}</td>
                         <td class="col-title">{{ $a->title }} <small class="text-muted">({{ $a->displayCode() }})</small></td>
-                        <td>{{ $a->kindLabel() }}</td>
-                        <td>{{ $a->duration_minutes ? $a->duration_minutes.' min' : '—' }}</td>
+                        <td class="col-type">{{ $a->kindLabel() }}</td>
+                        <td class="col-dur">{{ $a->duration_minutes ? $a->duration_minutes.' min' : '—' }}</td>
                         <td class="col-window">
                             @if($asg)
-                                {{ optional($asg->available_from)->format('d/m/Y H:i') ?? 'Open' }}
-                                —
-                                {{ optional($asg->available_until)->format('d/m/Y H:i') ?? 'No end' }}
+                                {{ optional($asg->available_from)->format('d/m/y H:i') ?? 'Open' }}
+                                <br><span class="text-muted">→ {{ optional($asg->available_until)->format('d/m/y H:i') ?? 'No end' }}</span>
                             @else
                                 —
                             @endif
                         </td>
-                        <td>{{ optional($att?->started_at)->format('H:i') ?? '—' }}</td>
-                        <td>{{ optional($att?->submitted_at)->format('H:i') ?? '—' }}</td>
-                        <td>{{ $spend !== null ? $spend . ' min' : '—' }}</td>
-                        <td>
+                        <td class="col-status">
                             @if($att)
                                 <span class="lms-row-status {{ str_replace('lms-status-', 'lms-row-', $att->statusColorClass()) }}">{{ $att->statusLabel() }}</span>
                                 @if($att->results_published && $att->score_raw !== null)
@@ -169,12 +195,15 @@
                             @elseif($tab === 'missed')
                                 <span class="lms-row-status lms-row-missed">Missed</span>
                             @elseif($tab === 'upcoming')
-                                <span class="lms-row-status lms-row-upcoming">Opens {{ optional($asg?->available_from)->format('d M Y H:i') ?: 'soon' }}</span>
+                                <span class="lms-row-status lms-row-upcoming">Opens {{ optional($asg?->available_from)->format('d M Y H:i') ?: 'soon' }} · Not open yet</span>
                             @else
                                 <span class="lms-row-status lms-row-available">Available</span>
                             @endif
                         </td>
-                        <td>
+                        <td class="col-time">{{ optional($att?->started_at)->format('H:i') ?? '—' }}</td>
+                        <td class="col-time">{{ optional($att?->submitted_at)->format('H:i') ?? '—' }}</td>
+                        <td class="col-spend">{{ $spend !== null ? $spend . ' min' : '—' }}</td>
+                        <td class="col-action">
                             @if($tab === 'available')
                                 <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.start', $a->id) }}">Start</a>
                             @elseif($tab === 'in_progress' && $att)
@@ -182,12 +211,12 @@
                             @elseif($att)
                                 <a class="btn btn-xs btn-default" href="{{ route('user.assessments.result', $att->id) }}">View</a>
                                 @if($att->results_published || ($a->results_mode === 'instant_mcq' && $att->status === 'graded'))
-                                    <a class="btn btn-xs btn-success" href="{{ route('user.assessments.result-pdf', $att->id) }}" target="_blank"><i class="fa fa-file-pdf-o"></i> Download PDF</a>
+                                    <a class="btn btn-xs btn-success" href="{{ route('user.assessments.result-pdf', $att->id) }}" target="_blank"><i class="fa fa-file-pdf-o"></i> PDF</a>
                                 @endif
                             @elseif($tab === 'upcoming')
                                 <span class="text-muted">Not open yet</span>
                             @elseif($tab === 'missed')
-                                <span class="text-muted">Appointment ended</span>
+                                <span class="text-muted">Ended</span>
                             @endif
                         </td>
                     </tr>
@@ -198,4 +227,21 @@
         </table>
     </div></div>
 </div>
+@if($tab === 'upcoming' && $nextOpenAtMs)
+@push('script')
+<script>
+(function () {
+    var openAt = {{ (int) $nextOpenAtMs }};
+    var goUrl = @json($availableTabUrl);
+    var delay = openAt - Date.now();
+    if (delay < 0) delay = 0;
+    // Cap at 6h so a long-open page still refreshes reasonably.
+    if (delay > 6 * 60 * 60 * 1000) return;
+    setTimeout(function () {
+        window.location.href = goUrl;
+    }, delay + 400);
+})();
+</script>
+@endpush
+@endif
 @endsection
