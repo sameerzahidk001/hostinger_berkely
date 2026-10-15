@@ -279,22 +279,10 @@
                </li>
                @elseif(auth()->user()->roles()->where('name', 'student')->exists())
                <li class="{{ request()->routeIs('user.assessments.*') ? 'active' : '' }}">
-                  <a href="javascript:void(0)">
+                  <a href="{{ route('user.assessments.index') }}">
                      <i class="fa fa-pencil-square-o"></i>
                      <span class="nav-label">Assessments</span>
-                     <span class="fa arrow"></span>
                   </a>
-                  <ul class="nav nav-second-level">
-                     <li class="{{ request()->routeIs('user.assessments.mocks') ? 'active' : '' }}">
-                        <a href="{{ route('user.assessments.mocks') }}">Mock Exams</a>
-                     </li>
-                     <li class="{{ request()->get('section') === 'practice' ? 'active' : '' }}">
-                        <a href="{{ route('user.assessments.index', ['section' => 'practice']) }}">Practice / General</a>
-                     </li>
-                     <li class="{{ request()->routeIs('user.assessments.index') && !request()->routeIs('user.assessments.mocks') && request()->get('section', 'all') === 'all' ? 'active' : '' }}">
-                        <a href="{{ route('user.assessments.index') }}">All · Upcoming / Results</a>
-                     </li>
-                  </ul>
                </li>
                <li class="{{ request()->routeIs('user.rate-review.*') ? 'active' : '' }}">
                   <a href="{{ route('user.rate-review.index') }}">

@@ -24,22 +24,42 @@
             padding: 8px 14px;
         }
         #assessments-portal .nav-tabs > li > a:hover,
-        #assessments-portal .nav-pills > li > a:hover,
-        #assessments-portal .nav-tabs > li > a:focus,
-        #assessments-portal .nav-pills > li > a:focus {
+        #assessments-portal .nav-tabs > li > a:focus {
             color: #1ab394 !important;
             background: #fff;
         }
         #assessments-portal .nav-tabs > li.active > a,
         #assessments-portal .nav-tabs > li.active > a:hover,
-        #assessments-portal .nav-tabs > li.active > a:focus,
-        #assessments-portal .nav-pills > li.active > a,
-        #assessments-portal .nav-pills > li.active > a:hover,
-        #assessments-portal .nav-pills > li.active > a:focus {
+        #assessments-portal .nav-tabs > li.active > a:focus {
             color: #fff !important;
             background: #1ab394;
             border-color: #1ab394;
         }
+        /* Distinct status-tab colors (Available / Upcoming / …) */
+        #assessments-portal .nav-pills > li > a.tab-available { background: #e8f8f5; border-color: #1ab394; color: #0f7a66 !important; }
+        #assessments-portal .nav-pills > li > a.tab-upcoming { background: #eaf2ff; border-color: #3b82f6; color: #1d4ed8 !important; }
+        #assessments-portal .nav-pills > li > a.tab-in-progress { background: #fff4e5; border-color: #f59e0b; color: #b45309 !important; }
+        #assessments-portal .nav-pills > li > a.tab-submitted { background: #f3e8ff; border-color: #8b5cf6; color: #6d28d9 !important; }
+        #assessments-portal .nav-pills > li > a.tab-results { background: #ecfeff; border-color: #06b6d4; color: #0e7490 !important; }
+        #assessments-portal .nav-pills > li > a.tab-missed { background: #fef2f2; border-color: #ef4444; color: #b91c1c !important; }
+        #assessments-portal .nav-pills > li.active > a.tab-available,
+        #assessments-portal .nav-pills > li.active > a.tab-available:hover,
+        #assessments-portal .nav-pills > li.active > a.tab-available:focus { background: #1ab394; border-color: #1ab394; color: #fff !important; }
+        #assessments-portal .nav-pills > li.active > a.tab-upcoming,
+        #assessments-portal .nav-pills > li.active > a.tab-upcoming:hover,
+        #assessments-portal .nav-pills > li.active > a.tab-upcoming:focus { background: #3b82f6; border-color: #3b82f6; color: #fff !important; }
+        #assessments-portal .nav-pills > li.active > a.tab-in-progress,
+        #assessments-portal .nav-pills > li.active > a.tab-in-progress:hover,
+        #assessments-portal .nav-pills > li.active > a.tab-in-progress:focus { background: #f59e0b; border-color: #f59e0b; color: #fff !important; }
+        #assessments-portal .nav-pills > li.active > a.tab-submitted,
+        #assessments-portal .nav-pills > li.active > a.tab-submitted:hover,
+        #assessments-portal .nav-pills > li.active > a.tab-submitted:focus { background: #8b5cf6; border-color: #8b5cf6; color: #fff !important; }
+        #assessments-portal .nav-pills > li.active > a.tab-results,
+        #assessments-portal .nav-pills > li.active > a.tab-results:hover,
+        #assessments-portal .nav-pills > li.active > a.tab-results:focus { background: #06b6d4; border-color: #06b6d4; color: #fff !important; }
+        #assessments-portal .nav-pills > li.active > a.tab-missed,
+        #assessments-portal .nav-pills > li.active > a.tab-missed:hover,
+        #assessments-portal .nav-pills > li.active > a.tab-missed:focus { background: #ef4444; border-color: #ef4444; color: #fff !important; }
     </style>
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if(session('fail'))<div class="alert alert-danger">{{ session('fail') }}</div>@endif
@@ -56,22 +76,22 @@
 
     <ul class="nav nav-pills" style="margin-bottom:15px;">
         <li class="{{ $tab === 'available' ? 'active' : '' }}">
-            <a href="{{ request()->fullUrlWithQuery(['tab' => 'available']) }}">Available ({{ $counts['available'] ?? 0 }})</a>
+            <a class="tab-available" href="{{ request()->fullUrlWithQuery(['tab' => 'available']) }}">Available ({{ $counts['available'] ?? 0 }})</a>
         </li>
         <li class="{{ $tab === 'upcoming' ? 'active' : '' }}">
-            <a href="{{ request()->fullUrlWithQuery(['tab' => 'upcoming']) }}">Upcoming ({{ $counts['upcoming'] ?? 0 }})</a>
+            <a class="tab-upcoming" href="{{ request()->fullUrlWithQuery(['tab' => 'upcoming']) }}">Upcoming ({{ $counts['upcoming'] ?? 0 }})</a>
         </li>
         <li class="{{ $tab === 'in_progress' ? 'active' : '' }}">
-            <a href="{{ request()->fullUrlWithQuery(['tab' => 'in_progress']) }}">In progress ({{ $counts['in_progress'] ?? 0 }})</a>
+            <a class="tab-in-progress" href="{{ request()->fullUrlWithQuery(['tab' => 'in_progress']) }}">In progress ({{ $counts['in_progress'] ?? 0 }})</a>
         </li>
         <li class="{{ $tab === 'submitted' ? 'active' : '' }}">
-            <a href="{{ request()->fullUrlWithQuery(['tab' => 'submitted']) }}">Submitted ({{ $counts['submitted'] ?? 0 }})</a>
+            <a class="tab-submitted" href="{{ request()->fullUrlWithQuery(['tab' => 'submitted']) }}">Submitted ({{ $counts['submitted'] ?? 0 }})</a>
         </li>
         <li class="{{ $tab === 'results' ? 'active' : '' }}">
-            <a href="{{ request()->fullUrlWithQuery(['tab' => 'results']) }}">Results ({{ $counts['results'] ?? 0 }})</a>
+            <a class="tab-results" href="{{ request()->fullUrlWithQuery(['tab' => 'results']) }}">Results ({{ $counts['results'] ?? 0 }})</a>
         </li>
         <li class="{{ $tab === 'missed' ? 'active' : '' }}">
-            <a href="{{ request()->fullUrlWithQuery(['tab' => 'missed']) }}">Missed ({{ $counts['missed'] ?? 0 }})</a>
+            <a class="tab-missed" href="{{ request()->fullUrlWithQuery(['tab' => 'missed']) }}">Missed ({{ $counts['missed'] ?? 0 }})</a>
         </li>
     </ul>
 
