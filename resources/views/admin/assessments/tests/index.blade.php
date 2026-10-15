@@ -80,14 +80,14 @@
             <thead>
                 <tr>
                     <th>Date</th>
-                    <th>ID</th>
+                    <th>Test ID</th>
                     <th>Title</th>
                     <th>Course / Test for</th>
                     <th>Test Type</th>
                     <th>Questions</th>
                     <th>Assignments</th>
                     <th>Attempts</th>
-                    <th>Marking instructor</th>
+                    <th>Assessor</th>
                     <th></th>
                 </tr>
             </thead>
@@ -98,7 +98,7 @@
                     @endphp
                     <tr>
                         <td>{{ optional($row->created_at)->format('d/m/Y H:i') ?? '—' }}</td>
-                        <td>{{ $row->id }}</td>
+                        <td>{{ $row->displayCode() }}</td>
                         <td>{{ $row->title }}</td>
                         <td>{{ $row->targetRoleLabel() }}</td>
                         <td>{{ $row->kindLabel() }}</td>

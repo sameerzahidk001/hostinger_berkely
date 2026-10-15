@@ -112,8 +112,11 @@
                     <th>Date</th>
                     <th>Title</th>
                     <th>Type</th>
-                    <th>Duration</th>
-                    <th>Window</th>
+                    <th>Duration given</th>
+                    <th>Exam Appointment Time</th>
+                    <th>Start time</th>
+                    <th>End time</th>
+                    <th>Spend duration</th>
                     <th>Status</th>
                     <th></th>
                 </tr>
@@ -127,21 +130,25 @@
                         $dateText = $att
                             ? (optional($att->submitted_at ?: $att->updated_at)->format('d/m/Y H:i') ?? '—')
                             : (optional($asg?->available_from ?: $asg?->created_at)->format('d/m/Y H:i') ?? '—');
+                        $spend = $att?->spendMinutes();
                     @endphp
                     <tr>
                         <td>{{ $dateText }}</td>
-                        <td>{{ $a->title }}</td>
+                        <td>{{ $a->title }} <small class="text-muted">({{ $a->displayCode() }})</small></td>
                         <td>{{ $a->kindLabel() }}</td>
                         <td>{{ $a->duration_minutes ? $a->duration_minutes.' min' : '—' }}</td>
                         <td>
                             @if($asg)
-                                {{ optional($asg->available_from)->format('d M Y H:i') ?? 'Open' }}
+                                {{ optional($asg->available_from)->format('d/m/Y H:i') ?? 'Open' }}
                                 —
-                                {{ optional($asg->available_until)->format('d M Y H:i') ?? 'No end' }}
+                                {{ optional($asg->available_until)->format('d/m/Y H:i') ?? 'No end' }}
                             @else
                                 —
                             @endif
                         </td>
+                        <td>{{ optional($att?->started_at)->format('H:i') ?? '—' }}</td>
+                        <td>{{ optional($att?->submitted_at)->format('H:i') ?? '—' }}</td>
+                        <td>{{ $spend !== null ? $spend . ' min' : '—' }}</td>
                         <td>
                             @if($att)
                                 <span class="lms-row-status {{ str_replace('lms-status-', 'lms-row-', $att->statusColorClass()) }}">{{ $att->statusLabel() }}</span>
@@ -170,12 +177,12 @@
                             @elseif($tab === 'upcoming')
                                 <span class="text-muted">Not open yet</span>
                             @elseif($tab === 'missed')
-                                <span class="text-muted">Window ended</span>
+                                <span class="text-muted">Appointment ended</span>
                             @endif
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="7" class="text-center">Nothing in this tab.</td></tr>
+                    <tr><td colspan="10" class="text-center">Nothing in this tab.</td></tr>
                 @endforelse
             </tbody>
         </table>

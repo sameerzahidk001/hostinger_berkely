@@ -46,8 +46,8 @@
                     </select>
                 </div>
                 <div class="col-md-6 form-group">
-                    <label>Marking instructor <span class="text-muted">(optional)</span></label>
-                    <select name="marker_user_id" class="form-control lms-searchable" data-placeholder="Type to find instructor">
+                    <label>Assessor <span class="text-muted">(who marks the exam, optional)</span></label>
+                    <select name="marker_user_id" class="form-control lms-searchable" data-placeholder="Type to find assessor">
                         <option value="">— Admin / course instructors —</option>
                         @foreach($instructors as $ins)
                             <option value="{{ $ins->id }}" @selected((string) $selectedMarkerId === (string) $ins->id)>{{ $ins->name }} ({{ $ins->email }})</option>

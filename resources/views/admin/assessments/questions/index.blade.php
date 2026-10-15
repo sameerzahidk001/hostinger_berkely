@@ -11,10 +11,12 @@
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
         <a href="{{ route('admin.assessments.questions.create') }}" class="btn btn-primary">Add question</a>
+        <a href="{{ route('admin.assessments.questions.import') }}" class="btn btn-success">Import MCQ (Excel/CSV)</a>
     </div>
 </div>
 <div class="wrapper wrapper-content">
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
+    @if(session('fail'))<div class="alert alert-danger">{{ session('fail') }}</div>@endif
     <div class="ibox">
         <div class="ibox-content table-responsive">
             <form method="GET" class="m-b-md" style="margin-bottom:15px;">
@@ -55,7 +57,7 @@
                     @forelse($rows as $row)
                         <tr>
                             <td>{{ optional($row->created_at)->format('d/m/Y H:i') ?? '—' }}</td>
-                            <td>{{ $row->id }}</td>
+                            <td>{{ $row->displayCode() }}</td>
                             <td>{{ $row->createdByLabel() }}</td>
                             <td>{{ $row->targetRoleLabel() }}</td>
                             <td>{{ $row->typeLabel() }}</td>

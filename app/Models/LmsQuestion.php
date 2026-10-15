@@ -38,6 +38,12 @@ class LmsQuestion extends Model
         return self::targetRoles()[$role] ?? ($role !== '' ? ucwords(str_replace('_', ' ', $role)) : '—');
     }
 
+    /** Public display code, e.g. QB12 */
+    public function displayCode(): string
+    {
+        return 'QB' . (int) $this->id;
+    }
+
     public function createdByLabel(): string
     {
         if ($this->created_by_user_id) {

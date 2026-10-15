@@ -50,6 +50,7 @@ class LmsAssessmentReportController extends Controller
                 'assessment.course:id,title',
                 'student:id,name,email',
                 'batch:id,code,name',
+                'marker:id,name',
             ])
             ->orderByDesc('id');
 

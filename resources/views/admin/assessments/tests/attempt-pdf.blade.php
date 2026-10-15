@@ -29,9 +29,12 @@
                 @if($attempt->percent() !== null) ({{ number_format((float) $attempt->percent(), 2) }}%) @endif
             @else — @endif
         </td></tr>
+        <tr><td class="muted">Test ID</td><td>{{ $attempt->assessment->displayCode() }}</td></tr>
         <tr><td class="muted">Duration given</td><td>{{ $attempt->assessment->duration_minutes ? $attempt->assessment->duration_minutes . ' min' : '—' }}</td></tr>
-        <tr><td class="muted">Started</td><td>{{ optional($attempt->started_at)->format('d/m/Y H:i') ?? '—' }}</td></tr>
-        <tr><td class="muted">Submitted</td><td>{{ optional($attempt->submitted_at)->format('d/m/Y H:i') ?? '—' }}</td></tr>
+        <tr><td class="muted">Start time</td><td>{{ optional($attempt->started_at)->format('d/m/Y H:i') ?? '—' }}</td></tr>
+        <tr><td class="muted">End time</td><td>{{ optional($attempt->submitted_at)->format('d/m/Y H:i') ?? '—' }}</td></tr>
+        <tr><td class="muted">Spend duration</td><td>{{ ($m = $attempt->spendMinutes()) !== null ? $m . ' min' : '—' }}</td></tr>
+        <tr><td class="muted">Assessor</td><td>{{ $attempt->assessorLabel() }}</td></tr>
         <tr><td class="muted">Published</td><td>{{ $attempt->results_published ? 'Yes' : 'No' }}</td></tr>
         <tr><td class="muted">Generated</td><td>{{ now()->format('d/m/Y H:i') }}</td></tr>
     </table>

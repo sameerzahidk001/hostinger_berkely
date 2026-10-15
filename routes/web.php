@@ -294,6 +294,9 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
         Route::prefix('assessments')->name('admin.assessments.')->group(function () {
             Route::get('/questions', [LmsQuestionController::class, 'index'])->name('questions.index');
             Route::get('/questions/create', [LmsQuestionController::class, 'create'])->name('questions.create');
+            Route::get('/questions/import', [LmsQuestionController::class, 'importForm'])->name('questions.import');
+            Route::get('/questions/import/template', [LmsQuestionController::class, 'importTemplate'])->name('questions.import-template');
+            Route::post('/questions/import', [LmsQuestionController::class, 'importStore'])->name('questions.import.store');
             Route::post('/questions', [LmsQuestionController::class, 'store'])->name('questions.store');
             Route::get('/questions/{id}/edit', [LmsQuestionController::class, 'edit'])->name('questions.edit');
             Route::put('/questions/{id}', [LmsQuestionController::class, 'update'])->name('questions.update');

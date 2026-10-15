@@ -11,7 +11,7 @@
 </style>
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
-        <h2>Attempts: {{ $assessment->title }}</h2>
+        <h2>Attempts: {{ $assessment->title }} <small class="text-muted">({{ $assessment->displayCode() }})</small></h2>
         <ol class="breadcrumb">
             <li><a href="{{ lms_portal_home() }}">Home</a></li>
             <li><a href="{{ route('admin.assessments.tests.index') }}">Assessments</a></li>
@@ -26,18 +26,26 @@
             <thead>
                 <tr>
                     <th>Date</th>
-                    <th>User</th>
+                    <th>Test Taker</th>
+                    <th>Start time</th>
+                    <th>End time</th>
+                    <th>Spend duration</th>
                     <th>Status</th>
                     <th>Score</th>
                     <th>Published</th>
+                    <th>Assessor</th>
                     <th></th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($rows as $row)
+                    @php $spend = $row->spendMinutes(); @endphp
                     <tr>
                         <td>{{ optional($row->submitted_at ?: $row->updated_at)->format('d/m/Y H:i') ?? '—' }}</td>
                         <td>{{ $row->user->name ?? '—' }}<br><small class="text-muted">{{ $row->user->email ?? '' }}</small></td>
+                        <td>{{ optional($row->started_at)->format('H:i') ?? '—' }}</td>
+                        <td>{{ optional($row->submitted_at)->format('H:i') ?? '—' }}</td>
+                        <td>{{ $spend !== null ? $spend . ' min' : '—' }}</td>
                         <td><span class="{{ $row->statusColorClass() }}">{{ $row->statusLabel() }}</span></td>
                         <td>
                             @if($row->score_raw !== null)
@@ -50,6 +58,7 @@
                                 {{ $row->results_published ? 'Yes' : 'No' }}
                             </span>
                         </td>
+                        <td>{{ $row->assessorLabel() }}</td>
                         <td style="white-space:nowrap;">
                             <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.mark', $row->id) }}">Mark / feedback</a>
                             <a class="btn btn-xs btn-success" href="{{ route('admin.assessments.tests.attempt-pdf', $row->id) }}" target="_blank"><i class="fa fa-file-pdf-o"></i> Download PDF</a>
@@ -59,7 +68,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="text-center">No attempts yet.</td></tr>
+                    <tr><td colspan="10" class="text-center">No attempts yet.</td></tr>
                 @endforelse
             </tbody>
         </table>
