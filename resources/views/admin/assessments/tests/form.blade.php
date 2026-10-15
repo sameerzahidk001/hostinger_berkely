@@ -42,7 +42,7 @@
                     <input type="text" name="title" class="form-control" value="{{ old('title', $assessment->title) }}" @required($canCreate) @readonly(! $canCreate)>
                 </div>
                 <div class="col-md-4 form-group">
-                    <label>Kind *</label>
+                    <label>Test Type *</label>
                     <select name="kind" id="assessment_kind" class="form-control lms-searchable" data-placeholder="Type to find kind" data-allow-clear="0" @required($canCreate) @disabled(! $canCreate)>
                         @foreach($kinds as $k => $label)
                             <option value="{{ $k }}" @selected(old('kind', $assessment->kind) === $k)>{{ $label }}</option>

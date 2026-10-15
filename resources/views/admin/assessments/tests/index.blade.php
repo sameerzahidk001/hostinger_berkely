@@ -61,7 +61,7 @@
             <div class="row">
                 <div class="col-sm-3">
                     <select name="kind" class="form-control">
-                        <option value="">All kinds</option>
+                        <option value="">All types</option>
                         @foreach($kinds as $k => $label)
                             <option value="{{ $k }}" @selected($kind === $k)>{{ $label }}</option>
                         @endforeach
@@ -83,7 +83,7 @@
                     <th>ID</th>
                     <th>Title</th>
                     <th>Course / Test for</th>
-                    <th>Kind</th>
+                    <th>Test Type</th>
                     <th>Questions</th>
                     <th>Assignments</th>
                     <th>Attempts</th>

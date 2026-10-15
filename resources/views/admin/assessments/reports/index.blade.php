@@ -140,11 +140,13 @@
                                             <button class="btn btn-xs btn-success" type="submit">Publish</button>
                                         </form>
                                     @endunless
-                                    <form action="{{ route('admin.assessments.reports.destroy-attempt', $attempt->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this attempt?');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-xs btn-danger" title="Delete"><i class="fa fa-trash"></i></button>
-                                    </form>
+                                    @if(!empty($canDeleteAttempts))
+                                        <form action="{{ route('admin.assessments.reports.destroy-attempt', $attempt->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this attempt?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-xs btn-danger" title="Delete"><i class="fa fa-trash"></i></button>
+                                        </form>
+                                    @endif
                                 @elseif($attempt && $attempt->status === 'in_progress')
                                     <span class="text-muted">In progress</span>
                                 @else
