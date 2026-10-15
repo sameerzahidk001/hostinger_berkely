@@ -33,7 +33,7 @@ class InvoiceTermsTemplateController extends Controller
             'is_active' => 'nullable|in:0,1',
         ]);
 
-        InvoiceTermsTemplate::create([
+        $template = InvoiceTermsTemplate::create([
             'name' => $data['name'],
             'body' => $data['body'] ?? '',
             'is_active' => (string) ($data['is_active'] ?? '1') === '1',
@@ -41,7 +41,7 @@ class InvoiceTermsTemplateController extends Controller
 
         return redirect()
             ->route('admin.invoice-terms-templates.index')
-            ->with('success', 'Invoice T&C template created.');
+            ->with('success', $template->displayCode() . ' created. Assign it on fee packages from the dropdown.');
     }
 
     public function edit($id)

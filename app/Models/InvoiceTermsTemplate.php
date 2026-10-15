@@ -50,11 +50,22 @@ class InvoiceTermsTemplate extends Model
         }
     }
 
+    /** Public display code, e.g. PAYTC1 */
+    public function displayCode(): string
+    {
+        return 'PAYTC' . (int) $this->id;
+    }
+
+    public function optionLabel(): string
+    {
+        return $this->displayCode() . ' — ' . $this->name;
+    }
+
     public static function optionsForSelect(bool $activeOnly = true)
     {
         self::ensureTable();
 
-        $query = static::query()->orderBy('name');
+        $query = static::query()->orderBy('id');
         if ($activeOnly) {
             $query->where('is_active', true);
         }

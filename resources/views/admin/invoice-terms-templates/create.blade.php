@@ -6,10 +6,11 @@
 @section('content')
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
-        <h2>Create Invoice T&amp;C Template</h2>
+        <h2>Create T&amp;C Template</h2>
         <ol class="breadcrumb">
             <li><a href="{{ route('admin.home') }}">Home</a></li>
-            <li><a href="{{ route('admin.invoice-terms-templates.index') }}">Invoice T&amp;C Templates</a></li>
+            <li><a href="{{ route('admin.payments.index') }}">Payments</a></li>
+            <li><a href="{{ route('admin.invoice-terms-templates.index') }}">T&amp;C Templates</a></li>
             <li class="active"><strong>Create</strong></li>
         </ol>
     </div>
@@ -22,6 +23,9 @@
         <div class="ibox-content">
             <form method="POST" action="{{ route('admin.invoice-terms-templates.store') }}">
                 @csrf
+                <div class="alert alert-info">
+                    After save, this template gets an ID like <strong>PAYTC1</strong>, <strong>PAYTC2</strong> (auto from database id).
+                </div>
                 <div class="form-group">
                     <label>Name *</label>
                     <input type="text" name="name" class="form-control" value="{{ old('name') }}" placeholder="e.g. UK Bank Payment Instructions" required>

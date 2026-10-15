@@ -99,14 +99,14 @@
                                     <div class="col-lg-12" style="margin-top:6px;">
                                         <label>Invoice T&amp;C Template</label>
                                         <p class="help-block m-b-xs">
-                                            Manage templates in
-                                            <a href="{{ route('admin.invoice-terms-templates.index') }}" target="_blank">Settings → Invoice T&amp;C Templates</a>.
+                                            Choose PAYTC template from
+                                            <a href="{{ route('admin.invoice-terms-templates.index') }}" target="_blank">Payments → T&amp;C Templates</a>.
                                         </p>
                                         <select name="invoice_terms_template_id" class="form-control">
                                             <option value="">— Select template —</option>
                                             @foreach(($invoiceTermsTemplates ?? []) as $tpl)
                                                 <option value="{{ $tpl->id }}" @selected((string) old('invoice_terms_template_id') === (string) $tpl->id)>
-                                                    {{ $tpl->name }}{{ $tpl->is_active ? '' : ' (inactive)' }}
+                                                    {{ $tpl->optionLabel() }}{{ $tpl->is_active ? '' : ' (inactive)' }}
                                                 </option>
                                             @endforeach
                                         </select>

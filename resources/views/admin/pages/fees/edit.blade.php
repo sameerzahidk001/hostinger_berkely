@@ -154,11 +154,11 @@
                                     <select name="invoice_terms_template_id" class="form-control">
                                         <option value="">— Select template —</option>
                                         @foreach(($invoiceTermsTemplates ?? []) as $tpl)
-                                            <option value="{{ $tpl->id }}">{{ $tpl->name }}{{ $tpl->is_active ? '' : ' (inactive)' }}</option>
+                                            <option value="{{ $tpl->id }}">{{ $tpl->optionLabel() }}{{ $tpl->is_active ? '' : ' (inactive)' }}</option>
                                         @endforeach
                                     </select>
                                     <p class="help-block m-b-none">
-                                        Manage in <a href="{{ route('admin.invoice-terms-templates.index') }}" target="_blank">Settings → Invoice T&amp;C Templates</a>
+                                        From <a href="{{ route('admin.invoice-terms-templates.index') }}" target="_blank">Payments → T&amp;C Templates</a>
                                     </p>
                                 </div>
                             </div>
@@ -206,7 +206,7 @@
                                                 <option value="">— Select template —</option>
                                                 @foreach(($invoiceTermsTemplates ?? []) as $tpl)
                                                     <option value="{{ $tpl->id }}" @selected((string) $package->invoice_terms_template_id === (string) $tpl->id)>
-                                                        {{ $tpl->name }}{{ $tpl->is_active ? '' : ' (inactive)' }}
+                                                        {{ $tpl->optionLabel() }}{{ $tpl->is_active ? '' : ' (inactive)' }}
                                                     </option>
                                                 @endforeach
                                             </select>
