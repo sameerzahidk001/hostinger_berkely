@@ -16,6 +16,23 @@
         color: #888;
         font-size: 12px;
     }
+    .note-editor .note-editable table,
+    .ibox-content table,
+    .well table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 8px 0;
+    }
+    .note-editor .note-editable table td,
+    .note-editor .note-editable table th,
+    .ibox-content table td,
+    .ibox-content table th,
+    .well table td,
+    .well table th {
+        border: 1px solid #c5c5c5;
+        padding: 6px 8px;
+        min-width: 40px;
+    }
 </style>
 @once
 @push('script')
@@ -67,6 +84,7 @@ window.LmsLimitedEditor = window.LmsLimitedEditor || (function () {
                     toolbar: [
                         ['font', ['bold', 'italic', 'underline', 'clear']],
                         ['para', ['ul', 'ol']],
+                        ['table', ['table']],
                         ['insert', ['link']],
                         ['view', ['codeview']]
                     ],
