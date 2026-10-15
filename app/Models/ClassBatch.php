@@ -17,9 +17,36 @@ class ClassBatch extends Model
         'course_id',
         'head_of_faculty_id',
         'status',
+        'rate_and_review_enabled',
+        'rate_review_text_required',
         'created_by_admin_id',
         'created_by_user_id',
     ];
+
+    protected $casts = [
+        'rate_and_review_enabled' => 'boolean',
+        'rate_review_text_required' => 'boolean',
+    ];
+
+    public static function ensureRateAndReviewColumns(): bool
+    {
+        if (! Schema::hasTable('class_batches')) {
+            return false;
+        }
+
+        if (! Schema::hasColumn('class_batches', 'rate_and_review_enabled')) {
+            Schema::table('class_batches', function ($table) {
+                $table->boolean('rate_and_review_enabled')->default(true);
+            });
+        }
+        if (! Schema::hasColumn('class_batches', 'rate_review_text_required')) {
+            Schema::table('class_batches', function ($table) {
+                $table->boolean('rate_review_text_required')->default(false);
+            });
+        }
+
+        return Schema::hasColumn('class_batches', 'rate_and_review_enabled');
+    }
 
     public function course(): BelongsTo
     {

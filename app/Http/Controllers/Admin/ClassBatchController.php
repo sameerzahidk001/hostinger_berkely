@@ -101,10 +101,15 @@ class ClassBatchController extends Controller
         }
 
         $batch = new ClassBatch();
+        ClassBatch::ensureRateAndReviewColumns();
         $batch->name = trim((string) $request->input('name'));
         $batch->course_id = (int) $request->input('course_id');
         $batch->head_of_faculty_id = $request->input('head_of_faculty_id') ?: null;
         $batch->status = $request->input('status', 'active') === 'active' ? 'active' : 'disabled';
+        if ($this->lms->isAdminActor() && Schema::hasColumn('class_batches', 'rate_and_review_enabled')) {
+            $batch->rate_and_review_enabled = $request->input('rate_and_review_enabled', '1') === '1';
+            $batch->rate_review_text_required = $request->input('rate_review_text_required', '0') === '1';
+        }
         if ($this->lms->isAdminActor()) {
             $batch->created_by_admin_id = Auth::guard('admin')->id();
         } else {
@@ -140,11 +145,16 @@ class ClassBatchController extends Controller
         }
 
         if ($this->lms->isAdminActor() || $this->lms->canManageBatch()) {
+            ClassBatch::ensureRateAndReviewColumns();
             $batch->name = trim((string) $request->input('name'));
             $batch->course_id = (int) $request->input('course_id');
             $batch->head_of_faculty_id = $request->input('head_of_faculty_id') ?: null;
             if ($this->lms->isAdminActor()) {
                 $batch->status = $request->input('status', 'active') === 'active' ? 'active' : 'disabled';
+                if (Schema::hasColumn('class_batches', 'rate_and_review_enabled')) {
+                    $batch->rate_and_review_enabled = $request->input('rate_and_review_enabled', '1') === '1';
+                    $batch->rate_review_text_required = $request->input('rate_review_text_required', '0') === '1';
+                }
             }
             $batch->save();
             $this->syncRelations($batch, $request);

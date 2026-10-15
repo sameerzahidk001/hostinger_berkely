@@ -419,7 +419,20 @@ class WelcomeController extends Controller
 
         $instructor->setRelation('courses', courses_for_instructor((int) $id));
 
-        return view('instructor-profile', compact('instructor'));
+        $ratingService = app(\App\Services\InstructorRatingService::class);
+        $publicScore = $ratingService->scoreForInstructor((int) $id, true);
+        $publicReviews = collect();
+        if (($publicScore['count'] ?? 0) > 0) {
+            $publicReviews = \App\Models\InstructorStudentReview::query()
+                ->with('student:id,name')
+                ->forInstructor((int) $id)
+                ->published()
+                ->orderByDesc('updated_at')
+                ->limit(12)
+                ->get();
+        }
+
+        return view('instructor-profile', compact('instructor', 'publicScore', 'publicReviews'));
     }
 
     public function faculty_search(Request $request)

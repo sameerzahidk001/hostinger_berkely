@@ -327,6 +327,11 @@ class StudyMaterialFolderController extends Controller
 
         if ($this->lms->isAdminActor()) {
             $folder->status = $request->input('status', $folder->status) === 'active' ? 'active' : 'disabled';
+            StudyMaterialFolder::ensureRateAndReviewColumns();
+            if (Schema::hasColumn('study_material_folders', 'rate_and_review_enabled')) {
+                $folder->rate_and_review_enabled = $request->input('rate_and_review_enabled', '1') === '1';
+                $folder->rate_review_text_required = $request->input('rate_review_text_required', '0') === '1';
+            }
         } elseif ($this->lms->canDisableFolder($folder) && $request->input('status') === 'disabled') {
             $folder->status = 'disabled';
         }

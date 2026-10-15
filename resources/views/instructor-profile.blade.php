@@ -551,6 +551,12 @@
                             </a>
                         @endif
                     </h3>
+                    @if(!empty($publicScore['count']))
+                        <p class="hero-meta">
+                            <strong>{{ number_format($publicScore['average'], 1) }}</strong>
+                            · {{ $publicScore['count'] }} student review{{ $publicScore['count'] === 1 ? '' : 's' }}
+                        </p>
+                    @endif
                     @if($hasProfessional)
                         <div class="hero-professional">{!! $instructor->short_description !!}</div>
                     @endif
@@ -806,7 +812,28 @@
                 </div>
             @endif
 
-            @if(! $hasProfessional && $educationList === [] && $proQualList === [] && ! $hasExecutive && ! $hasTeaching && $recognitionLabels === [] && ! $hasTraining && ! $hasCorporate && $expertiseList === [] && ! $hasInstitutions && $methodLabels === [] && ! $hasAvailGrid && ! $hasConference && ! $hasAwards && ! $hasBooks && ! $hasArticles && ! $hasPodcasts)
+            @if(!empty($publicReviews) && $publicReviews->isNotEmpty())
+                <div class="profile-section">
+                    <h3>Student reviews</h3>
+                    <div class="section-body">
+                        @foreach($publicReviews as $review)
+                            <div style="margin-bottom:14px;">
+                                <strong>{{ $review->stars }} / 5</strong>
+                                @if($review->hide_student_name)
+                                    <span style="opacity:0.7;"> · Student</span>
+                                @elseif($review->student)
+                                    <span style="opacity:0.7;"> · {{ $review->student->name }}</span>
+                                @endif
+                                @if($review->review_text)
+                                    <p style="margin:6px 0 0;">{{ $review->review_text }}</p>
+                                @endif
+                            </div>
+                        @endforeach
+                    </div>
+                </div>
+            @endif
+
+            @if(! $hasProfessional && $educationList === [] && $proQualList === [] && ! $hasExecutive && ! $hasTeaching && $recognitionLabels === [] && ! $hasTraining && ! $hasCorporate && $expertiseList === [] && ! $hasInstitutions && $methodLabels === [] && ! $hasAvailGrid && ! $hasConference && ! $hasAwards && ! $hasBooks && ! $hasArticles && ! $hasPodcasts && (empty($publicReviews) || $publicReviews->isEmpty()))
                 <div class="profile-section">
                     <h3>Professional Profile</h3>
                     <div class="section-body"><p>This instructor has not added profile details yet.</p></div>
