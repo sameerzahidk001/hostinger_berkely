@@ -66,10 +66,22 @@ class LmsAssessmentAttempt extends Model
     {
         return match ($this->status) {
             'in_progress' => 'In progress',
-            'submitted' => 'Submitted',
-            'graded' => 'Graded',
-            'expired' => 'Expired',
+            'submitted' => 'Completed',
+            'graded' => 'Completed and Marked',
+            'expired' => 'Missed',
             default => ucfirst((string) $this->status),
+        };
+    }
+
+    /** CSS class key for status colour in tables. */
+    public function statusColorClass(): string
+    {
+        return match ($this->status) {
+            'submitted' => 'lms-status-completed',
+            'graded' => 'lms-status-marked',
+            'in_progress' => 'lms-status-in_progress',
+            'expired' => 'lms-status-missed',
+            default => 'lms-status-' . $this->status,
         };
     }
 

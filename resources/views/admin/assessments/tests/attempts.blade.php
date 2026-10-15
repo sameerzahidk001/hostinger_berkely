@@ -1,6 +1,14 @@
 @extends(lms_portal_layout())
 @section('title', 'Attempts — ' . $assessment->title)
 @section('content')
+<style>
+    .lms-status-completed { color: #f59e0b; font-weight: 700; }
+    .lms-status-marked { color: #1ab394; font-weight: 700; }
+    .lms-status-in_progress { color: #f0ad4e; font-weight: 700; }
+    .lms-status-missed { color: #ed5565; font-weight: 700; }
+    .lms-pub-yes { color: #1ab394; font-weight: 700; }
+    .lms-pub-no { color: inherit; font-weight: 600; }
+</style>
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
         <h2>Attempts: {{ $assessment->title }}</h2>
@@ -16,21 +24,32 @@
     <div class="ibox"><div class="ibox-content table-responsive">
         <table class="table table-striped table-bordered">
             <thead>
-                <tr><th>User</th><th>Status</th><th>Score</th><th>Published</th><th>Submitted</th><th></th></tr>
+                <tr>
+                    <th>Date</th>
+                    <th>User</th>
+                    <th>Status</th>
+                    <th>Score</th>
+                    <th>Published</th>
+                    <th></th>
+                </tr>
             </thead>
             <tbody>
                 @forelse($rows as $row)
                     <tr>
+                        <td>{{ optional($row->submitted_at ?: $row->updated_at)->format('d/m/Y H:i') ?? '—' }}</td>
                         <td>{{ $row->user->name ?? '—' }}<br><small class="text-muted">{{ $row->user->email ?? '' }}</small></td>
-                        <td>{{ $row->statusLabel() }}</td>
+                        <td><span class="{{ $row->statusColorClass() }}">{{ $row->statusLabel() }}</span></td>
                         <td>
                             @if($row->score_raw !== null)
                                 {{ $row->score_raw }} / {{ $row->score_max }}
                                 @if($row->percent() !== null) ({{ $row->percent() }}%) @endif
                             @else — @endif
                         </td>
-                        <td>{{ $row->results_published ? 'Yes' : 'No' }}</td>
-                        <td>{{ optional($row->submitted_at)->format('d M Y H:i') ?? '—' }}</td>
+                        <td>
+                            <span class="{{ $row->results_published ? 'lms-pub-yes' : 'lms-pub-no' }}">
+                                {{ $row->results_published ? 'Yes' : 'No' }}
+                            </span>
+                        </td>
                         <td style="white-space:nowrap;">
                             <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.mark', $row->id) }}">Mark / feedback</a>
                             @unless($row->results_published)

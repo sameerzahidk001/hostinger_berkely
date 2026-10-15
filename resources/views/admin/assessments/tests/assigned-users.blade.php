@@ -2,9 +2,9 @@
 @section('title', 'Assigned Tests')
 @section('content')
 <style>
-    .lms-win-upcoming { color: #3b82f6; font-weight: 700; }
-    .lms-win-available { color: #1ab394; font-weight: 700; }
-    .lms-win-ended { color: #ed5565; font-weight: 700; }
+    .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
+    .lms-status-available { color: #1ab394; font-weight: 700; }
+    .lms-status-missed { color: #ed5565; font-weight: 700; }
 </style>
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">
@@ -36,6 +36,7 @@
         <table class="table table-striped table-bordered">
             <thead>
                 <tr>
+                    <th>Date</th>
                     <th>Test ID</th>
                     <th>Test</th>
                     <th>Assigned to</th>
@@ -43,7 +44,6 @@
                     <th>Available from</th>
                     <th>Available until</th>
                     <th>Status</th>
-                    <th>Assigned at</th>
                     <th></th>
                 </tr>
             </thead>
@@ -52,16 +52,17 @@
                     @php
                         if ($row->isNotYetOpen()) {
                             $winLabel = 'Upcoming';
-                            $winClass = 'lms-win-upcoming';
+                            $winClass = 'lms-status-upcoming';
                         } elseif ($row->isExpired()) {
-                            $winLabel = 'Ended';
-                            $winClass = 'lms-win-ended';
+                            $winLabel = 'Missed';
+                            $winClass = 'lms-status-missed';
                         } else {
                             $winLabel = 'Available';
-                            $winClass = 'lms-win-available';
+                            $winClass = 'lms-status-available';
                         }
                     @endphp
                     <tr>
+                        <td>{{ optional($row->created_at)->format('d/m/Y H:i') ?? '—' }}</td>
                         <td>{{ $row->assessment_id }}</td>
                         <td>{{ $row->assessment->title ?? '—' }}</td>
                         <td>{{ $row->scopeLabel() }}</td>
@@ -75,7 +76,6 @@
                         <td>{{ optional($row->available_from)->format('d/m/Y H:i') ?? '—' }}</td>
                         <td>{{ optional($row->available_until)->format('d/m/Y H:i') ?? '—' }}</td>
                         <td><span class="{{ $winClass }}">{{ $winLabel }}</span></td>
-                        <td>{{ optional($row->created_at)->format('d/m/Y H:i') ?? '—' }}</td>
                         <td style="white-space:nowrap;">
                             @if($row->assessment_id)
                                 <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.assign', $row->assessment_id) }}">Re-assign</a>

@@ -65,10 +65,12 @@
         #assessments-portal .lms-row-available { color: #0f7a66; }
         #assessments-portal .lms-row-upcoming { color: #1d4ed8; }
         #assessments-portal .lms-row-in_progress { color: #b45309; }
-        #assessments-portal .lms-row-submitted { color: #6d28d9; }
-        #assessments-portal .lms-row-graded { color: #0e7490; }
+        #assessments-portal .lms-row-submitted,
+        #assessments-portal .lms-row-completed { color: #f59e0b; } /* Completed — orange */
+        #assessments-portal .lms-row-graded,
+        #assessments-portal .lms-row-marked { color: #1ab394; } /* Completed and Marked — green */
         #assessments-portal .lms-row-missed,
-        #assessments-portal .lms-row-expired { color: #b91c1c; }
+        #assessments-portal .lms-row-expired { color: #ed5565; } /* Missed — red */
     </style>
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if(session('fail'))<div class="alert alert-danger">{{ session('fail') }}</div>@endif
@@ -107,6 +109,7 @@
         <table class="table table-striped table-bordered">
             <thead>
                 <tr>
+                    <th>Date</th>
                     <th>Title</th>
                     <th>Type</th>
                     <th>Duration</th>
@@ -121,8 +124,12 @@
                         $a = $row['assessment'];
                         $asg = $row['assignment'];
                         $att = $row['attempt'] ?? null;
+                        $dateText = $att
+                            ? (optional($att->submitted_at ?: $att->updated_at)->format('d/m/Y H:i') ?? '—')
+                            : (optional($asg?->available_from ?: $asg?->created_at)->format('d/m/Y H:i') ?? '—');
                     @endphp
                     <tr>
+                        <td>{{ $dateText }}</td>
                         <td>{{ $a->title }}</td>
                         <td>{{ $a->kindLabel() }}</td>
                         <td>{{ $a->duration_minutes ? $a->duration_minutes.' min' : '—' }}</td>
@@ -137,7 +144,7 @@
                         </td>
                         <td>
                             @if($att)
-                                <span class="lms-row-status lms-row-{{ $att->status }}">{{ $att->statusLabel() }}</span>
+                                <span class="lms-row-status {{ str_replace('lms-status-', 'lms-row-', $att->statusColorClass()) }}">{{ $att->statusLabel() }}</span>
                                 @if($att->results_published && $att->score_raw !== null)
                                     · {{ $att->score_raw }}/{{ $att->score_max }}
                                     @if($att->percent() !== null) ({{ $att->percent() }}%) @endif
@@ -165,7 +172,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="text-center">Nothing in this tab.</td></tr>
+                    <tr><td colspan="7" class="text-center">Nothing in this tab.</td></tr>
                 @endforelse
             </tbody>
         </table>

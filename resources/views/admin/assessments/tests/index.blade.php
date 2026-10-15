@@ -79,8 +79,8 @@
         <table class="table table-striped table-bordered">
             <thead>
                 <tr>
-                    <th>ID</th>
                     <th>Date</th>
+                    <th>ID</th>
                     <th>Title</th>
                     <th>Course / Test for</th>
                     <th>Kind</th>
@@ -97,8 +97,8 @@
                         $markers = $row->assignments->pluck('marker')->filter()->unique('id');
                     @endphp
                     <tr>
-                        <td>{{ $row->id }}</td>
                         <td>{{ optional($row->created_at)->format('d/m/Y H:i') ?? '—' }}</td>
+                        <td>{{ $row->id }}</td>
                         <td>{{ $row->title }}</td>
                         <td>{{ $row->targetRoleLabel() }}</td>
                         <td>{{ $row->kindLabel() }}</td>
