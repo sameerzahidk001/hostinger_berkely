@@ -8,10 +8,20 @@ use Illuminate\Http\Request;
 
 class InvoiceTermsTemplateController extends Controller
 {
+    public function __construct()
+    {
+        // Admin + Accountant only (same Payments menu access).
+        $this->middleware(function ($request, $next) {
+            abort_unless(admin_menu_allowed('payments'), 403);
+
+            return $next($request);
+        });
+    }
+
     public function index()
     {
         InvoiceTermsTemplate::ensureTable();
-        $templates = InvoiceTermsTemplate::query()->orderBy('name')->get();
+        $templates = InvoiceTermsTemplate::query()->orderBy('id')->get();
 
         return view('admin.invoice-terms-templates.index', compact('templates'));
     }

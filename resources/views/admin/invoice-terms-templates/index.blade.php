@@ -1,13 +1,13 @@
 @extends('admin.layout.app')
-@section('title', 'T&C Templates')
+@section('title', 'Invoice T&C Templates')
 @section('content')
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">
-        <h2>T&amp;C Templates</h2>
+        <h2>Invoice T&amp;C Templates</h2>
         <ol class="breadcrumb">
             <li><a href="{{ route('admin.home') }}">Home</a></li>
             <li><a href="{{ route('admin.payments.index') }}">Payments</a></li>
-            <li class="active"><strong>T&amp;C Templates</strong></li>
+            <li class="active"><strong>Invoice T&amp;C Templates</strong></li>
         </ol>
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
@@ -19,9 +19,8 @@
     <div class="ibox">
         <div class="ibox-content">
             <p class="text-muted m-b-md">
-                Admin / Accountant creates payment instruction templates here (IDs like <strong>PAYTC1</strong>, <strong>PAYTC2</strong>).
-                Assign a template on each course fee package or page fee package. New invoices load that package’s template into Terms &amp; Conditions.
-                Existing invoices are left as-is until you ask to apply a specific template ID.
+                Admin / Accountant create templates here (IDs <strong>PAYTC1</strong>, <strong>PAYTC2</strong>, …).
+                Select one on each fee package. New invoices load that package’s template. Existing invoices stay unchanged until you give a template ID to apply.
             </p>
             <div class="table-responsive">
                 <table class="table table-striped table-bordered">

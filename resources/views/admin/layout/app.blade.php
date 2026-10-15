@@ -305,7 +305,7 @@
                         <li class="{{ request()->routeIs('admin.payments.index') && request('status') === 'partial' ? 'active' : '' }}"><a href="{{ route('admin.payments.index', ['status' => 'partial']) }}">Partial Paid Invoices</a></li>
                         <li><a href="{{ route('admin.payments.create') }}">Create Invoice</a></li>
                         <li><a href="{{ route('admin.payments.receipts') }}">Receipts</a></li>
-                        <li class="{{ request()->is('admin/invoice-terms-templates*') ? 'active' : '' }}"><a href="{{ route('admin.invoice-terms-templates.index') }}">T&amp;C Templates (PAYTC)</a></li>
+                        <li class="{{ request()->is('admin/invoice-terms-templates*') ? 'active' : '' }}"><a href="{{ route('admin.invoice-terms-templates.index') }}">Invoice T&amp;C Templates</a></li>
                         <li class="{{ request()->is('admin/instructor-payments*') ? 'active' : '' }}"><a href="{{ route('admin.instructor-payments.index') }}">Instructor Payments</a></li>
                         @if(admin_menu_allowed('currency-rate-setup'))
                         <li class="{{ request()->is('admin/currency-rate-setup') ? 'active' : '' }}"><a href="{{ route('currency-rates.index') }}">Currency Rate Setup</a></li>
