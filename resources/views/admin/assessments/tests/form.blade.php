@@ -84,10 +84,6 @@
                     <input type="number" min="1" name="duration_minutes" class="form-control" value="{{ old('duration_minutes', $assessment->duration_minutes) }}" placeholder="Timed" @readonly(! $canCreate)>
                 </div>
                 <div class="col-md-2 form-group">
-                    <label>Pass %</label>
-                    <input type="number" step="0.1" min="0" max="100" name="pass_percent" class="form-control" value="{{ old('pass_percent', $assessment->pass_percent) }}" @readonly(! $canCreate)>
-                </div>
-                <div class="col-md-2 form-group">
                     <label>Max attempts</label>
                     <input type="number" min="1" name="max_attempts" class="form-control" value="{{ old('max_attempts', $assessment->max_attempts) }}" @readonly(! $canCreate)>
                 </div>

@@ -8,8 +8,6 @@
     .lms-status-expired { color: #ed5565; font-weight: 700; }
     .lms-pub-yes { color: #ed5565; font-weight: 700; }
     .lms-pub-no { color: #ed5565; font-weight: 700; }
-    .lms-result-pass { color: #1ab394; font-weight: 700; }
-    .lms-result-fail { color: #ed5565; font-weight: 700; }
 </style>
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
@@ -81,7 +79,6 @@
                         <th>Student</th>
                         <th>Status</th>
                         <th>Score</th>
-                        <th>Result</th>
                         <th>Published</th>
                         <th>Date</th>
                         <th>Action</th>
@@ -91,7 +88,6 @@
                     @forelse($studentAttempts as $row)
                         @php
                             $statusText = $row->status === 'graded' ? 'Completed' : $row->statusLabel();
-                            $resultText = $row->passFailLabel();
                         @endphp
                         <tr>
                             @unless($selectedAssessment)
@@ -107,15 +103,6 @@
                                     {{ number_format((float) $row->score_raw, 2) }} / {{ number_format((float) $row->score_max, 2) }}
                                     @if($row->percent() !== null) ({{ number_format((float) $row->percent(), 2) }}%) @endif
                                 @else — @endif
-                            </td>
-                            <td>
-                                @if($resultText === 'Pass')
-                                    <span class="lms-result-pass">Pass</span>
-                                @elseif($resultText === 'Fail')
-                                    <span class="lms-result-fail">Fail</span>
-                                @else
-                                    {{ $resultText }}
-                                @endif
                             </td>
                             <td>
                                 <span class="{{ $row->results_published ? 'lms-pub-yes' : 'lms-pub-no' }}">
@@ -145,7 +132,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="{{ $selectedAssessment ? 7 : 8 }}" class="text-center text-muted">No test takers found for this filter.</td>
+                            <td colspan="{{ $selectedAssessment ? 6 : 7 }}" class="text-center text-muted">No test takers found for this filter.</td>
                         </tr>
                     @endforelse
                 </tbody>

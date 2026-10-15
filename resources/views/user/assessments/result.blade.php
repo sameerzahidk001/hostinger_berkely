@@ -22,7 +22,6 @@
                 <p style="font-size:22px;margin:8px 0;">
                     Score: <strong>{{ $attempt->score_raw }} / {{ $attempt->score_max }}</strong>
                     @if($attempt->percent() !== null) ({{ $attempt->percent() }}%) @endif
-                    · {{ $attempt->passFailLabel() }}
                 </p>
                 @if($attempt->grader_feedback)
                     <div class="m-t-sm">
@@ -31,7 +30,7 @@
                     </div>
                 @endif
             @else
-                <p class="text-muted">Submitted. Your score and pass/fail will appear here when Admin / Instructor publishes results.</p>
+                <p class="text-muted">Submitted. Your score will appear here when Admin / Instructor publishes results.</p>
             @endif
             <p class="text-muted">Submitted: {{ optional($attempt->submitted_at)->format('d M Y H:i') ?? '—' }}</p>
         </div>

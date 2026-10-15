@@ -139,7 +139,8 @@
                             @if($att)
                                 <span class="lms-row-status lms-row-{{ $att->status }}">{{ $att->statusLabel() }}</span>
                                 @if($att->results_published && $att->score_raw !== null)
-                                    · {{ $att->score_raw }}/{{ $att->score_max }} · {{ $att->passFailLabel() }}
+                                    · {{ $att->score_raw }}/{{ $att->score_max }}
+                                    @if($att->percent() !== null) ({{ $att->percent() }}%) @endif
                                 @endif
                             @elseif($tab === 'missed')
                                 <span class="lms-row-status lms-row-missed">Missed</span>
