@@ -7,11 +7,13 @@
     $descriptionMax = 5000;
     $canCreate = $canCreate ?? true;
     $canAssign = $canAssign ?? true;
+    $isSkill = old('kind', $assessment->kind) === \App\Models\LmsAssessment::KIND_SKILL;
+    $targetRoles = $targetRoles ?? \App\Models\LmsAssessment::targetRoles();
 @endphp
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
         <h2>
-            {{ $assessment->exists ? 'Edit' : 'Create' }} assessment
+            {{ $assessment->exists ? 'Edit' : 'Create' }} test
             @if($assessment->exists)
                 <small class="text-muted">ID {{ $assessment->id }}</small>
             @endif
@@ -36,12 +38,12 @@
             <fieldset @disabled(! $canCreate)>
             <div class="row">
                 <div class="col-md-8 form-group">
-                    <label>Title *</label>
+                    <label>{{ $isSkill ? 'Test Name' : 'Title' }} *</label>
                     <input type="text" name="title" class="form-control" value="{{ old('title', $assessment->title) }}" @required($canCreate) @readonly(! $canCreate)>
                 </div>
                 <div class="col-md-4 form-group">
                     <label>Kind *</label>
-                    <select name="kind" class="form-control lms-searchable" data-placeholder="Type to find kind" data-allow-clear="0" @required($canCreate) @disabled(! $canCreate)>
+                    <select name="kind" id="assessment_kind" class="form-control lms-searchable" data-placeholder="Type to find kind" data-allow-clear="0" @required($canCreate) @disabled(! $canCreate)>
                         @foreach($kinds as $k => $label)
                             <option value="{{ $k }}" @selected(old('kind', $assessment->kind) === $k)>{{ $label }}</option>
                         @endforeach
@@ -54,20 +56,28 @@
                     <label>Description <span class="lms-char-hint">(max {{ number_format($descriptionMax) }} characters)</span></label>
                     <textarea name="description" class="form-control" rows="3" data-max="{{ $descriptionMax }}" maxlength="{{ $descriptionMax }}" @readonly(! $canCreate)>{{ old('description', $assessment->description) }}</textarea>
                 </div>
-                <div class="col-md-4 form-group">
+                <div class="col-md-4 form-group js-course-field" style="{{ $isSkill ? 'display:none;' : '' }}">
                     <label>Course{{ !empty($courseRequired) ? ' *' : '' }}</label>
-                    <select name="course_id" class="form-control lms-searchable" data-placeholder="Type to find course" @if(!empty($courseRequired) && $canCreate) required @endif @disabled(! $canCreate)>
+                    <select name="course_id" class="form-control lms-searchable" data-placeholder="Type to find course" @if(!empty($courseRequired) && $canCreate && ! $isSkill) required @endif @disabled(! $canCreate || $isSkill)>
                         <option value="">—</option>
                         @foreach($courses as $course)
                             <option value="{{ $course->id }}" @selected((string) old('course_id', $assessment->course_id) === (string) $course->id)>{{ $course->title }}</option>
                         @endforeach
                     </select>
-                    @if(! $canCreate)
+                    @if(! $canCreate && ! $isSkill)
                         <input type="hidden" name="course_id" value="{{ old('course_id', $assessment->course_id) }}">
                     @endif
                     @if(!empty($courseRequired))
                         <p class="help-block m-b-none">Instructors may only create Practice/Mock for courses Admin assigned them.</p>
                     @endif
+                </div>
+                <div class="col-md-4 form-group js-target-role-field" style="{{ $isSkill ? '' : 'display:none;' }}">
+                    <label>Test for * <span class="text-muted">(no course — choose user type)</span></label>
+                    <select name="target_role" class="form-control lms-searchable" data-placeholder="Type to find user type" data-allow-clear="0" @disabled(! $canCreate)>
+                        @foreach($targetRoles as $rk => $rl)
+                            <option value="{{ $rk }}" @selected(old('target_role', $assessment->target_role ?? 'all_staff') === $rk)>{{ $rl }}</option>
+                        @endforeach
+                    </select>
                 </div>
                 <div class="col-md-2 form-group">
                     <label>Duration (min)</label>
@@ -115,59 +125,34 @@
                     </option>
                 @endforeach
             </select>
-            <p class="help-block">Type to find and multi-select. Add questions in Question Bank first.</p>
+            <p class="help-block">Type to find and multi-select. Add questions in Question Bank first. Assign users on the separate Assign page.</p>
             </fieldset>
 
-            <h4>Assign to batch and/or users</h4>
-            @if(! $canAssign)
-                <p class="text-muted">You do not have Assign permission. Current assignments are shown below (read-only).</p>
-            @else
-                <p class="help-block">Students and staff (Content Writers, Accountants, Instructors) can be assigned.</p>
-            @endif
-            <fieldset @disabled(! $canAssign)>
-            <div class="row">
-                <div class="col-md-6 form-group">
-                    <label>Batches</label>
-                    <select name="batch_ids[]" class="form-control lms-searchable" data-placeholder="Type to find batch" multiple>
-                        @foreach($batches as $batch)
-                            <option value="{{ $batch->id }}" @selected(collect($selectedBatchIds)->contains($batch->id))>{{ $batch->code }} — {{ $batch->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-6 form-group">
-                    <label>Individual users (students &amp; staff)</label>
-                    <select name="student_ids[]" class="form-control lms-searchable" data-placeholder="Type to find user" multiple>
-                        @foreach($students as $student)
-                            @php
-                                $roleLabel = $student->roles->pluck('name')->map(fn ($n) => ucwords(str_replace(['_', '-'], ' ', $n)))->implode(', ');
-                            @endphp
-                            <option value="{{ $student->id }}" @selected(collect($selectedStudentIds)->contains($student->id))>
-                                {{ $student->name }} ({{ $student->email }}){{ $roleLabel ? ' — '.$roleLabel : '' }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-3 form-group">
-                    <label>Available from</label>
-                    <input type="datetime-local" name="available_from" class="form-control" value="{{ old('available_from', optional($assessment->assignments->first()?->available_from)->format('Y-m-d\TH:i')) }}">
-                    <p class="help-block m-b-none">Leave blank to open immediately after assign.</p>
-                </div>
-                <div class="col-md-3 form-group">
-                    <label>Available until</label>
-                    <input type="datetime-local" name="available_until" class="form-control" value="{{ old('available_until', optional($assessment->assignments->first()?->available_until)->format('Y-m-d\TH:i')) }}">
-                    <p class="help-block m-b-none">Must be after “from”. Leave blank for no end time.</p>
-                </div>
-            </div>
-            </fieldset>
-
-            @if($canCreate || $canAssign)
-                <button type="submit" class="btn btn-primary">Save</button>
+            @if($canCreate)
+                <button type="submit" class="btn btn-primary">Save test</button>
             @endif
             <a href="{{ route('admin.assessments.tests.index') }}" class="btn btn-default">Back</a>
             @if($assessment->exists)
+                @if($canAssign)
+                    <a href="{{ route('admin.assessments.tests.assign', $assessment->id) }}" class="btn btn-success">Assign users / batches</a>
+                @endif
                 <a href="{{ route('admin.assessments.tests.attempts', $assessment->id) }}" class="btn btn-default">View attempts</a>
             @endif
         </form>
     </div></div>
 </div>
 @endsection
+@push('script')
+<script>
+(function () {
+    function syncKindUi() {
+        var kind = $('#assessment_kind').val() || $('input[name="kind"]').val();
+        var skill = kind === 'skill';
+        $('.js-course-field').toggle(!skill);
+        $('.js-target-role-field').toggle(skill);
+    }
+    $('#assessment_kind').on('change select2:select', syncKindUi);
+    syncKindUi();
+})();
+</script>
+@endpush

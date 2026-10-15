@@ -23,10 +23,32 @@ class LmsAssessment extends Model
     protected $table = 'lms_assessments';
 
     protected $fillable = [
-        'title', 'description', 'kind', 'audience', 'course_id', 'duration_minutes',
+        'title', 'description', 'kind', 'audience', 'target_role', 'course_id', 'duration_minutes',
         'pass_percent', 'max_attempts', 'shuffle_questions', 'results_mode', 'status',
         'published_at', 'created_by_admin_id', 'created_by_user_id',
     ];
+
+    /** Who a non-course (skill/staff) test is intended for. */
+    public static function targetRoles(): array
+    {
+        return [
+            'student' => 'Students',
+            'instructor' => 'Instructors',
+            'accountant' => 'Accountants',
+            'content_writer' => 'Content Writers',
+            'all_staff' => 'All staff (Instructor / Accountant / CW)',
+        ];
+    }
+
+    public function targetRoleLabel(): string
+    {
+        if ($this->course_id) {
+            return $this->course?->title ?: ('Course #' . $this->course_id);
+        }
+        $role = (string) ($this->target_role ?? '');
+
+        return self::targetRoles()[$role] ?? ($role !== '' ? ucwords(str_replace('_', ' ', $role)) : '—');
+    }
 
     protected $casts = [
         'duration_minutes' => 'integer',

@@ -9,6 +9,7 @@ use App\Services\LmsAssessmentService;
 use App\Services\StudyMaterialService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 
 class LmsQuestionController extends Controller
@@ -93,6 +94,7 @@ class LmsQuestionController extends Controller
 
             $sharedCourse = $request->input('course_id') ?: null;
             $sharedTopic = trim((string) $request->input('topic', '')) ?: null;
+            $sharedTargetRole = trim((string) $request->input('target_role', '')) ?: null;
             $sharedStatus = $request->input('status', 'active') === 'active' ? 'active' : 'disabled';
             $saved = 0;
             $totalMarks = 0.0;
@@ -105,6 +107,7 @@ class LmsQuestionController extends Controller
                 $this->fillFromArray($q, $row, [
                     'course_id' => $sharedCourse,
                     'topic' => trim((string) ($row['topic'] ?? '')) ?: $sharedTopic,
+                    'target_role' => $sharedCourse ? null : $sharedTargetRole,
                     'status' => $sharedStatus,
                 ], true);
                 $q->save();
@@ -272,6 +275,7 @@ class LmsQuestionController extends Controller
             'stem' => $request->input('stem'),
             'topic' => $request->input('topic'),
             'course_id' => $request->input('course_id'),
+            'target_role' => $request->input('target_role'),
             'max_marks' => $request->input('max_marks', 1),
             'explanation' => $request->input('explanation'),
             'status' => $request->input('status', 'active'),
@@ -292,6 +296,12 @@ class LmsQuestionController extends Controller
             : (($row['course_id'] ?? null) ?: null);
         if ($q->course_id && $this->instructorMustPickCourse()) {
             abort_unless($this->lms->instructorAssignedToCourse((int) $q->course_id), 403);
+        }
+        if (Schema::hasColumn('lms_questions', 'target_role')) {
+            $role = array_key_exists('target_role', $defaults)
+                ? trim((string) ($defaults['target_role'] ?? ''))
+                : trim((string) ($row['target_role'] ?? ''));
+            $q->target_role = $q->course_id ? null : ($role !== '' ? $role : null);
         }
         $q->max_marks = (float) ($row['max_marks'] ?? 1);
         $explanation = trim((string) ($row['explanation'] ?? ''));
@@ -339,6 +349,7 @@ class LmsQuestionController extends Controller
         return [
             'question' => $question,
             'types' => LmsQuestion::types(),
+            'targetRoles' => LmsQuestion::targetRoles(),
             'courses' => $this->lms->coursesForActor(),
         ];
     }

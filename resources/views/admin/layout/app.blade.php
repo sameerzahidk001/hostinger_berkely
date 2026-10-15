@@ -227,8 +227,11 @@
                         </li>
                         @endif
                         @if($canTestsMenu)
-                        <li class="{{ request()->routeIs('admin.assessments.tests.*') ? 'active' : '' }}">
-                           <a href="{{ route('admin.assessments.tests.index') }}">Practice / Mock / Tests</a>
+                        <li class="{{ request()->routeIs('admin.assessments.tests.index') || request()->routeIs('admin.assessments.tests.create') || request()->routeIs('admin.assessments.tests.edit') || request()->routeIs('admin.assessments.tests.store') ? 'active' : '' }}">
+                           <a href="{{ route('admin.assessments.tests.index') }}">Create tests</a>
+                        </li>
+                        <li class="{{ request()->routeIs('admin.assessments.tests.assign*') || request()->routeIs('admin.assessments.tests.assigned-users') ? 'active' : '' }}">
+                           <a href="{{ route('admin.assessments.tests.assigned-users') }}">Assign / Assigned users</a>
                         </li>
                         <li class="{{ request()->routeIs('admin.assessments.reports.*') ? 'active' : '' }}">
                            <a href="{{ route('admin.assessments.reports.index') }}">Reports</a>

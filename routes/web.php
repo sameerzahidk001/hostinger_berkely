@@ -300,11 +300,14 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
             Route::delete('/questions/{id}', [LmsQuestionController::class, 'destroy'])->name('questions.destroy');
 
             Route::get('/tests', [LmsAssessmentController::class, 'index'])->name('tests.index');
+            Route::get('/tests/assigned-users', [LmsAssessmentController::class, 'assignedUsers'])->name('tests.assigned-users');
             Route::get('/tests/create', [LmsAssessmentController::class, 'create'])->name('tests.create');
             Route::post('/tests', [LmsAssessmentController::class, 'store'])->name('tests.store');
             Route::get('/tests/{id}/edit', [LmsAssessmentController::class, 'edit'])->name('tests.edit');
             Route::put('/tests/{id}', [LmsAssessmentController::class, 'update'])->name('tests.update');
             Route::delete('/tests/{id}', [LmsAssessmentController::class, 'destroy'])->name('tests.destroy');
+            Route::get('/tests/{id}/assign', [LmsAssessmentController::class, 'assignForm'])->name('tests.assign');
+            Route::post('/tests/{id}/assign', [LmsAssessmentController::class, 'saveAssign'])->name('tests.assign.save');
             Route::get('/tests/{id}/attempts', [LmsAssessmentController::class, 'attempts'])->name('tests.attempts');
             Route::get('/attempts/{attemptId}/mark', [LmsAssessmentController::class, 'mark'])->name('tests.mark');
             Route::post('/attempts/{attemptId}/marks', [LmsAssessmentController::class, 'saveMarks'])->name('tests.save-marks');
