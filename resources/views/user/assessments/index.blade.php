@@ -171,6 +171,9 @@
                             ? (optional($att->submitted_at ?: $att->updated_at)->format('d/m/y H:i') ?? '—')
                             : (optional($asg?->available_from ?: $asg?->created_at)->format('d/m/y H:i') ?? '—');
                         $spend = $att?->spendMinutes();
+                        $used = (int) ($row['attempts_used'] ?? 0);
+                        $maxAtt = $row['max_attempts'] ?? null;
+                        $canRetake = !empty($row['can_retake']);
                     @endphp
                     <tr>
                         <td class="col-date">{{ $dateText }}</td>
@@ -196,6 +199,14 @@
                                 <span class="lms-row-status lms-row-missed">Missed</span>
                             @elseif($tab === 'upcoming')
                                 <span class="lms-row-status lms-row-upcoming">Opens {{ optional($asg?->available_from)->format('d M Y H:i') ?: 'soon' }} · Not open yet</span>
+                            @elseif($canRetake)
+                                <span class="lms-row-status lms-row-available">Retake available
+                                    @if($maxAtt !== null)
+                                        ({{ $used }}/{{ (int) $maxAtt }} used)
+                                    @else
+                                        ({{ $used }} used)
+                                    @endif
+                                </span>
                             @else
                                 <span class="lms-row-status lms-row-available">Available</span>
                             @endif
@@ -205,13 +216,16 @@
                         <td class="col-spend">{{ $spend !== null ? $spend . ' min' : '—' }}</td>
                         <td class="col-action">
                             @if($tab === 'available')
-                                <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.start', $a->id) }}">Start</a>
+                                <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.start', $a->id) }}">{{ $canRetake ? 'Retake' : 'Start' }}</a>
                             @elseif($tab === 'in_progress' && $att)
                                 <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.take', $att->id) }}">Continue</a>
                             @elseif($att)
                                 <a class="btn btn-xs btn-default" href="{{ route('user.assessments.result', $att->id) }}">View</a>
                                 @if($att->results_published || ($a->results_mode === 'instant_mcq' && $att->status === 'graded'))
                                     <a class="btn btn-xs btn-success" href="{{ route('user.assessments.result-pdf', $att->id) }}" target="_blank"><i class="fa fa-file-pdf-o"></i> PDF</a>
+                                @endif
+                                @if($canRetake)
+                                    <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.start', $a->id) }}">Retake</a>
                                 @endif
                             @elseif($tab === 'upcoming')
                                 <span class="text-muted">Not open yet</span>

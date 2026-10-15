@@ -157,7 +157,11 @@ class LmsAssessmentPortalController extends Controller
         $canSeeScore = $attempt->results_published
             || ($attempt->assessment->results_mode === 'instant_mcq' && $attempt->status === 'graded');
 
-        return view('user.assessments.result', compact('attempt', 'canSeeScore'));
+        $assignment = $this->assessments->availableAssessmentsForUser($user, $attempt->assessment->kind)
+            ->first(fn ($row) => (int) $row['assessment']->id === (int) $attempt->assessment_id)['assignment'] ?? null;
+        $canRetake = $this->assessments->canRetake($user, $attempt->assessment, $assignment);
+
+        return view('user.assessments.result', compact('attempt', 'canSeeScore', 'canRetake'));
     }
 
     public function resultPdf($attemptId)
