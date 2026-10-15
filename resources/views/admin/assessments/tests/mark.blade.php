@@ -71,7 +71,7 @@
         @endforeach
         <div class="form-group">
             <label>
-                Overall feedback to student
+                Overall feedback to student *
                 <span class="lms-char-hint">(max {{ number_format($overallMax) }} characters)</span>
             </label>
             <textarea
@@ -81,7 +81,11 @@
                 data-max="{{ $overallMax }}"
                 data-height="160"
                 data-rich="1"
+                required
             >{{ old('grader_feedback', $attempt->grader_feedback) }}</textarea>
+            @error('grader_feedback')
+                <span class="help-block text-danger">{{ $message }}</span>
+            @enderror
         </div>
         <button type="submit" class="btn btn-default" name="publish" value="0">Save marks</button>
         <button type="submit" class="btn btn-primary" name="publish" value="1">Save &amp; publish results</button>

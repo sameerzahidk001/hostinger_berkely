@@ -66,8 +66,8 @@ class LmsAssessmentController extends Controller
             'canSkill' => $this->assessments->canManageSkillTests(),
             'canCreate' => $this->assessments->canCreateStudentAssessments() || $this->assessments->canManageSkillTests(),
             'canAssign' => $this->assessments->canAssignStudentAssessments() || $this->assessments->canManageSkillTests(),
-            'canDelete' => $this->assessments->canCreateStudentAssessments() || $this->assessments->canManageSkillTests()
-                || $this->lms->isAdminActor() || panel_sees_all_dashboards(),
+            // Instructors must not delete tests — Admin (or full panel) only.
+            'canDelete' => $this->lms->isAdminActor() || panel_sees_all_dashboards(),
         ]);
     }
 
@@ -157,19 +157,10 @@ class LmsAssessmentController extends Controller
 
     public function destroy($id)
     {
+        // Instructors must not delete — Admin (or full panel) only.
+        abort_unless($this->lms->isAdminActor() || panel_sees_all_dashboards(), 403);
         $this->assessments->ensure();
         $a = LmsAssessment::findOrFail($id);
-        if ($a->isSkill()) {
-            abort_unless($this->assessments->canManageSkillTests() || $this->lms->isAdminActor() || panel_sees_all_dashboards(), 403);
-        } else {
-            abort_unless(
-                $this->lms->isAdminActor()
-                || panel_sees_all_dashboards()
-                || $this->assessments->canCreateStudentAssessments(),
-                403
-            );
-            $this->assertInstructorOwnsCourse((int) $a->course_id);
-        }
         $a->delete();
 
         return redirect()->route('admin.assessments.tests.index')->with('success', 'Test removed.');
@@ -312,7 +303,10 @@ class LmsAssessmentController extends Controller
                 $errors['feedback.' . $answerId] = 'Feedback exceeds ' . number_format($feedbackMax) . ' characters.';
             }
         }
-        if ($this->plainTextLen($request->input('grader_feedback')) > $overallMax) {
+        $overallLen = $this->plainTextLen($request->input('grader_feedback'));
+        if ($overallLen < 1) {
+            $errors['grader_feedback'] = 'Overall feedback to student is required.';
+        } elseif ($overallLen > $overallMax) {
             $errors['grader_feedback'] = 'Overall feedback exceeds ' . number_format($overallMax) . ' characters.';
         }
         if ($errors !== []) {

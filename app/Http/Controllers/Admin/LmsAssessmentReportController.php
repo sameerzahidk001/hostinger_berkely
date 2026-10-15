@@ -185,6 +185,7 @@ class LmsAssessmentReportController extends Controller
                 ? ClassBatch::query()->orderByDesc('id')->get(['id', 'code', 'name'])
                 : collect(),
             'courses' => $courses,
+            'canDeleteAttempts' => $this->lms->isAdminActor() || panel_sees_all_dashboards(),
             'filters' => [
                 'assessment_id' => $assessmentId,
                 'batch_id' => $batchId,
@@ -195,21 +196,11 @@ class LmsAssessmentReportController extends Controller
 
     public function destroyAttempt($attemptId)
     {
-        abort_unless($this->assessments->canManageStudentAssessments() || $this->assessments->canManageSkillTests(), 403);
+        // Instructors must not delete attempts — Admin (or full panel) only.
+        abort_unless($this->lms->isAdminActor() || panel_sees_all_dashboards(), 403);
         $this->assessments->ensure();
 
         $attempt = LmsAssessmentAttempt::with('assessment')->findOrFail($attemptId);
-        $assessment = $attempt->assessment;
-        if ($assessment?->isSkill()) {
-            abort_unless($this->assessments->canManageSkillTests(), 403);
-        } else {
-            abort_unless($this->assessments->canManageStudentAssessments(), 403);
-            if ($this->lms->isInstructorActor() && ! $this->lms->isAdminActor() && ! panel_sees_all_dashboards()) {
-                $courseId = (int) ($assessment?->course_id ?? 0);
-                abort_unless($courseId > 0 && $this->lms->instructorAssignedToCourse($courseId), 403);
-            }
-        }
-
         $attempt->answers()->delete();
         $attempt->delete();
 
