@@ -59,8 +59,8 @@
                         <td class="col-status"><span class="{{ $row->statusColorClass() }}">{{ $row->statusLabel() }}</span></td>
                         <td>
                             @if($row->score_raw !== null)
-                                {{ $row->score_raw }} / {{ $row->score_max }}
-                                @if($row->percent() !== null) ({{ $row->percent() }}%) @endif
+                                {{ lms_format_number($row->score_raw) }} / {{ lms_format_number($row->score_max) }}
+                                @if($row->percent() !== null) ({{ lms_format_number($row->percent()) }}%) @endif
                             @else — @endif
                         </td>
                         <td>

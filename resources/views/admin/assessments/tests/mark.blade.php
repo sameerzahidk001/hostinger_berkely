@@ -23,7 +23,7 @@
     @endif
     <p><strong>{{ $attempt->user->name ?? '' }}</strong> · {{ $attempt->statusLabel() }}
         @if($attempt->score_raw !== null)
-            · Score {{ $attempt->score_raw }} / {{ $attempt->score_max }}
+            · Score {{ lms_format_number($attempt->score_raw) }} / {{ lms_format_number($attempt->score_max) }}
         @endif
     </p>
     <form method="POST" action="{{ route('admin.assessments.tests.save-marks', $attempt->id) }}" id="markAttemptForm">

@@ -25,8 +25,8 @@
         <tr><td class="muted">Status</td><td>{{ $attempt->statusLabel() }}</td></tr>
         <tr><td class="muted">Score</td><td class="score">
             @if($attempt->score_raw !== null)
-                {{ number_format((float) $attempt->score_raw, 2) }} / {{ number_format((float) $attempt->score_max, 2) }}
-                @if($attempt->percent() !== null) ({{ number_format((float) $attempt->percent(), 2) }}%) @endif
+                {{ lms_format_number($attempt->score_raw) }} / {{ lms_format_number($attempt->score_max) }}
+                @if($attempt->percent() !== null) ({{ lms_format_number($attempt->percent()) }}%) @endif
             @else — @endif
         </td></tr>
         <tr><td class="muted">Test ID</td><td>{{ $attempt->assessment->displayCode() }}</td></tr>
@@ -48,7 +48,7 @@
     @foreach($attempt->assessment->questions as $i => $question)
         @php $answer = $attempt->answers->firstWhere('question_id', $question->id); @endphp
         <div class="q">
-            <div class="q-title">Q{{ $i + 1 }}. {{ $question->typeLabel() }} · {{ number_format((float) $question->max_marks, 2) }} marks</div>
+            <div class="q-title">Q{{ $i + 1 }}. {{ $question->typeLabel() }} · {{ lms_format_number($question->max_marks) }} marks</div>
             <div>{!! strip_tags($question->stem, '<p><br><strong><em><ul><ol><li><b><i>') !!}</div>
             @if($question->isMcq())
                 <p><strong>Selected:</strong> {{ $answer?->selectedKey() ?? '—' }}
@@ -62,7 +62,7 @@
             @endif
             <p><strong>Score:</strong>
                 @if($answer)
-                    {{ number_format($answer->finalScore(), 2) }} / {{ number_format((float) $answer->max_marks, 2) }}
+                    {{ lms_format_number($answer->finalScore()) }} / {{ lms_format_number($answer->max_marks) }}
                 @else
                     —
                 @endif
