@@ -441,6 +441,42 @@ class LmsAssessmentService
             ->get();
     }
 
+    /** How many sittings this user has used for the test. */
+    public function attemptsUsed(User $user, LmsAssessment $assessment): int
+    {
+        return (int) LmsAssessmentAttempt::query()
+            ->where('assessment_id', $assessment->id)
+            ->where('user_id', $user->id)
+            ->count();
+    }
+
+    /**
+     * Whether the student may start another sitting (respects Max attempts + window).
+     * max_attempts null = unlimited.
+     */
+    public function canRetake(User $user, LmsAssessment $assessment, ?LmsAssessmentAssignment $assignment = null): bool
+    {
+        if (! $assessment->isPublished()) {
+            return false;
+        }
+        if ($assignment && ($assignment->isExpired() || $assignment->isNotYetOpen())) {
+            return false;
+        }
+        if (LmsAssessmentAttempt::query()
+            ->where('assessment_id', $assessment->id)
+            ->where('user_id', $user->id)
+            ->where('status', 'in_progress')
+            ->exists()) {
+            return false;
+        }
+        $max = $assessment->max_attempts;
+        if ($max === null) {
+            return true;
+        }
+
+        return $this->attemptsUsed($user, $assessment) < (int) $max;
+    }
+
     public function bucketForUser(User $user, ?string $kind = null): array
     {
         $items = $this->availableAssessmentsForUser($user, $kind);
@@ -463,29 +499,94 @@ class LmsAssessmentService
                 ->orderByDesc('id')
                 ->get();
 
+            $used = $attempts->count();
+            $max = $assessment->max_attempts;
+
             $open = $attempts->firstWhere('status', 'in_progress');
             if ($open) {
                 if ($open->isTimedOut()) {
                     $this->submitAttempt($open, true);
                     $open = $open->fresh();
                 } else {
-                    $inProgress->push(['assessment' => $assessment, 'assignment' => $assignment, 'attempt' => $open]);
+                    $inProgress->push([
+                        'assessment' => $assessment,
+                        'assignment' => $assignment,
+                        'attempt' => $open,
+                        'attempts_used' => $used,
+                        'max_attempts' => $max,
+                        'can_retake' => false,
+                    ]);
                     continue;
                 }
             }
 
+            $windowOpen = ! $assignment || (! $assignment->isExpired() && ! $assignment->isNotYetOpen());
+            $underLimit = $max === null || $used < (int) $max;
+            $canRetake = $windowOpen && $underLimit;
+
             $done = $attempts->first(fn ($a) => in_array($a->status, ['submitted', 'graded', 'expired'], true));
             if ($done && $done->results_published) {
-                $results->push(['assessment' => $assessment, 'assignment' => $assignment, 'attempt' => $done]);
+                $results->push([
+                    'assessment' => $assessment,
+                    'assignment' => $assignment,
+                    'attempt' => $done,
+                    'attempts_used' => $used,
+                    'max_attempts' => $max,
+                    'can_retake' => $canRetake,
+                ]);
             } elseif ($done) {
-                $submitted->push(['assessment' => $assessment, 'assignment' => $assignment, 'attempt' => $done]);
-            } elseif ($assignment && $assignment->isExpired()) {
-                $missed->push(['assessment' => $assessment, 'assignment' => $assignment, 'attempt' => null]);
+                $submitted->push([
+                    'assessment' => $assessment,
+                    'assignment' => $assignment,
+                    'attempt' => $done,
+                    'attempts_used' => $used,
+                    'max_attempts' => $max,
+                    'can_retake' => $canRetake,
+                ]);
+            }
+
+            if ($done) {
+                // Still allowed more sittings → also list under Available with Retake.
+                if ($canRetake) {
+                    $available->push([
+                        'assessment' => $assessment,
+                        'assignment' => $assignment,
+                        'attempt' => null,
+                        'attempts_used' => $used,
+                        'max_attempts' => $max,
+                        'can_retake' => true,
+                    ]);
+                }
+                continue;
+            }
+
+            if ($assignment && $assignment->isExpired()) {
+                $missed->push([
+                    'assessment' => $assessment,
+                    'assignment' => $assignment,
+                    'attempt' => null,
+                    'attempts_used' => $used,
+                    'max_attempts' => $max,
+                    'can_retake' => false,
+                ]);
             } elseif ($assignment && $assignment->isNotYetOpen()) {
-                $upcoming->push(['assessment' => $assessment, 'assignment' => $assignment, 'attempt' => null]);
+                $upcoming->push([
+                    'assessment' => $assessment,
+                    'assignment' => $assignment,
+                    'attempt' => null,
+                    'attempts_used' => $used,
+                    'max_attempts' => $max,
+                    'can_retake' => false,
+                ]);
             } else {
-                // Open window (or no schedule) — ready to start, not "upcoming".
-                $available->push(['assessment' => $assessment, 'assignment' => $assignment, 'attempt' => null]);
+                $available->push([
+                    'assessment' => $assessment,
+                    'assignment' => $assignment,
+                    'attempt' => null,
+                    'attempts_used' => $used,
+                    'max_attempts' => $max,
+                    'can_retake' => false,
+                ]);
             }
         }
 

@@ -26,6 +26,31 @@
     .lms-btn-general:hover, .lms-btn-general:focus { background: #ec971f; color: #fff !important; }
     .lms-btn-skill { background: #5cb85c; }
     .lms-btn-skill:hover, .lms-btn-skill:focus { background: #449d44; color: #fff !important; }
+    .lms-tests-wrap { overflow-x: hidden; }
+    .lms-tests-table {
+        width: 100%;
+        max-width: 100%;
+        table-layout: fixed;
+        margin-bottom: 0;
+        font-size: 12px;
+    }
+    .lms-tests-table > thead > tr > th,
+    .lms-tests-table > tbody > tr > td {
+        vertical-align: middle;
+        padding: 6px 6px;
+        word-wrap: break-word;
+        overflow-wrap: anywhere;
+        white-space: normal;
+    }
+    .lms-tests-table .col-date { width: 9%; }
+    .lms-tests-table .col-id { width: 6%; }
+    .lms-tests-table .col-title { width: 16%; }
+    .lms-tests-table .col-course { width: 14%; }
+    .lms-tests-table .col-type { width: 8%; }
+    .lms-tests-table .col-num { width: 6%; text-align: center; }
+    .lms-tests-table .col-assessor { width: 12%; }
+    .lms-tests-table .col-action { width: 17%; white-space: nowrap; }
+    .lms-tests-table .col-action .btn { margin: 1px 0; }
 </style>
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">
@@ -56,7 +81,7 @@
 <div class="wrapper wrapper-content">
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     <p class="text-muted m-b-sm">This list is for creating and editing tests only. Assign users/batches on the Assign page; marking instructor is optional there.</p>
-    <div class="ibox"><div class="ibox-content table-responsive">
+    <div class="ibox"><div class="ibox-content lms-tests-wrap">
         <form method="GET" class="m-b-md" style="margin-bottom:15px;">
             <div class="row">
                 <div class="col-sm-3">
@@ -76,19 +101,19 @@
                 </div>
             </div>
         </form>
-        <table class="table table-striped table-bordered">
+        <table class="table table-striped table-bordered lms-tests-table">
             <thead>
                 <tr>
-                    <th>Date</th>
-                    <th>Test ID</th>
-                    <th>Title</th>
-                    <th>Course / Test for</th>
-                    <th>Test Type</th>
-                    <th>Questions</th>
-                    <th>Assignments</th>
-                    <th title="How many times students have started or submitted this test">Attempts</th>
-                    <th>Assessor</th>
-                    <th></th>
+                    <th class="col-date">Date</th>
+                    <th class="col-id">Test ID</th>
+                    <th class="col-title">Title</th>
+                    <th class="col-course">Course / Test for</th>
+                    <th class="col-type">Test Type</th>
+                    <th class="col-num">Qs</th>
+                    <th class="col-num">Assigned</th>
+                    <th class="col-num" title="How many sittings students have started or submitted">Taken</th>
+                    <th class="col-assessor">Assessor</th>
+                    <th class="col-action"></th>
                 </tr>
             </thead>
             <tbody>
@@ -97,27 +122,27 @@
                         $markers = $row->assignments->pluck('marker')->filter()->unique('id');
                     @endphp
                     <tr>
-                        <td>{{ optional($row->created_at)->format('d/m/Y H:i') ?? '—' }}</td>
-                        <td>{{ $row->displayCode() }}</td>
-                        <td>{{ $row->title }}</td>
-                        <td>{{ $row->targetRoleLabel() }}</td>
-                        <td>{{ $row->kindLabel() }}</td>
-                        <td>{{ $row->questions_count }}</td>
-                        <td>{{ $row->assignments_count }}</td>
-                        <td>{{ $row->attempts_count }}</td>
-                        <td>
+                        <td class="col-date">{{ optional($row->created_at)->format('d/m/y H:i') ?? '—' }}</td>
+                        <td class="col-id">{{ $row->displayCode() }}</td>
+                        <td class="col-title">{{ $row->title }}</td>
+                        <td class="col-course">{{ $row->targetRoleLabel() }}</td>
+                        <td class="col-type">{{ $row->kindLabel() }}</td>
+                        <td class="col-num">{{ $row->questions_count }}</td>
+                        <td class="col-num">{{ $row->assignments_count }}</td>
+                        <td class="col-num">{{ $row->attempts_count }}</td>
+                        <td class="col-assessor">
                             @if($markers->isNotEmpty())
                                 {{ $markers->pluck('name')->implode(', ') }}
                             @else
                                 <span class="text-muted">Admin / course instructors</span>
                             @endif
                         </td>
-                        <td style="white-space:nowrap;">
+                        <td class="col-action">
                             <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.edit', $row->id) }}">Edit</a>
                             @if(!empty($canAssign))
                                 <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.assign', $row->id) }}">Assign</a>
                             @endif
-                            <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.attempts', $row->id) }}">Attempts</a>
+                            <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.attempts', $row->id) }}">Results</a>
                             @if(!empty($canDelete))
                                 <form action="{{ route('admin.assessments.tests.destroy', $row->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this test?');">
                                     @csrf

@@ -10,22 +10,30 @@
     .lms-status-missed { color: #ed5565; font-weight: 700; }
     .lms-pub-yes { color: #1ab394; font-weight: 700; }
     .lms-pub-no { color: inherit; font-weight: 600; }
-    .lms-results-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .lms-results-table { min-width: 1680px; table-layout: auto; width: 100%; margin-bottom: 0; }
+    .lms-results-wrap { overflow-x: hidden; }
+    .lms-results-table {
+        width: 100%;
+        max-width: 100%;
+        table-layout: fixed;
+        margin-bottom: 0;
+        font-size: 12px;
+    }
     .lms-results-table > thead > tr > th,
     .lms-results-table > tbody > tr > td {
         vertical-align: middle;
-        padding: 10px 12px;
-        white-space: nowrap;
+        padding: 6px 5px;
+        word-wrap: break-word;
+        overflow-wrap: anywhere;
+        white-space: normal;
     }
-    .lms-results-table .col-test { min-width: 200px; max-width: 260px; white-space: normal; }
-    .lms-results-table .col-taker { min-width: 180px; max-width: 240px; white-space: normal; }
-    .lms-results-table .col-course { min-width: 160px; max-width: 220px; white-space: normal; }
-    .lms-results-table .col-assessor { min-width: 130px; max-width: 180px; white-space: normal; }
-    .lms-results-table .col-status { min-width: 140px; white-space: normal; }
-    .lms-results-table .col-score { min-width: 150px; }
-    .lms-results-table .col-actions { min-width: 210px; white-space: nowrap; }
-    .lms-results-table .col-actions .btn { margin: 0 2px 2px 0; }
+    .lms-results-table .col-test { width: 12%; }
+    .lms-results-table .col-taker { width: 10%; }
+    .lms-results-table .col-course { width: 10%; }
+    .lms-results-table .col-assessor { width: 9%; }
+    .lms-results-table .col-status { width: 9%; }
+    .lms-results-table .col-score { width: 8%; }
+    .lms-results-table .col-actions { width: 12%; white-space: nowrap; }
+    .lms-results-table .col-actions .btn { margin: 1px 0; padding: 2px 5px; font-size: 11px; }
 </style>
 @php
     $fmtDuration = function ($minutes) {
