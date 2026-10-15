@@ -56,7 +56,7 @@
                                     </label>
                                     <textarea
                                         name="feedback[{{ $answer->id }}]"
-                                        class="form-control text-editor"
+                                        class="form-control lms-text-editor"
                                         rows="3"
                                         data-max="{{ $feedbackMax }}"
                                         data-height="120"
@@ -76,7 +76,7 @@
             </label>
             <textarea
                 name="grader_feedback"
-                class="form-control text-editor"
+                class="form-control lms-text-editor"
                 rows="4"
                 data-max="{{ $overallMax }}"
                 data-height="160"

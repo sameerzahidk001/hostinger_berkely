@@ -58,11 +58,11 @@
                     </div>
                     <div class="col-md-12 form-group">
                         <label>Question stem * <span class="lms-char-hint">(max {{ number_format($stemMax) }} characters)</span></label>
-                        <textarea name="stem" class="form-control text-editor" rows="4" data-max="{{ $stemMax }}" data-height="180" data-rich="1" required>{{ old('stem', $question->stem) }}</textarea>
+                        <textarea name="stem" class="form-control lms-text-editor" rows="4" data-max="{{ $stemMax }}" data-height="180" data-rich="1" required>{{ old('stem', $question->stem) }}</textarea>
                     </div>
                     <div class="col-md-12 form-group">
                         <label>Explanation / model answer notes <span class="lms-char-hint">(max {{ number_format($explanationMax) }} characters)</span></label>
-                        <textarea name="explanation" class="form-control text-editor" rows="3" data-max="{{ $explanationMax }}" data-height="140" data-rich="1">{{ old('explanation', $question->explanation) }}</textarea>
+                        <textarea name="explanation" class="form-control lms-text-editor" rows="3" data-max="{{ $explanationMax }}" data-height="140" data-rich="1">{{ old('explanation', $question->explanation) }}</textarea>
                     </div>
                     <div class="col-md-3 form-group">
                         <label>Status</label>
@@ -194,7 +194,7 @@
                 alert('Keep at least one question.');
                 return;
             }
-            $block.find('textarea.text-editor').each(function () {
+            $block.find('textarea.lms-text-editor, textarea.text-editor, textarea[data-rich="1"]').each(function () {
                 if ($(this).next('.note-editor').length) {
                     try { $(this).summernote('destroy'); } catch (e) {}
                 }

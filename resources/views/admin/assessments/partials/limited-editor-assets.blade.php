@@ -75,9 +75,12 @@ window.LmsLimitedEditor = window.LmsLimitedEditor || (function () {
         if ($el.data('lms-limited-ready')) return;
         var max = parseInt($el.attr('data-max') || '0', 10);
         var height = parseInt($el.attr('data-height') || '140', 10);
-        var isRich = $el.hasClass('text-editor') || $el.attr('data-rich') === '1';
+        var isRich = $el.hasClass('text-editor') || $el.hasClass('lms-text-editor') || $el.attr('data-rich') === '1';
 
         if (isRich) {
+            // Drop duplicate CKEditor UI if the global layout already wrapped this field.
+            $el.siblings('.ck-editor').remove();
+            $el.parent().children('.ck-editor').remove();
             if (!$el.hasClass('summernote-initialized') && !$el.next('.note-editor').length) {
                 $el.summernote({
                     height: height,
@@ -121,13 +124,13 @@ window.LmsLimitedEditor = window.LmsLimitedEditor || (function () {
     }
 
     function init(scope) {
-        $(scope || document).find('textarea[data-max], textarea.text-editor, input[data-max]').each(function () {
+        $(scope || document).find('textarea[data-max], textarea.text-editor, textarea.lms-text-editor, textarea[data-rich="1"], input[data-max]').each(function () {
             initOne(this);
         });
     }
 
     function sync(scope) {
-        $(scope || document).find('textarea.text-editor, textarea[data-rich="1"]').each(function () {
+        $(scope || document).find('textarea.text-editor, textarea.lms-text-editor, textarea[data-rich="1"]').each(function () {
             var $el = $(this);
             if ($el.next('.note-editor').length) {
                 $el.val($el.summernote('code'));
@@ -141,7 +144,7 @@ window.LmsLimitedEditor = window.LmsLimitedEditor || (function () {
             var $el = $(this);
             var max = parseInt($el.attr('data-max') || '0', 10);
             if (!max) return;
-            var len = $el.hasClass('text-editor') || $el.attr('data-rich') === '1'
+            var len = $el.hasClass('text-editor') || $el.hasClass('lms-text-editor') || $el.attr('data-rich') === '1'
                 ? plainLen($el.next('.note-editor').length ? $el.summernote('code') : $el.val())
                 : ($el.val() || '').length;
             if (!renderCount($el, len, max)) {

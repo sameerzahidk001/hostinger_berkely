@@ -497,7 +497,8 @@
       <script src="https://cdn.ckeditor.com/ckeditor5/23.0.0/classic/ckeditor.js"></script>
       <script>
          document.addEventListener('DOMContentLoaded', (event) => {
-            document.querySelectorAll('.text-editor').forEach((editorElement) => {
+            // Skip LMS assessment editors (data-rich) — those use Summernote with table + char limits.
+            document.querySelectorAll('.text-editor:not([data-rich="1"])').forEach((editorElement) => {
                   ClassicEditor.create(editorElement, {
                      link: {
                         addTargetToExternalLinks: true,
