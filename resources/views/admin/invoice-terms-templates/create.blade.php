@@ -10,7 +10,7 @@
         <ol class="breadcrumb">
             <li><a href="{{ route('admin.home') }}">Home</a></li>
             <li><a href="{{ route('admin.payments.index') }}">Payments</a></li>
-            <li><a href="{{ route('admin.invoice-terms-templates.index') }}">T&amp;C Templates</a></li>
+            <li><a href="{{ route('admin.invoice-terms-templates.index') }}">Invoice T&amp;C Templates</a></li>
             <li class="active"><strong>Create</strong></li>
         </ol>
     </div>
