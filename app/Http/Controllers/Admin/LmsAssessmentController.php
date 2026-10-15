@@ -247,9 +247,47 @@ class LmsAssessmentController extends Controller
             });
         }
 
+        $rows = $query->paginate(30)->withQueryString();
+        $assessmentIds = $rows->getCollection()->pluck('assessment_id')->unique()->filter()->all();
+        $attemptsByAssessment = $assessmentIds === []
+            ? collect()
+            : LmsAssessmentAttempt::query()
+                ->whereIn('assessment_id', $assessmentIds)
+                ->whereIn('status', ['submitted', 'graded', 'in_progress', 'expired'])
+                ->orderByDesc('id')
+                ->get(['id', 'assessment_id', 'user_id', 'status', 'submitted_at', 'updated_at'])
+                ->groupBy('assessment_id');
+
+        $batchStudentCache = [];
+        $lockReassign = [];
+        foreach ($rows as $row) {
+            $locked = $row->isExpired();
+            $attempts = $attemptsByAssessment->get($row->assessment_id, collect());
+            if ($row->student_id) {
+                $att = $attempts->firstWhere('user_id', (int) $row->student_id);
+                if ($att && in_array($att->status, ['submitted', 'graded'], true)) {
+                    $locked = true;
+                }
+            } elseif ($row->class_batch_id) {
+                $bid = (int) $row->class_batch_id;
+                if (! isset($batchStudentCache[$bid])) {
+                    $batchStudentCache[$bid] = ClassBatch::find($bid)
+                        ?->students()->pluck('users.id')->map(fn ($id) => (int) $id)->all() ?? [];
+                }
+                $ids = $batchStudentCache[$bid];
+                if ($attempts->whereIn('user_id', $ids)->whereIn('status', ['submitted', 'graded'])->isNotEmpty()) {
+                    $locked = true;
+                }
+            }
+            $lockReassign[(int) $row->id] = $locked;
+        }
+
         return view('admin.assessments.tests.assigned-users', [
-            'rows' => $query->paginate(30)->withQueryString(),
+            'rows' => $rows,
             'search' => $search,
+            'attemptsByAssessment' => $attemptsByAssessment,
+            'lockReassign' => $lockReassign,
+            'batchStudentCache' => $batchStudentCache,
         ]);
     }
 
@@ -441,12 +479,49 @@ class LmsAssessmentController extends Controller
 
     protected function syncAssignments(LmsAssessment $a, Request $request): void
     {
-        // Keep expired (Missed) assignments locked — do not delete or re-target them.
+        // Lock Missed / Completed / Completed and Marked — do not delete or re-target them.
         $existing = LmsAssessmentAssignment::query()->where('assessment_id', $a->id)->get();
-        $expiredIds = $existing->filter(fn (LmsAssessmentAssignment $row) => $row->isExpired())->pluck('id')->all();
+        $doneUserIds = LmsAssessmentAttempt::query()
+            ->where('assessment_id', $a->id)
+            ->whereIn('status', ['submitted', 'graded'])
+            ->pluck('user_id')
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        $lockedIds = [];
+        $lockedStudentIds = $doneUserIds;
+        $lockedBatchIds = [];
+        foreach ($existing as $row) {
+            $lock = $row->isExpired();
+            if (! $lock && $row->student_id && in_array((int) $row->student_id, $doneUserIds, true)) {
+                $lock = true;
+            }
+            if (! $lock && $row->class_batch_id) {
+                $batchStudentIds = ClassBatch::find((int) $row->class_batch_id)
+                    ?->students()->pluck('users.id')->map(fn ($id) => (int) $id)->all() ?? [];
+                if (array_intersect($batchStudentIds, $doneUserIds) !== []) {
+                    $lock = true;
+                    $lockedBatchIds[] = (int) $row->class_batch_id;
+                }
+            }
+            if ($lock) {
+                $lockedIds[] = (int) $row->id;
+                if ($row->student_id) {
+                    $lockedStudentIds[] = (int) $row->student_id;
+                }
+                if ($row->class_batch_id) {
+                    $lockedBatchIds[] = (int) $row->class_batch_id;
+                }
+            }
+        }
+        $lockedStudentIds = array_values(array_unique($lockedStudentIds));
+        $lockedBatchIds = array_values(array_unique($lockedBatchIds));
+
         $deleteQuery = LmsAssessmentAssignment::query()->where('assessment_id', $a->id);
-        if ($expiredIds !== []) {
-            $deleteQuery->whereNotIn('id', $expiredIds);
+        if ($lockedIds !== []) {
+            $deleteQuery->whereNotIn('id', $lockedIds);
         }
         $deleteQuery->delete();
 
@@ -456,12 +531,6 @@ class LmsAssessmentController extends Controller
         $byUser = ! $byAdmin ? Auth::id() : null;
         $markerId = $request->filled('marker_user_id') ? (int) $request->input('marker_user_id') : null;
         $hasMarkerCol = Schema::hasColumn('lms_assessment_assignments', 'marker_user_id');
-
-        // Skip creating a new row that would replace an already-expired student/batch assignment.
-        $lockedStudentIds = $existing->filter(fn ($r) => $r->isExpired() && $r->student_id)
-            ->pluck('student_id')->map(fn ($id) => (int) $id)->all();
-        $lockedBatchIds = $existing->filter(fn ($r) => $r->isExpired() && $r->class_batch_id)
-            ->pluck('class_batch_id')->map(fn ($id) => (int) $id)->all();
 
         foreach ((array) $request->input('batch_ids', []) as $batchId) {
             if (in_array((int) $batchId, $lockedBatchIds, true)) {

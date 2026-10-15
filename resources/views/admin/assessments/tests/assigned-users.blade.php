@@ -5,6 +5,9 @@
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
     .lms-status-missed { color: #ed5565; font-weight: 700; }
+    .lms-status-completed { color: #f59e0b; font-weight: 700; }
+    .lms-status-marked { color: #1ab394; font-weight: 700; }
+    .lms-status-in_progress { color: #f0ad4e; font-weight: 700; }
 </style>
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">
@@ -50,7 +53,15 @@
             <tbody>
                 @forelse($rows as $row)
                     @php
-                        if ($row->isNotYetOpen()) {
+                        $attempts = ($attemptsByAssessment ?? collect())->get($row->assessment_id, collect());
+                        $att = null;
+                        if ($row->student_id) {
+                            $att = $attempts->firstWhere('user_id', (int) $row->student_id);
+                        }
+                        if ($att) {
+                            $winLabel = $att->statusLabel();
+                            $winClass = $att->statusColorClass();
+                        } elseif ($row->isNotYetOpen()) {
                             $winLabel = 'Upcoming';
                             $winClass = 'lms-status-upcoming';
                         } elseif ($row->isExpired()) {
@@ -60,6 +71,7 @@
                             $winLabel = 'Available';
                             $winClass = 'lms-status-available';
                         }
+                        $cannotReassign = !empty($lockReassign[(int) $row->id]);
                     @endphp
                     <tr>
                         <td>{{ optional($row->created_at)->format('d/m/Y H:i') ?? '—' }}</td>
@@ -78,10 +90,10 @@
                         <td><span class="{{ $winClass }}">{{ $winLabel }}</span></td>
                         <td style="white-space:nowrap;">
                             @if($row->assessment_id)
-                                @unless($row->isExpired())
+                                @unless($cannotReassign)
                                     <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.assign', $row->assessment_id) }}">Re-assign</a>
                                 @else
-                                    <span class="text-muted" title="Window ended — cannot re-assign">—</span>
+                                    <span class="text-muted" title="Cannot re-assign after Missed / Completed / Marked">—</span>
                                 @endunless
                                 <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.attempts', $row->assessment_id) }}">Attempts</a>
                             @endif
