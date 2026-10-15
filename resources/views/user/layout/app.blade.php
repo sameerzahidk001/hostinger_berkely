@@ -250,6 +250,12 @@
                      <span class="nav-label">My Rating</span>
                   </a>
                </li>
+               <li class="{{ request()->routeIs('user.instructor-payments.*') ? 'active' : '' }}">
+                  <a href="{{ route('user.instructor-payments.index') }}">
+                     <i class="fa fa-money"></i>
+                     <span class="nav-label">My Payments</span>
+                  </a>
+               </li>
                @elseif(auth()->user()->roles()->where('name', 'student')->exists())
                <li class="{{ request()->routeIs('user.rate-review.*') ? 'active' : '' }}">
                   <a href="{{ route('user.rate-review.index') }}">
