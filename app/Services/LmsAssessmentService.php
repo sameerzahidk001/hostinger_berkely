@@ -315,12 +315,8 @@ class LmsAssessmentService
 
         $attempt->score_raw = round($raw, 2);
         $attempt->score_max = round($max, 2);
-        $passPercent = $assessment?->pass_percent;
-        if ($passPercent !== null && $max > 0) {
-            $attempt->passed = (($raw / $max) * 100) >= (float) $passPercent;
-        } else {
-            $attempt->passed = null;
-        }
+        // No Pass/Fail — marking criteria varies by course; score and % only.
+        $attempt->passed = null;
     }
 
     public function publishResults(LmsAssessmentAttempt $attempt, ?string $feedback = null): void

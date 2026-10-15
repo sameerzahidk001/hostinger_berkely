@@ -16,7 +16,7 @@
     <div class="ibox"><div class="ibox-content table-responsive">
         <table class="table table-striped table-bordered">
             <thead>
-                <tr><th>User</th><th>Status</th><th>Score</th><th>Pass</th><th>Published</th><th>Submitted</th><th></th></tr>
+                <tr><th>User</th><th>Status</th><th>Score</th><th>Published</th><th>Submitted</th><th></th></tr>
             </thead>
             <tbody>
                 @forelse($rows as $row)
@@ -29,7 +29,6 @@
                                 @if($row->percent() !== null) ({{ $row->percent() }}%) @endif
                             @else — @endif
                         </td>
-                        <td>{{ $row->passFailLabel() }}</td>
                         <td>{{ $row->results_published ? 'Yes' : 'No' }}</td>
                         <td>{{ optional($row->submitted_at)->format('d M Y H:i') ?? '—' }}</td>
                         <td style="white-space:nowrap;">
@@ -40,7 +39,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="7" class="text-center">No attempts yet.</td></tr>
+                    <tr><td colspan="6" class="text-center">No attempts yet.</td></tr>
                 @endforelse
             </tbody>
         </table>

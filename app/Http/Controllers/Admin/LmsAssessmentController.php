@@ -86,7 +86,7 @@ class LmsAssessmentController extends Controller
             'audience' => $kind === LmsAssessment::KIND_SKILL ? LmsAssessment::AUDIENCE_STAFF : LmsAssessment::AUDIENCE_STUDENT,
             'status' => 'draft',
             'results_mode' => 'after_publish',
-            'pass_percent' => 50,
+            'pass_percent' => null,
         ])));
     }
 
@@ -417,7 +417,8 @@ class LmsAssessmentController extends Controller
                 : ($role !== '' ? $role : null);
         }
         $a->duration_minutes = $request->filled('duration_minutes') ? (int) $request->input('duration_minutes') : null;
-        $a->pass_percent = $request->filled('pass_percent') ? (float) $request->input('pass_percent') : null;
+        // Pass/Fail threshold removed from UI — criteria varies by course; score % only.
+        $a->pass_percent = null;
         $a->max_attempts = $request->filled('max_attempts') ? (int) $request->input('max_attempts') : null;
         $a->shuffle_questions = $request->boolean('shuffle_questions');
         $a->results_mode = $request->input('results_mode', 'after_publish');
