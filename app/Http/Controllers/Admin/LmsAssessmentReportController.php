@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ClassBatch;
 use App\Models\LmsAssessment;
+use App\Models\LmsAssessmentAttempt;
 use App\Services\LmsAssessmentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
@@ -36,10 +37,30 @@ class LmsAssessmentReportController extends Controller
             ? $this->assessments->skillReport()->take(50)
             : collect();
 
+        $studentAttempts = collect();
+        $selectedAssessment = null;
+        if ($assessmentId > 0) {
+            $selectedAssessment = LmsAssessment::query()->find($assessmentId);
+            $query = LmsAssessmentAttempt::query()
+                ->with('user:id,name,email')
+                ->where('assessment_id', $assessmentId)
+                ->whereIn('status', ['submitted', 'graded', 'expired', 'in_progress'])
+                ->orderByDesc('id');
+
+            if ($batchId > 0 && Schema::hasTable('class_batches')) {
+                $studentIds = ClassBatch::find($batchId)?->students()->pluck('users.id')->all() ?? [];
+                $query->whereIn('user_id', $studentIds ?: [0]);
+            }
+
+            $studentAttempts = $query->limit(200)->get();
+        }
+
         return view('admin.assessments.reports.index', [
             'passRate' => $passRate,
             'itemAnalysis' => $itemAnalysis,
             'skillRows' => $skillRows,
+            'studentAttempts' => $studentAttempts,
+            'selectedAssessment' => $selectedAssessment,
             'assessments' => LmsAssessment::query()->orderBy('title')->get(['id', 'title', 'kind']),
             'batches' => Schema::hasTable('class_batches')
                 ? ClassBatch::query()->orderByDesc('id')->get(['id', 'code', 'name'])

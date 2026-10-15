@@ -25,7 +25,7 @@
             <div class="ibox">
                 <div class="ibox-title"><h5>{{ $question->typeLabel() }} · {{ $question->max_marks }} marks</h5></div>
                 <div class="ibox-content">
-                    <p>{!! nl2br(e($question->stem)) !!}</p>
+                    <div class="m-b-sm">{!! $question->stem !!}</div>
                     @if($question->isMcq())
                         <p><strong>Selected:</strong> {{ $answer?->selectedKey() ?? '—' }}
                             @if($answer && $answer->is_correct !== null)
