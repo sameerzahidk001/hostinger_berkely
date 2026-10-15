@@ -27,9 +27,8 @@
         white-space: normal;
     }
     .lms-assigned-table .col-date { width: 8%; }
-    .lms-assigned-table .col-test { width: 12%; }
-    .lms-assigned-table .col-taker { width: 11%; }
-    .lms-assigned-table .col-course { width: 10%; }
+    .lms-assigned-table .col-test { width: 13%; }
+    .lms-assigned-table .col-taker { width: 16%; }
     .lms-assigned-table .col-assessor { width: 9%; }
     .lms-assigned-table .col-status { width: 9%; }
     .lms-assigned-table .col-score { width: 8%; }
@@ -110,7 +109,7 @@
                 </div>
                 <div class="col-sm-2 form-group">
                     <label>Search</label>
-                    <input type="text" name="search" class="form-control" value="{{ $filters['search'] ?? '' }}" placeholder="Test, taker, course…">
+                    <input type="text" name="search" class="form-control" value="{{ $filters['search'] ?? '' }}" placeholder="Name, email, test, course…">
                 </div>
                 <div class="col-sm-2 form-group" style="padding-top:24px;">
                     <button class="btn btn-primary" type="submit">Filter</button>
@@ -138,7 +137,6 @@
                         <th class="col-date">Date</th>
                         <th class="col-test">Test</th>
                         <th class="col-taker">Test Taker</th>
-                        <th class="col-course">Course</th>
                         <th>Available</th>
                         <th>Start</th>
                         <th>End</th>
@@ -184,8 +182,10 @@
                             <td class="col-taker">
                                 {{ $row['student']->name ?? '—' }}
                                 <br><small class="text-muted">{{ $row['student']->email ?? '' }}</small>
+                                @if(!empty($assessment->course?->title))
+                                    <br><small class="text-muted">{{ $assessment->course->title }}</small>
+                                @endif
                             </td>
-                            <td class="col-course">{{ $assessment->course->title ?? '—' }}</td>
                             <td>
                                 {{ optional($assignment->available_from)->format('d/m/y H:i') ?? '—' }}
                                 <br><span class="text-muted">→ {{ optional($assignment->available_until)->format('d/m/y H:i') ?? '—' }}</span>
@@ -236,7 +236,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="14" class="text-center text-muted">No assigned test takers found.</td></tr>
+                        <tr><td colspan="13" class="text-center text-muted">No assigned test takers found.</td></tr>
                     @endforelse
                 </tbody>
             </table>
