@@ -214,33 +214,74 @@ class LmsAssessmentController extends Controller
             ->with('success', 'Assignments saved for “' . $a->title . '”.');
     }
 
+    /**
+     * One list for all assigned test takers (started or not) with status / score / mark actions.
+     * Replaces the separate Test Results menu.
+     */
     public function assignedUsers(Request $request)
     {
-        abort_unless($this->assessments->canAssignStudentAssessments() || $this->assessments->canManageSkillTests() || $this->assessments->canManageStudentAssessments(), 403);
+        abort_unless(
+            $this->assessments->canAssignStudentAssessments()
+            || $this->assessments->canManageSkillTests()
+            || $this->assessments->canManageStudentAssessments(),
+            403
+        );
         $this->assessments->ensure();
 
-        $query = LmsAssessmentAssignment::query()
+        $assessmentId = (int) $request->get('assessment_id', 0);
+        $batchId = (int) $request->get('batch_id', 0);
+        $courseId = (int) $request->get('course_id', 0);
+        $kind = trim((string) $request->get('kind', ''));
+        $search = trim((string) $request->get('search', ''));
+
+        $selectedAssessment = $assessmentId > 0
+            ? LmsAssessment::query()->find($assessmentId)
+            : null;
+
+        if ($selectedAssessment && $selectedAssessment->isSkill()) {
+            abort_unless($this->assessments->canManageSkillTests(), 403);
+        }
+
+        $courseIdsScope = null;
+        if ($this->lms->isInstructorActor() && ! $this->lms->isAdminActor() && ! panel_sees_all_dashboards()) {
+            $courseIdsScope = $this->lms->coursesForActor()->pluck('id')->map(fn ($id) => (int) $id)->all();
+        }
+
+        $assignQuery = LmsAssessmentAssignment::query()
             ->with([
-                'assessment:id,title,kind,course_id,target_role',
+                'assessment:id,title,kind,course_id,audience,duration_minutes,target_role',
                 'assessment.course:id,title',
-                'batch:id,code,name',
                 'student:id,name,email',
-                'marker:id,name,email',
+                'batch:id,code,name',
+                'marker:id,name',
             ])
             ->orderByDesc('id');
 
-        if ($this->lms->isInstructorActor() && ! $this->lms->isAdminActor() && ! panel_sees_all_dashboards()) {
-            $courseIds = $this->lms->coursesForActor()->pluck('id')->map(fn ($id) => (int) $id)->all();
-            $query->whereHas('assessment', function ($q) use ($courseIds) {
-                $q->whereIn('course_id', $courseIds ?: [0]);
+        if ($assessmentId > 0) {
+            $assignQuery->where('assessment_id', $assessmentId);
+        }
+        if ($batchId > 0) {
+            $batchStudentIds = ClassBatch::find($batchId)?->students()->pluck('users.id')->map(fn ($id) => (int) $id)->all() ?? [];
+            $assignQuery->where(function ($q) use ($batchId, $batchStudentIds) {
+                $q->where('class_batch_id', $batchId);
+                if ($batchStudentIds !== []) {
+                    $q->orWhereIn('student_id', $batchStudentIds);
+                }
             });
         }
-
-        $search = trim((string) $request->get('search', ''));
+        if ($courseId > 0) {
+            $assignQuery->whereHas('assessment', fn ($q) => $q->where('course_id', $courseId));
+        }
+        if ($kind !== '' && array_key_exists($kind, LmsAssessment::kinds())) {
+            $assignQuery->whereHas('assessment', fn ($q) => $q->where('kind', $kind));
+        }
         if ($search !== '') {
             $like = '%' . addcslashes($search, '%_\\') . '%';
-            $query->where(function ($q) use ($like, $search) {
-                $q->whereHas('assessment', fn ($aq) => $aq->where('title', 'like', $like))
+            $assignQuery->where(function ($q) use ($like, $search) {
+                $q->whereHas('assessment', function ($aq) use ($like) {
+                    $aq->where('title', 'like', $like)
+                        ->orWhereHas('course', fn ($cq) => $cq->where('title', 'like', $like));
+                })
                     ->orWhereHas('student', fn ($sq) => $sq->where('name', 'like', $like)->orWhere('email', 'like', $like))
                     ->orWhereHas('batch', fn ($bq) => $bq->where('name', 'like', $like)->orWhere('code', 'like', $like));
                 if (ctype_digit($search)) {
@@ -249,47 +290,143 @@ class LmsAssessmentController extends Controller
             });
         }
 
-        $rows = $query->paginate(30)->withQueryString();
-        $assessmentIds = $rows->getCollection()->pluck('assessment_id')->unique()->filter()->all();
-        $attemptsByAssessment = $assessmentIds === []
-            ? collect()
-            : LmsAssessmentAttempt::query()
-                ->whereIn('assessment_id', $assessmentIds)
-                ->whereIn('status', ['submitted', 'graded', 'in_progress', 'expired'])
-                ->orderByDesc('id')
-                ->get(['id', 'assessment_id', 'user_id', 'status', 'started_at', 'submitted_at', 'updated_at', 'graded_by_user_id', 'graded_by_admin_id'])
-                ->groupBy('assessment_id');
+        $assignQuery->whereHas('assessment', function ($q) use ($courseIdsScope) {
+            if ($courseIdsScope !== null) {
+                $q->where(function ($inner) use ($courseIdsScope) {
+                    $inner->whereIn('course_id', $courseIdsScope ?: [0]);
+                    if ($this->assessments->canManageSkillTests()) {
+                        $inner->orWhere('kind', LmsAssessment::KIND_SKILL)
+                            ->orWhere('audience', LmsAssessment::AUDIENCE_STAFF);
+                    }
+                });
+            } elseif (! $this->assessments->canManageSkillTests()) {
+                $q->where('kind', '!=', LmsAssessment::KIND_SKILL)
+                    ->where('audience', '!=', LmsAssessment::AUDIENCE_STAFF);
+            }
+        });
 
+        $assignments = $assignQuery->limit(400)->get();
+        $rowsByKey = [];
         $batchStudentCache = [];
-        $lockReassign = [];
-        foreach ($rows as $row) {
-            $locked = $row->isExpired();
-            $attempts = $attemptsByAssessment->get($row->assessment_id, collect());
-            if ($row->student_id) {
-                $att = $attempts->firstWhere('user_id', (int) $row->student_id);
-                if ($att && in_array($att->status, ['submitted', 'graded'], true)) {
-                    $locked = true;
+
+        foreach ($assignments as $assignment) {
+            $assessment = $assignment->assessment;
+            if (! $assessment) {
+                continue;
+            }
+
+            $students = collect();
+            if ($assignment->student_id && $assignment->student) {
+                $students->push($assignment->student);
+            } elseif ($assignment->class_batch_id) {
+                $bid = (int) $assignment->class_batch_id;
+                if ($batchId > 0 && $bid !== $batchId) {
+                    continue;
                 }
-            } elseif ($row->class_batch_id) {
-                $bid = (int) $row->class_batch_id;
                 if (! isset($batchStudentCache[$bid])) {
-                    $batchStudentCache[$bid] = ClassBatch::find($bid)
-                        ?->students()->pluck('users.id')->map(fn ($id) => (int) $id)->all() ?? [];
+                    $batch = ClassBatch::query()->find($bid);
+                    $batchStudentCache[$bid] = $batch
+                        ? $batch->students()->get(['users.id', 'users.name', 'users.email'])
+                        : collect();
                 }
-                $ids = $batchStudentCache[$bid];
-                if ($attempts->whereIn('user_id', $ids)->whereIn('status', ['submitted', 'graded'])->isNotEmpty()) {
-                    $locked = true;
+                $students = $batchStudentCache[$bid];
+            }
+
+            if ($batchId > 0 && $assignment->student_id) {
+                $inBatch = ClassBatch::find($batchId)?->students()->where('users.id', $assignment->student_id)->exists();
+                if (! $inBatch) {
+                    continue;
                 }
             }
-            $lockReassign[(int) $row->id] = $locked;
+
+            if ($search !== '') {
+                $needle = mb_strtolower($search);
+                $students = $students->filter(function ($student) use ($needle, $assessment) {
+                    $hay = mb_strtolower(
+                        ($student->name ?? '') . ' ' . ($student->email ?? '') . ' '
+                        . ($assessment->title ?? '') . ' ' . ($assessment->course->title ?? '')
+                    );
+
+                    return str_contains($hay, $needle);
+                });
+            }
+
+            foreach ($students as $student) {
+                $key = (int) $assessment->id . ':' . (int) $student->id;
+                if (isset($rowsByKey[$key]) && (int) $rowsByKey[$key]['assignment']->id >= (int) $assignment->id) {
+                    continue;
+                }
+                $rowsByKey[$key] = [
+                    'assessment' => $assessment,
+                    'student' => $student,
+                    'assignment' => $assignment,
+                    'attempt' => null,
+                ];
+            }
+        }
+
+        $pairs = collect($rowsByKey)->values();
+        if ($pairs->isNotEmpty()) {
+            $assessmentIds = $pairs->pluck('assessment.id')->unique()->all();
+            $userIds = $pairs->pluck('student.id')->unique()->all();
+            $attempts = LmsAssessmentAttempt::query()
+                ->whereIn('assessment_id', $assessmentIds)
+                ->whereIn('user_id', $userIds)
+                ->orderByDesc('id')
+                ->get()
+                ->groupBy(fn ($a) => (int) $a->assessment_id . ':' . (int) $a->user_id);
+
+            foreach ($rowsByKey as $key => &$row) {
+                $row['attempt'] = optional($attempts->get($key))->first();
+            }
+            unset($row);
+        }
+
+        $rows = collect($rowsByKey)->values()->sortByDesc(function ($row) {
+            $attempt = $row['attempt'];
+            if ($attempt) {
+                return optional($attempt->submitted_at ?: $attempt->updated_at)->timestamp ?? 0;
+            }
+
+            return optional($row['assignment']->created_at)->timestamp ?? 0;
+        })->values()->take(300);
+
+        $assessmentQuery = LmsAssessment::query()->orderBy('title');
+        if ($courseIdsScope !== null) {
+            $assessmentQuery->where(function ($q) use ($courseIdsScope) {
+                $q->whereIn('course_id', $courseIdsScope ?: [0]);
+                if ($this->assessments->canManageSkillTests()) {
+                    $q->orWhere('kind', LmsAssessment::KIND_SKILL)
+                        ->orWhere('audience', LmsAssessment::AUDIENCE_STAFF);
+                }
+            });
+        } elseif (! $this->assessments->canManageSkillTests()) {
+            $assessmentQuery->where('kind', '!=', LmsAssessment::KIND_SKILL)
+                ->where('audience', '!=', LmsAssessment::AUDIENCE_STAFF);
+        }
+
+        $kinds = LmsAssessment::kinds();
+        if (! $this->assessments->canManageSkillTests()) {
+            unset($kinds[LmsAssessment::KIND_SKILL]);
         }
 
         return view('admin.assessments.tests.assigned-users', [
             'rows' => $rows,
-            'search' => $search,
-            'attemptsByAssessment' => $attemptsByAssessment,
-            'lockReassign' => $lockReassign,
-            'batchStudentCache' => $batchStudentCache,
+            'selectedAssessment' => $selectedAssessment,
+            'assessments' => $assessmentQuery->get(['id', 'title', 'kind']),
+            'batches' => Schema::hasTable('class_batches')
+                ? ClassBatch::query()->orderByDesc('id')->get(['id', 'code', 'name'])
+                : collect(),
+            'courses' => $this->lms->coursesForActor(),
+            'kinds' => $kinds,
+            'canDeleteAttempts' => $this->lms->isAdminActor() || panel_sees_all_dashboards(),
+            'filters' => [
+                'assessment_id' => $assessmentId,
+                'batch_id' => $batchId,
+                'course_id' => $courseId,
+                'kind' => $kind,
+                'search' => $search,
+            ],
         ]);
     }
 

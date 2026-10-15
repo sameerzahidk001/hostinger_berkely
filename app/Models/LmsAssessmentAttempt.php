@@ -66,7 +66,7 @@ class LmsAssessmentAttempt extends Model
     {
         return match ($this->status) {
             'in_progress' => 'In progress',
-            'submitted' => 'Completed',
+            'submitted' => 'Marking Required',
             'graded' => 'Completed and Marked',
             'expired' => 'Missed',
             default => ucfirst((string) $this->status),

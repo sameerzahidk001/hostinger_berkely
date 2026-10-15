@@ -66,7 +66,7 @@
         #assessments-portal .lms-row-upcoming { color: #1d4ed8; }
         #assessments-portal .lms-row-in_progress { color: #b45309; }
         #assessments-portal .lms-row-submitted,
-        #assessments-portal .lms-row-completed { color: #f59e0b; } /* Completed — orange */
+        #assessments-portal .lms-row-completed { color: #f59e0b; } /* Marking Required — orange */
         #assessments-portal .lms-row-graded,
         #assessments-portal .lms-row-marked { color: #1ab394; } /* Completed and Marked — green */
         #assessments-portal .lms-row-missed,

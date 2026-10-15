@@ -308,14 +308,9 @@
                         <a href="{{ route('admin.assessments.tests.index') }}">Create Test</a>
                      </li>
                      @endif
-                     @if($canAssignTests)
-                     <li class="{{ request()->is('admin/assessments/tests/assigned-users') || request()->is('admin/assessments/tests/*/assign') ? 'active' : '' }}">
+                     @if($canAssignTests || $canMarkResults)
+                     <li class="{{ request()->is('admin/assessments/tests/assigned-users') || request()->is('admin/assessments/tests/*/assign') || request()->is('admin/assessments/reports*') ? 'active' : '' }}">
                         <a href="{{ route('admin.assessments.tests.assigned-users') }}">Assigned Tests</a>
-                     </li>
-                     @endif
-                     @if($canMarkResults)
-                     <li class="{{ request()->is('admin/assessments/reports*') ? 'active' : '' }}">
-                        <a href="{{ route('admin.assessments.reports.index') }}">Test Results</a>
                      </li>
                      @endif
                      @if($hasMyTests)
