@@ -10,7 +10,7 @@ class LmsAssessmentAssignment extends Model
     protected $table = 'lms_assessment_assignments';
 
     protected $fillable = [
-        'assessment_id', 'class_batch_id', 'student_id',
+        'assessment_id', 'class_batch_id', 'student_id', 'marker_user_id',
         'available_from', 'available_until',
         'assigned_by_admin_id', 'assigned_by_user_id',
     ];
@@ -33,6 +33,11 @@ class LmsAssessmentAssignment extends Model
     public function student(): BelongsTo
     {
         return $this->belongsTo(User::class, 'student_id');
+    }
+
+    public function marker(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'marker_user_id');
     }
 
     public function isNotYetOpen(): bool

@@ -20,10 +20,31 @@ class LmsAssessmentSchema
         self::ensureAssignments();
         self::ensureAttempts();
         self::ensureAnswers();
+        self::ensureAdditiveColumns();
 
         $done = true;
 
         return Schema::hasTable('lms_assessments') && Schema::hasTable('lms_questions');
+    }
+
+    /** Nullable columns for assign/marking flow — safe on GitHub pull alone. */
+    protected static function ensureAdditiveColumns(): void
+    {
+        if (Schema::hasTable('lms_assessments') && ! Schema::hasColumn('lms_assessments', 'target_role')) {
+            Schema::table('lms_assessments', function (Blueprint $table) {
+                $table->string('target_role', 40)->nullable()->index();
+            });
+        }
+        if (Schema::hasTable('lms_questions') && ! Schema::hasColumn('lms_questions', 'target_role')) {
+            Schema::table('lms_questions', function (Blueprint $table) {
+                $table->string('target_role', 40)->nullable()->index();
+            });
+        }
+        if (Schema::hasTable('lms_assessment_assignments') && ! Schema::hasColumn('lms_assessment_assignments', 'marker_user_id')) {
+            Schema::table('lms_assessment_assignments', function (Blueprint $table) {
+                $table->unsignedBigInteger('marker_user_id')->nullable()->index();
+            });
+        }
     }
 
     protected static function ensureQuestions(): void

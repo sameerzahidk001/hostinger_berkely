@@ -19,9 +19,24 @@ class LmsQuestion extends Model
     protected $table = 'lms_questions';
 
     protected $fillable = [
-        'course_id', 'type', 'topic', 'stem', 'explanation', 'options_json',
+        'course_id', 'target_role', 'type', 'topic', 'stem', 'explanation', 'options_json',
         'max_marks', 'status', 'created_by_admin_id', 'created_by_user_id',
     ];
+
+    public static function targetRoles(): array
+    {
+        return LmsAssessment::targetRoles();
+    }
+
+    public function targetRoleLabel(): string
+    {
+        if ($this->course_id) {
+            return $this->course?->title ?: ('Course #' . $this->course_id);
+        }
+        $role = (string) ($this->target_role ?? '');
+
+        return self::targetRoles()[$role] ?? ($role !== '' ? ucwords(str_replace('_', ' ', $role)) : '—');
+    }
 
     protected $casts = [
         'options_json' => 'array',

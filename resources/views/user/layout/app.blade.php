@@ -264,9 +264,14 @@
                      </li>
                      @endif
                      @if($canTests)
-                     <li class="{{ request()->is('admin/assessments/tests*') ? 'active' : '' }}">
-                        <a href="{{ route('admin.assessments.tests.index') }}">Create / Assign</a>
+                     <li class="{{ request()->is('admin/assessments/tests') || request()->is('admin/assessments/tests/create*') || request()->is('admin/assessments/tests/*/edit') ? 'active' : '' }}">
+                        <a href="{{ route('admin.assessments.tests.index') }}">Create tests</a>
                      </li>
+                     @if($canAssignTests || $canCreateTests)
+                     <li class="{{ request()->is('admin/assessments/tests/assigned-users') || request()->is('admin/assessments/tests/*/assign') ? 'active' : '' }}">
+                        <a href="{{ route('admin.assessments.tests.assigned-users') }}">Assign / Assigned users</a>
+                     </li>
+                     @endif
                      <li class="{{ request()->is('admin/assessments/reports*') ? 'active' : '' }}">
                         <a href="{{ route('admin.assessments.reports.index') }}">Reports</a>
                      </li>

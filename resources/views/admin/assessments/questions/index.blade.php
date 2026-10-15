@@ -40,7 +40,8 @@
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>Course</th>
+                        <th>Date</th>
+                        <th>Course / For</th>
                         <th>Type</th>
                         <th>Topic</th>
                         <th>Stem</th>
@@ -53,7 +54,8 @@
                     @forelse($rows as $row)
                         <tr>
                             <td>{{ $row->id }}</td>
-                            <td>{{ $row->course?->title ?: '—' }}</td>
+                            <td>{{ optional($row->created_at)->format('d/m/Y H:i') ?? '—' }}</td>
+                            <td>{{ $row->targetRoleLabel() }}</td>
                             <td>{{ $row->typeLabel() }}</td>
                             <td>{{ $row->topic ?: '—' }}</td>
                             <td>{{ \Illuminate\Support\Str::limit(strip_tags($row->stem), 100) }}</td>
@@ -64,7 +66,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="8" class="text-center">No questions yet.</td></tr>
+                        <tr><td colspan="9" class="text-center">No questions yet.</td></tr>
                     @endforelse
                 </tbody>
             </table>
