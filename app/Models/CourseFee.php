@@ -16,7 +16,7 @@ class CourseFee extends Model
     protected $fillable = [
         'courses_id', 'package_name', 'currency', 'price',
         'tax_percentage', 'discount_amount', 'short_description', 'key_point',
-        'package_includes', 'terms_conditions', 'priority', 'package_feature', 'installments', 'showonwebsite', 'status',
+        'package_includes', 'terms_conditions', 'invoice_terms_template_id', 'priority', 'package_feature', 'installments', 'showonwebsite', 'status',
     ];
 
     protected $casts = [
@@ -31,9 +31,31 @@ class CourseFee extends Model
                     $table->longText('terms_conditions')->nullable();
                 });
             }
+            if (Schema::hasTable('course_fees') && ! Schema::hasColumn('course_fees', 'invoice_terms_template_id')) {
+                Schema::table('course_fees', function (Blueprint $table) {
+                    $table->unsignedBigInteger('invoice_terms_template_id')->nullable()->index();
+                });
+            }
+            InvoiceTermsTemplate::ensureTable();
         } catch (\Throwable $e) {
             Log::warning('course_fees terms_conditions ensure failed: ' . $e->getMessage());
         }
+    }
+
+    public function invoiceTermsTemplate()
+    {
+        return $this->belongsTo(InvoiceTermsTemplate::class, 'invoice_terms_template_id');
+    }
+
+    /** Resolve T&C HTML for invoices: template body first, then legacy package text. */
+    public function resolvedTermsHtml(): string
+    {
+        $fromTemplate = trim((string) ($this->invoiceTermsTemplate?->body ?? ''));
+        if ($fromTemplate !== '') {
+            return $fromTemplate;
+        }
+
+        return (string) ($this->terms_conditions ?? '');
     }
 
     // Define relationship with Course

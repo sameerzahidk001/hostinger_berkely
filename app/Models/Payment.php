@@ -136,16 +136,19 @@ class Payment extends Model
             $fromPackage = null;
             try {
                 if (! empty($payment->page_fee_package_id) && Schema::hasTable('page_fee_packages')) {
-                    $fromPackage = PageFeePackage::query()->whereKey($payment->page_fee_package_id)->value('terms_conditions');
-                } elseif (! empty($payment->package_id) && Schema::hasTable('course_fees') && Schema::hasColumn('course_fees', 'terms_conditions')) {
-                    $fromPackage = CourseFee::query()->whereKey($payment->package_id)->value('terms_conditions');
+                    $pkg = PageFeePackage::query()->with('invoiceTermsTemplate')->find($payment->page_fee_package_id);
+                    $fromPackage = $pkg?->resolvedTermsHtml();
+                } elseif (! empty($payment->package_id) && Schema::hasTable('course_fees')) {
+                    $pkg = CourseFee::query()->with('invoiceTermsTemplate')->find($payment->package_id);
+                    $fromPackage = $pkg?->resolvedTermsHtml();
                 }
             } catch (\Throwable $e) {
                 $fromPackage = null;
             }
 
-            $payment->terms_conditions = $fromPackage
-                ?: (Payment::latest('id')->value('terms_conditions') ?? 'Default Terms and Conditions');
+            $payment->terms_conditions = (is_string($fromPackage) && trim($fromPackage) !== '')
+                ? $fromPackage
+                : (Payment::latest('id')->value('terms_conditions') ?? 'Default Terms and Conditions');
         });
     }
 }

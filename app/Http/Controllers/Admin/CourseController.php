@@ -1372,8 +1372,10 @@ class CourseController extends Controller
 
     function courseCreateFee($id)
     {
+        CourseFee::ensureTermsColumn();
         $data['course'] = Course::withTrashed()->findOrFail($id);
         $data['currencies'] = Currency::get();
+        $data['invoiceTermsTemplates'] = \App\Models\InvoiceTermsTemplate::optionsForSelect(false);
         return view('admin.course.fee.create')->with($data);
     }
 
@@ -1383,6 +1385,7 @@ class CourseController extends Controller
         $data['course_fee'] = CourseFee::findOrFail($id);
         $data['course'] = Course::withTrashed()->findOrFail($data['course_fee']->courses_id);
         $data['currencies'] = Currency::get();
+        $data['invoiceTermsTemplates'] = \App\Models\InvoiceTermsTemplate::optionsForSelect(false);
         return view('admin.course.fee.edit')->with($data);
     }
 
@@ -1397,7 +1400,7 @@ class CourseController extends Controller
             'short_description' => 'nullable|string|max:1000',
             'key_point' => 'nullable|string|max:255',
             'package_includes' => 'nullable|string|max:255',
-            'terms_conditions' => 'nullable|string|max:50000',
+            'invoice_terms_template_id' => 'nullable|integer|min:1',
             'priority' => 'required|integer|min:1',
             'Installments' => 'nullable|in:1',
             'showonwebsite' => 'nullable|in:1',
@@ -1412,8 +1415,15 @@ class CourseController extends Controller
         $validated = $validator->validated();
         $validated['showonwebsite'] = $request->has('showonwebsite') ? 1 : 0;
         CourseFee::ensureTermsColumn();
-        if (! \Illuminate\Support\Facades\Schema::hasColumn('course_fees', 'terms_conditions')) {
-            unset($validated['terms_conditions']);
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('course_fees', 'invoice_terms_template_id')) {
+            unset($validated['invoice_terms_template_id']);
+        } else {
+            $validated['invoice_terms_template_id'] = $validated['invoice_terms_template_id'] ?? null;
+            if (! empty($validated['invoice_terms_template_id']) && \Illuminate\Support\Facades\Schema::hasColumn('course_fees', 'terms_conditions')) {
+                $validated['terms_conditions'] = \App\Models\InvoiceTermsTemplate::query()
+                    ->whereKey($validated['invoice_terms_template_id'])
+                    ->value('body');
+            }
         }
 
         if (!empty($validated['package_feature'])) {
@@ -1461,7 +1471,7 @@ class CourseController extends Controller
             'short_description' => 'nullable|string|max:1000',
             'key_point' => 'nullable|string|max:255',
             'package_includes' => 'nullable|string|max:255',
-            'terms_conditions' => 'nullable|string|max:50000',
+            'invoice_terms_template_id' => 'nullable|integer|min:1',
             'priority' => 'required|integer|min:1',
             'Installments' => 'nullable|in:1',
             'showonwebsite' => 'nullable|in:1',
@@ -1476,8 +1486,15 @@ class CourseController extends Controller
         $validated = $validator->validated();
         $validated['showonwebsite'] = $request->has('showonwebsite') ? 1 : 0;
         CourseFee::ensureTermsColumn();
-        if (! \Illuminate\Support\Facades\Schema::hasColumn('course_fees', 'terms_conditions')) {
-            unset($validated['terms_conditions']);
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('course_fees', 'invoice_terms_template_id')) {
+            unset($validated['invoice_terms_template_id']);
+        } else {
+            $validated['invoice_terms_template_id'] = $validated['invoice_terms_template_id'] ?? null;
+            if (! empty($validated['invoice_terms_template_id']) && \Illuminate\Support\Facades\Schema::hasColumn('course_fees', 'terms_conditions')) {
+                $validated['terms_conditions'] = \App\Models\InvoiceTermsTemplate::query()
+                    ->whereKey($validated['invoice_terms_template_id'])
+                    ->value('body');
+            }
         }
 
         if (!empty($validated['package_feature'])) {

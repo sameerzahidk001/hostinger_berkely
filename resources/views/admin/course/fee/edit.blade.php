@@ -61,10 +61,20 @@
                                     @error('short_description') <p class="text-danger">{{ $message }}</p> @enderror
                                 </div>
                                 <div class="col-lg-12">
-                                    <label>Invoice Terms &amp; Conditions</label>
-                                    <p class="help-block m-b-xs">Used when creating invoices for this package (editable per invoice).</p>
-                                    <textarea class="form-control" name="terms_conditions" rows="6" placeholder="Payment instructions / T&amp;C for invoices">{{ old('terms_conditions', $course_fee->terms_conditions ?? '') }}</textarea>
-                                    @error('terms_conditions') <p class="text-danger">{{ $message }}</p> @enderror
+                                    <label>Invoice T&amp;C Template</label>
+                                    <p class="help-block m-b-xs">
+                                        Manage templates in
+                                        <a href="{{ route('admin.invoice-terms-templates.index') }}" target="_blank">Settings → Invoice T&amp;C Templates</a>.
+                                    </p>
+                                    <select name="invoice_terms_template_id" class="form-control">
+                                        <option value="">— Select template —</option>
+                                        @foreach(($invoiceTermsTemplates ?? []) as $tpl)
+                                            <option value="{{ $tpl->id }}" @selected((string) old('invoice_terms_template_id', $course_fee->invoice_terms_template_id) === (string) $tpl->id)>
+                                                {{ $tpl->name }}{{ $tpl->is_active ? '' : ' (inactive)' }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('invoice_terms_template_id') <p class="text-danger">{{ $message }}</p> @enderror
                                 </div>
                                 <div class="col-lg-6">
                                     <label>Key Point</label>
