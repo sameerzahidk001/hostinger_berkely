@@ -85,6 +85,40 @@ class LmsAssessmentAttempt extends Model
         };
     }
 
+    /** Minutes spent from start to submit (null if incomplete). */
+    public function spendMinutes(): ?int
+    {
+        if (! $this->started_at || ! $this->submitted_at) {
+            return null;
+        }
+
+        return (int) max(0, $this->started_at->diffInMinutes($this->submitted_at));
+    }
+
+    public function assessorLabel(?LmsAssessmentAssignment $assignment = null): string
+    {
+        if ($this->graded_by_user_id) {
+            $user = User::query()->find($this->graded_by_user_id);
+
+            return $user?->name ?: ('User #' . $this->graded_by_user_id);
+        }
+        if ($this->graded_by_admin_id) {
+            if (class_exists(\App\Models\Admin::class)) {
+                $admin = \App\Models\Admin::query()->find($this->graded_by_admin_id);
+                if ($admin) {
+                    return $admin->name ?? $admin->email ?? 'Admin';
+                }
+            }
+
+            return 'Admin';
+        }
+        if ($assignment && $assignment->marker) {
+            return $assignment->marker->name ?? '—';
+        }
+
+        return '—';
+    }
+
     public function passFailLabel(): string
     {
         if ($this->passed === null) {

@@ -183,6 +183,133 @@ class LmsQuestionController extends Controller
         return back()->with('success', 'Question removed.');
     }
 
+    public function importForm()
+    {
+        abort_unless($this->assessments->canManageQuestionBank(), 403);
+        $this->assessments->ensure();
+
+        return view('admin.assessments.questions.import', [
+            'courses' => $this->lms->coursesForActor(),
+        ]);
+    }
+
+    public function importTemplate()
+    {
+        abort_unless($this->assessments->canManageQuestionBank(), 403);
+        $csv = "topic,stem,option_a,option_b,option_c,option_d,correct,max_marks,course_id\n"
+            . "Sample,\"What is 2+2?\",2,3,4,5,C,1,\n";
+
+        return response($csv, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="mcq-import-template.csv"',
+        ]);
+    }
+
+    public function importStore(Request $request)
+    {
+        abort_unless($this->assessments->canManageQuestionBank(), 403);
+        $this->assessments->ensure();
+
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt|max:5120',
+            'course_id' => ($this->instructorMustPickCourse() ? 'required' : 'nullable') . '|exists:courses,id',
+        ]);
+
+        $defaultCourseId = $request->filled('course_id') ? (int) $request->input('course_id') : null;
+        if ($defaultCourseId && $this->instructorMustPickCourse()) {
+            abort_unless($this->lms->instructorAssignedToCourse($defaultCourseId), 403);
+        }
+
+        $handle = fopen($request->file('file')->getRealPath(), 'r');
+        if (! $handle) {
+            return back()->with('fail', 'Could not read the uploaded file.');
+        }
+
+        $header = null;
+        $saved = 0;
+        $skipped = 0;
+        $line = 0;
+        while (($cols = fgetcsv($handle)) !== false) {
+            $line++;
+            if ($header === null) {
+                $header = array_map(fn ($h) => strtolower(trim((string) $h)), $cols);
+                continue;
+            }
+            if (count(array_filter($cols, fn ($c) => trim((string) $c) !== '')) === 0) {
+                continue;
+            }
+            $row = [];
+            foreach ($header as $i => $key) {
+                $row[$key] = $cols[$i] ?? '';
+            }
+
+            $stem = trim((string) ($row['stem'] ?? ''));
+            $a = trim((string) ($row['option_a'] ?? ''));
+            $b = trim((string) ($row['option_b'] ?? ''));
+            $c = trim((string) ($row['option_c'] ?? ''));
+            $d = trim((string) ($row['option_d'] ?? ''));
+            if ($stem === '' || $a === '' || $b === '') {
+                $skipped++;
+                continue;
+            }
+
+            $correctRaw = strtoupper(trim((string) ($row['correct'] ?? 'A')));
+            $correctMap = ['A' => 0, 'B' => 1, 'C' => 2, 'D' => 3, '1' => 0, '2' => 1, '3' => 2, '4' => 3];
+            $correct = $correctMap[$correctRaw] ?? 0;
+
+            $courseId = trim((string) ($row['course_id'] ?? ''));
+            $courseId = $courseId !== '' ? (int) $courseId : $defaultCourseId;
+            if ($courseId && $this->instructorMustPickCourse()) {
+                if (! $this->lms->instructorAssignedToCourse($courseId)) {
+                    $skipped++;
+                    continue;
+                }
+            }
+
+            $options = [];
+            foreach ([$a, $b, $c, $d] as $i => $text) {
+                if ($text === '') {
+                    continue;
+                }
+                $options[] = [
+                    'key' => (string) count($options),
+                    'text' => $text,
+                    'is_correct' => false,
+                ];
+            }
+            if ($options === []) {
+                $skipped++;
+                continue;
+            }
+            $correct = min($correct, count($options) - 1);
+            foreach ($options as $i => &$opt) {
+                $opt['key'] = (string) $i;
+                $opt['is_correct'] = $i === $correct;
+            }
+            unset($opt);
+
+            $q = new LmsQuestion();
+            $q->type = LmsQuestion::TYPE_MCQ;
+            $q->stem = $stem;
+            $q->topic = trim((string) ($row['topic'] ?? '')) ?: null;
+            $q->course_id = $courseId ?: null;
+            $q->max_marks = max(0.1, (float) ($row['max_marks'] ?? 1));
+            $q->status = 'active';
+            $q->options_json = $options;
+            if ($this->lms->isAdminActor()) {
+                $q->created_by_admin_id = Auth::guard('admin')->id();
+            } else {
+                $q->created_by_user_id = Auth::id();
+            }
+            $q->save();
+            $saved++;
+        }
+        fclose($handle);
+
+        return redirect()->route('admin.assessments.questions.index')
+            ->with('success', "Imported {$saved} MCQ(s)" . ($skipped ? "; skipped {$skipped} row(s)." : '.'));
+    }
+
     protected function instructorMustPickCourse(): bool
     {
         return $this->lms->isInstructorActor()

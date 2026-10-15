@@ -257,7 +257,7 @@ class LmsAssessmentController extends Controller
                 ->whereIn('assessment_id', $assessmentIds)
                 ->whereIn('status', ['submitted', 'graded', 'in_progress', 'expired'])
                 ->orderByDesc('id')
-                ->get(['id', 'assessment_id', 'user_id', 'status', 'submitted_at', 'updated_at'])
+                ->get(['id', 'assessment_id', 'user_id', 'status', 'started_at', 'submitted_at', 'updated_at', 'graded_by_user_id', 'graded_by_admin_id'])
                 ->groupBy('assessment_id');
 
         $batchStudentCache = [];

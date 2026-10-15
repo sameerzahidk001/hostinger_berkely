@@ -110,7 +110,8 @@
                         <th>Start time</th>
                         <th>End time</th>
                         <th>Duration given</th>
-                        <th>Duration taken</th>
+                        <th>Spend duration</th>
+                        <th>Assessor</th>
                         <th>Status</th>
                         <th>Score</th>
                         <th>Published</th>
@@ -143,16 +144,14 @@
                             $startTime = optional($attempt?->started_at ?: $assignment->available_from)->format('H:i') ?? '—';
                             $endTime = optional($attempt?->submitted_at ?: $assignment->available_until)->format('H:i') ?? '—';
                             $durationGiven = $fmtDuration($assessment->duration_minutes ?? null);
-                            $durationTaken = '—';
-                            if ($attempt && $attempt->started_at && $attempt->submitted_at) {
-                                $durationTaken = $fmtDuration($attempt->started_at->diffInMinutes($attempt->submitted_at));
-                            }
+                            $spend = $attempt?->spendMinutes();
+                            $durationTaken = $spend !== null ? $fmtDuration($spend) : '—';
                         @endphp
                         <tr>
                             <td>{{ $dateText }}</td>
                             <td>
                                 {{ $assessment->title ?? '—' }}
-                                <br><small class="text-muted">{{ $assessment->kindLabel() }}</small>
+                                <br><small class="text-muted">{{ $assessment->displayCode() }} · {{ $assessment->kindLabel() }}</small>
                             </td>
                             <td>
                                 {{ $row['student']->name ?? '—' }}
@@ -164,6 +163,7 @@
                             <td>{{ $endTime }}</td>
                             <td>{{ $durationGiven }}</td>
                             <td>{{ $durationTaken }}</td>
+                            <td>{{ $attempt ? $attempt->assessorLabel($assignment) : ($assignment->marker->name ?? '—') }}</td>
                             <td><span class="{{ $statusClass }}">{{ $statusText }}</span></td>
                             <td>
                                 @if($attempt && $attempt->score_raw !== null)
@@ -207,7 +207,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="13" class="text-center text-muted">No assigned tests found for this filter.</td>
+                            <td colspan="14" class="text-center text-muted">No assigned tests found for this filter.</td>
                         </tr>
                     @endforelse
                 </tbody>

@@ -43,9 +43,12 @@
                     <th>Test ID</th>
                     <th>Test</th>
                     <th>Assigned to</th>
-                    <th>Marking instructor</th>
+                    <th>Assessor</th>
                     <th>Available from</th>
                     <th>Available until</th>
+                    <th>Start time</th>
+                    <th>End time</th>
+                    <th>Spend duration</th>
                     <th>Status</th>
                     <th></th>
                 </tr>
@@ -72,21 +75,27 @@
                             $winClass = 'lms-status-available';
                         }
                         $cannotReassign = !empty($lockReassign[(int) $row->id]);
+                        $spend = $att?->spendMinutes();
                     @endphp
                     <tr>
                         <td>{{ optional($row->created_at)->format('d/m/Y H:i') ?? '—' }}</td>
-                        <td>{{ $row->assessment_id }}</td>
+                        <td>{{ $row->assessment?->displayCode() ?? ('BST'.$row->assessment_id) }}</td>
                         <td>{{ $row->assessment->title ?? '—' }}</td>
                         <td>{{ $row->scopeLabel() }}</td>
                         <td>
                             @if($row->marker)
                                 {{ $row->marker->name }}
+                            @elseif($att)
+                                {{ $att->assessorLabel($row) }}
                             @else
                                 <span class="text-muted">Admin / course instructors</span>
                             @endif
                         </td>
                         <td>{{ optional($row->available_from)->format('d/m/Y H:i') ?? '—' }}</td>
                         <td>{{ optional($row->available_until)->format('d/m/Y H:i') ?? '—' }}</td>
+                        <td>{{ optional($att?->started_at)->format('H:i') ?? '—' }}</td>
+                        <td>{{ optional($att?->submitted_at)->format('H:i') ?? '—' }}</td>
+                        <td>{{ $spend !== null ? $spend . ' min' : '—' }}</td>
                         <td><span class="{{ $winClass }}">{{ $winLabel }}</span></td>
                         <td style="white-space:nowrap;">
                             @if($row->assessment_id)
@@ -100,7 +109,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="9" class="text-center">No assignments yet.</td></tr>
+                    <tr><td colspan="12" class="text-center">No assignments yet.</td></tr>
                 @endforelse
             </tbody>
         </table>

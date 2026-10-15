@@ -91,6 +91,12 @@ class LmsAssessment extends Model
         return $this->hasMany(LmsAssessmentAttempt::class, 'assessment_id');
     }
 
+    /** Public display code, e.g. BST12 */
+    public function displayCode(): string
+    {
+        return 'BST' . (int) $this->id;
+    }
+
     public function kindLabel(): string
     {
         return self::kinds()[$this->kind] ?? ucfirst((string) $this->kind);
