@@ -196,8 +196,8 @@ class LmsQuestionController extends Controller
     public function importTemplate()
     {
         abort_unless($this->assessments->canManageQuestionBank(), 403);
-        $csv = "topic,stem,option_a,option_b,option_c,option_d,correct,max_marks,course_id\n"
-            . "Sample,\"What is 2+2?\",2,3,4,5,C,1,\n";
+        $csv = "topic,stem,option_a,option_b,option_c,option_d,option_e,correct,max_marks,course_id\n"
+            . "Sample,\"What is 2+2?\",2,3,4,5,6,C,1,\n";
 
         return response($csv, 200, [
             'Content-Type' => 'text/csv; charset=UTF-8',
@@ -248,13 +248,17 @@ class LmsQuestionController extends Controller
             $b = trim((string) ($row['option_b'] ?? ''));
             $c = trim((string) ($row['option_c'] ?? ''));
             $d = trim((string) ($row['option_d'] ?? ''));
+            $e = trim((string) ($row['option_e'] ?? ''));
             if ($stem === '' || $a === '' || $b === '') {
                 $skipped++;
                 continue;
             }
 
             $correctRaw = strtoupper(trim((string) ($row['correct'] ?? 'A')));
-            $correctMap = ['A' => 0, 'B' => 1, 'C' => 2, 'D' => 3, '1' => 0, '2' => 1, '3' => 2, '4' => 3];
+            $correctMap = [
+                'A' => 0, 'B' => 1, 'C' => 2, 'D' => 3, 'E' => 4,
+                '1' => 0, '2' => 1, '3' => 2, '4' => 3, '5' => 4,
+            ];
             $correct = $correctMap[$correctRaw] ?? 0;
 
             $courseId = trim((string) ($row['course_id'] ?? ''));
@@ -267,7 +271,7 @@ class LmsQuestionController extends Controller
             }
 
             $options = [];
-            foreach ([$a, $b, $c, $d] as $i => $text) {
+            foreach ([$a, $b, $c, $d, $e] as $text) {
                 if ($text === '') {
                     continue;
                 }
