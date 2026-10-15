@@ -1,0 +1,315 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Http\Controllers\Controller;
+use App\Models\ClassBatch;
+use App\Models\LmsAssessment;
+use App\Models\LmsAssessmentAssignment;
+use App\Models\LmsAssessmentAttempt;
+use App\Models\LmsQuestion;
+use App\Models\User;
+use App\Services\LmsAssessmentService;
+use App\Services\StudyMaterialService;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Validator;
+
+class LmsAssessmentController extends Controller
+{
+    public function __construct(
+        protected LmsAssessmentService $assessments,
+        protected StudyMaterialService $lms
+    ) {
+    }
+
+    public function index(Request $request)
+    {
+        abort_unless($this->assessments->canManageAssessments(), 403);
+        $this->assessments->ensure();
+
+        $kind = trim((string) $request->get('kind', ''));
+        $search = trim((string) $request->get('search', ''));
+        $query = LmsAssessment::query()->withCount(['questions', 'assignments', 'attempts'])->orderByDesc('id');
+
+        if ($kind !== '' && array_key_exists($kind, LmsAssessment::kinds())) {
+            $query->where('kind', $kind);
+        }
+        if (! $this->assessments->canManageSkillTests()) {
+            $query->where('kind', '!=', LmsAssessment::KIND_SKILL)
+                ->where('audience', '!=', LmsAssessment::AUDIENCE_STAFF);
+        }
+        if ($search !== '') {
+            $like = '%' . addcslashes($search, '%_\\') . '%';
+            $query->where('title', 'like', $like);
+        }
+
+        return view('admin.assessments.tests.index', [
+            'rows' => $query->paginate(20)->withQueryString(),
+            'kinds' => LmsAssessment::kinds(),
+            'kind' => $kind,
+            'search' => $search,
+            'canSkill' => $this->assessments->canManageSkillTests(),
+        ]);
+    }
+
+    public function create(Request $request)
+    {
+        abort_unless($this->assessments->canManageAssessments(), 403);
+        $this->assessments->ensure();
+        $kind = $request->get('kind', LmsAssessment::KIND_PRACTICE);
+        if ($kind === LmsAssessment::KIND_SKILL) {
+            abort_unless($this->assessments->canManageSkillTests(), 403);
+        }
+
+        return view('admin.assessments.tests.form', $this->formData(new LmsAssessment([
+            'kind' => $kind,
+            'audience' => $kind === LmsAssessment::KIND_SKILL ? LmsAssessment::AUDIENCE_STAFF : LmsAssessment::AUDIENCE_STUDENT,
+            'status' => 'draft',
+            'results_mode' => 'after_publish',
+            'pass_percent' => 50,
+        ])));
+    }
+
+    public function store(Request $request)
+    {
+        abort_unless($this->assessments->canManageAssessments(), 403);
+        $this->assessments->ensure();
+        $validator = Validator::make($request->all(), $this->rules());
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
+        if ($request->input('kind') === LmsAssessment::KIND_SKILL) {
+            abort_unless($this->assessments->canManageSkillTests(), 403);
+        }
+
+        $a = new LmsAssessment();
+        $this->fill($a, $request, true);
+        $a->save();
+        $this->syncQuestions($a, $request);
+        $this->syncAssignments($a, $request);
+
+        return redirect()->route('admin.assessments.tests.edit', $a->id)->with('success', 'Assessment created.');
+    }
+
+    public function edit($id)
+    {
+        abort_unless($this->assessments->canManageAssessments(), 403);
+        $this->assessments->ensure();
+        $assessment = LmsAssessment::with(['questions', 'assignments.batch', 'assignments.student'])->findOrFail($id);
+        if ($assessment->isSkill()) {
+            abort_unless($this->assessments->canManageSkillTests(), 403);
+        }
+
+        return view('admin.assessments.tests.form', $this->formData($assessment));
+    }
+
+    public function update(Request $request, $id)
+    {
+        abort_unless($this->assessments->canManageAssessments(), 403);
+        $this->assessments->ensure();
+        $a = LmsAssessment::findOrFail($id);
+        if ($a->isSkill()) {
+            abort_unless($this->assessments->canManageSkillTests(), 403);
+        }
+        $validator = Validator::make($request->all(), $this->rules());
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
+        $this->fill($a, $request, false);
+        $a->save();
+        $this->syncQuestions($a, $request);
+        $this->syncAssignments($a, $request);
+
+        return redirect()->route('admin.assessments.tests.edit', $a->id)->with('success', 'Assessment updated.');
+    }
+
+    public function destroy($id)
+    {
+        abort_unless($this->lms->isAdminActor() || panel_sees_all_dashboards(), 403);
+        $this->assessments->ensure();
+        LmsAssessment::findOrFail($id)->delete();
+
+        return redirect()->route('admin.assessments.tests.index')->with('success', 'Assessment removed.');
+    }
+
+    public function attempts(Request $request, $id)
+    {
+        abort_unless($this->assessments->canManageAssessments(), 403);
+        $this->assessments->ensure();
+        $assessment = LmsAssessment::findOrFail($id);
+        $rows = LmsAssessmentAttempt::query()
+            ->with('user:id,name,email')
+            ->where('assessment_id', $assessment->id)
+            ->orderByDesc('id')
+            ->paginate(20)
+            ->withQueryString();
+
+        return view('admin.assessments.tests.attempts', compact('assessment', 'rows'));
+    }
+
+    public function mark($attemptId)
+    {
+        abort_unless($this->assessments->canManageAssessments(), 403);
+        $this->assessments->ensure();
+        $attempt = LmsAssessmentAttempt::with(['assessment.questions', 'answers.question', 'user'])->findOrFail($attemptId);
+
+        return view('admin.assessments.tests.mark', compact('attempt'));
+    }
+
+    public function saveMarks(Request $request, $attemptId)
+    {
+        abort_unless($this->assessments->canManageAssessments(), 403);
+        $this->assessments->ensure();
+        $attempt = LmsAssessmentAttempt::with(['answers.question', 'assessment'])->findOrFail($attemptId);
+
+        foreach ((array) $request->input('manual', []) as $answerId => $score) {
+            $answer = $attempt->answers->firstWhere('id', (int) $answerId);
+            if (! $answer || ! $answer->question || ! $answer->question->needsManualMark()) {
+                continue;
+            }
+            $feedback = $request->input('feedback.' . $answerId);
+            $this->assessments->markManualAnswer($answer, (float) $score, $feedback !== null ? (string) $feedback : null);
+        }
+
+        if ($request->boolean('publish')) {
+            $this->assessments->publishResults($attempt->fresh(), $request->input('grader_feedback'));
+            return redirect()->route('admin.assessments.tests.attempts', $attempt->assessment_id)
+                ->with('success', 'Marks saved and results published to the student.');
+        }
+
+        return back()->with('success', 'Marks saved.');
+    }
+
+    public function publishAttempt($attemptId)
+    {
+        abort_unless($this->assessments->canManageAssessments(), 403);
+        $this->assessments->ensure();
+        $attempt = LmsAssessmentAttempt::findOrFail($attemptId);
+        $this->assessments->publishResults($attempt);
+
+        return back()->with('success', 'Results published.');
+    }
+
+    protected function rules(): array
+    {
+        return [
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'kind' => 'required|in:practice,mock,general,skill',
+            'course_id' => 'nullable|exists:courses,id',
+            'duration_minutes' => 'nullable|integer|min:1',
+            'pass_percent' => 'nullable|numeric|min:0|max:100',
+            'max_attempts' => 'nullable|integer|min:1',
+            'shuffle_questions' => 'nullable|boolean',
+            'results_mode' => 'required|in:instant_mcq,after_publish',
+            'status' => 'required|in:draft,published,disabled',
+            'question_ids' => 'nullable|array',
+            'question_ids.*' => 'exists:lms_questions,id',
+            'batch_ids' => 'nullable|array',
+            'batch_ids.*' => 'exists:class_batches,id',
+            'student_ids' => 'nullable|array',
+            'student_ids.*' => 'exists:users,id',
+            'available_from' => 'nullable|date',
+            'available_until' => 'nullable|date|after_or_equal:available_from',
+        ];
+    }
+
+    protected function fill(LmsAssessment $a, Request $request, bool $creating): void
+    {
+        $a->title = trim((string) $request->input('title'));
+        $a->description = trim((string) $request->input('description', '')) ?: null;
+        $a->kind = $request->input('kind');
+        $a->audience = $a->kind === LmsAssessment::KIND_SKILL
+            ? LmsAssessment::AUDIENCE_STAFF
+            : LmsAssessment::AUDIENCE_STUDENT;
+        $a->course_id = $request->input('course_id') ?: null;
+        $a->duration_minutes = $request->filled('duration_minutes') ? (int) $request->input('duration_minutes') : null;
+        $a->pass_percent = $request->filled('pass_percent') ? (float) $request->input('pass_percent') : null;
+        $a->max_attempts = $request->filled('max_attempts') ? (int) $request->input('max_attempts') : null;
+        $a->shuffle_questions = $request->boolean('shuffle_questions');
+        $a->results_mode = $request->input('results_mode', 'after_publish');
+        $a->status = $request->input('status', 'draft');
+        if ($a->status === 'published' && ! $a->published_at) {
+            $a->published_at = now();
+        }
+        if ($creating) {
+            if ($this->lms->isAdminActor()) {
+                $a->created_by_admin_id = Auth::guard('admin')->id();
+            } else {
+                $a->created_by_user_id = Auth::id();
+            }
+        }
+    }
+
+    protected function syncQuestions(LmsAssessment $a, Request $request): void
+    {
+        $ids = collect($request->input('question_ids', []))->map(fn ($id) => (int) $id)->filter()->unique()->values();
+        $sync = [];
+        foreach ($ids as $i => $qid) {
+            $sync[$qid] = ['sort_order' => $i];
+        }
+        $a->questions()->sync($sync);
+    }
+
+    protected function syncAssignments(LmsAssessment $a, Request $request): void
+    {
+        LmsAssessmentAssignment::query()->where('assessment_id', $a->id)->delete();
+
+        $from = $request->filled('available_from') ? $request->input('available_from') : null;
+        $until = $request->filled('available_until') ? $request->input('available_until') : null;
+        $byAdmin = $this->lms->isAdminActor() ? Auth::guard('admin')->id() : null;
+        $byUser = ! $byAdmin ? Auth::id() : null;
+
+        foreach ((array) $request->input('batch_ids', []) as $batchId) {
+            LmsAssessmentAssignment::create([
+                'assessment_id' => $a->id,
+                'class_batch_id' => (int) $batchId,
+                'available_from' => $from,
+                'available_until' => $until,
+                'assigned_by_admin_id' => $byAdmin,
+                'assigned_by_user_id' => $byUser,
+            ]);
+        }
+        foreach ((array) $request->input('student_ids', []) as $studentId) {
+            LmsAssessmentAssignment::create([
+                'assessment_id' => $a->id,
+                'student_id' => (int) $studentId,
+                'available_from' => $from,
+                'available_until' => $until,
+                'assigned_by_admin_id' => $byAdmin,
+                'assigned_by_user_id' => $byUser,
+            ]);
+        }
+    }
+
+    protected function formData(LmsAssessment $assessment): array
+    {
+        $questions = LmsQuestion::query()->where('status', 'active')->orderByDesc('id')->get(['id', 'type', 'stem', 'topic', 'max_marks']);
+        $batches = Schema::hasTable('class_batches')
+            ? ClassBatch::query()->orderByDesc('id')->get(['id', 'code', 'name'])
+            : collect();
+        $students = User::query()
+            ->whereHas('roles', fn ($q) => $q->where('name', 'student'))
+            ->orderBy('name')
+            ->limit(500)
+            ->get(['id', 'name', 'email']);
+
+        return [
+            'assessment' => $assessment,
+            'kinds' => collect(LmsAssessment::kinds())->when(
+                ! $this->assessments->canManageSkillTests(),
+                fn ($c) => $c->except(LmsAssessment::KIND_SKILL)
+            )->all(),
+            'courses' => $this->lms->coursesForActor(),
+            'questions' => $questions,
+            'batches' => $batches,
+            'students' => $students,
+            'selectedQuestionIds' => old('question_ids', $assessment->questions->pluck('id')->all()),
+            'selectedBatchIds' => old('batch_ids', $assessment->assignments->whereNotNull('class_batch_id')->pluck('class_batch_id')->all()),
+            'selectedStudentIds' => old('student_ids', $assessment->assignments->whereNotNull('student_id')->pluck('student_id')->all()),
+            'canSkill' => $this->assessments->canManageSkillTests(),
+        ];
+    }
+}

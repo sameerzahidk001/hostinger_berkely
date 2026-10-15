@@ -244,6 +244,27 @@
                </li>
                @endif
                @if(auth()->user()->roles()->where('name', 'instructor')->exists())
+               <li class="{{ request()->routeIs('user.assessments.*') || request()->is('admin/assessments*') ? 'active' : '' }}">
+                  <a href="javascript:void(0)">
+                     <i class="fa fa-pencil-square-o"></i>
+                     <span class="nav-label">Assessments</span>
+                     <span class="fa arrow"></span>
+                  </a>
+                  <ul class="nav nav-second-level">
+                     <li class="{{ request()->is('admin/assessments/questions*') ? 'active' : '' }}">
+                        <a href="{{ route('admin.assessments.questions.index') }}">Question Bank</a>
+                     </li>
+                     <li class="{{ request()->is('admin/assessments/tests*') ? 'active' : '' }}">
+                        <a href="{{ route('admin.assessments.tests.index') }}">Create / Assign</a>
+                     </li>
+                     <li class="{{ request()->routeIs('user.assessments.*') ? 'active' : '' }}">
+                        <a href="{{ route('user.assessments.index', ['section' => 'skill']) }}">My skill tests</a>
+                     </li>
+                     <li class="{{ request()->is('admin/assessments/reports*') ? 'active' : '' }}">
+                        <a href="{{ route('admin.assessments.reports.index') }}">Reports</a>
+                     </li>
+                  </ul>
+               </li>
                <li class="{{ request()->routeIs('user.rate-review.my-score') || request()->is('admin/rate-review*') ? 'active' : '' }}">
                   <a href="{{ route('user.rate-review.my-score') }}">
                      <i class="fa fa-star"></i>
@@ -257,6 +278,24 @@
                   </a>
                </li>
                @elseif(auth()->user()->roles()->where('name', 'student')->exists())
+               <li class="{{ request()->routeIs('user.assessments.*') ? 'active' : '' }}">
+                  <a href="javascript:void(0)">
+                     <i class="fa fa-pencil-square-o"></i>
+                     <span class="nav-label">Assessments</span>
+                     <span class="fa arrow"></span>
+                  </a>
+                  <ul class="nav nav-second-level">
+                     <li class="{{ request()->routeIs('user.assessments.mocks') ? 'active' : '' }}">
+                        <a href="{{ route('user.assessments.mocks') }}">Mock Exams</a>
+                     </li>
+                     <li class="{{ request()->get('section') === 'practice' ? 'active' : '' }}">
+                        <a href="{{ route('user.assessments.index', ['section' => 'practice']) }}">Practice / General</a>
+                     </li>
+                     <li class="{{ request()->routeIs('user.assessments.index') && !request()->routeIs('user.assessments.mocks') && request()->get('section', 'all') === 'all' ? 'active' : '' }}">
+                        <a href="{{ route('user.assessments.index') }}">All · Upcoming / Results</a>
+                     </li>
+                  </ul>
+               </li>
                <li class="{{ request()->routeIs('user.rate-review.*') ? 'active' : '' }}">
                   <a href="{{ route('user.rate-review.index') }}">
                      <i class="fa fa-star"></i>
