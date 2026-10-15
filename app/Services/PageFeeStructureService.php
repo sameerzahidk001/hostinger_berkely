@@ -135,6 +135,20 @@ class PageFeeStructureService
                 });
             }
 
+            if (Schema::hasTable('page_fee_packages') && ! Schema::hasColumn('page_fee_packages', 'invoice_terms_template_id')) {
+                Schema::table('page_fee_packages', function (Blueprint $table) {
+                    $table->unsignedBigInteger('invoice_terms_template_id')->nullable()->index();
+                });
+            }
+
+            if (Schema::hasTable('course_fees') && ! Schema::hasColumn('course_fees', 'invoice_terms_template_id')) {
+                Schema::table('course_fees', function (Blueprint $table) {
+                    $table->unsignedBigInteger('invoice_terms_template_id')->nullable()->index();
+                });
+            }
+
+            \App\Models\InvoiceTermsTemplate::ensureTable();
+
             return true;
         } catch (\Throwable $e) {
             Log::warning('fee package terms_conditions ensure failed: ' . $e->getMessage());

@@ -326,7 +326,7 @@
                   </li>
                   @endif
                   @if(admin_menu_allowed('settings'))
-                  <li class="{{ request()->is('admin/homepage/edit') || request()->is('admin/menu*') || request()->is('admin/site-settings*') || request()->is('admin/widget*') || request()->is('admin/header-setting*') || request()->is('admin/footer-setting*') || request()->is('admin/smtp-settings*') || request()->is('admin/email-templates*') ? 'active show' : '' }}">
+                  <li class="{{ request()->is('admin/homepage/edit') || request()->is('admin/menu*') || request()->is('admin/site-settings*') || request()->is('admin/widget*') || request()->is('admin/header-setting*') || request()->is('admin/footer-setting*') || request()->is('admin/smtp-settings*') || request()->is('admin/email-templates*') || request()->is('admin/invoice-terms-templates*') ? 'active show' : '' }}">
                      <a href="#"><i class="fa fa-address-card"></i> <span class="nav-label">Settings</span> <span class="fa arrow"></span></a>
                      <ul class="nav nav-second-level">
                         <li><a href="{{ route('menu.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Menu</span></a></li>
@@ -338,6 +338,7 @@
                         @if(admin_menu_allowed('emails'))
                         <li class="{{ request()->is('admin/email-templates*') ? 'active' : '' }}"><a href="{{ route('admin.emails.index') }}"><i class="fa fa-envelope"></i> <span class="nav-label">Email Templates</span></a></li>
                         @endif
+                        <li class="{{ request()->is('admin/invoice-terms-templates*') ? 'active' : '' }}"><a href="{{ route('admin.invoice-terms-templates.index') }}"><i class="fa fa-file-text-o"></i> <span class="nav-label">Invoice T&amp;C Templates</span></a></li>
                      </ul>
                   </li>
                   @endif

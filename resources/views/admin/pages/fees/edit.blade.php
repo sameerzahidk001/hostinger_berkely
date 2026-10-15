@@ -150,8 +150,16 @@
                             </div>
                             <div class="row" style="margin-top:8px;">
                                 <div class="col-md-12">
-                                    <label class="text-muted">Invoice Terms &amp; Conditions (for this package)</label>
-                                    <textarea class="form-control" name="terms_conditions" rows="4" placeholder="Payment instructions / T&amp;C shown on invoices for this package"></textarea>
+                                    <label class="text-muted">Invoice T&amp;C Template</label>
+                                    <select name="invoice_terms_template_id" class="form-control">
+                                        <option value="">— Select template —</option>
+                                        @foreach(($invoiceTermsTemplates ?? []) as $tpl)
+                                            <option value="{{ $tpl->id }}">{{ $tpl->name }}{{ $tpl->is_active ? '' : ' (inactive)' }}</option>
+                                        @endforeach
+                                    </select>
+                                    <p class="help-block m-b-none">
+                                        Manage in <a href="{{ route('admin.invoice-terms-templates.index') }}" target="_blank">Settings → Invoice T&amp;C Templates</a>
+                                    </p>
                                 </div>
                             </div>
                         </form>
@@ -193,8 +201,15 @@
                                     </div>
                                     <div class="row" style="margin-top:8px;">
                                         <div class="col-md-12">
-                                            <label class="text-muted">Invoice Terms &amp; Conditions (for this package)</label>
-                                            <textarea class="form-control" name="terms_conditions" rows="4" placeholder="Payment instructions / T&amp;C shown on invoices for this package">{{ $package->terms_conditions ?? '' }}</textarea>
+                                            <label class="text-muted">Invoice T&amp;C Template</label>
+                                            <select name="invoice_terms_template_id" class="form-control">
+                                                <option value="">— Select template —</option>
+                                                @foreach(($invoiceTermsTemplates ?? []) as $tpl)
+                                                    <option value="{{ $tpl->id }}" @selected((string) $package->invoice_terms_template_id === (string) $tpl->id)>
+                                                        {{ $tpl->name }}{{ $tpl->is_active ? '' : ' (inactive)' }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
                                         </div>
                                     </div>
                                 </form>

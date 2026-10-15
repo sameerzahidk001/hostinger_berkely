@@ -45,13 +45,16 @@ class PageFeeController extends Controller
 
     public function edit(string $pageId)
     {
+        $this->fees->ensureTermsConditionsColumn();
+        \App\Models\InvoiceTermsTemplate::ensureTable();
         $page = Page::findOrFail($pageId);
         $services = PageFeeService::with(['categories.packages'])
             ->where('page_id', $page->id)
             ->orderBy('sort_order')
             ->get();
+        $invoiceTermsTemplates = \App\Models\InvoiceTermsTemplate::optionsForSelect(false);
 
-        return view('admin.pages.fees.edit', compact('page', 'services'));
+        return view('admin.pages.fees.edit', compact('page', 'services', 'invoiceTermsTemplates'));
     }
 
     public function updateHeading(Request $request, string $pageId)
@@ -363,7 +366,7 @@ class PageFeeController extends Controller
             'short_description' => 'nullable|string|max:2000',
             'key_point' => 'nullable|string|max:2000',
             'package_includes' => 'nullable|string|max:5000',
-            'terms_conditions' => 'nullable|string|max:50000',
+            'invoice_terms_template_id' => 'nullable|integer|min:1',
             'priority' => 'nullable|integer|min:0',
             'installments' => 'nullable|integer|min:0',
             'showonwebsite' => 'nullable|in:0,1',
@@ -372,6 +375,7 @@ class PageFeeController extends Controller
 
         $includes = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', (string) ($data['package_includes'] ?? '')))));
         app(\App\Services\PageFeeStructureService::class)->ensureTermsConditionsColumn();
+        \App\Models\InvoiceTermsTemplate::ensureTable();
 
         $payload = [
             'package_name' => $data['package_name'],
@@ -388,8 +392,16 @@ class PageFeeController extends Controller
             'status' => (string) ($data['status'] ?? '1') === '1',
         ];
 
-        if (\Illuminate\Support\Facades\Schema::hasColumn('page_fee_packages', 'terms_conditions')) {
-            $payload['terms_conditions'] = $data['terms_conditions'] ?? null;
+        if (\Illuminate\Support\Facades\Schema::hasColumn('page_fee_packages', 'invoice_terms_template_id')) {
+            $payload['invoice_terms_template_id'] = $data['invoice_terms_template_id'] ?? null;
+            if (! empty($payload['invoice_terms_template_id'])) {
+                $body = \App\Models\InvoiceTermsTemplate::query()
+                    ->whereKey($payload['invoice_terms_template_id'])
+                    ->value('body');
+                if (\Illuminate\Support\Facades\Schema::hasColumn('page_fee_packages', 'terms_conditions')) {
+                    $payload['terms_conditions'] = $body;
+                }
+            }
         }
 
         return $payload;

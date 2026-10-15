@@ -77,7 +77,7 @@ class PaymentController extends Controller
             $query->where('name', 'student');
         })->orderByDesc('created_at')->get();
         $courses = Course::orderByDesc('created_at')->get();
-        $packages = CourseFee::with('course')
+        $packages = CourseFee::with(['course', 'invoiceTermsTemplate'])
             ->whereHas('course', function ($query) {
                 $query->where('status', 1);
             })
@@ -86,7 +86,7 @@ class PaymentController extends Controller
 
         $pageFeePackages = collect();
         if (Schema::hasTable('page_fee_packages')) {
-            $pageFeePackages = PageFeePackage::with(['category.service.page'])
+            $pageFeePackages = PageFeePackage::with(['category.service.page', 'invoiceTermsTemplate'])
                 ->where('status', true)
                 ->orderBy('package_name')
                 ->get();

@@ -188,7 +188,11 @@
                         <div class="row">
                             <div class="col-md-12" style="margin-bottom: 15px;">
                                 <label for="editor">Terms & Conditions</label>
-                                <p class="help-block m-b-xs">Loaded from the selected package when set; you can still edit for this invoice.</p>
+                                <p class="help-block m-b-xs">
+                                    Loaded from the package’s Invoice T&amp;C template
+                                    (<a href="{{ route('admin.invoice-terms-templates.index') }}" target="_blank">manage templates</a>).
+                                    You can still edit for this invoice.
+                                </p>
                                 <textarea class="form-control" id="editor"
                                     name="terms_conditions">{{ old('terms_conditions', App\Models\Payment::latest('id')->value('terms_conditions')) }}</textarea>
                             </div>
@@ -252,12 +256,12 @@
                         'currency' => $package->currency,
                         'name' => $package->package_name,
                         'label' => $package->package_name . ' (' . $package->currency . ')',
-                        'terms' => (string) ($package->terms_conditions ?? ''),
+                        'terms' => (string) $package->resolvedTermsHtml(),
                     ];
                 })->values();
                 $defaultTermsHtml = old('terms_conditions', \App\Models\Payment::latest('id')->value('terms_conditions') ?? '');
                 $pagePackageTermsForJs = collect($pageFeePackages ?? [])->mapWithKeys(function ($pkg) {
-                    return [(string) $pkg->id => (string) ($pkg->terms_conditions ?? '')];
+                    return [(string) $pkg->id => (string) $pkg->resolvedTermsHtml()];
                 });
             @endphp
             const allPackages = @json($invoicePackagesForJs);

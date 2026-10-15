@@ -19,6 +19,7 @@ class PageFeePackage extends Model
         'key_point',
         'package_includes',
         'terms_conditions',
+        'invoice_terms_template_id',
         'priority',
         'installments',
         'showonwebsite',
@@ -34,6 +35,22 @@ class PageFeePackage extends Model
     public function category()
     {
         return $this->belongsTo(PageFeeCategory::class, 'category_id');
+    }
+
+    public function invoiceTermsTemplate()
+    {
+        return $this->belongsTo(InvoiceTermsTemplate::class, 'invoice_terms_template_id');
+    }
+
+    /** Resolve T&C HTML for invoices: template body first, then legacy package text. */
+    public function resolvedTermsHtml(): string
+    {
+        $fromTemplate = trim((string) ($this->invoiceTermsTemplate?->body ?? ''));
+        if ($fromTemplate !== '') {
+            return $fromTemplate;
+        }
+
+        return (string) ($this->terms_conditions ?? '');
     }
 
     /** Alias so invoice/cart views can reuse course fee field names. */

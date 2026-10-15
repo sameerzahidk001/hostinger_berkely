@@ -396,6 +396,10 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
 
         Route::resource('roles-permissions', RolePermissionController::class)->names('admin.rolesPermissions');
         Route::resource('email-templates', EmailController::class)->names('admin.emails');
+        Route::resource('invoice-terms-templates', \App\Http\Controllers\Admin\InvoiceTermsTemplateController::class)
+            ->except(['show'])
+            ->names('admin.invoice-terms-templates');
+
         Route::resource('clients', ClientController::class)->names('admin.clients');
 
         Route::prefix('user')->group(function () {
