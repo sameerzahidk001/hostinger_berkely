@@ -46,7 +46,12 @@ class LmsAssessmentController extends Controller
         }
         if ($search !== '') {
             $like = '%' . addcslashes($search, '%_\\') . '%';
-            $query->where('title', 'like', $like);
+            $query->where(function ($q) use ($search, $like) {
+                $q->where('title', 'like', $like);
+                if (ctype_digit($search)) {
+                    $q->orWhere('id', (int) $search);
+                }
+            });
         }
 
         return view('admin.assessments.tests.index', [

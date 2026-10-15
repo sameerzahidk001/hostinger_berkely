@@ -35,11 +35,11 @@
             </div>
             <div class="col-md-12 form-group">
                 <label>Question stem * <span class="lms-char-hint">(max 10,000 characters)</span></label>
-                <textarea name="{{ $prefix }}[stem]" class="form-control text-editor" rows="4" data-max="10000" data-height="160" data-rich="1">{{ $stem }}</textarea>
+                <textarea name="{{ $prefix }}[stem]" class="form-control lms-text-editor" rows="4" data-max="10000" data-height="160" data-rich="1">{{ $stem }}</textarea>
             </div>
             <div class="col-md-12 form-group">
                 <label>Explanation / model answer notes <span class="lms-char-hint">(max 10,000 characters)</span></label>
-                <textarea name="{{ $prefix }}[explanation]" class="form-control text-editor" rows="3" data-max="10000" data-height="120" data-rich="1">{{ $explanation }}</textarea>
+                <textarea name="{{ $prefix }}[explanation]" class="form-control lms-text-editor" rows="3" data-max="10000" data-height="120" data-rich="1">{{ $explanation }}</textarea>
             </div>
         </div>
         <div class="js-mcq-options" style="{{ $type === 'mcq' ? '' : 'display:none;' }}">

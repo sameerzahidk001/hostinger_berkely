@@ -11,11 +11,11 @@
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
         @if(!empty($canCreate))
-            <a href="{{ route('admin.assessments.tests.create', ['kind' => 'practice']) }}" class="btn btn-primary btn-sm">Practice</a>
-            <a href="{{ route('admin.assessments.tests.create', ['kind' => 'mock']) }}" class="btn btn-primary btn-sm">Mock</a>
-            <a href="{{ route('admin.assessments.tests.create', ['kind' => 'general']) }}" class="btn btn-default btn-sm">General</a>
+            <a href="{{ route('admin.assessments.tests.create', ['kind' => 'practice']) }}" class="btn btn-primary btn-sm">Create New Practice Test</a>
+            <a href="{{ route('admin.assessments.tests.create', ['kind' => 'mock']) }}" class="btn btn-primary btn-sm">Create New Mock Test</a>
+            <a href="{{ route('admin.assessments.tests.create', ['kind' => 'general']) }}" class="btn btn-default btn-sm">Create New General Test</a>
             @if(!empty($canSkill))
-                <a href="{{ route('admin.assessments.tests.create', ['kind' => 'skill']) }}" class="btn btn-warning btn-sm">Skill test</a>
+                <a href="{{ route('admin.assessments.tests.create', ['kind' => 'skill']) }}" class="btn btn-warning btn-sm">Create New Skill Test</a>
             @endif
         @endif
     </div>
@@ -34,7 +34,7 @@
                     </select>
                 </div>
                 <div class="col-sm-5">
-                    <input type="text" name="search" class="form-control" value="{{ $search }}" placeholder="Search title">
+                    <input type="text" name="search" class="form-control" value="{{ $search }}" placeholder="Search ID / title">
                 </div>
                 <div class="col-sm-4">
                     <button class="btn btn-primary" type="submit">Filter</button>
