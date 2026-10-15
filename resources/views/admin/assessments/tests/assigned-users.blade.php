@@ -8,6 +8,17 @@
     .lms-status-completed { color: #f59e0b; font-weight: 700; }
     .lms-status-marked { color: #1ab394; font-weight: 700; }
     .lms-status-in_progress { color: #f0ad4e; font-weight: 700; }
+    .lms-assigned-table { min-width: 1400px; width: 100%; margin-bottom: 0; }
+    .lms-assigned-table > thead > tr > th,
+    .lms-assigned-table > tbody > tr > td {
+        vertical-align: middle;
+        padding: 10px 12px;
+        white-space: nowrap;
+    }
+    .lms-assigned-table .col-test { min-width: 180px; max-width: 240px; white-space: normal; }
+    .lms-assigned-table .col-scope { min-width: 160px; max-width: 220px; white-space: normal; }
+    .lms-assigned-table .col-assessor { min-width: 130px; max-width: 180px; white-space: normal; }
+    .lms-assigned-table .col-status { min-width: 120px; white-space: normal; }
 </style>
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">
@@ -36,20 +47,20 @@
                 </div>
             </div>
         </form>
-        <table class="table table-striped table-bordered">
+        <table class="table table-striped table-bordered lms-assigned-table">
             <thead>
                 <tr>
                     <th>Date</th>
                     <th>Test ID</th>
-                    <th>Test</th>
-                    <th>Assigned to</th>
-                    <th>Assessor</th>
+                    <th class="col-test">Test</th>
+                    <th class="col-scope">Assigned to</th>
+                    <th class="col-assessor">Assessor</th>
                     <th>Available from</th>
                     <th>Available until</th>
                     <th>Start time</th>
                     <th>End time</th>
                     <th>Spend duration</th>
-                    <th>Status</th>
+                    <th class="col-status">Status</th>
                     <th></th>
                 </tr>
             </thead>
@@ -80,9 +91,9 @@
                     <tr>
                         <td>{{ optional($row->created_at)->format('d/m/Y H:i') ?? '—' }}</td>
                         <td>{{ $row->assessment?->displayCode() ?? ('BST'.$row->assessment_id) }}</td>
-                        <td>{{ $row->assessment->title ?? '—' }}</td>
-                        <td>{{ $row->scopeLabel() }}</td>
-                        <td>
+                        <td class="col-test">{{ $row->assessment->title ?? '—' }}</td>
+                        <td class="col-scope">{{ $row->scopeLabel() }}</td>
+                        <td class="col-assessor">
                             @if($row->marker)
                                 {{ $row->marker->name }}
                             @elseif($att)
@@ -96,7 +107,7 @@
                         <td>{{ optional($att?->started_at)->format('H:i') ?? '—' }}</td>
                         <td>{{ optional($att?->submitted_at)->format('H:i') ?? '—' }}</td>
                         <td>{{ $spend !== null ? $spend . ' min' : '—' }}</td>
-                        <td><span class="{{ $winClass }}">{{ $winLabel }}</span></td>
+                        <td class="col-status"><span class="{{ $winClass }}">{{ $winLabel }}</span></td>
                         <td style="white-space:nowrap;">
                             @if($row->assessment_id)
                                 @unless($cannotReassign)

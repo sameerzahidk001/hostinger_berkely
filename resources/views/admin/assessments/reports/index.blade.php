@@ -10,6 +10,22 @@
     .lms-status-missed { color: #ed5565; font-weight: 700; }
     .lms-pub-yes { color: #1ab394; font-weight: 700; }
     .lms-pub-no { color: inherit; font-weight: 600; }
+    .lms-results-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .lms-results-table { min-width: 1680px; table-layout: auto; width: 100%; margin-bottom: 0; }
+    .lms-results-table > thead > tr > th,
+    .lms-results-table > tbody > tr > td {
+        vertical-align: middle;
+        padding: 10px 12px;
+        white-space: nowrap;
+    }
+    .lms-results-table .col-test { min-width: 200px; max-width: 260px; white-space: normal; }
+    .lms-results-table .col-taker { min-width: 180px; max-width: 240px; white-space: normal; }
+    .lms-results-table .col-course { min-width: 160px; max-width: 220px; white-space: normal; }
+    .lms-results-table .col-assessor { min-width: 130px; max-width: 180px; white-space: normal; }
+    .lms-results-table .col-status { min-width: 140px; white-space: normal; }
+    .lms-results-table .col-score { min-width: 150px; }
+    .lms-results-table .col-actions { min-width: 210px; white-space: nowrap; }
+    .lms-results-table .col-actions .btn { margin: 0 2px 2px 0; }
 </style>
 @php
     $fmtDuration = function ($minutes) {
@@ -98,24 +114,24 @@
                 @endif
             </h5>
         </div>
-        <div class="ibox-content table-responsive">
-            <table class="table table-striped table-bordered">
+        <div class="ibox-content lms-results-wrap">
+            <table class="table table-striped table-bordered lms-results-table">
                 <thead>
                     <tr>
                         <th>Date</th>
-                        <th>Test</th>
-                        <th>Test Taker</th>
-                        <th>Course</th>
+                        <th class="col-test">Test</th>
+                        <th class="col-taker">Test Taker</th>
+                        <th class="col-course">Course</th>
                         <th>Test date</th>
                         <th>Start time</th>
                         <th>End time</th>
                         <th>Duration given</th>
                         <th>Spend duration</th>
-                        <th>Assessor</th>
-                        <th>Status</th>
-                        <th>Score</th>
+                        <th class="col-assessor">Assessor</th>
+                        <th class="col-status">Status</th>
+                        <th class="col-score">Score</th>
                         <th>Published</th>
-                        <th>Action</th>
+                        <th class="col-actions">Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -149,23 +165,23 @@
                         @endphp
                         <tr>
                             <td>{{ $dateText }}</td>
-                            <td>
+                            <td class="col-test">
                                 {{ $assessment->title ?? '—' }}
                                 <br><small class="text-muted">{{ $assessment->displayCode() }} · {{ $assessment->kindLabel() }}</small>
                             </td>
-                            <td>
+                            <td class="col-taker">
                                 {{ $row['student']->name ?? '—' }}
                                 <br><small class="text-muted">{{ $row['student']->email ?? '' }}</small>
                             </td>
-                            <td>{{ $assessment->course->title ?? '—' }}</td>
+                            <td class="col-course">{{ $assessment->course->title ?? '—' }}</td>
                             <td>{{ $testDate }}</td>
                             <td>{{ $startTime }}</td>
                             <td>{{ $endTime }}</td>
                             <td>{{ $durationGiven }}</td>
                             <td>{{ $durationTaken }}</td>
-                            <td>{{ $attempt ? $attempt->assessorLabel($assignment) : ($assignment->marker->name ?? '—') }}</td>
-                            <td><span class="{{ $statusClass }}">{{ $statusText }}</span></td>
-                            <td>
+                            <td class="col-assessor">{{ $attempt ? $attempt->assessorLabel($assignment) : ($assignment->marker->name ?? '—') }}</td>
+                            <td class="col-status"><span class="{{ $statusClass }}">{{ $statusText }}</span></td>
+                            <td class="col-score">
                                 @if($attempt && $attempt->score_raw !== null)
                                     {{ number_format((float) $attempt->score_raw, 2) }} / {{ number_format((float) $attempt->score_max, 2) }}
                                     @if($attempt->percent() !== null) ({{ number_format((float) $attempt->percent(), 2) }}%) @endif
@@ -180,11 +196,11 @@
                                     <span class="lms-pub-no">No</span>
                                 @endif
                             </td>
-                            <td style="white-space:nowrap;">
+                            <td class="col-actions">
                                 @if($attempt && in_array($attempt->status, ['submitted', 'graded', 'expired'], true))
                                     <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.mark', $attempt->id) }}">View</a>
                                     <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.mark', $attempt->id) }}">Update</a>
-                                    <a class="btn btn-xs btn-success" href="{{ route('admin.assessments.tests.attempt-pdf', $attempt->id) }}" target="_blank"><i class="fa fa-file-pdf-o"></i> Download PDF</a>
+                                    <a class="btn btn-xs btn-success" href="{{ route('admin.assessments.tests.attempt-pdf', $attempt->id) }}" target="_blank" title="Download PDF"><i class="fa fa-file-pdf-o"></i> PDF</a>
                                     @unless($attempt->results_published)
                                         <form action="{{ route('admin.assessments.tests.publish-attempt', $attempt->id) }}" method="POST" style="display:inline;">
                                             @csrf
