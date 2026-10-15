@@ -12,7 +12,7 @@
     <div class="col-lg-4 text-right" style="padding-top:20px;">
         @if(!empty($canCreate))
             <a href="{{ route('admin.assessments.tests.create', ['kind' => 'practice']) }}" class="btn btn-primary btn-sm">Create New Practice Test</a>
-            <a href="{{ route('admin.assessments.tests.create', ['kind' => 'mock']) }}" class="btn btn-primary btn-sm">Create New Mock Test</a>
+            <a href="{{ route('admin.assessments.tests.create', ['kind' => 'mock']) }}" class="btn btn-info btn-sm">Create New Mock Test</a>
             <a href="{{ route('admin.assessments.tests.create', ['kind' => 'general']) }}" class="btn btn-default btn-sm">Create New General Test</a>
             @if(!empty($canSkill))
                 <a href="{{ route('admin.assessments.tests.create', ['kind' => 'skill']) }}" class="btn btn-warning btn-sm">Create New Skill Test</a>
