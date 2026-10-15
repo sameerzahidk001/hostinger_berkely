@@ -450,6 +450,9 @@ class ZohoCrmSyncService
         return $done;
     }
 
+    /**
+     * Backfill Active / Partial / Paid invoices and their paid receipts.
+     */
     public function backfill(?string $since = null, int $limit = 200): int
     {
         if (! $this->oauth->isEnabled()) {
@@ -457,7 +460,17 @@ class ZohoCrmSyncService
         }
 
         $this->ensureSchema();
-        $query = Payment::query()->orderBy('id');
+        $query = Payment::query()
+            ->with(['installments', 'user', 'course', 'courseFee', 'page', 'pageFeePackage'])
+            ->where(function ($q) {
+                // Active invoices on LMS, plus any with payment activity (Partial/Paid).
+                $q->where('status', 'Active')
+                    ->orWhereHas('installments', function ($iq) {
+                        $iq->where('paid_amount', '>', 0)->orWhere('status', 'paid');
+                    });
+            })
+            ->orderBy('id');
+
         if ($since) {
             $query->where('created_at', '>=', $since);
         }

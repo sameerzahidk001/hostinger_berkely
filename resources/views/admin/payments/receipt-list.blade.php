@@ -116,6 +116,7 @@
                                     <th>Receipt No</th>
                                     <th>Paid Amount</th>
                                     <th>Paid Date</th>
+                                    <th>CRM Sync</th>
                                     <th>Action</th>
                                 </tr>
                             </thead>
@@ -145,8 +146,25 @@
                                         N/A
                                         @endif
                                     </td>
+                                    <td data-export="{{ $installment->zoho_crm_sync_status ?? 'not synced' }}">
+                                        @php $rcCrm = $installment->zoho_crm_sync_status ?? null; @endphp
+                                        @if($rcCrm === 'synced')
+                                            <span class="label label-primary">synced</span>
+                                        @elseif($rcCrm === 'failed')
+                                            <span class="label label-danger" title="{{ $installment->zoho_crm_last_error }}">failed</span>
+                                        @else
+                                            <span class="label label-default">not synced</span>
+                                        @endif
+                                        @if(!empty($installment->zoho_crm_synced_at))
+                                            <div class="text-muted" style="font-size:11px;margin-top:2px;">{{ \Carbon\Carbon::parse($installment->zoho_crm_synced_at)->format('Y/m/d H:i') }}</div>
+                                        @endif
+                                    </td>
 
                                     <td>
+                                        <form action="{{ route('admin.installments.push-crm', $installment->id) }}" method="POST" style="display:inline-block;margin-right:4px;margin-bottom:4px;">
+                                            @csrf
+                                            <button type="submit" class="btn btn-info btn-sm" title="Push receipt to Zoho CRM"><i class="fa fa-cloud-upload"></i> Push CRM</button>
+                                        </form>
                                         @if ($installment->payment_method)
                                         <button class="btn btn-success btn-sm edit-bank-transfer-modal" style="margin-right: 4px; margin-bottom: 4px;"
                                             data-id="{{ $installment->id }}"

@@ -117,6 +117,7 @@
                                     <th>Paid Amount</th>
                                     <th>Payment Status</th>
                                     <th>Status</th>
+                                    <th>CRM Sync</th>
                                     <th>Action</th>
                                 </tr>
                             </thead>
@@ -167,8 +168,25 @@
                                             <span class="slider round"></span>
                                         </label>
                                     </td>
+                                    <td data-export="{{ $payment->zoho_crm_sync_status ?? 'not synced' }}">
+                                        @php $crmStatus = $payment->zoho_crm_sync_status ?? null; @endphp
+                                        @if($crmStatus === 'synced' || $crmStatus === 'cancelled')
+                                            <span class="label label-primary">{{ $crmStatus }}</span>
+                                        @elseif($crmStatus === 'failed')
+                                            <span class="label label-danger" title="{{ $payment->zoho_crm_last_error }}">failed</span>
+                                        @else
+                                            <span class="label label-default">not synced</span>
+                                        @endif
+                                        @if(!empty($payment->zoho_crm_synced_at))
+                                            <div class="text-muted" style="font-size:11px;margin-top:2px;">{{ \Carbon\Carbon::parse($payment->zoho_crm_synced_at)->format('Y/m/d H:i') }}</div>
+                                        @endif
+                                    </td>
                                     <td>
                                         <a class="btn btn-primary btn-sm" href="{{ route('admin.payments.edit', $payment->id) }}"><i class="fa fa-edit"></i> Edit</a>
+                                        <form action="{{ route('admin.payments.push-crm', $payment->id) }}" method="POST" style="display:inline-block;">
+                                            @csrf
+                                            <button type="submit" class="btn btn-info btn-sm" title="Push invoice to Zoho CRM"><i class="fa fa-cloud-upload"></i> Push CRM</button>
+                                        </form>
                                         <form action="{{ route('admin.payments.destroy', $payment->id) }}" method="POST" style="display: inline-block;" onsubmit="return confirm('Are you sure you want to delete this payment?');">
                                             @csrf
                                             @method('DELETE')
