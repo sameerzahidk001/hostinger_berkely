@@ -182,8 +182,7 @@
                         <td class="col-dur">{{ $a->duration_minutes ? $a->duration_minutes.' min' : '—' }}</td>
                         <td class="col-window">
                             @if($asg)
-                                {{ optional($asg->available_from)->format('d/m/y H:i') ?? 'Open' }}
-                                <br><span class="text-muted">→ {{ optional($asg->available_until)->format('d/m/y H:i') ?? 'No end' }}</span>
+                                {{ $asg->appointmentWindowLabel() }}
                             @else
                                 —
                             @endif

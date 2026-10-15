@@ -55,12 +55,13 @@
                     </select>
                 </div>
                 <div class="col-md-3 form-group">
-                    <label>Available from</label>
+                    <label>Exam Appointment Start</label>
                     <input type="datetime-local" name="available_from" class="form-control" value="{{ old('available_from', optional($assessment->assignments->first()?->available_from)->format('Y-m-d\TH:i')) }}">
-                </div>
-                <div class="col-md-3 form-group">
-                    <label>Available until</label>
-                    <input type="datetime-local" name="available_until" class="form-control" value="{{ old('available_until', optional($assessment->assignments->first()?->available_until)->format('Y-m-d\TH:i')) }}">
+                    <p class="help-block" style="margin-bottom:0;font-size:11px;">
+                        Window ends at start + exam duration
+                        ({{ $assessment->duration_minutes ? $assessment->duration_minutes . ' min' : 'set duration on the test' }}).
+                        Student may start anytime inside that window.
+                    </p>
                 </div>
             </div>
             <button type="submit" class="btn btn-primary">Save assignments</button>

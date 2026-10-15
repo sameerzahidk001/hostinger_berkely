@@ -170,17 +170,7 @@
                                 ? (optional($attempt->submitted_at ?: $attempt->updated_at)->format('d/m/y H:i') ?? '—')
                                 : (optional($assignment->created_at)->format('d/m/y H:i') ?? '—');
                             $spend = $attempt?->spendMinutes();
-                            $from = optional($assignment->available_from)->format('d/m/y H:i');
-                            $until = optional($assignment->available_until)->format('d/m/y H:i');
-                            if ($from && $until) {
-                                $appointment = $from . ' → ' . $until;
-                            } elseif ($from) {
-                                $appointment = $from;
-                            } elseif ($until) {
-                                $appointment = 'Until ' . $until;
-                            } else {
-                                $appointment = '—';
-                            }
+                            $appointment = $assignment->appointmentWindowLabel();
                         @endphp
                         <tr>
                             <td class="col-date">{{ $dateText }}</td>

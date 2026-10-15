@@ -124,6 +124,7 @@ class LmsAssessmentService
 
                 return false;
             })->values();
+            $matches->each(fn (LmsAssessmentAssignment $a) => $a->setRelation('assessment', $assessment));
             $assignment = $matches->first(fn (LmsAssessmentAssignment $a) => $a->isAvailableNow())
                 ?? $matches->first(fn (LmsAssessmentAssignment $a) => $a->isNotYetOpen())
                 ?? $matches->first();
