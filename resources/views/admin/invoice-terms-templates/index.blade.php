@@ -20,7 +20,8 @@
         <div class="ibox-content">
             <p class="text-muted m-b-md">
                 Admin / Accountant create templates here (IDs <strong>PAYTC1</strong>, <strong>PAYTC2</strong>, …).
-                Select one on each fee package. New invoices use that package’s template automatically (no T&amp;C editor on Create Invoice).
+                Select one on each fee package (or use <strong>Apply to all</strong> to link this template to every fee package and refresh T&amp;C text on all existing invoices).
+                New invoices load the package’s template automatically (no T&amp;C editor on Create Invoice).
             </p>
             <div class="table-responsive">
                 <table class="table table-striped table-bordered">

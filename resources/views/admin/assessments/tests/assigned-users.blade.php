@@ -8,17 +8,33 @@
     .lms-status-completed { color: #f59e0b; font-weight: 700; }
     .lms-status-marked { color: #1ab394; font-weight: 700; }
     .lms-status-in_progress { color: #f0ad4e; font-weight: 700; }
-    .lms-assigned-table { min-width: 1400px; width: 100%; margin-bottom: 0; }
+    .lms-assigned-wrap { overflow-x: hidden; }
+    .lms-assigned-table {
+        width: 100%;
+        max-width: 100%;
+        table-layout: fixed;
+        margin-bottom: 0;
+    }
     .lms-assigned-table > thead > tr > th,
     .lms-assigned-table > tbody > tr > td {
         vertical-align: middle;
-        padding: 10px 12px;
-        white-space: nowrap;
+        padding: 6px 6px;
+        font-size: 12px;
+        word-wrap: break-word;
+        overflow-wrap: anywhere;
+        white-space: normal;
     }
-    .lms-assigned-table .col-test { min-width: 180px; max-width: 240px; white-space: normal; }
-    .lms-assigned-table .col-scope { min-width: 160px; max-width: 220px; white-space: normal; }
-    .lms-assigned-table .col-assessor { min-width: 130px; max-width: 180px; white-space: normal; }
-    .lms-assigned-table .col-status { min-width: 120px; white-space: normal; }
+    .lms-assigned-table .col-date { width: 7%; }
+    .lms-assigned-table .col-id { width: 5%; }
+    .lms-assigned-table .col-test { width: 16%; }
+    .lms-assigned-table .col-scope { width: 12%; }
+    .lms-assigned-table .col-assessor { width: 10%; }
+    .lms-assigned-table .col-window { width: 14%; }
+    .lms-assigned-table .col-time { width: 5%; text-align: center; }
+    .lms-assigned-table .col-spend { width: 6%; text-align: center; }
+    .lms-assigned-table .col-status { width: 10%; }
+    .lms-assigned-table .col-action { width: 10%; white-space: nowrap; }
+    .lms-assigned-table .col-action .btn { margin: 1px 0; }
 </style>
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">
@@ -35,7 +51,7 @@
 </div>
 <div class="wrapper wrapper-content">
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
-    <div class="ibox"><div class="ibox-content table-responsive">
+    <div class="ibox"><div class="ibox-content lms-assigned-wrap">
         <form method="GET" class="m-b-md" style="margin-bottom:15px;">
             <div class="row">
                 <div class="col-sm-6">
@@ -50,18 +66,17 @@
         <table class="table table-striped table-bordered lms-assigned-table">
             <thead>
                 <tr>
-                    <th>Date</th>
-                    <th>Test ID</th>
+                    <th class="col-date">Date</th>
+                    <th class="col-id">Test ID</th>
                     <th class="col-test">Test</th>
                     <th class="col-scope">Assigned to</th>
                     <th class="col-assessor">Assessor</th>
-                    <th>Available from</th>
-                    <th>Available until</th>
-                    <th>Start time</th>
-                    <th>End time</th>
-                    <th>Spend duration</th>
+                    <th class="col-window">Available</th>
+                    <th class="col-time">Start</th>
+                    <th class="col-time">End</th>
+                    <th class="col-spend">Spend</th>
                     <th class="col-status">Status</th>
-                    <th></th>
+                    <th class="col-action"></th>
                 </tr>
             </thead>
             <tbody>
@@ -89,8 +104,8 @@
                         $spend = $att?->spendMinutes();
                     @endphp
                     <tr>
-                        <td>{{ optional($row->created_at)->format('d/m/Y H:i') ?? '—' }}</td>
-                        <td>{{ $row->assessment?->displayCode() ?? ('BST'.$row->assessment_id) }}</td>
+                        <td class="col-date">{{ optional($row->created_at)->format('d/m/y H:i') ?? '—' }}</td>
+                        <td class="col-id">{{ $row->assessment?->displayCode() ?? ('BST'.$row->assessment_id) }}</td>
                         <td class="col-test">{{ $row->assessment->title ?? '—' }}</td>
                         <td class="col-scope">{{ $row->scopeLabel() }}</td>
                         <td class="col-assessor">
@@ -102,25 +117,27 @@
                                 <span class="text-muted">Admin / course instructors</span>
                             @endif
                         </td>
-                        <td>{{ optional($row->available_from)->format('d/m/Y H:i') ?? '—' }}</td>
-                        <td>{{ optional($row->available_until)->format('d/m/Y H:i') ?? '—' }}</td>
-                        <td>{{ optional($att?->started_at)->format('H:i') ?? '—' }}</td>
-                        <td>{{ optional($att?->submitted_at)->format('H:i') ?? '—' }}</td>
-                        <td>{{ $spend !== null ? $spend . ' min' : '—' }}</td>
+                        <td class="col-window">
+                            {{ optional($row->available_from)->format('d/m/y H:i') ?? '—' }}
+                            <br><span class="text-muted">→ {{ optional($row->available_until)->format('d/m/y H:i') ?? '—' }}</span>
+                        </td>
+                        <td class="col-time">{{ optional($att?->started_at)->format('H:i') ?? '—' }}</td>
+                        <td class="col-time">{{ optional($att?->submitted_at)->format('H:i') ?? '—' }}</td>
+                        <td class="col-spend">{{ $spend !== null ? $spend . ' min' : '—' }}</td>
                         <td class="col-status"><span class="{{ $winClass }}">{{ $winLabel }}</span></td>
-                        <td style="white-space:nowrap;">
+                        <td class="col-action">
                             @if($row->assessment_id)
                                 @unless($cannotReassign)
                                     <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.assign', $row->assessment_id) }}">Re-assign</a>
                                 @else
                                     <span class="text-muted" title="Cannot re-assign after Missed / Completed / Marked">—</span>
                                 @endunless
-                                <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.attempts', $row->assessment_id) }}">Attempts</a>
+                                <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.attempts', $row->assessment_id) }}">View</a>
                             @endif
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="12" class="text-center">No assignments yet.</td></tr>
+                    <tr><td colspan="11" class="text-center">No assignments yet.</td></tr>
                 @endforelse
             </tbody>
         </table>
