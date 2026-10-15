@@ -396,6 +396,8 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
 
         Route::resource('roles-permissions', RolePermissionController::class)->names('admin.rolesPermissions');
         Route::resource('email-templates', EmailController::class)->names('admin.emails');
+        Route::post('invoice-terms-templates/{id}/apply-all', [\App\Http\Controllers\Admin\InvoiceTermsTemplateController::class, 'applyToAll'])
+            ->name('admin.invoice-terms-templates.apply-all');
         Route::resource('invoice-terms-templates', \App\Http\Controllers\Admin\InvoiceTermsTemplateController::class)
             ->except(['show'])
             ->names('admin.invoice-terms-templates');

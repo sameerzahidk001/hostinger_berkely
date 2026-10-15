@@ -1,15 +1,16 @@
 <?php
 namespace App\Models;
 
+use App\Traits\TracksAudit;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Schema;
-use App\Models\CourseFee;
-use App\Models\PageFeePackage;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Log;
 
 class Payment extends Model
 {
-    use HasFactory;
+    use HasFactory, TracksAudit;
 
     protected $fillable = [
         'user_id',
@@ -26,7 +27,30 @@ class Payment extends Model
         'package_id',
         'terms_conditions',
         'total_installment',
+        'created_by',
+        'updated_by',
     ];
+
+    public static function ensureAuditColumns(): void
+    {
+        try {
+            if (! Schema::hasTable('payments')) {
+                return;
+            }
+            if (! Schema::hasColumn('payments', 'created_by')) {
+                Schema::table('payments', function (Blueprint $table) {
+                    $table->unsignedBigInteger('created_by')->nullable()->index();
+                });
+            }
+            if (! Schema::hasColumn('payments', 'updated_by')) {
+                Schema::table('payments', function (Blueprint $table) {
+                    $table->unsignedBigInteger('updated_by')->nullable()->index();
+                });
+            }
+        } catch (\Throwable $e) {
+            Log::warning('payments audit columns ensure failed: ' . $e->getMessage());
+        }
+    }
 
     public function user()
     {

@@ -20,7 +20,7 @@
         <div class="ibox-content">
             <p class="text-muted m-b-md">
                 Admin / Accountant create templates here (IDs <strong>PAYTC1</strong>, <strong>PAYTC2</strong>, …).
-                Select one on each fee package. New invoices load that package’s template. Existing invoices stay unchanged until you give a template ID to apply.
+                Select one on each fee package. New invoices use that package’s template automatically (no T&amp;C editor on Create Invoice).
             </p>
             <div class="table-responsive">
                 <table class="table table-striped table-bordered">
@@ -29,7 +29,8 @@
                             <th>ID</th>
                             <th>Name</th>
                             <th>Status</th>
-                            <th style="width:160px;">Action</th>
+                            @include('admin.layout.partials.audit-columns-head')
+                            <th style="width:220px;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -44,17 +45,22 @@
                                         <span class="text-muted">Inactive</span>
                                     @endif
                                 </td>
+                                @include('admin.layout.partials.audit-columns-cells', ['model' => $row])
                                 <td>
                                     <a href="{{ route('admin.invoice-terms-templates.edit', $row->id) }}" class="btn btn-xs btn-primary"><i class="fa fa-pencil"></i> Edit</a>
+                                    <form action="{{ route('admin.invoice-terms-templates.apply-all', $row->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Link {{ $row->displayCode() }} to ALL fee packages and update ALL existing invoices T&amp;C?');">
+                                        @csrf
+                                        <button type="submit" class="btn btn-xs btn-warning" title="Link to all packages &amp; invoices">Apply to all</button>
+                                    </form>
                                     <form action="{{ route('admin.invoice-terms-templates.destroy', $row->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete {{ $row->displayCode() }}?');">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="btn btn-xs btn-danger"><i class="fa fa-trash"></i> Delete</button>
+                                        <button type="submit" class="btn btn-xs btn-danger"><i class="fa fa-trash"></i></button>
                                     </form>
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="4" class="text-center text-muted">No templates yet. Create PAYTC1 first (e.g. UK bank payment instructions).</td></tr>
+                            <tr><td colspan="8" class="text-center text-muted">No templates yet. Create PAYTC1 first.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

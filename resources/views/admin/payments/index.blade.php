@@ -118,6 +118,7 @@
                                     <th>Payment Status</th>
                                     <th>Status</th>
                                     <th>CRM Sync</th>
+                                    @include('admin.layout.partials.audit-columns-head')
                                     <th>Action</th>
                                 </tr>
                             </thead>
@@ -181,6 +182,7 @@
                                             <div class="text-muted" style="font-size:11px;margin-top:2px;">{{ \Carbon\Carbon::parse($payment->zoho_crm_synced_at)->format('Y/m/d H:i') }}</div>
                                         @endif
                                     </td>
+                                    @include('admin.layout.partials.audit-columns-cells', ['model' => $payment])
                                     <td>
                                         <a class="btn btn-primary btn-sm" href="{{ route('admin.payments.edit', $payment->id) }}"><i class="fa fa-edit"></i> Edit</a>
                                         <form action="{{ route('admin.payments.push-crm', $payment->id) }}" method="POST" style="display:inline-block;">
