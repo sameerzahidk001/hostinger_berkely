@@ -63,17 +63,47 @@ class InvoiceTermsTemplate extends Model
                     $table->unsignedBigInteger('invoice_terms_template_id')->nullable()->index();
                 });
             }
+
+            // One-time: link PAYTC1 (first template) to packages + refresh invoice T&C.
+            // No admin "Apply to all" button — done automatically when PAYTC1 exists.
+            self::ensureDefaultLinkedOnce();
         } catch (\Throwable $e) {
             Log::warning('invoice_terms_templates ensure failed: ' . $e->getMessage());
         }
     }
 
     /**
-     * Assign this template to all fee packages and refresh invoice T&C text.
-     *
-     * @return array{packages:int, invoices:int}
+     * Once PAYTC1 exists: assign it to all fee packages and refresh existing invoice T&C.
+     * Later only fills packages that still have no template selected.
      */
-    public function linkToAllPackagesAndInvoices(): array
+    public static function ensureDefaultLinkedOnce(): void
+    {
+        try {
+            if (! Schema::hasTable('invoice_terms_templates')) {
+                return;
+            }
+
+            $template = static::query()->orderBy('id')->first();
+            if (! $template) {
+                return;
+            }
+
+            $cacheKey = 'invoice_tnc_default_linked_v1';
+            if (! cache()->get($cacheKey)) {
+                $template->assignToAllPackagesAndRefreshInvoices();
+                cache()->forever($cacheKey, (int) $template->id);
+
+                return;
+            }
+
+            self::assignDefaultToUnlinkedPackages($template);
+        } catch (\Throwable $e) {
+            Log::warning('invoice_tnc default link failed: ' . $e->getMessage());
+        }
+    }
+
+    /** Assign this template to every fee package and copy body onto existing invoices. */
+    public function assignToAllPackagesAndRefreshInvoices(): array
     {
         $packages = 0;
         $invoices = 0;
@@ -99,6 +129,26 @@ class InvoiceTermsTemplate extends Model
         }
 
         return ['packages' => (int) $packages, 'invoices' => (int) $invoices];
+    }
+
+    /** New packages created later with no template yet get the default (PAYTC1). */
+    public static function assignDefaultToUnlinkedPackages(self $template): void
+    {
+        if (Schema::hasTable('course_fees') && Schema::hasColumn('course_fees', 'invoice_terms_template_id')) {
+            $payload = ['invoice_terms_template_id' => $template->id];
+            if (Schema::hasColumn('course_fees', 'terms_conditions')) {
+                $payload['terms_conditions'] = $template->body;
+            }
+            CourseFee::query()->whereNull('invoice_terms_template_id')->update($payload);
+        }
+
+        if (Schema::hasTable('page_fee_packages') && Schema::hasColumn('page_fee_packages', 'invoice_terms_template_id')) {
+            $payload = ['invoice_terms_template_id' => $template->id];
+            if (Schema::hasColumn('page_fee_packages', 'terms_conditions')) {
+                $payload['terms_conditions'] = $template->body;
+            }
+            PageFeePackage::query()->whereNull('invoice_terms_template_id')->update($payload);
+        }
     }
 
     /** Public display code, e.g. PAYTC1 */

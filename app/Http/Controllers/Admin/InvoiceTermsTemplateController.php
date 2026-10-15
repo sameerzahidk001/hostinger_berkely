@@ -29,21 +29,6 @@ class InvoiceTermsTemplateController extends Controller
         return view('admin.invoice-terms-templates.index', compact('templates'));
     }
 
-    /** Link PAYTC{id} to all fee packages and refresh existing invoice T&C bodies. */
-    public function applyToAll(Request $request, $id)
-    {
-        InvoiceTermsTemplate::ensureTable();
-        $template = InvoiceTermsTemplate::findOrFail($id);
-        $result = $template->linkToAllPackagesAndInvoices();
-
-        return redirect()
-            ->route('admin.invoice-terms-templates.index')
-            ->with(
-                'success',
-                $template->displayCode() . ' linked to all fee packages (' . $result['packages'] . ') and applied to existing invoices (' . $result['invoices'] . ').'
-            );
-    }
-
     public function create()
     {
         InvoiceTermsTemplate::ensureTable();
@@ -67,9 +52,12 @@ class InvoiceTermsTemplateController extends Controller
             'is_active' => (string) ($data['is_active'] ?? '1') === '1',
         ]);
 
+        // First template (PAYTC1): link to packages + refresh existing invoices once (no Apply button).
+        InvoiceTermsTemplate::ensureDefaultLinkedOnce();
+
         return redirect()
             ->route('admin.invoice-terms-templates.index')
-            ->with('success', $template->displayCode() . ' created. Assign it on fee packages from the dropdown.');
+            ->with('success', $template->displayCode() . ' created. Select it on fee packages from the dropdown.');
     }
 
     public function edit($id)

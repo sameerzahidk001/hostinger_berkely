@@ -20,8 +20,7 @@
         <div class="ibox-content">
             <p class="text-muted m-b-md">
                 Admin / Accountant create templates here (IDs <strong>PAYTC1</strong>, <strong>PAYTC2</strong>, …).
-                Select one on each fee package (or use <strong>Apply to all</strong> to link this template to every fee package and refresh T&amp;C text on all existing invoices).
-                New invoices load the package’s template automatically (no T&amp;C editor on Create Invoice).
+                Select one on each fee package. New invoices load that package’s template automatically (no T&amp;C editor on Create Invoice).
             </p>
             <div class="table-responsive">
                 <table class="table table-striped table-bordered">
@@ -31,7 +30,7 @@
                             <th>Name</th>
                             <th>Status</th>
                             @include('admin.layout.partials.audit-columns-head')
-                            <th style="width:220px;">Action</th>
+                            <th style="width:120px;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -49,10 +48,6 @@
                                 @include('admin.layout.partials.audit-columns-cells', ['model' => $row])
                                 <td>
                                     <a href="{{ route('admin.invoice-terms-templates.edit', $row->id) }}" class="btn btn-xs btn-primary"><i class="fa fa-pencil"></i> Edit</a>
-                                    <form action="{{ route('admin.invoice-terms-templates.apply-all', $row->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Link {{ $row->displayCode() }} to ALL fee packages and update ALL existing invoices T&amp;C?');">
-                                        @csrf
-                                        <button type="submit" class="btn btn-xs btn-warning" title="Link to all packages &amp; invoices">Apply to all</button>
-                                    </form>
                                     <form action="{{ route('admin.invoice-terms-templates.destroy', $row->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete {{ $row->displayCode() }}?');">
                                         @csrf
                                         @method('DELETE')
