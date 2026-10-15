@@ -188,6 +188,7 @@
                         <div class="row">
                             <div class="col-md-12" style="margin-bottom: 15px;">
                                 <label for="editor">Terms & Conditions</label>
+                                <p class="help-block m-b-xs">Loaded from the selected package when set; you can still edit for this invoice.</p>
                                 <textarea class="form-control" id="editor"
                                     name="terms_conditions">{{ old('terms_conditions', App\Models\Payment::latest('id')->value('terms_conditions')) }}</textarea>
                             </div>
@@ -251,10 +252,26 @@
                         'currency' => $package->currency,
                         'name' => $package->package_name,
                         'label' => $package->package_name . ' (' . $package->currency . ')',
+                        'terms' => (string) ($package->terms_conditions ?? ''),
                     ];
                 })->values();
+                $defaultTermsHtml = old('terms_conditions', \App\Models\Payment::latest('id')->value('terms_conditions') ?? '');
+                $pagePackageTermsForJs = collect($pageFeePackages ?? [])->mapWithKeys(function ($pkg) {
+                    return [(string) $pkg->id => (string) ($pkg->terms_conditions ?? '')];
+                });
             @endphp
             const allPackages = @json($invoicePackagesForJs);
+            const pagePackageTerms = @json($pagePackageTermsForJs);
+            const defaultTermsHtml = @json($defaultTermsHtml);
+
+            function applyInvoiceTerms(html) {
+                const content = (html && String(html).trim() !== '') ? html : defaultTermsHtml;
+                if ($('#editor').hasClass('summernote-initialized') || $('#editor').next('.note-editor').length) {
+                    $('#editor').summernote('code', content || '');
+                } else {
+                    $('#editor').val(content || '');
+                }
+            }
 
             function filterPackagesByCourse(selectedCourseId, preferPackageId) {
                 const $package = $('#package');
@@ -275,7 +292,8 @@
                                 'data-courseid': pkg.course_id,
                                 'data-price': pkg.price,
                                 'data-currency': pkg.currency,
-                                'data-packagename': pkg.name
+                                'data-packagename': pkg.name,
+                                'data-terms': pkg.terms || ''
                             });
                             $package.append($opt);
                         });
@@ -308,12 +326,15 @@
                 const price = $selected.data('price') || 0;
                 const currency = $selected.data('currency') || 'AED';
                 const currencySymbol = currency === 'AED' ? 'AED' : currency;
+                const pkgId = String($selected.val() || '');
+                const pkg = allPackages.find(function (p) { return String(p.id) === pkgId; });
                 $('#total_amount').val(price);
                 if ($('#fullAmountInFirstInstallment').is(':checked')) {
                     $('#amount_1').val(price);
                 }
                 $('.currency').val(currency);
                 $('.currency-addon').text(currencySymbol);
+                applyInvoiceTerms(pkg ? pkg.terms : '');
             });
 
             $('#addInstallment').on('click', function () {
@@ -390,7 +411,13 @@
                 }
                 $('.currency').val(currency);
                 $('.currency-addon').text(currencySymbol);
+                const pagePkgId = String($selected.val() || '');
+                applyInvoiceTerms(pagePackageTerms[pagePkgId] || '');
             });
+
+            if ($('#invoice_source').val() === 'page' && $('#page_fee_package').val()) {
+                $('#page_fee_package').trigger('change');
+            }
         });
     </script>
 @endpush

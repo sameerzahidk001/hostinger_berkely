@@ -4,6 +4,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Schema;
+use App\Models\CourseFee;
+use App\Models\PageFeePackage;
 
 class Payment extends Model
 {
@@ -127,11 +129,23 @@ class Payment extends Model
         });
 
         static::creating(function ($payment) {
-            // If terms_conditions is missing or empty
-            if (empty($payment->terms_conditions)) {
-                // Get the latest previous terms_conditions
-                $payment->terms_conditions = Payment::latest('id')->value('terms_conditions') ?? 'Default Terms and Conditions';
+            if (! empty($payment->terms_conditions)) {
+                return;
             }
+
+            $fromPackage = null;
+            try {
+                if (! empty($payment->page_fee_package_id) && Schema::hasTable('page_fee_packages')) {
+                    $fromPackage = PageFeePackage::query()->whereKey($payment->page_fee_package_id)->value('terms_conditions');
+                } elseif (! empty($payment->package_id) && Schema::hasTable('course_fees') && Schema::hasColumn('course_fees', 'terms_conditions')) {
+                    $fromPackage = CourseFee::query()->whereKey($payment->package_id)->value('terms_conditions');
+                }
+            } catch (\Throwable $e) {
+                $fromPackage = null;
+            }
+
+            $payment->terms_conditions = $fromPackage
+                ?: (Payment::latest('id')->value('terms_conditions') ?? 'Default Terms and Conditions');
         });
     }
 }

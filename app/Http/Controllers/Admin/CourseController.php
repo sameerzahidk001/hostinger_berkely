@@ -1359,6 +1359,7 @@ class CourseController extends Controller
 
     public function courseEditFee($id)
     {
+        CourseFee::ensureTermsColumn();
         $data['course_fee'] = CourseFee::findOrFail($id);
         $data['course'] = Course::withTrashed()->findOrFail($data['course_fee']->courses_id);
         $data['currencies'] = Currency::get();
@@ -1376,6 +1377,7 @@ class CourseController extends Controller
             'short_description' => 'nullable|string|max:1000',
             'key_point' => 'nullable|string|max:255',
             'package_includes' => 'nullable|string|max:255',
+            'terms_conditions' => 'nullable|string|max:50000',
             'priority' => 'required|integer|min:1',
             'Installments' => 'nullable|in:1',
             'showonwebsite' => 'nullable|in:1',
@@ -1389,6 +1391,10 @@ class CourseController extends Controller
 
         $validated = $validator->validated();
         $validated['showonwebsite'] = $request->has('showonwebsite') ? 1 : 0;
+        CourseFee::ensureTermsColumn();
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('course_fees', 'terms_conditions')) {
+            unset($validated['terms_conditions']);
+        }
 
         if (!empty($validated['package_feature'])) {
             $validated['package_feature'] = array_filter($validated['package_feature']);
@@ -1435,6 +1441,7 @@ class CourseController extends Controller
             'short_description' => 'nullable|string|max:1000',
             'key_point' => 'nullable|string|max:255',
             'package_includes' => 'nullable|string|max:255',
+            'terms_conditions' => 'nullable|string|max:50000',
             'priority' => 'required|integer|min:1',
             'Installments' => 'nullable|in:1',
             'showonwebsite' => 'nullable|in:1',
@@ -1448,6 +1455,10 @@ class CourseController extends Controller
 
         $validated = $validator->validated();
         $validated['showonwebsite'] = $request->has('showonwebsite') ? 1 : 0;
+        CourseFee::ensureTermsColumn();
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('course_fees', 'terms_conditions')) {
+            unset($validated['terms_conditions']);
+        }
 
         if (!empty($validated['package_feature'])) {
             $validated['package_feature'] = array_filter($validated['package_feature']);

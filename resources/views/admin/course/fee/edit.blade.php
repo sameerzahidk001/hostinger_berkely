@@ -60,6 +60,12 @@
                                     <textarea class="form-control" name="short_description" placeholder="Write something...">{{ old('short_description', $course_fee->short_description) }}</textarea>
                                     @error('short_description') <p class="text-danger">{{ $message }}</p> @enderror
                                 </div>
+                                <div class="col-lg-12">
+                                    <label>Invoice Terms &amp; Conditions</label>
+                                    <p class="help-block m-b-xs">Used when creating invoices for this package (editable per invoice).</p>
+                                    <textarea class="form-control" name="terms_conditions" rows="6" placeholder="Payment instructions / T&amp;C for invoices">{{ old('terms_conditions', $course_fee->terms_conditions ?? '') }}</textarea>
+                                    @error('terms_conditions') <p class="text-danger">{{ $message }}</p> @enderror
+                                </div>
                                 <div class="col-lg-6">
                                     <label>Key Point</label>
                                     <input class="form-control" name="key_point" value="{{ old('key_point', $course_fee->key_point) }}" placeholder="Most popular, Sell faster, etc." type="text">

@@ -363,6 +363,7 @@ class PageFeeController extends Controller
             'short_description' => 'nullable|string|max:2000',
             'key_point' => 'nullable|string|max:2000',
             'package_includes' => 'nullable|string|max:5000',
+            'terms_conditions' => 'nullable|string|max:50000',
             'priority' => 'nullable|integer|min:0',
             'installments' => 'nullable|integer|min:0',
             'showonwebsite' => 'nullable|in:0,1',
@@ -370,8 +371,9 @@ class PageFeeController extends Controller
         ]);
 
         $includes = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', (string) ($data['package_includes'] ?? '')))));
+        app(\App\Services\PageFeeStructureService::class)->ensureTermsConditionsColumn();
 
-        return [
+        $payload = [
             'package_name' => $data['package_name'],
             'currency' => $data['currency'],
             'price' => $data['price'],
@@ -385,5 +387,11 @@ class PageFeeController extends Controller
             'showonwebsite' => (string) ($data['showonwebsite'] ?? '1') === '1',
             'status' => (string) ($data['status'] ?? '1') === '1',
         ];
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('page_fee_packages', 'terms_conditions')) {
+            $payload['terms_conditions'] = $data['terms_conditions'] ?? null;
+        }
+
+        return $payload;
     }
 }

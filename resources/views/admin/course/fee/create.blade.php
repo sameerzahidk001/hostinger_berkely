@@ -91,8 +91,17 @@
                                     <div class="col-lg-12" style="margin-top:6px;">
                                         <label>Short Description</label>
                                         <textarea class="form-control" name="short_description" id="short_description"
-                                            placeholder="Write something here...">{{ old('tax_percentage') }}</textarea>
-                                        @error('tax_percentage')
+                                            placeholder="Write something here...">{{ old('short_description') }}</textarea>
+                                        @error('short_description')
+                                            <p class="text-danger text-xs italic">{{ $message }}</p>
+                                        @enderror
+                                    </div>
+                                    <div class="col-lg-12" style="margin-top:6px;">
+                                        <label>Invoice Terms &amp; Conditions</label>
+                                        <p class="help-block m-b-xs">Used when creating invoices for this package (editable per invoice).</p>
+                                        <textarea class="form-control" name="terms_conditions" rows="6"
+                                            placeholder="Payment instructions / T&amp;C for invoices">{{ old('terms_conditions') }}</textarea>
+                                        @error('terms_conditions')
                                             <p class="text-danger text-xs italic">{{ $message }}</p>
                                         @enderror
                                     </div>

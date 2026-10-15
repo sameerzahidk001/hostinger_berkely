@@ -68,7 +68,10 @@ class PaymentController extends Controller
 
     public function create()
     {
-        app(PageFeeStructureService::class)->ensureTables();
+        $pageFees = app(PageFeeStructureService::class);
+        $pageFees->ensureTables();
+        $pageFees->ensureTermsConditionsColumn();
+        CourseFee::ensureTermsColumn();
 
         $users = User::with('roles')->whereHas('roles', function ($query) {
             $query->where('name', 'student');
