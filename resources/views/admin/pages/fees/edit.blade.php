@@ -148,6 +148,12 @@
                                 </div>
                                 <div class="col-md-2"><button class="btn btn-primary btn-block" type="submit">Add Package</button></div>
                             </div>
+                            <div class="row" style="margin-top:8px;">
+                                <div class="col-md-12">
+                                    <label class="text-muted">Invoice Terms &amp; Conditions (for this package)</label>
+                                    <textarea class="form-control" name="terms_conditions" rows="4" placeholder="Payment instructions / T&amp;C shown on invoices for this package"></textarea>
+                                </div>
+                            </div>
                         </form>
 
                         @foreach($category->packages as $package)
@@ -184,6 +190,12 @@
                                             </select>
                                         </div>
                                         <div class="col-md-2"><button class="btn btn-default btn-block" type="submit">Save Package</button></div>
+                                    </div>
+                                    <div class="row" style="margin-top:8px;">
+                                        <div class="col-md-12">
+                                            <label class="text-muted">Invoice Terms &amp; Conditions (for this package)</label>
+                                            <textarea class="form-control" name="terms_conditions" rows="4" placeholder="Payment instructions / T&amp;C shown on invoices for this package">{{ $package->terms_conditions ?? '' }}</textarea>
+                                        </div>
                                     </div>
                                 </form>
                                 <form action="{{ route('admin.pages.fees.packages.destroy', $package->id) }}" method="POST" style="margin-top:6px;" onsubmit="return confirm('Delete package?');">

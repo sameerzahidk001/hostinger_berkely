@@ -18,6 +18,7 @@ class PageFeePackage extends Model
         'short_description',
         'key_point',
         'package_includes',
+        'terms_conditions',
         'priority',
         'installments',
         'showonwebsite',

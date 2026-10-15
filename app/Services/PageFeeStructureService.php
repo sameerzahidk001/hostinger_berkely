@@ -46,6 +46,7 @@ class PageFeeStructureService
                     $table->text('short_description')->nullable();
                     $table->text('key_point')->nullable();
                     $table->longText('package_includes')->nullable();
+                    $table->longText('terms_conditions')->nullable();
                     $table->unsignedInteger('priority')->default(0);
                     $table->unsignedInteger('installments')->nullable();
                     $table->boolean('showonwebsite')->default(true);
@@ -56,6 +57,7 @@ class PageFeeStructureService
 
             $this->ensurePageFeeHeadingColumn();
             $this->ensureCommerceColumns();
+            $this->ensureTermsConditionsColumn();
 
             return true;
         } catch (\Throwable $e) {
@@ -113,6 +115,29 @@ class PageFeeStructureService
             return true;
         } catch (\Throwable $e) {
             Log::warning('page fee commerce columns ensure failed: ' . $e->getMessage());
+
+            return false;
+        }
+    }
+
+    public function ensureTermsConditionsColumn(): bool
+    {
+        try {
+            if (Schema::hasTable('page_fee_packages') && ! Schema::hasColumn('page_fee_packages', 'terms_conditions')) {
+                Schema::table('page_fee_packages', function (Blueprint $table) {
+                    $table->longText('terms_conditions')->nullable();
+                });
+            }
+
+            if (Schema::hasTable('course_fees') && ! Schema::hasColumn('course_fees', 'terms_conditions')) {
+                Schema::table('course_fees', function (Blueprint $table) {
+                    $table->longText('terms_conditions')->nullable();
+                });
+            }
+
+            return true;
+        } catch (\Throwable $e) {
+            Log::warning('fee package terms_conditions ensure failed: ' . $e->getMessage());
 
             return false;
         }
