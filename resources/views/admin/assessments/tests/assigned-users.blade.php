@@ -1,13 +1,18 @@
 @extends(lms_portal_layout())
-@section('title', 'Assigned users')
+@section('title', 'Assigned Tests')
 @section('content')
+<style>
+    .lms-win-upcoming { color: #3b82f6; font-weight: 700; }
+    .lms-win-available { color: #1ab394; font-weight: 700; }
+    .lms-win-ended { color: #ed5565; font-weight: 700; }
+</style>
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">
-        <h2>Assigned users</h2>
+        <h2>Assigned Tests</h2>
         <ol class="breadcrumb">
             <li><a href="{{ lms_portal_home() }}">Home</a></li>
             <li><a href="{{ route('admin.assessments.tests.index') }}">Assessments</a></li>
-            <li class="active"><strong>Assigned users</strong></li>
+            <li class="active"><strong>Assigned Tests</strong></li>
         </ol>
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
@@ -37,12 +42,25 @@
                     <th>Marking instructor</th>
                     <th>Available from</th>
                     <th>Available until</th>
+                    <th>Status</th>
                     <th>Assigned at</th>
                     <th></th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($rows as $row)
+                    @php
+                        if ($row->isNotYetOpen()) {
+                            $winLabel = 'Upcoming';
+                            $winClass = 'lms-win-upcoming';
+                        } elseif ($row->isExpired()) {
+                            $winLabel = 'Ended';
+                            $winClass = 'lms-win-ended';
+                        } else {
+                            $winLabel = 'Available';
+                            $winClass = 'lms-win-available';
+                        }
+                    @endphp
                     <tr>
                         <td>{{ $row->assessment_id }}</td>
                         <td>{{ $row->assessment->title ?? '—' }}</td>
@@ -56,16 +74,17 @@
                         </td>
                         <td>{{ optional($row->available_from)->format('d/m/Y H:i') ?? '—' }}</td>
                         <td>{{ optional($row->available_until)->format('d/m/Y H:i') ?? '—' }}</td>
+                        <td><span class="{{ $winClass }}">{{ $winLabel }}</span></td>
                         <td>{{ optional($row->created_at)->format('d/m/Y H:i') ?? '—' }}</td>
                         <td style="white-space:nowrap;">
                             @if($row->assessment_id)
-                                <a class="btn btn-xs btn-success" href="{{ route('admin.assessments.tests.assign', $row->assessment_id) }}">Re-assign</a>
-                                <a class="btn btn-xs btn-default" href="{{ route('admin.assessments.tests.attempts', $row->assessment_id) }}">Attempts</a>
+                                <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.assign', $row->assessment_id) }}">Re-assign</a>
+                                <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.attempts', $row->assessment_id) }}">Attempts</a>
                             @endif
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="8" class="text-center">No assignments yet.</td></tr>
+                    <tr><td colspan="9" class="text-center">No assignments yet.</td></tr>
                 @endforelse
             </tbody>
         </table>

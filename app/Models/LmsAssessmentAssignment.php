@@ -42,7 +42,11 @@ class LmsAssessmentAssignment extends Model
 
     public function isNotYetOpen(): bool
     {
-        return $this->available_from && now()->lt($this->available_from);
+        if (! $this->available_from) {
+            return false;
+        }
+
+        return now()->lt($this->available_from);
     }
 
     public function isExpired(): bool
@@ -54,6 +58,11 @@ class LmsAssessmentAssignment extends Model
         // Same from/until (zero-length window) expires as soon as that timestamp is reached.
         if ($this->available_from && $this->available_from->equalTo($this->available_until)) {
             return now()->gte($this->available_until);
+        }
+
+        // Still upcoming — not missed yet.
+        if ($this->isNotYetOpen()) {
+            return false;
         }
 
         return now()->gt($this->available_until);

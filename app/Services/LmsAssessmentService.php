@@ -113,7 +113,8 @@ class LmsAssessmentService
         $out = collect();
 
         foreach ($assessments as $assessment) {
-            $assignment = $assessment->assignments->first(function (LmsAssessmentAssignment $a) use ($userId, $batchIds) {
+            // Prefer direct user assignment, then batch; among matches prefer open, then upcoming.
+            $matches = $assessment->assignments->filter(function (LmsAssessmentAssignment $a) use ($userId, $batchIds) {
                 if ($a->student_id && (int) $a->student_id === $userId) {
                     return true;
                 }
@@ -122,7 +123,10 @@ class LmsAssessmentService
                 }
 
                 return false;
-            });
+            })->values();
+            $assignment = $matches->first(fn (LmsAssessmentAssignment $a) => $a->isAvailableNow())
+                ?? $matches->first(fn (LmsAssessmentAssignment $a) => $a->isNotYetOpen())
+                ?? $matches->first();
 
             if ($assessment->isSkill() || $assessment->audience === LmsAssessment::AUDIENCE_STAFF) {
                 if (! $isStaff) {

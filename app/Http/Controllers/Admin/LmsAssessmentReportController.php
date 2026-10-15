@@ -24,23 +24,13 @@ class LmsAssessmentReportController extends Controller
         $assessmentId = (int) $request->get('assessment_id', 0);
         $batchId = (int) $request->get('batch_id', 0);
 
-        $passRate = $this->assessments->passRateReport(
-            $assessmentId > 0 ? $assessmentId : null,
-            $batchId > 0 ? $batchId : null
-        );
-
-        $itemAnalysis = $assessmentId > 0
-            ? $this->assessments->mcqItemAnalysis($assessmentId)
-            : collect();
-
-        $skillRows = $this->assessments->canManageSkillTests()
-            ? $this->assessments->skillReport()->take(50)
-            : collect();
-
         $studentAttempts = collect();
         $selectedAssessment = null;
         if ($assessmentId > 0) {
             $selectedAssessment = LmsAssessment::query()->find($assessmentId);
+            if ($selectedAssessment && $selectedAssessment->isSkill()) {
+                abort_unless($this->assessments->canManageSkillTests(), 403);
+            }
             $query = LmsAssessmentAttempt::query()
                 ->with('user:id,name,email')
                 ->where('assessment_id', $assessmentId)
@@ -55,13 +45,16 @@ class LmsAssessmentReportController extends Controller
             $studentAttempts = $query->limit(200)->get();
         }
 
+        $assessmentQuery = LmsAssessment::query()->orderBy('title');
+        if (! $this->assessments->canManageSkillTests()) {
+            $assessmentQuery->where('kind', '!=', LmsAssessment::KIND_SKILL)
+                ->where('audience', '!=', LmsAssessment::AUDIENCE_STAFF);
+        }
+
         return view('admin.assessments.reports.index', [
-            'passRate' => $passRate,
-            'itemAnalysis' => $itemAnalysis,
-            'skillRows' => $skillRows,
             'studentAttempts' => $studentAttempts,
             'selectedAssessment' => $selectedAssessment,
-            'assessments' => LmsAssessment::query()->orderBy('title')->get(['id', 'title', 'kind']),
+            'assessments' => $assessmentQuery->get(['id', 'title', 'kind']),
             'batches' => Schema::hasTable('class_batches')
                 ? ClassBatch::query()->orderByDesc('id')->get(['id', 'code', 'name'])
                 : collect(),
@@ -69,7 +62,6 @@ class LmsAssessmentReportController extends Controller
                 'assessment_id' => $assessmentId,
                 'batch_id' => $batchId,
             ],
-            'canSkill' => $this->assessments->canManageSkillTests(),
         ]);
     }
 }

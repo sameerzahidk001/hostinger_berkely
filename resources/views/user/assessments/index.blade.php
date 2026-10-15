@@ -60,6 +60,15 @@
         #assessments-portal .nav-pills > li.active > a.tab-missed,
         #assessments-portal .nav-pills > li.active > a.tab-missed:hover,
         #assessments-portal .nav-pills > li.active > a.tab-missed:focus { background: #ef4444; border-color: #ef4444; color: #fff !important; }
+        /* Status colours inside the same table row */
+        #assessments-portal .lms-row-status { font-weight: 700; }
+        #assessments-portal .lms-row-available { color: #0f7a66; }
+        #assessments-portal .lms-row-upcoming { color: #1d4ed8; }
+        #assessments-portal .lms-row-in_progress { color: #b45309; }
+        #assessments-portal .lms-row-submitted { color: #6d28d9; }
+        #assessments-portal .lms-row-graded { color: #0e7490; }
+        #assessments-portal .lms-row-missed,
+        #assessments-portal .lms-row-expired { color: #b91c1c; }
     </style>
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if(session('fail'))<div class="alert alert-danger">{{ session('fail') }}</div>@endif
@@ -128,16 +137,16 @@
                         </td>
                         <td>
                             @if($att)
-                                {{ $att->statusLabel() }}
+                                <span class="lms-row-status lms-row-{{ $att->status }}">{{ $att->statusLabel() }}</span>
                                 @if($att->results_published && $att->score_raw !== null)
                                     · {{ $att->score_raw }}/{{ $att->score_max }} · {{ $att->passFailLabel() }}
                                 @endif
                             @elseif($tab === 'missed')
-                                Missed
+                                <span class="lms-row-status lms-row-missed">Missed</span>
                             @elseif($tab === 'upcoming')
-                                Opens {{ optional($asg?->available_from)->format('d M Y H:i') ?: 'soon' }}
+                                <span class="lms-row-status lms-row-upcoming">Opens {{ optional($asg?->available_from)->format('d M Y H:i') ?: 'soon' }}</span>
                             @else
-                                Available
+                                <span class="lms-row-status lms-row-available">Available</span>
                             @endif
                         </td>
                         <td>
