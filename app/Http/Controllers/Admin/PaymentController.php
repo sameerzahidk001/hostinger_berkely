@@ -29,8 +29,9 @@ class PaymentController extends Controller
 {
     public function index(Request $request)
     {
+        Payment::ensureAuditColumns();
         $installments = Installment::get();
-        $payments = Payment::with('user', 'course', 'courseFee', 'page', 'pageFeeService', 'pageFeePackage', 'installments', 'installment_request')
+        $payments = Payment::with('user', 'course', 'courseFee', 'page', 'pageFeeService', 'pageFeePackage', 'installments', 'installment_request', 'createdBy', 'updatedBy')
             ->orderByDesc('created_at')
             ->get();
 
@@ -144,9 +145,9 @@ class PaymentController extends Controller
 
         try {
             if ($invoiceSource === 'page') {
-                $package = PageFeePackage::with(['category.service.page'])->findOrFail($request->page_fee_package);
+                $package = PageFeePackage::with(['category.service.page', 'invoiceTermsTemplate'])->findOrFail($request->page_fee_package);
             } else {
-                $package = CourseFee::findOrFail($request->package);
+                $package = CourseFee::with('invoiceTermsTemplate')->findOrFail($request->package);
             }
 
             $displayCurrency = package_currency_code($package->currency);
@@ -181,7 +182,7 @@ class PaymentController extends Controller
             $payment->currency = $displayCurrency;
             $payment->payment_method = 'invoice';
             $payment->total_installment = count($request->amount);
-            $payment->terms_conditions = $request->terms_conditions;
+            $payment->terms_conditions = $package->resolvedTermsHtml() ?: null;
             $payment->status = 'Inactive';
             $payment->source = 'admin';
             $payment->save();

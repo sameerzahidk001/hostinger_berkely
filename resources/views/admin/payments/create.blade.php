@@ -1,7 +1,6 @@
 @extends('admin.layout.app')
 @section('title', 'Create Payment')
 @push('style')
-    <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote.min.css" rel="stylesheet">
     <style>
         .page-heading {
             display: flex;
@@ -185,16 +184,16 @@
                             @endfor
                         </div>
                         <button type="button" class="btn btn-primary" id="addInstallment">Add Installment</button>
-                        <div class="row">
-                            <div class="col-md-12" style="margin-bottom: 15px;">
-                                <label for="editor">Terms & Conditions</label>
-                                <p class="help-block m-b-xs">
-                                    Loaded from the fee package’s PAYTC template
-                                    (<a href="{{ route('admin.invoice-terms-templates.index') }}" target="_blank">Payments → T&amp;C Templates</a>).
-                                    You can still edit for this invoice only.
-                                </p>
-                                <textarea class="form-control" id="editor"
-                                    name="terms_conditions">{{ old('terms_conditions', App\Models\Payment::latest('id')->value('terms_conditions')) }}</textarea>
+                        <div class="row" style="margin-top:12px;">
+                            <div class="col-md-12">
+                                <div class="alert alert-info" style="margin-bottom:0;">
+                                    <strong>Invoice T&amp;C template:</strong>
+                                    <span id="package_tnc_label">Select a package to see its default PAYTC template</span>
+                                    <span class="text-muted">
+                                        — managed in
+                                        <a href="{{ route('admin.invoice-terms-templates.index') }}" target="_blank">Payments → Invoice T&amp;C Templates</a>
+                                    </span>
+                                </div>
                             </div>
                         </div>
                         <div class="row">
@@ -216,7 +215,6 @@
 
 @include('admin.partials.type-find-selects')
 @push('script')
-    <script src="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote.min.js"></script>
     <script>
         let installmentIndex = {{ $installmentCount }};
 
@@ -231,24 +229,9 @@
                 }
             });
 
-
-            $('#editor').each(function() {
-                if (!this.classList.contains('summernote-initialized')) {
-                    $(this).summernote({
-                        height: 200,
-                        toolbar: [
-                            ['font', ['bold', 'italic', 'underline', 'clear']],
-                            ['para', ['ul', 'ol']],
-                            ['view', ['codeview']]
-                        ]
-                    });
-
-                    this.classList.add('summernote-initialized');
-                }
-            });
-
             @php
                 $invoicePackagesForJs = $packages->map(function ($package) {
+                    $tpl = $package->invoiceTermsTemplate;
                     return [
                         'id' => (string) $package->id,
                         'course_id' => (string) $package->courses_id,
@@ -256,25 +239,19 @@
                         'currency' => $package->currency,
                         'name' => $package->package_name,
                         'label' => $package->package_name . ' (' . $package->currency . ')',
-                        'terms' => (string) $package->resolvedTermsHtml(),
+                        'tnc_label' => $tpl ? $tpl->optionLabel() : 'No T&C template on this package',
                     ];
                 })->values();
-                $defaultTermsHtml = old('terms_conditions', \App\Models\Payment::latest('id')->value('terms_conditions') ?? '');
-                $pagePackageTermsForJs = collect($pageFeePackages ?? [])->mapWithKeys(function ($pkg) {
-                    return [(string) $pkg->id => (string) $pkg->resolvedTermsHtml()];
+                $pagePackageTncForJs = collect($pageFeePackages ?? [])->mapWithKeys(function ($pkg) {
+                    $tpl = $pkg->invoiceTermsTemplate;
+                    return [(string) $pkg->id => $tpl ? $tpl->optionLabel() : 'No T&C template on this package'];
                 });
             @endphp
             const allPackages = @json($invoicePackagesForJs);
-            const pagePackageTerms = @json($pagePackageTermsForJs);
-            const defaultTermsHtml = @json($defaultTermsHtml);
+            const pagePackageTncLabels = @json($pagePackageTncForJs);
 
-            function applyInvoiceTerms(html) {
-                const content = (html && String(html).trim() !== '') ? html : defaultTermsHtml;
-                if ($('#editor').hasClass('summernote-initialized') || $('#editor').next('.note-editor').length) {
-                    $('#editor').summernote('code', content || '');
-                } else {
-                    $('#editor').val(content || '');
-                }
+            function showPackageTnc(label) {
+                $('#package_tnc_label').text(label || 'Select a package to see its default PAYTC template');
             }
 
             function filterPackagesByCourse(selectedCourseId, preferPackageId) {
@@ -296,8 +273,7 @@
                                 'data-courseid': pkg.course_id,
                                 'data-price': pkg.price,
                                 'data-currency': pkg.currency,
-                                'data-packagename': pkg.name,
-                                'data-terms': pkg.terms || ''
+                                'data-packagename': pkg.name
                             });
                             $package.append($opt);
                         });
@@ -323,6 +299,7 @@
                 $('.currency').val('$');
                 $('.currency-addon').text('$');
                 filterPackagesByCourse(selectedCourseId, null);
+                showPackageTnc('');
             });
 
             $('#package').on('change', function () {
@@ -338,7 +315,7 @@
                 }
                 $('.currency').val(currency);
                 $('.currency-addon').text(currencySymbol);
-                applyInvoiceTerms(pkg ? pkg.terms : '');
+                showPackageTnc(pkg ? pkg.tnc_label : '');
             });
 
             $('#addInstallment').on('click', function () {
@@ -416,7 +393,7 @@
                 $('.currency').val(currency);
                 $('.currency-addon').text(currencySymbol);
                 const pagePkgId = String($selected.val() || '');
-                applyInvoiceTerms(pagePackageTerms[pagePkgId] || '');
+                showPackageTnc(pagePackageTncLabels[pagePkgId] || '');
             });
 
             if ($('#invoice_source').val() === 'page' && $('#page_fee_package').val()) {

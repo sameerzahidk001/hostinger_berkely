@@ -21,9 +21,27 @@ class InvoiceTermsTemplateController extends Controller
     public function index()
     {
         InvoiceTermsTemplate::ensureTable();
-        $templates = InvoiceTermsTemplate::query()->orderBy('id')->get();
+        $templates = InvoiceTermsTemplate::query()
+            ->with(['createdBy', 'updatedBy'])
+            ->orderBy('id')
+            ->get();
 
         return view('admin.invoice-terms-templates.index', compact('templates'));
+    }
+
+    /** Link PAYTC{id} to all fee packages and refresh existing invoice T&C bodies. */
+    public function applyToAll(Request $request, $id)
+    {
+        InvoiceTermsTemplate::ensureTable();
+        $template = InvoiceTermsTemplate::findOrFail($id);
+        $result = $template->linkToAllPackagesAndInvoices();
+
+        return redirect()
+            ->route('admin.invoice-terms-templates.index')
+            ->with(
+                'success',
+                $template->displayCode() . ' linked to all fee packages (' . $result['packages'] . ') and applied to existing invoices (' . $result['invoices'] . ').'
+            );
     }
 
     public function create()
