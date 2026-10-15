@@ -11,10 +11,12 @@ use App\Models\LmsQuestion;
 use App\Models\User;
 use App\Services\LmsAssessmentService;
 use App\Services\StudyMaterialService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 
 class LmsAssessmentController extends Controller
 {
@@ -325,6 +327,27 @@ class LmsAssessmentController extends Controller
         }
 
         return view('admin.assessments.tests.mark', compact('attempt'));
+    }
+
+    public function attemptPdf($attemptId)
+    {
+        abort_unless($this->assessments->canManageStudentAssessments() || $this->assessments->canManageSkillTests(), 403);
+        $this->assessments->ensure();
+        $attempt = LmsAssessmentAttempt::with(['assessment.questions', 'answers.question', 'user'])->findOrFail($attemptId);
+        if ($attempt->assessment?->isSkill()) {
+            abort_unless($this->assessments->canManageSkillTests(), 403);
+        } else {
+            abort_unless($this->assessments->canManageStudentAssessments(), 403);
+            $this->assertInstructorOwnsCourse((int) ($attempt->assessment?->course_id ?? 0));
+        }
+
+        $title = Str::slug($attempt->assessment->title ?? 'attempt', '-');
+        $student = Str::slug($attempt->user->name ?? 'student', '-');
+        $filename = 'attempt-' . $attempt->id . '-' . $title . '-' . $student . '.pdf';
+
+        return Pdf::loadView('admin.assessments.tests.attempt-pdf', compact('attempt'))
+            ->setPaper('a4')
+            ->download($filename);
     }
 
     public function saveMarks(Request $request, $attemptId)

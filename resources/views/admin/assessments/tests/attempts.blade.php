@@ -52,6 +52,7 @@
                         </td>
                         <td style="white-space:nowrap;">
                             <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.mark', $row->id) }}">Mark / feedback</a>
+                            <a class="btn btn-xs btn-success" href="{{ route('admin.assessments.tests.attempt-pdf', $row->id) }}" target="_blank"><i class="fa fa-file-pdf-o"></i> PDF</a>
                             @unless($row->results_published)
                                 <form action="{{ route('admin.assessments.tests.publish-attempt', $row->id) }}" method="POST" style="display:inline;">@csrf<button class="btn btn-xs btn-default">Publish</button></form>
                             @endunless
