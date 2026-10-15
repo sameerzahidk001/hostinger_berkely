@@ -45,10 +45,6 @@
                         <span class="help-block">Choose a batch first to narrow the list to assigned instructors.</span>
                     </div>
                     <div class="col-md-3 form-group">
-                        <label>Rate</label>
-                        <input type="number" step="0.01" min="0" name="rate" class="form-control" value="{{ old('rate', $payment->rate) }}" placeholder="Optional">
-                    </div>
-                    <div class="col-md-3 form-group">
                         <label>Amount *</label>
                         <input type="number" step="0.01" min="0" name="amount" class="form-control" value="{{ old('amount', $payment->amount) }}" required>
                     </div>
@@ -78,7 +74,11 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-4 form-group">
+                    <div class="col-md-3 form-group">
+                        <label>Due date</label>
+                        <input type="date" name="due_date" class="form-control" value="{{ old('due_date', optional($payment->due_date ?? null)->format('Y-m-d')) }}">
+                    </div>
+                    <div class="col-md-3 form-group">
                         <label>Paid date</label>
                         <input type="date" name="paid_date" class="form-control" value="{{ old('paid_date', optional($payment->paid_date)->format('Y-m-d')) }}">
                     </div>

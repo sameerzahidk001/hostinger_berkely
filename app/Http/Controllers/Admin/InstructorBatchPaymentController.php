@@ -236,10 +236,10 @@ class InstructorBatchPaymentController extends Controller
         return [
             'class_batch_id' => 'required|exists:class_batches,id',
             'instructor_id' => 'required|exists:users,id',
-            'rate' => 'nullable|numeric|min:0',
             'amount' => 'required|numeric|min:0',
             'currency' => 'required|string|max:10',
             'status' => 'required|in:pending,approved,paid',
+            'due_date' => 'nullable|date',
             'paid_date' => 'nullable|date',
             'notes' => 'nullable|string|max:5000',
             'payment_slip' => 'nullable|file|mimes:pdf,jpg,jpeg,png,webp|max:10240',
@@ -250,10 +250,16 @@ class InstructorBatchPaymentController extends Controller
     {
         $payment->class_batch_id = (int) $request->input('class_batch_id');
         $payment->instructor_id = (int) $request->input('instructor_id');
-        $payment->rate = $request->filled('rate') ? (float) $request->input('rate') : null;
+        // Rate removed from UI; keep existing DB value untouched on edit, null on create.
+        if ($creating) {
+            $payment->rate = null;
+        }
         $payment->amount = (float) $request->input('amount');
         $payment->currency = package_currency_code($request->input('currency'));
         $payment->status = (string) $request->input('status');
+        if (\Illuminate\Support\Facades\Schema::hasColumn('instructor_batch_payments', 'due_date')) {
+            $payment->due_date = $request->filled('due_date') ? $request->input('due_date') : null;
+        }
         $payment->paid_date = $request->filled('paid_date') ? $request->input('paid_date') : null;
         $payment->notes = trim((string) $request->input('notes', '')) ?: null;
 

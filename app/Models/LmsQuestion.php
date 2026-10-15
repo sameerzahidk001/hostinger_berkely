@@ -38,6 +38,27 @@ class LmsQuestion extends Model
         return self::targetRoles()[$role] ?? ($role !== '' ? ucwords(str_replace('_', ' ', $role)) : '—');
     }
 
+    public function createdByLabel(): string
+    {
+        if ($this->created_by_user_id) {
+            $user = User::query()->find($this->created_by_user_id);
+
+            return $user?->name ?: ('User #' . $this->created_by_user_id);
+        }
+        if ($this->created_by_admin_id) {
+            if (class_exists(\App\Models\Admin::class)) {
+                $admin = \App\Models\Admin::query()->find($this->created_by_admin_id);
+                if ($admin) {
+                    return $admin->name ?? $admin->email ?? 'Admin';
+                }
+            }
+
+            return 'Admin';
+        }
+
+        return 'Admin';
+    }
+
     protected $casts = [
         'options_json' => 'array',
         'max_marks' => 'decimal:2',

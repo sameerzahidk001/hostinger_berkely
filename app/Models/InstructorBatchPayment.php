@@ -20,6 +20,7 @@ class InstructorBatchPayment extends Model
         'amount',
         'currency',
         'status',
+        'due_date',
         'paid_date',
         'notes',
         'payment_slip_path',
@@ -32,6 +33,7 @@ class InstructorBatchPayment extends Model
     protected $casts = [
         'rate' => 'decimal:2',
         'amount' => 'decimal:2',
+        'due_date' => 'date',
         'paid_date' => 'date',
     ];
 
@@ -46,29 +48,34 @@ class InstructorBatchPayment extends Model
 
     public static function ensureTable(): bool
     {
-        if (Schema::hasTable('instructor_batch_payments')) {
-            return true;
+        if (! Schema::hasTable('instructor_batch_payments')) {
+            Schema::create('instructor_batch_payments', function (Blueprint $table) {
+                $table->id();
+                $table->unsignedBigInteger('class_batch_id')->index();
+                $table->unsignedBigInteger('instructor_id')->index();
+                $table->decimal('rate', 12, 2)->nullable();
+                $table->decimal('amount', 12, 2)->default(0);
+                $table->string('currency', 10)->default('AED');
+                $table->string('status', 20)->default('pending')->index();
+                $table->date('due_date')->nullable();
+                $table->date('paid_date')->nullable();
+                $table->text('notes')->nullable();
+                $table->string('payment_slip_path')->nullable();
+                $table->unsignedBigInteger('created_by_admin_id')->nullable();
+                $table->unsignedBigInteger('created_by_user_id')->nullable();
+                $table->unsignedBigInteger('updated_by_admin_id')->nullable();
+                $table->unsignedBigInteger('updated_by_user_id')->nullable();
+                $table->timestamps();
+
+                $table->unique(['class_batch_id', 'instructor_id'], 'ibp_batch_instructor_unique');
+            });
         }
 
-        Schema::create('instructor_batch_payments', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('class_batch_id')->index();
-            $table->unsignedBigInteger('instructor_id')->index();
-            $table->decimal('rate', 12, 2)->nullable();
-            $table->decimal('amount', 12, 2)->default(0);
-            $table->string('currency', 10)->default('AED');
-            $table->string('status', 20)->default('pending')->index();
-            $table->date('paid_date')->nullable();
-            $table->text('notes')->nullable();
-            $table->string('payment_slip_path')->nullable();
-            $table->unsignedBigInteger('created_by_admin_id')->nullable();
-            $table->unsignedBigInteger('created_by_user_id')->nullable();
-            $table->unsignedBigInteger('updated_by_admin_id')->nullable();
-            $table->unsignedBigInteger('updated_by_user_id')->nullable();
-            $table->timestamps();
-
-            $table->unique(['class_batch_id', 'instructor_id'], 'ibp_batch_instructor_unique');
-        });
+        if (Schema::hasTable('instructor_batch_payments') && ! Schema::hasColumn('instructor_batch_payments', 'due_date')) {
+            Schema::table('instructor_batch_payments', function (Blueprint $table) {
+                $table->date('due_date')->nullable();
+            });
+        }
 
         return Schema::hasTable('instructor_batch_payments');
     }

@@ -40,8 +40,9 @@
                 <thead>
                     <tr>
                         <th>ID</th>
-                        <th>Date</th>
-                        <th>Course / For</th>
+                        <th>Created Date</th>
+                        <th>Created by</th>
+                        <th>Question for</th>
                         <th>Type</th>
                         <th>Topic</th>
                         <th>Stem</th>
@@ -55,6 +56,7 @@
                         <tr>
                             <td>{{ $row->id }}</td>
                             <td>{{ optional($row->created_at)->format('d/m/Y H:i') ?? '—' }}</td>
+                            <td>{{ $row->createdByLabel() }}</td>
                             <td>{{ $row->targetRoleLabel() }}</td>
                             <td>{{ $row->typeLabel() }}</td>
                             <td>{{ $row->topic ?: '—' }}</td>
@@ -66,7 +68,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="9" class="text-center">No questions yet.</td></tr>
+                        <tr><td colspan="10" class="text-center">No questions yet.</td></tr>
                     @endforelse
                 </tbody>
             </table>

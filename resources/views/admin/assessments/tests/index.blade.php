@@ -87,11 +87,15 @@
                     <th>Questions</th>
                     <th>Assignments</th>
                     <th>Attempts</th>
+                    <th>Marking instructor</th>
                     <th></th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($rows as $row)
+                    @php
+                        $markers = $row->assignments->pluck('marker')->filter()->unique('id');
+                    @endphp
                     <tr>
                         <td>{{ $row->id }}</td>
                         <td>{{ optional($row->created_at)->format('d/m/Y H:i') ?? '—' }}</td>
@@ -101,12 +105,19 @@
                         <td>{{ $row->questions_count }}</td>
                         <td>{{ $row->assignments_count }}</td>
                         <td>{{ $row->attempts_count }}</td>
+                        <td>
+                            @if($markers->isNotEmpty())
+                                {{ $markers->pluck('name')->implode(', ') }}
+                            @else
+                                <span class="text-muted">Admin / course instructors</span>
+                            @endif
+                        </td>
                         <td style="white-space:nowrap;">
                             <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.edit', $row->id) }}">Edit</a>
                             @if(!empty($canAssign))
-                                <a class="btn btn-xs btn-success" href="{{ route('admin.assessments.tests.assign', $row->id) }}">Assign</a>
+                                <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.assign', $row->id) }}">Assign</a>
                             @endif
-                            <a class="btn btn-xs btn-default" href="{{ route('admin.assessments.tests.attempts', $row->id) }}">Attempts</a>
+                            <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.attempts', $row->id) }}">Attempts</a>
                             @if(!empty($canDelete))
                                 <form action="{{ route('admin.assessments.tests.destroy', $row->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this test?');">
                                     @csrf
@@ -117,7 +128,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="9" class="text-center">No assessments yet.</td></tr>
+                    <tr><td colspan="10" class="text-center">No assessments yet.</td></tr>
                 @endforelse
             </tbody>
         </table>

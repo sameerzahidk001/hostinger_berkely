@@ -37,9 +37,9 @@
                 <thead>
                     <tr>
                         <th>Batch</th>
-                        <th>Rate</th>
                         <th>Amount</th>
                         <th>Status</th>
+                        <th>Due date</th>
                         <th>Paid date</th>
                         <th>Slip</th>
                         <th>Notes</th>
@@ -54,9 +54,9 @@
                                     <br><small class="text-muted">{{ $row->batch->course->title }}</small>
                                 @endif
                             </td>
-                            <td>{{ $row->formattedRate() }}</td>
                             <td>{{ $row->formattedAmount() }}</td>
                             <td><span class="label {{ $row->statusBadgeClass() }}">{{ $row->statusLabel() }}</span></td>
+                            <td>{{ optional($row->due_date ?? null)->format('d M Y') ?? '—' }}</td>
                             <td>{{ optional($row->paid_date)->format('d M Y') ?? '—' }}</td>
                             <td>
                                 @if($row->hasSlip())

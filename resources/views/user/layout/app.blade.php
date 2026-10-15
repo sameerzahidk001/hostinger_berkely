@@ -249,8 +249,30 @@
                    $canQbank = method_exists($u, 'hasLmsPermission') && $u->hasLmsPermission('manage_question_bank');
                    $canCreateTests = method_exists($u, 'hasLmsPermission') && $u->hasLmsPermission('create_student_assessments');
                    $canAssignTests = method_exists($u, 'hasLmsPermission') && $u->hasLmsPermission('assign_student_assessments');
-                   $canTests = $canCreateTests || $canAssignTests;
+                   $canMarkResults = $canCreateTests || $canAssignTests;
+                   $hasMyTests = false;
+                   try {
+                       if (class_exists(\App\Models\LmsAssessmentAssignment::class)
+                           && \Illuminate\Support\Facades\Schema::hasTable('lms_assessment_assignments')) {
+                           $uid = (int) $u->id;
+                           $batchIds = method_exists($u, 'classBatches')
+                               ? $u->classBatches()->pluck('class_batches.id')->map(fn ($id) => (int) $id)->all()
+                               : [];
+                           $hasMyTests = \App\Models\LmsAssessmentAssignment::query()
+                               ->where(function ($q) use ($uid, $batchIds) {
+                                   $q->where('student_id', $uid);
+                                   if ($batchIds !== []) {
+                                       $q->orWhereIn('class_batch_id', $batchIds);
+                                   }
+                               })
+                               ->exists();
+                       }
+                   } catch (\Throwable $e) {
+                       $hasMyTests = false;
+                   }
+                   $showAssessmentsNav = $canQbank || $canCreateTests || $canAssignTests || $hasMyTests;
                @endphp
+               @if($showAssessmentsNav)
                <li class="{{ request()->routeIs('user.assessments.*') || request()->is('admin/assessments*') ? 'active' : '' }}">
                   <a href="javascript:void(0)">
                      <i class="fa fa-pencil-square-o"></i>
@@ -263,24 +285,29 @@
                         <a href="{{ route('admin.assessments.questions.index') }}">Question Bank</a>
                      </li>
                      @endif
-                     @if($canTests)
+                     @if($canCreateTests)
                      <li class="{{ request()->is('admin/assessments/tests') || request()->is('admin/assessments/tests/create*') || request()->is('admin/assessments/tests/*/edit') ? 'active' : '' }}">
-                        <a href="{{ route('admin.assessments.tests.index') }}">Create tests</a>
+                        <a href="{{ route('admin.assessments.tests.index') }}">Create Test</a>
                      </li>
-                     @if($canAssignTests || $canCreateTests)
+                     @endif
+                     @if($canAssignTests)
                      <li class="{{ request()->is('admin/assessments/tests/assigned-users') || request()->is('admin/assessments/tests/*/assign') ? 'active' : '' }}">
-                        <a href="{{ route('admin.assessments.tests.assigned-users') }}">Assign / Assigned users</a>
+                        <a href="{{ route('admin.assessments.tests.assigned-users') }}">Assigned Tests</a>
                      </li>
                      @endif
+                     @if($canMarkResults)
                      <li class="{{ request()->is('admin/assessments/reports*') ? 'active' : '' }}">
-                        <a href="{{ route('admin.assessments.reports.index') }}">Reports</a>
+                        <a href="{{ route('admin.assessments.reports.index') }}">Test Results</a>
                      </li>
                      @endif
+                     @if($hasMyTests)
                      <li class="{{ request()->routeIs('user.assessments.*') ? 'active' : '' }}">
-                        <a href="{{ route('user.assessments.index') }}">My assigned assessments</a>
+                        <a href="{{ route('user.assessments.index') }}">My Tests</a>
                      </li>
+                     @endif
                   </ul>
                </li>
+               @endif
                <li class="{{ request()->routeIs('user.rate-review.my-score') || request()->is('admin/rate-review*') ? 'active' : '' }}">
                   <a href="{{ route('user.rate-review.my-score') }}">
                      <i class="fa fa-star"></i>

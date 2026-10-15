@@ -26,7 +26,8 @@ class LmsAssessmentController extends Controller
 
     public function index(Request $request)
     {
-        abort_unless($this->assessments->canManageStudentAssessments() || $this->assessments->canManageSkillTests(), 403);
+        // Create Test page: create permission (or skill admin). Assign-only users use Assigned Tests.
+        abort_unless($this->assessments->canCreateStudentAssessments() || $this->assessments->canManageSkillTests(), 403);
         $this->assessments->ensure();
 
         $kind = trim((string) $request->get('kind', ''));
@@ -55,7 +56,10 @@ class LmsAssessmentController extends Controller
         }
 
         return view('admin.assessments.tests.index', [
-            'rows' => $query->with('course:id,title')->paginate(20)->withQueryString(),
+            'rows' => $query->with([
+                'course:id,title',
+                'assignments' => fn ($q) => $q->with('marker:id,name')->whereNotNull('marker_user_id'),
+            ])->paginate(20)->withQueryString(),
             'kinds' => LmsAssessment::kinds(),
             'kind' => $kind,
             'search' => $search,
