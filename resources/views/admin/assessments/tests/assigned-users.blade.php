@@ -78,7 +78,11 @@
                         <td><span class="{{ $winClass }}">{{ $winLabel }}</span></td>
                         <td style="white-space:nowrap;">
                             @if($row->assessment_id)
-                                <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.assign', $row->assessment_id) }}">Re-assign</a>
+                                @unless($row->isExpired())
+                                    <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.assign', $row->assessment_id) }}">Re-assign</a>
+                                @else
+                                    <span class="text-muted" title="Window ended — cannot re-assign">—</span>
+                                @endunless
                                 <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.attempts', $row->assessment_id) }}">Attempts</a>
                             @endif
                         </td>

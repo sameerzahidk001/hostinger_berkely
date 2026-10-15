@@ -441,7 +441,14 @@ class LmsAssessmentController extends Controller
 
     protected function syncAssignments(LmsAssessment $a, Request $request): void
     {
-        LmsAssessmentAssignment::query()->where('assessment_id', $a->id)->delete();
+        // Keep expired (Missed) assignments locked — do not delete or re-target them.
+        $existing = LmsAssessmentAssignment::query()->where('assessment_id', $a->id)->get();
+        $expiredIds = $existing->filter(fn (LmsAssessmentAssignment $row) => $row->isExpired())->pluck('id')->all();
+        $deleteQuery = LmsAssessmentAssignment::query()->where('assessment_id', $a->id);
+        if ($expiredIds !== []) {
+            $deleteQuery->whereNotIn('id', $expiredIds);
+        }
+        $deleteQuery->delete();
 
         $from = $request->filled('available_from') ? $request->input('available_from') : null;
         $until = $request->filled('available_until') ? $request->input('available_until') : null;
@@ -450,7 +457,16 @@ class LmsAssessmentController extends Controller
         $markerId = $request->filled('marker_user_id') ? (int) $request->input('marker_user_id') : null;
         $hasMarkerCol = Schema::hasColumn('lms_assessment_assignments', 'marker_user_id');
 
+        // Skip creating a new row that would replace an already-expired student/batch assignment.
+        $lockedStudentIds = $existing->filter(fn ($r) => $r->isExpired() && $r->student_id)
+            ->pluck('student_id')->map(fn ($id) => (int) $id)->all();
+        $lockedBatchIds = $existing->filter(fn ($r) => $r->isExpired() && $r->class_batch_id)
+            ->pluck('class_batch_id')->map(fn ($id) => (int) $id)->all();
+
         foreach ((array) $request->input('batch_ids', []) as $batchId) {
+            if (in_array((int) $batchId, $lockedBatchIds, true)) {
+                continue;
+            }
             $row = [
                 'assessment_id' => $a->id,
                 'class_batch_id' => (int) $batchId,
@@ -465,6 +481,9 @@ class LmsAssessmentController extends Controller
             LmsAssessmentAssignment::create($row);
         }
         foreach ((array) $request->input('student_ids', []) as $studentId) {
+            if (in_array((int) $studentId, $lockedStudentIds, true)) {
+                continue;
+            }
             $row = [
                 'assessment_id' => $a->id,
                 'student_id' => (int) $studentId,
