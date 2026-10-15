@@ -19,7 +19,7 @@
         <div class="row">
             <div class="col-md-3 form-group">
                 <label>Type *</label>
-                <select name="{{ $prefix }}[type]" class="form-control js-q-type" required>
+                <select name="{{ $prefix }}[type]" class="form-control js-q-type lms-searchable" data-placeholder="Type to find type" data-allow-clear="0" required>
                     @foreach($types as $k => $label)
                         <option value="{{ $k }}" @selected($type === $k)>{{ $label }}</option>
                     @endforeach

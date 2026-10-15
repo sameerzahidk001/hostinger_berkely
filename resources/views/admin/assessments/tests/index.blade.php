@@ -10,11 +10,13 @@
         </ol>
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
-        <a href="{{ route('admin.assessments.tests.create', ['kind' => 'practice']) }}" class="btn btn-primary btn-sm">Practice</a>
-        <a href="{{ route('admin.assessments.tests.create', ['kind' => 'mock']) }}" class="btn btn-primary btn-sm">Mock</a>
-        <a href="{{ route('admin.assessments.tests.create', ['kind' => 'general']) }}" class="btn btn-default btn-sm">General</a>
-        @if(!empty($canSkill))
-            <a href="{{ route('admin.assessments.tests.create', ['kind' => 'skill']) }}" class="btn btn-warning btn-sm">Skill test</a>
+        @if(!empty($canCreate))
+            <a href="{{ route('admin.assessments.tests.create', ['kind' => 'practice']) }}" class="btn btn-primary btn-sm">Practice</a>
+            <a href="{{ route('admin.assessments.tests.create', ['kind' => 'mock']) }}" class="btn btn-primary btn-sm">Mock</a>
+            <a href="{{ route('admin.assessments.tests.create', ['kind' => 'general']) }}" class="btn btn-default btn-sm">General</a>
+            @if(!empty($canSkill))
+                <a href="{{ route('admin.assessments.tests.create', ['kind' => 'skill']) }}" class="btn btn-warning btn-sm">Skill test</a>
+            @endif
         @endif
     </div>
 </div>
@@ -42,11 +44,12 @@
         </form>
         <table class="table table-striped table-bordered">
             <thead>
-                <tr><th>Title</th><th>Kind</th><th>Status</th><th>Questions</th><th>Assignments</th><th>Attempts</th><th></th></tr>
+                <tr><th>ID</th><th>Title</th><th>Kind</th><th>Status</th><th>Questions</th><th>Assignments</th><th>Attempts</th><th></th></tr>
             </thead>
             <tbody>
                 @forelse($rows as $row)
                     <tr>
+                        <td>{{ $row->id }}</td>
                         <td>{{ $row->title }}</td>
                         <td>{{ $row->kindLabel() }}</td>
                         <td>{{ ucfirst($row->status) }}</td>
@@ -59,7 +62,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="7" class="text-center">No assessments yet.</td></tr>
+                    <tr><td colspan="8" class="text-center">No assessments yet.</td></tr>
                 @endforelse
             </tbody>
         </table>

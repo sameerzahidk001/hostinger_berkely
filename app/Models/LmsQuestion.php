@@ -14,6 +14,7 @@ class LmsQuestion extends Model
     public const TYPE_MCQ = 'mcq';
     public const TYPE_ESSAY = 'essay';
     public const TYPE_SIMULATION = 'simulation';
+    public const TYPE_CASE_STUDY = 'case_study';
 
     protected $table = 'lms_questions';
 
@@ -32,7 +33,8 @@ class LmsQuestion extends Model
         return [
             self::TYPE_MCQ => 'MCQ',
             self::TYPE_ESSAY => 'Essay',
-            self::TYPE_SIMULATION => 'Simulation / case',
+            self::TYPE_SIMULATION => 'Simulation',
+            self::TYPE_CASE_STUDY => 'Case Study',
         ];
     }
 
@@ -55,7 +57,7 @@ class LmsQuestion extends Model
 
     public function needsManualMark(): bool
     {
-        return in_array($this->type, [self::TYPE_ESSAY, self::TYPE_SIMULATION], true);
+        return in_array($this->type, [self::TYPE_ESSAY, self::TYPE_SIMULATION, self::TYPE_CASE_STUDY], true);
     }
 
     public function options(): array

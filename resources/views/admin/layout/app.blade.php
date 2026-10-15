@@ -208,7 +208,10 @@
                       $canTestsMenu = admin_menu_allowed('assessments') && (
                           !auth()->check()
                           || !auth()->user()->roles()->where('name', 'instructor')->exists()
-                          || (method_exists(auth()->user(), 'hasLmsPermission') && auth()->user()->hasLmsPermission('manage_student_assessments'))
+                          || (method_exists(auth()->user(), 'hasLmsPermission') && (
+                              auth()->user()->hasLmsPermission('create_student_assessments')
+                              || auth()->user()->hasLmsPermission('assign_student_assessments')
+                          ))
                           || panel_sees_all_dashboards()
                       );
                       $isStaffPanelRole = auth()->check() && in_array(normalize_panel_role(auth()->user()->roles()->value('name')), ['content_writer', 'accountant'], true);
