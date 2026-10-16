@@ -21,6 +21,12 @@ class LmsAssessmentAssignment extends Model
         'available_until' => 'datetime',
     ];
 
+    /** Public appointment / sitting code, e.g. BEXT12 */
+    public function displayCode(): string
+    {
+        return 'BEXT' . (int) $this->id;
+    }
+
     public static function timezoneOptions(): array
     {
         if (class_exists(ClassSchedule::class) && method_exists(ClassSchedule::class, 'timezoneOptions')) {

@@ -531,9 +531,12 @@ class LmsAssessmentController extends Controller
                 $students = collect();
                 if ($assignment->student_id) {
                     $student = $assignment->student ?: User::query()->find($assignment->student_id);
-                    if ($student) {
-                        $students->push($student);
-                    }
+                    // Always keep the sitting visible even if the user row is missing.
+                    $students->push($student ?: (object) [
+                        'id' => (int) $assignment->student_id,
+                        'name' => 'User #' . $assignment->student_id,
+                        'email' => '',
+                    ]);
                 } elseif ($assignment->class_batch_id && Schema::hasTable('class_batches')) {
                     $bid = (int) $assignment->class_batch_id;
                     if (! isset($batchStudentCache[$bid])) {
@@ -543,10 +546,25 @@ class LmsAssessmentController extends Controller
                             : collect();
                     }
                     $students = $batchStudentCache[$bid];
+                    if ($students->isEmpty()) {
+                        $students = collect([(object) [
+                            'id' => 0,
+                            'name' => 'Batch #' . $bid . ' (no students)',
+                            'email' => '',
+                        ]]);
+                    }
+                } else {
+                    // Orphan assignment row — still list it.
+                    $students = collect([(object) [
+                        'id' => 0,
+                        'name' => '—',
+                        'email' => '',
+                    ]]);
                 }
 
                 foreach ($students as $student) {
-                    $key = (int) $assignment->id . ':' . (int) $student->id;
+                    $sid = (int) ($student->id ?? 0);
+                    $key = (int) $assignment->id . ':' . $sid;
                     if (isset($rowsByKey[$key])) {
                         continue;
                     }
@@ -559,18 +577,16 @@ class LmsAssessmentController extends Controller
                 }
             }
 
-            $userIds = collect($rowsByKey)->pluck('student.id')->unique()->filter()->values()->all();
-            $attemptsByUser = $userIds === []
-                ? collect()
-                : LmsAssessmentAttempt::query()
-                    ->where('assessment_id', $assessment->id)
-                    ->whereIn('user_id', $userIds)
-                    ->orderByDesc('id')
-                    ->get()
-                    ->groupBy(fn ($a) => (int) $a->user_id);
+            $allAttempts = LmsAssessmentAttempt::query()
+                ->with('user:id,name,email')
+                ->where('assessment_id', $assessment->id)
+                ->orderByDesc('id')
+                ->get();
+            $attemptsByUser = $allAttempts->groupBy(fn ($a) => (int) $a->user_id);
+            $claimedAttemptIds = [];
 
             // Attempt N of T per student (oldest assignment = attempt 1).
-            $sittingsByUser = collect($rowsByKey)->groupBy(fn ($r) => (int) $r['student']->id);
+            $sittingsByUser = collect($rowsByKey)->groupBy(fn ($r) => (int) ($r['student']->id ?? 0));
             $attemptMeta = [];
             foreach ($sittingsByUser as $uid => $sittings) {
                 $ordered = $sittings->sortBy(fn ($r) => (int) $r['assignment']->id)->values();
@@ -584,17 +600,51 @@ class LmsAssessmentController extends Controller
             }
 
             foreach ($rowsByKey as $key => &$row) {
-                $uid = (int) $row['student']->id;
+                $uid = (int) ($row['student']->id ?? 0);
                 $asg = $row['assignment'];
-                $candidates = $attemptsByUser->get($uid) ?? collect();
-                $row['attempt'] = $candidates->first(
-                    fn ($att) => $this->assessments->attemptBelongsToAssignment($att, $asg)
-                );
-                $meta = $attemptMeta[(int) $asg->id . ':' . $uid] ?? ['number' => 1, 'total' => 1];
+                $candidates = $uid > 0 ? ($attemptsByUser->get($uid) ?? collect()) : collect();
+                $matched = $candidates->first(function ($att) use ($asg, $claimedAttemptIds) {
+                    return ! isset($claimedAttemptIds[(int) $att->id])
+                        && $this->assessments->attemptBelongsToAssignment($att, $asg);
+                });
+                // Same student, newest sitting without a window match may claim leftover attempt.
+                if (! $matched && $uid > 0 && $candidates->isNotEmpty()) {
+                    $latestAsgId = collect($rowsByKey)
+                        ->filter(fn ($r) => (int) ($r['student']->id ?? 0) === $uid)
+                        ->max(fn ($r) => (int) $r['assignment']->id);
+                    if ((int) $asg->id === (int) $latestAsgId) {
+                        $matched = $candidates->first(fn ($att) => ! isset($claimedAttemptIds[(int) $att->id]));
+                    }
+                }
+                if ($matched) {
+                    $claimedAttemptIds[(int) $matched->id] = true;
+                }
+                $row['attempt'] = $matched;
+                $meta = $attemptMeta[(int) $asg->id . ':' . $uid] ?? ['number' => 1, 'total' => max(1, $assignments->count())];
                 $row['attempt_number'] = $meta['number'];
                 $row['attempt_total'] = $meta['total'];
             }
             unset($row);
+
+            // Include any attempt that never matched an assignment sitting (legacy / edge cases).
+            foreach ($allAttempts as $att) {
+                if (isset($claimedAttemptIds[(int) $att->id])) {
+                    continue;
+                }
+                $student = $att->user ?: (object) [
+                    'id' => (int) $att->user_id,
+                    'name' => 'User #' . $att->user_id,
+                    'email' => '',
+                ];
+                $rowsByKey['attempt:' . $att->id] = [
+                    'assessment' => $assessment,
+                    'student' => $student,
+                    'assignment' => $assignments->first(),
+                    'attempt' => $att,
+                    'attempt_number' => 1,
+                    'attempt_total' => max(1, $assignments->count()),
+                ];
+            }
 
             $rows = collect($rowsByKey)->values()->sortByDesc(function ($row) {
                 $attempt = $row['attempt'];
@@ -602,7 +652,7 @@ class LmsAssessmentController extends Controller
                     return optional($attempt->submitted_at ?: $attempt->updated_at)->timestamp ?? 0;
                 }
 
-                return optional($row['assignment']->windowStart() ?: $row['assignment']->created_at)->timestamp ?? 0;
+                return (int) ($row['assignment']->id ?? 0);
             })->values();
         } catch (\Throwable $e) {
             report($e);

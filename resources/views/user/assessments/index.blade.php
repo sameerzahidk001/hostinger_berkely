@@ -88,7 +88,7 @@
             overflow-wrap: break-word;
             white-space: normal;
         }
-        #assessments-portal .lms-assess-table .col-date { width: 8%; }
+        #assessments-portal .lms-assess-table .col-appt { width: 8%; }
         #assessments-portal .lms-assess-table .col-attempt { width: 7%; }
         #assessments-portal .lms-assess-table .col-title { width: 18%; }
         #assessments-portal .lms-assess-table .col-type { width: 9%; }
@@ -195,7 +195,7 @@
         <table class="table table-striped table-bordered lms-assess-table js-sortable-table">
             <thead>
                 <tr>
-                    <th class="col-date" data-sort-col="0">Exam start <span class="sort-ind"></span></th>
+                    <th class="col-appt" data-sort-col="0">Appointment ID <span class="sort-ind"></span></th>
                     <th class="col-attempt" data-sort-col="1">Attempt <span class="sort-ind"></span></th>
                     <th class="col-title" data-sort-col="2">Test <span class="sort-ind"></span></th>
                     <th class="col-type" data-sort-col="3">Type <span class="sort-ind"></span></th>
@@ -211,25 +211,13 @@
                         $a = $row['assessment'];
                         $asg = $row['assignment'];
                         $att = $row['attempt'] ?? null;
-                        // Exam start = appointment start (same clock as Timing), not created-at.
-                        if ($att) {
-                            $dateText = ($asg && $att->submitted_at)
-                                ? $asg->formatInTimezone($att->submitted_at)
-                                : (optional($att->submitted_at ?: $att->updated_at)->format('d/m/y H:i') ?? '—');
-                            $dateSort = optional($att->submitted_at ?: $att->updated_at)->timestamp ?? 0;
-                        } elseif ($asg && $asg->windowStart()) {
-                            $dateText = $asg->windowStart()->format('d/m/y H:i');
-                            $dateSort = $asg->windowStart()->timestamp;
-                        } else {
-                            $dateText = optional($asg?->created_at)->format('d/m/y H:i') ?? '—';
-                            $dateSort = optional($asg?->created_at)->timestamp ?? 0;
-                        }
                         $spend = $att?->spendMinutes();
                         $used = (int) ($row['attempts_used'] ?? 0);
                         $maxAtt = $row['max_attempts'] ?? null;
                         $canRetake = !empty($row['can_retake']);
                         $attemptNo = (int) ($row['attempt_number'] ?? 1);
                         $attemptTotal = (int) ($row['attempt_total'] ?? 1);
+                        $apptId = $asg ? $asg->displayCode() : '—';
                         $course = $a->course ?? null;
                         $assessorName = $att
                             ? $att->assessorLabel($asg)
@@ -238,7 +226,7 @@
                         $statusSort = $att ? $att->statusLabel() : ($tab === 'missed' ? 'Missed' : ($tab === 'upcoming' ? 'Upcoming' : ($canRetake ? 'Retake' : 'Available')));
                     @endphp
                     <tr>
-                        <td class="col-date" data-sort="{{ $dateSort }}">{{ $dateText }}</td>
+                        <td class="col-appt" data-sort="{{ $asg->id ?? 0 }}"><strong>{{ $apptId }}</strong></td>
                         <td class="col-attempt" data-sort="{{ $attemptNo }}">
                             <strong>{{ $attemptNo }} of {{ $attemptTotal }}</strong>
                         </td>

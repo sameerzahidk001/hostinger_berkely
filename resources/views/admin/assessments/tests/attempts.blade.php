@@ -27,7 +27,7 @@
         overflow-wrap: break-word;
         white-space: normal;
     }
-    .lms-attempts-table .col-date { width: 7%; }
+    .lms-attempts-table .col-appt { width: 8%; }
     .lms-attempts-table .col-attempt { width: 7%; }
     .lms-attempts-table .col-test { width: 12%; }
     .lms-attempts-table .col-taker { width: 13%; }
@@ -104,7 +104,7 @@
             <table class="table table-striped table-bordered lms-attempts-table js-sortable-table">
                 <thead>
                     <tr>
-                        <th class="col-date" data-sort-col="0">Exam start <span class="sort-ind"></span></th>
+                        <th class="col-appt" data-sort-col="0">Appointment ID <span class="sort-ind"></span></th>
                         <th class="col-attempt" data-sort-col="1">Attempt <span class="sort-ind"></span></th>
                         <th class="col-test" data-sort-col="2">Test <span class="sort-ind"></span></th>
                         <th class="col-taker" data-sort-col="3">Test Taker <span class="sort-ind"></span></th>
@@ -128,42 +128,36 @@
                             if ($attempt) {
                                 $statusClass = $attempt->statusColorClass();
                                 $statusText = $attempt->statusLabel();
-                            } elseif ($assignment->isNotYetOpen()) {
+                            } elseif ($assignment && $assignment->isNotYetOpen()) {
                                 $statusClass = 'lms-status-upcoming';
                                 $statusText = 'Upcoming';
-                            } elseif ($assignment->isExpired()) {
+                            } elseif ($assignment && $assignment->isExpired()) {
                                 $statusClass = 'lms-status-missed';
                                 $statusText = 'Missed';
                             } else {
                                 $statusClass = 'lms-status-available';
                                 $statusText = 'Assigned';
                             }
-                            if ($attempt && $attempt->submitted_at) {
-                                $dateText = $assignment->formatInTimezone($attempt->submitted_at);
-                            } elseif ($assignment->windowStart()) {
-                                $dateText = $assignment->windowStart()->format('d/m/y H:i');
-                            } else {
-                                $dateText = optional($assignment->created_at)->format('d/m/y H:i') ?? '—';
-                            }
                             $spend = $attempt?->spendMinutes();
-                            $appointment = $assignment->appointmentWindowLabel();
+                            $appointment = $assignment ? $assignment->appointmentWindowLabel() : '—';
                             $assessorName = $attempt
                                 ? $attempt->assessorLabel($assignment)
-                                : ($assignment->marker->name ?? 'Admin / course instructors');
+                                : ($assignment?->marker->name ?? 'Admin / course instructors');
                             $assessorUserId = $attempt
                                 ? $attempt->assessorUserId($assignment)
-                                : ($assignment->marker_user_id ? (int) $assignment->marker_user_id : null);
+                                : ($assignment && $assignment->marker_user_id ? (int) $assignment->marker_user_id : null);
                             $course = $assessmentRow->course ?? null;
-                            $createdBy = $assignment->createdByLabel();
+                            $createdBy = $assignment ? $assignment->createdByLabel() : '—';
+                            $apptId = $assignment ? $assignment->displayCode() : '—';
                         @endphp
                         <tr>
-                            <td class="col-date" data-sort="{{ optional($assignment->windowStart() ?: $assignment->created_at)->timestamp ?? 0 }}">{{ $dateText }}</td>
+                            <td class="col-appt" data-sort="{{ $assignment->id ?? 0 }}"><strong>{{ $apptId }}</strong></td>
                             <td class="col-attempt" data-sort="{{ $attemptNo }}">
                                 <strong>{{ $attemptNo }} of {{ $attemptTotal }}</strong>
                             </td>
                             <td class="col-test" data-sort="{{ $assessmentRow->title ?? '' }}">
                                 <strong>{{ $assessmentRow->title ?: ('Test #'.$assessmentRow->id) }}</strong>
-                                <br><small class="text-muted">{{ $assessmentRow->displayCode() }} · {{ $assessmentRow->kindLabel() }} · Sitting #{{ $assignment->id }}</small>
+                                <br><small class="text-muted">{{ $assessmentRow->displayCode() }} · {{ $assessmentRow->kindLabel() }}</small>
                             </td>
                             <td class="col-taker" data-sort="{{ $student->name ?? '' }}">
                                 @if(!empty($student->id))
