@@ -45,6 +45,11 @@ class LmsAssessmentSchema
                 $table->unsignedBigInteger('marker_user_id')->nullable()->index();
             });
         }
+        if (Schema::hasTable('lms_assessment_assignments') && ! Schema::hasColumn('lms_assessment_assignments', 'timezone')) {
+            Schema::table('lms_assessment_assignments', function (Blueprint $table) {
+                $table->string('timezone', 64)->nullable()->after('available_until');
+            });
+        }
     }
 
     protected static function ensureQuestions(): void
@@ -127,6 +132,7 @@ class LmsAssessmentSchema
             $table->unsignedBigInteger('student_id')->nullable()->index();
             $table->timestamp('available_from')->nullable();
             $table->timestamp('available_until')->nullable();
+            $table->string('timezone', 64)->nullable();
             $table->unsignedBigInteger('assigned_by_admin_id')->nullable();
             $table->unsignedBigInteger('assigned_by_user_id')->nullable();
             $table->timestamps();

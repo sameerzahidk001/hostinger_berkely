@@ -12,7 +12,7 @@ class LmsAssessmentAssignment extends Model
 
     protected $fillable = [
         'assessment_id', 'class_batch_id', 'student_id', 'marker_user_id',
-        'available_from', 'available_until',
+        'available_from', 'available_until', 'timezone',
         'assigned_by_admin_id', 'assigned_by_user_id',
     ];
 
@@ -20,6 +20,66 @@ class LmsAssessmentAssignment extends Model
         'available_from' => 'datetime',
         'available_until' => 'datetime',
     ];
+
+    public static function timezoneOptions(): array
+    {
+        if (class_exists(ClassSchedule::class) && method_exists(ClassSchedule::class, 'timezoneOptions')) {
+            return ClassSchedule::timezoneOptions();
+        }
+
+        return [
+            'Asia/Dubai' => 'Asia/Dubai (UAE)',
+            'Asia/Karachi' => 'Asia/Karachi (Pakistan)',
+            'Asia/Kolkata' => 'Asia/Kolkata (India)',
+            'Europe/London' => 'Europe/London (UK)',
+            'America/New_York' => 'America/New_York (US East)',
+            'UTC' => 'UTC',
+        ];
+    }
+
+    public function timezoneName(): string
+    {
+        $tz = trim((string) ($this->timezone ?? ''));
+        if ($tz === '') {
+            $tz = (string) config('app.timezone', 'Asia/Dubai');
+        }
+
+        return $tz !== '' ? $tz : 'Asia/Dubai';
+    }
+
+    public function timezoneLabel(): string
+    {
+        $tz = $this->timezoneName();
+        try {
+            $abbr = now($tz)->format('T');
+        } catch (\Throwable $e) {
+            $abbr = '';
+        }
+
+        return trim($tz . ($abbr !== '' && $abbr !== $tz ? ' · ' . $abbr : ''));
+    }
+
+    /** Format a moment in this assignment's timezone (legacy rows without timezone stay as stored). */
+    public function formatInTimezone($dt, string $fmt = 'd/m/y H:i'): string
+    {
+        if (! $dt) {
+            return '—';
+        }
+        try {
+            $carbon = $dt instanceof Carbon ? $dt->copy() : Carbon::parse($dt);
+        } catch (\Throwable $e) {
+            return '—';
+        }
+        if (filled($this->timezone)) {
+            try {
+                $carbon->setTimezone($this->timezoneName());
+            } catch (\Throwable $e) {
+                // keep stored clock
+            }
+        }
+
+        return $carbon->format($fmt);
+    }
 
     public function assessment(): BelongsTo
     {
@@ -89,19 +149,20 @@ class LmsAssessmentAssignment extends Model
         return $this->available_until;
     }
 
-    /** Display: "15/10/24 22:25 → 16/10/24 01:25" */
+    /** Display: "15/10/24 22:25 → 16/10/24 01:25 (Asia/Dubai · GST)" */
     public function appointmentWindowLabel(string $fmt = 'd/m/y H:i'): string
     {
         $from = $this->available_from;
         $until = $this->appointmentEnd();
+        $tzSuffix = filled($this->timezone) ? (' (' . $this->timezoneLabel() . ')') : '';
         if ($from && $until) {
-            return $from->format($fmt) . ' → ' . $until->format($fmt);
+            return $this->formatInTimezone($from, $fmt) . ' → ' . $this->formatInTimezone($until, $fmt) . $tzSuffix;
         }
         if ($from) {
-            return $from->format($fmt);
+            return $this->formatInTimezone($from, $fmt) . $tzSuffix;
         }
         if ($until) {
-            return 'Until ' . $until->format($fmt);
+            return 'Until ' . $this->formatInTimezone($until, $fmt) . $tzSuffix;
         }
 
         return 'Open';

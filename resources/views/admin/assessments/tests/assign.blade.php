@@ -54,14 +54,33 @@
                         @endforeach
                     </select>
                 </div>
+                @php
+                    $firstAsg = $assessment->assignments->first();
+                    $tzForInput = old('timezone', $selectedTimezone ?? config('app.timezone', 'Asia/Dubai'));
+                    $fromForInput = old('available_from');
+                    if ($fromForInput === null && $firstAsg?->available_from) {
+                        $fromForInput = filled($firstAsg->timezone)
+                            ? $firstAsg->available_from->copy()->timezone($firstAsg->timezoneName())->format('Y-m-d\TH:i')
+                            : $firstAsg->available_from->format('Y-m-d\TH:i');
+                    }
+                @endphp
                 <div class="col-md-3 form-group">
                     <label>Exam Appointment Start</label>
-                    <input type="datetime-local" name="available_from" class="form-control" value="{{ old('available_from', optional($assessment->assignments->first()?->available_from)->format('Y-m-d\TH:i')) }}">
+                    <input type="datetime-local" name="available_from" class="form-control" value="{{ $fromForInput }}">
                     <p class="help-block" style="margin-bottom:0;font-size:11px;">
-                        Window ends at start + exam duration
+                        Local time for the timezone below. Window ends at start + exam duration
                         ({{ $assessment->duration_minutes ? $assessment->duration_minutes . ' min' : 'set duration on the test' }}).
                         Student may start anytime inside that window.
                     </p>
+                </div>
+                <div class="col-md-3 form-group">
+                    <label>Timezone *</label>
+                    <select name="timezone" class="form-control lms-searchable" data-placeholder="Type to find timezone" data-allow-clear="0" required>
+                        @foreach(($timezoneOptions ?? \App\Models\LmsAssessmentAssignment::timezoneOptions()) as $tzValue => $tzLabel)
+                            <option value="{{ $tzValue }}" @selected((string) $tzForInput === (string) $tzValue)>{{ $tzLabel }}</option>
+                        @endforeach
+                    </select>
+                    <p class="help-block" style="margin-bottom:0;font-size:11px;">Shown with appointment and attempt times on all lists and PDFs.</p>
                 </div>
             </div>
             <button type="submit" class="btn btn-primary">Save assignments</button>
