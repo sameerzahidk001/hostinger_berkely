@@ -640,10 +640,13 @@ class LmsAssessmentService
         // Attempt N of T per assessment (oldest assigned sitting = attempt 1).
         $sittingMeta = [];
         foreach ($items->groupBy(fn ($r) => (int) $r['assessment']->id) as $aid => $group) {
-            $ordered = $group->sortBy(fn ($r) => (int) ($r['assignment']->id ?? 0))->values();
-            $total = $ordered->count();
+            $ordered = $group
+                ->filter(fn ($r) => ! empty($r['assignment']?->id))
+                ->sortBy(fn ($r) => (int) $r['assignment']->id)
+                ->values();
+            $total = max(1, $ordered->count());
             foreach ($ordered as $i => $r) {
-                $asgId = (int) ($r['assignment']->id ?? 0);
+                $asgId = (int) $r['assignment']->id;
                 $sittingMeta[$aid . ':' . $asgId] = [
                     'number' => $i + 1,
                     'total' => $total,

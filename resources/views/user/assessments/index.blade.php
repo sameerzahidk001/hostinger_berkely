@@ -214,14 +214,18 @@
                         $maxAtt = $row['max_attempts'] ?? null;
                         $canRetake = !empty($row['can_retake']);
                         $attemptNo = (int) ($row['attempt_number'] ?? 1);
-                        $attemptTotal = (int) ($row['attempt_total'] ?? 1);
+                        $attemptTotal = max(1, (int) ($row['attempt_total'] ?? 1), $attemptNo);
                         $apptId = $asg ? $asg->displayCode() : '—';
                         $course = $a->course ?? null;
                         $assessorName = $att
                             ? $att->assessorLabel($asg)
                             : ($asg?->marker?->name ?? '—');
                         $assessorEmail = $asg?->marker?->email ?? null;
-                        $statusSort = $att ? $att->statusLabel() : ($tab === 'missed' ? 'Missed' : ($tab === 'upcoming' ? 'Upcoming' : ($canRetake ? 'Retake' : 'Available')));
+                        $canDownloadPdf = $att && (
+                            $att->results_published
+                            || ($a->results_mode === 'instant_mcq' && $att->status === 'graded')
+                        );
+                        $statusSort = $att ? $att->statusLabel() : ($tab === 'missed' ? 'Missed' : ($tab === 'upcoming' ? 'Upcoming' : 'Available'));
                     @endphp
                     <tr>
                         <td class="col-appt" data-sort="{{ $asg->id ?? 0 }}"><strong>{{ $apptId }}</strong></td>
@@ -267,11 +271,10 @@
                             @elseif($tab === 'missed')
                                 <span class="lms-row-status lms-row-missed">Missed</span>
                             @elseif($tab === 'upcoming')
-                                <span class="lms-row-status lms-row-upcoming">Opens {{ $asg?->windowStart()?->format('d M Y H:i') ?: 'soon' }} ({{ $asg?->timezoneLabel() }}) · Not open yet</span>
-                            @elseif($canRetake || $attemptNo > 1)
-                                <span class="lms-row-status lms-row-available">Attempt {{ $attemptNo }} of {{ $attemptTotal }} — start anytime in this window</span>
+                                <span class="lms-row-status lms-row-upcoming">Upcoming</span>
+                                <br><small class="text-muted">Opens {{ $asg?->windowStart()?->format('d M Y H:i') ?: 'soon' }}</small>
                             @else
-                                <span class="lms-row-status lms-row-available">Attempt {{ $attemptNo }} of {{ $attemptTotal }} — start anytime in this window</span>
+                                <span class="lms-row-status lms-row-available">Available</span>
                             @endif
                         </td>
                         <td class="col-action">
@@ -281,9 +284,6 @@
                                 <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.take', $att->id) }}">Continue</a>
                             @elseif($att)
                                 <a class="btn btn-xs btn-warning" href="{{ route('user.assessments.result', $att->id) }}">View Details</a>
-                                @if($att->results_published || ($a->results_mode === 'instant_mcq' && $att->status === 'graded'))
-                                    <a class="btn btn-xs btn-info" href="{{ route('user.assessments.result-pdf', $att->id) }}" target="_blank">Download PDF</a>
-                                @endif
                                 @if($canRetake)
                                     <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.start', $a->id) }}">Retake</a>
                                 @endif
@@ -291,6 +291,9 @@
                                 <span class="text-muted">Not open yet</span>
                             @elseif($tab === 'missed')
                                 <span class="text-muted">Ended</span>
+                            @endif
+                            @if($canDownloadPdf)
+                                <a class="btn btn-xs btn-info" href="{{ route('user.assessments.result-pdf', $att->id) }}" target="_blank">Download PDF</a>
                             @endif
                         </td>
                     </tr>
