@@ -1,5 +1,6 @@
 @extends(lms_portal_layout())
 @section('title', 'Assessments')
+@include('admin.assessments.partials.searchable-select-assets')
 @section('content')
 <style>
     .lms-create-tests-row {
@@ -90,7 +91,7 @@
         <form method="GET" class="m-b-md" style="margin-bottom:15px;">
             <div class="row">
                 <div class="col-sm-3">
-                    <select name="kind" class="form-control">
+                    <select name="kind" class="form-control lms-searchable" data-placeholder="Type to find type">
                         <option value="">All types</option>
                         @foreach($kinds as $k => $label)
                             <option value="{{ $k }}" @selected($kind === $k)>{{ $label }}</option>

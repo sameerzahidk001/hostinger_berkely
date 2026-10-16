@@ -1,5 +1,6 @@
 @extends(lms_portal_layout())
 @section('title', 'Assigned Tests')
+@include('admin.assessments.partials.searchable-select-assets')
 @section('content')
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
@@ -97,7 +98,7 @@
             <div class="row">
                 <div class="col-sm-2 form-group">
                     <label>Assessment</label>
-                    <select name="assessment_id" class="form-control">
+                    <select name="assessment_id" class="form-control lms-searchable" data-placeholder="Type to find assessment">
                         <option value="0">All</option>
                         @foreach($assessments as $a)
                             <option value="{{ $a->id }}" @selected((int)($filters['assessment_id'] ?? 0) === (int)$a->id)>{{ $a->title }}</option>
@@ -106,7 +107,7 @@
                 </div>
                 <div class="col-sm-2 form-group">
                     <label>Batch</label>
-                    <select name="batch_id" class="form-control">
+                    <select name="batch_id" class="form-control lms-searchable" data-placeholder="Type to find batch">
                         <option value="0">All</option>
                         @foreach($batches as $b)
                             <option value="{{ $b->id }}" @selected((int)($filters['batch_id'] ?? 0) === (int)$b->id)>{{ $b->code }} — {{ $b->name }}</option>
@@ -115,7 +116,7 @@
                 </div>
                 <div class="col-sm-2 form-group">
                     <label>Course</label>
-                    <select name="course_id" class="form-control">
+                    <select name="course_id" class="form-control lms-searchable" data-placeholder="Type to find course">
                         <option value="0">All</option>
                         @foreach($courses as $c)
                             <option value="{{ $c->id }}" @selected((int)($filters['course_id'] ?? 0) === (int)$c->id)>{{ $c->title }}</option>
@@ -124,7 +125,7 @@
                 </div>
                 <div class="col-sm-2 form-group">
                     <label>Type</label>
-                    <select name="kind" class="form-control">
+                    <select name="kind" class="form-control lms-searchable" data-placeholder="Type to find type">
                         <option value="">All</option>
                         @foreach($kinds as $k => $label)
                             <option value="{{ $k }}" @selected(($filters['kind'] ?? '') === $k)>{{ $label }}</option>

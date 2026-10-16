@@ -87,22 +87,42 @@
             overflow-wrap: break-word;
             white-space: normal;
         }
-        #assessments-portal .lms-assess-table .col-date { width: 8%; }
+        #assessments-portal .lms-assess-table .col-date { width: 9%; }
         #assessments-portal .lms-assess-table .col-title { width: 18%; }
-        #assessments-portal .lms-assess-table .col-type { width: 8%; }
-        #assessments-portal .lms-assess-table .col-dur { width: 7%; }
-        #assessments-portal .lms-assess-table .col-window { width: 16%; }
+        #assessments-portal .lms-assess-table .col-type { width: 9%; }
+        #assessments-portal .lms-assess-table .col-timing { width: 24%; }
+        #assessments-portal .lms-assess-table .col-assessor { width: 12%; }
         #assessments-portal .lms-assess-table .col-status { width: 14%; }
-        #assessments-portal .lms-assess-table .col-time { width: 5%; text-align: center; }
-        #assessments-portal .lms-assess-table .col-spend { width: 6%; text-align: center; }
         #assessments-portal .lms-assess-table .col-action {
-            width: 13%;
+            width: 14%;
             overflow-wrap: normal;
             word-break: normal;
-            white-space: nowrap;
         }
-        #assessments-portal .lms-assess-table .col-action .btn { white-space: nowrap; margin: 1px 2px 1px 0; }
+        #assessments-portal .lms-assess-table .col-action .btn {
+            display: block;
+            width: 100%;
+            margin: 0 0 4px 0;
+            white-space: nowrap;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        #assessments-portal .lms-assess-table .lms-timing-line { display: block; line-height: 1.35; }
     </style>
+    @php
+        $fmtDuration = function ($minutes) {
+            if ($minutes === null || $minutes === '') {
+                return '—';
+            }
+            $m = (int) round((float) $minutes);
+            if ($m < 60) {
+                return $m . ' min';
+            }
+            $h = intdiv($m, 60);
+            $r = $m % 60;
+
+            return $r ? ($h . 'h ' . $r . 'm') : ($h . 'h');
+        };
+    @endphp
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if(session('fail'))<div class="alert alert-danger">{{ session('fail') }}</div>@endif
 
@@ -156,14 +176,11 @@
             <thead>
                 <tr>
                     <th class="col-date">Date</th>
-                    <th class="col-title">Title</th>
+                    <th class="col-title">Test</th>
                     <th class="col-type">Type</th>
-                    <th class="col-dur">Duration</th>
-                    <th class="col-window">Exam Appointment Time</th>
+                    <th class="col-timing">Timing</th>
+                    <th class="col-assessor">Assessor</th>
                     <th class="col-status">Status</th>
-                    <th class="col-time">Start</th>
-                    <th class="col-time">End</th>
-                    <th class="col-spend">Spend</th>
                     <th class="col-action">Action</th>
                 </tr>
             </thead>
@@ -180,24 +197,34 @@
                         $used = (int) ($row['attempts_used'] ?? 0);
                         $maxAtt = $row['max_attempts'] ?? null;
                         $canRetake = !empty($row['can_retake']);
+                        $course = $a->course ?? null;
+                        $assessorName = $att
+                            ? $att->assessorLabel($asg)
+                            : ($asg?->marker?->name ?? '—');
                     @endphp
                     <tr>
                         <td class="col-date">{{ $dateText }}</td>
-                        <td class="col-title">{{ $a->title }} <small class="text-muted">({{ $a->displayCode() }})</small></td>
-                        <td class="col-type">{{ $a->kindLabel() }}</td>
-                        <td class="col-dur">{{ $a->duration_minutes ? $a->duration_minutes.' min' : '—' }}</td>
-                        <td class="col-window">
-                            @if($asg)
-                                {{ $asg->appointmentWindowLabel() }}
-                            @else
-                                —
+                        <td class="col-title">
+                            {{ $a->title }}
+                            <br><small class="text-muted">{{ $a->displayCode() }}</small>
+                            @if($course)
+                                <br><small class="text-muted">{{ $course->title }}</small>
                             @endif
                         </td>
+                        <td class="col-type">{{ $a->kindLabel() }}</td>
+                        <td class="col-timing">
+                            <span class="lms-timing-line"><strong>Exam Appointment Timing:</strong> {{ $asg ? $asg->appointmentWindowLabel() : '—' }}</span>
+                            <span class="lms-timing-line"><strong>Exam Duration:</strong> {{ $fmtDuration($a->duration_minutes ?? null) }}</span>
+                            <span class="lms-timing-line"><strong>Started:</strong> {{ optional($att?->started_at)->format('d/m/y H:i') ?? '—' }}</span>
+                            <span class="lms-timing-line"><strong>Ended:</strong> {{ optional($att?->submitted_at)->format('d/m/y H:i') ?? '—' }}</span>
+                            <span class="lms-timing-line"><strong>Duration spent:</strong> {{ $spend !== null ? $fmtDuration($spend) : '—' }}</span>
+                        </td>
+                        <td class="col-assessor">{{ $assessorName }}</td>
                         <td class="col-status">
                             @if($att)
                                 <span class="lms-row-status {{ str_replace('lms-status-', 'lms-row-', $att->statusColorClass()) }}">{{ $att->statusLabel() }}</span>
                                 @if($att->results_published && $att->score_raw !== null)
-                                    · {{ lms_format_number($att->score_raw) }}/{{ lms_format_number($att->score_max) }}
+                                    <br>{{ lms_format_number($att->score_raw) }}/{{ lms_format_number($att->score_max) }}
                                     @if($att->percent() !== null) ({{ lms_format_number($att->percent()) }}%) @endif
                                 @endif
                             @elseif($tab === 'missed')
@@ -216,9 +243,6 @@
                                 <span class="lms-row-status lms-row-available">Available</span>
                             @endif
                         </td>
-                        <td class="col-time">{{ optional($att?->started_at)->format('H:i') ?? '—' }}</td>
-                        <td class="col-time">{{ optional($att?->submitted_at)->format('H:i') ?? '—' }}</td>
-                        <td class="col-spend">{{ $spend !== null ? $spend . ' min' : '—' }}</td>
                         <td class="col-action">
                             @if($tab === 'available')
                                 <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.start', $a->id) }}">{{ $canRetake ? 'Retake' : 'Start' }}</a>
@@ -227,7 +251,7 @@
                             @elseif($att)
                                 <a class="btn btn-xs btn-default" href="{{ route('user.assessments.result', $att->id) }}">View</a>
                                 @if($att->results_published || ($a->results_mode === 'instant_mcq' && $att->status === 'graded'))
-                                    <a class="btn btn-xs btn-success" href="{{ route('user.assessments.result-pdf', $att->id) }}" target="_blank"><i class="fa fa-file-pdf-o"></i> PDF</a>
+                                    <a class="btn btn-xs btn-success" href="{{ route('user.assessments.result-pdf', $att->id) }}" target="_blank">PDF</a>
                                 @endif
                                 @if($canRetake)
                                     <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.start', $a->id) }}">Retake</a>
@@ -240,7 +264,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="10" class="text-center">Nothing in this tab.</td></tr>
+                    <tr><td colspan="7" class="text-center">Nothing in this tab.</td></tr>
                 @endforelse
             </tbody>
         </table>

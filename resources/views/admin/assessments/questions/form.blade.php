@@ -33,7 +33,7 @@
                 <div class="row">
                     <div class="col-md-2 form-group">
                         <label>Status</label>
-                        <select name="status" class="form-control">
+                        <select name="status" class="form-control lms-searchable" data-placeholder="Type to find status" data-allow-clear="0">
                             <option value="active" @selected(old('status', $question->status ?: 'active') === 'active')>Active</option>
                             <option value="disabled" @selected(old('status', $question->status) === 'disabled')>Disabled</option>
                         </select>
@@ -124,7 +124,7 @@
                     </div>
                     <div class="col-md-2 form-group">
                         <label>Status</label>
-                        <select name="status" class="form-control">
+                        <select name="status" class="form-control lms-searchable" data-placeholder="Type to find status" data-allow-clear="0">
                             <option value="active" @selected(old('status', 'active') === 'active')>Active</option>
                             <option value="disabled" @selected(old('status') === 'disabled')>Disabled</option>
                         </select>
