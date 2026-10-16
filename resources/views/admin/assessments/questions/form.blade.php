@@ -50,7 +50,7 @@
                         <label>Topic <span class="lms-char-hint">(max {{ $topicMax }})</span></label>
                         <input type="text" name="topic" class="form-control" data-max="{{ $topicMax }}" maxlength="{{ $topicMax }}" value="{{ old('topic', $question->topic) }}">
                     </div>
-                    <div class="col-md-2 form-group js-q-target-role" style="{{ old('course_id', $question->course_id) ? 'display:none;' : '' }}">
+                    <div class="col-md-2 form-group js-q-target-role">
                         <label>Question for</label>
                         <select name="target_role" class="form-control lms-searchable" data-placeholder="Type to find user type">
                             <option value="">—</option>
@@ -99,7 +99,7 @@
             @else
                 {{-- Multi create: shared defaults + question blocks --}}
                 <div class="row m-b-md">
-                    <div class="col-md-3 form-group js-shared-target-role" style="{{ old('course_id') ? 'display:none;' : '' }}">
+                    <div class="col-md-3 form-group js-shared-target-role">
                         <label>Question for (all)</label>
                         <select name="target_role" class="form-control lms-searchable" data-placeholder="Type to find user type">
                             <option value="">—</option>
@@ -107,7 +107,7 @@
                                 <option value="{{ $rk }}" @selected(old('target_role') === $rk)>{{ $rl }}</option>
                             @endforeach
                         </select>
-                        <p class="help-block m-b-none">When there is no course, choose who these questions are for.</p>
+                        <p class="help-block m-b-none">Who these questions are for (optional with a course).</p>
                     </div>
                     <div class="col-md-3 form-group">
                         <label>Course (applies to all)</label>
@@ -239,13 +239,6 @@
     $('#q_type').on('change', function () {
         $('#mcq_options').toggle($(this).val() === 'mcq');
     });
-
-    function syncTargetRoleUi() {
-        var hasCourse = !!($('#q_course_id').val() || $('#shared_course').val());
-        $('.js-q-target-role, .js-shared-target-role').toggle(!hasCourse);
-    }
-    $('#q_course_id, #shared_course').on('change select2:select select2:clear', syncTargetRoleUi);
-    syncTargetRoleUi();
 
     $('#questionBlocks .question-block').each(function () {
         bindBlock($(this));

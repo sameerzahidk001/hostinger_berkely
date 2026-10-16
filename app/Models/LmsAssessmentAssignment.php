@@ -41,6 +41,36 @@ class LmsAssessmentAssignment extends Model
         return $this->belongsTo(User::class, 'marker_user_id');
     }
 
+    public function assignedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_by_user_id');
+    }
+
+    /** Who created this assignment (Admin or panel user). */
+    public function createdByLabel(): string
+    {
+        if ($this->assigned_by_user_id) {
+            if ($this->relationLoaded('assignedByUser') && $this->assignedByUser) {
+                return $this->assignedByUser->name ?: ('User #' . $this->assigned_by_user_id);
+            }
+            $user = User::query()->find($this->assigned_by_user_id);
+
+            return $user?->name ?: ('User #' . $this->assigned_by_user_id);
+        }
+        if ($this->assigned_by_admin_id) {
+            if (class_exists(\App\Models\Admin::class)) {
+                $admin = \App\Models\Admin::query()->find($this->assigned_by_admin_id);
+                if ($admin) {
+                    return $admin->name ?? $admin->email ?? 'Admin';
+                }
+            }
+
+            return 'Admin';
+        }
+
+        return 'Admin';
+    }
+
     /**
      * Appointment window end = appointment start + exam duration.
      * Student may start anytime within that window. Falls back to stored available_until.
