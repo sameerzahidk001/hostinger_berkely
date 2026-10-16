@@ -223,17 +223,23 @@
                                             <button class="btn btn-xs btn-primary" type="submit">Publish</button>
                                         </form>
                                     @endunless
-                                    @if(!empty($canDeleteAttempts))
-                                        <form action="{{ route('admin.assessments.reports.destroy-attempt', $attempt->id) }}" method="POST" onsubmit="return confirm('Delete this attempt?');">
-                                            @csrf
-                                            @method('DELETE')
-                                            <button type="submit" class="btn btn-xs btn-danger">Delete</button>
-                                        </form>
-                                    @endif
                                 @elseif($attempt && $attempt->status === 'in_progress')
-                                    <span class="text-muted">In progress</span>
-                                @else
-                                    <span class="text-muted">{{ $statusText === 'Assigned' ? 'Not started' : $statusText }}</span>
+                                    <span class="text-muted" style="display:block;margin-bottom:4px;">In progress</span>
+                                @elseif(! $attempt)
+                                    <span class="text-muted" style="display:block;margin-bottom:4px;">{{ $statusText === 'Assigned' ? 'Not started' : $statusText }}</span>
+                                @endif
+                                @if(!empty($canAssign) && $assignment)
+                                    <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.edit-assignment', $assignment->id) }}">Edit</a>
+                                @endif
+                                @if(!empty($canDeleteAttempts) && $assignment)
+                                    <form action="{{ route('admin.assessments.tests.destroy-assignment', $assignment->id) }}" method="POST" onsubmit="return confirm('Delete this sitting ({{ $apptId }})?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        @if($attempt)
+                                            <input type="hidden" name="attempt_id" value="{{ $attempt->id }}">
+                                        @endif
+                                        <button type="submit" class="btn btn-xs btn-danger">Delete</button>
+                                    </form>
                                 @endif
                                 <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.assign', $assessmentRow->id) }}">Assign again</a>
                             </td>

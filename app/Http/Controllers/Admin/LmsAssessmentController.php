@@ -229,6 +229,115 @@ class LmsAssessmentController extends Controller
             ->with('success', $created . ' new sitting' . ($created === 1 ? '' : 's') . ' created for test “' . $a->title . '”. Open Assigned Tests below — each save adds a new row for the same test.');
     }
 
+    public function editAssignment($assignmentId)
+    {
+        abort_unless($this->assessments->canAssignStudentAssessments() || $this->assessments->canManageSkillTests(), 403);
+        $this->assessments->ensure();
+        $assignment = LmsAssessmentAssignment::with(['assessment', 'student', 'batch', 'marker'])->findOrFail($assignmentId);
+        $assessment = $assignment->assessment;
+        abort_unless($assessment, 404);
+        if ($assessment->isSkill()) {
+            abort_unless($this->assessments->canManageSkillTests(), 403);
+        } else {
+            abort_unless($this->assessments->canAssignStudentAssessments(), 403);
+            $this->assertInstructorOwnsCourse((int) $assessment->course_id);
+        }
+
+        return view('admin.assessments.tests.edit-assignment', array_merge($this->formData($assessment), [
+            'assignment' => $assignment,
+            'selectedMarkerId' => old('marker_user_id', $assignment->marker_user_id),
+            'selectedTimezone' => old('timezone', $assignment->timezone ?: config('app.timezone', 'Asia/Dubai')),
+        ]));
+    }
+
+    public function updateAssignment(Request $request, $assignmentId)
+    {
+        abort_unless($this->assessments->canAssignStudentAssessments() || $this->assessments->canManageSkillTests(), 403);
+        $this->assessments->ensure();
+        $assignment = LmsAssessmentAssignment::with('assessment')->findOrFail($assignmentId);
+        $a = $assignment->assessment;
+        abort_unless($a, 404);
+        if ($a->isSkill()) {
+            abort_unless($this->assessments->canManageSkillTests(), 403);
+        } else {
+            abort_unless($this->assessments->canAssignStudentAssessments(), 403);
+            $this->assertInstructorOwnsCourse((int) $a->course_id);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'marker_user_id' => 'nullable|exists:users,id',
+            'available_from' => 'required|date',
+            'timezone' => 'required|string|max:64',
+        ]);
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
+
+        $tzOptions = LmsAssessmentAssignment::timezoneOptions();
+        $timezone = trim((string) $request->input('timezone', ''));
+        if ($timezone === '' || ! array_key_exists($timezone, $tzOptions)) {
+            $timezone = (string) config('app.timezone', 'Asia/Dubai');
+        }
+
+        $fromLocal = \Carbon\Carbon::parse($request->input('available_from'), $timezone);
+        $assignment->available_from = $fromLocal->copy()->timezone(config('app.timezone'))->format('Y-m-d H:i:s');
+        if ($a->duration_minutes) {
+            $assignment->available_until = $fromLocal->copy()
+                ->addMinutes((int) $a->duration_minutes)
+                ->timezone(config('app.timezone'))
+                ->format('Y-m-d H:i:s');
+        }
+        if (Schema::hasColumn('lms_assessment_assignments', 'timezone')) {
+            $assignment->timezone = $timezone;
+        }
+        if (Schema::hasColumn('lms_assessment_assignments', 'marker_user_id')) {
+            $assignment->marker_user_id = $request->filled('marker_user_id')
+                ? (int) $request->input('marker_user_id')
+                : null;
+        }
+        $assignment->save();
+
+        return redirect()
+            ->route('admin.assessments.tests.attempts', $a->id)
+            ->with('success', 'Sitting ' . $assignment->displayCode() . ' updated.');
+    }
+
+    public function destroyAssignment(Request $request, $assignmentId)
+    {
+        abort_unless($this->lms->isAdminActor() || panel_sees_all_dashboards(), 403);
+        $this->assessments->ensure();
+        $assignment = LmsAssessmentAssignment::findOrFail($assignmentId);
+
+        $attemptId = (int) $request->input('attempt_id', 0);
+        if ($attemptId > 0) {
+            $attempt = LmsAssessmentAttempt::query()
+                ->where('id', $attemptId)
+                ->where('assessment_id', $assignment->assessment_id)
+                ->first();
+            if ($attempt) {
+                $attempt->answers()->delete();
+                $attempt->delete();
+            }
+        } else {
+            $attemptQuery = LmsAssessmentAttempt::query()
+                ->where('assessment_id', $assignment->assessment_id);
+            if ($assignment->student_id) {
+                $attemptQuery->where('user_id', (int) $assignment->student_id);
+            }
+            foreach ($attemptQuery->get() as $att) {
+                if ($this->assessments->attemptBelongsToAssignment($att, $assignment)) {
+                    $att->answers()->delete();
+                    $att->delete();
+                }
+            }
+        }
+
+        $code = $assignment->displayCode();
+        $assignment->delete();
+
+        return back()->with('success', 'Sitting ' . $code . ' removed.');
+    }
+
     /**
      * One list for all assigned test takers (started or not) with status / score / mark actions.
      * Replaces the separate Test Results menu.
@@ -503,6 +612,8 @@ class LmsAssessmentController extends Controller
             'kinds' => $kinds,
             'statusOptions' => $statusOptions,
             'canDeleteAttempts' => $this->lms->isAdminActor() || panel_sees_all_dashboards(),
+            'canAssign' => $this->assessments->canAssignStudentAssessments()
+                || $this->assessments->canManageSkillTests(),
             'filters' => [
                 'assessment_id' => $assessmentId,
                 'batch_id' => $batchId,
@@ -677,6 +788,8 @@ class LmsAssessmentController extends Controller
             'assessment' => $assessment,
             'rows' => $rows,
             'canDeleteAttempts' => $this->lms->isAdminActor() || panel_sees_all_dashboards(),
+            'canAssign' => $this->assessments->canAssignStudentAssessments()
+                || $this->assessments->canManageSkillTests(),
         ]);
     }
 
