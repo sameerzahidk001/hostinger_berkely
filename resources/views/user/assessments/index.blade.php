@@ -84,7 +84,7 @@
             padding: 6px 6px;
             font-size: 12px;
             word-wrap: break-word;
-            overflow-wrap: anywhere;
+            overflow-wrap: break-word;
             white-space: normal;
         }
         #assessments-portal .lms-assess-table .col-date { width: 8%; }
@@ -95,7 +95,13 @@
         #assessments-portal .lms-assess-table .col-status { width: 14%; }
         #assessments-portal .lms-assess-table .col-time { width: 5%; text-align: center; }
         #assessments-portal .lms-assess-table .col-spend { width: 6%; text-align: center; }
-        #assessments-portal .lms-assess-table .col-action { width: 13%; white-space: nowrap; }
+        #assessments-portal .lms-assess-table .col-action {
+            width: 13%;
+            overflow-wrap: normal;
+            word-break: normal;
+            white-space: nowrap;
+        }
+        #assessments-portal .lms-assess-table .col-action .btn { white-space: nowrap; margin: 1px 2px 1px 0; }
     </style>
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if(session('fail'))<div class="alert alert-danger">{{ session('fail') }}</div>@endif
@@ -158,7 +164,7 @@
                     <th class="col-time">Start</th>
                     <th class="col-time">End</th>
                     <th class="col-spend">Spend</th>
-                    <th class="col-action"></th>
+                    <th class="col-action">Action</th>
                 </tr>
             </thead>
             <tbody>

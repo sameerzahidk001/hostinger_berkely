@@ -119,6 +119,19 @@ class LmsAssessmentAttempt extends Model
         return '—';
     }
 
+    /** User id for linking assessor profile, when the assessor is a portal user. */
+    public function assessorUserId(?LmsAssessmentAssignment $assignment = null): ?int
+    {
+        if ($this->graded_by_user_id) {
+            return (int) $this->graded_by_user_id;
+        }
+        if ($assignment && $assignment->marker_user_id) {
+            return (int) $assignment->marker_user_id;
+        }
+
+        return null;
+    }
+
     public function passFailLabel(): string
     {
         if ($this->passed === null) {

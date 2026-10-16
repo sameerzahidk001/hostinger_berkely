@@ -39,7 +39,7 @@
         vertical-align: middle;
         padding: 6px 6px;
         word-wrap: break-word;
-        overflow-wrap: anywhere;
+        overflow-wrap: break-word;
         white-space: normal;
     }
     .lms-tests-table .col-date { width: 9%; }
@@ -49,8 +49,13 @@
     .lms-tests-table .col-type { width: 8%; }
     .lms-tests-table .col-num { width: 6%; text-align: center; }
     .lms-tests-table .col-assessor { width: 12%; }
-    .lms-tests-table .col-action { width: 17%; white-space: nowrap; }
-    .lms-tests-table .col-action .btn { margin: 1px 0; }
+    .lms-tests-table .col-action {
+        width: 17%;
+        overflow-wrap: normal;
+        word-break: normal;
+        white-space: nowrap;
+    }
+    .lms-tests-table .col-action .btn { margin: 1px 2px 1px 0; white-space: nowrap; }
 </style>
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">
@@ -113,7 +118,7 @@
                     <th class="col-num">Assigned</th>
                     <th class="col-num" title="How many sittings students have started or submitted">Taken</th>
                     <th class="col-assessor">Assessor</th>
-                    <th class="col-action"></th>
+                    <th class="col-action">Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -125,14 +130,23 @@
                         <td class="col-date">{{ optional($row->created_at)->format('d/m/y H:i') ?? '—' }}</td>
                         <td class="col-id">{{ $row->displayCode() }}</td>
                         <td class="col-title">{{ $row->title }}</td>
-                        <td class="col-course">{{ $row->targetRoleLabel() }}</td>
+                        <td class="col-course">
+                            @if($row->course_id && $row->course)
+                                <a href="{{ route('course.edit', $row->course_id) }}">{{ $row->course->title }}</a>
+                            @else
+                                {{ $row->targetRoleLabel() }}
+                            @endif
+                        </td>
                         <td class="col-type">{{ $row->kindLabel() }}</td>
                         <td class="col-num">{{ $row->questions_count }}</td>
                         <td class="col-num">{{ $row->assignments_count }}</td>
                         <td class="col-num">{{ $row->attempts_count }}</td>
                         <td class="col-assessor">
                             @if($markers->isNotEmpty())
-                                {{ $markers->pluck('name')->implode(', ') }}
+                                @foreach($markers as $marker)
+                                    @if(!$loop->first), @endif
+                                    <a href="{{ route('users.edit', $marker->id) }}">{{ $marker->name }}</a>
+                                @endforeach
                             @else
                                 <span class="text-muted">Admin / course instructors</span>
                             @endif
@@ -147,7 +161,7 @@
                                 <form action="{{ route('admin.assessments.tests.destroy', $row->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this test?');">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="btn btn-xs btn-danger" title="Delete"><i class="fa fa-trash"></i></button>
+                                    <button type="submit" class="btn btn-xs btn-danger">Delete</button>
                                 </form>
                             @endif
                         </td>

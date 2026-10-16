@@ -23,7 +23,7 @@
         vertical-align: middle;
         padding: 6px 5px;
         word-wrap: break-word;
-        overflow-wrap: anywhere;
+        overflow-wrap: break-word;
         white-space: normal;
     }
     .lms-results-table .col-test { width: 12%; }
@@ -32,8 +32,25 @@
     .lms-results-table .col-assessor { width: 9%; }
     .lms-results-table .col-status { width: 9%; }
     .lms-results-table .col-score { width: 8%; }
-    .lms-results-table .col-actions { width: 12%; white-space: nowrap; }
-    .lms-results-table .col-actions .btn { margin: 1px 0; padding: 2px 5px; font-size: 11px; }
+    .lms-results-table .col-actions {
+        width: 14%;
+        overflow-wrap: normal;
+        word-break: normal;
+        white-space: normal;
+    }
+    .lms-results-table .col-actions .btn,
+    .lms-results-table .col-actions form {
+        display: block;
+        width: 100%;
+        margin: 0 0 4px 0;
+        box-sizing: border-box;
+    }
+    .lms-results-table .col-actions .btn {
+        padding: 4px 8px;
+        font-size: 11px;
+        text-align: center;
+        white-space: nowrap;
+    }
 </style>
 @php
     $fmtDuration = function ($minutes) {
@@ -181,13 +198,33 @@
                                 {{ $row['student']->name ?? '—' }}
                                 <br><small class="text-muted">{{ $row['student']->email ?? '' }}</small>
                             </td>
-                            <td class="col-course">{{ $assessment->course->title ?? '—' }}</td>
+                            <td class="col-course">
+                                @if($assessment->course)
+                                    <a href="{{ route('course.edit', $assessment->course->id) }}">{{ $assessment->course->title }}</a>
+                                @else
+                                    —
+                                @endif
+                            </td>
                             <td>{{ $testDate }}</td>
                             <td>{{ $startTime }}</td>
                             <td>{{ $endTime }}</td>
                             <td>{{ $durationGiven }}</td>
                             <td>{{ $durationTaken }}</td>
-                            <td class="col-assessor">{{ $attempt ? $attempt->assessorLabel($assignment) : ($assignment->marker->name ?? '—') }}</td>
+                            <td class="col-assessor">
+                                @php
+                                    $assessorName = $attempt
+                                        ? $attempt->assessorLabel($assignment)
+                                        : ($assignment->marker->name ?? '—');
+                                    $assessorUserId = $attempt
+                                        ? $attempt->assessorUserId($assignment)
+                                        : ($assignment->marker_user_id ? (int) $assignment->marker_user_id : null);
+                                @endphp
+                                @if($assessorUserId)
+                                    <a href="{{ route('users.edit', $assessorUserId) }}">{{ $assessorName }}</a>
+                                @else
+                                    {{ $assessorName }}
+                                @endif
+                            </td>
                             <td class="col-status"><span class="{{ $statusClass }}">{{ $statusText }}</span></td>
                             <td class="col-score">
                                 @if($attempt && $attempt->score_raw !== null)
@@ -208,18 +245,18 @@
                                 @if($attempt && in_array($attempt->status, ['submitted', 'graded', 'expired'], true))
                                     <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.mark', $attempt->id) }}">View</a>
                                     <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.mark', $attempt->id) }}">Update</a>
-                                    <a class="btn btn-xs btn-success" href="{{ route('admin.assessments.tests.attempt-pdf', $attempt->id) }}" target="_blank" title="Download PDF"><i class="fa fa-file-pdf-o"></i> PDF</a>
+                                    <a class="btn btn-xs btn-success" href="{{ route('admin.assessments.tests.attempt-pdf', $attempt->id) }}" target="_blank">PDF</a>
                                     @unless($attempt->results_published)
-                                        <form action="{{ route('admin.assessments.tests.publish-attempt', $attempt->id) }}" method="POST" style="display:inline;">
+                                        <form action="{{ route('admin.assessments.tests.publish-attempt', $attempt->id) }}" method="POST">
                                             @csrf
                                             <button class="btn btn-xs btn-default" type="submit">Publish</button>
                                         </form>
                                     @endunless
                                     @if(!empty($canDeleteAttempts))
-                                        <form action="{{ route('admin.assessments.reports.destroy-attempt', $attempt->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this attempt?');">
+                                        <form action="{{ route('admin.assessments.reports.destroy-attempt', $attempt->id) }}" method="POST" onsubmit="return confirm('Delete this attempt?');">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-xs btn-danger" title="Delete"><i class="fa fa-trash"></i></button>
+                                            <button type="submit" class="btn btn-xs btn-danger">Delete</button>
                                         </form>
                                     @endif
                                 @elseif($attempt && $attempt->status === 'in_progress')

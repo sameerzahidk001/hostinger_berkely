@@ -21,7 +21,7 @@
         vertical-align: middle;
         padding: 6px 6px;
         word-wrap: break-word;
-        overflow-wrap: anywhere;
+        overflow-wrap: break-word;
         white-space: normal;
     }
     .lms-attempts-table .col-date { width: 10%; }
@@ -32,8 +32,13 @@
     .lms-attempts-table .col-score { width: 10%; }
     .lms-attempts-table .col-pub { width: 6%; }
     .lms-attempts-table .col-assessor { width: 12%; }
-    .lms-attempts-table .col-action { width: 16%; white-space: nowrap; }
-    .lms-attempts-table .col-action .btn { margin: 1px 0; }
+    .lms-attempts-table .col-action {
+        width: 16%;
+        overflow-wrap: normal;
+        word-break: normal;
+        white-space: nowrap;
+    }
+    .lms-attempts-table .col-action .btn { margin: 1px 2px 1px 0; white-space: nowrap; }
 </style>
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
@@ -60,12 +65,15 @@
                     <th class="col-score">Score</th>
                     <th class="col-pub">Published</th>
                     <th class="col-assessor">Assessor</th>
-                    <th class="col-action"></th>
+                    <th class="col-action">Action</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($rows as $row)
-                    @php $spend = $row->spendMinutes(); @endphp
+                    @php
+                        $spend = $row->spendMinutes();
+                        $assessorUserId = $row->assessorUserId();
+                    @endphp
                     <tr>
                         <td class="col-date">{{ optional($row->submitted_at ?: $row->updated_at)->format('d/m/y H:i') ?? '—' }}</td>
                         <td class="col-taker">{{ $row->user->name ?? '—' }}<br><small class="text-muted">{{ $row->user->email ?? '' }}</small></td>
@@ -84,10 +92,16 @@
                                 {{ $row->results_published ? 'Yes' : 'No' }}
                             </span>
                         </td>
-                        <td class="col-assessor">{{ $row->assessorLabel() }}</td>
+                        <td class="col-assessor">
+                            @if($assessorUserId)
+                                <a href="{{ route('users.edit', $assessorUserId) }}">{{ $row->assessorLabel() }}</a>
+                            @else
+                                {{ $row->assessorLabel() }}
+                            @endif
+                        </td>
                         <td class="col-action">
                             <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.mark', $row->id) }}">Mark</a>
-                            <a class="btn btn-xs btn-success" href="{{ route('admin.assessments.tests.attempt-pdf', $row->id) }}" target="_blank" title="Download PDF"><i class="fa fa-file-pdf-o"></i> PDF</a>
+                            <a class="btn btn-xs btn-success" href="{{ route('admin.assessments.tests.attempt-pdf', $row->id) }}" target="_blank">PDF</a>
                             @unless($row->results_published)
                                 <form action="{{ route('admin.assessments.tests.publish-attempt', $row->id) }}" method="POST" style="display:inline;">@csrf<button class="btn btn-xs btn-default">Publish</button></form>
                             @endunless
