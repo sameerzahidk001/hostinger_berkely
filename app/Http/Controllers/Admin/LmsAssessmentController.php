@@ -238,13 +238,24 @@ class LmsAssessmentController extends Controller
             ->map(fn ($n) => ucwords(str_replace(['_', '-'], ' ', (string) $n)))
             ->filter()
             ->implode(', ');
+        $blank = static fn ($v) => ($v !== null && trim((string) $v) !== '') ? trim((string) $v) : '—';
+        $gender = trim((string) ($user->gender ?? ''));
+        if ($gender !== '') {
+            $gender = ucfirst(strtolower($gender));
+        }
 
         return response()->json([
             'id' => (int) $user->id,
             'name' => $user->name ?: ('User #' . $user->id),
-            'email' => $user->email ?: '—',
-            'mobile' => $user->mobile_number ?: '—',
+            'email' => $blank($user->email),
+            'mobile' => $blank($user->mobile_number),
             'roles' => $roles !== '' ? $roles : '—',
+            'gender' => $gender !== '' ? $gender : '—',
+            'nationality' => $blank($user->nationality),
+            'city' => $blank($user->city),
+            'country' => $blank($user->country),
+            'address' => $blank($user->address),
+            'post_code' => $blank($user->post_code ?? null),
         ]);
     }
 
