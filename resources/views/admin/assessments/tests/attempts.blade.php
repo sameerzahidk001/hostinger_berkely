@@ -103,7 +103,7 @@
             <table class="table table-striped table-bordered lms-attempts-table js-sortable-table">
                 <thead>
                     <tr>
-                        <th class="col-date" data-sort-col="0">Date <span class="sort-ind"></span></th>
+                        <th class="col-date" data-sort-col="0">Exam start <span class="sort-ind"></span></th>
                         <th class="col-test" data-sort-col="1">Test <span class="sort-ind"></span></th>
                         <th class="col-taker" data-sort-col="2">Test Taker <span class="sort-ind"></span></th>
                         <th class="col-timing" data-sort-col="3">Timing <span class="sort-ind"></span></th>
@@ -123,7 +123,11 @@
                             $student = $row['student'];
                             $statusClass = $attempt->statusColorClass();
                             $statusText = $attempt->statusLabel();
-                            $dateText = optional($attempt->submitted_at ?: $attempt->updated_at)->format('d/m/y H:i') ?? '—';
+                            $dateText = ($assignment && $attempt->submitted_at)
+                                ? $assignment->formatInTimezone($attempt->submitted_at)
+                                : (($assignment && $assignment->windowStart())
+                                    ? $assignment->windowStart()->format('d/m/y H:i')
+                                    : (optional($attempt->submitted_at ?: $attempt->updated_at)->format('d/m/y H:i') ?? '—'));
                             $spend = $attempt->spendMinutes();
                             $appointment = $assignment ? $assignment->appointmentWindowLabel() : '—';
                             $assessorName = $attempt->assessorLabel($assignment);
