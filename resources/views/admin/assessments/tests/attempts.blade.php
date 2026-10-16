@@ -28,15 +28,16 @@
         white-space: normal;
     }
     .lms-attempts-table .col-date { width: 7%; }
-    .lms-attempts-table .col-test { width: 13%; }
-    .lms-attempts-table .col-taker { width: 14%; }
-    .lms-attempts-table .col-timing { width: 17%; }
+    .lms-attempts-table .col-attempt { width: 7%; }
+    .lms-attempts-table .col-test { width: 12%; }
+    .lms-attempts-table .col-taker { width: 13%; }
+    .lms-attempts-table .col-timing { width: 16%; }
     .lms-attempts-table .col-created { width: 8%; }
-    .lms-attempts-table .col-assessor { width: 9%; }
-    .lms-attempts-table .col-status { width: 12%; }
+    .lms-attempts-table .col-assessor { width: 8%; }
+    .lms-attempts-table .col-status { width: 11%; }
     .lms-attempts-table .col-pub { width: 6%; }
     .lms-attempts-table .col-actions {
-        width: 11%;
+        width: 12%;
         overflow-wrap: normal;
         word-break: normal;
         white-space: normal;
@@ -96,7 +97,7 @@
 <div class="wrapper wrapper-content">
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     <p class="text-muted m-b-sm">
-        All attempts for this test only. Columns match Assigned Tests.
+        All assigned sittings for this test (completed or not). Attempt column shows which sitting (e.g. 2 of 3).
     </p>
     <div class="ibox">
         <div class="ibox-content lms-attempts-wrap">
@@ -104,42 +105,65 @@
                 <thead>
                     <tr>
                         <th class="col-date" data-sort-col="0">Exam start <span class="sort-ind"></span></th>
-                        <th class="col-test" data-sort-col="1">Test <span class="sort-ind"></span></th>
-                        <th class="col-taker" data-sort-col="2">Test Taker <span class="sort-ind"></span></th>
-                        <th class="col-timing" data-sort-col="3">Timing <span class="sort-ind"></span></th>
-                        <th class="col-created" data-sort-col="4">Created by <span class="sort-ind"></span></th>
-                        <th class="col-assessor" data-sort-col="5">Assessor <span class="sort-ind"></span></th>
-                        <th class="col-status" data-sort-col="6">Status <span class="sort-ind"></span></th>
-                        <th class="col-pub" data-sort-col="7">Published <span class="sort-ind"></span></th>
+                        <th class="col-attempt" data-sort-col="1">Attempt <span class="sort-ind"></span></th>
+                        <th class="col-test" data-sort-col="2">Test <span class="sort-ind"></span></th>
+                        <th class="col-taker" data-sort-col="3">Test Taker <span class="sort-ind"></span></th>
+                        <th class="col-timing" data-sort-col="4">Timing <span class="sort-ind"></span></th>
+                        <th class="col-created" data-sort-col="5">Created by <span class="sort-ind"></span></th>
+                        <th class="col-assessor" data-sort-col="6">Assessor <span class="sort-ind"></span></th>
+                        <th class="col-status" data-sort-col="7">Status <span class="sort-ind"></span></th>
+                        <th class="col-pub" data-sort-col="8">Published <span class="sort-ind"></span></th>
                         <th class="col-actions">Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($rows as $row)
                         @php
-                            $attempt = $row['attempt'];
+                            $attempt = $row['attempt'] ?? null;
                             $assignment = $row['assignment'];
                             $assessmentRow = $row['assessment'];
                             $student = $row['student'];
-                            $statusClass = $attempt->statusColorClass();
-                            $statusText = $attempt->statusLabel();
-                            $dateText = ($assignment && $attempt->submitted_at)
-                                ? $assignment->formatInTimezone($attempt->submitted_at)
-                                : (($assignment && $assignment->windowStart())
-                                    ? $assignment->windowStart()->format('d/m/y H:i')
-                                    : (optional($attempt->submitted_at ?: $attempt->updated_at)->format('d/m/y H:i') ?? '—'));
-                            $spend = $attempt->spendMinutes();
-                            $appointment = $assignment ? $assignment->appointmentWindowLabel() : '—';
-                            $assessorName = $attempt->assessorLabel($assignment);
-                            $assessorUserId = $attempt->assessorUserId($assignment);
+                            $attemptNo = (int) ($row['attempt_number'] ?? 1);
+                            $attemptTotal = (int) ($row['attempt_total'] ?? 1);
+                            if ($attempt) {
+                                $statusClass = $attempt->statusColorClass();
+                                $statusText = $attempt->statusLabel();
+                            } elseif ($assignment->isNotYetOpen()) {
+                                $statusClass = 'lms-status-upcoming';
+                                $statusText = 'Upcoming';
+                            } elseif ($assignment->isExpired()) {
+                                $statusClass = 'lms-status-missed';
+                                $statusText = 'Missed';
+                            } else {
+                                $statusClass = 'lms-status-available';
+                                $statusText = 'Assigned';
+                            }
+                            if ($attempt && $attempt->submitted_at) {
+                                $dateText = $assignment->formatInTimezone($attempt->submitted_at);
+                            } elseif ($assignment->windowStart()) {
+                                $dateText = $assignment->windowStart()->format('d/m/y H:i');
+                            } else {
+                                $dateText = optional($assignment->created_at)->format('d/m/y H:i') ?? '—';
+                            }
+                            $spend = $attempt?->spendMinutes();
+                            $appointment = $assignment->appointmentWindowLabel();
+                            $assessorName = $attempt
+                                ? $attempt->assessorLabel($assignment)
+                                : ($assignment->marker->name ?? 'Admin / course instructors');
+                            $assessorUserId = $attempt
+                                ? $attempt->assessorUserId($assignment)
+                                : ($assignment->marker_user_id ? (int) $assignment->marker_user_id : null);
                             $course = $assessmentRow->course ?? null;
-                            $createdBy = $assignment ? $assignment->createdByLabel() : '—';
+                            $createdBy = $assignment->createdByLabel();
                         @endphp
                         <tr>
-                            <td class="col-date" data-sort="{{ optional($attempt->submitted_at ?: $attempt->updated_at)->timestamp ?? 0 }}">{{ $dateText }}</td>
+                            <td class="col-date" data-sort="{{ optional($assignment->windowStart() ?: $assignment->created_at)->timestamp ?? 0 }}">{{ $dateText }}</td>
+                            <td class="col-attempt" data-sort="{{ $attemptNo }}">
+                                <strong>{{ $attemptNo }} of {{ $attemptTotal }}</strong>
+                            </td>
                             <td class="col-test" data-sort="{{ $assessmentRow->title ?? '' }}">
                                 <strong>{{ $assessmentRow->title ?: ('Test #'.$assessmentRow->id) }}</strong>
-                                <br><small class="text-muted">{{ $assessmentRow->displayCode() }} · {{ $assessmentRow->kindLabel() }}</small>
+                                <br><small class="text-muted">{{ $assessmentRow->displayCode() }} · {{ $assessmentRow->kindLabel() }} · Sitting #{{ $assignment->id }}</small>
                             </td>
                             <td class="col-taker" data-sort="{{ $student->name ?? '' }}">
                                 @if(!empty($student->id))
@@ -148,7 +172,7 @@
                                     {{ $student->name ?? '—' }}
                                 @endif
                                 <br><small class="text-muted">{{ $student->email ?? '' }}</small>
-                                @if($assignment && $assignment->batch)
+                                @if($assignment->batch)
                                     <br><small class="text-muted">Batch: {{ $assignment->batch->code ?? $assignment->batch->name }}</small>
                                 @endif
                                 @if($course)
@@ -157,18 +181,16 @@
                                     </small>
                                 @endif
                             </td>
-                            <td class="col-timing" data-sort="{{ optional($assignment?->available_from)->timestamp ?? optional($attempt->started_at)->timestamp ?? 0 }}">
+                            <td class="col-timing" data-sort="{{ optional($assignment->available_from)->timestamp ?? 0 }}">
                                 <span class="lms-timing-line"><strong>Exam Appointment Timing:</strong> {{ $appointment }}</span>
                                 <span class="lms-timing-line"><strong>Exam Duration:</strong> {{ $fmtDuration($assessmentRow->duration_minutes ?? null) }}</span>
-                                <span class="lms-timing-line"><strong>Started:</strong> {{ ($assignment && $attempt->started_at) ? $assignment->formatInTimezone($attempt->started_at) : (optional($attempt->started_at)->format('d/m/y H:i') ?? '—') }}</span>
-                                <span class="lms-timing-line"><strong>Ended:</strong> {{ ($assignment && $attempt->submitted_at) ? $assignment->formatInTimezone($attempt->submitted_at) : (optional($attempt->submitted_at)->format('d/m/y H:i') ?? '—') }}</span>
+                                <span class="lms-timing-line"><strong>Started:</strong> {{ ($attempt?->started_at) ? $assignment->formatInTimezone($attempt->started_at) : '—' }}</span>
+                                <span class="lms-timing-line"><strong>Ended:</strong> {{ ($attempt?->submitted_at) ? $assignment->formatInTimezone($attempt->submitted_at) : '—' }}</span>
                                 <span class="lms-timing-line"><strong>Duration spent:</strong> {{ $spend !== null ? $fmtDuration($spend) : '—' }}</span>
-                                @if($assignment)
-                                    <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $assignment->timezoneLabel() }}</span>
-                                @endif
+                                <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $assignment->timezoneLabel() }}</span>
                             </td>
                             <td class="col-created" data-sort="{{ $createdBy }}">
-                                @if($assignment && $assignment->assigned_by_user_id)
+                                @if($assignment->assigned_by_user_id)
                                     <a href="{{ route('users.edit', $assignment->assigned_by_user_id) }}">{{ $createdBy }}</a>
                                 @else
                                     {{ $createdBy }}
@@ -184,7 +206,7 @@
                             <td class="col-status" data-sort="{{ $statusText }}">
                                 <span class="{{ $statusClass }}">{{ $statusText }}</span>
                                 <span class="lms-score-line">
-                                    @if($attempt->score_raw !== null)
+                                    @if($attempt && $attempt->score_raw !== null)
                                         {{ lms_format_number($attempt->score_raw) }} / {{ lms_format_number($attempt->score_max) }}
                                         @if($attempt->percent() !== null) ({{ lms_format_number($attempt->percent()) }}%) @endif
                                     @else
@@ -192,13 +214,17 @@
                                     @endif
                                 </span>
                             </td>
-                            <td class="col-pub" data-sort="{{ $attempt->results_published ? 'Yes' : 'No' }}">
-                                <span class="{{ $attempt->results_published ? 'lms-pub-yes' : 'lms-pub-no' }}">
-                                    {{ $attempt->results_published ? 'Yes' : 'No' }}
-                                </span>
+                            <td class="col-pub" data-sort="{{ ($attempt && $attempt->results_published) ? 'Yes' : 'No' }}">
+                                @if($attempt)
+                                    <span class="{{ $attempt->results_published ? 'lms-pub-yes' : 'lms-pub-no' }}">
+                                        {{ $attempt->results_published ? 'Yes' : 'No' }}
+                                    </span>
+                                @else
+                                    <span class="lms-pub-no">No</span>
+                                @endif
                             </td>
                             <td class="col-actions">
-                                @if(in_array($attempt->status, ['submitted', 'graded', 'expired'], true))
+                                @if($attempt && in_array($attempt->status, ['submitted', 'graded', 'expired'], true))
                                     <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.mark', $attempt->id) }}">View Details</a>
                                     <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.attempt-pdf', $attempt->id) }}" target="_blank">Download PDF</a>
                                     @unless($attempt->results_published)
@@ -214,19 +240,19 @@
                                             <button type="submit" class="btn btn-xs btn-danger">Delete</button>
                                         </form>
                                     @endif
-                                @elseif($attempt->status === 'in_progress')
+                                @elseif($attempt && $attempt->status === 'in_progress')
                                     <span class="text-muted">In progress</span>
                                 @else
-                                    <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.mark', $attempt->id) }}">View Details</a>
+                                    <span class="text-muted">{{ $statusText === 'Assigned' ? 'Not started' : $statusText }}</span>
                                 @endif
+                                <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.assign', $assessmentRow->id) }}">Assign again</a>
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="9" class="text-center text-muted">No attempts yet for this test.</td></tr>
+                        <tr><td colspan="10" class="text-center text-muted">No assignments yet for this test. Use Assign to create sittings.</td></tr>
                     @endforelse
                 </tbody>
             </table>
-            {{ $rows->links() }}
         </div>
     </div>
 </div>
