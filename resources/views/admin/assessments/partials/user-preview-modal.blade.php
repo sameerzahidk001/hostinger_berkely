@@ -14,8 +14,10 @@
     #lms-user-preview-box {
         background: #fff;
         color: #1f2937;
-        max-width: 440px;
+        max-width: 480px;
         width: 100%;
+        max-height: min(90vh, 640px);
+        overflow-y: auto;
         border-radius: 8px;
         box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25);
         padding: 22px 24px;
@@ -35,7 +37,7 @@
         line-height: 1.4;
     }
     #lms-user-preview-box .lms-up-label {
-        flex: 0 0 90px;
+        flex: 0 0 110px;
         color: #6b7280;
         font-weight: 600;
     }
@@ -92,16 +94,25 @@
             return res.json();
         }).then(function (data) {
             body.className = '';
-            body.innerHTML =
-                '<div class="lms-up-row"><span class="lms-up-label">Name</span><span class="lms-up-value"></span></div>' +
-                '<div class="lms-up-row"><span class="lms-up-label">Email</span><span class="lms-up-value"></span></div>' +
-                '<div class="lms-up-row"><span class="lms-up-label">Mobile</span><span class="lms-up-value"></span></div>' +
-                '<div class="lms-up-row"><span class="lms-up-label">Role</span><span class="lms-up-value"></span></div>';
+            var fields = [
+                ['Name', data.name],
+                ['Email', data.email],
+                ['Mobile', data.mobile],
+                ['Role', data.roles],
+                ['Gender', data.gender],
+                ['Nationality', data.nationality],
+                ['City', data.city],
+                ['Country', data.country],
+                ['Address', data.address],
+                ['Post code', data.post_code]
+            ];
+            body.innerHTML = fields.map(function (row) {
+                return '<div class="lms-up-row"><span class="lms-up-label">' + row[0] + '</span><span class="lms-up-value"></span></div>';
+            }).join('');
             var vals = body.querySelectorAll('.lms-up-value');
-            vals[0].textContent = data.name || '—';
-            vals[1].textContent = data.email || '—';
-            vals[2].textContent = data.mobile || '—';
-            vals[3].textContent = data.roles || '—';
+            fields.forEach(function (row, i) {
+                vals[i].textContent = row[1] || '—';
+            });
             document.getElementById('lms-user-preview-title').textContent = data.name || 'Profile';
         }).catch(function () {
             body.className = 'lms-up-error';
