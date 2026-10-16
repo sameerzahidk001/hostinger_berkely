@@ -516,65 +516,94 @@ class LmsAssessmentController extends Controller
         }
 
         try {
-            $paginator = LmsAssessmentAttempt::query()
-                ->with('user:id,name,email')
-                ->where('assessment_id', $assessment->id)
-                ->orderByDesc('id')
-                ->paginate(40)
-                ->withQueryString();
-
+            // Results = every assigned sitting for this test (started or not), same idea as Assigned Tests.
             $assignments = LmsAssessmentAssignment::query()
-                ->with(['marker:id,name', 'assignedByUser:id,name', 'batch:id,code,name'])
+                ->with(['marker:id,name', 'assignedByUser:id,name', 'batch:id,code,name', 'student:id,name,email'])
                 ->where('assessment_id', $assessment->id)
-                ->orderByDesc('id')
+                ->orderBy('id')
                 ->get();
             $assignments->each(fn ($a) => $a->setRelation('assessment', $assessment));
 
-            $batchStudentIds = [];
-            if (Schema::hasTable('class_batches')) {
-                foreach ($assignments->whereNotNull('class_batch_id') as $asg) {
-                    $bid = (int) $asg->class_batch_id;
-                    if (! isset($batchStudentIds[$bid])) {
-                        $batchStudentIds[$bid] = ClassBatch::find($bid)?->students()->pluck('users.id')->map(fn ($id) => (int) $id)->all() ?? [];
+            $batchStudentCache = [];
+            $rowsByKey = [];
+
+            foreach ($assignments as $assignment) {
+                $students = collect();
+                if ($assignment->student_id) {
+                    $student = $assignment->student ?: User::query()->find($assignment->student_id);
+                    if ($student) {
+                        $students->push($student);
                     }
+                } elseif ($assignment->class_batch_id && Schema::hasTable('class_batches')) {
+                    $bid = (int) $assignment->class_batch_id;
+                    if (! isset($batchStudentCache[$bid])) {
+                        $batch = ClassBatch::query()->find($bid);
+                        $batchStudentCache[$bid] = $batch
+                            ? $batch->students()->get(['users.id', 'users.name', 'users.email'])
+                            : collect();
+                    }
+                    $students = $batchStudentCache[$bid];
+                }
+
+                foreach ($students as $student) {
+                    $key = (int) $assignment->id . ':' . (int) $student->id;
+                    if (isset($rowsByKey[$key])) {
+                        continue;
+                    }
+                    $rowsByKey[$key] = [
+                        'assessment' => $assessment,
+                        'student' => $student,
+                        'assignment' => $assignment,
+                        'attempt' => null,
+                    ];
                 }
             }
 
-            $rows = $paginator->getCollection()->map(function (LmsAssessmentAttempt $attempt) use ($assignments, $assessment, $batchStudentIds) {
-                $uid = (int) $attempt->user_id;
-                $forUser = $assignments->filter(function (LmsAssessmentAssignment $a) use ($uid, $batchStudentIds) {
-                    if ($a->student_id && (int) $a->student_id === $uid) {
-                        return true;
-                    }
-                    if ($a->class_batch_id) {
-                        return in_array($uid, $batchStudentIds[(int) $a->class_batch_id] ?? [], true);
-                    }
+            $userIds = collect($rowsByKey)->pluck('student.id')->unique()->filter()->values()->all();
+            $attemptsByUser = $userIds === []
+                ? collect()
+                : LmsAssessmentAttempt::query()
+                    ->where('assessment_id', $assessment->id)
+                    ->whereIn('user_id', $userIds)
+                    ->orderByDesc('id')
+                    ->get()
+                    ->groupBy(fn ($a) => (int) $a->user_id);
 
-                    return false;
-                })->values();
-
-                $assignment = $forUser->first(fn (LmsAssessmentAssignment $a) => $this->assessments->attemptBelongsToAssignment($attempt, $a))
-                    ?? $forUser->first()
-                    ?? $assignments->first();
-
-                $student = $attempt->user;
-                if (! $student) {
-                    $student = (object) [
-                        'id' => $attempt->user_id,
-                        'name' => 'User #' . $attempt->user_id,
-                        'email' => '',
+            // Attempt N of T per student (oldest assignment = attempt 1).
+            $sittingsByUser = collect($rowsByKey)->groupBy(fn ($r) => (int) $r['student']->id);
+            $attemptMeta = [];
+            foreach ($sittingsByUser as $uid => $sittings) {
+                $ordered = $sittings->sortBy(fn ($r) => (int) $r['assignment']->id)->values();
+                $total = $ordered->count();
+                foreach ($ordered as $i => $r) {
+                    $attemptMeta[(int) $r['assignment']->id . ':' . $uid] = [
+                        'number' => $i + 1,
+                        'total' => $total,
                     ];
                 }
+            }
 
-                return [
-                    'attempt' => $attempt,
-                    'assignment' => $assignment,
-                    'assessment' => $assessment,
-                    'student' => $student,
-                ];
-            });
+            foreach ($rowsByKey as $key => &$row) {
+                $uid = (int) $row['student']->id;
+                $asg = $row['assignment'];
+                $candidates = $attemptsByUser->get($uid) ?? collect();
+                $row['attempt'] = $candidates->first(
+                    fn ($att) => $this->assessments->attemptBelongsToAssignment($att, $asg)
+                );
+                $meta = $attemptMeta[(int) $asg->id . ':' . $uid] ?? ['number' => 1, 'total' => 1];
+                $row['attempt_number'] = $meta['number'];
+                $row['attempt_total'] = $meta['total'];
+            }
+            unset($row);
 
-            $paginator->setCollection($rows);
+            $rows = collect($rowsByKey)->values()->sortByDesc(function ($row) {
+                $attempt = $row['attempt'];
+                if ($attempt) {
+                    return optional($attempt->submitted_at ?: $attempt->updated_at)->timestamp ?? 0;
+                }
+
+                return optional($row['assignment']->windowStart() ?: $row['assignment']->created_at)->timestamp ?? 0;
+            })->values();
         } catch (\Throwable $e) {
             report($e);
 
@@ -585,7 +614,7 @@ class LmsAssessmentController extends Controller
 
         return view('admin.assessments.tests.attempts', [
             'assessment' => $assessment,
-            'rows' => $paginator,
+            'rows' => $rows,
             'canDeleteAttempts' => $this->lms->isAdminActor() || panel_sees_all_dashboards(),
         ]);
     }

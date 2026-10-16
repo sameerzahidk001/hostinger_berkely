@@ -88,7 +88,8 @@
             overflow-wrap: break-word;
             white-space: normal;
         }
-        #assessments-portal .lms-assess-table .col-date { width: 9%; }
+        #assessments-portal .lms-assess-table .col-date { width: 8%; }
+        #assessments-portal .lms-assess-table .col-attempt { width: 7%; }
         #assessments-portal .lms-assess-table .col-title { width: 18%; }
         #assessments-portal .lms-assess-table .col-type { width: 9%; }
         #assessments-portal .lms-assess-table .col-timing { width: 24%; }
@@ -195,11 +196,12 @@
             <thead>
                 <tr>
                     <th class="col-date" data-sort-col="0">Exam start <span class="sort-ind"></span></th>
-                    <th class="col-title" data-sort-col="1">Test <span class="sort-ind"></span></th>
-                    <th class="col-type" data-sort-col="2">Type <span class="sort-ind"></span></th>
-                    <th class="col-timing" data-sort-col="3">Timing <span class="sort-ind"></span></th>
-                    <th class="col-assessor" data-sort-col="4">Assessor <span class="sort-ind"></span></th>
-                    <th class="col-status" data-sort-col="5">Status <span class="sort-ind"></span></th>
+                    <th class="col-attempt" data-sort-col="1">Attempt <span class="sort-ind"></span></th>
+                    <th class="col-title" data-sort-col="2">Test <span class="sort-ind"></span></th>
+                    <th class="col-type" data-sort-col="3">Type <span class="sort-ind"></span></th>
+                    <th class="col-timing" data-sort-col="4">Timing <span class="sort-ind"></span></th>
+                    <th class="col-assessor" data-sort-col="5">Assessor <span class="sort-ind"></span></th>
+                    <th class="col-status" data-sort-col="6">Status <span class="sort-ind"></span></th>
                     <th class="col-action">Action</th>
                 </tr>
             </thead>
@@ -226,6 +228,8 @@
                         $used = (int) ($row['attempts_used'] ?? 0);
                         $maxAtt = $row['max_attempts'] ?? null;
                         $canRetake = !empty($row['can_retake']);
+                        $attemptNo = (int) ($row['attempt_number'] ?? 1);
+                        $attemptTotal = (int) ($row['attempt_total'] ?? 1);
                         $course = $a->course ?? null;
                         $assessorName = $att
                             ? $att->assessorLabel($asg)
@@ -235,6 +239,9 @@
                     @endphp
                     <tr>
                         <td class="col-date" data-sort="{{ $dateSort }}">{{ $dateText }}</td>
+                        <td class="col-attempt" data-sort="{{ $attemptNo }}">
+                            <strong>{{ $attemptNo }} of {{ $attemptTotal }}</strong>
+                        </td>
                         <td class="col-title" data-sort="{{ $a->title }}">
                             {{ $a->title }}
                             <br><small class="text-muted">{{ $a->displayCode() }}</small>
@@ -277,15 +284,15 @@
                                 <span class="lms-row-status lms-row-missed">Missed</span>
                             @elseif($tab === 'upcoming')
                                 <span class="lms-row-status lms-row-upcoming">Opens {{ $asg?->windowStart()?->format('d M Y H:i') ?: 'soon' }} ({{ $asg?->timezoneLabel() }}) · Not open yet</span>
-                            @elseif($canRetake)
-                                <span class="lms-row-status lms-row-available">Assigned retake — start anytime in this window</span>
+                            @elseif($canRetake || $attemptNo > 1)
+                                <span class="lms-row-status lms-row-available">Attempt {{ $attemptNo }} of {{ $attemptTotal }} — start anytime in this window</span>
                             @else
-                                <span class="lms-row-status lms-row-available">Available — start anytime in this window</span>
+                                <span class="lms-row-status lms-row-available">Attempt {{ $attemptNo }} of {{ $attemptTotal }} — start anytime in this window</span>
                             @endif
                         </td>
                         <td class="col-action">
                             @if($tab === 'available')
-                                <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.start', $a->id) }}">{{ $canRetake ? 'Retake' : 'Start' }}</a>
+                                <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.start', $a->id) }}">{{ ($canRetake || $attemptNo > 1) ? 'Start attempt '.$attemptNo : 'Start' }}</a>
                             @elseif($tab === 'in_progress' && $att)
                                 <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.take', $att->id) }}">Continue</a>
                             @elseif($att)
@@ -304,7 +311,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="7" class="text-center">Nothing in this tab.</td></tr>
+                    <tr><td colspan="8" class="text-center">Nothing in this tab.</td></tr>
                 @endforelse
             </tbody>
         </table>

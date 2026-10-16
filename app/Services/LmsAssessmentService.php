@@ -552,9 +552,22 @@ class LmsAssessmentService
                 ->get()
                 ->groupBy(fn ($a) => (int) $a->assessment_id);
 
+        // Attempt N of T per assessment (oldest assigned sitting = attempt 1).
+        $sittingMeta = [];
+        foreach ($items->groupBy(fn ($r) => (int) $r['assessment']->id) as $aid => $group) {
+            $ordered = $group->sortBy(fn ($r) => (int) ($r['assignment']->id ?? 0))->values();
+            $total = $ordered->count();
+            foreach ($ordered as $i => $r) {
+                $asgId = (int) ($r['assignment']->id ?? 0);
+                $sittingMeta[$aid . ':' . $asgId] = [
+                    'number' => $i + 1,
+                    'total' => $total,
+                ];
+            }
+        }
+
         $claimedAttemptIds = [];
         $inProgressShown = [];
-        $hasPriorByAssessment = [];
 
         foreach ($items as $row) {
             /** @var LmsAssessment $assessment */
@@ -562,11 +575,16 @@ class LmsAssessmentService
             /** @var LmsAssessmentAssignment|null $assignment */
             $assignment = $row['assignment'];
             $aid = (int) $assessment->id;
+            $asgId = (int) ($assignment->id ?? 0);
+            $meta = $sittingMeta[$aid . ':' . $asgId] ?? ['number' => 1, 'total' => 1];
+            $attemptNumber = (int) $meta['number'];
+            $attemptTotal = (int) $meta['total'];
 
             $attempts = $attemptsByAssessment->get($aid) ?? collect();
             $used = $attempts->count();
             $max = $assessment->max_attempts;
-            $hasPriorByAssessment[$aid] = $used > 0;
+            // 2nd+ assigned sitting = retake path (even if attempt 1 was only missed).
+            $isRetakeSitting = $attemptNumber > 1;
 
             $matched = $attempts->first(function ($att) use ($assignment, $claimedAttemptIds) {
                 return ! isset($claimedAttemptIds[(int) $att->id])
@@ -575,6 +593,15 @@ class LmsAssessmentService
             if ($matched) {
                 $claimedAttemptIds[(int) $matched->id] = true;
             }
+
+            $base = [
+                'assessment' => $assessment,
+                'assignment' => $assignment,
+                'attempts_used' => $used,
+                'max_attempts' => $max,
+                'attempt_number' => $attemptNumber,
+                'attempt_total' => $attemptTotal,
+            ];
 
             if ($matched && $matched->status === 'in_progress') {
                 if ($matched->isTimedOut()) {
@@ -585,12 +612,8 @@ class LmsAssessmentService
                         continue;
                     }
                     $inProgressShown[$aid] = true;
-                    $inProgress->push([
-                        'assessment' => $assessment,
-                        'assignment' => $assignment,
+                    $inProgress->push($base + [
                         'attempt' => $matched,
-                        'attempts_used' => $used,
-                        'max_attempts' => $max,
                         'can_retake' => false,
                     ]);
                     continue;
@@ -601,57 +624,36 @@ class LmsAssessmentService
                 ? $matched
                 : null;
 
-            // Finished sittings stay in Results/Submitted — retake only via a new Assign row.
+            // Finished sittings stay in Results/Submitted — next open sitting appears under Available.
             if ($done && $done->results_published) {
-                $results->push([
-                    'assessment' => $assessment,
-                    'assignment' => $assignment,
+                $results->push($base + [
                     'attempt' => $done,
-                    'attempts_used' => $used,
-                    'max_attempts' => $max,
                     'can_retake' => false,
                 ]);
                 continue;
             }
             if ($done) {
-                $submitted->push([
-                    'assessment' => $assessment,
-                    'assignment' => $assignment,
+                $submitted->push($base + [
                     'attempt' => $done,
-                    'attempts_used' => $used,
-                    'max_attempts' => $max,
                     'can_retake' => false,
                 ]);
                 continue;
             }
 
             if ($assignment && $assignment->isExpired()) {
-                $missed->push([
-                    'assessment' => $assessment,
-                    'assignment' => $assignment,
+                $missed->push($base + [
                     'attempt' => null,
-                    'attempts_used' => $used,
-                    'max_attempts' => $max,
                     'can_retake' => false,
                 ]);
             } elseif ($assignment && $assignment->isNotYetOpen()) {
-                $upcoming->push([
-                    'assessment' => $assessment,
-                    'assignment' => $assignment,
+                $upcoming->push($base + [
                     'attempt' => null,
-                    'attempts_used' => $used,
-                    'max_attempts' => $max,
                     'can_retake' => false,
                 ]);
             } else {
-                // Open unused sitting: Start (first) or Retake (after a prior attempt on this test).
-                $isRetakeSitting = ! empty($hasPriorByAssessment[$aid]);
-                $available->push([
-                    'assessment' => $assessment,
-                    'assignment' => $assignment,
+                // Open unused sitting → Available (attempt 2+ labeled as retake).
+                $available->push($base + [
                     'attempt' => null,
-                    'attempts_used' => $used,
-                    'max_attempts' => $max,
                     'can_retake' => $isRetakeSitting,
                 ]);
             }
