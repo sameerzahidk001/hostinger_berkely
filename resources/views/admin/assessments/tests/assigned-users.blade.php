@@ -1,6 +1,7 @@
 @extends(lms_portal_layout())
 @section('title', 'Assigned Tests')
 @include('admin.assessments.partials.searchable-select-assets')
+@include('admin.assessments.partials.sortable-table-assets')
 @section('content')
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
@@ -169,17 +170,17 @@
             </h5>
         </div>
         <div class="ibox-content lms-assigned-wrap">
-            <table class="table table-striped table-bordered lms-assigned-table">
+            <table class="table table-striped table-bordered lms-assigned-table js-sortable-table">
                 <thead>
                     <tr>
-                        <th class="col-date">Date</th>
-                        <th class="col-test">Test</th>
-                        <th class="col-taker">Test Taker</th>
-                        <th class="col-timing">Timing</th>
-                        <th class="col-created">Created by</th>
-                        <th class="col-assessor">Assessor</th>
-                        <th class="col-status">Status</th>
-                        <th class="col-pub">Published</th>
+                        <th class="col-date" data-sort-col="0">Date <span class="sort-ind"></span></th>
+                        <th class="col-test" data-sort-col="1">Test <span class="sort-ind"></span></th>
+                        <th class="col-taker" data-sort-col="2">Test Taker <span class="sort-ind"></span></th>
+                        <th class="col-timing" data-sort-col="3">Timing <span class="sort-ind"></span></th>
+                        <th class="col-created" data-sort-col="4">Created by <span class="sort-ind"></span></th>
+                        <th class="col-assessor" data-sort-col="5">Assessor <span class="sort-ind"></span></th>
+                        <th class="col-status" data-sort-col="6">Status <span class="sort-ind"></span></th>
+                        <th class="col-pub" data-sort-col="7">Published <span class="sort-ind"></span></th>
                         <th class="col-actions">Action</th>
                     </tr>
                 </thead>
@@ -216,13 +217,17 @@
                             $course = $assessment->course ?? null;
                         @endphp
                         <tr>
-                            <td class="col-date">{{ $dateText }}</td>
-                            <td class="col-test">
+                            <td class="col-date" data-sort="{{ $attempt ? optional($attempt->submitted_at ?: $attempt->updated_at)->timestamp : optional($assignment->created_at)->timestamp }}">{{ $dateText }}</td>
+                            <td class="col-test" data-sort="{{ $assessment->title ?? '' }}">
                                 {{ $assessment->title ?? '—' }}
                                 <br><small class="text-muted">{{ $assessment->displayCode() }} · {{ $assessment->kindLabel() }}</small>
                             </td>
-                            <td class="col-taker">
-                                {{ $row['student']->name ?? '—' }}
+                            <td class="col-taker" data-sort="{{ $row['student']->name ?? '' }}">
+                                @if(!empty($row['student']->id))
+                                    <a href="{{ route('users.edit', $row['student']->id) }}">{{ $row['student']->name ?? '—' }}</a>
+                                @else
+                                    {{ $row['student']->name ?? '—' }}
+                                @endif
                                 <br><small class="text-muted">{{ $row['student']->email ?? '' }}</small>
                                 @if($course)
                                     <br><small>
@@ -230,31 +235,29 @@
                                     </small>
                                 @endif
                             </td>
-                            <td class="col-timing">
+                            <td class="col-timing" data-sort="{{ optional($assignment->available_from)->timestamp ?? 0 }}">
                                 <span class="lms-timing-line"><strong>Exam Appointment Timing:</strong> {{ $appointment }}</span>
                                 <span class="lms-timing-line"><strong>Exam Duration:</strong> {{ $fmtDuration($assessment->duration_minutes ?? null) }}</span>
                                 <span class="lms-timing-line"><strong>Started:</strong> {{ $attempt?->started_at ? $assignment->formatInTimezone($attempt->started_at) : '—' }}</span>
                                 <span class="lms-timing-line"><strong>Ended:</strong> {{ $attempt?->submitted_at ? $assignment->formatInTimezone($attempt->submitted_at) : '—' }}</span>
                                 <span class="lms-timing-line"><strong>Duration spent:</strong> {{ $spend !== null ? $fmtDuration($spend) : '—' }}</span>
-                                @if(filled($assignment->timezone))
-                                    <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $assignment->timezoneLabel() }}</span>
-                                @endif
+                                <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $assignment->timezoneLabel() }}</span>
                             </td>
-                            <td class="col-created">
+                            <td class="col-created" data-sort="{{ $assignment->createdByLabel() }}">
                                 @if($assignment->assigned_by_user_id)
                                     <a href="{{ route('users.edit', $assignment->assigned_by_user_id) }}">{{ $assignment->createdByLabel() }}</a>
                                 @else
                                     {{ $assignment->createdByLabel() }}
                                 @endif
                             </td>
-                            <td class="col-assessor">
+                            <td class="col-assessor" data-sort="{{ $assessorName }}">
                                 @if($assessorUserId)
                                     <a href="{{ route('users.edit', $assessorUserId) }}">{{ $assessorName }}</a>
                                 @else
                                     {{ $assessorName }}
                                 @endif
                             </td>
-                            <td class="col-status">
+                            <td class="col-status" data-sort="{{ $statusText }}">
                                 <span class="{{ $statusClass }}">{{ $statusText }}</span>
                                 <span class="lms-score-line">
                                     @if($attempt && $attempt->score_raw !== null)
@@ -265,7 +268,7 @@
                                     @endif
                                 </span>
                             </td>
-                            <td class="col-pub">
+                            <td class="col-pub" data-sort="{{ ($attempt && $attempt->results_published) ? 'Yes' : 'No' }}">
                                 @if($attempt)
                                     <span class="{{ $attempt->results_published ? 'lms-pub-yes' : 'lms-pub-no' }}">
                                         {{ $attempt->results_published ? 'Yes' : 'No' }}

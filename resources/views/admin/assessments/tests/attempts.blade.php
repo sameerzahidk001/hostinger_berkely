@@ -1,5 +1,6 @@
 @extends(lms_portal_layout())
 @section('title', 'Attempts — ' . $assessment->title)
+@include('admin.assessments.partials.sortable-table-assets')
 @section('content')
 <style>
     .lms-status-completed { color: #f59e0b; font-weight: 700; }
@@ -63,18 +64,18 @@
 <div class="wrapper wrapper-content">
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     <div class="ibox"><div class="ibox-content lms-attempts-wrap">
-        <table class="table table-striped table-bordered lms-attempts-table">
+        <table class="table table-striped table-bordered lms-attempts-table js-sortable-table">
             <thead>
                 <tr>
-                    <th class="col-date">Date</th>
-                    <th class="col-taker">Test Taker</th>
-                    <th class="col-time">Start</th>
-                    <th class="col-time">End</th>
-                    <th class="col-spend">Spend</th>
-                    <th class="col-status">Status</th>
-                    <th class="col-score">Score</th>
-                    <th class="col-pub">Published</th>
-                    <th class="col-assessor">Assessor</th>
+                    <th class="col-date" data-sort-col="0">Date <span class="sort-ind"></span></th>
+                    <th class="col-taker" data-sort-col="1">Test Taker <span class="sort-ind"></span></th>
+                    <th class="col-time" data-sort-col="2">Start <span class="sort-ind"></span></th>
+                    <th class="col-time" data-sort-col="3">End <span class="sort-ind"></span></th>
+                    <th class="col-spend" data-sort-col="4">Spend <span class="sort-ind"></span></th>
+                    <th class="col-status" data-sort-col="5">Status <span class="sort-ind"></span></th>
+                    <th class="col-score" data-sort-col="6">Score <span class="sort-ind"></span></th>
+                    <th class="col-pub" data-sort-col="7">Published <span class="sort-ind"></span></th>
+                    <th class="col-assessor" data-sort-col="8">Assessor <span class="sort-ind"></span></th>
                     <th class="col-action">Action</th>
                 </tr>
             </thead>
@@ -85,24 +86,31 @@
                         $assessorUserId = $row->assessorUserId();
                     @endphp
                     <tr>
-                        <td class="col-date">{{ optional($row->submitted_at ?: $row->updated_at)->format('d/m/y H:i') ?? '—' }}</td>
-                        <td class="col-taker">{{ $row->user->name ?? '—' }}<br><small class="text-muted">{{ $row->user->email ?? '' }}</small></td>
-                        <td class="col-time">{{ optional($row->started_at)->format('H:i') ?? '—' }}</td>
-                        <td class="col-time">{{ optional($row->submitted_at)->format('H:i') ?? '—' }}</td>
-                        <td class="col-spend">{{ $spend !== null ? $spend . ' min' : '—' }}</td>
-                        <td class="col-status"><span class="{{ $row->statusColorClass() }}">{{ $row->statusLabel() }}</span></td>
-                        <td class="col-score">
+                        <td class="col-date" data-sort="{{ optional($row->submitted_at ?: $row->updated_at)->timestamp ?? 0 }}">{{ optional($row->submitted_at ?: $row->updated_at)->format('d/m/y H:i') ?? '—' }}</td>
+                        <td class="col-taker" data-sort="{{ $row->user->name ?? '' }}">
+                            @if(!empty($row->user->id))
+                                <a href="{{ route('users.edit', $row->user->id) }}">{{ $row->user->name ?? '—' }}</a>
+                            @else
+                                {{ $row->user->name ?? '—' }}
+                            @endif
+                            <br><small class="text-muted">{{ $row->user->email ?? '' }}</small>
+                        </td>
+                        <td class="col-time" data-sort="{{ optional($row->started_at)->format('H:i') ?? '' }}">{{ optional($row->started_at)->format('H:i') ?? '—' }}</td>
+                        <td class="col-time" data-sort="{{ optional($row->submitted_at)->format('H:i') ?? '' }}">{{ optional($row->submitted_at)->format('H:i') ?? '—' }}</td>
+                        <td class="col-spend" data-sort="{{ $spend ?? -1 }}">{{ $spend !== null ? $spend . ' min' : '—' }}</td>
+                        <td class="col-status" data-sort="{{ $row->statusLabel() }}"><span class="{{ $row->statusColorClass() }}">{{ $row->statusLabel() }}</span></td>
+                        <td class="col-score" data-sort="{{ $row->score_raw ?? -1 }}">
                             @if($row->score_raw !== null)
                                 {{ lms_format_number($row->score_raw) }} / {{ lms_format_number($row->score_max) }}
                                 @if($row->percent() !== null) ({{ lms_format_number($row->percent()) }}%) @endif
                             @else — @endif
                         </td>
-                        <td class="col-pub">
+                        <td class="col-pub" data-sort="{{ $row->results_published ? 'Yes' : 'No' }}">
                             <span class="{{ $row->results_published ? 'lms-pub-yes' : 'lms-pub-no' }}">
                                 {{ $row->results_published ? 'Yes' : 'No' }}
                             </span>
                         </td>
-                        <td class="col-assessor">
+                        <td class="col-assessor" data-sort="{{ $row->assessorLabel() }}">
                             @if($assessorUserId)
                                 <a href="{{ route('users.edit', $assessorUserId) }}">{{ $row->assessorLabel() }}</a>
                             @else

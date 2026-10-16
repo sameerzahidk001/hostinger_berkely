@@ -1,6 +1,7 @@
 @extends(lms_portal_layout())
 @section('title', 'Question Bank')
 @include('admin.assessments.partials.searchable-select-assets')
+@include('admin.assessments.partials.sortable-table-assets')
 @section('content')
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">
@@ -39,47 +40,47 @@
                     </div>
                 </div>
             </form>
-            <table class="table table-striped table-bordered">
+            <table class="table table-striped table-bordered js-sortable-table">
                 <thead>
                     <tr>
-                        <th>Date</th>
-                        <th>ID</th>
-                        <th>Created by</th>
-                        <th>Question for</th>
-                        <th>Type</th>
-                        <th>Topic</th>
-                        <th>Stem</th>
-                        <th>Marks</th>
-                        <th>Status</th>
-                        <th></th>
+                        <th data-sort-col="0">Date <span class="sort-ind"></span></th>
+                        <th data-sort-col="1">ID <span class="sort-ind"></span></th>
+                        <th data-sort-col="2">Created by <span class="sort-ind"></span></th>
+                        <th data-sort-col="3">Question for <span class="sort-ind"></span></th>
+                        <th data-sort-col="4">Type <span class="sort-ind"></span></th>
+                        <th data-sort-col="5">Topic <span class="sort-ind"></span></th>
+                        <th data-sort-col="6">Stem <span class="sort-ind"></span></th>
+                        <th data-sort-col="7">Marks <span class="sort-ind"></span></th>
+                        <th data-sort-col="8">Status <span class="sort-ind"></span></th>
+                        <th>Action</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($rows as $row)
                         <tr>
-                            <td>{{ optional($row->created_at)->format('d/m/Y H:i') ?? '—' }}</td>
-                            <td>{{ $row->displayCode() }}</td>
-                            <td>
+                            <td data-sort="{{ optional($row->created_at)->timestamp ?? 0 }}">{{ optional($row->created_at)->format('d/m/Y H:i') ?? '—' }}</td>
+                            <td data-sort="{{ $row->id }}">{{ $row->displayCode() }}</td>
+                            <td data-sort="{{ $row->createdByLabel() }}">
                                 @if($row->created_by_user_id)
                                     <a href="{{ route('users.edit', $row->created_by_user_id) }}">{{ $row->createdByLabel() }}</a>
                                 @else
                                     {{ $row->createdByLabel() }}
                                 @endif
                             </td>
-                            <td>
+                            <td data-sort="{{ $row->course->title ?? $row->targetRoleLabel() }}">
                                 @if($row->course_id && $row->course)
                                     <a href="{{ route('course.edit', $row->course_id) }}">{{ $row->course->title }}</a>
                                 @else
                                     {{ $row->targetRoleLabel() }}
                                 @endif
                             </td>
-                            <td>{{ $row->typeLabel() }}</td>
-                            <td>{{ $row->topic ?: '—' }}</td>
-                            <td>{{ \Illuminate\Support\Str::limit(strip_tags($row->stem), 100) }}</td>
-                            <td>{{ $row->max_marks }}</td>
-                            <td>{{ ucfirst($row->status) }}</td>
+                            <td data-sort="{{ $row->typeLabel() }}">{{ $row->typeLabel() }}</td>
+                            <td data-sort="{{ $row->topic ?: '' }}">{{ $row->topic ?: '—' }}</td>
+                            <td data-sort="{{ strip_tags($row->stem) }}">{{ \Illuminate\Support\Str::limit(strip_tags($row->stem), 100) }}</td>
+                            <td data-sort="{{ $row->max_marks }}">{{ $row->max_marks }}</td>
+                            <td data-sort="{{ $row->status }}">{{ ucfirst($row->status) }}</td>
                             <td>
-                                <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.questions.edit', $row->id) }}">Edit</a>
+                                <a class="btn btn-xs btn-primary" style="font-weight:700;" href="{{ route('admin.assessments.questions.edit', $row->id) }}">Edit</a>
                             </td>
                         </tr>
                     @empty

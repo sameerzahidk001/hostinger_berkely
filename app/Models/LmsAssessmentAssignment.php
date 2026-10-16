@@ -154,7 +154,7 @@ class LmsAssessmentAssignment extends Model
     {
         $from = $this->available_from;
         $until = $this->appointmentEnd();
-        $tzSuffix = filled($this->timezone) ? (' (' . $this->timezoneLabel() . ')') : '';
+        $tzSuffix = ' (' . $this->timezoneLabel() . ')';
         if ($from && $until) {
             return $this->formatInTimezone($from, $fmt) . ' → ' . $this->formatInTimezone($until, $fmt) . $tzSuffix;
         }
@@ -165,7 +165,7 @@ class LmsAssessmentAssignment extends Model
             return 'Until ' . $this->formatInTimezone($until, $fmt) . $tzSuffix;
         }
 
-        return 'Open';
+        return 'Open' . $tzSuffix;
     }
 
     public function isNotYetOpen(): bool

@@ -1,5 +1,6 @@
 @extends('user.layout.app')
 @section('title', $section === 'mocks' ? 'Mock Exams' : 'Assessments')
+@include('admin.assessments.partials.sortable-table-assets')
 @section('content')
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
@@ -190,15 +191,15 @@
         $availableTabUrl = request()->fullUrlWithQuery(['tab' => 'available']);
     @endphp
     <div class="ibox"><div class="ibox-content lms-assess-wrap">
-        <table class="table table-striped table-bordered lms-assess-table">
+        <table class="table table-striped table-bordered lms-assess-table js-sortable-table">
             <thead>
                 <tr>
-                    <th class="col-date">Date</th>
-                    <th class="col-title">Test</th>
-                    <th class="col-type">Type</th>
-                    <th class="col-timing">Timing</th>
-                    <th class="col-assessor">Assessor</th>
-                    <th class="col-status">Status</th>
+                    <th class="col-date" data-sort-col="0">Date <span class="sort-ind"></span></th>
+                    <th class="col-title" data-sort-col="1">Test <span class="sort-ind"></span></th>
+                    <th class="col-type" data-sort-col="2">Type <span class="sort-ind"></span></th>
+                    <th class="col-timing" data-sort-col="3">Timing <span class="sort-ind"></span></th>
+                    <th class="col-assessor" data-sort-col="4">Assessor <span class="sort-ind"></span></th>
+                    <th class="col-status" data-sort-col="5">Status <span class="sort-ind"></span></th>
                     <th class="col-action">Action</th>
                 </tr>
             </thead>
@@ -211,6 +212,9 @@
                         $dateText = $att
                             ? (optional($att->submitted_at ?: $att->updated_at)->format('d/m/y H:i') ?? '—')
                             : (optional($asg?->available_from ?: $asg?->created_at)->format('d/m/y H:i') ?? '—');
+                        $dateSort = $att
+                            ? (optional($att->submitted_at ?: $att->updated_at)->timestamp ?? 0)
+                            : (optional($asg?->available_from ?: $asg?->created_at)->timestamp ?? 0);
                         $spend = $att?->spendMinutes();
                         $used = (int) ($row['attempts_used'] ?? 0);
                         $maxAtt = $row['max_attempts'] ?? null;
@@ -219,29 +223,43 @@
                         $assessorName = $att
                             ? $att->assessorLabel($asg)
                             : ($asg?->marker?->name ?? '—');
+                        $assessorEmail = $asg?->marker?->email ?? null;
+                        $statusSort = $att ? $att->statusLabel() : ($tab === 'missed' ? 'Missed' : ($tab === 'upcoming' ? 'Upcoming' : ($canRetake ? 'Retake' : 'Available')));
                     @endphp
                     <tr>
-                        <td class="col-date">{{ $dateText }}</td>
-                        <td class="col-title">
+                        <td class="col-date" data-sort="{{ $dateSort }}">{{ $dateText }}</td>
+                        <td class="col-title" data-sort="{{ $a->title }}">
                             {{ $a->title }}
                             <br><small class="text-muted">{{ $a->displayCode() }}</small>
                             @if($course)
-                                <br><small class="text-muted">{{ $course->title }}</small>
+                                <br><small>
+                                    @if(!empty($course->slug))
+                                        <a href="{{ route('course.details', ['course' => $course->slug]) }}" target="_blank" rel="noopener">{{ $course->title }}</a>
+                                    @else
+                                        {{ $course->title }}
+                                    @endif
+                                </small>
                             @endif
                         </td>
-                        <td class="col-type">{{ $a->kindLabel() }}</td>
-                        <td class="col-timing">
+                        <td class="col-type" data-sort="{{ $a->kindLabel() }}">{{ $a->kindLabel() }}</td>
+                        <td class="col-timing" data-sort="{{ optional($asg?->available_from)->timestamp ?? 0 }}">
                             <span class="lms-timing-line"><strong>Exam Appointment Timing:</strong> {{ $asg ? $asg->appointmentWindowLabel() : '—' }}</span>
                             <span class="lms-timing-line"><strong>Exam Duration:</strong> {{ $fmtDuration($a->duration_minutes ?? null) }}</span>
                             <span class="lms-timing-line"><strong>Started:</strong> {{ ($asg && $att?->started_at) ? $asg->formatInTimezone($att->started_at) : (optional($att?->started_at)->format('d/m/y H:i') ?? '—') }}</span>
                             <span class="lms-timing-line"><strong>Ended:</strong> {{ ($asg && $att?->submitted_at) ? $asg->formatInTimezone($att->submitted_at) : (optional($att?->submitted_at)->format('d/m/y H:i') ?? '—') }}</span>
                             <span class="lms-timing-line"><strong>Duration spent:</strong> {{ $spend !== null ? $fmtDuration($spend) : '—' }}</span>
-                            @if($asg && filled($asg->timezone))
+                            @if($asg)
                                 <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $asg->timezoneLabel() }}</span>
                             @endif
                         </td>
-                        <td class="col-assessor">{{ $assessorName }}</td>
-                        <td class="col-status">
+                        <td class="col-assessor" data-sort="{{ $assessorName }}">
+                            @if($assessorEmail && $assessorName !== '—')
+                                <a href="mailto:{{ $assessorEmail }}">{{ $assessorName }}</a>
+                            @else
+                                {{ $assessorName }}
+                            @endif
+                        </td>
+                        <td class="col-status" data-sort="{{ $statusSort }}">
                             @if($att)
                                 <span class="lms-row-status {{ str_replace('lms-status-', 'lms-row-', $att->statusColorClass()) }}">{{ $att->statusLabel() }}</span>
                                 @if($att->results_published && $att->score_raw !== null)
