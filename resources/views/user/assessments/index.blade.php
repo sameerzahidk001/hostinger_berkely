@@ -271,15 +271,9 @@
                             @elseif($tab === 'upcoming')
                                 <span class="lms-row-status lms-row-upcoming">Opens {{ optional($asg?->available_from)->format('d M Y H:i') ?: 'soon' }} · Not open yet</span>
                             @elseif($canRetake)
-                                <span class="lms-row-status lms-row-available">Retake available
-                                    @if($maxAtt !== null)
-                                        ({{ $used }}/{{ (int) $maxAtt }} used)
-                                    @else
-                                        ({{ $used }} used)
-                                    @endif
-                                </span>
+                                <span class="lms-row-status lms-row-available">Assigned retake — start anytime in this window</span>
                             @else
-                                <span class="lms-row-status lms-row-available">Available</span>
+                                <span class="lms-row-status lms-row-available">Available — start anytime in this window</span>
                             @endif
                         </td>
                         <td class="col-action">

@@ -20,6 +20,7 @@
     <div class="ibox"><div class="ibox-content">
         <p class="help-block">
             Each save creates a <strong>new sitting</strong> of this <strong>same test</strong> (new appointment).
+            That is how a <strong>retake</strong> is given — assign again; the student may start anytime inside the new window.
             Older sittings stay on Assigned Tests. Optional assessor: if set, that instructor (or Admin) can mark; otherwise Admin / course instructors can mark.
         </p>
         <form method="POST" action="{{ route('admin.assessments.tests.assign.save', $assessment->id) }}">

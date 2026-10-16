@@ -156,16 +156,51 @@ class LmsAssessmentService
         return $out;
     }
 
-    /** Whether an attempt started inside this assignment's appointment window. */
+    /** Whether an attempt belongs to this assignment sitting (window, or created_at if open-ended). */
     public function attemptBelongsToAssignment(LmsAssessmentAttempt $att, ?LmsAssessmentAssignment $asg): bool
     {
-        if (! $asg || ! $asg->available_from || ! $att->started_at) {
+        if (! $asg || ! $att->started_at) {
             return false;
         }
-        $end = $asg->appointmentEnd() ?: $asg->available_from->copy()->addDays(7);
+        if ($asg->available_from) {
+            $end = $asg->appointmentEnd() ?: $asg->available_from->copy()->addDays(7);
 
-        return $att->started_at->gte($asg->available_from->copy()->subMinutes(5))
-            && $att->started_at->lte($end->copy()->addDay());
+            return $att->started_at->gte($asg->available_from->copy()->subMinutes(5))
+                && $att->started_at->lte($end->copy()->addDay());
+        }
+        if ($asg->created_at) {
+            return $att->started_at->gte($asg->created_at->copy()->subMinutes(5));
+        }
+
+        return false;
+    }
+
+    /**
+     * Open assignment sittings for this user/test that still have no attempt.
+     * Retake = admin Assigns a new sitting; student may start anytime inside that window.
+     *
+     * @return Collection<int, LmsAssessmentAssignment>
+     */
+    public function openUnusedAssignmentsFor(User $user, LmsAssessment $assessment): Collection
+    {
+        $attempts = LmsAssessmentAttempt::query()
+            ->where('assessment_id', $assessment->id)
+            ->where('user_id', $user->id)
+            ->orderByDesc('id')
+            ->get();
+
+        return $this->availableAssessmentsForUser($user, $assessment->kind)
+            ->filter(fn ($row) => (int) $row['assessment']->id === (int) $assessment->id)
+            ->map(fn ($row) => $row['assignment'])
+            ->filter()
+            ->filter(function (LmsAssessmentAssignment $asg) use ($attempts) {
+                if (! $asg->isAvailableNow()) {
+                    return false;
+                }
+
+                return ! $attempts->contains(fn ($att) => $this->attemptBelongsToAssignment($att, $asg));
+            })
+            ->values();
     }
 
     public function userCanAccessAssessment(User $user, LmsAssessment $assessment): bool
@@ -185,19 +220,6 @@ class LmsAssessmentService
             ->values();
         abort_unless($accessRows->isNotEmpty(), 403);
 
-        // Prefer the newest sitting that is open right now.
-        $assignment = $accessRows
-            ->map(fn ($row) => $row['assignment'])
-            ->filter()
-            ->first(fn (LmsAssessmentAssignment $a) => $a->isAvailableNow());
-
-        if (! $assignment && $accessRows->contains(fn ($row) => $row['assignment'] !== null)) {
-            $blocked = $accessRows->map(fn ($row) => $row['assignment'])->filter()->first();
-            abort(403, ($blocked && $blocked->isNotYetOpen())
-                ? 'This exam is not open yet.'
-                : 'The availability window for this exam has ended.');
-        }
-
         $open = LmsAssessmentAttempt::query()
             ->where('assessment_id', $assessment->id)
             ->where('user_id', $user->id)
@@ -212,12 +234,23 @@ class LmsAssessmentService
             }
         }
 
-        if ($assessment->max_attempts) {
-            $count = LmsAssessmentAttempt::query()
-                ->where('assessment_id', $assessment->id)
-                ->where('user_id', $user->id)
-                ->count();
-            abort_unless($count < (int) $assessment->max_attempts, 403, 'Maximum attempts reached.');
+        // Must have an open assigned sitting with no attempt yet (retake = new Assign).
+        // Exception: unassigned skill tests stay open to staff without a sitting row.
+        $assignment = $this->openUnusedAssignmentsFor($user, $assessment)->first();
+        $hasExplicitAssign = $accessRows->contains(fn ($row) => $row['assignment'] !== null);
+        if (! $assignment) {
+            if ($assessment->isSkill() && ! $hasExplicitAssign) {
+                // open skill — no sitting required
+            } else {
+                $anyAsg = $accessRows->map(fn ($row) => $row['assignment'])->filter()->first();
+                if ($anyAsg && $anyAsg->isNotYetOpen()) {
+                    abort(403, 'This exam is not open yet.');
+                }
+                if ($anyAsg && $anyAsg->isExpired()) {
+                    abort(403, 'The availability window for this exam has ended.');
+                }
+                abort(403, 'No open assigned sitting. Ask admin to Assign a retake for this test.');
+            }
         }
 
         $attempt = new LmsAssessmentAttempt();
@@ -477,15 +510,12 @@ class LmsAssessmentService
     }
 
     /**
-     * Whether the student may start another sitting (respects Max attempts + window).
-     * max_attempts null = unlimited.
+     * Retake = admin created a new Assign sitting that is open and unused.
+     * Not based on Max attempts alone.
      */
     public function canRetake(User $user, LmsAssessment $assessment, ?LmsAssessmentAssignment $assignment = null): bool
     {
         if (! $assessment->isPublished()) {
-            return false;
-        }
-        if ($assignment && ($assignment->isExpired() || $assignment->isNotYetOpen())) {
             return false;
         }
         if (LmsAssessmentAttempt::query()
@@ -495,12 +525,11 @@ class LmsAssessmentService
             ->exists()) {
             return false;
         }
-        $max = $assessment->max_attempts;
-        if ($max === null) {
-            return true;
+        if ($this->attemptsUsed($user, $assessment) < 1) {
+            return false;
         }
 
-        return $this->attemptsUsed($user, $assessment) < (int) $max;
+        return $this->openUnusedAssignmentsFor($user, $assessment)->isNotEmpty();
     }
 
     public function bucketForUser(User $user, ?string $kind = null): array
@@ -523,15 +552,9 @@ class LmsAssessmentService
                 ->get()
                 ->groupBy(fn ($a) => (int) $a->assessment_id);
 
-        $newestAssignmentId = [];
-        foreach ($items as $row) {
-            $aid = (int) $row['assessment']->id;
-            $asgId = (int) ($row['assignment']->id ?? 0);
-            $newestAssignmentId[$aid] = max($newestAssignmentId[$aid] ?? 0, $asgId);
-        }
-
         $claimedAttemptIds = [];
         $inProgressShown = [];
+        $hasPriorByAssessment = [];
 
         foreach ($items as $row) {
             /** @var LmsAssessment $assessment */
@@ -543,14 +566,12 @@ class LmsAssessmentService
             $attempts = $attemptsByAssessment->get($aid) ?? collect();
             $used = $attempts->count();
             $max = $assessment->max_attempts;
+            $hasPriorByAssessment[$aid] = $used > 0;
 
             $matched = $attempts->first(function ($att) use ($assignment, $claimedAttemptIds) {
                 return ! isset($claimedAttemptIds[(int) $att->id])
                     && $this->attemptBelongsToAssignment($att, $assignment);
             });
-            if (! $matched && $assignment && (int) $assignment->id === (int) ($newestAssignmentId[$aid] ?? 0)) {
-                $matched = $attempts->first(fn ($att) => ! isset($claimedAttemptIds[(int) $att->id]));
-            }
             if ($matched) {
                 $claimedAttemptIds[(int) $matched->id] = true;
             }
@@ -576,14 +597,11 @@ class LmsAssessmentService
                 }
             }
 
-            $windowOpen = ! $assignment || (! $assignment->isExpired() && ! $assignment->isNotYetOpen());
-            $underLimit = $max === null || $used < (int) $max;
-            $canRetake = $windowOpen && $underLimit;
-
             $done = $matched && in_array($matched->status, ['submitted', 'graded', 'expired'], true)
                 ? $matched
                 : null;
 
+            // Finished sittings stay in Results/Submitted — retake only via a new Assign row.
             if ($done && $done->results_published) {
                 $results->push([
                     'assessment' => $assessment,
@@ -591,31 +609,19 @@ class LmsAssessmentService
                     'attempt' => $done,
                     'attempts_used' => $used,
                     'max_attempts' => $max,
-                    'can_retake' => $canRetake,
+                    'can_retake' => false,
                 ]);
-            } elseif ($done) {
+                continue;
+            }
+            if ($done) {
                 $submitted->push([
                     'assessment' => $assessment,
                     'assignment' => $assignment,
                     'attempt' => $done,
                     'attempts_used' => $used,
                     'max_attempts' => $max,
-                    'can_retake' => $canRetake,
+                    'can_retake' => false,
                 ]);
-            }
-
-            if ($done) {
-                // Still allowed more sittings on this open window → also list under Available.
-                if ($canRetake) {
-                    $available->push([
-                        'assessment' => $assessment,
-                        'assignment' => $assignment,
-                        'attempt' => null,
-                        'attempts_used' => $used,
-                        'max_attempts' => $max,
-                        'can_retake' => true,
-                    ]);
-                }
                 continue;
             }
 
@@ -638,16 +644,36 @@ class LmsAssessmentService
                     'can_retake' => false,
                 ]);
             } else {
+                // Open unused sitting: Start (first) or Retake (after a prior attempt on this test).
+                $isRetakeSitting = ! empty($hasPriorByAssessment[$aid]);
                 $available->push([
                     'assessment' => $assessment,
                     'assignment' => $assignment,
                     'attempt' => null,
                     'attempts_used' => $used,
                     'max_attempts' => $max,
-                    'can_retake' => false,
+                    'can_retake' => $isRetakeSitting,
                 ]);
             }
         }
+
+        // Result/Submitted rows: Retake only if a separate open unused assigned sitting exists.
+        $openRetakeByAssessment = [];
+        foreach ($available as $av) {
+            if (! empty($av['can_retake'])) {
+                $openRetakeByAssessment[(int) $av['assessment']->id] = true;
+            }
+        }
+        $results = $results->map(function ($row) use ($openRetakeByAssessment) {
+            $row['can_retake'] = ! empty($openRetakeByAssessment[(int) $row['assessment']->id]);
+
+            return $row;
+        });
+        $submitted = $submitted->map(function ($row) use ($openRetakeByAssessment) {
+            $row['can_retake'] = ! empty($openRetakeByAssessment[(int) $row['assessment']->id]);
+
+            return $row;
+        });
 
         return compact('available', 'upcoming', 'inProgress', 'submitted', 'results', 'missed');
     }
