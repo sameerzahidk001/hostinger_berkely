@@ -216,10 +216,17 @@ class LmsAssessmentController extends Controller
             return back()->withErrors($validator)->withInput();
         }
 
-        $this->syncAssignments($a, $request);
+        $batchCount = count(array_filter((array) $request->input('batch_ids', [])));
+        $studentCount = count(array_filter((array) $request->input('student_ids', [])));
+        if ($batchCount === 0 && $studentCount === 0) {
+            return back()->withErrors(['student_ids' => 'Select at least one batch or user to assign.'])->withInput();
+        }
 
-        return redirect()->route('admin.assessments.tests.assigned-users')
-            ->with('success', 'New assignees added for “' . $a->title . '”. Existing assignees were kept.');
+        $this->syncAssignments($a, $request);
+        $created = (int) $request->attributes->get('lms_assignments_created', $batchCount + $studentCount);
+
+        return redirect()->route('admin.assessments.tests.assigned-users', ['assessment_id' => $a->id])
+            ->with('success', $created . ' new assignment' . ($created === 1 ? '' : 's') . ' created for “' . $a->title . '” (same test, new sitting).');
     }
 
     /**
@@ -362,8 +369,9 @@ class LmsAssessmentController extends Controller
             }
 
             foreach ($students as $student) {
-                $key = (int) $assessment->id . ':' . (int) $student->id;
-                if (isset($rowsByKey[$key]) && (int) $rowsByKey[$key]['assignment']->id >= (int) $assignment->id) {
+                // One row per assignment sitting (same test can appear many times).
+                $key = (int) $assignment->id . ':' . (int) $student->id;
+                if (isset($rowsByKey[$key])) {
                     continue;
                 }
                 $rowsByKey[$key] = [
@@ -387,7 +395,28 @@ class LmsAssessmentController extends Controller
                 ->groupBy(fn ($a) => (int) $a->assessment_id . ':' . (int) $a->user_id);
 
             foreach ($rowsByKey as $key => &$row) {
-                $row['attempt'] = optional($attempts->get($key))->first();
+                $pairKey = (int) $row['assessment']->id . ':' . (int) $row['student']->id;
+                $candidates = $attempts->get($pairKey) ?? collect();
+                $asg = $row['assignment'];
+                // Prefer attempt that started inside this sitting's appointment window.
+                $row['attempt'] = $candidates->first(function ($att) use ($asg) {
+                    if (! $att->started_at || ! $asg->available_from) {
+                        return false;
+                    }
+                    $end = $asg->appointmentEnd() ?: $asg->available_from->copy()->addDays(7);
+                    return $att->started_at->gte($asg->available_from->copy()->subMinutes(5))
+                        && $att->started_at->lte($end->copy()->addDay());
+                });
+                // Fallback: only latest sitting without a window match gets the latest attempt.
+                if (! $row['attempt'] && $candidates->isNotEmpty()) {
+                    $latestAsgId = collect($rowsByKey)
+                        ->filter(fn ($r) => (int) $r['assessment']->id === (int) $row['assessment']->id
+                            && (int) $r['student']->id === (int) $row['student']->id)
+                        ->max(fn ($r) => (int) $r['assignment']->id);
+                    if ((int) $asg->id === (int) $latestAsgId) {
+                        $row['attempt'] = $candidates->first();
+                    }
+                }
             }
             unset($row);
         }
@@ -679,13 +708,7 @@ class LmsAssessmentController extends Controller
 
     protected function syncAssignments(LmsAssessment $a, Request $request): void
     {
-        // Assign = add new people only. Never delete or replace existing assignees.
-        $existing = LmsAssessmentAssignment::query()->where('assessment_id', $a->id)->get();
-        $existingStudentIds = $existing->whereNotNull('student_id')
-            ->pluck('student_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
-        $existingBatchIds = $existing->whereNotNull('class_batch_id')
-            ->pluck('class_batch_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
-
+        // Each Save = new assignment sitting(s) for this same test. Never delete older sittings.
         $tzOptions = LmsAssessmentAssignment::timezoneOptions();
         $timezone = trim((string) $request->input('timezone', ''));
         if ($timezone === '' || ! array_key_exists($timezone, $tzOptions)) {
@@ -695,7 +718,7 @@ class LmsAssessmentController extends Controller
         $from = null;
         $until = null;
         if ($request->filled('available_from')) {
-            // Interpret wall-clock time in the chosen timezone, store in app timezone.
+            // Wall-clock time is in the chosen timezone (not the browser TZ).
             $fromLocal = \Carbon\Carbon::parse($request->input('available_from'), $timezone);
             $from = $fromLocal->copy()->timezone(config('app.timezone'))->format('Y-m-d H:i:s');
             // Appointment window length = exam duration from start (student may start within that window).
@@ -716,9 +739,10 @@ class LmsAssessmentController extends Controller
         $hasMarkerCol = Schema::hasColumn('lms_assessment_assignments', 'marker_user_id');
         $hasTimezoneCol = Schema::hasColumn('lms_assessment_assignments', 'timezone');
 
+        $created = 0;
         foreach ((array) $request->input('batch_ids', []) as $batchId) {
             $batchId = (int) $batchId;
-            if ($batchId <= 0 || in_array($batchId, $existingBatchIds, true)) {
+            if ($batchId <= 0) {
                 continue;
             }
             $row = [
@@ -736,11 +760,11 @@ class LmsAssessmentController extends Controller
                 $row['timezone'] = $timezone;
             }
             LmsAssessmentAssignment::create($row);
-            $existingBatchIds[] = $batchId;
+            $created++;
         }
         foreach ((array) $request->input('student_ids', []) as $studentId) {
             $studentId = (int) $studentId;
-            if ($studentId <= 0 || in_array($studentId, $existingStudentIds, true)) {
+            if ($studentId <= 0) {
                 continue;
             }
             $row = [
@@ -758,8 +782,11 @@ class LmsAssessmentController extends Controller
                 $row['timezone'] = $timezone;
             }
             LmsAssessmentAssignment::create($row);
-            $existingStudentIds[] = $studentId;
+            $created++;
         }
+
+        // Stash count for flash message.
+        $request->attributes->set('lms_assignments_created', $created);
     }
 
     protected function formData(LmsAssessment $assessment): array

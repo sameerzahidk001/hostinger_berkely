@@ -19,8 +19,8 @@
     @endif
     <div class="ibox"><div class="ibox-content">
         <p class="help-block">
-            Add <strong>new</strong> batches or users only. Existing assignees stay as they are.
-            Optional marking instructor: if set, that instructor (or Admin) can mark attempts; otherwise Admin / course instructors can mark.
+            Each save creates a <strong>new assignment sitting</strong> for this same test (new appointment window).
+            Older sittings are kept. Optional assessor: if set, that instructor (or Admin) can mark; otherwise Admin / course instructors can mark.
         </p>
         <form method="POST" action="{{ route('admin.assessments.tests.assign.save', $assessment->id) }}">
             @csrf
@@ -60,22 +60,25 @@
                     $fromForInput = old('available_from');
                 @endphp
                 <div class="col-md-3 form-group">
-                    <label>Exam Appointment Start</label>
-                    <input type="datetime-local" name="available_from" class="form-control" value="{{ $fromForInput }}">
+                    <label>Exam Appointment Start *</label>
+                    <input type="datetime-local" name="available_from" id="available_from" class="form-control" value="{{ $fromForInput }}" required>
                     <p class="help-block" style="margin-bottom:0;font-size:11px;">
-                        Local time for the timezone below. Window ends at start + exam duration
+                        Enter the clock time in the <strong>Timezone</strong> selected on the right (not your computer clock unless they match).
+                        Window = start + exam duration
                         ({{ $assessment->duration_minutes ? $assessment->duration_minutes . ' min' : 'set duration on the test' }}).
                         Student may start anytime inside that window.
                     </p>
                 </div>
                 <div class="col-md-3 form-group">
                     <label>Timezone *</label>
-                    <select name="timezone" class="form-control lms-searchable" data-placeholder="Type to find timezone" data-allow-clear="0" required>
+                    <select name="timezone" id="assign_timezone" class="form-control lms-searchable" data-placeholder="Type to find timezone" data-allow-clear="0" required>
                         @foreach(($timezoneOptions ?? \App\Models\LmsAssessmentAssignment::timezoneOptions()) as $tzValue => $tzLabel)
                             <option value="{{ $tzValue }}" @selected((string) $tzForInput === (string) $tzValue)>{{ $tzLabel }}</option>
                         @endforeach
                     </select>
-                    <p class="help-block" style="margin-bottom:0;font-size:11px;">Shown with appointment and attempt times on all lists and PDFs.</p>
+                    <p class="help-block" style="margin-bottom:0;font-size:11px;">
+                        <strong>Now in this timezone:</strong> <span id="tz_now_clock">—</span>
+                    </p>
                 </div>
             </div>
             <button type="submit" class="btn btn-primary">Save assignments</button>
@@ -85,3 +88,28 @@
     </div></div>
 </div>
 @endsection
+@push('script')
+<script>
+(function () {
+    var sel = document.getElementById('assign_timezone');
+    var out = document.getElementById('tz_now_clock');
+    if (!sel || !out) return;
+    function tick() {
+        var tz = sel.value || 'Asia/Dubai';
+        try {
+            out.textContent = new Intl.DateTimeFormat('en-GB', {
+                timeZone: tz,
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                hour12: false
+            }).format(new Date()) + ' (' + tz + ')';
+        } catch (e) {
+            out.textContent = new Date().toISOString() + ' (UTC fallback)';
+        }
+    }
+    tick();
+    setInterval(tick, 1000);
+    $(sel).on('change select2:select', tick);
+})();
+</script>
+@endpush
