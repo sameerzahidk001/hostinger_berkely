@@ -199,14 +199,12 @@
                             </td>
                             <td class="col-status" data-sort="{{ $statusText }}">
                                 <span class="{{ $statusClass }}">{{ $statusText }}</span>
-                                <span class="lms-score-line">
-                                    @if($attempt && $attempt->score_raw !== null)
+                                @if($attempt && $attempt->score_raw !== null)
+                                    <span class="lms-score-line">
                                         {{ lms_format_number($attempt->score_raw) }} / {{ lms_format_number($attempt->score_max) }}
                                         @if($attempt->percent() !== null) ({{ lms_format_number($attempt->percent()) }}%) @endif
-                                    @else
-                                        —
-                                    @endif
-                                </span>
+                                    </span>
+                                @endif
                             </td>
                             <td class="col-pub" data-sort="{{ ($attempt && $attempt->results_published) ? 'Yes' : 'No' }}">
                                 @if($attempt)

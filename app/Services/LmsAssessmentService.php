@@ -72,17 +72,18 @@ class LmsAssessmentService
 
     /**
      * Edit / delete / re-assign sittings for a test.
-     * Admin: always. Instructor: only if they have create or assign permission AND created the test.
-     * Assessor-only (marker) does not get these actions.
+     * Admin login only (not Head-of-Faculty panel bypass). Instructors: create/assign permission
+     * AND they created the test. Assessor-only (marker) never gets these actions.
      */
     public function canManageSittingsFor(LmsAssessment $assessment): bool
     {
-        if ($this->lms->isAdminActor() || panel_sees_all_dashboards()) {
+        // Real Admin panel only — Musa / panel_sees_all must not inherit sitting admin powers.
+        if ($this->lms->isAdminActor()) {
             return true;
         }
 
         if ($assessment->isSkill()) {
-            return $this->canManageSkillTests();
+            return false;
         }
 
         if (! $this->canCreateStudentAssessments() && ! $this->canAssignStudentAssessments()) {
