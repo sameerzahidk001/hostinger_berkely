@@ -7,7 +7,7 @@
         <h2>Assign: {{ $assessment->title }} <small class="text-muted">ID {{ $assessment->id }}</small></h2>
         <ol class="breadcrumb">
             <li><a href="{{ lms_portal_home() }}">Home</a></li>
-            <li><a href="{{ route('admin.assessments.tests.index') }}">Assessments</a></li>
+            <li><a href="{{ route('admin.assessments.tests.index') }}">ALL TESTS</a></li>
             <li class="active"><strong>Assign</strong></li>
         </ol>
     </div>

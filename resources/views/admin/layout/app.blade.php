@@ -232,7 +232,7 @@
                         @endif
                         @if($canCreateTestsMenu)
                         <li class="{{ request()->routeIs('admin.assessments.tests.index') || request()->routeIs('admin.assessments.tests.create') || request()->routeIs('admin.assessments.tests.edit') || request()->routeIs('admin.assessments.tests.store') ? 'active' : '' }}">
-                           <a href="{{ route('admin.assessments.tests.index') }}">Create Test</a>
+                           <a href="{{ route('admin.assessments.tests.index') }}">All Tests</a>
                         </li>
                         @endif
                         @if($canAssignTestsMenu || $canTestsMenu)
