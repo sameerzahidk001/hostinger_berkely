@@ -23,12 +23,35 @@
         padding: 22px 24px;
         font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
     }
-    #lms-user-preview-box h3 {
+    #lms-user-preview-box .lms-up-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
         margin: 0 0 12px;
+    }
+    #lms-user-preview-box h3 {
+        margin: 0;
         font-size: 18px;
         font-weight: 700;
         color: #000435;
+        flex: 1;
     }
+    #lms-user-preview-box .lms-up-view-profile {
+        display: none;
+        flex-shrink: 0;
+        border: none;
+        border-radius: 4px;
+        padding: 8px 12px;
+        font-weight: 700;
+        font-size: 12px;
+        text-decoration: none;
+        background: #000435;
+        color: #fff !important;
+        white-space: nowrap;
+    }
+    #lms-user-preview-box .lms-up-view-profile.is-visible { display: inline-block; }
+    #lms-user-preview-box .lms-up-view-profile:hover { filter: brightness(1.08); color: #fff !important; }
     #lms-user-preview-box .lms-up-row {
         display: flex;
         gap: 10px;
@@ -62,7 +85,10 @@
 </style>
 <div id="lms-user-preview-overlay" role="dialog" aria-modal="true" aria-labelledby="lms-user-preview-title">
     <div id="lms-user-preview-box">
-        <h3 id="lms-user-preview-title">Profile</h3>
+        <div class="lms-up-head">
+            <h3 id="lms-user-preview-title">Profile</h3>
+            <a id="lms-user-preview-faculty" class="lms-up-view-profile" href="#" target="_blank" rel="noopener noreferrer">View Profile</a>
+        </div>
         <div id="lms-user-preview-body" class="lms-up-loading">Loading…</div>
         <div class="lms-up-actions">
             <button type="button" class="lms-up-close" id="lms-user-preview-close">Close</button>
@@ -74,6 +100,7 @@
     var overlay = document.getElementById('lms-user-preview-overlay');
     var body = document.getElementById('lms-user-preview-body');
     var closeBtn = document.getElementById('lms-user-preview-close');
+    var facultyBtn = document.getElementById('lms-user-preview-faculty');
     var urlTpl = @json(url('/admin/assessments/users/__ID__/preview'));
     if (!overlay || !body) return;
 
@@ -81,9 +108,21 @@
         overlay.classList.remove('is-open');
     }
 
+    function setFacultyButton(url) {
+        if (!facultyBtn) return;
+        if (url) {
+            facultyBtn.href = url;
+            facultyBtn.classList.add('is-visible');
+        } else {
+            facultyBtn.href = '#';
+            facultyBtn.classList.remove('is-visible');
+        }
+    }
+
     function openPreview(userId) {
         body.className = 'lms-up-loading';
         body.textContent = 'Loading…';
+        setFacultyButton(null);
         overlay.classList.add('is-open');
         var url = urlTpl.replace('__ID__', String(userId));
         fetch(url, {
@@ -114,9 +153,11 @@
                 vals[i].textContent = row[1] || '—';
             });
             document.getElementById('lms-user-preview-title').textContent = data.name || 'Profile';
+            setFacultyButton(data.faculty_profile_url || null);
         }).catch(function () {
             body.className = 'lms-up-error';
             body.textContent = 'Profile is not available.';
+            setFacultyButton(null);
         });
     }
 
