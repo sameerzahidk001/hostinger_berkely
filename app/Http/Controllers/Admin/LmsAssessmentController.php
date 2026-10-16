@@ -254,6 +254,7 @@ class LmsAssessmentController extends Controller
                 'student:id,name,email',
                 'batch:id,code,name',
                 'marker:id,name',
+                'assignedByUser:id,name',
             ])
             ->orderByDesc('id');
 
