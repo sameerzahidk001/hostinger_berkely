@@ -1,5 +1,6 @@
 @extends(lms_portal_layout())
 @section('title', 'Question Bank')
+@include('admin.assessments.partials.searchable-select-assets')
 @section('content')
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">
@@ -22,7 +23,7 @@
             <form method="GET" class="m-b-md" style="margin-bottom:15px;">
                 <div class="row">
                     <div class="col-sm-3">
-                        <select name="type" class="form-control">
+                        <select name="type" class="form-control lms-searchable" data-placeholder="Type to find type">
                             <option value="">All types</option>
                             @foreach($types as $k => $label)
                                 <option value="{{ $k }}" @selected($type === $k)>{{ $label }}</option>

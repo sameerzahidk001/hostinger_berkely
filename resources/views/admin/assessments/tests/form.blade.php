@@ -90,7 +90,7 @@
                 </div>
                 <div class="col-md-2 form-group">
                     <label>Status *</label>
-                    <select name="status" class="form-control" @required($canCreate) @disabled(! $canCreate)>
+                    <select name="status" class="form-control lms-searchable" data-placeholder="Type to find status" data-allow-clear="0" @required($canCreate) @disabled(! $canCreate)>
                         <option value="draft" @selected(old('status', $assessment->status) === 'draft')>Draft</option>
                         <option value="published" @selected(old('status', $assessment->status) === 'published')>Published</option>
                         <option value="disabled" @selected(old('status', $assessment->status) === 'disabled')>Disabled</option>
@@ -101,7 +101,7 @@
                 </div>
                 <div class="col-md-4 form-group">
                     <label>Results mode *</label>
-                    <select name="results_mode" class="form-control" @required($canCreate) @disabled(! $canCreate)>
+                    <select name="results_mode" class="form-control lms-searchable" data-placeholder="Type to find results mode" data-allow-clear="0" @required($canCreate) @disabled(! $canCreate)>
                         <option value="after_publish" @selected(old('results_mode', $assessment->results_mode) === 'after_publish')>Publish after marking</option>
                         <option value="instant_mcq" @selected(old('results_mode', $assessment->results_mode) === 'instant_mcq')>Instant (MCQ-only)</option>
                     </select>

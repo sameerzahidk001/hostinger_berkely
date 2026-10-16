@@ -102,7 +102,7 @@ class LmsAssessmentService
         }
 
         $query = LmsAssessment::query()
-            ->with(['assignments.batch', 'assignments.student', 'questions'])
+            ->with(['course:id,title', 'assignments.batch', 'assignments.student', 'assignments.marker:id,name', 'questions'])
             ->where('status', 'published');
 
         if ($kind) {
