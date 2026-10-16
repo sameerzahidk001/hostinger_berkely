@@ -267,9 +267,6 @@
                         <li class="{{ request()->is('admin/meeting-accounts*') || request()->is('admin/zoho-settings*') ? 'active' : '' }}">
                            <a href="{{ route('admin.meeting-accounts.index') }}">Meeting Accounts</a>
                         </li>
-                        <li class="{{ request()->is('admin/zoho-crm-settings*') ? 'active' : '' }}">
-                           <a href="{{ route('admin.zoho-crm.settings') }}">Zoho CRM (Invoices)</a>
-                        </li>
                         @endif
                      </ul>
                   </li>
@@ -322,17 +319,23 @@
                   </li>
                   @endif
                   @if(admin_menu_allowed('settings'))
-                  <li class="{{ request()->is('admin/homepage/edit') || request()->is('admin/menu*') || request()->is('admin/site-settings*') || request()->is('admin/widget*') || request()->is('admin/header-setting*') || request()->is('admin/footer-setting*') || request()->is('admin/smtp-settings*') || request()->is('admin/email-templates*') ? 'active show' : '' }}">
+                  <li class="{{ request()->is('admin/homepage/edit') || request()->is('admin/menu*') || request()->is('admin/site-settings*') || request()->is('admin/widget*') || request()->is('admin/header-setting*') || request()->is('admin/footer-setting*') || request()->is('admin/smtp-settings*') || request()->is('admin/content-editor-settings*') || request()->is('admin/email-templates*') || request()->is('admin/zoho-crm-settings*') ? 'active show' : '' }}">
                      <a href="#"><i class="fa fa-address-card"></i> <span class="nav-label">Settings</span> <span class="fa arrow"></span></a>
                      <ul class="nav nav-second-level">
                         <li><a href="{{ route('menu.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Menu</span></a></li>
                         <li><a href="{{ route('site-settings.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Site Settings</span></a></li>
+                        <li class="{{ request()->is('admin/content-editor-settings*') ? 'active' : '' }}"><a href="{{ route('admin.content-editor.edit') }}"><i class="fa fa-pencil"></i> <span class="nav-label">Content Editor</span></a></li>
                         <li><a href="{{ route('widget.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Widgets</span></a></li>
                         <li><a href="{{ route('header.setting.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Header Settings</span></a></li>
                         <li><a href="{{ route('footer.setting.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Footer Settings</span></a></li>
                         <li><a href="{{ route('admin.smtpSettings.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Email SMTP Setting</span></a></li>
                         @if(admin_menu_allowed('emails'))
                         <li class="{{ request()->is('admin/email-templates*') ? 'active' : '' }}"><a href="{{ route('admin.emails.index') }}"><i class="fa fa-envelope"></i> <span class="nav-label">Email Templates</span></a></li>
+                        @endif
+                        @if(Auth::guard('admin')->check())
+                        <li class="{{ request()->is('admin/zoho-crm-settings*') ? 'active' : '' }}">
+                           <a href="{{ route('admin.zoho-crm.settings') }}"><i class="fa fa-cloud"></i> <span class="nav-label">Zoho CRM (Invoices)</span></a>
+                        </li>
                         @endif
                      </ul>
                   </li>
