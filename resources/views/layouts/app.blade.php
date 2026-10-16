@@ -651,6 +651,7 @@
             });
         });
     </script>
+    @include('partials.session_expired_refresh')
     @stack('script')
 </body>
 

@@ -344,5 +344,6 @@ a {
             });
         })();
     </script>
+@include('partials.session_expired_refresh')
 </body>
 </html>

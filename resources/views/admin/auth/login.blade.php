@@ -281,5 +281,6 @@
         </form>
         
     </div>
+    @include('partials.session_expired_refresh')
 </body>
 </html>
