@@ -543,6 +543,7 @@
       @include('admin.layout.partials.char-count')
       @include('admin.layout.partials.restrict-delete')
       @include('partials.idle_session_timeout', ['logoutUrl' => route('admin.logout')])
+      @include('partials.session_expired_refresh')
       @stack('script')
    </body>
 </html>
