@@ -170,13 +170,10 @@ class LmsAssessmentController extends Controller
 
     public function assignForm($id)
     {
-        abort_unless($this->assessments->canAssignStudentAssessments() || $this->assessments->canManageSkillTests(), 403);
         $this->assessments->ensure();
         $assessment = LmsAssessment::with(['assignments.batch', 'assignments.student', 'assignments.marker', 'course'])->findOrFail($id);
-        if ($assessment->isSkill()) {
-            abort_unless($this->assessments->canManageSkillTests(), 403);
-        } else {
-            abort_unless($this->assessments->canAssignStudentAssessments(), 403);
+        abort_unless($this->assessments->canManageSittingsFor($assessment), 403);
+        if (! $assessment->isSkill()) {
             $this->assertInstructorOwnsCourse((int) $assessment->course_id);
         }
 
@@ -192,13 +189,10 @@ class LmsAssessmentController extends Controller
 
     public function saveAssign(Request $request, $id)
     {
-        abort_unless($this->assessments->canAssignStudentAssessments() || $this->assessments->canManageSkillTests(), 403);
         $this->assessments->ensure();
         $a = LmsAssessment::findOrFail($id);
-        if ($a->isSkill()) {
-            abort_unless($this->assessments->canManageSkillTests(), 403);
-        } else {
-            abort_unless($this->assessments->canAssignStudentAssessments(), 403);
+        abort_unless($this->assessments->canManageSittingsFor($a), 403);
+        if (! $a->isSkill()) {
             $this->assertInstructorOwnsCourse((int) $a->course_id);
         }
 
@@ -231,15 +225,12 @@ class LmsAssessmentController extends Controller
 
     public function editAssignment($assignmentId)
     {
-        abort_unless($this->assessments->canAssignStudentAssessments() || $this->assessments->canManageSkillTests(), 403);
         $this->assessments->ensure();
         $assignment = LmsAssessmentAssignment::with(['assessment', 'student', 'batch', 'marker'])->findOrFail($assignmentId);
         $assessment = $assignment->assessment;
         abort_unless($assessment, 404);
-        if ($assessment->isSkill()) {
-            abort_unless($this->assessments->canManageSkillTests(), 403);
-        } else {
-            abort_unless($this->assessments->canAssignStudentAssessments(), 403);
+        abort_unless($this->assessments->canManageSittingsFor($assessment), 403);
+        if (! $assessment->isSkill()) {
             $this->assertInstructorOwnsCourse((int) $assessment->course_id);
         }
 
@@ -252,15 +243,12 @@ class LmsAssessmentController extends Controller
 
     public function updateAssignment(Request $request, $assignmentId)
     {
-        abort_unless($this->assessments->canAssignStudentAssessments() || $this->assessments->canManageSkillTests(), 403);
         $this->assessments->ensure();
         $assignment = LmsAssessmentAssignment::with('assessment')->findOrFail($assignmentId);
         $a = $assignment->assessment;
         abort_unless($a, 404);
-        if ($a->isSkill()) {
-            abort_unless($this->assessments->canManageSkillTests(), 403);
-        } else {
-            abort_unless($this->assessments->canAssignStudentAssessments(), 403);
+        abort_unless($this->assessments->canManageSittingsFor($a), 403);
+        if (! $a->isSkill()) {
             $this->assertInstructorOwnsCourse((int) $a->course_id);
         }
 
@@ -304,9 +292,9 @@ class LmsAssessmentController extends Controller
 
     public function destroyAssignment(Request $request, $assignmentId)
     {
-        abort_unless($this->lms->isAdminActor() || panel_sees_all_dashboards(), 403);
         $this->assessments->ensure();
-        $assignment = LmsAssessmentAssignment::findOrFail($assignmentId);
+        $assignment = LmsAssessmentAssignment::with('assessment')->findOrFail($assignmentId);
+        abort_unless($assignment->assessment && $this->assessments->canManageSittingsFor($assignment->assessment), 403);
 
         $attemptId = (int) $request->input('attempt_id', 0);
         if ($attemptId > 0) {
