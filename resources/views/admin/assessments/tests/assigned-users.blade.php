@@ -213,12 +213,15 @@
                                 : ($assignment->marker_user_id ? (int) $assignment->marker_user_id : null);
                             $course = $assessment->course ?? null;
                             $apptId = $assignment->displayCode();
+                            $attemptNo = (int) ($row['attempt_number'] ?? 1);
+                            $attemptTotal = (int) ($row['attempt_total'] ?? 1);
                         @endphp
                         <tr>
                             <td class="col-appt" data-sort="{{ $assignment->id }}"><strong>{{ $apptId }}</strong></td>
                             <td class="col-test" data-sort="{{ $assessment->title ?? ('Test #'.($assignment->assessment_id ?? '')) }}">
                                 <strong>{{ $assessment->title ?: ('Test #'.$assessment->id) }}</strong>
                                 <br><small class="text-muted">{{ $assessment->displayCode() }} · {{ $assessment->kindLabel() }}</small>
+                                <br><small><strong>Attempt {{ $attemptNo }} of {{ $attemptTotal }}</strong></small>
                             </td>
                             <td class="col-taker" data-sort="{{ $row['student']->name ?? '' }}">
                                 @if(!empty($row['student']->id))

@@ -46,11 +46,21 @@
     } elseif (is_file($logoPath)) {
         $logoSrc = $logoPath;
     }
-    $assignment = \App\Models\LmsAssessmentAssignment::query()
+    $assessmentSvc = app(\App\Services\LmsAssessmentService::class);
+    $assignments = \App\Models\LmsAssessmentAssignment::query()
         ->where('assessment_id', $attempt->assessment_id)
-        ->orderByRaw('CASE WHEN student_id = ? THEN 0 ELSE 1 END', [(int) $attempt->user_id])
-        ->orderByDesc('id')
-        ->first();
+        ->orderBy('id')
+        ->get();
+    $assignment = $assignments->first(
+        fn ($asg) => $assessmentSvc->attemptBelongsToAssignment($attempt, $asg)
+    ) ?: $assignments->sortByDesc('id')->first(
+        fn ($asg) => (int) ($asg->student_id ?? 0) === (int) $attempt->user_id
+    ) ?: $assignments->sortByDesc('id')->first();
+    $attemptMeta = $assessmentSvc->sittingAttemptMeta(
+        (int) $attempt->user_id,
+        $attempt->assessment,
+        $assignment
+    );
     $fmtTime = function ($dt) use ($assignment) {
         if (! $dt) {
             return '—';
@@ -91,6 +101,8 @@
             @else — @endif
         </td></tr>
         <tr><td class="muted">Test ID</td><td>{{ $attempt->assessment->displayCode() }}</td></tr>
+        <tr><td class="muted">Appointment ID</td><td>{{ $assignment ? $assignment->displayCode() : '—' }}</td></tr>
+        <tr><td class="muted">Attempt</td><td>{{ $attemptMeta['number'] }} of {{ $attemptMeta['total'] }}</td></tr>
         <tr><td class="muted">Duration given</td><td>{{ $attempt->assessment->duration_minutes ? $attempt->assessment->duration_minutes . ' min' : '—' }}</td></tr>
         @if($assignment)
             <tr><td class="muted">Exam appointment</td><td>{{ $assignment->appointmentWindowLabel('d/m/Y H:i') }}</td></tr>

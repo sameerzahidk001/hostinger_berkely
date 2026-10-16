@@ -202,6 +202,9 @@
                             <td class="col-test">
                                 {{ $assessment->title ?? '—' }}
                                 <br><small class="text-muted">{{ $assessment->displayCode() }} · {{ $assessment->kindLabel() }}</small>
+                                @if(!empty($assignment))
+                                    <br><small class="text-muted">{{ $assignment->displayCode() }}</small>
+                                @endif
                             </td>
                             <td class="col-taker">
                                 {{ $row['student']->name ?? '—' }}

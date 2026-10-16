@@ -21,10 +21,26 @@
     @if($errors->any())
         <div class="alert alert-danger"><ul class="m-b-none">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>
     @endif
+    @php
+        $markAsg = \App\Models\LmsAssessmentAssignment::query()
+            ->where('assessment_id', $attempt->assessment_id)
+            ->orderBy('id')
+            ->get()
+            ->first(fn ($asg) => app(\App\Services\LmsAssessmentService::class)->attemptBelongsToAssignment($attempt, $asg));
+        $markMeta = app(\App\Services\LmsAssessmentService::class)->sittingAttemptMeta(
+            (int) $attempt->user_id,
+            $attempt->assessment,
+            $markAsg
+        );
+    @endphp
     <p><strong>{{ $attempt->user->name ?? '' }}</strong> · {{ $attempt->statusLabel() }}
         @if($attempt->score_raw !== null)
             · Score {{ lms_format_number($attempt->score_raw) }} / {{ lms_format_number($attempt->score_max) }}
         @endif
+        @if($markAsg)
+            · {{ $markAsg->displayCode() }}
+        @endif
+        · Attempt {{ $markMeta['number'] }} of {{ $markMeta['total'] }}
     </p>
     <form method="POST" action="{{ route('admin.assessments.tests.save-marks', $attempt->id) }}" id="markAttemptForm">
         @csrf

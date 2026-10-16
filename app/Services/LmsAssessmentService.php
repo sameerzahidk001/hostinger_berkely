@@ -176,6 +176,49 @@ class LmsAssessmentService
     }
 
     /**
+     * Attempt N of T for this user's sittings of a test (oldest assignment = 1).
+     *
+     * @return array{number:int,total:int}
+     */
+    public function sittingAttemptMeta(int $userId, LmsAssessment $assessment, ?LmsAssessmentAssignment $assignment): array
+    {
+        if (! $assignment) {
+            return ['number' => 1, 'total' => 1];
+        }
+
+        $batchIds = [];
+        if (Schema::hasTable('class_batch_student')) {
+            $batchIds = ClassBatch::query()
+                ->whereHas('students', fn ($q) => $q->where('users.id', $userId))
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+        }
+
+        $sittings = LmsAssessmentAssignment::query()
+            ->where('assessment_id', $assessment->id)
+            ->where(function ($q) use ($userId, $batchIds) {
+                $q->where('student_id', $userId);
+                if ($batchIds !== []) {
+                    $q->orWhereIn('class_batch_id', $batchIds);
+                }
+            })
+            ->orderBy('id')
+            ->get(['id']);
+
+        $total = max(1, $sittings->count());
+        $number = 1;
+        foreach ($sittings->values() as $i => $asg) {
+            if ((int) $asg->id === (int) $assignment->id) {
+                $number = $i + 1;
+                break;
+            }
+        }
+
+        return ['number' => $number, 'total' => $total];
+    }
+
+    /**
      * Open assignment sittings for this user/test that still have no attempt.
      * Retake = admin Assigns a new sitting; student may start anytime inside that window.
      *

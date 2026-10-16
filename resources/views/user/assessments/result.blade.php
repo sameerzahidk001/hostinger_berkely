@@ -18,6 +18,13 @@
         <div class="ibox-title"><h5>Summary</h5></div>
         <div class="ibox-content">
             <p>Status: <strong class="{{ $attempt->statusColorClass() }}">{{ $attempt->statusLabel() }}</strong></p>
+            @if(!empty($appointmentId) || !empty($attemptLabel))
+                <p class="text-muted" style="margin-bottom:6px;">
+                    @if(!empty($appointmentId))Appointment ID: <strong>{{ $appointmentId }}</strong>@endif
+                    @if(!empty($appointmentId) && !empty($attemptLabel)) · @endif
+                    @if(!empty($attemptLabel)){{ $attemptLabel }}@endif
+                </p>
+            @endif
 <style>
 .lms-status-completed { color: #f59e0b; }
 .lms-status-marked { color: #1ab394; }
