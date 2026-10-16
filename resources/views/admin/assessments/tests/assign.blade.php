@@ -19,8 +19,8 @@
     @endif
     <div class="ibox"><div class="ibox-content">
         <p class="help-block">
-            Each save creates a <strong>new assignment sitting</strong> for this same test (new appointment window).
-            Older sittings are kept. Optional assessor: if set, that instructor (or Admin) can mark; otherwise Admin / course instructors can mark.
+            Each save creates a <strong>new sitting</strong> of this <strong>same test</strong> (new appointment).
+            Older sittings stay on Assigned Tests. Optional assessor: if set, that instructor (or Admin) can mark; otherwise Admin / course instructors can mark.
         </p>
         <form method="POST" action="{{ route('admin.assessments.tests.assign.save', $assessment->id) }}">
             @csrf
@@ -63,7 +63,7 @@
                     <label>Exam Appointment Start *</label>
                     <input type="datetime-local" name="available_from" id="available_from" class="form-control" value="{{ $fromForInput }}" required>
                     <p class="help-block" style="margin-bottom:0;font-size:11px;">
-                        Enter the clock time in the <strong>Timezone</strong> selected on the right (not your computer clock unless they match).
+                        Type the start time using the <strong>Timezone</strong> on the right (compare with “Now” below).
                         Window = start + exam duration
                         ({{ $assessment->duration_minutes ? $assessment->duration_minutes . ' min' : 'set duration on the test' }}).
                         Student may start anytime inside that window.
@@ -77,13 +77,14 @@
                         @endforeach
                     </select>
                     <p class="help-block" style="margin-bottom:0;font-size:11px;">
-                        <strong>Now in this timezone:</strong> <span id="tz_now_clock">—</span>
+                        <strong>Now in this timezone:</strong> <span id="tz_now_clock">—</span><br>
+                        Appointment and Timing columns use this timezone — not UTC and not your laptop clock unless they match.
                     </p>
                 </div>
             </div>
             <button type="submit" class="btn btn-primary">Save assignments</button>
             <a href="{{ route('admin.assessments.tests.index') }}" class="btn btn-default">Back to tests</a>
-            <a href="{{ route('admin.assessments.tests.assigned-users') }}" class="btn btn-default">Assigned users list</a>
+            <a href="{{ route('admin.assessments.tests.assigned-users', ['assessment_id' => $assessment->id]) }}" class="btn btn-default">Assigned users list</a>
         </form>
     </div></div>
 </div>
@@ -93,23 +94,54 @@
 (function () {
     var sel = document.getElementById('assign_timezone');
     var out = document.getElementById('tz_now_clock');
+    var start = document.getElementById('available_from');
     if (!sel || !out) return;
+
+    function partsInTz(tz) {
+        var parts = new Intl.DateTimeFormat('en-CA', {
+            timeZone: tz,
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', second: '2-digit',
+            hour12: false
+        }).formatToParts(new Date());
+        var map = {};
+        parts.forEach(function (p) { if (p.type !== 'literal') map[p.type] = p.value; });
+        return map;
+    }
+
     function tick() {
         var tz = sel.value || 'Asia/Dubai';
         try {
-            out.textContent = new Intl.DateTimeFormat('en-GB', {
-                timeZone: tz,
-                year: 'numeric', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute: '2-digit', second: '2-digit',
-                hour12: false
-            }).format(new Date()) + ' (' + tz + ')';
+            var m = partsInTz(tz);
+            out.textContent = m.year + '-' + m.month + '-' + m.day + ' ' + m.hour + ':' + m.minute + ':' + m.second + ' (' + tz + ')';
         } catch (e) {
             out.textContent = new Date().toISOString() + ' (UTC fallback)';
         }
     }
+
+    // Default appointment start = now (in selected TZ) so it is never “mystery UTC”.
+    function fillDefaultStart() {
+        if (!start || start.value) return;
+        var tz = sel.value || 'Asia/Dubai';
+        try {
+            var m = partsInTz(tz);
+            start.value = m.year + '-' + m.month + '-' + m.day + 'T' + m.hour + ':' + m.minute;
+        } catch (e) { /* leave empty */ }
+    }
+
     tick();
+    fillDefaultStart();
     setInterval(tick, 1000);
-    $(sel).on('change select2:select', tick);
+    $(sel).on('change select2:select', function () {
+        tick();
+        if (start && !start.dataset.touched) {
+            start.value = '';
+            fillDefaultStart();
+        }
+    });
+    if (start) {
+        start.addEventListener('input', function () { start.dataset.touched = '1'; });
+    }
 })();
 </script>
 @endpush
