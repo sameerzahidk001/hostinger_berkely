@@ -73,7 +73,7 @@
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
         @if(!empty($canAssign))
-            <a href="{{ route('admin.assessments.tests.assigned-users') }}" class="btn btn-default btn-sm">Assigned users</a>
+            <a href="{{ route('admin.assessments.tests.assigned-users') }}" class="btn btn-default btn-sm">Assigned Tests</a>
         @endif
     </div>
     @if(!empty($canCreate))

@@ -1,13 +1,13 @@
 @extends('user.layout.app')
-@section('title', $section === 'mocks' ? 'Mock Exams' : 'Assessments')
+@section('title', $section === 'mocks' ? 'Mock Exams' : ($section === 'skill' ? 'Skill Tests' : 'My Tests'))
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
-        <h2>{{ $section === 'mocks' ? 'Mock Exams' : ($section === 'skill' ? 'Skill Tests' : 'Assessments') }}</h2>
+        <h2>{{ $section === 'mocks' ? 'Mock Exams' : ($section === 'skill' ? 'Skill Tests' : 'My Tests') }}</h2>
         <ol class="breadcrumb">
             <li><a href="{{ route('user.home') }}">Home</a></li>
-            <li class="active"><strong>{{ ucfirst($section === 'all' ? 'Assessments' : $section) }}</strong></li>
+            <li class="active"><strong>{{ $section === 'mocks' ? 'Mock Exams' : ($section === 'skill' ? 'Skill Tests' : 'My Tests') }}</strong></li>
         </ol>
     </div>
 </div>

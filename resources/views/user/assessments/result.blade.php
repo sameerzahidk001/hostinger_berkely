@@ -5,7 +5,7 @@
     <div class="col-lg-10">
         <h2>{{ $attempt->assessment->title ?? 'Result' }}</h2>
         <ol class="breadcrumb">
-            <li><a href="{{ route('user.assessments.index', ['tab' => 'results']) }}">Assessments</a></li>
+            <li><a href="{{ route('user.assessments.index', ['tab' => 'results']) }}">My Tests</a></li>
             <li class="active"><strong>Result</strong></li>
         </ol>
     </div>

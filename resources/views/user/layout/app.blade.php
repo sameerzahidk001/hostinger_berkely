@@ -304,12 +304,12 @@
                      </li>
                      @endif
                      @if($canCreateTests)
-                     <li class="{{ request()->is('admin/assessments/tests') || request()->is('admin/assessments/tests/create*') || request()->is('admin/assessments/tests/*/edit') ? 'active' : '' }}">
+                     <li class="{{ request()->routeIs('admin.assessments.tests.*') && ! request()->routeIs('admin.assessments.tests.assigned-users') ? 'active' : '' }}">
                         <a href="{{ route('admin.assessments.tests.index') }}">All Tests</a>
                      </li>
                      @endif
                      @if($canAssignTests || $canMarkResults)
-                     <li class="{{ request()->is('admin/assessments/tests/assigned-users') || request()->is('admin/assessments/tests/*/assign') || request()->is('admin/assessments/reports*') ? 'active' : '' }}">
+                     <li class="{{ request()->routeIs('admin.assessments.tests.assigned-users') || request()->routeIs('admin.assessments.reports.*') ? 'active' : '' }}">
                         <a href="{{ route('admin.assessments.tests.assigned-users') }}">Assigned Tests</a>
                      </li>
                      @endif
@@ -337,7 +337,7 @@
                <li class="{{ request()->routeIs('user.assessments.*') ? 'active' : '' }}">
                   <a href="{{ route('user.assessments.index') }}">
                      <i class="fa fa-pencil-square-o"></i>
-                     <span class="nav-label">Assessments</span>
+                     <span class="nav-label">My Tests</span>
                   </a>
                </li>
                <li class="{{ request()->routeIs('user.rate-review.*') ? 'active' : '' }}">

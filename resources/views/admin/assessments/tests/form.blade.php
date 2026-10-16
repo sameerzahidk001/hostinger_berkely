@@ -82,11 +82,7 @@
                 <div class="col-md-2 form-group">
                     <label>Duration (min)</label>
                     <input type="number" min="1" name="duration_minutes" class="form-control" value="{{ old('duration_minutes', $assessment->duration_minutes) }}" placeholder="Timed" @readonly(! $canCreate)>
-                </div>
-                <div class="col-md-2 form-group">
-                    <label>Max attempts</label>
-                    <input type="number" min="1" name="max_attempts" class="form-control" value="{{ old('max_attempts', $assessment->max_attempts) }}" placeholder="Unlimited" @readonly(! $canCreate)>
-                    <p class="help-block" style="margin-bottom:0;font-size:11px;">Optional note only. Retakes require a new <strong>Assign</strong> sitting; student may start anytime inside that appointment window.</p>
+                    <p class="help-block" style="margin-bottom:0;font-size:11px;">Retakes: use <strong>Assign</strong> again (new sitting).</p>
                 </div>
                 <div class="col-md-2 form-group">
                     <label>Status *</label>

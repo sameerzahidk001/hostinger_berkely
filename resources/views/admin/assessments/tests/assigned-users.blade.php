@@ -90,7 +90,7 @@
         </ol>
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
-        <a href="{{ route('admin.assessments.tests.index') }}" class="btn btn-default btn-sm">All tests</a>
+        <a href="{{ route('admin.assessments.tests.index') }}" class="btn btn-default btn-sm">ALL TESTS</a>
     </div>
 </div>
 <div class="wrapper wrapper-content">

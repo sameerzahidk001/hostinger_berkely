@@ -11,7 +11,8 @@
         <h2>Mark: {{ $attempt->assessment->title ?? 'Attempt' }}</h2>
         <ol class="breadcrumb">
             <li><a href="{{ lms_portal_home() }}">Home</a></li>
-            <li><a href="{{ route('admin.assessments.tests.attempts', $attempt->assessment_id) }}">Attempts</a></li>
+            <li><a href="{{ route('admin.assessments.tests.index') }}">ALL TESTS</a></li>
+            <li><a href="{{ route('admin.assessments.tests.attempts', $attempt->assessment_id) }}">Results</a></li>
             <li class="active"><strong>Mark</strong></li>
         </ol>
     </div>
