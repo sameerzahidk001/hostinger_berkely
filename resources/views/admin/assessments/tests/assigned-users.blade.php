@@ -33,31 +33,35 @@
     .lms-assigned-table .col-timing { width: 17%; }
     .lms-assigned-table .col-created { width: 8%; }
     .lms-assigned-table .col-assessor { width: 9%; }
-    .lms-assigned-table .col-status { width: 8%; }
-    .lms-assigned-table .col-score { width: 7%; }
-    .lms-assigned-table .col-pub { width: 5%; }
+    .lms-assigned-table .col-status { width: 12%; }
+    .lms-assigned-table .col-pub { width: 6%; }
     .lms-assigned-table .col-actions {
-        width: 12%;
+        width: 11%;
         overflow-wrap: normal;
         word-break: normal;
         white-space: normal;
     }
     .lms-assigned-table .col-actions .btn,
     .lms-assigned-table .col-actions form {
-        display: block;
-        width: 100%;
+        display: inline-block;
+        width: auto;
+        max-width: 100%;
         margin: 0 0 4px 0;
         box-sizing: border-box;
     }
     .lms-assigned-table .col-actions .btn {
-        padding: 4px 8px;
+        padding: 4px 10px;
         font-size: 11px;
+        font-weight: 700;
         line-height: 1.3;
         text-align: center;
         white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
     }
+    .lms-assigned-table .col-actions .btn-warning { color: #fff !important; background: #f0ad4e; border-color: #eea236; }
+    .lms-assigned-table .col-actions .btn-info { color: #fff !important; background: #5bc0de; border-color: #46b8da; }
+    .lms-assigned-table .col-actions .btn-primary { color: #fff !important; background: #337ab7; border-color: #2e6da4; }
+    .lms-assigned-table .col-actions .btn-danger { color: #fff !important; background: #d9534f; border-color: #d43f3a; }
+    .lms-assigned-table .col-status .lms-score-line { display: block; margin-top: 4px; font-weight: 600; color: #333; }
     .lms-assigned-table .col-timing .lms-timing-line { display: block; line-height: 1.35; }
 </style>
 @php
@@ -133,10 +137,19 @@
                     </select>
                 </div>
                 <div class="col-sm-2 form-group">
+                    <label>Status</label>
+                    <select name="status" class="form-control lms-searchable" data-placeholder="Type to find status">
+                        <option value="">All</option>
+                        @foreach(($statusOptions ?? []) as $sk => $sl)
+                            <option value="{{ $sk }}" @selected(($filters['status'] ?? '') === $sk)>{{ $sl }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-sm-2 form-group">
                     <label>Search</label>
                     <input type="text" name="search" class="form-control" value="{{ $filters['search'] ?? '' }}" placeholder="Name, email, test, course…">
                 </div>
-                <div class="col-sm-2 form-group" style="padding-top:24px;">
+                <div class="col-sm-12 form-group" style="padding-top:8px;">
                     <button class="btn btn-primary" type="submit">Filter</button>
                     <a href="{{ route('admin.assessments.tests.assigned-users') }}" class="btn btn-default">Clear</a>
                 </div>
@@ -166,7 +179,6 @@
                         <th class="col-created">Created by</th>
                         <th class="col-assessor">Assessor</th>
                         <th class="col-status">Status</th>
-                        <th class="col-score">Score</th>
                         <th class="col-pub">Published</th>
                         <th class="col-actions">Action</th>
                     </tr>
@@ -242,12 +254,16 @@
                                     {{ $assessorName }}
                                 @endif
                             </td>
-                            <td class="col-status"><span class="{{ $statusClass }}">{{ $statusText }}</span></td>
-                            <td class="col-score">
-                                @if($attempt && $attempt->score_raw !== null)
-                                    {{ lms_format_number($attempt->score_raw) }} / {{ lms_format_number($attempt->score_max) }}
-                                    @if($attempt->percent() !== null) ({{ lms_format_number($attempt->percent()) }}%) @endif
-                                @else — @endif
+                            <td class="col-status">
+                                <span class="{{ $statusClass }}">{{ $statusText }}</span>
+                                <span class="lms-score-line">
+                                    @if($attempt && $attempt->score_raw !== null)
+                                        {{ lms_format_number($attempt->score_raw) }} / {{ lms_format_number($attempt->score_max) }}
+                                        @if($attempt->percent() !== null) ({{ lms_format_number($attempt->percent()) }}%) @endif
+                                    @else
+                                        —
+                                    @endif
+                                </span>
                             </td>
                             <td class="col-pub">
                                 @if($attempt)
@@ -260,12 +276,12 @@
                             </td>
                             <td class="col-actions">
                                 @if($attempt && in_array($attempt->status, ['submitted', 'graded', 'expired'], true))
-                                    <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.mark', $attempt->id) }}">View</a>
-                                    <a class="btn btn-xs btn-success" href="{{ route('admin.assessments.tests.attempt-pdf', $attempt->id) }}" target="_blank">PDF</a>
+                                    <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.mark', $attempt->id) }}">View Details</a>
+                                    <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.attempt-pdf', $attempt->id) }}" target="_blank">Download PDF</a>
                                     @unless($attempt->results_published)
                                         <form action="{{ route('admin.assessments.tests.publish-attempt', $attempt->id) }}" method="POST">
                                             @csrf
-                                            <button class="btn btn-xs btn-default" type="submit">Publish</button>
+                                            <button class="btn btn-xs btn-primary" type="submit">Publish</button>
                                         </form>
                                     @endunless
                                     @if(!empty($canDeleteAttempts))
@@ -283,7 +299,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="10" class="text-center text-muted">No assigned test takers found.</td></tr>
+                        <tr><td colspan="9" class="text-center text-muted">No assigned test takers found.</td></tr>
                     @endforelse
                 </tbody>
             </table>

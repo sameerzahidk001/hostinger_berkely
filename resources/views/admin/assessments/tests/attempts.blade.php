@@ -38,7 +38,17 @@
         word-break: normal;
         white-space: nowrap;
     }
-    .lms-attempts-table .col-action .btn { margin: 1px 2px 1px 0; white-space: nowrap; }
+    .lms-attempts-table .col-action .btn {
+        margin: 1px 2px 1px 0;
+        white-space: nowrap;
+        font-weight: 700;
+    }
+    .lms-attempts-table .col-action .btn-default {
+        color: #fff !important;
+        background: #337ab7;
+        border-color: #2e6da4;
+        font-weight: 700;
+    }
 </style>
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
@@ -100,10 +110,10 @@
                             @endif
                         </td>
                         <td class="col-action">
-                            <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.mark', $row->id) }}">Mark</a>
-                            <a class="btn btn-xs btn-success" href="{{ route('admin.assessments.tests.attempt-pdf', $row->id) }}" target="_blank">PDF</a>
+                            <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.mark', $row->id) }}">View Details</a>
+                            <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.attempt-pdf', $row->id) }}" target="_blank">Download PDF</a>
                             @unless($row->results_published)
-                                <form action="{{ route('admin.assessments.tests.publish-attempt', $row->id) }}" method="POST" style="display:inline;">@csrf<button class="btn btn-xs btn-default">Publish</button></form>
+                                <form action="{{ route('admin.assessments.tests.publish-attempt', $row->id) }}" method="POST" style="display:inline;">@csrf<button class="btn btn-xs btn-primary">Publish</button></form>
                             @endunless
                         </td>
                     </tr>
