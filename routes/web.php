@@ -310,6 +310,9 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
             Route::get('/tests/{id}/assign', [LmsAssessmentController::class, 'assignForm'])->name('tests.assign');
             Route::post('/tests/{id}/assign', [LmsAssessmentController::class, 'saveAssign'])->name('tests.assign.save');
             Route::get('/tests/{id}/attempts', [LmsAssessmentController::class, 'attempts'])->name('tests.attempts');
+            Route::get('/assignments/{assignmentId}/edit', [LmsAssessmentController::class, 'editAssignment'])->name('tests.edit-assignment');
+            Route::put('/assignments/{assignmentId}', [LmsAssessmentController::class, 'updateAssignment'])->name('tests.update-assignment');
+            Route::delete('/assignments/{assignmentId}', [LmsAssessmentController::class, 'destroyAssignment'])->name('tests.destroy-assignment');
             Route::get('/attempts/{attemptId}/mark', [LmsAssessmentController::class, 'mark'])->name('tests.mark');
             Route::get('/attempts/{attemptId}/pdf', [LmsAssessmentController::class, 'attemptPdf'])->name('tests.attempt-pdf');
             Route::post('/attempts/{attemptId}/marks', [LmsAssessmentController::class, 'saveMarks'])->name('tests.save-marks');
