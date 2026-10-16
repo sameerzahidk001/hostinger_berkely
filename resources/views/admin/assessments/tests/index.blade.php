@@ -56,7 +56,11 @@
         word-break: normal;
         white-space: nowrap;
     }
-    .lms-tests-table .col-action .btn { margin: 1px 2px 1px 0; white-space: nowrap; }
+    .lms-tests-table .col-action .btn {
+        margin: 1px 2px 1px 0;
+        white-space: nowrap;
+        font-weight: 700;
+    }
 </style>
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">

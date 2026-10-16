@@ -99,12 +99,30 @@
             word-break: normal;
         }
         #assessments-portal .lms-assess-table .col-action .btn {
-            display: block;
-            width: 100%;
+            display: inline-block;
+            width: auto;
+            max-width: 100%;
             margin: 0 0 4px 0;
             white-space: nowrap;
             text-align: center;
             box-sizing: border-box;
+            font-weight: 700;
+        }
+        #assessments-portal .lms-assess-table .col-action .btn-default,
+        #assessments-portal .lms-assess-table .col-action .btn-warning {
+            color: #fff !important;
+            background: #f0ad4e;
+            border-color: #eea236;
+        }
+        #assessments-portal .lms-assess-table .col-action .btn-success,
+        #assessments-portal .lms-assess-table .col-action .btn-info {
+            color: #fff !important;
+            background: #5bc0de;
+            border-color: #46b8da;
+        }
+        #assessments-portal .lms-assess-table .col-action .btn-primary {
+            color: #fff !important;
+            font-weight: 700;
         }
         #assessments-portal .lms-assess-table .lms-timing-line { display: block; line-height: 1.35; }
     </style>
@@ -252,9 +270,9 @@
                             @elseif($tab === 'in_progress' && $att)
                                 <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.take', $att->id) }}">Continue</a>
                             @elseif($att)
-                                <a class="btn btn-xs btn-default" href="{{ route('user.assessments.result', $att->id) }}">View</a>
+                                <a class="btn btn-xs btn-warning" href="{{ route('user.assessments.result', $att->id) }}">View Details</a>
                                 @if($att->results_published || ($a->results_mode === 'instant_mcq' && $att->status === 'graded'))
-                                    <a class="btn btn-xs btn-success" href="{{ route('user.assessments.result-pdf', $att->id) }}" target="_blank">PDF</a>
+                                    <a class="btn btn-xs btn-info" href="{{ route('user.assessments.result-pdf', $att->id) }}" target="_blank">Download PDF</a>
                                 @endif
                                 @if($canRetake)
                                     <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.start', $a->id) }}">Retake</a>

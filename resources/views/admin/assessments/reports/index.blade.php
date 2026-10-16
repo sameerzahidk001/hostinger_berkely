@@ -41,16 +41,23 @@
     }
     .lms-results-table .col-actions .btn,
     .lms-results-table .col-actions form {
-        display: block;
-        width: 100%;
+        display: inline-block;
+        width: auto;
+        max-width: 100%;
         margin: 0 0 4px 0;
         box-sizing: border-box;
     }
     .lms-results-table .col-actions .btn {
-        padding: 4px 8px;
+        padding: 4px 10px;
         font-size: 11px;
+        font-weight: 700;
         text-align: center;
         white-space: nowrap;
+    }
+    .lms-results-table .col-actions .btn-default {
+        color: #fff !important;
+        background: #337ab7;
+        border-color: #2e6da4;
     }
 </style>
 @php
@@ -244,13 +251,12 @@
                             </td>
                             <td class="col-actions">
                                 @if($attempt && in_array($attempt->status, ['submitted', 'graded', 'expired'], true))
-                                    <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.mark', $attempt->id) }}">View</a>
-                                    <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.mark', $attempt->id) }}">Update</a>
-                                    <a class="btn btn-xs btn-success" href="{{ route('admin.assessments.tests.attempt-pdf', $attempt->id) }}" target="_blank">PDF</a>
+                                    <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.mark', $attempt->id) }}">View Details</a>
+                                    <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.attempt-pdf', $attempt->id) }}" target="_blank">Download PDF</a>
                                     @unless($attempt->results_published)
                                         <form action="{{ route('admin.assessments.tests.publish-attempt', $attempt->id) }}" method="POST">
                                             @csrf
-                                            <button class="btn btn-xs btn-default" type="submit">Publish</button>
+                                            <button class="btn btn-xs btn-primary" type="submit">Publish</button>
                                         </form>
                                     @endunless
                                     @if(!empty($canDeleteAttempts))

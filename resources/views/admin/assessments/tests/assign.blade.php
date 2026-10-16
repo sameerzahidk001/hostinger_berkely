@@ -19,7 +19,8 @@
     @endif
     <div class="ibox"><div class="ibox-content">
         <p class="help-block">
-            Choose a batch and/or individual users. Optional marking instructor: if set, that instructor (or Admin) can mark attempts; otherwise Admin / course instructors can mark.
+            Add <strong>new</strong> batches or users only. Existing assignees stay as they are.
+            Optional marking instructor: if set, that instructor (or Admin) can mark attempts; otherwise Admin / course instructors can mark.
         </p>
         <form method="POST" action="{{ route('admin.assessments.tests.assign.save', $assessment->id) }}">
             @csrf
@@ -28,7 +29,7 @@
                     <label>Batches</label>
                     <select name="batch_ids[]" class="form-control lms-searchable" data-placeholder="Type to find batch" multiple>
                         @foreach($batches as $batch)
-                            <option value="{{ $batch->id }}" @selected(collect($selectedBatchIds)->contains($batch->id))>{{ $batch->code }} — {{ $batch->name }}</option>
+                            <option value="{{ $batch->id }}" @selected(collect($selectedBatchIds ?? [])->contains($batch->id))>{{ $batch->code }} — {{ $batch->name }}</option>
                         @endforeach
                     </select>
                 </div>
@@ -39,7 +40,7 @@
                             @php
                                 $roleLabel = $student->roles->pluck('name')->map(fn ($n) => ucwords(str_replace(['_', '-'], ' ', $n)))->implode(', ');
                             @endphp
-                            <option value="{{ $student->id }}" @selected(collect($selectedStudentIds)->contains($student->id))>
+                            <option value="{{ $student->id }}" @selected(collect($selectedStudentIds ?? [])->contains($student->id))>
                                 {{ $student->name }} ({{ $student->email }}){{ $roleLabel ? ' — '.$roleLabel : '' }}
                             </option>
                         @endforeach
@@ -50,19 +51,13 @@
                     <select name="marker_user_id" class="form-control lms-searchable" data-placeholder="Type to find assessor">
                         <option value="">— Admin / course instructors —</option>
                         @foreach($instructors as $ins)
-                            <option value="{{ $ins->id }}" @selected((string) $selectedMarkerId === (string) $ins->id)>{{ $ins->name }} ({{ $ins->email }})</option>
+                            <option value="{{ $ins->id }}" @selected((string) ($selectedMarkerId ?? '') === (string) $ins->id)>{{ $ins->name }} ({{ $ins->email }})</option>
                         @endforeach
                     </select>
                 </div>
                 @php
-                    $firstAsg = $assessment->assignments->first();
                     $tzForInput = old('timezone', $selectedTimezone ?? config('app.timezone', 'Asia/Dubai'));
                     $fromForInput = old('available_from');
-                    if ($fromForInput === null && $firstAsg?->available_from) {
-                        $fromForInput = filled($firstAsg->timezone)
-                            ? $firstAsg->available_from->copy()->timezone($firstAsg->timezoneName())->format('Y-m-d\TH:i')
-                            : $firstAsg->available_from->format('Y-m-d\TH:i');
-                    }
                 @endphp
                 <div class="col-md-3 form-group">
                     <label>Exam Appointment Start</label>

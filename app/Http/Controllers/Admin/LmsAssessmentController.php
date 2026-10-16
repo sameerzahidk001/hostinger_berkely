@@ -180,7 +180,14 @@ class LmsAssessmentController extends Controller
             $this->assertInstructorOwnsCourse((int) $assessment->course_id);
         }
 
-        return view('admin.assessments.tests.assign', $this->formData($assessment));
+        // Assign = add new people only — never preload existing assignees.
+        return view('admin.assessments.tests.assign', array_merge($this->formData($assessment), [
+            'selectedBatchIds' => old('batch_ids', []),
+            'selectedStudentIds' => old('student_ids', []),
+            'selectedMarkerId' => old('marker_user_id'),
+            'selectedTimezone' => old('timezone', config('app.timezone', 'Asia/Dubai')),
+            'assignFresh' => true,
+        ]));
     }
 
     public function saveAssign(Request $request, $id)
@@ -212,7 +219,7 @@ class LmsAssessmentController extends Controller
         $this->syncAssignments($a, $request);
 
         return redirect()->route('admin.assessments.tests.assigned-users')
-            ->with('success', 'Assignments saved for “' . $a->title . '”.');
+            ->with('success', 'New assignees added for “' . $a->title . '”. Existing assignees were kept.');
     }
 
     /**
@@ -233,6 +240,7 @@ class LmsAssessmentController extends Controller
         $batchId = (int) $request->get('batch_id', 0);
         $courseId = (int) $request->get('course_id', 0);
         $kind = trim((string) $request->get('kind', ''));
+        $statusFilter = trim((string) $request->get('status', ''));
         $search = trim((string) $request->get('search', ''));
 
         $selectedAssessment = $assessmentId > 0
@@ -391,7 +399,35 @@ class LmsAssessmentController extends Controller
             }
 
             return optional($row['assignment']->created_at)->timestamp ?? 0;
-        })->values()->take(300);
+        })->values();
+
+        $statusOptions = [
+            'Upcoming' => 'Upcoming',
+            'Assigned' => 'Assigned',
+            'In progress' => 'In progress',
+            'Marking Required' => 'Marking Required',
+            'Completed and Marked' => 'Completed and Marked',
+            'Missed' => 'Missed',
+        ];
+        if ($statusFilter !== '' && array_key_exists($statusFilter, $statusOptions)) {
+            $rows = $rows->filter(function ($row) use ($statusFilter) {
+                $attempt = $row['attempt'];
+                $assignment = $row['assignment'];
+                if ($attempt) {
+                    $statusText = $attempt->statusLabel();
+                } elseif ($assignment->isNotYetOpen()) {
+                    $statusText = 'Upcoming';
+                } elseif ($assignment->isExpired()) {
+                    $statusText = 'Missed';
+                } else {
+                    $statusText = 'Assigned';
+                }
+
+                return $statusText === $statusFilter;
+            })->values();
+        }
+
+        $rows = $rows->take(300);
 
         $assessmentQuery = LmsAssessment::query()->orderBy('title');
         if ($courseIdsScope !== null) {
@@ -421,12 +457,14 @@ class LmsAssessmentController extends Controller
                 : collect(),
             'courses' => $this->lms->coursesForActor(),
             'kinds' => $kinds,
+            'statusOptions' => $statusOptions,
             'canDeleteAttempts' => $this->lms->isAdminActor() || panel_sees_all_dashboards(),
             'filters' => [
                 'assessment_id' => $assessmentId,
                 'batch_id' => $batchId,
                 'course_id' => $courseId,
                 'kind' => $kind,
+                'status' => $statusFilter,
                 'search' => $search,
             ],
         ]);
@@ -641,51 +679,12 @@ class LmsAssessmentController extends Controller
 
     protected function syncAssignments(LmsAssessment $a, Request $request): void
     {
-        // Lock Missed / Completed / Completed and Marked — do not delete or re-target them.
+        // Assign = add new people only. Never delete or replace existing assignees.
         $existing = LmsAssessmentAssignment::query()->where('assessment_id', $a->id)->get();
-        $doneUserIds = LmsAssessmentAttempt::query()
-            ->where('assessment_id', $a->id)
-            ->whereIn('status', ['submitted', 'graded'])
-            ->pluck('user_id')
-            ->map(fn ($id) => (int) $id)
-            ->unique()
-            ->values()
-            ->all();
-
-        $lockedIds = [];
-        $lockedStudentIds = $doneUserIds;
-        $lockedBatchIds = [];
-        foreach ($existing as $row) {
-            $lock = $row->isExpired();
-            if (! $lock && $row->student_id && in_array((int) $row->student_id, $doneUserIds, true)) {
-                $lock = true;
-            }
-            if (! $lock && $row->class_batch_id) {
-                $batchStudentIds = ClassBatch::find((int) $row->class_batch_id)
-                    ?->students()->pluck('users.id')->map(fn ($id) => (int) $id)->all() ?? [];
-                if (array_intersect($batchStudentIds, $doneUserIds) !== []) {
-                    $lock = true;
-                    $lockedBatchIds[] = (int) $row->class_batch_id;
-                }
-            }
-            if ($lock) {
-                $lockedIds[] = (int) $row->id;
-                if ($row->student_id) {
-                    $lockedStudentIds[] = (int) $row->student_id;
-                }
-                if ($row->class_batch_id) {
-                    $lockedBatchIds[] = (int) $row->class_batch_id;
-                }
-            }
-        }
-        $lockedStudentIds = array_values(array_unique($lockedStudentIds));
-        $lockedBatchIds = array_values(array_unique($lockedBatchIds));
-
-        $deleteQuery = LmsAssessmentAssignment::query()->where('assessment_id', $a->id);
-        if ($lockedIds !== []) {
-            $deleteQuery->whereNotIn('id', $lockedIds);
-        }
-        $deleteQuery->delete();
+        $existingStudentIds = $existing->whereNotNull('student_id')
+            ->pluck('student_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
+        $existingBatchIds = $existing->whereNotNull('class_batch_id')
+            ->pluck('class_batch_id')->map(fn ($id) => (int) $id)->unique()->values()->all();
 
         $tzOptions = LmsAssessmentAssignment::timezoneOptions();
         $timezone = trim((string) $request->input('timezone', ''));
@@ -717,31 +716,14 @@ class LmsAssessmentController extends Controller
         $hasMarkerCol = Schema::hasColumn('lms_assessment_assignments', 'marker_user_id');
         $hasTimezoneCol = Schema::hasColumn('lms_assessment_assignments', 'timezone');
 
-        // Refresh window + timezone on sittings that already have attempts (locked rows).
-        if ($lockedIds !== [] && ($from || $hasTimezoneCol)) {
-            $lockUpdate = [];
-            if ($from) {
-                $lockUpdate['available_from'] = $from;
-                $lockUpdate['available_until'] = $until;
-            }
-            if ($hasTimezoneCol) {
-                $lockUpdate['timezone'] = $timezone;
-            }
-            if ($lockUpdate !== []) {
-                LmsAssessmentAssignment::query()
-                    ->where('assessment_id', $a->id)
-                    ->whereIn('id', $lockedIds)
-                    ->update($lockUpdate);
-            }
-        }
-
         foreach ((array) $request->input('batch_ids', []) as $batchId) {
-            if (in_array((int) $batchId, $lockedBatchIds, true)) {
+            $batchId = (int) $batchId;
+            if ($batchId <= 0 || in_array($batchId, $existingBatchIds, true)) {
                 continue;
             }
             $row = [
                 'assessment_id' => $a->id,
-                'class_batch_id' => (int) $batchId,
+                'class_batch_id' => $batchId,
                 'available_from' => $from,
                 'available_until' => $until,
                 'assigned_by_admin_id' => $byAdmin,
@@ -754,14 +736,16 @@ class LmsAssessmentController extends Controller
                 $row['timezone'] = $timezone;
             }
             LmsAssessmentAssignment::create($row);
+            $existingBatchIds[] = $batchId;
         }
         foreach ((array) $request->input('student_ids', []) as $studentId) {
-            if (in_array((int) $studentId, $lockedStudentIds, true)) {
+            $studentId = (int) $studentId;
+            if ($studentId <= 0 || in_array($studentId, $existingStudentIds, true)) {
                 continue;
             }
             $row = [
                 'assessment_id' => $a->id,
-                'student_id' => (int) $studentId,
+                'student_id' => $studentId,
                 'available_from' => $from,
                 'available_until' => $until,
                 'assigned_by_admin_id' => $byAdmin,
@@ -774,6 +758,7 @@ class LmsAssessmentController extends Controller
                 $row['timezone'] = $timezone;
             }
             LmsAssessmentAssignment::create($row);
+            $existingStudentIds[] = $studentId;
         }
     }
 
