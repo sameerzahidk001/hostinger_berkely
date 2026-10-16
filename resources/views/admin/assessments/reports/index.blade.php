@@ -1,6 +1,7 @@
 @extends(lms_portal_layout())
 @section('title', 'Test Results')
 @include('admin.assessments.partials.searchable-select-assets')
+@include('admin.assessments.partials.sortable-table-assets')
 @section('content')
 <style>
     .lms-status-completed { color: #f59e0b; font-weight: 700; }
@@ -148,22 +149,22 @@
             </h5>
         </div>
         <div class="ibox-content lms-results-wrap">
-            <table class="table table-striped table-bordered lms-results-table">
+            <table class="table table-striped table-bordered lms-results-table js-sortable-table">
                 <thead>
                     <tr>
-                        <th>Date</th>
-                        <th class="col-test">Test</th>
-                        <th class="col-taker">Test Taker</th>
-                        <th class="col-course">Course</th>
-                        <th>Test date</th>
-                        <th>Start time</th>
-                        <th>End time</th>
-                        <th>Duration given</th>
-                        <th>Spend duration</th>
-                        <th class="col-assessor">Assessor</th>
-                        <th class="col-status">Status</th>
-                        <th class="col-score">Score</th>
-                        <th>Published</th>
+                        <th data-sort-col="0">Date <span class="sort-ind"></span></th>
+                        <th class="col-test" data-sort-col="1">Test <span class="sort-ind"></span></th>
+                        <th class="col-taker" data-sort-col="2">Test Taker <span class="sort-ind"></span></th>
+                        <th class="col-course" data-sort-col="3">Course <span class="sort-ind"></span></th>
+                        <th data-sort-col="4">Test date <span class="sort-ind"></span></th>
+                        <th data-sort-col="5">Start time <span class="sort-ind"></span></th>
+                        <th data-sort-col="6">End time <span class="sort-ind"></span></th>
+                        <th data-sort-col="7">Duration given <span class="sort-ind"></span></th>
+                        <th data-sort-col="8">Spend duration <span class="sort-ind"></span></th>
+                        <th class="col-assessor" data-sort-col="9">Assessor <span class="sort-ind"></span></th>
+                        <th class="col-status" data-sort-col="10">Status <span class="sort-ind"></span></th>
+                        <th class="col-score" data-sort-col="11">Score <span class="sort-ind"></span></th>
+                        <th data-sort-col="12">Published <span class="sort-ind"></span></th>
                         <th class="col-actions">Action</th>
                     </tr>
                 </thead>

@@ -1,6 +1,7 @@
 @extends(lms_portal_layout())
 @section('title', 'Assessments')
 @include('admin.assessments.partials.searchable-select-assets')
+@include('admin.assessments.partials.sortable-table-assets')
 @section('content')
 <style>
     .lms-create-tests-row {
@@ -111,18 +112,18 @@
                 </div>
             </div>
         </form>
-        <table class="table table-striped table-bordered lms-tests-table">
+        <table class="table table-striped table-bordered lms-tests-table js-sortable-table">
             <thead>
                 <tr>
-                    <th class="col-date">Date</th>
-                    <th class="col-id">Test ID</th>
-                    <th class="col-title">Title</th>
-                    <th class="col-course">Course / Test for</th>
-                    <th class="col-type">Test Type</th>
-                    <th class="col-num">Qs</th>
-                    <th class="col-num">Assigned</th>
-                    <th class="col-num" title="How many sittings students have started or submitted">Taken</th>
-                    <th class="col-assessor">Assessor</th>
+                    <th class="col-date" data-sort-col="0">Date <span class="sort-ind"></span></th>
+                    <th class="col-id" data-sort-col="1">Test ID <span class="sort-ind"></span></th>
+                    <th class="col-title" data-sort-col="2">Title <span class="sort-ind"></span></th>
+                    <th class="col-course" data-sort-col="3">Course / Test for <span class="sort-ind"></span></th>
+                    <th class="col-type" data-sort-col="4">Test Type <span class="sort-ind"></span></th>
+                    <th class="col-num" data-sort-col="5">Qs <span class="sort-ind"></span></th>
+                    <th class="col-num" data-sort-col="6">Assigned <span class="sort-ind"></span></th>
+                    <th class="col-num" data-sort-col="7" title="How many sittings students have started or submitted">Taken <span class="sort-ind"></span></th>
+                    <th class="col-assessor" data-sort-col="8">Assessor <span class="sort-ind"></span></th>
                     <th class="col-action">Action</th>
                 </tr>
             </thead>
@@ -132,21 +133,21 @@
                         $markers = $row->assignments->pluck('marker')->filter()->unique('id');
                     @endphp
                     <tr>
-                        <td class="col-date">{{ optional($row->created_at)->format('d/m/y H:i') ?? '—' }}</td>
-                        <td class="col-id">{{ $row->displayCode() }}</td>
-                        <td class="col-title">{{ $row->title }}</td>
-                        <td class="col-course">
+                        <td class="col-date" data-sort="{{ optional($row->created_at)->timestamp ?? 0 }}">{{ optional($row->created_at)->format('d/m/y H:i') ?? '—' }}</td>
+                        <td class="col-id" data-sort="{{ $row->id }}">{{ $row->displayCode() }}</td>
+                        <td class="col-title" data-sort="{{ $row->title }}">{{ $row->title }}</td>
+                        <td class="col-course" data-sort="{{ $row->course->title ?? $row->targetRoleLabel() }}">
                             @if($row->course_id && $row->course)
                                 <a href="{{ route('course.edit', $row->course_id) }}">{{ $row->course->title }}</a>
                             @else
                                 {{ $row->targetRoleLabel() }}
                             @endif
                         </td>
-                        <td class="col-type">{{ $row->kindLabel() }}</td>
-                        <td class="col-num">{{ $row->questions_count }}</td>
-                        <td class="col-num">{{ $row->assignments_count }}</td>
-                        <td class="col-num">{{ $row->attempts_count }}</td>
-                        <td class="col-assessor">
+                        <td class="col-type" data-sort="{{ $row->kindLabel() }}">{{ $row->kindLabel() }}</td>
+                        <td class="col-num" data-sort="{{ $row->questions_count }}">{{ $row->questions_count }}</td>
+                        <td class="col-num" data-sort="{{ $row->assignments_count }}">{{ $row->assignments_count }}</td>
+                        <td class="col-num" data-sort="{{ $row->attempts_count }}">{{ $row->attempts_count }}</td>
+                        <td class="col-assessor" data-sort="{{ $markers->isNotEmpty() ? $markers->pluck('name')->implode(', ') : 'Admin' }}">
                             @if($markers->isNotEmpty())
                                 @foreach($markers as $marker)
                                     @if(!$loop->first), @endif
