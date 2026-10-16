@@ -799,7 +799,6 @@ class LmsAssessmentController extends Controller
             'target_role' => ($isSkill ? 'required' : 'nullable') . '|in:' . implode(',', array_keys(LmsAssessment::targetRoles())),
             'duration_minutes' => 'nullable|integer|min:1',
             'pass_percent' => 'nullable|numeric|min:0|max:100',
-            'max_attempts' => 'nullable|integer|min:1',
             'shuffle_questions' => 'nullable|boolean',
             'results_mode' => 'required|in:instant_mcq,after_publish',
             'status' => 'required|in:draft,published,disabled',
@@ -844,7 +843,10 @@ class LmsAssessmentController extends Controller
         $a->duration_minutes = $request->filled('duration_minutes') ? (int) $request->input('duration_minutes') : null;
         // Pass/Fail threshold removed from UI — criteria varies by course; score % only.
         $a->pass_percent = null;
-        $a->max_attempts = $request->filled('max_attempts') ? (int) $request->input('max_attempts') : null;
+        // Retakes = new Assign sitting only; do not gate or edit max_attempts from the form.
+        if ($creating) {
+            $a->max_attempts = null;
+        }
         $a->shuffle_questions = $request->boolean('shuffle_questions');
         $a->results_mode = $request->input('results_mode', 'after_publish');
         $a->status = $request->input('status', 'draft');

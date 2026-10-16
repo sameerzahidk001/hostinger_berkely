@@ -84,8 +84,8 @@
                 </div>
             </div>
             <button type="submit" class="btn btn-primary">Save assignments</button>
-            <a href="{{ route('admin.assessments.tests.index') }}" class="btn btn-default">Back to tests</a>
-            <a href="{{ route('admin.assessments.tests.assigned-users', ['assessment_id' => $assessment->id]) }}" class="btn btn-default">Assigned users list</a>
+            <a href="{{ route('admin.assessments.tests.index') }}" class="btn btn-default">Back to ALL TESTS</a>
+            <a href="{{ route('admin.assessments.tests.assigned-users', ['assessment_id' => $assessment->id]) }}" class="btn btn-default">Assigned Tests</a>
         </form>
     </div></div>
 </div>

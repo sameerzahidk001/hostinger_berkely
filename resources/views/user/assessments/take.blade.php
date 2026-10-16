@@ -49,7 +49,7 @@
         <div class="col-lg-10">
             <h2>{{ $attempt->assessment->title }}</h2>
             <ol class="breadcrumb">
-                <li><a href="{{ route('user.assessments.index') }}">Assessments</a></li>
+                <li><a href="{{ route('user.assessments.index') }}">My Tests</a></li>
                 <li class="active"><strong>In progress</strong></li>
             </ol>
         </div>

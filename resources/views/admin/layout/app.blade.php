@@ -231,12 +231,12 @@
                         </li>
                         @endif
                         @if($canCreateTestsMenu)
-                        <li class="{{ request()->routeIs('admin.assessments.tests.index') || request()->routeIs('admin.assessments.tests.create') || request()->routeIs('admin.assessments.tests.edit') || request()->routeIs('admin.assessments.tests.store') ? 'active' : '' }}">
+                        <li class="{{ request()->routeIs('admin.assessments.tests.*') && ! request()->routeIs('admin.assessments.tests.assigned-users') ? 'active' : '' }}">
                            <a href="{{ route('admin.assessments.tests.index') }}">All Tests</a>
                         </li>
                         @endif
                         @if($canAssignTestsMenu || $canTestsMenu)
-                        <li class="{{ request()->routeIs('admin.assessments.tests.assign*') || request()->routeIs('admin.assessments.tests.assigned-users') || request()->routeIs('admin.assessments.reports.*') ? 'active' : '' }}">
+                        <li class="{{ request()->routeIs('admin.assessments.tests.assigned-users') || request()->routeIs('admin.assessments.reports.*') ? 'active' : '' }}">
                            <a href="{{ route('admin.assessments.tests.assigned-users') }}">Assigned Tests</a>
                         </li>
                         @endif
