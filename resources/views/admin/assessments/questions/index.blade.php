@@ -58,8 +58,20 @@
                         <tr>
                             <td>{{ optional($row->created_at)->format('d/m/Y H:i') ?? '—' }}</td>
                             <td>{{ $row->displayCode() }}</td>
-                            <td>{{ $row->createdByLabel() }}</td>
-                            <td>{{ $row->targetRoleLabel() }}</td>
+                            <td>
+                                @if($row->created_by_user_id)
+                                    <a href="{{ route('users.edit', $row->created_by_user_id) }}">{{ $row->createdByLabel() }}</a>
+                                @else
+                                    {{ $row->createdByLabel() }}
+                                @endif
+                            </td>
+                            <td>
+                                @if($row->course_id && $row->course)
+                                    <a href="{{ route('course.edit', $row->course_id) }}">{{ $row->course->title }}</a>
+                                @else
+                                    {{ $row->targetRoleLabel() }}
+                                @endif
+                            </td>
                             <td>{{ $row->typeLabel() }}</td>
                             <td>{{ $row->topic ?: '—' }}</td>
                             <td>{{ \Illuminate\Support\Str::limit(strip_tags($row->stem), 100) }}</td>

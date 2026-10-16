@@ -10,7 +10,7 @@
     .lms-status-in_progress { color: #f0ad4e; font-weight: 700; }
     .lms-pub-yes { color: #1ab394; font-weight: 700; }
     .lms-pub-no { color: inherit; font-weight: 600; }
-    .lms-assigned-wrap { overflow-x: hidden; }
+    .lms-assigned-wrap { overflow-x: auto; }
     .lms-assigned-table {
         width: 100%;
         max-width: 100%;
@@ -23,25 +23,40 @@
         vertical-align: middle;
         padding: 6px 5px;
         word-wrap: break-word;
-        overflow-wrap: anywhere;
+        overflow-wrap: break-word;
         white-space: normal;
     }
-    .lms-assigned-table .col-date { width: 8%; }
-    .lms-assigned-table .col-test { width: 14%; }
-    .lms-assigned-table .col-taker { width: 16%; }
-    .lms-assigned-table .col-timing { width: 20%; }
+    .lms-assigned-table .col-date { width: 7%; }
+    .lms-assigned-table .col-test { width: 13%; }
+    .lms-assigned-table .col-taker { width: 14%; }
+    .lms-assigned-table .col-timing { width: 17%; }
     .lms-assigned-table .col-created { width: 8%; }
-    .lms-assigned-table .col-assessor { width: 8%; }
-    .lms-assigned-table .col-status { width: 9%; }
+    .lms-assigned-table .col-assessor { width: 9%; }
+    .lms-assigned-table .col-status { width: 8%; }
     .lms-assigned-table .col-score { width: 7%; }
-    .lms-assigned-table .col-actions { width: 10%; }
+    .lms-assigned-table .col-pub { width: 5%; }
+    .lms-assigned-table .col-actions {
+        width: 12%;
+        overflow-wrap: normal;
+        word-break: normal;
+        white-space: normal;
+    }
     .lms-assigned-table .col-actions .btn,
     .lms-assigned-table .col-actions form {
         display: block;
         width: 100%;
         margin: 0 0 4px 0;
+        box-sizing: border-box;
     }
-    .lms-assigned-table .col-actions .btn { padding: 3px 6px; font-size: 11px; text-align: left; }
+    .lms-assigned-table .col-actions .btn {
+        padding: 4px 8px;
+        font-size: 11px;
+        line-height: 1.3;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
     .lms-assigned-table .col-timing .lms-timing-line { display: block; line-height: 1.35; }
 </style>
 @php
@@ -151,7 +166,7 @@
                         <th class="col-assessor">Assessor</th>
                         <th class="col-status">Status</th>
                         <th class="col-score">Score</th>
-                        <th>Published</th>
+                        <th class="col-pub">Published</th>
                         <th class="col-actions">Action</th>
                     </tr>
                 </thead>
@@ -179,6 +194,13 @@
                                 : (optional($assignment->created_at)->format('d/m/y H:i') ?? '—');
                             $spend = $attempt?->spendMinutes();
                             $appointment = $assignment->appointmentWindowLabel();
+                            $assessorName = $attempt
+                                ? $attempt->assessorLabel($assignment)
+                                : ($assignment->marker->name ?? 'Admin / course instructors');
+                            $assessorUserId = $attempt
+                                ? $attempt->assessorUserId($assignment)
+                                : ($assignment->marker_user_id ? (int) $assignment->marker_user_id : null);
+                            $course = $assessment->course ?? null;
                         @endphp
                         <tr>
                             <td class="col-date">{{ $dateText }}</td>
@@ -189,8 +211,10 @@
                             <td class="col-taker">
                                 {{ $row['student']->name ?? '—' }}
                                 <br><small class="text-muted">{{ $row['student']->email ?? '' }}</small>
-                                @if(!empty($assessment->course?->title))
-                                    <br><small class="text-muted">{{ $assessment->course->title }}</small>
+                                @if($course)
+                                    <br><small>
+                                        <a href="{{ route('course.edit', $course->id) }}">{{ $course->title }}</a>
+                                    </small>
                                 @endif
                             </td>
                             <td class="col-timing">
@@ -200,8 +224,20 @@
                                 <span class="lms-timing-line"><strong>Ended:</strong> {{ optional($attempt?->submitted_at)->format('d/m/y H:i') ?? '—' }}</span>
                                 <span class="lms-timing-line"><strong>Duration spent:</strong> {{ $spend !== null ? $fmtDuration($spend) : '—' }}</span>
                             </td>
-                            <td class="col-created">{{ $assignment->createdByLabel() }}</td>
-                            <td class="col-assessor">{{ $attempt ? $attempt->assessorLabel($assignment) : ($assignment->marker->name ?? 'Admin / course instructors') }}</td>
+                            <td class="col-created">
+                                @if($assignment->assigned_by_user_id)
+                                    <a href="{{ route('users.edit', $assignment->assigned_by_user_id) }}">{{ $assignment->createdByLabel() }}</a>
+                                @else
+                                    {{ $assignment->createdByLabel() }}
+                                @endif
+                            </td>
+                            <td class="col-assessor">
+                                @if($assessorUserId)
+                                    <a href="{{ route('users.edit', $assessorUserId) }}">{{ $assessorName }}</a>
+                                @else
+                                    {{ $assessorName }}
+                                @endif
+                            </td>
                             <td class="col-status"><span class="{{ $statusClass }}">{{ $statusText }}</span></td>
                             <td class="col-score">
                                 @if($attempt && $attempt->score_raw !== null)
@@ -209,7 +245,7 @@
                                     @if($attempt->percent() !== null) ({{ lms_format_number($attempt->percent()) }}%) @endif
                                 @else — @endif
                             </td>
-                            <td>
+                            <td class="col-pub">
                                 @if($attempt)
                                     <span class="{{ $attempt->results_published ? 'lms-pub-yes' : 'lms-pub-no' }}">
                                         {{ $attempt->results_published ? 'Yes' : 'No' }}
@@ -220,19 +256,19 @@
                             </td>
                             <td class="col-actions">
                                 @if($attempt && in_array($attempt->status, ['submitted', 'graded', 'expired'], true))
-                                    <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.mark', $attempt->id) }}" title="View / mark"><i class="fa fa-eye"></i> View</a>
-                                    <a class="btn btn-xs btn-success" href="{{ route('admin.assessments.tests.attempt-pdf', $attempt->id) }}" target="_blank" title="PDF"><i class="fa fa-file-pdf-o"></i></a>
+                                    <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.mark', $attempt->id) }}">View</a>
+                                    <a class="btn btn-xs btn-success" href="{{ route('admin.assessments.tests.attempt-pdf', $attempt->id) }}" target="_blank">PDF</a>
                                     @unless($attempt->results_published)
-                                        <form action="{{ route('admin.assessments.tests.publish-attempt', $attempt->id) }}" method="POST" style="display:inline;">
+                                        <form action="{{ route('admin.assessments.tests.publish-attempt', $attempt->id) }}" method="POST">
                                             @csrf
                                             <button class="btn btn-xs btn-default" type="submit">Publish</button>
                                         </form>
                                     @endunless
                                     @if(!empty($canDeleteAttempts))
-                                        <form action="{{ route('admin.assessments.reports.destroy-attempt', $attempt->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this sitting?');">
+                                        <form action="{{ route('admin.assessments.reports.destroy-attempt', $attempt->id) }}" method="POST" onsubmit="return confirm('Delete this sitting?');">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="btn btn-xs btn-danger" title="Delete"><i class="fa fa-trash"></i></button>
+                                            <button type="submit" class="btn btn-xs btn-danger">Delete</button>
                                         </form>
                                     @endif
                                 @elseif($attempt && $attempt->status === 'in_progress')
