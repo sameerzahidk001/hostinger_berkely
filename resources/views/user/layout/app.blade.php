@@ -305,7 +305,7 @@
                      @endif
                      @if($canCreateTests)
                      <li class="{{ request()->is('admin/assessments/tests') || request()->is('admin/assessments/tests/create*') || request()->is('admin/assessments/tests/*/edit') ? 'active' : '' }}">
-                        <a href="{{ route('admin.assessments.tests.index') }}">Create Test</a>
+                        <a href="{{ route('admin.assessments.tests.index') }}">All Tests</a>
                      </li>
                      @endif
                      @if($canAssignTests || $canMarkResults)

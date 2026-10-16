@@ -20,7 +20,7 @@
         </h2>
         <ol class="breadcrumb">
             <li><a href="{{ lms_portal_home() }}">Home</a></li>
-            <li><a href="{{ route('admin.assessments.tests.index') }}">Assessments</a></li>
+            <li><a href="{{ route('admin.assessments.tests.index') }}">ALL TESTS</a></li>
             <li class="active"><strong>{{ $assessment->exists ? 'Edit' : 'Create' }}</strong></li>
         </ol>
     </div>

@@ -1,5 +1,5 @@
 @extends(lms_portal_layout())
-@section('title', 'Assessments')
+@section('title', 'ALL TESTS')
 @include('admin.assessments.partials.searchable-select-assets')
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
@@ -65,10 +65,10 @@
 </style>
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">
-        <h2>Assessments</h2>
+        <h2>ALL TESTS</h2>
         <ol class="breadcrumb">
             <li><a href="{{ lms_portal_home() }}">Home</a></li>
-            <li class="active"><strong>Practice / Mock / Tests</strong></li>
+            <li class="active"><strong>ALL TESTS</strong></li>
         </ol>
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">

@@ -1,15 +1,17 @@
 @extends(lms_portal_layout())
-@section('title', 'Attempts — ' . $assessment->title)
+@section('title', 'Results — ' . $assessment->title)
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
 <style>
+    .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
+    .lms-status-available { color: #1ab394; font-weight: 700; }
+    .lms-status-missed { color: #ed5565; font-weight: 700; }
     .lms-status-completed { color: #f59e0b; font-weight: 700; }
     .lms-status-marked { color: #1ab394; font-weight: 700; }
     .lms-status-in_progress { color: #f0ad4e; font-weight: 700; }
-    .lms-status-missed { color: #ed5565; font-weight: 700; }
     .lms-pub-yes { color: #1ab394; font-weight: 700; }
     .lms-pub-no { color: inherit; font-weight: 600; }
-    .lms-attempts-wrap { overflow-x: hidden; }
+    .lms-attempts-wrap { overflow-x: auto; }
     .lms-attempts-table {
         width: 100%;
         max-width: 100%;
@@ -20,117 +22,208 @@
     .lms-attempts-table > thead > tr > th,
     .lms-attempts-table > tbody > tr > td {
         vertical-align: middle;
-        padding: 6px 6px;
+        padding: 6px 5px;
         word-wrap: break-word;
         overflow-wrap: break-word;
         white-space: normal;
     }
-    .lms-attempts-table .col-date { width: 10%; }
-    .lms-attempts-table .col-taker { width: 16%; }
-    .lms-attempts-table .col-time { width: 6%; text-align: center; }
-    .lms-attempts-table .col-spend { width: 7%; text-align: center; }
-    .lms-attempts-table .col-status { width: 11%; }
-    .lms-attempts-table .col-score { width: 10%; }
+    .lms-attempts-table .col-date { width: 7%; }
+    .lms-attempts-table .col-test { width: 13%; }
+    .lms-attempts-table .col-taker { width: 14%; }
+    .lms-attempts-table .col-timing { width: 17%; }
+    .lms-attempts-table .col-created { width: 8%; }
+    .lms-attempts-table .col-assessor { width: 9%; }
+    .lms-attempts-table .col-status { width: 12%; }
     .lms-attempts-table .col-pub { width: 6%; }
-    .lms-attempts-table .col-assessor { width: 12%; }
-    .lms-attempts-table .col-action {
-        width: 16%;
+    .lms-attempts-table .col-actions {
+        width: 11%;
         overflow-wrap: normal;
         word-break: normal;
+        white-space: normal;
+    }
+    .lms-attempts-table .col-actions .btn,
+    .lms-attempts-table .col-actions form {
+        display: inline-block;
+        width: auto;
+        max-width: 100%;
+        margin: 0 0 4px 0;
+        box-sizing: border-box;
+    }
+    .lms-attempts-table .col-actions .btn {
+        padding: 4px 10px;
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1.3;
+        text-align: center;
         white-space: nowrap;
     }
-    .lms-attempts-table .col-action .btn {
-        margin: 1px 2px 1px 0;
-        white-space: nowrap;
-        font-weight: 700;
-    }
-    .lms-attempts-table .col-action .btn-default {
-        color: #fff !important;
-        background: #337ab7;
-        border-color: #2e6da4;
-        font-weight: 700;
-    }
+    .lms-attempts-table .col-actions .btn-warning { color: #fff !important; background: #f0ad4e; border-color: #eea236; }
+    .lms-attempts-table .col-actions .btn-info { color: #fff !important; background: #5bc0de; border-color: #46b8da; }
+    .lms-attempts-table .col-actions .btn-primary { color: #fff !important; background: #337ab7; border-color: #2e6da4; }
+    .lms-attempts-table .col-actions .btn-danger { color: #fff !important; background: #d9534f; border-color: #d43f3a; }
+    .lms-attempts-table .col-status .lms-score-line { display: block; margin-top: 4px; font-weight: 600; color: #333; }
+    .lms-attempts-table .col-timing .lms-timing-line { display: block; line-height: 1.35; }
 </style>
+@php
+    $fmtDuration = function ($minutes) {
+        if ($minutes === null || $minutes === '') {
+            return '—';
+        }
+        $m = (int) round((float) $minutes);
+        if ($m < 60) {
+            return $m . ' min';
+        }
+        $h = intdiv($m, 60);
+        $r = $m % 60;
+
+        return $r ? ($h . 'h ' . $r . 'm') : ($h . 'h');
+    };
+@endphp
 <div class="row wrapper border-bottom white-bg page-heading">
-    <div class="col-lg-10">
-        <h2>Attempts: {{ $assessment->title }} <small class="text-muted">({{ $assessment->displayCode() }})</small></h2>
+    <div class="col-lg-8">
+        <h2>Results: {{ $assessment->title }} <small class="text-muted">({{ $assessment->displayCode() }})</small></h2>
         <ol class="breadcrumb">
             <li><a href="{{ lms_portal_home() }}">Home</a></li>
-            <li><a href="{{ route('admin.assessments.tests.index') }}">Assessments</a></li>
-            <li class="active"><strong>Attempts</strong></li>
+            <li><a href="{{ route('admin.assessments.tests.index') }}">ALL TESTS</a></li>
+            <li class="active"><strong>Results</strong></li>
         </ol>
+    </div>
+    <div class="col-lg-4 text-right" style="padding-top:20px;">
+        <a href="{{ route('admin.assessments.tests.index') }}" class="btn btn-default btn-sm">Back to ALL TESTS</a>
+        <a href="{{ route('admin.assessments.tests.assigned-users', ['assessment_id' => $assessment->id]) }}" class="btn btn-default btn-sm">Assigned Tests</a>
     </div>
 </div>
 <div class="wrapper wrapper-content">
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
-    <div class="ibox"><div class="ibox-content lms-attempts-wrap">
-        <table class="table table-striped table-bordered lms-attempts-table js-sortable-table">
-            <thead>
-                <tr>
-                    <th class="col-date" data-sort-col="0">Date <span class="sort-ind"></span></th>
-                    <th class="col-taker" data-sort-col="1">Test Taker <span class="sort-ind"></span></th>
-                    <th class="col-time" data-sort-col="2">Start <span class="sort-ind"></span></th>
-                    <th class="col-time" data-sort-col="3">End <span class="sort-ind"></span></th>
-                    <th class="col-spend" data-sort-col="4">Spend <span class="sort-ind"></span></th>
-                    <th class="col-status" data-sort-col="5">Status <span class="sort-ind"></span></th>
-                    <th class="col-score" data-sort-col="6">Score <span class="sort-ind"></span></th>
-                    <th class="col-pub" data-sort-col="7">Published <span class="sort-ind"></span></th>
-                    <th class="col-assessor" data-sort-col="8">Assessor <span class="sort-ind"></span></th>
-                    <th class="col-action">Action</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($rows as $row)
-                    @php
-                        $spend = $row->spendMinutes();
-                        $assessorUserId = $row->assessorUserId();
-                    @endphp
+    <p class="text-muted m-b-sm">
+        All attempts for this test only. Columns match Assigned Tests.
+    </p>
+    <div class="ibox">
+        <div class="ibox-content lms-attempts-wrap">
+            <table class="table table-striped table-bordered lms-attempts-table js-sortable-table">
+                <thead>
                     <tr>
-                        <td class="col-date" data-sort="{{ optional($row->submitted_at ?: $row->updated_at)->timestamp ?? 0 }}">{{ optional($row->submitted_at ?: $row->updated_at)->format('d/m/y H:i') ?? '—' }}</td>
-                        <td class="col-taker" data-sort="{{ $row->user->name ?? '' }}">
-                            @if(!empty($row->user->id))
-                                <a href="{{ route('users.edit', $row->user->id) }}">{{ $row->user->name ?? '—' }}</a>
-                            @else
-                                {{ $row->user->name ?? '—' }}
-                            @endif
-                            <br><small class="text-muted">{{ $row->user->email ?? '' }}</small>
-                        </td>
-                        <td class="col-time" data-sort="{{ optional($row->started_at)->format('H:i') ?? '' }}">{{ optional($row->started_at)->format('H:i') ?? '—' }}</td>
-                        <td class="col-time" data-sort="{{ optional($row->submitted_at)->format('H:i') ?? '' }}">{{ optional($row->submitted_at)->format('H:i') ?? '—' }}</td>
-                        <td class="col-spend" data-sort="{{ $spend ?? -1 }}">{{ $spend !== null ? $spend . ' min' : '—' }}</td>
-                        <td class="col-status" data-sort="{{ $row->statusLabel() }}"><span class="{{ $row->statusColorClass() }}">{{ $row->statusLabel() }}</span></td>
-                        <td class="col-score" data-sort="{{ $row->score_raw ?? -1 }}">
-                            @if($row->score_raw !== null)
-                                {{ lms_format_number($row->score_raw) }} / {{ lms_format_number($row->score_max) }}
-                                @if($row->percent() !== null) ({{ lms_format_number($row->percent()) }}%) @endif
-                            @else — @endif
-                        </td>
-                        <td class="col-pub" data-sort="{{ $row->results_published ? 'Yes' : 'No' }}">
-                            <span class="{{ $row->results_published ? 'lms-pub-yes' : 'lms-pub-no' }}">
-                                {{ $row->results_published ? 'Yes' : 'No' }}
-                            </span>
-                        </td>
-                        <td class="col-assessor" data-sort="{{ $row->assessorLabel() }}">
-                            @if($assessorUserId)
-                                <a href="{{ route('users.edit', $assessorUserId) }}">{{ $row->assessorLabel() }}</a>
-                            @else
-                                {{ $row->assessorLabel() }}
-                            @endif
-                        </td>
-                        <td class="col-action">
-                            <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.mark', $row->id) }}">View Details</a>
-                            <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.attempt-pdf', $row->id) }}" target="_blank">Download PDF</a>
-                            @unless($row->results_published)
-                                <form action="{{ route('admin.assessments.tests.publish-attempt', $row->id) }}" method="POST" style="display:inline;">@csrf<button class="btn btn-xs btn-primary">Publish</button></form>
-                            @endunless
-                        </td>
+                        <th class="col-date" data-sort-col="0">Date <span class="sort-ind"></span></th>
+                        <th class="col-test" data-sort-col="1">Test <span class="sort-ind"></span></th>
+                        <th class="col-taker" data-sort-col="2">Test Taker <span class="sort-ind"></span></th>
+                        <th class="col-timing" data-sort-col="3">Timing <span class="sort-ind"></span></th>
+                        <th class="col-created" data-sort-col="4">Created by <span class="sort-ind"></span></th>
+                        <th class="col-assessor" data-sort-col="5">Assessor <span class="sort-ind"></span></th>
+                        <th class="col-status" data-sort-col="6">Status <span class="sort-ind"></span></th>
+                        <th class="col-pub" data-sort-col="7">Published <span class="sort-ind"></span></th>
+                        <th class="col-actions">Action</th>
                     </tr>
-                @empty
-                    <tr><td colspan="10" class="text-center">No attempts yet.</td></tr>
-                @endforelse
-            </tbody>
-        </table>
-        {{ $rows->links() }}
-    </div></div>
+                </thead>
+                <tbody>
+                    @forelse($rows as $row)
+                        @php
+                            $attempt = $row['attempt'];
+                            $assignment = $row['assignment'];
+                            $assessmentRow = $row['assessment'];
+                            $student = $row['student'];
+                            $statusClass = $attempt->statusColorClass();
+                            $statusText = $attempt->statusLabel();
+                            $dateText = optional($attempt->submitted_at ?: $attempt->updated_at)->format('d/m/y H:i') ?? '—';
+                            $spend = $attempt->spendMinutes();
+                            $appointment = $assignment ? $assignment->appointmentWindowLabel() : '—';
+                            $assessorName = $attempt->assessorLabel($assignment);
+                            $assessorUserId = $attempt->assessorUserId($assignment);
+                            $course = $assessmentRow->course ?? null;
+                            $createdBy = $assignment ? $assignment->createdByLabel() : '—';
+                        @endphp
+                        <tr>
+                            <td class="col-date" data-sort="{{ optional($attempt->submitted_at ?: $attempt->updated_at)->timestamp ?? 0 }}">{{ $dateText }}</td>
+                            <td class="col-test" data-sort="{{ $assessmentRow->title ?? '' }}">
+                                <strong>{{ $assessmentRow->title ?: ('Test #'.$assessmentRow->id) }}</strong>
+                                <br><small class="text-muted">{{ $assessmentRow->displayCode() }} · {{ $assessmentRow->kindLabel() }}</small>
+                            </td>
+                            <td class="col-taker" data-sort="{{ $student->name ?? '' }}">
+                                @if(!empty($student->id))
+                                    <a href="{{ route('users.edit', $student->id) }}">{{ $student->name ?? '—' }}</a>
+                                @else
+                                    {{ $student->name ?? '—' }}
+                                @endif
+                                <br><small class="text-muted">{{ $student->email ?? '' }}</small>
+                                @if($assignment && $assignment->batch)
+                                    <br><small class="text-muted">Batch: {{ $assignment->batch->code ?? $assignment->batch->name }}</small>
+                                @endif
+                                @if($course)
+                                    <br><small>
+                                        <a href="{{ route('course.edit', $course->id) }}">{{ $course->title }}</a>
+                                    </small>
+                                @endif
+                            </td>
+                            <td class="col-timing" data-sort="{{ optional($assignment?->available_from)->timestamp ?? optional($attempt->started_at)->timestamp ?? 0 }}">
+                                <span class="lms-timing-line"><strong>Exam Appointment Timing:</strong> {{ $appointment }}</span>
+                                <span class="lms-timing-line"><strong>Exam Duration:</strong> {{ $fmtDuration($assessmentRow->duration_minutes ?? null) }}</span>
+                                <span class="lms-timing-line"><strong>Started:</strong> {{ ($assignment && $attempt->started_at) ? $assignment->formatInTimezone($attempt->started_at) : (optional($attempt->started_at)->format('d/m/y H:i') ?? '—') }}</span>
+                                <span class="lms-timing-line"><strong>Ended:</strong> {{ ($assignment && $attempt->submitted_at) ? $assignment->formatInTimezone($attempt->submitted_at) : (optional($attempt->submitted_at)->format('d/m/y H:i') ?? '—') }}</span>
+                                <span class="lms-timing-line"><strong>Duration spent:</strong> {{ $spend !== null ? $fmtDuration($spend) : '—' }}</span>
+                                @if($assignment)
+                                    <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $assignment->timezoneLabel() }}</span>
+                                @endif
+                            </td>
+                            <td class="col-created" data-sort="{{ $createdBy }}">
+                                @if($assignment && $assignment->assigned_by_user_id)
+                                    <a href="{{ route('users.edit', $assignment->assigned_by_user_id) }}">{{ $createdBy }}</a>
+                                @else
+                                    {{ $createdBy }}
+                                @endif
+                            </td>
+                            <td class="col-assessor" data-sort="{{ $assessorName }}">
+                                @if($assessorUserId)
+                                    <a href="{{ route('users.edit', $assessorUserId) }}">{{ $assessorName }}</a>
+                                @else
+                                    {{ $assessorName }}
+                                @endif
+                            </td>
+                            <td class="col-status" data-sort="{{ $statusText }}">
+                                <span class="{{ $statusClass }}">{{ $statusText }}</span>
+                                <span class="lms-score-line">
+                                    @if($attempt->score_raw !== null)
+                                        {{ lms_format_number($attempt->score_raw) }} / {{ lms_format_number($attempt->score_max) }}
+                                        @if($attempt->percent() !== null) ({{ lms_format_number($attempt->percent()) }}%) @endif
+                                    @else
+                                        —
+                                    @endif
+                                </span>
+                            </td>
+                            <td class="col-pub" data-sort="{{ $attempt->results_published ? 'Yes' : 'No' }}">
+                                <span class="{{ $attempt->results_published ? 'lms-pub-yes' : 'lms-pub-no' }}">
+                                    {{ $attempt->results_published ? 'Yes' : 'No' }}
+                                </span>
+                            </td>
+                            <td class="col-actions">
+                                @if(in_array($attempt->status, ['submitted', 'graded', 'expired'], true))
+                                    <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.mark', $attempt->id) }}">View Details</a>
+                                    <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.attempt-pdf', $attempt->id) }}" target="_blank">Download PDF</a>
+                                    @unless($attempt->results_published)
+                                        <form action="{{ route('admin.assessments.tests.publish-attempt', $attempt->id) }}" method="POST">
+                                            @csrf
+                                            <button class="btn btn-xs btn-primary" type="submit">Publish</button>
+                                        </form>
+                                    @endunless
+                                    @if(!empty($canDeleteAttempts))
+                                        <form action="{{ route('admin.assessments.reports.destroy-attempt', $attempt->id) }}" method="POST" onsubmit="return confirm('Delete this attempt?');">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-xs btn-danger">Delete</button>
+                                        </form>
+                                    @endif
+                                @elseif($attempt->status === 'in_progress')
+                                    <span class="text-muted">In progress</span>
+                                @else
+                                    <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.mark', $attempt->id) }}">View Details</a>
+                                @endif
+                            </td>
+                        </tr>
+                    @empty
+                        <tr><td colspan="9" class="text-center text-muted">No attempts yet for this test.</td></tr>
+                    @endforelse
+                </tbody>
+            </table>
+            {{ $rows->links() }}
+        </div>
+    </div>
 </div>
 @endsection
