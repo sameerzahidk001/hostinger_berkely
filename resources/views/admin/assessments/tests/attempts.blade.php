@@ -223,10 +223,6 @@
                                             <button class="btn btn-xs btn-primary" type="submit">Publish</button>
                                         </form>
                                     @endunless
-                                @elseif($attempt && $attempt->status === 'in_progress')
-                                    <span class="text-muted" style="display:block;margin-bottom:4px;">In progress</span>
-                                @elseif(! $attempt)
-                                    <span class="text-muted" style="display:block;margin-bottom:4px;">{{ $statusText === 'Assigned' ? 'Not started' : $statusText }}</span>
                                 @endif
                                 @if(!empty($canAssign) && $assignment)
                                     <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.edit-assignment', $assignment->id) }}">Edit</a>
