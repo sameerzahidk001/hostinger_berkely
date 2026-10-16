@@ -28,7 +28,7 @@
         overflow-wrap: break-word;
         white-space: normal;
     }
-    .lms-assigned-table .col-date { width: 7%; }
+    .lms-assigned-table .col-appt { width: 8%; }
     .lms-assigned-table .col-test { width: 13%; }
     .lms-assigned-table .col-taker { width: 14%; }
     .lms-assigned-table .col-timing { width: 17%; }
@@ -173,7 +173,7 @@
             <table class="table table-striped table-bordered lms-assigned-table js-sortable-table">
                 <thead>
                     <tr>
-                        <th class="col-date" data-sort-col="0">Exam start <span class="sort-ind"></span></th>
+                        <th class="col-appt" data-sort-col="0">Appointment ID <span class="sort-ind"></span></th>
                         <th class="col-test" data-sort-col="1">Test <span class="sort-ind"></span></th>
                         <th class="col-taker" data-sort-col="2">Test Taker <span class="sort-ind"></span></th>
                         <th class="col-timing" data-sort-col="3">Timing <span class="sort-ind"></span></th>
@@ -203,16 +203,6 @@
                                 $statusClass = 'lms-status-available';
                                 $statusText = 'Assigned';
                             }
-                            // Before attempt: show exam appointment start (not created-at).
-                            if ($attempt) {
-                                $dateText = $attempt->submitted_at
-                                    ? $assignment->formatInTimezone($attempt->submitted_at)
-                                    : (optional($attempt->updated_at)->format('d/m/y H:i') ?? '—');
-                            } elseif ($assignment->windowStart()) {
-                                $dateText = $assignment->windowStart()->format('d/m/y H:i');
-                            } else {
-                                $dateText = optional($assignment->created_at)->format('d/m/y H:i') ?? '—';
-                            }
                             $spend = $attempt?->spendMinutes();
                             $appointment = $assignment->appointmentWindowLabel();
                             $assessorName = $attempt
@@ -222,12 +212,13 @@
                                 ? $attempt->assessorUserId($assignment)
                                 : ($assignment->marker_user_id ? (int) $assignment->marker_user_id : null);
                             $course = $assessment->course ?? null;
+                            $apptId = $assignment->displayCode();
                         @endphp
                         <tr>
-                            <td class="col-date" data-sort="{{ $attempt ? optional($attempt->submitted_at ?: $attempt->updated_at)->timestamp : optional($assignment->created_at)->timestamp }}">{{ $dateText }}</td>
+                            <td class="col-appt" data-sort="{{ $assignment->id }}"><strong>{{ $apptId }}</strong></td>
                             <td class="col-test" data-sort="{{ $assessment->title ?? ('Test #'.($assignment->assessment_id ?? '')) }}">
                                 <strong>{{ $assessment->title ?: ('Test #'.$assessment->id) }}</strong>
-                                <br><small class="text-muted">{{ $assessment->displayCode() }} · {{ $assessment->kindLabel() }} · Sitting #{{ $assignment->id }}</small>
+                                <br><small class="text-muted">{{ $assessment->displayCode() }} · {{ $assessment->kindLabel() }}</small>
                             </td>
                             <td class="col-taker" data-sort="{{ $row['student']->name ?? '' }}">
                                 @if(!empty($row['student']->id))
