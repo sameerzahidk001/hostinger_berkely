@@ -243,6 +243,15 @@ class LmsAssessmentController extends Controller
         if ($gender !== '') {
             $gender = ucfirst(strtolower($gender));
         }
+        $isInstructor = $user->roles->contains(
+            fn ($r) => strtolower((string) $r->name) === 'instructor'
+        );
+        // Same gate as public Faculty page (/instructor/{id}).
+        $facultyProfileUrl = (
+            $isInstructor
+            && (int) ($user->is_on_web ?? 0) === 1
+            && (int) ($user->approved ?? 0) === 1
+        ) ? url('/instructor/' . $user->id) : null;
 
         return response()->json([
             'id' => (int) $user->id,
@@ -256,6 +265,7 @@ class LmsAssessmentController extends Controller
             'country' => $blank($user->country),
             'address' => $blank($user->address),
             'post_code' => $blank($user->post_code ?? null),
+            'faculty_profile_url' => $facultyProfileUrl,
         ]);
     }
 
