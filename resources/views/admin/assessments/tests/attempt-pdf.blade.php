@@ -46,6 +46,22 @@
     } elseif (is_file($logoPath)) {
         $logoSrc = $logoPath;
     }
+    $assignment = \App\Models\LmsAssessmentAssignment::query()
+        ->where('assessment_id', $attempt->assessment_id)
+        ->orderByRaw('CASE WHEN student_id = ? THEN 0 ELSE 1 END', [(int) $attempt->user_id])
+        ->orderByDesc('id')
+        ->first();
+    $fmtTime = function ($dt) use ($assignment) {
+        if (! $dt) {
+            return '—';
+        }
+        if ($assignment) {
+            return $assignment->formatInTimezone($dt, 'd/m/Y H:i')
+                . (filled($assignment->timezone) ? ' (' . $assignment->timezoneLabel() . ')' : '');
+        }
+
+        return optional($dt)->format('d/m/Y H:i') ?? '—';
+    };
 @endphp
 
     <table class="top">
@@ -76,9 +92,15 @@
         </td></tr>
         <tr><td class="muted">Test ID</td><td>{{ $attempt->assessment->displayCode() }}</td></tr>
         <tr><td class="muted">Duration given</td><td>{{ $attempt->assessment->duration_minutes ? $attempt->assessment->duration_minutes . ' min' : '—' }}</td></tr>
-        <tr><td class="muted">Start time</td><td>{{ optional($attempt->started_at)->format('d/m/Y H:i') ?? '—' }}</td></tr>
-        <tr><td class="muted">End time</td><td>{{ optional($attempt->submitted_at)->format('d/m/Y H:i') ?? '—' }}</td></tr>
+        @if($assignment)
+            <tr><td class="muted">Exam appointment</td><td>{{ $assignment->appointmentWindowLabel('d/m/Y H:i') }}</td></tr>
+        @endif
+        <tr><td class="muted">Start time</td><td>{{ $fmtTime($attempt->started_at) }}</td></tr>
+        <tr><td class="muted">End time</td><td>{{ $fmtTime($attempt->submitted_at) }}</td></tr>
         <tr><td class="muted">Spend duration</td><td>{{ ($m = $attempt->spendMinutes()) !== null ? $m . ' min' : '—' }}</td></tr>
+        @if($assignment && filled($assignment->timezone))
+            <tr><td class="muted">Timezone</td><td>{{ $assignment->timezoneLabel() }}</td></tr>
+        @endif
         <tr><td class="muted">Assessor</td><td>{{ $attempt->assessorLabel() }}</td></tr>
         <tr><td class="muted">Published</td><td>{{ $attempt->results_published ? 'Yes' : 'No' }}</td></tr>
     </table>

@@ -203,6 +203,7 @@ class LmsAssessmentController extends Controller
             'marker_user_id' => 'nullable|exists:users,id',
             'available_from' => 'nullable|date',
             'available_until' => 'nullable|date',
+            'timezone' => 'nullable|string|max:64',
         ]);
         if ($validator->fails()) {
             return back()->withErrors($validator)->withInput();
@@ -686,20 +687,53 @@ class LmsAssessmentController extends Controller
         }
         $deleteQuery->delete();
 
-        $from = $request->filled('available_from') ? $request->input('available_from') : null;
-        // Appointment window length = exam duration from start (student may start within that window).
+        $tzOptions = LmsAssessmentAssignment::timezoneOptions();
+        $timezone = trim((string) $request->input('timezone', ''));
+        if ($timezone === '' || ! array_key_exists($timezone, $tzOptions)) {
+            $timezone = (string) config('app.timezone', 'Asia/Dubai');
+        }
+
+        $from = null;
         $until = null;
-        if ($from && $a->duration_minutes) {
-            $until = \Carbon\Carbon::parse($from)
-                ->addMinutes((int) $a->duration_minutes)
-                ->format('Y-m-d H:i:s');
-        } elseif ($request->filled('available_until')) {
-            $until = $request->input('available_until');
+        if ($request->filled('available_from')) {
+            // Interpret wall-clock time in the chosen timezone, store in app timezone.
+            $fromLocal = \Carbon\Carbon::parse($request->input('available_from'), $timezone);
+            $from = $fromLocal->copy()->timezone(config('app.timezone'))->format('Y-m-d H:i:s');
+            // Appointment window length = exam duration from start (student may start within that window).
+            if ($a->duration_minutes) {
+                $until = $fromLocal->copy()
+                    ->addMinutes((int) $a->duration_minutes)
+                    ->timezone(config('app.timezone'))
+                    ->format('Y-m-d H:i:s');
+            } elseif ($request->filled('available_until')) {
+                $until = \Carbon\Carbon::parse($request->input('available_until'), $timezone)
+                    ->timezone(config('app.timezone'))
+                    ->format('Y-m-d H:i:s');
+            }
         }
         $byAdmin = $this->lms->isAdminActor() ? Auth::guard('admin')->id() : null;
         $byUser = ! $byAdmin ? Auth::id() : null;
         $markerId = $request->filled('marker_user_id') ? (int) $request->input('marker_user_id') : null;
         $hasMarkerCol = Schema::hasColumn('lms_assessment_assignments', 'marker_user_id');
+        $hasTimezoneCol = Schema::hasColumn('lms_assessment_assignments', 'timezone');
+
+        // Refresh window + timezone on sittings that already have attempts (locked rows).
+        if ($lockedIds !== [] && ($from || $hasTimezoneCol)) {
+            $lockUpdate = [];
+            if ($from) {
+                $lockUpdate['available_from'] = $from;
+                $lockUpdate['available_until'] = $until;
+            }
+            if ($hasTimezoneCol) {
+                $lockUpdate['timezone'] = $timezone;
+            }
+            if ($lockUpdate !== []) {
+                LmsAssessmentAssignment::query()
+                    ->where('assessment_id', $a->id)
+                    ->whereIn('id', $lockedIds)
+                    ->update($lockUpdate);
+            }
+        }
 
         foreach ((array) $request->input('batch_ids', []) as $batchId) {
             if (in_array((int) $batchId, $lockedBatchIds, true)) {
@@ -715,6 +749,9 @@ class LmsAssessmentController extends Controller
             ];
             if ($hasMarkerCol) {
                 $row['marker_user_id'] = $markerId;
+            }
+            if ($hasTimezoneCol) {
+                $row['timezone'] = $timezone;
             }
             LmsAssessmentAssignment::create($row);
         }
@@ -732,6 +769,9 @@ class LmsAssessmentController extends Controller
             ];
             if ($hasMarkerCol) {
                 $row['marker_user_id'] = $markerId;
+            }
+            if ($hasTimezoneCol) {
+                $row['timezone'] = $timezone;
             }
             LmsAssessmentAssignment::create($row);
         }
@@ -786,6 +826,12 @@ class LmsAssessmentController extends Controller
             'selectedBatchIds' => old('batch_ids', $assessment->assignments->whereNotNull('class_batch_id')->pluck('class_batch_id')->all()),
             'selectedStudentIds' => old('student_ids', $assessment->assignments->whereNotNull('student_id')->pluck('student_id')->all()),
             'selectedMarkerId' => $selectedMarker,
+            'timezoneOptions' => LmsAssessmentAssignment::timezoneOptions(),
+            'selectedTimezone' => old(
+                'timezone',
+                $assessment->assignments->firstWhere('timezone', '!=', null)?->timezone
+                    ?: config('app.timezone', 'Asia/Dubai')
+            ),
             'canSkill' => $this->assessments->canManageSkillTests(),
             'canCreate' => $assessment->isSkill()
                 ? $this->assessments->canManageSkillTests()

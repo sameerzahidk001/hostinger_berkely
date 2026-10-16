@@ -215,9 +215,12 @@
                         <td class="col-timing">
                             <span class="lms-timing-line"><strong>Exam Appointment Timing:</strong> {{ $asg ? $asg->appointmentWindowLabel() : '—' }}</span>
                             <span class="lms-timing-line"><strong>Exam Duration:</strong> {{ $fmtDuration($a->duration_minutes ?? null) }}</span>
-                            <span class="lms-timing-line"><strong>Started:</strong> {{ optional($att?->started_at)->format('d/m/y H:i') ?? '—' }}</span>
-                            <span class="lms-timing-line"><strong>Ended:</strong> {{ optional($att?->submitted_at)->format('d/m/y H:i') ?? '—' }}</span>
+                            <span class="lms-timing-line"><strong>Started:</strong> {{ ($asg && $att?->started_at) ? $asg->formatInTimezone($att->started_at) : (optional($att?->started_at)->format('d/m/y H:i') ?? '—') }}</span>
+                            <span class="lms-timing-line"><strong>Ended:</strong> {{ ($asg && $att?->submitted_at) ? $asg->formatInTimezone($att->submitted_at) : (optional($att?->submitted_at)->format('d/m/y H:i') ?? '—') }}</span>
                             <span class="lms-timing-line"><strong>Duration spent:</strong> {{ $spend !== null ? $fmtDuration($spend) : '—' }}</span>
+                            @if($asg && filled($asg->timezone))
+                                <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $asg->timezoneLabel() }}</span>
+                            @endif
                         </td>
                         <td class="col-assessor">{{ $assessorName }}</td>
                         <td class="col-status">
