@@ -139,7 +139,11 @@
                         <td class="col-title" data-sort="{{ $row->title }}">{{ $row->title }}</td>
                         <td class="col-course" data-sort="{{ $row->course->title ?? $row->targetRoleLabel() }}">
                             @if($row->course_id && $row->course)
-                                <a href="{{ route('course.edit', $row->course_id) }}">{{ $row->course->title }}</a>
+                                @if(!empty($row->course->slug))
+                                    <a href="{{ route('course.details', ['course' => $row->course->slug]) }}" target="_blank" rel="noopener noreferrer">{{ $row->course->title }}</a>
+                                @else
+                                    <a href="{{ route('course.show', $row->course_id) }}" target="_blank" rel="noopener noreferrer">{{ $row->course->title }}</a>
+                                @endif
                             @else
                                 {{ $row->targetRoleLabel() }}
                             @endif
@@ -152,7 +156,7 @@
                             @if($markers->isNotEmpty())
                                 @foreach($markers as $marker)
                                     @if(!$loop->first), @endif
-                                    <a href="{{ route('users.edit', $marker->id) }}">{{ $marker->name }}</a>
+                                    <a href="#" class="lms-user-preview" data-user-id="{{ $marker->id }}">{{ $marker->name }}</a>
                                 @endforeach
                             @else
                                 <span class="text-muted">Admin / course instructors</span>
@@ -184,4 +188,5 @@
         {{ $rows->links() }}
     </div></div>
 </div>
+@include('admin.assessments.partials.user-preview-modal')
 @endsection
