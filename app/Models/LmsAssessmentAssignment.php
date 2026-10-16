@@ -188,23 +188,22 @@ class LmsAssessmentAssignment extends Model
         }
     }
 
-    /** Display: "15/10/24 22:25 → 16/10/24 01:25 (Asia/Dubai · GST)" */
+    /** Display: "15/10/24 22:25 → 16/10/24 01:25" (timezone is shown on its own line). */
     public function appointmentWindowLabel(string $fmt = 'd/m/y H:i'): string
     {
         $from = $this->windowStart();
         $until = $this->appointmentEnd();
-        $tzSuffix = ' (' . $this->timezoneLabel() . ')';
         if ($from && $until) {
-            return $from->format($fmt) . ' → ' . $until->format($fmt) . $tzSuffix;
+            return $from->format($fmt) . ' → ' . $until->format($fmt);
         }
         if ($from) {
-            return $from->format($fmt) . $tzSuffix;
+            return $from->format($fmt);
         }
         if ($until) {
-            return 'Until ' . $until->format($fmt) . $tzSuffix;
+            return 'Until ' . $until->format($fmt);
         }
 
-        return 'Open' . $tzSuffix;
+        return 'Open';
     }
 
     public function isNotYetOpen(): bool
