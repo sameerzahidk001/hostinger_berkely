@@ -162,7 +162,22 @@ class LmsAssessmentPortalController extends Controller
         // Retake only if admin assigned a new open sitting for this test.
         $canRetake = $this->assessments->canRetake($user, $attempt->assessment);
 
-        return view('user.assessments.result', compact('attempt', 'canSeeScore', 'canRetake'));
+        $assignment = \App\Models\LmsAssessmentAssignment::query()
+            ->where('assessment_id', $attempt->assessment_id)
+            ->orderBy('id')
+            ->get()
+            ->first(fn ($asg) => $this->assessments->attemptBelongsToAssignment($attempt, $asg));
+        $meta = $this->assessments->sittingAttemptMeta((int) $user->id, $attempt->assessment, $assignment);
+        $appointmentId = $assignment?->displayCode();
+        $attemptLabel = 'Attempt ' . $meta['number'] . ' of ' . $meta['total'];
+
+        return view('user.assessments.result', compact(
+            'attempt',
+            'canSeeScore',
+            'canRetake',
+            'appointmentId',
+            'attemptLabel'
+        ));
     }
 
     public function resultPdf($attemptId)

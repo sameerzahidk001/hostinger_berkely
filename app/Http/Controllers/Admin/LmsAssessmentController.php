@@ -404,12 +404,7 @@ class LmsAssessmentController extends Controller
                 $asg = $row['assignment'];
                 // Prefer attempt that started inside this sitting's appointment window.
                 $row['attempt'] = $candidates->first(function ($att) use ($asg) {
-                    if (! $att->started_at || ! $asg->available_from) {
-                        return false;
-                    }
-                    $end = $asg->appointmentEnd() ?: $asg->available_from->copy()->addDays(7);
-                    return $att->started_at->gte($asg->available_from->copy()->subMinutes(5))
-                        && $att->started_at->lte($end->copy()->addDay());
+                    return $this->assessments->attemptBelongsToAssignment($att, $asg);
                 });
                 // Fallback: only latest sitting without a window match gets the latest attempt.
                 if (! $row['attempt'] && $candidates->isNotEmpty()) {
@@ -423,6 +418,22 @@ class LmsAssessmentController extends Controller
                 }
             }
             unset($row);
+        }
+
+        // Attempt N of T per student+assessment (oldest sitting = 1).
+        $sittingsByPair = collect($rowsByKey)->groupBy(
+            fn ($r) => (int) $r['assessment']->id . ':' . (int) $r['student']->id
+        );
+        foreach ($sittingsByPair as $pairRows) {
+            $ordered = $pairRows->sortBy(fn ($r) => (int) $r['assignment']->id)->values();
+            $total = $ordered->count();
+            foreach ($ordered as $i => $r) {
+                $k = (int) $r['assignment']->id . ':' . (int) $r['student']->id;
+                if (isset($rowsByKey[$k])) {
+                    $rowsByKey[$k]['attempt_number'] = $i + 1;
+                    $rowsByKey[$k]['attempt_total'] = $total;
+                }
+            }
         }
 
         $rows = collect($rowsByKey)->values()->sortByDesc(function ($row) {

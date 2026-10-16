@@ -27,9 +27,8 @@
         overflow-wrap: break-word;
         white-space: normal;
     }
-    .lms-attempts-table .col-appt { width: 8%; }
-    .lms-attempts-table .col-attempt { width: 7%; }
-    .lms-attempts-table .col-test { width: 12%; }
+    .lms-attempts-table .col-appt { width: 9%; }
+    .lms-attempts-table .col-test { width: 15%; }
     .lms-attempts-table .col-taker { width: 13%; }
     .lms-attempts-table .col-timing { width: 16%; }
     .lms-attempts-table .col-created { width: 8%; }
@@ -97,7 +96,7 @@
 <div class="wrapper wrapper-content">
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     <p class="text-muted m-b-sm">
-        All assigned sittings for this test (completed or not). Attempt column shows which sitting (e.g. 2 of 3).
+        All assigned sittings for this test (completed or not). Attempt number is shown under the test title (e.g. Attempt 2 of 3).
     </p>
     <div class="ibox">
         <div class="ibox-content lms-attempts-wrap">
@@ -105,14 +104,13 @@
                 <thead>
                     <tr>
                         <th class="col-appt" data-sort-col="0">Appointment ID <span class="sort-ind"></span></th>
-                        <th class="col-attempt" data-sort-col="1">Attempt <span class="sort-ind"></span></th>
-                        <th class="col-test" data-sort-col="2">Test <span class="sort-ind"></span></th>
-                        <th class="col-taker" data-sort-col="3">Test Taker <span class="sort-ind"></span></th>
-                        <th class="col-timing" data-sort-col="4">Timing <span class="sort-ind"></span></th>
-                        <th class="col-created" data-sort-col="5">Created by <span class="sort-ind"></span></th>
-                        <th class="col-assessor" data-sort-col="6">Assessor <span class="sort-ind"></span></th>
-                        <th class="col-status" data-sort-col="7">Status <span class="sort-ind"></span></th>
-                        <th class="col-pub" data-sort-col="8">Published <span class="sort-ind"></span></th>
+                        <th class="col-test" data-sort-col="1">Test <span class="sort-ind"></span></th>
+                        <th class="col-taker" data-sort-col="2">Test Taker <span class="sort-ind"></span></th>
+                        <th class="col-timing" data-sort-col="3">Timing <span class="sort-ind"></span></th>
+                        <th class="col-created" data-sort-col="4">Created by <span class="sort-ind"></span></th>
+                        <th class="col-assessor" data-sort-col="5">Assessor <span class="sort-ind"></span></th>
+                        <th class="col-status" data-sort-col="6">Status <span class="sort-ind"></span></th>
+                        <th class="col-pub" data-sort-col="7">Published <span class="sort-ind"></span></th>
                         <th class="col-actions">Action</th>
                     </tr>
                 </thead>
@@ -152,12 +150,10 @@
                         @endphp
                         <tr>
                             <td class="col-appt" data-sort="{{ $assignment->id ?? 0 }}"><strong>{{ $apptId }}</strong></td>
-                            <td class="col-attempt" data-sort="{{ $attemptNo }}">
-                                <strong>{{ $attemptNo }} of {{ $attemptTotal }}</strong>
-                            </td>
                             <td class="col-test" data-sort="{{ $assessmentRow->title ?? '' }}">
                                 <strong>{{ $assessmentRow->title ?: ('Test #'.$assessmentRow->id) }}</strong>
                                 <br><small class="text-muted">{{ $assessmentRow->displayCode() }} · {{ $assessmentRow->kindLabel() }}</small>
+                                <br><small><strong>Attempt {{ $attemptNo }} of {{ $attemptTotal }}</strong></small>
                             </td>
                             <td class="col-taker" data-sort="{{ $student->name ?? '' }}">
                                 @if(!empty($student->id))
@@ -243,7 +239,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="10" class="text-center text-muted">No assignments yet for this test. Use Assign to create sittings.</td></tr>
+                        <tr><td colspan="9" class="text-center text-muted">No assignments yet for this test. Use Assign to create sittings.</td></tr>
                     @endforelse
                 </tbody>
             </table>

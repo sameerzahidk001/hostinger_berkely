@@ -88,9 +88,8 @@
             overflow-wrap: break-word;
             white-space: normal;
         }
-        #assessments-portal .lms-assess-table .col-appt { width: 8%; }
-        #assessments-portal .lms-assess-table .col-attempt { width: 7%; }
-        #assessments-portal .lms-assess-table .col-title { width: 18%; }
+        #assessments-portal .lms-assess-table .col-appt { width: 9%; }
+        #assessments-portal .lms-assess-table .col-title { width: 20%; }
         #assessments-portal .lms-assess-table .col-type { width: 9%; }
         #assessments-portal .lms-assess-table .col-timing { width: 24%; }
         #assessments-portal .lms-assess-table .col-assessor { width: 12%; }
@@ -196,12 +195,11 @@
             <thead>
                 <tr>
                     <th class="col-appt" data-sort-col="0">Appointment ID <span class="sort-ind"></span></th>
-                    <th class="col-attempt" data-sort-col="1">Attempt <span class="sort-ind"></span></th>
-                    <th class="col-title" data-sort-col="2">Test <span class="sort-ind"></span></th>
-                    <th class="col-type" data-sort-col="3">Type <span class="sort-ind"></span></th>
-                    <th class="col-timing" data-sort-col="4">Timing <span class="sort-ind"></span></th>
-                    <th class="col-assessor" data-sort-col="5">Assessor <span class="sort-ind"></span></th>
-                    <th class="col-status" data-sort-col="6">Status <span class="sort-ind"></span></th>
+                    <th class="col-title" data-sort-col="1">Test <span class="sort-ind"></span></th>
+                    <th class="col-type" data-sort-col="2">Type <span class="sort-ind"></span></th>
+                    <th class="col-timing" data-sort-col="3">Timing <span class="sort-ind"></span></th>
+                    <th class="col-assessor" data-sort-col="4">Assessor <span class="sort-ind"></span></th>
+                    <th class="col-status" data-sort-col="5">Status <span class="sort-ind"></span></th>
                     <th class="col-action">Action</th>
                 </tr>
             </thead>
@@ -227,12 +225,10 @@
                     @endphp
                     <tr>
                         <td class="col-appt" data-sort="{{ $asg->id ?? 0 }}"><strong>{{ $apptId }}</strong></td>
-                        <td class="col-attempt" data-sort="{{ $attemptNo }}">
-                            <strong>{{ $attemptNo }} of {{ $attemptTotal }}</strong>
-                        </td>
                         <td class="col-title" data-sort="{{ $a->title }}">
                             {{ $a->title }}
                             <br><small class="text-muted">{{ $a->displayCode() }}</small>
+                            <br><small><strong>Attempt {{ $attemptNo }} of {{ $attemptTotal }}</strong></small>
                             @if($course)
                                 <br><small>
                                     @if(!empty($course->slug))
@@ -299,7 +295,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="8" class="text-center">Nothing in this tab.</td></tr>
+                    <tr><td colspan="7" class="text-center">Nothing in this tab.</td></tr>
                 @endforelse
             </tbody>
         </table>
