@@ -157,9 +157,8 @@ class LmsAssessmentPortalController extends Controller
         $canSeeScore = $attempt->results_published
             || ($attempt->assessment->results_mode === 'instant_mcq' && $attempt->status === 'graded');
 
-        $assignment = $this->assessments->availableAssessmentsForUser($user, $attempt->assessment->kind)
-            ->first(fn ($row) => (int) $row['assessment']->id === (int) $attempt->assessment_id)['assignment'] ?? null;
-        $canRetake = $this->assessments->canRetake($user, $attempt->assessment, $assignment);
+        // Retake only if admin assigned a new open sitting for this test.
+        $canRetake = $this->assessments->canRetake($user, $attempt->assessment);
 
         return view('user.assessments.result', compact('attempt', 'canSeeScore', 'canRetake'));
     }
