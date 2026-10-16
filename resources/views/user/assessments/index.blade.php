@@ -179,10 +179,10 @@
         $nextOpenAtMs = null;
         if ($tab === 'upcoming') {
             foreach ($list as $row) {
-                $from = $row['assignment']->available_from ?? null;
-                if ($from) {
-                    $ms = \Carbon\Carbon::parse($from)->getTimestampMs();
-                    if ($ms > now()->getTimestampMs() && ($nextOpenAtMs === null || $ms < $nextOpenAtMs)) {
+                $start = $row['assignment']?->windowStart();
+                if ($start) {
+                    $ms = $start->getTimestampMs();
+                    if ($ms > now($row['assignment']->timezoneName())->getTimestampMs() && ($nextOpenAtMs === null || $ms < $nextOpenAtMs)) {
                         $nextOpenAtMs = $ms;
                     }
                 }
@@ -194,7 +194,7 @@
         <table class="table table-striped table-bordered lms-assess-table js-sortable-table">
             <thead>
                 <tr>
-                    <th class="col-date" data-sort-col="0">Date <span class="sort-ind"></span></th>
+                    <th class="col-date" data-sort-col="0">Exam start <span class="sort-ind"></span></th>
                     <th class="col-title" data-sort-col="1">Test <span class="sort-ind"></span></th>
                     <th class="col-type" data-sort-col="2">Type <span class="sort-ind"></span></th>
                     <th class="col-timing" data-sort-col="3">Timing <span class="sort-ind"></span></th>
@@ -209,12 +209,19 @@
                         $a = $row['assessment'];
                         $asg = $row['assignment'];
                         $att = $row['attempt'] ?? null;
-                        $dateText = $att
-                            ? (optional($att->submitted_at ?: $att->updated_at)->format('d/m/y H:i') ?? '—')
-                            : (optional($asg?->available_from ?: $asg?->created_at)->format('d/m/y H:i') ?? '—');
-                        $dateSort = $att
-                            ? (optional($att->submitted_at ?: $att->updated_at)->timestamp ?? 0)
-                            : (optional($asg?->available_from ?: $asg?->created_at)->timestamp ?? 0);
+                        // Exam start = appointment start (same clock as Timing), not created-at.
+                        if ($att) {
+                            $dateText = ($asg && $att->submitted_at)
+                                ? $asg->formatInTimezone($att->submitted_at)
+                                : (optional($att->submitted_at ?: $att->updated_at)->format('d/m/y H:i') ?? '—');
+                            $dateSort = optional($att->submitted_at ?: $att->updated_at)->timestamp ?? 0;
+                        } elseif ($asg && $asg->windowStart()) {
+                            $dateText = $asg->windowStart()->format('d/m/y H:i');
+                            $dateSort = $asg->windowStart()->timestamp;
+                        } else {
+                            $dateText = optional($asg?->created_at)->format('d/m/y H:i') ?? '—';
+                            $dateSort = optional($asg?->created_at)->timestamp ?? 0;
+                        }
                         $spend = $att?->spendMinutes();
                         $used = (int) ($row['attempts_used'] ?? 0);
                         $maxAtt = $row['max_attempts'] ?? null;
@@ -269,7 +276,7 @@
                             @elseif($tab === 'missed')
                                 <span class="lms-row-status lms-row-missed">Missed</span>
                             @elseif($tab === 'upcoming')
-                                <span class="lms-row-status lms-row-upcoming">Opens {{ optional($asg?->available_from)->format('d M Y H:i') ?: 'soon' }} · Not open yet</span>
+                                <span class="lms-row-status lms-row-upcoming">Opens {{ $asg?->windowStart()?->format('d M Y H:i') ?: 'soon' }} ({{ $asg?->timezoneLabel() }}) · Not open yet</span>
                             @elseif($canRetake)
                                 <span class="lms-row-status lms-row-available">Assigned retake — start anytime in this window</span>
                             @else

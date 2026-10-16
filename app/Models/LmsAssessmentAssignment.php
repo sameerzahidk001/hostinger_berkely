@@ -132,37 +132,70 @@ class LmsAssessmentAssignment extends Model
     }
 
     /**
-     * Appointment window end = appointment start + exam duration.
+     * Exam start as wall-clock in this sitting's timezone (matches Timing column).
+     * Open/closed uses this so status always agrees with what the student sees.
+     */
+    public function windowStart(): ?Carbon
+    {
+        if (! $this->available_from) {
+            return null;
+        }
+        $tz = $this->timezoneName();
+        try {
+            $wall = $this->formatInTimezone($this->available_from, 'Y-m-d H:i:s');
+
+            return Carbon::createFromFormat('Y-m-d H:i:s', $wall, $tz);
+        } catch (\Throwable $e) {
+            try {
+                return $this->available_from->copy()->timezone($tz);
+            } catch (\Throwable $e2) {
+                return $this->available_from->copy();
+            }
+        }
+    }
+
+    /**
+     * Appointment window end = appointment start + exam duration (same timezone as start).
      * Student may start anytime within that window. Falls back to stored available_until.
      */
     public function appointmentEnd(): ?Carbon
     {
-        if ($this->available_from) {
+        $start = $this->windowStart();
+        if ($start) {
             $mins = (int) ($this->relationLoaded('assessment')
                 ? ($this->assessment?->duration_minutes ?? 0)
                 : ($this->assessment()->value('duration_minutes') ?? 0));
             if ($mins > 0) {
-                return $this->available_from->copy()->addMinutes($mins);
+                return $start->copy()->addMinutes($mins);
             }
         }
+        if (! $this->available_until) {
+            return null;
+        }
+        $tz = $this->timezoneName();
+        try {
+            $wall = $this->formatInTimezone($this->available_until, 'Y-m-d H:i:s');
 
-        return $this->available_until;
+            return Carbon::createFromFormat('Y-m-d H:i:s', $wall, $tz);
+        } catch (\Throwable $e) {
+            return $this->available_until->copy();
+        }
     }
 
     /** Display: "15/10/24 22:25 → 16/10/24 01:25 (Asia/Dubai · GST)" */
     public function appointmentWindowLabel(string $fmt = 'd/m/y H:i'): string
     {
-        $from = $this->available_from;
+        $from = $this->windowStart();
         $until = $this->appointmentEnd();
         $tzSuffix = ' (' . $this->timezoneLabel() . ')';
         if ($from && $until) {
-            return $this->formatInTimezone($from, $fmt) . ' → ' . $this->formatInTimezone($until, $fmt) . $tzSuffix;
+            return $from->format($fmt) . ' → ' . $until->format($fmt) . $tzSuffix;
         }
         if ($from) {
-            return $this->formatInTimezone($from, $fmt) . $tzSuffix;
+            return $from->format($fmt) . $tzSuffix;
         }
         if ($until) {
-            return 'Until ' . $this->formatInTimezone($until, $fmt) . $tzSuffix;
+            return 'Until ' . $until->format($fmt) . $tzSuffix;
         }
 
         return 'Open' . $tzSuffix;
@@ -170,11 +203,12 @@ class LmsAssessmentAssignment extends Model
 
     public function isNotYetOpen(): bool
     {
-        if (! $this->available_from) {
+        $start = $this->windowStart();
+        if (! $start) {
             return false;
         }
 
-        return now()->lt($this->available_from);
+        return now($this->timezoneName())->lt($start);
     }
 
     public function isExpired(): bool
@@ -183,10 +217,13 @@ class LmsAssessmentAssignment extends Model
         if (! $until) {
             return false;
         }
+        $tz = $this->timezoneName();
+        $now = now($tz);
 
         // Same from/until (zero-length window) expires as soon as that timestamp is reached.
-        if ($this->available_from && $this->available_from->equalTo($until)) {
-            return now()->gte($until);
+        $start = $this->windowStart();
+        if ($start && $start->equalTo($until)) {
+            return $now->gte($until);
         }
 
         // Still upcoming — not missed yet.
@@ -194,7 +231,7 @@ class LmsAssessmentAssignment extends Model
             return false;
         }
 
-        return now()->gt($until);
+        return $now->gt($until);
     }
 
     public function isAvailableNow(): bool

@@ -515,54 +515,73 @@ class LmsAssessmentController extends Controller
             $this->assertInstructorOwnsCourse((int) $assessment->course_id);
         }
 
-        $paginator = LmsAssessmentAttempt::query()
-            ->with('user:id,name,email')
-            ->where('assessment_id', $assessment->id)
-            ->orderByDesc('id')
-            ->paginate(40)
-            ->withQueryString();
+        try {
+            $paginator = LmsAssessmentAttempt::query()
+                ->with('user:id,name,email')
+                ->where('assessment_id', $assessment->id)
+                ->orderByDesc('id')
+                ->paginate(40)
+                ->withQueryString();
 
-        $assignments = LmsAssessmentAssignment::query()
-            ->with(['marker:id,name', 'assignedByUser:id,name', 'batch:id,code,name', 'assessment'])
-            ->where('assessment_id', $assessment->id)
-            ->orderByDesc('id')
-            ->get();
-        $assignments->each(fn ($a) => $a->setRelation('assessment', $assessment));
+            $assignments = LmsAssessmentAssignment::query()
+                ->with(['marker:id,name', 'assignedByUser:id,name', 'batch:id,code,name'])
+                ->where('assessment_id', $assessment->id)
+                ->orderByDesc('id')
+                ->get();
+            $assignments->each(fn ($a) => $a->setRelation('assessment', $assessment));
 
-        $batchStudentIds = [];
-        foreach ($assignments->whereNotNull('class_batch_id') as $asg) {
-            $bid = (int) $asg->class_batch_id;
-            if (! isset($batchStudentIds[$bid])) {
-                $batchStudentIds[$bid] = ClassBatch::find($bid)?->students()->pluck('users.id')->map(fn ($id) => (int) $id)->all() ?? [];
+            $batchStudentIds = [];
+            if (Schema::hasTable('class_batches')) {
+                foreach ($assignments->whereNotNull('class_batch_id') as $asg) {
+                    $bid = (int) $asg->class_batch_id;
+                    if (! isset($batchStudentIds[$bid])) {
+                        $batchStudentIds[$bid] = ClassBatch::find($bid)?->students()->pluck('users.id')->map(fn ($id) => (int) $id)->all() ?? [];
+                    }
+                }
             }
+
+            $rows = $paginator->getCollection()->map(function (LmsAssessmentAttempt $attempt) use ($assignments, $assessment, $batchStudentIds) {
+                $uid = (int) $attempt->user_id;
+                $forUser = $assignments->filter(function (LmsAssessmentAssignment $a) use ($uid, $batchStudentIds) {
+                    if ($a->student_id && (int) $a->student_id === $uid) {
+                        return true;
+                    }
+                    if ($a->class_batch_id) {
+                        return in_array($uid, $batchStudentIds[(int) $a->class_batch_id] ?? [], true);
+                    }
+
+                    return false;
+                })->values();
+
+                $assignment = $forUser->first(fn (LmsAssessmentAssignment $a) => $this->assessments->attemptBelongsToAssignment($attempt, $a))
+                    ?? $forUser->first()
+                    ?? $assignments->first();
+
+                $student = $attempt->user;
+                if (! $student) {
+                    $student = (object) [
+                        'id' => $attempt->user_id,
+                        'name' => 'User #' . $attempt->user_id,
+                        'email' => '',
+                    ];
+                }
+
+                return [
+                    'attempt' => $attempt,
+                    'assignment' => $assignment,
+                    'assessment' => $assessment,
+                    'student' => $student,
+                ];
+            });
+
+            $paginator->setCollection($rows);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return redirect()
+                ->route('admin.assessments.tests.index')
+                ->with('error', 'Could not load Results for this test. Please try again or open Assigned Tests.');
         }
-
-        $rows = $paginator->getCollection()->map(function (LmsAssessmentAttempt $attempt) use ($assignments, $assessment, $batchStudentIds) {
-            $uid = (int) $attempt->user_id;
-            $forUser = $assignments->filter(function (LmsAssessmentAssignment $a) use ($uid, $batchStudentIds) {
-                if ($a->student_id && (int) $a->student_id === $uid) {
-                    return true;
-                }
-                if ($a->class_batch_id) {
-                    return in_array($uid, $batchStudentIds[(int) $a->class_batch_id] ?? [], true);
-                }
-
-                return false;
-            })->values();
-
-            $assignment = $forUser->first(fn (LmsAssessmentAssignment $a) => $this->assessments->attemptBelongsToAssignment($attempt, $a))
-                ?? $forUser->first()
-                ?? $assignments->first();
-
-            return [
-                'attempt' => $attempt,
-                'assignment' => $assignment,
-                'assessment' => $assessment,
-                'student' => $attempt->user,
-            ];
-        });
-
-        $paginator->setCollection($rows);
 
         return view('admin.assessments.tests.attempts', [
             'assessment' => $assessment,
@@ -707,7 +726,11 @@ class LmsAssessmentController extends Controller
         if (! $this->lms->isInstructorActor()) {
             return;
         }
-        abort_unless($courseId > 0 && $this->lms->instructorAssignedToCourse($courseId), 403);
+        // General / no-course tests: nothing to check (avoid 403 on Results).
+        if ($courseId <= 0) {
+            return;
+        }
+        abort_unless($this->lms->instructorAssignedToCourse($courseId), 403);
     }
 
     protected function fill(LmsAssessment $a, Request $request, bool $creating): void

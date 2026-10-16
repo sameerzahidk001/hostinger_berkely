@@ -173,7 +173,7 @@
             <table class="table table-striped table-bordered lms-assigned-table js-sortable-table">
                 <thead>
                     <tr>
-                        <th class="col-date" data-sort-col="0">Date <span class="sort-ind"></span></th>
+                        <th class="col-date" data-sort-col="0">Exam start <span class="sort-ind"></span></th>
                         <th class="col-test" data-sort-col="1">Test <span class="sort-ind"></span></th>
                         <th class="col-taker" data-sort-col="2">Test Taker <span class="sort-ind"></span></th>
                         <th class="col-timing" data-sort-col="3">Timing <span class="sort-ind"></span></th>
@@ -203,9 +203,16 @@
                                 $statusClass = 'lms-status-available';
                                 $statusText = 'Assigned';
                             }
-                            $dateText = $attempt
-                                ? (optional($attempt->submitted_at ?: $attempt->updated_at)->format('d/m/y H:i') ?? '—')
-                                : (optional($assignment->created_at)->format('d/m/y H:i') ?? '—');
+                            // Before attempt: show exam appointment start (not created-at).
+                            if ($attempt) {
+                                $dateText = $attempt->submitted_at
+                                    ? $assignment->formatInTimezone($attempt->submitted_at)
+                                    : (optional($attempt->updated_at)->format('d/m/y H:i') ?? '—');
+                            } elseif ($assignment->windowStart()) {
+                                $dateText = $assignment->windowStart()->format('d/m/y H:i');
+                            } else {
+                                $dateText = optional($assignment->created_at)->format('d/m/y H:i') ?? '—';
+                            }
                             $spend = $attempt?->spendMinutes();
                             $appointment = $assignment->appointmentWindowLabel();
                             $assessorName = $attempt
