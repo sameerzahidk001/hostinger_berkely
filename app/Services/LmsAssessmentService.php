@@ -83,6 +83,7 @@ class LmsAssessmentService
 
     /**
      * Assessments visible to a user (assigned via batch or direct, or skill for staff).
+     * One row per assignment sitting — re-assigning the same test creates another row.
      *
      * @return Collection<int, array{assessment: LmsAssessment, assignment: ?LmsAssessmentAssignment}>
      */
@@ -113,43 +114,58 @@ class LmsAssessmentService
         $out = collect();
 
         foreach ($assessments as $assessment) {
-            // Prefer direct user assignment, then batch; among matches prefer open, then upcoming.
-            $matches = $assessment->assignments->filter(function (LmsAssessmentAssignment $a) use ($userId, $batchIds) {
-                if ($a->student_id && (int) $a->student_id === $userId) {
-                    return true;
-                }
-                if ($a->class_batch_id && in_array((int) $a->class_batch_id, $batchIds, true)) {
-                    return true;
-                }
+            $matches = $assessment->assignments
+                ->filter(function (LmsAssessmentAssignment $a) use ($userId, $batchIds) {
+                    if ($a->student_id && (int) $a->student_id === $userId) {
+                        return true;
+                    }
+                    if ($a->class_batch_id && in_array((int) $a->class_batch_id, $batchIds, true)) {
+                        return true;
+                    }
 
-                return false;
-            })->values();
+                    return false;
+                })
+                ->sortByDesc(fn (LmsAssessmentAssignment $a) => (int) $a->id)
+                ->values();
             $matches->each(fn (LmsAssessmentAssignment $a) => $a->setRelation('assessment', $assessment));
-            $assignment = $matches->first(fn (LmsAssessmentAssignment $a) => $a->isAvailableNow())
-                ?? $matches->first(fn (LmsAssessmentAssignment $a) => $a->isNotYetOpen())
-                ?? $matches->first();
 
             if ($assessment->isSkill() || $assessment->audience === LmsAssessment::AUDIENCE_STAFF) {
                 if (! $isStaff) {
                     continue;
                 }
                 // Unassigned skill tests are available to all staff; assigned ones must match.
-                if ($assessment->assignments->isNotEmpty() && ! $assignment) {
+                if ($assessment->assignments->isNotEmpty() && $matches->isEmpty()) {
                     continue;
                 }
+                if ($matches->isEmpty()) {
+                    $out->push(['assessment' => $assessment, 'assignment' => null]);
+                    continue;
+                }
+                foreach ($matches as $assignment) {
+                    $out->push(['assessment' => $assessment, 'assignment' => $assignment]);
+                }
+                continue;
+            }
+
+            // Practice / Mock / General: one portal row per sitting of this same test.
+            foreach ($matches as $assignment) {
                 $out->push(['assessment' => $assessment, 'assignment' => $assignment]);
-                continue;
             }
-
-            // Practice / Mock / General: assignable to students and staff (CW, Accountant, Instructor).
-            if (! $assignment) {
-                continue;
-            }
-
-            $out->push(['assessment' => $assessment, 'assignment' => $assignment]);
         }
 
         return $out;
+    }
+
+    /** Whether an attempt started inside this assignment's appointment window. */
+    public function attemptBelongsToAssignment(LmsAssessmentAttempt $att, ?LmsAssessmentAssignment $asg): bool
+    {
+        if (! $asg || ! $asg->available_from || ! $att->started_at) {
+            return false;
+        }
+        $end = $asg->appointmentEnd() ?: $asg->available_from->copy()->addDays(7);
+
+        return $att->started_at->gte($asg->available_from->copy()->subMinutes(5))
+            && $att->started_at->lte($end->copy()->addDay());
     }
 
     public function userCanAccessAssessment(User $user, LmsAssessment $assessment): bool
@@ -164,11 +180,20 @@ class LmsAssessmentService
         abort_unless($assessment->isPublished(), 403);
         abort_unless($this->userCanAccessAssessment($user, $assessment), 403);
 
-        $access = $this->availableAssessmentsForUser($user, $assessment->kind)
-            ->first(fn ($row) => (int) $row['assessment']->id === (int) $assessment->id);
-        $assignment = $access['assignment'] ?? null;
-        if ($assignment && ! $assignment->isAvailableNow()) {
-            abort(403, $assignment->isNotYetOpen()
+        $accessRows = $this->availableAssessmentsForUser($user, $assessment->kind)
+            ->filter(fn ($row) => (int) $row['assessment']->id === (int) $assessment->id)
+            ->values();
+        abort_unless($accessRows->isNotEmpty(), 403);
+
+        // Prefer the newest sitting that is open right now.
+        $assignment = $accessRows
+            ->map(fn ($row) => $row['assignment'])
+            ->filter()
+            ->first(fn (LmsAssessmentAssignment $a) => $a->isAvailableNow());
+
+        if (! $assignment && $accessRows->contains(fn ($row) => $row['assignment'] !== null)) {
+            $blocked = $accessRows->map(fn ($row) => $row['assignment'])->filter()->first();
+            abort(403, ($blocked && $blocked->isNotYetOpen())
                 ? 'This exam is not open yet.'
                 : 'The availability window for this exam has ended.');
         }
@@ -488,31 +513,61 @@ class LmsAssessmentService
         $results = collect();
         $missed = collect();
 
+        $assessmentIds = $items->pluck('assessment.id')->unique()->filter()->values()->all();
+        $attemptsByAssessment = $assessmentIds === []
+            ? collect()
+            : LmsAssessmentAttempt::query()
+                ->where('user_id', $user->id)
+                ->whereIn('assessment_id', $assessmentIds)
+                ->orderByDesc('id')
+                ->get()
+                ->groupBy(fn ($a) => (int) $a->assessment_id);
+
+        $newestAssignmentId = [];
+        foreach ($items as $row) {
+            $aid = (int) $row['assessment']->id;
+            $asgId = (int) ($row['assignment']->id ?? 0);
+            $newestAssignmentId[$aid] = max($newestAssignmentId[$aid] ?? 0, $asgId);
+        }
+
+        $claimedAttemptIds = [];
+        $inProgressShown = [];
+
         foreach ($items as $row) {
             /** @var LmsAssessment $assessment */
             $assessment = $row['assessment'];
             /** @var LmsAssessmentAssignment|null $assignment */
             $assignment = $row['assignment'];
+            $aid = (int) $assessment->id;
 
-            $attempts = LmsAssessmentAttempt::query()
-                ->where('assessment_id', $assessment->id)
-                ->where('user_id', $user->id)
-                ->orderByDesc('id')
-                ->get();
-
+            $attempts = $attemptsByAssessment->get($aid) ?? collect();
             $used = $attempts->count();
             $max = $assessment->max_attempts;
 
-            $open = $attempts->firstWhere('status', 'in_progress');
-            if ($open) {
-                if ($open->isTimedOut()) {
-                    $this->submitAttempt($open, true);
-                    $open = $open->fresh();
+            $matched = $attempts->first(function ($att) use ($assignment, $claimedAttemptIds) {
+                return ! isset($claimedAttemptIds[(int) $att->id])
+                    && $this->attemptBelongsToAssignment($att, $assignment);
+            });
+            if (! $matched && $assignment && (int) $assignment->id === (int) ($newestAssignmentId[$aid] ?? 0)) {
+                $matched = $attempts->first(fn ($att) => ! isset($claimedAttemptIds[(int) $att->id]));
+            }
+            if ($matched) {
+                $claimedAttemptIds[(int) $matched->id] = true;
+            }
+
+            if ($matched && $matched->status === 'in_progress') {
+                if ($matched->isTimedOut()) {
+                    $this->submitAttempt($matched, true);
+                    $matched = $matched->fresh();
                 } else {
+                    if (! empty($inProgressShown[$aid])) {
+                        continue;
+                    }
+                    $inProgressShown[$aid] = true;
                     $inProgress->push([
                         'assessment' => $assessment,
                         'assignment' => $assignment,
-                        'attempt' => $open,
+                        'attempt' => $matched,
                         'attempts_used' => $used,
                         'max_attempts' => $max,
                         'can_retake' => false,
@@ -525,7 +580,10 @@ class LmsAssessmentService
             $underLimit = $max === null || $used < (int) $max;
             $canRetake = $windowOpen && $underLimit;
 
-            $done = $attempts->first(fn ($a) => in_array($a->status, ['submitted', 'graded', 'expired'], true));
+            $done = $matched && in_array($matched->status, ['submitted', 'graded', 'expired'], true)
+                ? $matched
+                : null;
+
             if ($done && $done->results_published) {
                 $results->push([
                     'assessment' => $assessment,
@@ -547,7 +605,7 @@ class LmsAssessmentService
             }
 
             if ($done) {
-                // Still allowed more sittings → also list under Available with Retake.
+                // Still allowed more sittings on this open window → also list under Available.
                 if ($canRetake) {
                     $available->push([
                         'assessment' => $assessment,

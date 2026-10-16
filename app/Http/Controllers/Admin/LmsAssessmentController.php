@@ -208,9 +208,9 @@ class LmsAssessmentController extends Controller
             'student_ids' => 'nullable|array',
             'student_ids.*' => 'exists:users,id',
             'marker_user_id' => 'nullable|exists:users,id',
-            'available_from' => 'nullable|date',
+            'available_from' => 'required|date',
             'available_until' => 'nullable|date',
-            'timezone' => 'nullable|string|max:64',
+            'timezone' => 'required|string|max:64',
         ]);
         if ($validator->fails()) {
             return back()->withErrors($validator)->withInput();
@@ -226,7 +226,7 @@ class LmsAssessmentController extends Controller
         $created = (int) $request->attributes->get('lms_assignments_created', $batchCount + $studentCount);
 
         return redirect()->route('admin.assessments.tests.assigned-users', ['assessment_id' => $a->id])
-            ->with('success', $created . ' new assignment' . ($created === 1 ? '' : 's') . ' created for “' . $a->title . '” (same test, new sitting).');
+            ->with('success', $created . ' new sitting' . ($created === 1 ? '' : 's') . ' created for test “' . $a->title . '”. Open Assigned Tests below — each save adds a new row for the same test.');
     }
 
     /**
@@ -333,8 +333,12 @@ class LmsAssessmentController extends Controller
             }
 
             $students = collect();
-            if ($assignment->student_id && $assignment->student) {
-                $students->push($assignment->student);
+            if ($assignment->student_id) {
+                $student = $assignment->student
+                    ?: \App\Models\User::query()->find($assignment->student_id);
+                if ($student) {
+                    $students->push($student);
+                }
             } elseif ($assignment->class_batch_id) {
                 $bid = (int) $assignment->class_batch_id;
                 if ($batchId > 0 && $bid !== $batchId) {

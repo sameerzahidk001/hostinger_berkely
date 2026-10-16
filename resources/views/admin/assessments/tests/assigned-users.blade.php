@@ -218,9 +218,9 @@
                         @endphp
                         <tr>
                             <td class="col-date" data-sort="{{ $attempt ? optional($attempt->submitted_at ?: $attempt->updated_at)->timestamp : optional($assignment->created_at)->timestamp }}">{{ $dateText }}</td>
-                            <td class="col-test" data-sort="{{ $assessment->title ?? '' }}">
-                                {{ $assessment->title ?? '—' }}
-                                <br><small class="text-muted">{{ $assessment->displayCode() }} · {{ $assessment->kindLabel() }}</small>
+                            <td class="col-test" data-sort="{{ $assessment->title ?? ('Test #'.($assignment->assessment_id ?? '')) }}">
+                                <strong>{{ $assessment->title ?: ('Test #'.$assessment->id) }}</strong>
+                                <br><small class="text-muted">{{ $assessment->displayCode() }} · {{ $assessment->kindLabel() }} · Sitting #{{ $assignment->id }}</small>
                             </td>
                             <td class="col-taker" data-sort="{{ $row['student']->name ?? '' }}">
                                 @if(!empty($row['student']->id))
@@ -229,6 +229,9 @@
                                     {{ $row['student']->name ?? '—' }}
                                 @endif
                                 <br><small class="text-muted">{{ $row['student']->email ?? '' }}</small>
+                                @if($assignment->batch)
+                                    <br><small class="text-muted">Batch: {{ $assignment->batch->code ?? $assignment->batch->name }}</small>
+                                @endif
                                 @if($course)
                                     <br><small>
                                         <a href="{{ route('course.edit', $course->id) }}">{{ $course->title }}</a>
@@ -295,10 +298,11 @@
                                         </form>
                                     @endif
                                 @elseif($attempt && $attempt->status === 'in_progress')
-                                    <span class="text-muted">In progress</span>
+                                    <span class="text-muted" style="display:block;margin-bottom:4px;">In progress</span>
                                 @else
-                                    <span class="text-muted">Not started</span>
+                                    <span class="text-muted" style="display:block;margin-bottom:4px;">Not started</span>
                                 @endif
+                                <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.assign', $assessment->id) }}">Assign again</a>
                             </td>
                         </tr>
                     @empty
