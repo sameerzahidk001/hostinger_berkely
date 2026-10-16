@@ -70,6 +70,30 @@ class LmsAssessmentService
             && $this->lms->actorHasLmsPermission('assign_student_assessments');
     }
 
+    /**
+     * Edit / delete / re-assign sittings for a test.
+     * Admin: always. Instructor: only if they have create or assign permission AND created the test.
+     * Assessor-only (marker) does not get these actions.
+     */
+    public function canManageSittingsFor(LmsAssessment $assessment): bool
+    {
+        if ($this->lms->isAdminActor() || panel_sees_all_dashboards()) {
+            return true;
+        }
+
+        if ($assessment->isSkill()) {
+            return $this->canManageSkillTests();
+        }
+
+        if (! $this->canCreateStudentAssessments() && ! $this->canAssignStudentAssessments()) {
+            return false;
+        }
+
+        $uid = (int) (Auth::id() ?? 0);
+
+        return $uid > 0 && (int) ($assessment->created_by_user_id ?? 0) === $uid;
+    }
+
     public function canManageSkillTests(): bool
     {
         return $this->lms->isAdminActor() || panel_sees_all_dashboards();

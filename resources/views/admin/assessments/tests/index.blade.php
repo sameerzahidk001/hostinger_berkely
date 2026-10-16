@@ -159,8 +159,11 @@
                             @endif
                         </td>
                         <td class="col-action">
-                            <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.edit', $row->id) }}">Edit</a>
-                            @if(!empty($canAssign))
+                            @php
+                                $canManageRow = app(\App\Services\LmsAssessmentService::class)->canManageSittingsFor($row);
+                            @endphp
+                            @if($canManageRow)
+                                <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.edit', $row->id) }}">Edit</a>
                                 <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.assign', $row->id) }}">Assign</a>
                             @endif
                             <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.attempts', $row->id) }}">Results</a>

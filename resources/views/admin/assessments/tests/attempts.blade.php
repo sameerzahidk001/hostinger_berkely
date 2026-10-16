@@ -214,6 +214,10 @@
                                 @endif
                             </td>
                             <td class="col-actions">
+                                @php
+                                    $canManageSitting = $assessmentRow
+                                        && app(\App\Services\LmsAssessmentService::class)->canManageSittingsFor($assessmentRow);
+                                @endphp
                                 @if($attempt && in_array($attempt->status, ['submitted', 'graded', 'expired'], true))
                                     <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.mark', $attempt->id) }}">View Details</a>
                                     <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.attempt-pdf', $attempt->id) }}" target="_blank">Download PDF</a>
@@ -224,10 +228,8 @@
                                         </form>
                                     @endunless
                                 @endif
-                                @if(!empty($canAssign) && $assignment)
+                                @if($canManageSitting && $assignment)
                                     <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.edit-assignment', $assignment->id) }}">Edit</a>
-                                @endif
-                                @if(!empty($canDeleteAttempts) && $assignment)
                                     <form action="{{ route('admin.assessments.tests.destroy-assignment', $assignment->id) }}" method="POST" onsubmit="return confirm('Delete this sitting ({{ $apptId }})?');">
                                         @csrf
                                         @method('DELETE')
@@ -236,8 +238,8 @@
                                         @endif
                                         <button type="submit" class="btn btn-xs btn-danger">Delete</button>
                                     </form>
+                                    <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.assign', $assessmentRow->id) }}">Assign again</a>
                                 @endif
-                                <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.assign', $assessmentRow->id) }}">Assign again</a>
                             </td>
                         </tr>
                     @empty
