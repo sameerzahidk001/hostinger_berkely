@@ -225,7 +225,7 @@
                             </td>
                             <td class="col-taker" data-sort="{{ $row['student']->name ?? '' }}">
                                 @if(!empty($row['student']->id))
-                                    <a href="{{ route('users.edit', $row['student']->id) }}">{{ $row['student']->name ?? '—' }}</a>
+                                    <a href="#" class="lms-user-preview" data-user-id="{{ $row['student']->id }}">{{ $row['student']->name ?? '—' }}</a>
                                 @else
                                     {{ $row['student']->name ?? '—' }}
                                 @endif
@@ -235,7 +235,11 @@
                                 @endif
                                 @if($course)
                                     <br><small>
-                                        <a href="{{ route('course.edit', $course->id) }}">{{ $course->title }}</a>
+                                        @if(!empty($course->slug))
+                                            <a href="{{ route('course.details', ['course' => $course->slug]) }}" target="_blank" rel="noopener noreferrer">{{ $course->title }}</a>
+                                        @else
+                                            <a href="{{ route('course.show', $course->id) }}" target="_blank" rel="noopener noreferrer">{{ $course->title }}</a>
+                                        @endif
                                     </small>
                                 @endif
                             </td>
@@ -249,14 +253,14 @@
                             </td>
                             <td class="col-created" data-sort="{{ $assignment->createdByLabel() }}">
                                 @if($assignment->assigned_by_user_id)
-                                    <a href="{{ route('users.edit', $assignment->assigned_by_user_id) }}">{{ $assignment->createdByLabel() }}</a>
+                                    <a href="#" class="lms-user-preview" data-user-id="{{ $assignment->assigned_by_user_id }}">{{ $assignment->createdByLabel() }}</a>
                                 @else
                                     {{ $assignment->createdByLabel() }}
                                 @endif
                             </td>
                             <td class="col-assessor" data-sort="{{ $assessorName }}">
                                 @if($assessorUserId)
-                                    <a href="{{ route('users.edit', $assessorUserId) }}">{{ $assessorName }}</a>
+                                    <a href="#" class="lms-user-preview" data-user-id="{{ $assessorUserId }}">{{ $assessorName }}</a>
                                 @else
                                     {{ $assessorName }}
                                 @endif
@@ -318,4 +322,5 @@
         </div>
     </div>
 </div>
+@include('admin.assessments.partials.user-preview-modal')
 @endsection

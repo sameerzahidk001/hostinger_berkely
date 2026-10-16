@@ -325,9 +325,18 @@ class LmsAssessmentService
         $attempt->user_id = $user->id;
         $attempt->status = 'in_progress';
         $attempt->started_at = now();
+        // Hard stop at exam duration and/or appointment window end (whichever is sooner).
+        $expires = null;
         if ($assessment->duration_minutes) {
-            $attempt->expires_at = now()->addMinutes((int) $assessment->duration_minutes);
+            $expires = now()->addMinutes((int) $assessment->duration_minutes);
         }
+        if ($assignment) {
+            $apptEnd = $assignment->appointmentEnd();
+            if ($apptEnd) {
+                $expires = $expires ? $expires->min($apptEnd) : $apptEnd->copy();
+            }
+        }
+        $attempt->expires_at = $expires;
         $attempt->save();
 
         return $attempt;
@@ -376,11 +385,20 @@ class LmsAssessmentService
             return $attempt;
         }
 
+        if (! $expired && $attempt->expires_at && now()->gte($attempt->expires_at)) {
+            $expired = true;
+        }
+
         $assessment = $attempt->assessment()->with('questions')->first();
         $this->autoMarkMcqs($attempt, $assessment);
 
         $attempt->status = $expired ? 'expired' : 'submitted';
-        $attempt->submitted_at = now();
+        // Timed-out submits use expires_at so spent duration cannot exceed the allowed window.
+        if ($expired && $attempt->expires_at) {
+            $attempt->submitted_at = $attempt->expires_at->copy();
+        } else {
+            $attempt->submitted_at = now();
+        }
         $this->recalculateScores($attempt);
 
         $needsManual = $assessment->questions->contains(fn (LmsQuestion $q) => $q->needsManualMark());

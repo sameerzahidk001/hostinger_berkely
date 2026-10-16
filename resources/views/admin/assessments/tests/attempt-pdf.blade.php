@@ -9,10 +9,10 @@
         .top { width: 100%; margin-bottom: 14px; border-bottom: 1px solid #e5e5e5; padding-bottom: 10px; }
         .top td { vertical-align: middle; }
         .brand { font-size: 14px; font-weight: bold; color: #1a365d; }
-        .doc-title { font-size: 16px; font-weight: bold; margin-top: 2px; }
-        .doc-sub { font-size: 10px; color: #777; margin-top: 2px; }
+        .doc-title { font-size: 16px; font-weight: bold; margin-top: 2px; text-transform: uppercase; }
+        .doc-sub { font-size: 11px; color: #444; margin-top: 4px; }
+        .doc-sub-muted { font-size: 10px; color: #777; margin-top: 2px; }
         .logo { height: 48px; max-width: 180px; }
-        h1 { font-size: 18px; margin: 10px 0 8px; }
         h2 { font-size: 14px; margin: 18px 0 8px; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
         .meta { margin-bottom: 8px; }
         .meta td { padding: 2px 8px 2px 0; vertical-align: top; }
@@ -61,25 +61,33 @@
         $attempt->assessment,
         $assignment
     );
+    $kindLabel = strtoupper((string) ($attempt->assessment->kindLabel() ?? 'EXAM'));
     $fmtTime = function ($dt) use ($assignment) {
         if (! $dt) {
             return '—';
         }
         if ($assignment) {
-            return $assignment->formatInTimezone($dt, 'd/m/Y H:i')
-                . (filled($assignment->timezone) ? ' (' . $assignment->timezoneLabel() . ')' : '');
+            return $assignment->formatInTimezone($dt, 'd/m/Y H:i');
         }
 
         return optional($dt)->format('d/m/Y H:i') ?? '—';
     };
+    $spent = $attempt->spendMinutes();
+    $publishedOn = $attempt->results_published
+        ? ($attempt->results_published_at
+            ? $fmtTime($attempt->results_published_at)
+            : 'Yes')
+        : 'No';
 @endphp
 
     <table class="top">
         <tr>
             <td style="width:62%;">
                 <div class="brand">Berkeley School of Business, Arts &amp; Sciences</div>
-                <div class="doc-title">Exam Result</div>
+                <div class="doc-title">{{ $kindLabel }} RESULT</div>
+                <div class="doc-sub">{{ $attempt->assessment->course->title ?? '—' }}</div>
                 <div class="doc-sub">{{ $attempt->assessment->title ?? 'Assessment attempt' }}</div>
+                <div class="doc-sub-muted">Attempt {{ $attemptMeta['number'] }} of {{ $attemptMeta['total'] }}</div>
             </td>
             <td style="width:38%; text-align:right;">
                 @if($logoSrc)
@@ -90,31 +98,22 @@
     </table>
 
     <table class="meta">
-        <tr><td class="muted">Test Taker</td><td>{{ $attempt->user->name ?? '—' }} ({{ $attempt->user->email ?? '' }})</td></tr>
-        <tr><td class="muted">Course</td><td>{{ $attempt->assessment->course->title ?? '—' }}</td></tr>
-        <tr><td class="muted">Type</td><td>{{ $attempt->assessment->kindLabel() }}</td></tr>
-        <tr><td class="muted">Status</td><td>{{ $attempt->statusLabel() }}</td></tr>
-        <tr><td class="muted">Score</td><td class="score">
+        <tr><td class="muted">Test Taker Name</td><td>{{ $attempt->user->name ?? '—' }} ({{ $attempt->user->email ?? '' }})</td></tr>
+        <tr><td class="muted">Test Result</td><td class="score">
             @if($attempt->score_raw !== null)
                 {{ lms_format_number($attempt->score_raw) }} / {{ lms_format_number($attempt->score_max) }}
                 @if($attempt->percent() !== null) ({{ lms_format_number($attempt->percent()) }}%) @endif
             @else — @endif
         </td></tr>
-        <tr><td class="muted">Test ID</td><td>{{ $attempt->assessment->displayCode() }}</td></tr>
         <tr><td class="muted">Appointment ID</td><td>{{ $assignment ? $assignment->displayCode() : '—' }}</td></tr>
-        <tr><td class="muted">Attempt</td><td>{{ $attemptMeta['number'] }} of {{ $attemptMeta['total'] }}</td></tr>
-        <tr><td class="muted">Duration given</td><td>{{ $attempt->assessment->duration_minutes ? $attempt->assessment->duration_minutes . ' min' : '—' }}</td></tr>
-        @if($assignment)
-            <tr><td class="muted">Exam appointment</td><td>{{ $assignment->appointmentWindowLabel('d/m/Y H:i') }}</td></tr>
-        @endif
-        <tr><td class="muted">Start time</td><td>{{ $fmtTime($attempt->started_at) }}</td></tr>
-        <tr><td class="muted">End time</td><td>{{ $fmtTime($attempt->submitted_at) }}</td></tr>
-        <tr><td class="muted">Spend duration</td><td>{{ ($m = $attempt->spendMinutes()) !== null ? $m . ' min' : '—' }}</td></tr>
-        @if($assignment && filled($assignment->timezone))
-            <tr><td class="muted">Timezone</td><td>{{ $assignment->timezoneLabel() }}</td></tr>
-        @endif
-        <tr><td class="muted">Assessor</td><td>{{ $attempt->assessorLabel() }}</td></tr>
-        <tr><td class="muted">Published</td><td>{{ $attempt->results_published ? 'Yes' : 'No' }}</td></tr>
+        <tr><td class="muted">Test Appointment Time</td><td>{{ $assignment ? $assignment->appointmentWindowLabel('d/m/Y H:i') : '—' }}</td></tr>
+        <tr><td class="muted">Test ID</td><td>{{ $attempt->assessment->displayCode() }}</td></tr>
+        <tr><td class="muted">Test Duration</td><td>{{ $attempt->assessment->duration_minutes ? $attempt->assessment->duration_minutes . ' min' : '—' }}</td></tr>
+        <tr><td class="muted">Started Time</td><td>{{ $fmtTime($attempt->started_at) }}</td></tr>
+        <tr><td class="muted">Ended Time</td><td>{{ $fmtTime($attempt->submitted_at) }}</td></tr>
+        <tr><td class="muted">Spent Duration</td><td>{{ $spent !== null ? $spent . ' min' : '—' }}</td></tr>
+        <tr><td class="muted">Assessor Name</td><td>{{ $attempt->assessorLabel($assignment) }}</td></tr>
+        <tr><td class="muted">Published on</td><td>{{ $publishedOn }}</td></tr>
     </table>
 
     @if($attempt->grader_feedback)

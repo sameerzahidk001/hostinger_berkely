@@ -113,32 +113,58 @@
 document.body.classList.add('lms-take-mode');
 (function () {
     var el = document.getElementById('expires_at');
-    if (!el) return;
-    var end = new Date(el.textContent);
+    var form = document.getElementById('attempt-form');
+    if (!el || !form) return;
+    var end = new Date(el.textContent.trim());
     var out = document.getElementById('countdown');
-    function tick() {
-        var ms = end - new Date();
-        if (ms <= 0) {
-            out.textContent = 'Time is up — submitting…';
-            var form = document.getElementById('attempt-form');
-            if (form && !form.dataset.autoSubmitted) {
-                form.dataset.autoSubmitted = '1';
-                var input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'submit';
-                input.value = '1';
-                form.appendChild(input);
-                form.submit();
+
+    function autoSubmit() {
+        if (form.dataset.autoSubmitted) return;
+        form.dataset.autoSubmitted = '1';
+        if (out) out.textContent = 'Time is up — submitting…';
+        var input = form.querySelector('input[name="submit"][type="hidden"]');
+        if (!input) {
+            input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'submit';
+            form.appendChild(input);
+        }
+        input.value = '1';
+        // Prefer beacon if the tab is closing; otherwise normal submit.
+        try {
+            if (navigator.sendBeacon && document.visibilityState === 'hidden') {
+                var fd = new FormData(form);
+                fd.set('submit', '1');
+                navigator.sendBeacon(form.action, fd);
+                return;
             }
+        } catch (e) {}
+        form.submit();
+    }
+
+    function tick() {
+        var ms = end.getTime() - Date.now();
+        if (ms <= 0) {
+            autoSubmit();
             return;
         }
         var s = Math.floor(ms / 1000);
         var m = Math.floor(s / 60);
         s = s % 60;
-        out.textContent = m + 'm ' + s + 's left';
+        if (out) out.textContent = m + 'm ' + s + 's left';
         setTimeout(tick, 1000);
     }
     tick();
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'hidden' && Date.now() >= end.getTime()) {
+            autoSubmit();
+        }
+    });
+    window.addEventListener('pagehide', function () {
+        if (Date.now() >= end.getTime()) {
+            autoSubmit();
+        }
+    });
 })();
 </script>
 @endpush

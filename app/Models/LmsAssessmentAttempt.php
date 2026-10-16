@@ -85,14 +85,22 @@ class LmsAssessmentAttempt extends Model
         };
     }
 
-    /** Minutes spent from start to submit (null if incomplete). */
+    /** Minutes spent from start to submit (null if incomplete). Capped at exam duration. */
     public function spendMinutes(): ?int
     {
         if (! $this->started_at || ! $this->submitted_at) {
             return null;
         }
 
-        return (int) max(0, $this->started_at->diffInMinutes($this->submitted_at));
+        $spent = (int) max(0, $this->started_at->diffInMinutes($this->submitted_at));
+        $cap = (int) ($this->relationLoaded('assessment')
+            ? ($this->assessment?->duration_minutes ?? 0)
+            : ($this->assessment()->value('duration_minutes') ?? 0));
+        if ($cap > 0) {
+            return min($spent, $cap);
+        }
+
+        return $spent;
     }
 
     public function assessorLabel(?LmsAssessmentAssignment $assignment = null): string

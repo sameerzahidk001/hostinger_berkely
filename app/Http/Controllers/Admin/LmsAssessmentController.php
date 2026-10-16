@@ -223,6 +223,31 @@ class LmsAssessmentController extends Controller
             ->with('success', $created . ' new sitting' . ($created === 1 ? '' : 's') . ' created for test “' . $a->title . '”. Open Assigned Tests below — each save adds a new row for the same test.');
     }
 
+    /** Read-only profile JSON for Assigned Tests / Results popups (no user-edit access required). */
+    public function userPreview($userId)
+    {
+        abort_unless(
+            $this->assessments->canManageStudentAssessments()
+            || $this->assessments->canManageSkillTests()
+            || $this->assessments->canAssignStudentAssessments(),
+            403
+        );
+        $user = User::query()->with('roles:id,name')->findOrFail($userId);
+        $roles = $user->roles
+            ->pluck('name')
+            ->map(fn ($n) => ucwords(str_replace(['_', '-'], ' ', (string) $n)))
+            ->filter()
+            ->implode(', ');
+
+        return response()->json([
+            'id' => (int) $user->id,
+            'name' => $user->name ?: ('User #' . $user->id),
+            'email' => $user->email ?: '—',
+            'mobile' => $user->mobile_number ?: '—',
+            'roles' => $roles !== '' ? $roles : '—',
+        ]);
+    }
+
     public function editAssignment($assignmentId)
     {
         $this->assessments->ensure();
