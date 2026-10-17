@@ -27,10 +27,10 @@
         overflow-wrap: break-word;
         white-space: normal;
     }
-    .lms-attempts-table .col-appt { width: 9%; }
-    .lms-attempts-table .col-test { width: 15%; }
-    .lms-attempts-table .col-taker { width: 13%; }
-    .lms-attempts-table .col-timing { width: 16%; }
+    .lms-attempts-table .col-appt { width: 10%; white-space: nowrap !important; }
+    .lms-attempts-table .col-test { width: 17%; }
+    .lms-attempts-table .col-taker { width: 12%; }
+    .lms-attempts-table .col-timing { width: 22%; }
     .lms-attempts-table .col-created { width: 8%; }
     .lms-attempts-table .col-assessor { width: 8%; }
     .lms-attempts-table .col-status { width: 11%; }
@@ -89,6 +89,7 @@
         </ol>
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
+        <a href="{{ route('admin.assessments.tests.attempts', ['id' => $assessment->id, 'export' => 'excel']) }}" class="btn btn-success btn-sm"><i class="fa fa-file-excel-o"></i> Download Excel</a>
         <a href="{{ route('admin.assessments.tests.index') }}" class="btn btn-default btn-sm">Back to ALL TESTS</a>
         <a href="{{ route('admin.assessments.tests.assigned-users', ['assessment_id' => $assessment->id]) }}" class="btn btn-default btn-sm">Assigned Tests</a>
     </div>
@@ -103,7 +104,7 @@
             <table class="table table-striped table-bordered lms-attempts-table js-sortable-table">
                 <thead>
                     <tr>
-                        <th class="col-appt" data-sort-col="0">Appointment ID <span class="sort-ind"></span></th>
+                        <th class="col-appt" data-sort-col="0" style="white-space:nowrap;">Appointment ID <span class="sort-ind"></span></th>
                         <th class="col-test" data-sort-col="1">Test <span class="sort-ind"></span></th>
                         <th class="col-taker" data-sort-col="2">Test Taker <span class="sort-ind"></span></th>
                         <th class="col-timing" data-sort-col="3">Timing <span class="sort-ind"></span></th>

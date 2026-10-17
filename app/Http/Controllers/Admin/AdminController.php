@@ -1323,14 +1323,20 @@ class AdminController extends Controller
         }
         $fileStamp = $filename . '_' . now()->format('Y-m-d');
 
+        // Exports: morning → evening (ascending), time without seconds (hh:mm AM/PM).
+        $rows = collect($rows)
+            ->sortBy(fn (array $row) => optional($row['occurred_at'] ?? null)?->timestamp ?? 0)
+            ->values();
+
         if ($format === 'pdf') {
             $pdf = Pdf::loadView('admin.dashboard.activity-pdf', [
                 'title' => $title,
                 'username' => $username,
-                'generatedAt' => now()->format('Y-m-d H:i:s'),
+                'generatedAt' => now()->format('M j, Y g:i A'),
                 'dateFrom' => $dateFrom,
                 'dateTo' => $dateTo,
                 'rows' => $rows,
+                'gapMinutes' => 10,
             ])->setPaper('a4', 'landscape');
 
             return $pdf->download($fileStamp . '.pdf');
@@ -1345,6 +1351,7 @@ class AdminController extends Controller
             fputcsv($handle, []);
             fputcsv($handle, $headers);
 
+            $prevTs = null;
             foreach ($rows as $activity) {
                 $visitUrl = $activity['visit_url'] ?? '';
                 $editUrl = $activity['edit_url'] ?? '';
@@ -1361,8 +1368,17 @@ class AdminController extends Controller
                     $editUrl = $fallbackUrl;
                 }
 
+                $ts = optional($activity['occurred_at'] ?? null)?->timestamp;
+                if ($prevTs !== null && $ts !== null && ($ts - $prevTs) > 10 * 60) {
+                    fputcsv($handle, ['---------- 10+ min gap ----------', '', '', '', '', '']);
+                }
+                if ($ts !== null) {
+                    $prevTs = $ts;
+                }
+
+                $when = optional($activity['occurred_at'] ?? null);
                 fputcsv($handle, [
-                    $activity['occurred_at']->format('Y-m-d H:i:s'),
+                    $when ? $when->format('M j, Y g:i A') : '—',
                     $activity['user_name'] ?? '—',
                     activity_action_label($activity['action'] ?? ''),
                     $activity['item'] ?? '',

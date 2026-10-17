@@ -2,20 +2,37 @@
 @section('title', 'Taking: ' . ($attempt->assessment->title ?? 'Assessment'))
 @push('style')
 <style>
-    /* Sticky works inside #page-wrapper (that element scrolls). */
+    /* Fixed take header — sticky fails when ancestors use overflow. */
+    body.lms-take-mode,
+    body.lms-take-mode #wrapper {
+        overflow: visible !important;
+    }
     body.lms-take-mode #page-wrapper {
-        overflow-x: hidden;
+        overflow: visible !important;
+        padding-top: 0;
     }
     body.lms-take-mode .wrapper-content {
-        overflow-x: visible;
+        overflow: visible !important;
+        padding-top: 8px;
     }
     .lms-take-sticky {
-        position: sticky;
+        position: fixed;
         top: 0;
+        left: 220px;
+        right: 0;
         z-index: 1040;
         background: #fff;
         box-shadow: 0 2px 10px rgba(0, 0, 0, .1);
-        margin: 0 0 14px;
+        margin: 0;
+    }
+    body.lms-take-mode #page-wrapper > .wrapper-content,
+    body.lms-take-mode .wrapper.wrapper-content {
+        margin-top: 150px;
+    }
+    @media (max-width: 768px) {
+        .lms-take-sticky { left: 0; }
+        body.lms-take-mode #page-wrapper > .wrapper-content,
+        body.lms-take-mode .wrapper.wrapper-content { margin-top: 160px; }
     }
     .lms-take-sticky .page-heading {
         margin: 0;
@@ -150,6 +167,8 @@
 @push('script')
 <script>
 document.body.classList.add('lms-take-mode');
+document.body.classList.add('lms-exam-lock');
+document.body.setAttribute('data-lms-exam-lock', '1');
 (function () {
     var steps = Array.prototype.slice.call(document.querySelectorAll('.lms-q-step'));
     var btnBack = document.getElementById('lms-q-back');
