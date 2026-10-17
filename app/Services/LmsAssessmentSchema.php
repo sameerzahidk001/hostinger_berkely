@@ -55,6 +55,16 @@ class LmsAssessmentSchema
                 $table->unsignedInteger('time_limit_minutes')->nullable();
             });
         }
+        if (Schema::hasTable('lms_assessments') && ! Schema::hasColumn('lms_assessments', 'reference_files_json')) {
+            Schema::table('lms_assessments', function (Blueprint $table) {
+                $table->json('reference_files_json')->nullable();
+            });
+        }
+        if (Schema::hasTable('lms_assessments') && ! Schema::hasColumn('lms_assessments', 'preseen_files_json')) {
+            Schema::table('lms_assessments', function (Blueprint $table) {
+                $table->json('preseen_files_json')->nullable();
+            });
+        }
     }
 
     protected static function ensureQuestions(): void

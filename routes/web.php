@@ -696,6 +696,7 @@ Route::prefix('user')->middleware(['auth', 'approved', 'redirect.panel.from.stud
     Route::get('/mock-exams', [LmsAssessmentPortalController::class, 'mocks'])->name('user.assessments.mocks');
     Route::get('/assessments/{id}/start', [LmsAssessmentPortalController::class, 'start'])->name('user.assessments.start');
     Route::get('/assessments/attempts/{attemptId}', [LmsAssessmentPortalController::class, 'take'])->name('user.assessments.take');
+    Route::get('/assessments/attempts/{attemptId}/resource/{kind}/{index}', [LmsAssessmentPortalController::class, 'resource'])->name('user.assessments.resource');
     Route::post('/assessments/attempts/{attemptId}', [LmsAssessmentPortalController::class, 'save'])->name('user.assessments.save');
     Route::get('/assessments/attempts/{attemptId}/result', [LmsAssessmentPortalController::class, 'result'])->name('user.assessments.result');
     Route::get('/assessments/attempts/{attemptId}/pdf', [LmsAssessmentPortalController::class, 'resultPdf'])->name('user.assessments.result-pdf');

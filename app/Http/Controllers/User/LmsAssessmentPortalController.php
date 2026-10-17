@@ -13,6 +13,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class LmsAssessmentPortalController extends Controller
@@ -121,6 +122,26 @@ class LmsAssessmentPortalController extends Controller
         $answers = $attempt->answers->keyBy('question_id');
 
         return view('user.assessments.take', compact('attempt', 'questions', 'answers'));
+    }
+
+    public function resource($attemptId, $kind, $index)
+    {
+        $user = Auth::user();
+        abort_unless($user, 403);
+        $this->assessments->ensure();
+        $kind = $kind === 'preseen' ? 'preseen' : 'reference';
+        $attempt = LmsAssessmentAttempt::with('assessment')
+            ->where('user_id', $user->id)
+            ->findOrFail($attemptId);
+        $files = $attempt->assessment->resourceFiles($kind);
+        $i = (int) $index;
+        abort_unless(isset($files[$i]), 404);
+        $path = $files[$i]['path'];
+        abort_unless(Storage::disk('public')->exists($path), 404);
+
+        return Storage::disk('public')->response($path, $files[$i]['name'], [
+            'Content-Disposition' => 'inline; filename="' . str_replace('"', '', $files[$i]['name']) . '"',
+        ]);
     }
 
     public function save(Request $request, $attemptId)

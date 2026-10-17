@@ -30,7 +30,7 @@
     .lms-attempts-table .col-appt { width: 10%; white-space: nowrap !important; }
     .lms-attempts-table .col-test { width: 17%; }
     .lms-attempts-table .col-taker { width: 12%; }
-    .lms-attempts-table .col-timing { width: 22%; }
+    .lms-attempts-table .col-timing { width: 28%; }
     .lms-attempts-table .col-created { width: 8%; }
     .lms-attempts-table .col-assessor { width: 8%; }
     .lms-attempts-table .col-status { width: 11%; }
@@ -177,7 +177,6 @@
                                 @endif
                             </td>
                             <td class="col-timing" data-sort="{{ optional($assignment->available_from)->timestamp ?? 0 }}">
-                                <span class="lms-timing-line"><strong>Exam Appointment Timing:</strong> {{ $appointment }}</span>
                                 <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $assignment->timezoneLabel() }}</span>
                                 <span class="lms-timing-line"><strong>Exam Duration:</strong> {{ $fmtDuration($assessmentRow->durationMinutes()) }}</span>
                                 <span class="lms-timing-line"><strong>Started:</strong> {{ ($attempt?->started_at) ? $assignment->formatInTimezone($attempt->started_at) : '—' }}</span>

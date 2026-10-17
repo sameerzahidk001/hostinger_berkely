@@ -28,6 +28,7 @@ class LmsAssessment extends Model
         'title', 'description', 'kind', 'audience', 'target_role', 'course_id', 'duration_minutes',
         'pass_percent', 'max_attempts', 'shuffle_questions', 'results_mode', 'status',
         'published_at', 'created_by_admin_id', 'created_by_user_id',
+        'reference_files_json', 'preseen_files_json',
     ];
 
     /** Who a non-course (skill/staff) test is intended for. */
@@ -58,6 +59,8 @@ class LmsAssessment extends Model
         'max_attempts' => 'integer',
         'shuffle_questions' => 'boolean',
         'published_at' => 'datetime',
+        'reference_files_json' => 'array',
+        'preseen_files_json' => 'array',
     ];
 
     public static function kinds(): array
@@ -147,5 +150,36 @@ class LmsAssessment extends Model
         $fallback = (int) ($this->duration_minutes ?? 0);
 
         return $fallback > 0 ? $fallback : null;
+    }
+
+    /** @return list<array{name:string,path:string,mime?:string}> */
+    public function resourceFiles(string $kind): array
+    {
+        $col = $kind === 'preseen' ? 'preseen_files_json' : 'reference_files_json';
+        if (! Schema::hasColumn('lms_assessments', $col)) {
+            return [];
+        }
+        $raw = $this->{$col};
+        if (! is_array($raw)) {
+            return [];
+        }
+        $out = [];
+        foreach ($raw as $row) {
+            if (! is_array($row) || empty($row['path'])) {
+                continue;
+            }
+            $out[] = [
+                'name' => (string) ($row['name'] ?? basename((string) $row['path'])),
+                'path' => (string) $row['path'],
+                'mime' => (string) ($row['mime'] ?? ''),
+            ];
+        }
+
+        return array_slice($out, 0, 2);
+    }
+
+    public function hasResourceKind(string $kind): bool
+    {
+        return $this->resourceFiles($kind) !== [];
     }
 }

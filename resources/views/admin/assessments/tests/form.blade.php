@@ -31,7 +31,7 @@
         <div class="alert alert-danger"><ul class="m-b-none">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>
     @endif
     <div class="ibox"><div class="ibox-content">
-        <form method="POST" action="{{ $assessment->exists ? route('admin.assessments.tests.update', $assessment->id) : route('admin.assessments.tests.store') }}">
+        <form method="POST" action="{{ $assessment->exists ? route('admin.assessments.tests.update', $assessment->id) : route('admin.assessments.tests.store') }}" enctype="multipart/form-data">
             @csrf
             @if($assessment->exists) @method('PUT') @endif
 
@@ -112,6 +112,26 @@
                 </div>
                 <div class="col-md-4 form-group" style="padding-top:28px;">
                     <label><input type="checkbox" name="shuffle_questions" value="1" @checked(old('shuffle_questions', $assessment->shuffle_questions)) @disabled(! $canCreate)> Shuffle questions</label>
+                </div>
+                <div class="col-md-6 form-group">
+                    <label>Reference material <span class="text-muted">(optional — up to 2 files)</span></label>
+                    <input type="file" name="reference_files[]" class="form-control" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.webp,.txt" multiple @disabled(! $canCreate)>
+                    @foreach($assessment->resourceFiles('reference') as $ri => $rf)
+                        <label class="m-t-xs" style="display:block;font-weight:normal;">
+                            <input type="checkbox" name="remove_reference[]" value="{{ $ri }}" @disabled(! $canCreate)> Remove {{ $rf['name'] }}
+                        </label>
+                    @endforeach
+                    <p class="help-block m-b-none">Shown as a navy <strong>Reference Material</strong> button during the test.</p>
+                </div>
+                <div class="col-md-6 form-group">
+                    <label>Pre-seen <span class="text-muted">(optional — up to 2 files)</span></label>
+                    <input type="file" name="preseen_files[]" class="form-control" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.webp,.txt" multiple @disabled(! $canCreate)>
+                    @foreach($assessment->resourceFiles('preseen') as $pi => $pf)
+                        <label class="m-t-xs" style="display:block;font-weight:normal;">
+                            <input type="checkbox" name="remove_preseen[]" value="{{ $pi }}" @disabled(! $canCreate)> Remove {{ $pf['name'] }}
+                        </label>
+                    @endforeach
+                    <p class="help-block m-b-none">Shown as a navy <strong>Pre-seen</strong> button during the test.</p>
                 </div>
             </div>
 
