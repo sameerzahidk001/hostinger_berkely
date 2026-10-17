@@ -47,8 +47,8 @@
                         </select>
                     </div>
                     <div class="col-md-2 form-group js-q-target-role">
-                        <label>Question Set</label>
-                        <select name="target_role" class="form-control lms-searchable" data-placeholder="Type to find question set">
+                        <label>Question for</label>
+                        <select name="target_role" class="form-control lms-searchable" data-placeholder="Type to find user type">
                             <option value="">—</option>
                             @foreach(($targetRoles ?? []) as $rk => $rl)
                                 <option value="{{ $rk }}" @selected(old('target_role', $question->target_role) === $rk)>{{ $rl }}</option>
@@ -103,7 +103,7 @@
                         $editSubs = $question->subQuestions();
                     }
                     if (! is_array($editSubs)) {
-                        $editSubs = [['text' => '', 'marks' => '']];
+                        $editSubs = [];
                     }
                 @endphp
                 <div id="edit_sub_questions" style="{{ old('type', $question->type) === 'mcq' ? 'display:none;' : '' }}">
@@ -131,14 +131,14 @@
                 {{-- Multi create: shared defaults + question blocks --}}
                 <div class="row m-b-md">
                     <div class="col-md-3 form-group js-shared-target-role">
-                        <label>Question Set (all)</label>
-                        <select name="target_role" class="form-control lms-searchable" data-placeholder="Type to find question set">
+                        <label>Question for (all)</label>
+                        <select name="target_role" class="form-control lms-searchable" data-placeholder="Type to find user type">
                             <option value="">—</option>
                             @foreach(($targetRoles ?? []) as $rk => $rl)
                                 <option value="{{ $rk }}" @selected(old('target_role') === $rk)>{{ $rl }}</option>
                             @endforeach
                         </select>
-                        <p class="help-block m-b-none">Optional question set (saved with or without a course).</p>
+                        <p class="help-block m-b-none">Who this question is for (saved even when a Course is also set).</p>
                     </div>
                     <div class="col-md-3 form-group">
                         <label>Course (applies to all)</label>
@@ -178,7 +178,7 @@
                                 'time_limit_minutes' => '',
                                 'options' => [['text'=>''],['text'=>''],['text'=>''],['text'=>'']],
                                 'correct_option' => 0,
-                                'sub_questions' => [['text'=>'','marks'=>'']],
+                                'sub_questions' => [],
                             ]];
                         }
                     @endphp
@@ -217,7 +217,7 @@
             'time_limit_minutes' => '',
             'options' => [['text'=>''],['text'=>''],['text'=>''],['text'=>'']],
             'correct_option' => 0,
-            'sub_questions' => [['text'=>'','marks'=>'']],
+            'sub_questions' => [],
         ],
         'types' => $types,
     ])
@@ -353,6 +353,10 @@
         bindBlock($(this));
     });
     updateTotalMarks();
+
+    $('#questionForm').on('submit', function () {
+        $(this).find('select.lms-searchable').prop('disabled', false);
+    });
 
     $('#addQuestionBlock').on('click', function () {
         var tpl = document.getElementById('questionBlockTemplate');
