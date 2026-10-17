@@ -3,12 +3,16 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Models\ClassBatch;
 use App\Models\LmsAssessment;
+use App\Models\LmsAssessmentAssignment;
 use App\Models\LmsAssessmentAttempt;
+use App\Models\User;
 use App\Services\LmsAssessmentService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class LmsAssessmentPortalController extends Controller
@@ -207,5 +211,36 @@ class LmsAssessmentPortalController extends Controller
         return Pdf::loadView('admin.assessments.tests.attempt-pdf', compact('attempt'))
             ->setPaper('a4')
             ->download($filename);
+    }
+
+    public function userPreview($userId)
+    {
+        $me = Auth::user();
+        abort_unless($me, 403);
+        $this->assessments->ensure();
+        $subject = User::query()->with('roles:id,name')->findOrFail($userId);
+        $id = (int) $subject->id;
+
+        $batchIds = [];
+        if (Schema::hasTable('class_batch_student')) {
+            $batchIds = ClassBatch::query()
+                ->whereHas('students', fn ($q) => $q->where('users.id', $me->id))
+                ->pluck('id')
+                ->map(fn ($bid) => (int) $bid)
+                ->all();
+        }
+
+        $allowed = LmsAssessmentAssignment::query()
+            ->where('marker_user_id', $id)
+            ->where(function ($q) use ($me, $batchIds) {
+                $q->where('student_id', $me->id);
+                if ($batchIds !== []) {
+                    $q->orWhereIn('class_batch_id', $batchIds);
+                }
+            })
+            ->exists();
+        abort_unless($allowed, 403);
+
+        return response()->json($this->assessments->userPreviewPayload($subject));
     }
 }

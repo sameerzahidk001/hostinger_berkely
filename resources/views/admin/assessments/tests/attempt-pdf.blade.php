@@ -108,7 +108,7 @@
         <tr><td class="muted">Appointment ID</td><td>{{ $assignment ? $assignment->displayCode() : '—' }}</td></tr>
         <tr><td class="muted">Test Appointment Time</td><td>{{ $assignment ? $assignment->appointmentWindowLabel('d/m/Y H:i') : '—' }}</td></tr>
         <tr><td class="muted">Test ID</td><td>{{ $attempt->assessment->displayCode() }}</td></tr>
-        <tr><td class="muted">Test Duration</td><td>{{ $attempt->assessment->duration_minutes ? $attempt->assessment->duration_minutes . ' min' : '—' }}</td></tr>
+        <tr><td class="muted">Test Duration</td><td>{{ ($d = $attempt->assessment->durationMinutes()) ? $d . ' min' : '—' }}</td></tr>
         <tr><td class="muted">Started Time</td><td>{{ $fmtTime($attempt->started_at) }}</td></tr>
         <tr><td class="muted">Ended Time</td><td>{{ $fmtTime($attempt->submitted_at) }}</td></tr>
         <tr><td class="muted">Spent Duration</td><td>{{ $spent !== null ? $spent . ' min' : '—' }}</td></tr>

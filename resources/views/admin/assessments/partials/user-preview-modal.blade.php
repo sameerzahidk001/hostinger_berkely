@@ -101,7 +101,7 @@
     var body = document.getElementById('lms-user-preview-body');
     var closeBtn = document.getElementById('lms-user-preview-close');
     var facultyBtn = document.getElementById('lms-user-preview-faculty');
-    var urlTpl = @json(url('/admin/assessments/users/__ID__/preview'));
+    var urlTpl = @json($lmsUserPreviewUrlTpl ?? url('/admin/assessments/users/__ID__/preview'));
     if (!overlay || !body) return;
 
     function close() {

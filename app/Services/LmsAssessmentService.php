@@ -19,6 +19,44 @@ class LmsAssessmentService
     {
     }
 
+    public function userPreviewPayload(\App\Models\User $user): array
+    {
+        $user->loadMissing('roles:id,name');
+        $roles = $user->roles
+            ->pluck('name')
+            ->map(fn ($n) => ucwords(str_replace(['_', '-'], ' ', (string) $n)))
+            ->filter()
+            ->implode(', ');
+        $blank = static fn ($v) => ($v !== null && trim((string) $v) !== '') ? trim((string) $v) : '—';
+        $gender = trim((string) ($user->gender ?? ''));
+        if ($gender !== '') {
+            $gender = ucfirst(strtolower($gender));
+        }
+        $isInstructor = $user->roles->contains(
+            fn ($r) => strtolower((string) $r->name) === 'instructor'
+        );
+        $facultyProfileUrl = (
+            $isInstructor
+            && (int) ($user->is_on_web ?? 0) === 1
+            && (int) ($user->approved ?? 0) === 1
+        ) ? url('/instructor/' . $user->id) : null;
+
+        return [
+            'id' => (int) $user->id,
+            'name' => $user->name ?: ('User #' . $user->id),
+            'email' => $blank($user->email),
+            'mobile' => $blank($user->mobile_number),
+            'roles' => $roles !== '' ? $roles : '—',
+            'gender' => $gender !== '' ? $gender : '—',
+            'nationality' => $blank($user->nationality),
+            'city' => $blank($user->city),
+            'country' => $blank($user->country),
+            'address' => $blank($user->address),
+            'post_code' => $blank($user->post_code ?? null),
+            'faculty_profile_url' => $facultyProfileUrl,
+        ];
+    }
+
     public function ensure(): bool
     {
         return LmsAssessmentSchema::ensure();
@@ -342,14 +380,9 @@ class LmsAssessmentService
         // Prefer sum of per-question timers; else optional test-level duration.
         $expires = null;
         $assessment->loadMissing('questions');
-        $questionMinutes = 0;
-        if (Schema::hasColumn('lms_questions', 'time_limit_minutes')) {
-            $questionMinutes = (int) $assessment->questions->sum(fn ($q) => (int) ($q->time_limit_minutes ?? 0));
-        }
-        if ($questionMinutes > 0) {
-            $expires = now()->addMinutes($questionMinutes);
-        } elseif ($assessment->duration_minutes) {
-            $expires = now()->addMinutes((int) $assessment->duration_minutes);
+        $mins = (int) ($assessment->durationMinutes() ?? 0);
+        if ($mins > 0) {
+            $expires = now()->addMinutes($mins);
         }
         if ($assignment) {
             $apptEnd = $assignment->appointmentEnd();

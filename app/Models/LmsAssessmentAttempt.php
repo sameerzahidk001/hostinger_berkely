@@ -93,9 +93,8 @@ class LmsAssessmentAttempt extends Model
         }
 
         $spent = (int) max(0, $this->started_at->diffInMinutes($this->submitted_at));
-        $cap = (int) ($this->relationLoaded('assessment')
-            ? ($this->assessment?->duration_minutes ?? 0)
-            : ($this->assessment()->value('duration_minutes') ?? 0));
+        $assessment = $this->assessment;
+        $cap = $assessment ? (int) ($assessment->durationMinutes() ?? 0) : 0;
         if ($cap > 0) {
             return min($spent, $cap);
         }

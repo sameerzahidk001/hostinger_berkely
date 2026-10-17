@@ -1,6 +1,7 @@
 @extends('user.layout.app')
 @section('title', $section === 'mocks' ? 'Mock Exams' : ($section === 'skill' ? 'Skill Tests' : 'My Tests'))
 @include('admin.assessments.partials.sortable-table-assets')
+@php $lmsUserPreviewUrlTpl = url('/assessments/users/__ID__/preview'); @endphp
 @section('content')
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
@@ -245,19 +246,20 @@
                                 </small>
                             @endif
                         </td>
+                        @php $assessorUserId = $att ? $att->assessorUserId($asg) : ($asg->marker_user_id ?? null); @endphp
                         <td class="col-timing" data-sort="{{ optional($asg?->available_from)->timestamp ?? 0 }}">
                             <span class="lms-timing-line"><strong>Exam Appointment Timing:</strong> {{ $asg ? $asg->appointmentWindowLabel() : '—' }}</span>
-                            <span class="lms-timing-line"><strong>Exam Duration:</strong> {{ $fmtDuration($a->duration_minutes ?? null) }}</span>
-                            <span class="lms-timing-line"><strong>Started:</strong> {{ ($asg && $att?->started_at) ? $asg->formatInTimezone($att->started_at) : (optional($att?->started_at)->format('d/m/y H:i') ?? '—') }}</span>
-                            <span class="lms-timing-line"><strong>Ended:</strong> {{ ($asg && $att?->submitted_at) ? $asg->formatInTimezone($att->submitted_at) : (optional($att?->submitted_at)->format('d/m/y H:i') ?? '—') }}</span>
-                            <span class="lms-timing-line"><strong>Duration spent:</strong> {{ $spend !== null ? $fmtDuration($spend) : '—' }}</span>
                             @if($asg)
                                 <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $asg->timezoneLabel() }}</span>
                             @endif
+                            <span class="lms-timing-line"><strong>Exam Duration:</strong> {{ $fmtDuration($a->durationMinutes()) }}</span>
+                            <span class="lms-timing-line"><strong>Started:</strong> {{ ($asg && $att?->started_at) ? $asg->formatInTimezone($att->started_at) : (optional($att?->started_at)->format('d/m/y H:i') ?? '—') }}</span>
+                            <span class="lms-timing-line"><strong>Ended:</strong> {{ ($asg && $att?->submitted_at) ? $asg->formatInTimezone($att->submitted_at) : (optional($att?->submitted_at)->format('d/m/y H:i') ?? '—') }}</span>
+                            <span class="lms-timing-line"><strong>Duration spent:</strong> {{ $spend !== null ? $fmtDuration($spend) : '—' }}</span>
                         </td>
                         <td class="col-assessor" data-sort="{{ $assessorName }}">
-                            @if($assessorEmail && $assessorName !== '—')
-                                <a href="mailto:{{ $assessorEmail }}">{{ $assessorName }}</a>
+                            @if($assessorUserId && $assessorName !== '—')
+                                <a href="#" class="lms-user-preview" data-user-id="{{ $assessorUserId }}">{{ $assessorName }}</a>
                             @else
                                 {{ $assessorName }}
                             @endif
@@ -322,4 +324,5 @@
 </script>
 @endpush
 @endif
+@include('admin.assessments.partials.user-preview-modal')
 @endsection
