@@ -221,6 +221,9 @@ class LmsAssessmentPortalController extends Controller
         $subject = User::query()->with('roles:id,name')->findOrFail($userId);
         $id = (int) $subject->id;
 
+        $isInstructor = $subject->roles->contains(
+            fn ($r) => strtolower((string) $r->name) === 'instructor'
+        );
         $batchIds = [];
         if (Schema::hasTable('class_batch_student')) {
             $batchIds = ClassBatch::query()
@@ -229,8 +232,7 @@ class LmsAssessmentPortalController extends Controller
                 ->map(fn ($bid) => (int) $bid)
                 ->all();
         }
-
-        $allowed = LmsAssessmentAssignment::query()
+        $isMyAssessor = LmsAssessmentAssignment::query()
             ->where('marker_user_id', $id)
             ->where(function ($q) use ($me, $batchIds) {
                 $q->where('student_id', $me->id);
@@ -238,7 +240,12 @@ class LmsAssessmentPortalController extends Controller
                     $q->orWhereIn('class_batch_id', $batchIds);
                 }
             })
-            ->exists();
+            ->exists()
+            || LmsAssessmentAttempt::query()
+                ->where('user_id', $me->id)
+                ->where('graded_by_user_id', $id)
+                ->exists();
+        $allowed = $id === (int) $me->id || $isInstructor || $isMyAssessor;
         abort_unless($allowed, 403);
 
         return response()->json($this->assessments->userPreviewPayload($subject));
