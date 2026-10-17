@@ -107,7 +107,7 @@ class LmsQuestionController extends Controller
                 $this->fillFromArray($q, $row, [
                     'course_id' => $sharedCourse,
                     'topic' => trim((string) ($row['topic'] ?? '')) ?: $sharedTopic,
-                    'target_role' => $sharedCourse ? null : $sharedTargetRole,
+                    'target_role' => $sharedTargetRole,
                     'status' => $sharedStatus,
                 ], true);
                 $q->save();
@@ -439,10 +439,11 @@ class LmsQuestionController extends Controller
             abort_unless($this->lms->instructorAssignedToCourse((int) $q->course_id), 403);
         }
         if (Schema::hasColumn('lms_questions', 'target_role')) {
+            // Question Set (target_role) is independent of Course — always persist when provided.
             $role = array_key_exists('target_role', $defaults)
                 ? trim((string) ($defaults['target_role'] ?? ''))
                 : trim((string) ($row['target_role'] ?? ''));
-            $q->target_role = $q->course_id ? null : ($role !== '' ? $role : null);
+            $q->target_role = $role !== '' ? $role : null;
         }
         $explanation = trim((string) ($row['explanation'] ?? ''));
         $q->explanation = $this->isBlankHtml($explanation) ? null : $explanation;
@@ -480,23 +481,28 @@ class LmsQuestionController extends Controller
         } else {
             // Sub-questions a/b/c with per-part marks (not for MCQ).
             $subs = [];
-            $letter = 0;
+            $n = 0;
             foreach ((array) ($row['sub_questions'] ?? []) as $subRow) {
                 $text = trim((string) ($subRow['text'] ?? ''));
                 $marks = (float) ($subRow['marks'] ?? 0);
                 if ($text === '' && $marks <= 0) {
                     continue;
                 }
+                $n++;
                 $subs[] = [
-                    'key' => chr(97 + $letter),
+                    'key' => (string) $n,
                     'text' => $text,
                     'marks' => $marks > 0 ? $marks : 0.0,
                 ];
-                $letter++;
             }
             $q->options_json = $subs !== [] ? $subs : null;
             $sumMarks = collect($subs)->sum(fn ($s) => (float) ($s['marks'] ?? 0));
-            $q->max_marks = $sumMarks > 0 ? (float) $sumMarks : (float) ($row['max_marks'] ?? 1);
+            // Sub-questions optional: keep Max marks field; only override when sub marks are entered.
+            if ($sumMarks > 0) {
+                $q->max_marks = (float) $sumMarks;
+            } else {
+                $q->max_marks = (float) ($row['max_marks'] ?? 1);
+            }
         }
 
         if ($creating) {
