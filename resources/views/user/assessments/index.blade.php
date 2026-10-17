@@ -1,7 +1,7 @@
 @extends('user.layout.app')
 @section('title', $section === 'mocks' ? 'Mock Exams' : ($section === 'skill' ? 'Skill Tests' : 'My Tests'))
 @include('admin.assessments.partials.sortable-table-assets')
-@php $lmsUserPreviewUrlTpl = url('/assessments/users/__ID__/preview'); @endphp
+@php $lmsUserPreviewUrlTpl = route('user.assessments.user-preview', ['userId' => '__ID__']); @endphp
 @section('content')
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
