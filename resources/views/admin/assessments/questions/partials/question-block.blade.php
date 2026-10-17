@@ -8,9 +8,9 @@
     $timeLimit = $row['time_limit_minutes'] ?? '';
     $opts = $row['options'] ?? [['text'=>''],['text'=>''],['text'=>''],['text'=>'']];
     $correct = (int) ($row['correct_option'] ?? 0);
-    $subs = $row['sub_questions'] ?? null;
+    $subs = $row['sub_questions'] ?? [];
     if (! is_array($subs)) {
-        $subs = [['text' => '', 'marks' => '']];
+        $subs = [];
     }
     $prefix = 'questions[' . $index . ']';
     $isMcq = $type === 'mcq';

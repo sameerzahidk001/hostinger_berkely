@@ -330,6 +330,7 @@ class LmsQuestionController extends Controller
             'stem' => 'nullable|string',
             'topic' => 'nullable|string|max:255',
             'course_id' => $courseRule,
+            'target_role' => 'nullable|in:' . implode(',', array_keys(LmsQuestion::targetRoles())),
             'max_marks' => 'required|numeric|min:0.1',
             'explanation' => 'nullable|string',
             'status' => 'required|in:active,disabled',
@@ -350,6 +351,7 @@ class LmsQuestionController extends Controller
 
         return [
             'course_id' => $courseRule,
+            'target_role' => 'nullable|in:' . implode(',', array_keys(LmsQuestion::targetRoles())),
             'topic' => 'nullable|string|max:255',
             'status' => 'required|in:active,disabled',
             'questions' => 'required|array|min:1',
@@ -438,12 +440,17 @@ class LmsQuestionController extends Controller
         if ($q->course_id && $this->instructorMustPickCourse()) {
             abort_unless($this->lms->instructorAssignedToCourse((int) $q->course_id), 403);
         }
+        if (Schema::hasTable('lms_questions') && ! Schema::hasColumn('lms_questions', 'target_role')) {
+            Schema::table('lms_questions', function ($table) {
+                $table->string('target_role', 40)->nullable()->index();
+            });
+        }
         if (Schema::hasColumn('lms_questions', 'target_role')) {
-            // Question Set (target_role) is independent of Course — always persist when provided.
             $role = array_key_exists('target_role', $defaults)
                 ? trim((string) ($defaults['target_role'] ?? ''))
                 : trim((string) ($row['target_role'] ?? ''));
-            $q->target_role = $role !== '' ? $role : null;
+            $allowed = array_keys(LmsQuestion::targetRoles());
+            $q->target_role = ($role !== '' && in_array($role, $allowed, true)) ? $role : null;
         }
         $explanation = trim((string) ($row['explanation'] ?? ''));
         $q->explanation = $this->isBlankHtml($explanation) ? null : $explanation;

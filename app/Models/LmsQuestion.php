@@ -30,18 +30,8 @@ class LmsQuestion extends Model
         return LmsAssessment::targetRoles();
     }
 
+    /** Question for (audience). Independent of Course. */
     public function targetRoleLabel(): string
-    {
-        if ($this->course_id) {
-            return $this->course?->title ?: ('Course #' . $this->course_id);
-        }
-        $role = (string) ($this->target_role ?? '');
-
-        return self::targetRoles()[$role] ?? ($role !== '' ? ucwords(str_replace('_', ' ', $role)) : '—');
-    }
-
-    /** Question Set label (independent of Course). */
-    public function questionSetLabel(): string
     {
         $role = (string) ($this->target_role ?? '');
         if ($role === '') {
@@ -49,6 +39,11 @@ class LmsQuestion extends Model
         }
 
         return self::targetRoles()[$role] ?? ucwords(str_replace('_', ' ', $role));
+    }
+
+    public function questionSetLabel(): string
+    {
+        return $this->targetRoleLabel();
     }
 
     /** Public display code, e.g. QB12 */

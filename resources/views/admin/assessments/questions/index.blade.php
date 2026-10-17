@@ -47,7 +47,7 @@
                         <th data-sort-col="1">ID <span class="sort-ind"></span></th>
                         <th data-sort-col="2">Created by <span class="sort-ind"></span></th>
                         <th data-sort-col="3">Course <span class="sort-ind"></span></th>
-                        <th data-sort-col="4">Question Set <span class="sort-ind"></span></th>
+                        <th data-sort-col="4">Question for <span class="sort-ind"></span></th>
                         <th data-sort-col="5">Type <span class="sort-ind"></span></th>
                         <th data-sort-col="6">Topic <span class="sort-ind"></span></th>
                         <th data-sort-col="7">Stem <span class="sort-ind"></span></th>
@@ -75,7 +75,7 @@
                                     —
                                 @endif
                             </td>
-                            <td data-sort="{{ $row->target_role ?: '' }}">{{ $row->questionSetLabel() }}</td>
+                            <td data-sort="{{ $row->target_role ?: '' }}">{{ $row->targetRoleLabel() }}</td>
                             <td data-sort="{{ $row->typeLabel() }}">{{ $row->typeLabel() }}</td>
                             <td data-sort="{{ $row->topic ?: '' }}">{{ $row->topic ?: '—' }}</td>
                             <td data-sort="{{ strip_tags($row->stem) }}">{{ \Illuminate\Support\Str::limit(strip_tags($row->stem), 100) }}</td>
