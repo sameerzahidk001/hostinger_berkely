@@ -28,10 +28,10 @@
         overflow-wrap: break-word;
         white-space: normal;
     }
-    .lms-assigned-table .col-appt { width: 8%; }
-    .lms-assigned-table .col-test { width: 13%; }
-    .lms-assigned-table .col-taker { width: 14%; }
-    .lms-assigned-table .col-timing { width: 17%; }
+    .lms-assigned-table .col-appt { width: 9%; white-space: nowrap !important; }
+    .lms-assigned-table .col-test { width: 16%; }
+    .lms-assigned-table .col-taker { width: 13%; }
+    .lms-assigned-table .col-timing { width: 22%; }
     .lms-assigned-table .col-created { width: 8%; }
     .lms-assigned-table .col-assessor { width: 9%; }
     .lms-assigned-table .col-status { width: 12%; }
@@ -90,6 +90,7 @@
         </ol>
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
+        <a href="{{ route('admin.assessments.tests.assigned-users', array_merge(request()->query(), ['export' => 'excel'])) }}" class="btn btn-success btn-sm"><i class="fa fa-file-excel-o"></i> Download Excel</a>
         <a href="{{ route('admin.assessments.tests.index') }}" class="btn btn-default btn-sm">ALL TESTS</a>
     </div>
 </div>
@@ -173,7 +174,7 @@
             <table class="table table-striped table-bordered lms-assigned-table js-sortable-table">
                 <thead>
                     <tr>
-                        <th class="col-appt" data-sort-col="0">Appointment ID <span class="sort-ind"></span></th>
+                        <th class="col-appt" data-sort-col="0" style="white-space:nowrap;">Appointment ID <span class="sort-ind"></span></th>
                         <th class="col-test" data-sort-col="1">Test <span class="sort-ind"></span></th>
                         <th class="col-taker" data-sort-col="2">Test Taker <span class="sort-ind"></span></th>
                         <th class="col-timing" data-sort-col="3">Timing <span class="sort-ind"></span></th>

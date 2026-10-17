@@ -44,15 +44,16 @@
         overflow-wrap: break-word;
         white-space: normal;
     }
-    .lms-tests-table .col-date { width: 9%; }
+    .lms-tests-table .col-date { width: 8%; }
     .lms-tests-table .col-id { width: 6%; }
-    .lms-tests-table .col-title { width: 16%; }
-    .lms-tests-table .col-course { width: 14%; }
-    .lms-tests-table .col-type { width: 8%; }
-    .lms-tests-table .col-num { width: 6%; text-align: center; }
-    .lms-tests-table .col-assessor { width: 12%; }
+    .lms-tests-table .col-title { width: 14%; }
+    .lms-tests-table .col-course { width: 12%; }
+    .lms-tests-table .col-type { width: 7%; }
+    .lms-tests-table .col-num { width: 5%; text-align: center; }
+    .lms-tests-table .col-status { width: 8%; }
+    .lms-tests-table .col-assessor { width: 11%; }
     .lms-tests-table .col-action {
-        width: 17%;
+        width: 16%;
         overflow-wrap: normal;
         word-break: normal;
         white-space: nowrap;
@@ -105,7 +106,7 @@
                     </select>
                 </div>
                 <div class="col-sm-5">
-                    <input type="text" name="search" class="form-control" value="{{ $search }}" placeholder="Search ID / title">
+                    <input type="text" name="search" class="form-control" value="{{ $search }}" placeholder="Search ID / Test Name">
                 </div>
                 <div class="col-sm-4">
                     <button class="btn btn-primary" type="submit">Filter</button>
@@ -118,13 +119,14 @@
                 <tr>
                     <th class="col-date" data-sort-col="0">Date <span class="sort-ind"></span></th>
                     <th class="col-id" data-sort-col="1">Test ID <span class="sort-ind"></span></th>
-                    <th class="col-title" data-sort-col="2">Title <span class="sort-ind"></span></th>
+                    <th class="col-title" data-sort-col="2">Test Name <span class="sort-ind"></span></th>
                     <th class="col-course" data-sort-col="3">Course / Test for <span class="sort-ind"></span></th>
                     <th class="col-type" data-sort-col="4">Test Type <span class="sort-ind"></span></th>
                     <th class="col-num" data-sort-col="5">Qs <span class="sort-ind"></span></th>
                     <th class="col-num" data-sort-col="6">Assigned <span class="sort-ind"></span></th>
                     <th class="col-num" data-sort-col="7" title="How many sittings students have started or submitted">Taken <span class="sort-ind"></span></th>
-                    <th class="col-assessor" data-sort-col="8">Assessor <span class="sort-ind"></span></th>
+                    <th class="col-status" data-sort-col="8">Status <span class="sort-ind"></span></th>
+                    <th class="col-assessor" data-sort-col="9">Assessor <span class="sort-ind"></span></th>
                     <th class="col-action">Action</th>
                 </tr>
             </thead>
@@ -152,6 +154,23 @@
                         <td class="col-num" data-sort="{{ $row->questions_count }}">{{ $row->questions_count }}</td>
                         <td class="col-num" data-sort="{{ $row->assignments_count }}">{{ $row->assignments_count }}</td>
                         <td class="col-num" data-sort="{{ $row->attempts_count }}">{{ $row->attempts_count }}</td>
+                        <td class="col-status" data-sort="{{ $row->status }}">
+                            @php
+                                $st = (string) ($row->status ?? '');
+                                $stLabel = match ($st) {
+                                    'published' => 'Published',
+                                    'disabled' => 'Disabled',
+                                    'draft' => 'Draft',
+                                    default => ucfirst($st ?: '—'),
+                                };
+                                $stClass = match ($st) {
+                                    'published' => 'text-navy',
+                                    'disabled' => 'text-danger',
+                                    default => 'text-muted',
+                                };
+                            @endphp
+                            <span class="{{ $stClass }}" style="font-weight:700;">{{ $stLabel }}</span>
+                        </td>
                         <td class="col-assessor" data-sort="{{ $markers->isNotEmpty() ? $markers->pluck('name')->implode(', ') : 'Admin' }}">
                             @if($markers->isNotEmpty())
                                 @foreach($markers as $marker)
@@ -181,7 +200,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="10" class="text-center">No assessments yet.</td></tr>
+                    <tr><td colspan="11" class="text-center">No assessments yet.</td></tr>
                 @endforelse
             </tbody>
         </table>

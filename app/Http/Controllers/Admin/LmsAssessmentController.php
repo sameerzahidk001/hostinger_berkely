@@ -635,6 +635,10 @@ class LmsAssessmentController extends Controller
             unset($kinds[LmsAssessment::KIND_SKILL]);
         }
 
+        if ($request->query('export') === 'excel') {
+            return $this->streamAssignedRowsExcel($rows, 'assigned-tests_' . now()->format('Y-m-d') . '.csv');
+        }
+
         return view('admin.assessments.tests.assigned-users', [
             'rows' => $rows,
             'selectedAssessment' => $selectedAssessment,
@@ -818,6 +822,10 @@ class LmsAssessmentController extends Controller
                 ->with('error', 'Could not load Results for this test. Please try again or open Assigned Tests.');
         }
 
+        if ($request->query('export') === 'excel') {
+            return $this->streamAssignedRowsExcel($rows, 'results-' . $assessment->id . '_' . now()->format('Y-m-d') . '.csv');
+        }
+
         return view('admin.assessments.tests.attempts', [
             'assessment' => $assessment,
             'rows' => $rows,
@@ -929,6 +937,60 @@ class LmsAssessmentController extends Controller
         return back()->with('success', 'Results published.');
     }
 
+
+    protected function streamAssignedRowsExcel($rows, string $filename): \Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        $headers = [
+            'Appointment ID', 'Test Name', 'Type', 'Test Taker', 'Attempt',
+            'Appointment Window', 'Started', 'Ended', 'Assessor', 'Status', 'Score', 'Published',
+        ];
+        $callback = function () use ($rows, $headers) {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, $headers);
+            foreach ($rows as $row) {
+                $assessment = $row['assessment'];
+                $student = $row['student'];
+                $assignment = $row['assignment'];
+                $attempt = $row['attempt'] ?? null;
+                if ($attempt) {
+                    $statusText = $attempt->statusLabel();
+                } elseif ($assignment && $assignment->isNotYetOpen()) {
+                    $statusText = 'Upcoming';
+                } elseif ($assignment && $assignment->isExpired()) {
+                    $statusText = 'Missed';
+                } else {
+                    $statusText = 'Assigned';
+                }
+                $score = '';
+                if ($attempt && $attempt->score_raw !== null) {
+                    $score = lms_format_number($attempt->score_raw) . '/' . lms_format_number($attempt->score_max);
+                    if ($attempt->percent() !== null) {
+                        $score .= ' (' . lms_format_number($attempt->percent()) . '%)';
+                    }
+                }
+                fputcsv($handle, [
+                    $assignment ? $assignment->displayCode() : '—',
+                    $assessment->title ?? '—',
+                    method_exists($assessment, 'kindLabel') ? $assessment->kindLabel() : ($assessment->kind ?? ''),
+                    $student->name ?? '—',
+                    'Attempt ' . (int) ($row['attempt_number'] ?? 1) . ' of ' . max(1, (int) ($row['attempt_total'] ?? 1)),
+                    $assignment ? $assignment->appointmentWindowLabel() : '—',
+                    ($assignment && $attempt?->started_at) ? $assignment->formatInTimezone($attempt->started_at) : (optional($attempt?->started_at)->format('d/m/y H:i') ?? '—'),
+                    ($assignment && $attempt?->submitted_at) ? $assignment->formatInTimezone($attempt->submitted_at) : (optional($attempt?->submitted_at)->format('d/m/y H:i') ?? '—'),
+                    $attempt ? $attempt->assessorLabel($assignment) : ($assignment?->marker?->name ?? '—'),
+                    $statusText,
+                    $score !== '' ? $score : '—',
+                    ($attempt && $attempt->results_published) ? 'Yes' : 'No',
+                ]);
+            }
+            fclose($handle);
+        };
+
+        return response()->streamDownload($callback, $filename, [
+            'Content-Type' => 'text/csv',
+        ]);
+    }
+
     protected function rules(Request $request): array
     {
         $courseRequired = $this->lms->isInstructorActor()
@@ -945,6 +1007,7 @@ class LmsAssessmentController extends Controller
             'course_id' => ($courseRequired ? 'required' : 'nullable') . '|exists:courses,id',
             'target_role' => ($isSkill ? 'required' : 'nullable') . '|in:' . implode(',', array_keys(LmsAssessment::targetRoles())),
             'duration_minutes' => 'nullable|integer|min:1',
+            'max_attempts' => 'required|integer|min:1|max:50',
             'pass_percent' => 'nullable|numeric|min:0|max:100',
             'shuffle_questions' => 'nullable|boolean',
             'results_mode' => 'required|in:instant_mcq,after_publish',
@@ -990,10 +1053,8 @@ class LmsAssessmentController extends Controller
         $a->duration_minutes = $request->filled('duration_minutes') ? (int) $request->input('duration_minutes') : null;
         // Pass/Fail threshold removed from UI — criteria varies by course; score % only.
         $a->pass_percent = null;
-        // Retakes = new Assign sitting only; do not gate or edit max_attempts from the form.
-        if ($creating) {
-            $a->max_attempts = null;
-        }
+        // Retake only when admin/instructor sets N > 1 (each sitting still needs Assign).
+        $a->max_attempts = max(1, (int) $request->input('max_attempts', 1));
         $a->shuffle_questions = $request->boolean('shuffle_questions');
         $a->results_mode = $request->input('results_mode', 'after_publish');
         $a->status = $request->input('status', 'draft');

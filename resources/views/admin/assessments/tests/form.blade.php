@@ -38,7 +38,7 @@
             <fieldset @disabled(! $canCreate)>
             <div class="row">
                 <div class="col-md-8 form-group">
-                    <label>{{ $isSkill ? 'Test Name' : 'Title' }} *</label>
+                    <label>Test Name *</label>
                     <input type="text" name="title" class="form-control" value="{{ old('title', $assessment->title) }}" @required($canCreate) @readonly(! $canCreate)>
                 </div>
                 <div class="col-md-4 form-group">
@@ -82,7 +82,11 @@
                 <div class="col-md-2 form-group">
                     <label>Duration (min)</label>
                     <input type="number" min="1" name="duration_minutes" class="form-control" value="{{ old('duration_minutes', $assessment->duration_minutes) }}" placeholder="Timed" @readonly(! $canCreate)>
-                    <p class="help-block" style="margin-bottom:0;font-size:11px;">Retakes: use <strong>Assign</strong> again (new sitting).</p>
+                </div>
+                <div class="col-md-2 form-group">
+                    <label>Max attempts *</label>
+                    <input type="number" min="1" max="50" name="max_attempts" class="form-control" value="{{ old('max_attempts', $assessment->max_attempts ?? 1) }}" @required($canCreate) @readonly(! $canCreate)>
+                    <p class="help-block" style="margin-bottom:0;font-size:11px;">Retake only if N &gt; 1. Each attempt still needs <strong>Assign</strong>.</p>
                 </div>
                 <div class="col-md-2 form-group">
                     <label>Status *</label>

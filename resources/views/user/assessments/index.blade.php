@@ -88,12 +88,15 @@
             overflow-wrap: break-word;
             white-space: normal;
         }
-        #assessments-portal .lms-assess-table .col-appt { width: 9%; }
-        #assessments-portal .lms-assess-table .col-title { width: 20%; }
-        #assessments-portal .lms-assess-table .col-type { width: 9%; }
-        #assessments-portal .lms-assess-table .col-timing { width: 24%; }
+        #assessments-portal .lms-assess-table .col-appt { width: 10%; white-space: nowrap; }
+        #assessments-portal .lms-assess-table .col-title { width: 26%; }
+        #assessments-portal .lms-assess-table .col-timing { width: 30%; }
         #assessments-portal .lms-assess-table .col-assessor { width: 12%; }
-        #assessments-portal .lms-assess-table .col-status { width: 14%; }
+        #assessments-portal .lms-assess-table .col-status { width: 12%; }
+        #assessments-portal .lms-assess-table th.col-appt,
+        #assessments-portal .lms-assess-table td.col-appt {
+            white-space: nowrap !important;
+        }
         #assessments-portal .lms-assess-table .col-action {
             width: 14%;
             overflow-wrap: normal;
@@ -194,12 +197,11 @@
         <table class="table table-striped table-bordered lms-assess-table js-sortable-table">
             <thead>
                 <tr>
-                    <th class="col-appt" data-sort-col="0">Appointment ID <span class="sort-ind"></span></th>
+                    <th class="col-appt" data-sort-col="0" style="white-space:nowrap;">Appointment ID <span class="sort-ind"></span></th>
                     <th class="col-title" data-sort-col="1">Test <span class="sort-ind"></span></th>
-                    <th class="col-type" data-sort-col="2">Type <span class="sort-ind"></span></th>
-                    <th class="col-timing" data-sort-col="3">Timing <span class="sort-ind"></span></th>
-                    <th class="col-assessor" data-sort-col="4">Assessor <span class="sort-ind"></span></th>
-                    <th class="col-status" data-sort-col="5">Status <span class="sort-ind"></span></th>
+                    <th class="col-timing" data-sort-col="2">Timing <span class="sort-ind"></span></th>
+                    <th class="col-assessor" data-sort-col="3">Assessor <span class="sort-ind"></span></th>
+                    <th class="col-status" data-sort-col="4">Status <span class="sort-ind"></span></th>
                     <th class="col-action">Action</th>
                 </tr>
             </thead>
@@ -214,7 +216,7 @@
                         $maxAtt = $row['max_attempts'] ?? null;
                         $canRetake = !empty($row['can_retake']);
                         $attemptNo = (int) ($row['attempt_number'] ?? 1);
-                        $attemptTotal = max(1, (int) ($row['attempt_total'] ?? 1), $attemptNo);
+                        $attemptTotal = max(1, (int) ($row['attempt_total'] ?? ($maxAtt ?: 1)), $attemptNo);
                         $apptId = $asg ? $asg->displayCode() : '—';
                         $course = $a->course ?? null;
                         $assessorName = $att
@@ -228,22 +230,21 @@
                         $statusSort = $att ? $att->statusLabel() : ($tab === 'missed' ? 'Missed' : ($tab === 'upcoming' ? 'Upcoming' : 'Available'));
                     @endphp
                     <tr>
-                        <td class="col-appt" data-sort="{{ $asg->id ?? 0 }}"><strong>{{ $apptId }}</strong></td>
+                        <td class="col-appt" data-sort="{{ $asg->id ?? 0 }}" style="white-space:nowrap;"><strong>{{ $apptId }}</strong></td>
                         <td class="col-title" data-sort="{{ $a->title }}">
                             {{ $a->title }}
-                            <br><small class="text-muted">{{ $a->displayCode() }}</small>
+                            <br><small class="text-muted">{{ $a->displayCode() }} · {{ $a->kindLabel() }}</small>
                             <br><small><strong>Attempt {{ $attemptNo }} of {{ $attemptTotal }}</strong></small>
                             @if($course)
                                 <br><small>
                                     @if(!empty($course->slug))
-                                        <a href="{{ route('course.details', ['course' => $course->slug]) }}" target="_blank" rel="noopener">{{ $course->title }}</a>
+                                        <a href="{{ route('course.details', ['course' => $course->slug]) }}" target="_blank" rel="noopener noreferrer">{{ $course->title }}</a>
                                     @else
                                         {{ $course->title }}
                                     @endif
                                 </small>
                             @endif
                         </td>
-                        <td class="col-type" data-sort="{{ $a->kindLabel() }}">{{ $a->kindLabel() }}</td>
                         <td class="col-timing" data-sort="{{ optional($asg?->available_from)->timestamp ?? 0 }}">
                             <span class="lms-timing-line"><strong>Exam Appointment Timing:</strong> {{ $asg ? $asg->appointmentWindowLabel() : '—' }}</span>
                             <span class="lms-timing-line"><strong>Exam Duration:</strong> {{ $fmtDuration($a->duration_minutes ?? null) }}</span>
@@ -298,7 +299,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="7" class="text-center">Nothing in this tab.</td></tr>
+                    <tr><td colspan="6" class="text-center">Nothing in this tab.</td></tr>
                 @endforelse
             </tbody>
         </table>

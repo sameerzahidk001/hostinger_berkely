@@ -33,9 +33,26 @@
       }
    </style>
    @stack('style')
+
+   <style>
+      /* During an in-progress exam: disable all left menus except My Tests */
+      body.lms-exam-lock #side-menu > li:not(.lms-nav-my-tests) {
+         pointer-events: none;
+         opacity: 0.45;
+      }
+      body.lms-exam-lock #side-menu > li.lms-nav-my-tests {
+         pointer-events: auto;
+         opacity: 1;
+      }
+      body.lms-exam-lock #side-menu > li.lms-nav-my-tests .nav-second-level li:not(.lms-nav-my-tests-link) {
+         pointer-events: none;
+         opacity: 0.45;
+      }
+   </style>
+
 </head>
 
-<body>
+<body class="{{ request()->routeIs('user.assessments.take') ? 'lms-take-mode lms-exam-lock' : '' }}">
    <style>
       /* Compact student/instructor sidebar so menus fit without scrolling */
       .navbar-static-side .nav-header {
@@ -291,7 +308,7 @@
                    $showAssessmentsNav = $canQbank || $canCreateTests || $canAssignTests || $hasMyTests;
                @endphp
                @if($showAssessmentsNav)
-               <li class="{{ request()->routeIs('user.assessments.*') || request()->is('admin/assessments*') ? 'active' : '' }}">
+               <li class="lms-nav-my-tests {{ request()->routeIs('user.assessments.*') || request()->is('admin/assessments*') ? 'active' : '' }}">
                   <a href="javascript:void(0)">
                      <i class="fa fa-pencil-square-o"></i>
                      <span class="nav-label">Assessments</span>
@@ -314,7 +331,7 @@
                      </li>
                      @endif
                      @if($hasMyTests)
-                     <li class="{{ request()->routeIs('user.assessments.*') ? 'active' : '' }}">
+                     <li class="lms-nav-my-tests-link {{ request()->routeIs('user.assessments.*') ? 'active' : '' }}">
                         <a href="{{ route('user.assessments.index') }}">My Tests</a>
                      </li>
                      @endif
@@ -334,7 +351,7 @@
                   </a>
                </li>
                @elseif(auth()->user()->roles()->where('name', 'student')->exists())
-               <li class="{{ request()->routeIs('user.assessments.*') ? 'active' : '' }}">
+               <li class="lms-nav-my-tests {{ request()->routeIs('user.assessments.*') ? 'active' : '' }}">
                   <a href="{{ route('user.assessments.index') }}">
                      <i class="fa fa-pencil-square-o"></i>
                      <span class="nav-label">My Tests</span>

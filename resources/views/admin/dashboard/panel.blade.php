@@ -406,7 +406,12 @@
                             · Report for: {{ $activityDateFrom ?? request('date_from', now()->toDateString()) }} - {{ $activityDateTo ?? request('date_to', now()->toDateString()) }}
                         </p>
                         <p class="text-muted small m-b-sm">Leave the user dropdown on <strong>{{ $userFilterEmptyLabel ?? 'None' }}</strong> to show everyone in this list. Dates default to today.</p>
-                        <div class="table-responsive">
+                        <style>
+                            #staffActivityTable thead th { position: sticky; top: 0; background: #f5f5f5; z-index: 2; }
+                            tr.activity-gap-row td { border-top: 3px solid #e74c3c !important; }
+                            .activity-gap-marker { color: #e74c3c; font-weight: 700; letter-spacing: .5px; font-size: 11px; }
+                        </style>
+                        <div class="table-responsive" style="max-height:70vh;overflow:auto;">
                             <table class="table table-striped table-bordered table-hover js-sortable-table" id="staffActivityTable">
                                 <thead>
                                     <tr>
@@ -431,6 +436,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
+                                    @php $prevStaffActAt = null; @endphp
                                     @forelse($activities as $activity)
                                         @php
                                             $visitUrl = $activity['visit_url'] ?? null;
@@ -447,8 +453,16 @@
                                             )) {
                                                 $editUrl = $fallbackUrl;
                                             }
+                                            $curStaffAt = $activity['occurred_at'] ?? null;
+                                            $staffHasGap = $prevStaffActAt && $curStaffAt && abs($curStaffAt->getTimestamp() - $prevStaffActAt->getTimestamp()) > 600;
+                                            $prevStaffActAt = $curStaffAt ?: $prevStaffActAt;
                                         @endphp
-                                        <tr>
+                                        @if(!empty($staffHasGap))
+                                            <tr>
+                                                <td colspan="{{ $staffColspan }}" class="activity-gap-marker">…………………… 10+ minute gap ……………………</td>
+                                            </tr>
+                                        @endif
+                                        <tr class="{{ !empty($staffHasGap) ? 'activity-gap-row' : '' }}">
                                             <td data-sort="{{ $activity['occurred_at']->timestamp }}">{{ $activity['occurred_at']->format('M j, Y g:i A') }}</td>
                                             @if($showUserColumn ?? false)
                                                 <td>{{ $activity['user_name'] ?? '—' }}</td>

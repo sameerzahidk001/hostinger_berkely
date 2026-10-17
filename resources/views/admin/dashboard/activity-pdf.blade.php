@@ -11,6 +11,8 @@
         th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; vertical-align: top; }
         th { background: #f3f3f3; }
         a { color: #1c84c6; text-decoration: underline; }
+        tr.activity-gap td { border-top: 3px solid #e74c3c; padding-top: 10px; }
+        .gap-line { color: #e74c3c; font-weight: bold; letter-spacing: 1px; }
     </style>
 </head>
 <body>
@@ -32,6 +34,7 @@
             </tr>
         </thead>
         <tbody>
+            @php $prevActivityAt = null; $gapMins = (int) ($gapMinutes ?? 10); @endphp
             @forelse($rows as $activity)
                 @php
                     $visitUrl = $activity['visit_url'] ?? null;
@@ -48,9 +51,17 @@
                     )) {
                         $editUrl = $fallbackUrl;
                     }
+                    $curAt = $activity['occurred_at'] ?? null;
+                    $hasGap = $prevActivityAt && $curAt && $curAt->diffInMinutes($prevActivityAt) > $gapMins;
+                    $prevActivityAt = $curAt ?: $prevActivityAt;
                 @endphp
-                <tr>
-                    <td>{{ optional($activity['occurred_at'] ?? null)?->format('Y-m-d H:i:s') }}</td>
+                @if($hasGap)
+                    <tr>
+                        <td colspan="6" class="gap-line">…………………… 10+ minute gap ……………………</td>
+                    </tr>
+                @endif
+                <tr class="{{ $hasGap ? 'activity-gap' : '' }}">
+                    <td>{{ optional($activity['occurred_at'] ?? null)?->format('M j, Y g:i A') }}</td>
                     <td>{{ $activity['user_name'] ?? '—' }}</td>
                     <td>{{ activity_action_label($activity['action'] ?? '') }}</td>
                     <td>{{ $activity['item'] ?? '' }}</td>
