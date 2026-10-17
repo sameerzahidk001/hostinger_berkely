@@ -72,11 +72,14 @@
                         <label>Max marks *</label>
                         <input type="number" step="0.1" min="0.1" name="max_marks" id="edit_max_marks" class="form-control" value="{{ old('max_marks', $question->max_marks ?: 1) }}" required>
                     </div>
+                    <div class="col-md-4 form-group">
+                        <label>Topic <span class="lms-char-hint">(optional, max {{ $topicMax }})</span></label>
+                        <input type="text" name="topic" class="form-control" data-max="{{ $topicMax }}" maxlength="{{ $topicMax }}" value="{{ old('topic', $question->topic) }}" placeholder="Optional">
+                    </div>
                     <div class="col-md-12 form-group">
                         <label>Question details * <span class="lms-char-hint">(This is the question the test taker sees in the exam — stem, passage, case or instructions. Max {{ number_format($stemMax) }} characters.)</span></label>
                         <textarea name="stem" class="form-control lms-text-editor" rows="4" data-max="{{ $stemMax }}" data-height="180" data-rich="1" required>{{ old('stem', $question->stem) }}</textarea>
                     </div>
-                    <input type="hidden" name="topic" value="{{ old('topic', $question->topic) }}">
                     <div class="col-md-12 form-group">
                         <label>Explanation / model answer notes <span class="lms-char-hint">(Instructors’ reference only — expected answer, marking notes or a model response. Not shown to the student while they take the test. Optional. Max {{ number_format($explanationMax) }} characters.)</span></label>
                         <textarea name="explanation" class="form-control lms-text-editor" rows="3" data-max="{{ $explanationMax }}" data-height="140" data-rich="1">{{ old('explanation', $question->explanation) }}</textarea>
