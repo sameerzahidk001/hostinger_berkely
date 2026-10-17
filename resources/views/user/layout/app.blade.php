@@ -52,7 +52,7 @@
 
 </head>
 
-<body class="{{ request()->routeIs('user.assessments.take') ? 'lms-take-mode lms-exam-lock' : '' }}">
+<body class="{{ request()->routeIs('user.assessments.take') ? 'lms-take-mode lms-exam-lock' : '' }}" data-viewer-tz="{{ function_exists('viewer_timezone') ? viewer_timezone() : config('app.timezone') }}">
    <style>
       /* Compact student/instructor sidebar so menus fit without scrolling */
       .navbar-static-side .nav-header {
@@ -491,6 +491,7 @@
    @include('admin.layout.partials.flash_messages')
    @include('partials.idle_session_timeout', ['logoutUrl' => route('user.logout')])
    @include('partials.session_expired_refresh')
+   @include('partials.viewer-tz-sync')
 
    @stack('script')
 </body>
