@@ -2916,6 +2916,83 @@ if (!function_exists('invoice_header_email')) {
     }
 }
 
+if (!function_exists('is_valid_timezone')) {
+    function is_valid_timezone(?string $tz): bool
+    {
+        $tz = trim((string) $tz);
+
+        return $tz !== '' && in_array($tz, \DateTimeZone::listIdentifiers(), true);
+    }
+}
+
+if (!function_exists('viewer_timezone')) {
+    /** Timezone for the person looking at the page (browser cookie, else GeoIP, else site default). */
+    function viewer_timezone($request = null): string
+    {
+        $request = $request ?? request();
+        $fallback = (string) config('app.timezone', 'Asia/Dubai');
+
+        $cookie = $request ? trim((string) $request->cookie('viewer_tz', '')) : '';
+        if (is_valid_timezone($cookie)) {
+            return $cookie;
+        }
+
+        $ip = function_exists('visitor_client_ip') ? visitor_client_ip() : ($request?->ip());
+        if ($ip) {
+            $cached = \Illuminate\Support\Facades\Cache::get('ip_tz:' . $ip);
+            if (is_valid_timezone(is_string($cached) ? $cached : null)) {
+                return $cached;
+            }
+            $mmdb = storage_path('app/geoip.mmdb');
+            if (is_file($mmdb) && class_exists(\Torann\GeoIP\Facades\GeoIP::class)
+                && filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)
+            ) {
+                try {
+                    $loc = \Torann\GeoIP\Facades\GeoIP::getLocation($ip);
+                    $tz = is_object($loc) ? (string) ($loc->timezone ?? '') : (string) ($loc['timezone'] ?? '');
+                    if (is_valid_timezone($tz)) {
+                        \Illuminate\Support\Facades\Cache::put('ip_tz:' . $ip, $tz, now()->addDay());
+
+                        return $tz;
+                    }
+                } catch (\Throwable $e) {
+                    // keep fallback
+                }
+            }
+        }
+
+        return is_valid_timezone($fallback) ? $fallback : 'UTC';
+    }
+}
+
+if (!function_exists('viewer_timezone_label')) {
+    function viewer_timezone_label(?string $tz = null): string
+    {
+        $tz = $tz ?: viewer_timezone();
+        try {
+            return now()->timezone($tz)->format('T P');
+        } catch (\Throwable $e) {
+            return '';
+        }
+    }
+}
+
+if (!function_exists('format_in_viewer_tz')) {
+    function format_in_viewer_tz($value, string $fmt = 'M j, Y g:i A'): string
+    {
+        if (! $value) {
+            return '—';
+        }
+        try {
+            $dt = $value instanceof \Carbon\Carbon ? $value->copy() : \Carbon\Carbon::parse($value);
+
+            return $dt->timezone(viewer_timezone())->format($fmt);
+        } catch (\Throwable $e) {
+            return (string) $value;
+        }
+    }
+}
+
 if (!function_exists('payment_type_options')) {
     function payment_type_options(): array
     {

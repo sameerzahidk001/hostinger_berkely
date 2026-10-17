@@ -334,7 +334,7 @@
 
 <div class="row" style="padding: 0 10px 12px;">
     <div class="col-lg-12">
-        <div class="ibox float-e-margins" style="margin-bottom: 16px;" id="activities-panel">
+        <div class="ibox float-e-margins" style="margin-bottom: 16px;" id="activities-panel" data-viewer-tz="{{ $activityTimezone ?? viewer_timezone() }}">
             <div class="ibox-title">
                 <h5>Activities</h5>
             </div>
@@ -422,7 +422,7 @@
                             · Report for: {{ $activityDateFrom ?? request('date_from', now()->toDateString()) }} - {{ $activityDateTo ?? request('date_to', now()->toDateString()) }}
                         </p>
                         <p class="text-muted small m-b-sm">Leave the user dropdown on <strong>{{ $userFilterEmptyLabel ?? 'None' }}</strong> to show everyone in this list. Dates default to today.</p>
-                        <p class="activity-tz-note"><strong>Time zone:</strong> {{ $activityTimezone ?? config('app.timezone') }}@if(!empty($activityTimezoneLabel)) ({{ $activityTimezoneLabel }})@endif. Date &amp; Time values below use this zone.</p>
+                        <p class="activity-tz-note"><strong>Time zone:</strong> {{ $activityTimezone ?? viewer_timezone() }}@if(!empty($activityTimezoneLabel)) ({{ $activityTimezoneLabel }})@endif — based on your location. Date &amp; Time values below use this zone.</p>
                         <style>
                             #staffActivityTable thead th { position: sticky; top: 0; background: #f5f5f5; z-index: 2; }
                         </style>
@@ -483,7 +483,7 @@
                                             ])
                                         @endif
                                         <tr class="{{ !empty($staffHasGap) ? 'activity-gap-row' : '' }}">
-                                            <td data-sort="{{ $activity['occurred_at']->timestamp }}">{{ $activity['occurred_at']->format('M j, Y g:i A') }}</td>
+                                            <td data-sort="{{ $activity['occurred_at']->timestamp }}">{{ format_in_viewer_tz($activity['occurred_at']) }}</td>
                                             @if($showUserColumn ?? false)
                                                 <td>{{ $activity['user_name'] ?? '—' }}</td>
                                             @endif
@@ -578,7 +578,7 @@
                             Report for: {{ $activityDateFrom ?? request('date_from', now()->toDateString()) }} - {{ $activityDateTo ?? request('date_to', now()->toDateString()) }}
                         </p>
                         <p class="text-muted small m-b-sm">Leave Student on <strong>None</strong> to see all students. Use dates only when needed.</p>
-                        <p class="activity-tz-note"><strong>Time zone:</strong> {{ $activityTimezone ?? config('app.timezone') }}@if(!empty($activityTimezoneLabel)) ({{ $activityTimezoneLabel }})@endif. Date &amp; Time values below use this zone.</p>
+                        <p class="activity-tz-note"><strong>Time zone:</strong> {{ $activityTimezone ?? viewer_timezone() }}@if(!empty($activityTimezoneLabel)) ({{ $activityTimezoneLabel }})@endif — based on your location. Date &amp; Time values below use this zone.</p>
                         <div class="table-responsive">
                             <table class="table table-striped table-bordered table-hover js-sortable-table" id="studentActivityTable">
                                 <thead>
@@ -615,7 +615,7 @@
                                             ])
                                         @endif
                                         <tr class="{{ !empty($studentHasGap) ? 'activity-gap-row' : '' }}">
-                                            <td data-sort="{{ $activity['occurred_at']->timestamp }}">{{ $activity['occurred_at']->format('M j, Y g:i A') }}</td>
+                                            <td data-sort="{{ $activity['occurred_at']->timestamp }}">{{ format_in_viewer_tz($activity['occurred_at']) }}</td>
                                             <td>{{ $activity['user_name'] ?? '—' }}</td>
                                             <td>
                                                 @if(!empty($activity['url']))
@@ -753,6 +753,28 @@ $(document).ready(function() {
             $(this).find('.sort-ind').text(sortDir === 'asc' ? ' ▲' : ' ▼');
         });
     });
+
+    (function syncViewerTimezone() {
+        var panel = document.getElementById('activities-panel');
+        var serverTz = panel ? (panel.getAttribute('data-viewer-tz') || '') : '';
+        var tz = '';
+        try {
+            tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+        } catch (e) {}
+        if (!tz) return;
+        var cookie = '';
+        document.cookie.split(';').forEach(function (part) {
+            var s = part.trim();
+            if (s.indexOf('viewer_tz=') === 0) {
+                cookie = decodeURIComponent(s.slice('viewer_tz='.length));
+            }
+        });
+        if (cookie === tz) return;
+        document.cookie = 'viewer_tz=' + encodeURIComponent(tz) + ';path=/;max-age=31536000;SameSite=Lax';
+        if (serverTz && serverTz !== tz) {
+            window.location.reload();
+        }
+    })();
 });
 </script>
 @endpush
