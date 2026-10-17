@@ -105,9 +105,9 @@
                 <thead>
                     <tr>
                         <th class="col-appt" data-sort-col="0" style="white-space:nowrap;">Appointment ID <span class="sort-ind"></span></th>
-                        <th class="col-test" data-sort-col="1">Test <span class="sort-ind"></span></th>
+                        <th class="col-test" data-sort-col="1">Test Details <span class="sort-ind"></span></th>
                         <th class="col-taker" data-sort-col="2">Test Taker <span class="sort-ind"></span></th>
-                        <th class="col-timing" data-sort-col="3">Timing <span class="sort-ind"></span></th>
+                        <th class="col-timing" data-sort-col="3">Test Time Details <span class="sort-ind"></span></th>
                         <th class="col-created" data-sort-col="4">Created by <span class="sort-ind"></span></th>
                         <th class="col-assessor" data-sort-col="5">Assessor <span class="sort-ind"></span></th>
                         <th class="col-status" data-sort-col="6">Status <span class="sort-ind"></span></th>
@@ -182,7 +182,7 @@
                                 <span class="lms-timing-line"><strong>Exam Duration:</strong> {{ $fmtDuration($assessmentRow->durationMinutes()) }}</span>
                                 <span class="lms-timing-line"><strong>Started:</strong> {{ ($attempt?->started_at) ? $assignment->formatInTimezone($attempt->started_at) : '—' }}</span>
                                 <span class="lms-timing-line"><strong>Ended:</strong> {{ ($attempt?->submitted_at) ? $assignment->formatInTimezone($attempt->submitted_at) : '—' }}</span>
-                                <span class="lms-timing-line"><strong>Duration spent:</strong> {{ $spend !== null ? $fmtDuration($spend) : '—' }}</span>
+                                <span class="lms-timing-line"><strong>Time spent:</strong> {{ $spend !== null ? $fmtDuration($spend) : '—' }}</span>
                             </td>
                             <td class="col-created" data-sort="{{ $createdBy }}">
                                 @if($assignment->assigned_by_user_id)

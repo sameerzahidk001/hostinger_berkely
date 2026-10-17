@@ -114,7 +114,7 @@
     @if($errors->any())
         <div class="alert alert-danger"><ul class="m-b-none">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>
     @endif
-    <form method="POST" action="{{ route('user.assessments.save', $attempt->id) }}" id="attempt-form">
+    <form method="POST" action="{{ route('user.assessments.save', $attempt->id) }}" id="attempt-form" data-result-url="{{ route('user.assessments.result', $attempt->id) }}">
         @csrf
         @forelse($questions as $i => $question)
             @php
@@ -187,8 +187,9 @@
             <button type="button" class="btn btn-default" id="lms-q-back" disabled>Back</button>
             <button type="button" class="btn btn-primary" id="lms-q-next" @disabled($qTotal <= 1)>Next</button>
             <span class="lms-q-nav-spacer"></span>
-            <button type="submit" name="submit" value="0" class="btn btn-default">Save progress</button>
-            <button type="submit" name="submit" value="1" class="btn btn-primary" onclick="return confirm('Submit this attempt?');">Submit</button>
+            <input type="hidden" name="submit" id="lms-submit-flag" value="0">
+            <button type="submit" name="save_mode" value="0" class="btn btn-default">Save progress</button>
+            <button type="submit" name="save_mode" value="1" class="btn btn-primary" id="lms-submit-btn">Submit</button>
         </div>
     </form>
 </div>
@@ -217,6 +218,7 @@ document.body.setAttribute('data-lms-exam-lock', '1');
     }
 
     function saveProgressThen(cb) {
+        if (form && form.dataset.autoSubmitted) return;
         if (!form) { if (cb) cb(); return; }
         var fd = new FormData(form);
         fd.set('submit', '0');
@@ -237,8 +239,10 @@ document.body.setAttribute('data-lms-exam-lock', '1');
         if (ms <= 0) {
             clearQTimer();
             qCountdown.textContent = '0s';
+            if (form && form.dataset.autoSubmitted) return;
             // Auto-save and move next (or stay on last).
             saveProgressThen(function () {
+                if (form && form.dataset.autoSubmitted) return;
                 if (idx < steps.length - 1) {
                     showStep(idx + 1);
                 }
@@ -288,34 +292,71 @@ document.body.setAttribute('data-lms-exam-lock', '1');
 (function () {
     var el = document.getElementById('expires_at');
     var form = document.getElementById('attempt-form');
-    if (!el || !form) return;
-    var end = new Date(el.textContent.trim());
+    if (!form) return;
     var out = document.getElementById('countdown');
+    var resultUrl = form.getAttribute('data-result-url') || '';
+    var end = el ? new Date(el.textContent.trim()) : null;
+    if (end && isNaN(end.getTime())) end = null;
+    var submitBtn = document.getElementById('lms-submit-btn');
+    if (submitBtn) {
+        submitBtn.addEventListener('click', function (e) {
+            if (form.dataset.autoSubmitted) return;
+            if (!confirm('Submit this attempt?')) {
+                e.preventDefault();
+                return;
+            }
+            var flag = document.getElementById('lms-submit-flag');
+            if (flag) flag.value = '1';
+        });
+    }
+
+    function goResult() {
+        if (resultUrl) {
+            window.location.href = resultUrl;
+        }
+    }
 
     function autoSubmit() {
         if (form.dataset.autoSubmitted) return;
         form.dataset.autoSubmitted = '1';
         if (out) out.textContent = 'Time is up — submitting…';
-        var input = form.querySelector('input[name="submit"][type="hidden"]');
-        if (!input) {
-            input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'submit';
-            form.appendChild(input);
-        }
-        input.value = '1';
-        try {
-            if (navigator.sendBeacon && document.visibilityState === 'hidden') {
-                var fd = new FormData(form);
-                fd.set('submit', '1');
-                navigator.sendBeacon(form.action, fd);
+        var flag = document.getElementById('lms-submit-flag');
+        if (flag) flag.value = '1';
+        var fd = new FormData(form);
+        fd.set('submit', '1');
+        fd.set('save_mode', '1');
+        Array.prototype.forEach.call(form.querySelectorAll('button'), function (n) {
+            n.disabled = true;
+        });
+        fetch(form.action, {
+            method: 'POST',
+            body: fd,
+            credentials: 'same-origin',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        }).then(function (res) {
+            return res.json().catch(function () { return {}; });
+        }).then(function (data) {
+            if (data && data.redirect) {
+                window.location.href = data.redirect;
                 return;
             }
-        } catch (e) {}
-        form.submit();
+            goResult();
+        }).catch(function () {
+            try {
+                HTMLFormElement.prototype.submit.call(form);
+            } catch (e) {
+                goResult();
+            }
+        });
+        setTimeout(goResult, 4000);
     }
+    window.lmsExamAutoSubmit = autoSubmit;
 
     function tick() {
+        if (!end) return;
         var ms = end.getTime() - Date.now();
         if (ms <= 0) {
             autoSubmit();
@@ -333,14 +374,15 @@ document.body.setAttribute('data-lms-exam-lock', '1');
     }
     tick();
     document.addEventListener('visibilitychange', function () {
-        if (document.visibilityState === 'hidden' && Date.now() >= end.getTime()) {
-            autoSubmit();
-        }
+        if (end && Date.now() >= end.getTime()) autoSubmit();
     });
     window.addEventListener('pagehide', function () {
-        if (Date.now() >= end.getTime()) {
-            autoSubmit();
-        }
+        if (!end || Date.now() < end.getTime() || form.dataset.autoSubmitted) return;
+        try {
+            var fd = new FormData(form);
+            fd.set('submit', '1');
+            if (navigator.sendBeacon) navigator.sendBeacon(form.action, fd);
+        } catch (e) {}
     });
 })();
 </script>

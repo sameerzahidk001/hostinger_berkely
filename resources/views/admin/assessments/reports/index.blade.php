@@ -14,7 +14,7 @@
 </div>
 <div class="wrapper wrapper-content">
     <div class="ibox"><div class="ibox-content">
-        <p>Test Results now live under <strong>Assigned Tests</strong> (same columns as Results: Appointment ID, Attempt under Test, Timing, Status).</p>
+        <p>Test Results now live under <strong>Assigned Tests</strong> (same columns as Results: Appointment ID, Attempt under Test Details, Test Time Details, Status).</p>
         <a href="{{ route('admin.assessments.tests.assigned-users', request()->query()) }}" class="btn btn-primary">Go to Assigned Tests</a>
         <a href="{{ route('admin.assessments.tests.index') }}" class="btn btn-default">ALL TESTS</a>
     </div></div>

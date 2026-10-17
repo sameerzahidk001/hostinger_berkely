@@ -199,8 +199,8 @@
             <thead>
                 <tr>
                     <th class="col-appt" data-sort-col="0" style="white-space:nowrap;">Appointment ID <span class="sort-ind"></span></th>
-                    <th class="col-title" data-sort-col="1">Test <span class="sort-ind"></span></th>
-                    <th class="col-timing" data-sort-col="2">Timing <span class="sort-ind"></span></th>
+                    <th class="col-title" data-sort-col="1">Test Details <span class="sort-ind"></span></th>
+                    <th class="col-timing" data-sort-col="2">Test Time Details <span class="sort-ind"></span></th>
                     <th class="col-assessor" data-sort-col="3">Assessor <span class="sort-ind"></span></th>
                     <th class="col-status" data-sort-col="4">Status <span class="sort-ind"></span></th>
                     <th class="col-action">Action</th>
@@ -255,7 +255,7 @@
                             <span class="lms-timing-line"><strong>Exam Duration:</strong> {{ $fmtDuration($a->durationMinutes()) }}</span>
                             <span class="lms-timing-line"><strong>Started:</strong> {{ ($asg && $att?->started_at) ? $asg->formatInTimezone($att->started_at) : (optional($att?->started_at)->format('d/m/y H:i') ?? '—') }}</span>
                             <span class="lms-timing-line"><strong>Ended:</strong> {{ ($asg && $att?->submitted_at) ? $asg->formatInTimezone($att->submitted_at) : (optional($att?->submitted_at)->format('d/m/y H:i') ?? '—') }}</span>
-                            <span class="lms-timing-line"><strong>Duration spent:</strong> {{ $spend !== null ? $fmtDuration($spend) : '—' }}</span>
+                            <span class="lms-timing-line"><strong>Time spent:</strong> {{ $spend !== null ? $fmtDuration($spend) : '—' }}</span>
                         </td>
                         <td class="col-assessor" data-sort="{{ $assessorName }}">
                             @if($assessorUserId && $assessorName !== '—')

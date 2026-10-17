@@ -399,11 +399,7 @@ class LmsAssessmentService
     public function saveAnswers(LmsAssessmentAttempt $attempt, array $answersByQuestionId): void
     {
         abort_unless($attempt->isInProgress(), 403);
-        if ($attempt->isTimedOut()) {
-            $this->submitAttempt($attempt, true);
-
-            return;
-        }
+        $timedOut = $attempt->isTimedOut();
 
         $assessment = $attempt->assessment()->with('questions')->first();
         $questions = $assessment->questions->keyBy('id');
@@ -437,6 +433,23 @@ class LmsAssessmentService
             }
             $answer->save();
         }
+
+        if ($timedOut) {
+            $this->submitAttempt($attempt, true);
+        }
+    }
+
+    public function autoSubmitTimedOutForUser(User $user): void
+    {
+        $open = LmsAssessmentAttempt::query()
+            ->where('user_id', $user->id)
+            ->where('status', 'in_progress')
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<=', now())
+            ->get();
+        foreach ($open as $attempt) {
+            $this->submitAttempt($attempt, true);
+        }
     }
 
     public function submitAttempt(LmsAssessmentAttempt $attempt, bool $expired = false): LmsAssessmentAttempt
@@ -452,7 +465,8 @@ class LmsAssessmentService
         $assessment = $attempt->assessment()->with('questions')->first();
         $this->autoMarkMcqs($attempt, $assessment);
 
-        $attempt->status = $expired ? 'expired' : 'submitted';
+        // Time-up / submission-window close still counts as submitted (Marking Required), not Missed.
+        $attempt->status = 'submitted';
         // Timed-out submits use expires_at so spent duration cannot exceed the allowed window.
         if ($expired && $attempt->expires_at) {
             $attempt->submitted_at = $attempt->expires_at->copy();
