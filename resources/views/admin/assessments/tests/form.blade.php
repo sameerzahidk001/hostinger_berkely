@@ -27,6 +27,7 @@
 </div>
 <div class="wrapper wrapper-content">
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
+    @if(session('fail'))<div class="alert alert-danger">{{ session('fail') }}</div>@endif
     @if($errors->any())
         <div class="alert alert-danger"><ul class="m-b-none">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>
     @endif
@@ -116,7 +117,13 @@
             </div>
 
             <h4 style="margin-top:8px;">Exam files <span class="text-muted" style="font-size:13px;font-weight:normal;">(optional — up to 2 files in each box)</span></h4>
-            <p class="help-block">Stored on the server at <code>storage/app/public/lms/tests/{{ $assessment->exists ? $assessment->id : '{test-id}' }}/reference/</code> and <code>.../preseen/</code>. Navy buttons appear in the test only after files are saved.</p>
+            <p class="help-block">
+                Files upload to <strong>Zoho WorkDrive</strong> (the folder set in Zoho LMS settings). They are not stored on this server.
+                @if(! ($zohoWorkDriveReady ?? false))
+                    <span class="text-danger">WorkDrive is not connected yet — connect OAuth before uploading.</span>
+                @endif
+                Navy buttons appear in the test only after files are saved.
+            </p>
             <div class="row">
                 <div class="col-md-6 form-group">
                     <label>Reference material</label>
@@ -124,6 +131,9 @@
                     @foreach($assessment->resourceFiles('reference') as $ri => $rf)
                         <label class="m-t-xs" style="display:block;font-weight:normal;">
                             <input type="checkbox" name="remove_reference[]" value="{{ $ri }}" @disabled(! $canCreate)> Remove {{ $rf['name'] }}
+                            @if(! empty($rf['url']) && str_contains((string) $rf['url'], 'workdrive'))
+                                <a href="{{ $rf['url'] }}" target="_blank" rel="noopener">Zoho Drive</a>
+                            @endif
                         </label>
                     @endforeach
                 </div>
@@ -133,6 +143,9 @@
                     @foreach($assessment->resourceFiles('preseen') as $pi => $pf)
                         <label class="m-t-xs" style="display:block;font-weight:normal;">
                             <input type="checkbox" name="remove_preseen[]" value="{{ $pi }}" @disabled(! $canCreate)> Remove {{ $pf['name'] }}
+                            @if(! empty($pf['url']) && str_contains((string) $pf['url'], 'workdrive'))
+                                <a href="{{ $pf['url'] }}" target="_blank" rel="noopener">Zoho Drive</a>
+                            @endif
                         </label>
                     @endforeach
                 </div>

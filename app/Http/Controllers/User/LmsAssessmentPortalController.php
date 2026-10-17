@@ -9,6 +9,7 @@ use App\Models\LmsAssessmentAssignment;
 use App\Models\LmsAssessmentAttempt;
 use App\Models\User;
 use App\Services\LmsAssessmentService;
+use App\Services\ZohoLmsService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -136,7 +137,13 @@ class LmsAssessmentPortalController extends Controller
         $files = $attempt->assessment->resourceFiles($kind);
         $i = (int) $index;
         abort_unless(isset($files[$i]), 404);
-        $path = $files[$i]['path'];
+        $path = (string) ($files[$i]['url'] ?? $files[$i]['path'] ?? '');
+        abort_unless($path !== '', 404);
+        if (preg_match('#workdrive\.zoho#i', $path) || str_starts_with($path, 'http')) {
+            $preview = app(ZohoLmsService::class)->workDrivePreviewUrl($path, true) ?: $path;
+
+            return redirect()->away($preview);
+        }
         abort_unless(Storage::disk('public')->exists($path), 404);
 
         return Storage::disk('public')->response($path, $files[$i]['name'], [
