@@ -176,9 +176,14 @@ class LmsQuestionController extends Controller
 
     public function destroy($id)
     {
-        abort_unless($this->lms->isAdminActor() || panel_sees_all_dashboards(), 403);
+        abort_unless($this->assessments->canManageQuestionBank(), 403);
         $this->assessments->ensure();
-        LmsQuestion::findOrFail($id)->delete();
+        $question = LmsQuestion::findOrFail($id);
+        if ($this->lms->isInstructorActor() && ! $this->lms->isAdminActor() && ! panel_sees_all_dashboards()) {
+            $courseIds = $this->lms->coursesForActor()->pluck('id')->map(fn ($id) => (int) $id)->all();
+            abort_unless($question->course_id && in_array((int) $question->course_id, $courseIds, true), 403);
+        }
+        $question->delete();
 
         return back()->with('success', 'Question removed.');
     }

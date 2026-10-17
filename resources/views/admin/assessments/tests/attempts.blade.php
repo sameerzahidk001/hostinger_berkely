@@ -177,6 +177,7 @@
                                 @endif
                             </td>
                             <td class="col-timing" data-sort="{{ optional($assignment->available_from)->timestamp ?? 0 }}">
+                                <span class="lms-timing-line"><strong>Exam Appointment:</strong> {{ $assignment->windowStart()?->format('d/m/Y, H:i') ?? '—' }}</span>
                                 <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $assignment->timezoneLabel() }}</span>
                                 <span class="lms-timing-line"><strong>Exam Duration:</strong> {{ $fmtDuration($assessmentRow->durationMinutes()) }}</span>
                                 <span class="lms-timing-line"><strong>Started:</strong> {{ ($attempt?->started_at) ? $assignment->formatInTimezone($attempt->started_at) : '—' }}</span>

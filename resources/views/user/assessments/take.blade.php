@@ -162,6 +162,20 @@
     $qTotal = $questions->count();
     $refFiles = $attempt->assessment->resourceFiles('reference');
     $preFiles = $attempt->assessment->resourceFiles('preseen');
+    $resModalFiles = [
+        'reference' => collect($refFiles)->values()->map(function ($f, $i) use ($attempt) {
+            return [
+                'name' => $f['name'],
+                'url' => route('user.assessments.resource', ['attemptId' => $attempt->id, 'kind' => 'reference', 'index' => $i]),
+            ];
+        })->values()->all(),
+        'preseen' => collect($preFiles)->values()->map(function ($f, $i) use ($attempt) {
+            return [
+                'name' => $f['name'],
+                'url' => route('user.assessments.resource', ['attemptId' => $attempt->id, 'kind' => 'preseen', 'index' => $i]),
+            ];
+        })->values()->all(),
+    ];
 @endphp
 <div class="lms-take-sticky">
     <div class="row wrapper border-bottom white-bg page-heading">
@@ -552,16 +566,7 @@ document.body.setAttribute('data-lms-exam-lock', '1');
 (function () {
     var modal = document.getElementById('lms-res-modal');
     if (!modal) return;
-    var files = {
-        reference: @json(collect($refFiles)->values()->map(fn ($f, $i) => [
-            'name' => $f['name'],
-            'url' => route('user.assessments.resource', ['attemptId' => $attempt->id, 'kind' => 'reference', 'index' => $i]),
-        ])->all()),
-        preseen: @json(collect($preFiles)->values()->map(fn ($f, $i) => [
-            'name' => $f['name'],
-            'url' => route('user.assessments.resource', ['attemptId' => $attempt->id, 'kind' => 'preseen', 'index' => $i]),
-        ])->all())
-    };
+    var files = @json($resModalFiles);
     var frame = document.getElementById('lms-res-frame');
     var fileSel = document.getElementById('lms-res-file');
     var kind = 'reference';
