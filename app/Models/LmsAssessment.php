@@ -165,12 +165,17 @@ class LmsAssessment extends Model
         }
         $out = [];
         foreach ($raw as $row) {
-            if (! is_array($row) || empty($row['path'])) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $path = (string) ($row['url'] ?? $row['path'] ?? '');
+            if ($path === '') {
                 continue;
             }
             $out[] = [
-                'name' => (string) ($row['name'] ?? basename((string) $row['path'])),
-                'path' => (string) $row['path'],
+                'name' => (string) ($row['name'] ?? basename($path)),
+                'path' => $path,
+                'url' => $path,
                 'mime' => (string) ($row['mime'] ?? ''),
             ];
         }

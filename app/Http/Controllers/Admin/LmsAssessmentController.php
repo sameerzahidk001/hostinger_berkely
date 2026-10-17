@@ -12,9 +12,12 @@ use App\Models\LmsQuestion;
 use App\Models\User;
 use App\Services\LmsAssessmentService;
 use App\Services\StudyMaterialService;
+use App\Services\ZohoLmsService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -24,7 +27,8 @@ class LmsAssessmentController extends Controller
 {
     public function __construct(
         protected LmsAssessmentService $assessments,
-        protected StudyMaterialService $lms
+        protected StudyMaterialService $lms,
+        protected ZohoLmsService $zoho
     ) {
     }
 
@@ -111,9 +115,14 @@ class LmsAssessmentController extends Controller
         $this->fill($a, $request, true);
         $a->save();
         $this->syncQuestions($a, $request);
-        $this->syncResourceFiles($a, $request);
+        $uploadError = $this->syncResourceFiles($a, $request);
+        $redirect = redirect()->route('admin.assessments.tests.edit', $a->id)
+            ->with('success', 'Test created. Use Assign to give it to users or batches.');
+        if ($uploadError) {
+            $redirect->with('fail', $uploadError);
+        }
 
-        return redirect()->route('admin.assessments.tests.edit', $a->id)->with('success', 'Test created. Use Assign to give it to users or batches.');
+        return $redirect;
     }
 
     public function edit($id)
@@ -155,7 +164,13 @@ class LmsAssessmentController extends Controller
             $this->fill($a, $request, false);
             $a->save();
             $this->syncQuestions($a, $request);
-            $this->syncResourceFiles($a, $request);
+            $uploadError = $this->syncResourceFiles($a, $request);
+            $redirect = redirect()->route('admin.assessments.tests.edit', $a->id)->with('success', 'Test updated.');
+            if ($uploadError) {
+                $redirect->with('fail', $uploadError);
+            }
+
+            return $redirect;
         }
 
         return redirect()->route('admin.assessments.tests.edit', $a->id)->with('success', 'Test updated.');
@@ -1090,11 +1105,14 @@ class LmsAssessmentController extends Controller
         $a->questions()->sync($sync);
     }
 
-    protected function syncResourceFiles(LmsAssessment $a, Request $request): void
+    protected function syncResourceFiles(LmsAssessment $a, Request $request): ?string
     {
         if (! Schema::hasColumn('lms_assessments', 'reference_files_json')) {
-            return;
+            return null;
         }
+        $wantedUploads = 0;
+        $storedUploads = 0;
+        $error = null;
         foreach ([
             'reference' => ['input' => 'reference_files', 'col' => 'reference_files_json', 'remove' => 'remove_reference'],
             'preseen' => ['input' => 'preseen_files', 'col' => 'preseen_files_json', 'remove' => 'remove_preseen'],
@@ -1110,8 +1128,9 @@ class LmsAssessmentController extends Controller
                     continue;
                 }
                 if (in_array((int) $i, $remove, true)) {
-                    if (! empty($row['path'])) {
-                        Storage::disk('public')->delete($row['path']);
+                    $diskPath = (string) ($row['path'] ?? '');
+                    if ($diskPath !== '' && ! str_contains($diskPath, 'workdrive.zoho') && ! str_starts_with($diskPath, 'http')) {
+                        Storage::disk('public')->delete($diskPath);
                     }
                     continue;
                 }
@@ -1122,22 +1141,48 @@ class LmsAssessmentController extends Controller
                 $uploads = $uploads ? [$uploads] : [];
             }
             foreach ($uploads as $file) {
+                if (! $file instanceof UploadedFile || ! $file->isValid()) {
+                    continue;
+                }
+                $wantedUploads++;
                 if (count($kept) >= 2) {
                     break;
                 }
-                if (! $file || ! $file->isValid()) {
+                if (! $this->zoho->isWorkDriveReady()) {
+                    $error = 'Connect Zoho WorkDrive OAuth first. Exam files are stored on Zoho Drive, not this server.';
                     continue;
                 }
-                $stored = $file->store('lms/tests/' . $a->id . '/' . $kind, 'public');
+                try {
+                    $remote = $this->zoho->uploadToWorkDrive($file);
+                } catch (\Throwable $e) {
+                    Log::error('Zoho WorkDrive exam file upload threw', ['message' => $e->getMessage()]);
+                    $error = 'WorkDrive could not be reached. Check Zoho OAuth and try again.';
+                    continue;
+                }
+                if (! $remote || empty($remote['url'])) {
+                    $error = 'WorkDrive upload failed. Check the WorkDrive folder ID and try again.';
+                    continue;
+                }
                 $kept[] = [
                     'name' => $file->getClientOriginalName(),
-                    'path' => $stored,
-                    'mime' => (string) $file->getClientMimeType(),
+                    'path' => (string) $remote['url'],
+                    'url' => (string) $remote['url'],
+                    'id' => $remote['id'] ?? null,
+                    'mime' => 'zoho/workdrive',
                 ];
+                $storedUploads++;
             }
             $a->{$cfg['col']} = $kept !== [] ? array_values($kept) : null;
         }
         $a->save();
+        if ($wantedUploads > 0 && $storedUploads === 0) {
+            return $error ?: 'WorkDrive upload failed.';
+        }
+        if ($error && $storedUploads < $wantedUploads) {
+            return $error;
+        }
+
+        return null;
     }
 
     protected function syncAssignments(LmsAssessment $a, Request $request): void
@@ -1283,6 +1328,7 @@ class LmsAssessmentController extends Controller
             'canCreate' => $assessment->isSkill()
                 ? $this->assessments->canManageSkillTests()
                 : $this->assessments->canCreateStudentAssessments(),
+            'zohoWorkDriveReady' => $this->zoho->isWorkDriveReady(),
             'canAssign' => $assessment->isSkill()
                 ? $this->assessments->canManageSkillTests()
                 : $this->assessments->canAssignStudentAssessments(),
