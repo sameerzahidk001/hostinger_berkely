@@ -68,7 +68,8 @@ class LmsAssessmentAttempt extends Model
             'in_progress' => 'In progress',
             'submitted' => 'Marking Required',
             'graded' => 'Completed and Marked',
-            'expired' => 'Missed',
+            // Started attempts that auto-submit at time-up are still a submission, not a missed sitting.
+            'expired' => 'Marking Required',
             default => ucfirst((string) $this->status),
         };
     }
@@ -80,7 +81,7 @@ class LmsAssessmentAttempt extends Model
             'submitted' => 'lms-status-completed',
             'graded' => 'lms-status-marked',
             'in_progress' => 'lms-status-in_progress',
-            'expired' => 'lms-status-missed',
+            'expired' => 'lms-status-completed',
             default => 'lms-status-' . $this->status,
         };
     }

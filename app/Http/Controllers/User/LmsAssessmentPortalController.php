@@ -26,6 +26,7 @@ class LmsAssessmentPortalController extends Controller
         $user = Auth::user();
         abort_unless($user, 403);
         $this->assessments->ensure();
+        $this->assessments->autoSubmitTimedOutForUser($user);
 
         $section = $request->get('section', 'all'); // all|mocks|practice|skill
         $tab = $request->get('tab', 'available'); // available|upcoming|in_progress|submitted|results|missed
@@ -107,9 +108,11 @@ class LmsAssessmentPortalController extends Controller
             $this->assessments->submitAttempt($attempt, true);
 
             return redirect()->route('user.assessments.result', $attempt->id)
-                ->with('fail', 'Time expired. Your attempt was submitted.');
+                ->with('success', 'Time was up. Your attempt was submitted.');
         }
-        abort_unless($attempt->isInProgress(), 403);
+        if (! $attempt->isInProgress()) {
+            return redirect()->route('user.assessments.result', $attempt->id);
+        }
 
         $questions = $attempt->assessment->questions;
         if ($attempt->assessment->shuffle_questions) {
@@ -126,6 +129,14 @@ class LmsAssessmentPortalController extends Controller
         abort_unless($user, 403);
         $this->assessments->ensure();
         $attempt = LmsAssessmentAttempt::where('user_id', $user->id)->findOrFail($attemptId);
+        if (! $attempt->isInProgress()) {
+            $redirect = route('user.assessments.result', $attempt->id);
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['ok' => true, 'redirect' => $redirect]);
+            }
+
+            return redirect()->to($redirect);
+        }
 
         $essayMax = 15000;
         $errors = [];
@@ -143,17 +154,32 @@ class LmsAssessmentPortalController extends Controller
                 }
             }
         }
-        if ($errors !== []) {
+        if ($errors !== [] && ! $attempt->isTimedOut()) {
             return back()->withErrors($errors)->withInput();
         }
 
         $this->assessments->saveAnswers($attempt, (array) $request->input('answers', []));
+        $fresh = $attempt->fresh();
+        $shouldFinish = $request->boolean('submit')
+            || $request->input('save_mode') === '1'
+            || ($fresh && ! $fresh->isInProgress());
 
-        if ($request->boolean('submit')) {
-            $this->assessments->submitAttempt($attempt->fresh());
+        if ($shouldFinish) {
+            if ($fresh && $fresh->isInProgress()) {
+                $this->assessments->submitAttempt($fresh);
+            }
 
-            return redirect()->route('user.assessments.result', $attempt->id)
+            $redirect = route('user.assessments.result', $attempt->id);
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['ok' => true, 'redirect' => $redirect]);
+            }
+
+            return redirect()->to($redirect)
                 ->with('success', 'Submitted. Results appear when published (MCQ-only instant results may show immediately).');
+        }
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['ok' => true]);
         }
 
         return back()->with('success', 'Answers saved.');
@@ -164,6 +190,7 @@ class LmsAssessmentPortalController extends Controller
         $user = Auth::user();
         abort_unless($user, 403);
         $this->assessments->ensure();
+        $this->assessments->autoSubmitTimedOutForUser($user);
         $attempt = LmsAssessmentAttempt::with(['assessment.questions', 'answers.question'])
             ->where('user_id', $user->id)
             ->findOrFail($attemptId);
