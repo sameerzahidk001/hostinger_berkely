@@ -79,7 +79,7 @@
                             <td data-sort="{{ $row->typeLabel() }}">{{ $row->typeLabel() }}</td>
                             <td data-sort="{{ $row->topic ?: '' }}">{{ $row->topic ?: '—' }}</td>
                             <td data-sort="{{ strip_tags($row->stem) }}">{{ \Illuminate\Support\Str::limit(strip_tags($row->stem), 100) }}</td>
-                            <td data-sort="{{ $row->max_marks }}">{{ $row->max_marks }}</td>
+                            <td data-sort="{{ $row->max_marks }}">{{ lms_format_number($row->max_marks) }}</td>
                             <td data-sort="{{ $row->status }}">{{ ucfirst($row->status) }}</td>
                             <td>
                                 <a class="btn btn-xs btn-primary" style="font-weight:700;" href="{{ route('admin.assessments.questions.edit', $row->id) }}">Edit</a>

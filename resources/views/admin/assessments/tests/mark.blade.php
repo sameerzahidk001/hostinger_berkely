@@ -68,27 +68,28 @@
         @foreach($attempt->assessment->questions as $question)
             @php $answer = $attempt->answers->firstWhere('question_id', $question->id); @endphp
             <div class="ibox">
-                <div class="ibox-title"><h5>{{ $question->typeLabel() }} · {{ $question->max_marks }} marks</h5></div>
+                <div class="ibox-title"><h5>{{ $question->typeLabel() }} · {{ lms_format_number($question->max_marks) }} marks</h5></div>
                 <div class="ibox-content">
                     <div class="m-b-sm">{!! $question->stem !!}</div>
                     @if($question->isMcq())
                         <p><strong>Selected:</strong> {{ $answer?->selectedKey() ?? '—' }}
                             @if($answer && $answer->is_correct !== null)
-                                · {{ $answer->is_correct ? 'Correct' : 'Incorrect' }} (auto {{ $answer->auto_score }})
+                                · {{ $answer->is_correct ? 'Correct' : 'Incorrect' }} (auto {{ lms_format_number($answer->auto_score) }})
                             @endif
                         </p>
                     @elseif($question->hasSubQuestions())
                         @foreach($question->subQuestions() as $sub)
-                            @php $sk = (string) ($sub['key'] ?? $loop->index); @endphp
+                            @php
+                                $sk = (string) ($sub['key'] ?? $loop->index);
+                                $subMax = $sub['marks'] ?? 0;
+                            @endphp
                             <p class="m-b-xs"><strong>{{ $sk }}.</strong> {{ $sub['text'] ?? '' }}
-                                <span class="text-muted">({{ lms_format_number($sub['percent'] ?? 0) }}% of {{ lms_format_number($question->max_marks) }} = {{ lms_format_number($sub['marks'] ?? 0) }} marks)</span></p>
+                                <span class="text-muted">({{ lms_format_number($sub['percent'] ?? 0) }}% of {{ lms_format_number($question->max_marks) }} = {{ lms_format_number($subMax) }} marks)</span></p>
                             <div class="well well-sm m-b-sm">{!! nl2br(e($answer?->partAnswer($sk) ?: '-')) !!}</div>
-                        @endforeach
-                        @if($answer)
                             <div class="row">
                                 <div class="col-md-3 form-group">
-                                    <label>Manual score (max {{ $answer->max_marks }})</label>
-                                    <input type="number" step="0.1" min="0" max="{{ $answer->max_marks }}" name="manual[{{ $answer->id }}]" class="form-control" value="{{ old('manual.'.$answer->id, $answer->manual_score) }}">
+                                    <label>Marks (max {{ lms_format_number($subMax) }})</label>
+                                    <input type="number" step="0.1" min="0" max="{{ $subMax }}" name="part_score[{{ $question->id }}][{{ $sk }}]" class="form-control" value="{{ old('part_score.'.$question->id.'.'.$sk, $answer && $answer->partScore($sk) !== null ? lms_format_number($answer->partScore($sk)) : '') }}">
                                 </div>
                                 <div class="col-md-9 form-group">
                                     <label>
@@ -96,24 +97,24 @@
                                         <span class="lms-char-hint">(max {{ number_format($feedbackMax) }} characters)</span>
                                     </label>
                                     <textarea
-                                        name="feedback[{{ $answer->id }}]"
+                                        name="part_feedback[{{ $question->id }}][{{ $sk }}]"
                                         class="form-control lms-text-editor"
                                         rows="3"
                                         data-max="{{ $feedbackMax }}"
                                         data-height="120"
                                         data-rich="1"
-                                    >{{ old('feedback.'.$answer->id, $answer->feedback) }}</textarea>
+                                    >{{ old('part_feedback.'.$question->id.'.'.$sk, $answer?->partFeedback($sk) ?: '') }}</textarea>
                                 </div>
                             </div>
-                        @endif
+                        @endforeach
                     @else
                         <p><strong>Answer:</strong></p>
                         <div class="well well-sm">{!! nl2br(e($answer?->textAnswer() ?: '-')) !!}</div>
                         @if($answer)
                             <div class="row">
                                 <div class="col-md-3 form-group">
-                                    <label>Manual score (max {{ $answer->max_marks }})</label>
-                                    <input type="number" step="0.1" min="0" max="{{ $answer->max_marks }}" name="manual[{{ $answer->id }}]" class="form-control" value="{{ old('manual.'.$answer->id, $answer->manual_score) }}">
+                                    <label>Marks (max {{ lms_format_number($answer->max_marks) }})</label>
+                                    <input type="number" step="0.1" min="0" max="{{ $answer->max_marks }}" name="manual[{{ $answer->id }}]" class="form-control" value="{{ old('manual.'.$answer->id, $answer->manual_score !== null ? lms_format_number($answer->manual_score) : '') }}">
                                 </div>
                                 <div class="col-md-9 form-group">
                                     <label>

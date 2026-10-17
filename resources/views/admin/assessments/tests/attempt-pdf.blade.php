@@ -136,6 +136,16 @@
                             · {{ $answer->is_correct ? 'Correct' : 'Incorrect' }}
                         @endif
                     </div>
+                @elseif($question->hasSubQuestions())
+                    @foreach($question->subQuestions() as $sub)
+                        @php $sk = (string) ($sub['key'] ?? $loop->index); @endphp
+                        <span class="label">{{ $sk }}. {{ $sub['text'] ?? '' }}</span>
+                        <div class="body">{!! nl2br(e($answer?->partAnswer($sk) ?: '—')) !!}</div>
+                        <p><strong>Marks:</strong> {{ lms_format_number($answer?->partScore($sk)) }} / {{ lms_format_number($sub['marks'] ?? 0) }}</p>
+                        @if($answer && trim(strip_tags($answer->partFeedback($sk))) !== '')
+                            <div class="feedback"><strong>Feedback:</strong><br>{!! strip_tags($answer->partFeedback($sk), '<p><br><strong><em><ul><ol><li><b><i>') !!}</div>
+                        @endif
+                    @endforeach
                 @else
                     <span class="label">Answer</span>
                     <div class="body">{!! nl2br(e($answer?->textAnswer() ?: '—')) !!}</div>
@@ -148,7 +158,7 @@
                     —
                 @endif
             </p>
-            @if($answer && $answer->feedback)
+            @if($answer && $answer->feedback && ! $question->hasSubQuestions())
                 <div class="feedback"><strong>Feedback:</strong><br>{!! strip_tags($answer->feedback, '<p><br><strong><em><ul><ol><li><b><i>') !!}</div>
             @endif
         </div>

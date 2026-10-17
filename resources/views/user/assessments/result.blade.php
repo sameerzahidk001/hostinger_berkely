@@ -69,11 +69,12 @@
                             <p class="m-b-xs"><strong>{{ $sk }}.</strong> {{ $sub['text'] ?? '' }}
                                 <span class="text-muted">({{ lms_format_number($sub['percent'] ?? 0) }}% · {{ lms_format_number($sub['marks'] ?? 0) }} marks)</span></p>
                             <div class="well well-sm m-b-sm">{!! nl2br(e($answer?->partAnswer($sk) ?: '-')) !!}</div>
+                            <p>Marks: {{ lms_format_number($answer?->partScore($sk)) }} / {{ lms_format_number($sub['marks'] ?? 0) }}</p>
+                            @if($answer && trim(strip_tags($answer->partFeedback($sk))) !== '')
+                                <div class="m-b-sm"><em>Feedback:</em><div class="well well-sm m-t-xs">{!! $answer->partFeedback($sk) !!}</div></div>
+                            @endif
                         @endforeach
-                        <p>Score: {{ lms_format_number($answer?->finalScore()) }} / {{ lms_format_number($answer->max_marks ?? $question->max_marks) }}</p>
-                        @if($answer && $answer->feedback)
-                            <div class="m-t-sm"><em>Feedback:</em><div class="well well-sm m-t-xs">{!! $answer->feedback !!}</div></div>
-                        @endif
+                        <p><strong>Question total:</strong> {{ lms_format_number($answer?->finalScore()) }} / {{ lms_format_number($answer->max_marks ?? $question->max_marks) }}</p>
                     @else
                         <div class="well well-sm">{!! nl2br(e($answer?->textAnswer() ?: '-')) !!}</div>
                         <p>Score: {{ lms_format_number($answer?->finalScore()) }} / {{ lms_format_number($answer->max_marks ?? $question->max_marks) }}</p>
