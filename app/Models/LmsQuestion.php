@@ -15,12 +15,14 @@ class LmsQuestion extends Model
     public const TYPE_ESSAY = 'essay';
     public const TYPE_SIMULATION = 'simulation';
     public const TYPE_CASE_STUDY = 'case_study';
+    public const TYPE_READ = 'read';
+    public const TYPE_TRANSLATION = 'translation';
 
     protected $table = 'lms_questions';
 
     protected $fillable = [
         'course_id', 'target_role', 'type', 'topic', 'stem', 'explanation', 'options_json',
-        'max_marks', 'status', 'created_by_admin_id', 'created_by_user_id',
+        'max_marks', 'time_limit_minutes', 'status', 'created_by_admin_id', 'created_by_user_id',
     ];
 
     public static function targetRoles(): array
@@ -68,6 +70,7 @@ class LmsQuestion extends Model
     protected $casts = [
         'options_json' => 'array',
         'max_marks' => 'decimal:2',
+        'time_limit_minutes' => 'integer',
     ];
 
     public static function types(): array
@@ -75,6 +78,8 @@ class LmsQuestion extends Model
         return [
             self::TYPE_MCQ => 'MCQ',
             self::TYPE_ESSAY => 'Essay',
+            self::TYPE_READ => 'Read',
+            self::TYPE_TRANSLATION => 'Translation',
             self::TYPE_SIMULATION => 'Simulation',
             self::TYPE_CASE_STUDY => 'Case Study',
         ];
@@ -99,7 +104,13 @@ class LmsQuestion extends Model
 
     public function needsManualMark(): bool
     {
-        return in_array($this->type, [self::TYPE_ESSAY, self::TYPE_SIMULATION, self::TYPE_CASE_STUDY], true);
+        return in_array($this->type, [
+            self::TYPE_ESSAY,
+            self::TYPE_READ,
+            self::TYPE_TRANSLATION,
+            self::TYPE_SIMULATION,
+            self::TYPE_CASE_STUDY,
+        ], true);
     }
 
     public function options(): array
@@ -117,6 +128,44 @@ class LmsQuestion extends Model
         }
 
         return $keys;
+    }
+
+
+    /** Non-MCQ parts a/b/c stored in options_json when not MCQ. */
+    public function subQuestions(): array
+    {
+        if ($this->isMcq()) {
+            return [];
+        }
+        $raw = $this->options();
+        $out = [];
+        foreach ($raw as $i => $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            // Skip MCQ-shaped rows accidentally left behind.
+            if (array_key_exists('is_correct', $row) && ! array_key_exists('marks', $row)) {
+                continue;
+            }
+            $text = trim((string) ($row['text'] ?? $row['prompt'] ?? ''));
+            $key = (string) ($row['key'] ?? chr(97 + count($out)));
+            $marks = (float) ($row['marks'] ?? 0);
+            if ($text === '' && $marks <= 0) {
+                continue;
+            }
+            $out[] = [
+                'key' => $key,
+                'text' => $text,
+                'marks' => $marks > 0 ? $marks : 0.0,
+            ];
+        }
+
+        return $out;
+    }
+
+    public function hasSubQuestions(): bool
+    {
+        return count($this->subQuestions()) > 0;
     }
 
     public function typeLabel(): string

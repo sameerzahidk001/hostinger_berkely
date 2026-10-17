@@ -77,9 +77,38 @@
                                 · {{ $answer->is_correct ? 'Correct' : 'Incorrect' }} (auto {{ $answer->auto_score }})
                             @endif
                         </p>
+                    @elseif($question->hasSubQuestions())
+                        @foreach($question->subQuestions() as $sub)
+                            @php $sk = (string) ($sub['key'] ?? $loop->index); @endphp
+                            <p class="m-b-xs"><strong>{{ $sk }}.</strong> {{ $sub['text'] ?? '' }}
+                                <span class="text-muted">({{ lms_format_number($sub['marks'] ?? 0) }} marks)</span></p>
+                            <div class="well well-sm m-b-sm">{!! nl2br(e($answer?->partAnswer($sk) ?: '-')) !!}</div>
+                        @endforeach
+                        @if($answer)
+                            <div class="row">
+                                <div class="col-md-3 form-group">
+                                    <label>Manual score (max {{ $answer->max_marks }})</label>
+                                    <input type="number" step="0.1" min="0" max="{{ $answer->max_marks }}" name="manual[{{ $answer->id }}]" class="form-control" value="{{ old('manual.'.$answer->id, $answer->manual_score) }}">
+                                </div>
+                                <div class="col-md-9 form-group">
+                                    <label>
+                                        Feedback
+                                        <span class="lms-char-hint">(max {{ number_format($feedbackMax) }} characters)</span>
+                                    </label>
+                                    <textarea
+                                        name="feedback[{{ $answer->id }}]"
+                                        class="form-control lms-text-editor"
+                                        rows="3"
+                                        data-max="{{ $feedbackMax }}"
+                                        data-height="120"
+                                        data-rich="1"
+                                    >{{ old('feedback.'.$answer->id, $answer->feedback) }}</textarea>
+                                </div>
+                            </div>
+                        @endif
                     @else
                         <p><strong>Answer:</strong></p>
-                        <div class="well well-sm">{!! nl2br(e($answer?->textAnswer() ?: '—')) !!}</div>
+                        <div class="well well-sm">{!! nl2br(e($answer?->textAnswer() ?: '-')) !!}</div>
                         @if($answer)
                             <div class="row">
                                 <div class="col-md-3 form-group">

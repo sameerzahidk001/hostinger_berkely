@@ -64,4 +64,28 @@ class LmsAttemptAnswer extends Model
 
         return isset($data['selected']) ? (string) $data['selected'] : null;
     }
+
+    /** @return array<string, string> */
+    public function partAnswers(): array
+    {
+        $data = $this->answer_json;
+        if (! is_array($data)) {
+            return [];
+        }
+        $parts = $data['parts'] ?? null;
+        if (! is_array($parts)) {
+            return [];
+        }
+        $out = [];
+        foreach ($parts as $k => $v) {
+            $out[(string) $k] = trim((string) $v);
+        }
+
+        return $out;
+    }
+
+    public function partAnswer(string $key): string
+    {
+        return $this->partAnswers()[$key] ?? '';
+    }
 }

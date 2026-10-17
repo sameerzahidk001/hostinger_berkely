@@ -339,9 +339,16 @@ class LmsAssessmentService
         $attempt->user_id = $user->id;
         $attempt->status = 'in_progress';
         $attempt->started_at = now();
-        // Hard stop at exam duration and/or appointment window end (whichever is sooner).
+        // Prefer sum of per-question timers; else optional test-level duration.
         $expires = null;
-        if ($assessment->duration_minutes) {
+        $assessment->loadMissing('questions');
+        $questionMinutes = 0;
+        if (Schema::hasColumn('lms_questions', 'time_limit_minutes')) {
+            $questionMinutes = (int) $assessment->questions->sum(fn ($q) => (int) ($q->time_limit_minutes ?? 0));
+        }
+        if ($questionMinutes > 0) {
+            $expires = now()->addMinutes($questionMinutes);
+        } elseif ($assessment->duration_minutes) {
             $expires = now()->addMinutes((int) $assessment->duration_minutes);
         }
         if ($assignment) {
@@ -386,6 +393,12 @@ class LmsAssessmentService
             if ($question->isMcq()) {
                 $selected = isset($payload['selected']) ? (string) $payload['selected'] : null;
                 $answer->answer_json = ['selected' => $selected];
+            } elseif ($question->hasSubQuestions() && isset($payload['parts']) && is_array($payload['parts'])) {
+                $parts = [];
+                foreach ($payload['parts'] as $key => $text) {
+                    $parts[(string) $key] = trim((string) $text);
+                }
+                $answer->answer_json = ['parts' => $parts];
             } else {
                 $answer->answer_json = ['text' => trim((string) ($payload['text'] ?? ''))];
             }
