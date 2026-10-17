@@ -81,7 +81,7 @@
                         @foreach($question->subQuestions() as $sub)
                             @php $sk = (string) ($sub['key'] ?? $loop->index); @endphp
                             <p class="m-b-xs"><strong>{{ $sk }}.</strong> {{ $sub['text'] ?? '' }}
-                                <span class="text-muted">({{ lms_format_number($sub['marks'] ?? 0) }} marks)</span></p>
+                                <span class="text-muted">({{ lms_format_number($sub['percent'] ?? 0) }}% of {{ lms_format_number($question->max_marks) }} = {{ lms_format_number($sub['marks'] ?? 0) }} marks)</span></p>
                             <div class="well well-sm m-b-sm">{!! nl2br(e($answer?->partAnswer($sk) ?: '-')) !!}</div>
                         @endforeach
                         @if($answer)

@@ -149,7 +149,7 @@
                                 <label>
                                     <strong>{{ $sk }}.</strong>
                                     {{ $sub['text'] ?? '' }}
-                                    <span class="text-muted">({{ lms_format_number($sub['marks'] ?? 0) }} marks)</span>
+                                    <span class="text-muted">({{ lms_format_number($sub['percent'] ?? 0) }}% · {{ lms_format_number($sub['marks'] ?? 0) }} marks)</span>
                                 </label>
                                 <textarea
                                     name="answers[{{ $question->id }}][parts][{{ $sk }}]"
