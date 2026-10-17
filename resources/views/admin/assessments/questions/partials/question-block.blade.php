@@ -40,11 +40,11 @@
                 <input type="number" step="0.1" min="0.1" name="{{ $prefix }}[max_marks]" class="form-control js-max-marks" value="{{ $marks }}" required>
             </div>
             <div class="col-md-12 form-group">
-                <label>Question details * <span class="lms-char-hint">(max 10,000 characters)</span></label>
+                <label>Question details * <span class="lms-char-hint">(This is the question the test taker sees in the exam — stem, passage, case or instructions. Max 10,000 characters.)</span></label>
                 <textarea name="{{ $prefix }}[stem]" class="form-control lms-text-editor" rows="4" data-max="10000" data-height="160" data-rich="1">{{ $stem }}</textarea>
             </div>
             <div class="col-md-12 form-group">
-                <label>Explanation / model answer notes <span class="lms-char-hint">(max 10,000 characters)</span></label>
+                <label>Explanation / model answer notes <span class="lms-char-hint">(Instructors’ reference only — expected answer, marking notes or a model response. Not shown to the student while they take the test. Optional. Max 10,000 characters.)</span></label>
                 <textarea name="{{ $prefix }}[explanation]" class="form-control lms-text-editor" rows="3" data-max="10000" data-height="120" data-rich="1">{{ $explanation }}</textarea>
             </div>
         </div>
@@ -60,7 +60,7 @@
             @endforeach
         </div>
         <div class="js-sub-questions" style="{{ $isMcq ? 'display:none;' : '' }}">
-            <h5>Sub-questions <span class="text-muted">(optional — 1, 2, 3… marks each)</span></h5>
+            <h5>Sub-questions <span class="text-muted">(optional — % of this question’s Max marks)</span></h5>
             <div class="js-sub-list">
                 @foreach($subs as $si => $sub)
                     <div class="row js-sub-row" style="margin-bottom:8px;">
@@ -71,7 +71,7 @@
                             <input type="text" name="{{ $prefix }}[sub_questions][{{ $si }}][text]" class="form-control" value="{{ $sub['text'] ?? '' }}" placeholder="Sub-question prompt">
                         </div>
                         <div class="col-md-2">
-                            <input type="number" step="0.1" min="0" name="{{ $prefix }}[sub_questions][{{ $si }}][marks]" class="form-control js-sub-marks" value="{{ $sub['marks'] ?? '' }}" placeholder="Marks">
+                            <input type="number" step="0.1" min="0" max="100" name="{{ $prefix }}[sub_questions][{{ $si }}][percent]" class="form-control js-sub-marks" value="{{ $sub['percent'] ?? '' }}" placeholder="%">
                         </div>
                         <div class="col-md-1">
                             <button type="button" class="btn btn-xs btn-default js-remove-sub" title="Remove">&times;</button>
@@ -80,7 +80,7 @@
                 @endforeach
             </div>
             <button type="button" class="btn btn-xs btn-success js-add-sub"><i class="fa fa-plus"></i> Add sub-question</button>
-            <p class="help-block m-b-none">Optional. Leave empty if the question has no parts.</p>
+            <p class="help-block m-b-none">Optional. % is of this question’s Max marks (e.g. 20 marks × 50% = 10). Percents should add up to 100.</p>
         </div>
     </div>
 </div>

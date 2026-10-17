@@ -155,14 +155,20 @@ class LmsQuestion extends Model
             }
             $text = trim((string) ($row['text'] ?? $row['prompt'] ?? ''));
             $key = (string) ($row['key'] ?? (count($out) + 1));
-            $marks = (float) ($row['marks'] ?? 0);
-            if ($text === '' && $marks <= 0) {
+            $percent = $row['percent'] ?? null;
+            if ($percent === null || $percent === '') {
+                $percent = $row['marks'] ?? 0;
+            }
+            $percent = (float) $percent;
+            if ($text === '' && $percent <= 0) {
                 continue;
             }
+            $total = (float) ($this->max_marks ?? 0);
             $out[] = [
                 'key' => $key,
                 'text' => $text,
-                'marks' => $marks > 0 ? $marks : 0.0,
+                'percent' => $percent,
+                'marks' => $total > 0 ? round($total * ($percent / 100), 2) : 0.0,
             ];
         }
 

@@ -73,12 +73,12 @@
                         <input type="number" step="0.1" min="0.1" name="max_marks" id="edit_max_marks" class="form-control" value="{{ old('max_marks', $question->max_marks ?: 1) }}" required>
                     </div>
                     <div class="col-md-12 form-group">
-                        <label>Question details * <span class="lms-char-hint">(max {{ number_format($stemMax) }} characters)</span></label>
+                        <label>Question details * <span class="lms-char-hint">(This is the question the test taker sees in the exam — stem, passage, case or instructions. Max {{ number_format($stemMax) }} characters.)</span></label>
                         <textarea name="stem" class="form-control lms-text-editor" rows="4" data-max="{{ $stemMax }}" data-height="180" data-rich="1" required>{{ old('stem', $question->stem) }}</textarea>
                     </div>
                     <input type="hidden" name="topic" value="{{ old('topic', $question->topic) }}">
                     <div class="col-md-12 form-group">
-                        <label>Explanation / model answer notes <span class="lms-char-hint">(max {{ number_format($explanationMax) }} characters)</span></label>
+                        <label>Explanation / model answer notes <span class="lms-char-hint">(Instructors’ reference only — expected answer, marking notes or a model response. Not shown to the student while they take the test. Optional. Max {{ number_format($explanationMax) }} characters.)</span></label>
                         <textarea name="explanation" class="form-control lms-text-editor" rows="3" data-max="{{ $explanationMax }}" data-height="140" data-rich="1">{{ old('explanation', $question->explanation) }}</textarea>
                     </div>
                 </div>
@@ -107,7 +107,7 @@
                     }
                 @endphp
                 <div id="edit_sub_questions" style="{{ old('type', $question->type) === 'mcq' ? 'display:none;' : '' }}">
-                    <h4>Sub-questions <span class="text-muted">(optional — 1, 2, 3… marks each)</span></h4>
+                    <h4>Sub-questions <span class="text-muted">(optional — % of this question’s Max marks)</span></h4>
                     <div id="edit_sub_list">
                         @foreach($editSubs as $si => $sub)
                             <div class="row js-sub-row" style="margin-bottom:8px;">
@@ -116,7 +116,7 @@
                                     <input type="text" name="sub_questions[{{ $si }}][text]" class="form-control" value="{{ $sub['text'] ?? '' }}" placeholder="Sub-question prompt">
                                 </div>
                                 <div class="col-md-2">
-                                    <input type="number" step="0.1" min="0" name="sub_questions[{{ $si }}][marks]" class="form-control js-edit-sub-marks" value="{{ $sub['marks'] ?? '' }}" placeholder="Marks">
+                                    <input type="number" step="0.1" min="0" max="100" name="sub_questions[{{ $si }}][percent]" class="form-control js-edit-sub-marks" value="{{ $sub['percent'] ?? '' }}" placeholder="%">
                                 </div>
                                 <div class="col-md-1">
                                     <button type="button" class="btn btn-xs btn-default js-edit-remove-sub">&times;</button>
@@ -125,7 +125,7 @@
                         @endforeach
                     </div>
                     <button type="button" class="btn btn-xs btn-success" id="edit_add_sub"><i class="fa fa-plus"></i> Add sub-question</button>
-                    <p class="help-block">Optional. Max marks stays as set above; if you enter sub marks, total uses their sum.</p>
+                    <p class="help-block">Max marks above is the full score for this question. Each sub-question % is a share of that total (e.g. Max 20, sub 50% = 10 marks). Percents should add up to 100.</p>
                 </div>
             @else
                 {{-- Multi create: shared defaults + question blocks --}}
@@ -272,7 +272,7 @@
             var html = '<div class="row js-sub-row" style="margin-bottom:8px;">' +
                 '<div class="col-md-1"><label class="js-sub-letter">1.</label></div>' +
                 '<div class="col-md-8"><input type="text" name="' + prefix + '[sub_questions][' + idx + '][text]" class="form-control" placeholder="Sub-question prompt"></div>' +
-                '<div class="col-md-2"><input type="number" step="0.1" min="0" name="' + prefix + '[sub_questions][' + idx + '][marks]" class="form-control js-sub-marks" placeholder="Marks"></div>' +
+                '<div class="col-md-2"><input type="number" step="0.1" min="0" max="100" name="' + prefix + '[sub_questions][' + idx + '][percent]" class="form-control js-sub-marks" placeholder="%"></div>' +
                 '<div class="col-md-1"><button type="button" class="btn btn-xs btn-default js-remove-sub">&times;</button></div></div>';
             $list.append(html);
             reletterSubs($block);
@@ -339,7 +339,7 @@
         var html = '<div class="row js-sub-row" style="margin-bottom:8px;">' +
             '<div class="col-md-1"><label class="js-sub-letter">1.</label></div>' +
             '<div class="col-md-8"><input type="text" name="sub_questions[' + idx + '][text]" class="form-control" placeholder="Sub-question prompt"></div>' +
-            '<div class="col-md-2"><input type="number" step="0.1" min="0" name="sub_questions[' + idx + '][marks]" class="form-control js-edit-sub-marks" placeholder="Marks"></div>' +
+            '<div class="col-md-2"><input type="number" step="0.1" min="0" max="100" name="sub_questions[' + idx + '][percent]" class="form-control js-edit-sub-marks" placeholder="%"></div>' +
             '<div class="col-md-1"><button type="button" class="btn btn-xs btn-default js-edit-remove-sub">&times;</button></div></div>';
         $('#edit_sub_list').append(html);
         reletterEdit();

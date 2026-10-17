@@ -342,6 +342,7 @@ class LmsQuestionController extends Controller
             'sub_questions' => 'nullable|array',
             'sub_questions.*.text' => 'nullable|string|max:5000',
             'sub_questions.*.marks' => 'nullable|numeric|min:0',
+            'sub_questions.*.percent' => 'nullable|numeric|min:0|max:100',
         ];
     }
 
@@ -367,6 +368,7 @@ class LmsQuestionController extends Controller
             'questions.*.sub_questions' => 'nullable|array',
             'questions.*.sub_questions.*.text' => 'nullable|string|max:5000',
             'questions.*.sub_questions.*.marks' => 'nullable|numeric|min:0',
+            'questions.*.sub_questions.*.percent' => 'nullable|numeric|min:0|max:100',
         ];
     }
 
@@ -491,25 +493,21 @@ class LmsQuestionController extends Controller
             $n = 0;
             foreach ((array) ($row['sub_questions'] ?? []) as $subRow) {
                 $text = trim((string) ($subRow['text'] ?? ''));
-                $marks = (float) ($subRow['marks'] ?? 0);
-                if ($text === '' && $marks <= 0) {
+                $percent = $subRow['percent'] ?? $subRow['marks'] ?? 0;
+                $percent = (float) $percent;
+                if ($text === '' && $percent <= 0) {
                     continue;
                 }
                 $n++;
                 $subs[] = [
                     'key' => (string) $n,
                     'text' => $text,
-                    'marks' => $marks > 0 ? $marks : 0.0,
+                    'percent' => max(0, min(100, $percent)),
                 ];
             }
             $q->options_json = $subs !== [] ? $subs : null;
-            $sumMarks = collect($subs)->sum(fn ($s) => (float) ($s['marks'] ?? 0));
-            // Sub-questions optional: keep Max marks field; only override when sub marks are entered.
-            if ($sumMarks > 0) {
-                $q->max_marks = (float) $sumMarks;
-            } else {
-                $q->max_marks = (float) ($row['max_marks'] ?? 1);
-            }
+            // Total marks stay on the question; sub-questions are % of that total.
+            $q->max_marks = (float) ($row['max_marks'] ?? 1);
         }
 
         if ($creating) {
