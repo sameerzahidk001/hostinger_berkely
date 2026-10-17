@@ -12,10 +12,31 @@
 </div>
 <div class="wrapper wrapper-content">
     <div class="ibox">
-        <div class="ibox-title"><h5>Your activity</h5></div>
+        <div class="ibox-title"><h5>{{ !empty($seeAll) ? 'Activity history' : 'Your activity' }}</h5></div>
         <div class="ibox-content">
+            <p class="text-muted" style="margin:0 0 10px;">
+                <strong>Time zone:</strong>
+                {{ function_exists('viewer_timezone') ? viewer_timezone() : config('app.timezone') }}
+                @if(function_exists('viewer_timezone_label'))
+                    ({{ viewer_timezone_label() }})
+                @endif
+                — based on your location. Date &amp; Time values below use this zone.
+            </p>
             <form method="GET" action="{{ route('user.history') }}" class="m-b-md" style="margin-bottom:15px;">
                 <div class="row">
+                    @if(!empty($seeAll))
+                        <div class="col-sm-4 col-md-3">
+                            <label>User</label>
+                            <select name="user_id" class="form-control">
+                                <option value="">All users</option>
+                                @foreach($filterUsers ?? [] as $u)
+                                    <option value="{{ $u->id }}" @selected((string) request('user_id') === (string) $u->id)>
+                                        {{ $u->name }} ({{ $u->email }})
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @endif
                     <div class="col-sm-4 col-md-3">
                         <label>From</label>
                         <input type="date" name="date_from" class="form-control" value="{{ request('date_from') }}">
@@ -44,15 +65,17 @@
                     <tbody>
                         @forelse($activities as $activity)
                             @php
+                                $actorUser = $activity->user;
+                                $actorAdmin = $activity->admin ?? null;
                                 $actorName = panel_actor_display_name(
-                                    $activity->user->name ?? Auth::user()->name ?? null,
-                                    $activity->user->email ?? Auth::user()->email ?? null,
-                                    $activity->user->username ?? Auth::user()->username ?? null
+                                    $actorUser->name ?? $actorAdmin->name ?? Auth::user()->name ?? null,
+                                    $actorUser->email ?? $actorAdmin->email ?? Auth::user()->email ?? null,
+                                    $actorUser->username ?? $actorAdmin->username ?? Auth::user()->username ?? null
                                 );
                                 $actionLabel = activity_action_label($activity->action);
                             @endphp
                             <tr>
-                                <td>{{ $activity->created_at?->timezone(config('app.timezone'))->format('d M Y g:i A') }}</td>
+                                <td>{{ function_exists('format_in_viewer_tz') ? format_in_viewer_tz($activity->created_at) : $activity->created_at?->format('d M Y g:i A') }}</td>
                                 <td>{{ $actorName }}</td>
                                 <td>
                                     @if(!empty($activity->url))

@@ -39,7 +39,7 @@
       </style>
       @stack('style')
    </head>
-   <body class="no-skin-config">
+   <body class="no-skin-config" data-viewer-tz="{{ function_exists('viewer_timezone') ? viewer_timezone() : config('app.timezone') }}">
       <div id="wrapper">
          <nav class="navbar-default navbar-static-side" role="navigation" style="position: fixed;">
             <div class="sidebar-collapse">
@@ -544,6 +544,7 @@
       @include('admin.layout.partials.restrict-delete')
       @include('partials.idle_session_timeout', ['logoutUrl' => route('admin.logout')])
       @include('partials.session_expired_refresh')
+      @include('partials.viewer-tz-sync')
       @stack('script')
    </body>
 </html>
