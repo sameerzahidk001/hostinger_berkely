@@ -7,6 +7,7 @@ use App\Models\ClassBatch;
 use App\Models\LmsAssessment;
 use App\Models\LmsAssessmentAssignment;
 use App\Models\LmsAssessmentAttempt;
+use App\Models\LmsAttemptAnswer;
 use App\Models\LmsQuestion;
 use App\Models\User;
 use App\Services\LmsAssessmentService;
@@ -844,7 +845,7 @@ class LmsAssessmentController extends Controller
     {
         abort_unless($this->assessments->canManageStudentAssessments() || $this->assessments->canManageSkillTests(), 403);
         $this->assessments->ensure();
-        $attempt = LmsAssessmentAttempt::with(['answers.question', 'assessment'])->findOrFail($attemptId);
+        $attempt = LmsAssessmentAttempt::with(['answers.question', 'assessment.questions'])->findOrFail($attemptId);
 
         $feedbackMax = 2000;
         $overallMax = 5000;
@@ -852,6 +853,13 @@ class LmsAssessmentController extends Controller
         foreach ((array) $request->input('feedback', []) as $answerId => $feedback) {
             if ($this->plainTextLen($feedback) > $feedbackMax) {
                 $errors['feedback.' . $answerId] = 'Feedback exceeds ' . number_format($feedbackMax) . ' characters.';
+            }
+        }
+        foreach ((array) $request->input('part_feedback', []) as $qid => $rows) {
+            foreach ((array) $rows as $sk => $feedback) {
+                if ($this->plainTextLen($feedback) > $feedbackMax) {
+                    $errors['part_feedback.' . $qid . '.' . $sk] = 'Feedback exceeds ' . number_format($feedbackMax) . ' characters.';
+                }
             }
         }
         $overallLen = $this->plainTextLen($request->input('grader_feedback'));
@@ -864,9 +872,33 @@ class LmsAssessmentController extends Controller
             return back()->withErrors($errors)->withInput();
         }
 
+        foreach ((array) $request->input('part_score', []) as $questionId => $scores) {
+            $question = $attempt->assessment->questions->firstWhere('id', (int) $questionId);
+            if (! $question || ! $question->hasSubQuestions() || ! $question->needsManualMark()) {
+                continue;
+            }
+            $answer = $attempt->answers->firstWhere('question_id', (int) $questionId);
+            if (! $answer) {
+                $answer = new LmsAttemptAnswer();
+                $answer->attempt_id = $attempt->id;
+                $answer->question_id = (int) $questionId;
+                $answer->max_marks = (float) ($question->pivot->marks_override ?? $question->max_marks);
+                $answer->save();
+            }
+            $this->assessments->markPartAnswers(
+                $answer,
+                $question->subQuestions(),
+                (array) $scores,
+                (array) $request->input('part_feedback.' . $questionId, [])
+            );
+        }
+
         foreach ((array) $request->input('manual', []) as $answerId => $score) {
             $answer = $attempt->answers->firstWhere('id', (int) $answerId);
             if (! $answer || ! $answer->question || ! $answer->question->needsManualMark()) {
+                continue;
+            }
+            if ($answer->question->hasSubQuestions()) {
                 continue;
             }
             $feedback = $request->input('feedback.' . $answerId);

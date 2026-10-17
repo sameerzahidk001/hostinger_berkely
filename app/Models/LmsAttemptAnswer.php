@@ -88,4 +88,54 @@ class LmsAttemptAnswer extends Model
     {
         return $this->partAnswers()[$key] ?? '';
     }
+
+    /** @return array<string, float> */
+    public function partScores(): array
+    {
+        $data = $this->answer_json;
+        $scores = is_array($data) ? ($data['part_scores'] ?? []) : [];
+        if (! is_array($scores)) {
+            return [];
+        }
+        $out = [];
+        foreach ($scores as $k => $v) {
+            if ($v === null || $v === '') {
+                continue;
+            }
+            $out[(string) $k] = (float) $v;
+        }
+
+        return $out;
+    }
+
+    public function partScore(string $key): ?float
+    {
+        $scores = $this->partScores();
+        if (! array_key_exists($key, $scores)) {
+            return null;
+        }
+
+        return $scores[$key];
+    }
+
+    /** @return array<string, string> */
+    public function partFeedbacks(): array
+    {
+        $data = $this->answer_json;
+        $rows = is_array($data) ? ($data['part_feedback'] ?? []) : [];
+        if (! is_array($rows)) {
+            return [];
+        }
+        $out = [];
+        foreach ($rows as $k => $v) {
+            $out[(string) $k] = (string) $v;
+        }
+
+        return $out;
+    }
+
+    public function partFeedback(string $key): string
+    {
+        return $this->partFeedbacks()[$key] ?? '';
+    }
 }

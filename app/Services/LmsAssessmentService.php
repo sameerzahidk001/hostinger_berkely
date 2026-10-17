@@ -419,18 +419,20 @@ class LmsAssessmentService
             ]);
             $answer->max_marks = $marks;
 
+            $json = is_array($answer->answer_json) ? $answer->answer_json : [];
             if ($question->isMcq()) {
                 $selected = isset($payload['selected']) ? (string) $payload['selected'] : null;
-                $answer->answer_json = ['selected' => $selected];
+                $json['selected'] = $selected;
             } elseif ($question->hasSubQuestions() && isset($payload['parts']) && is_array($payload['parts'])) {
                 $parts = [];
                 foreach ($payload['parts'] as $key => $text) {
                     $parts[(string) $key] = trim((string) $text);
                 }
-                $answer->answer_json = ['parts' => $parts];
+                $json['parts'] = $parts;
             } else {
-                $answer->answer_json = ['text' => trim((string) ($payload['text'] ?? ''))];
+                $json['text'] = trim((string) ($payload['text'] ?? ''));
             }
+            $answer->answer_json = $json;
             $answer->save();
         }
 
@@ -557,10 +559,40 @@ class LmsAssessmentService
         $attempt->save();
     }
 
+    public function markPartAnswers(LmsAttemptAnswer $answer, array $subs, array $scores, array $feedbacks): void
+    {
+        $json = is_array($answer->answer_json) ? $answer->answer_json : [];
+        $partScores = [];
+        $partFb = [];
+        $total = 0.0;
+        foreach ($subs as $sub) {
+            if (! is_array($sub)) {
+                continue;
+            }
+            $sk = (string) ($sub['key'] ?? '');
+            if ($sk === '') {
+                continue;
+            }
+            $cap = (float) ($sub['marks'] ?? 0);
+            $raw = $scores[$sk] ?? null;
+            $score = ($raw === null || $raw === '') ? 0.0 : (float) $raw;
+            $score = max(0, min($score, max(0, $cap)));
+            $partScores[$sk] = round($score, 2);
+            $total += $score;
+            $partFb[$sk] = (string) ($feedbacks[$sk] ?? '');
+        }
+        $json['part_scores'] = $partScores;
+        $json['part_feedback'] = $partFb;
+        $answer->answer_json = $json;
+        $this->markManualAnswer($answer, $total, null);
+    }
+
     public function markManualAnswer(LmsAttemptAnswer $answer, float $score, ?string $feedback = null): void
     {
         $answer->manual_score = max(0, min($score, (float) $answer->max_marks));
-        $answer->feedback = $feedback;
+        if (func_num_args() >= 3) {
+            $answer->feedback = $feedback;
+        }
         $answer->is_correct = $answer->manual_score >= ((float) $answer->max_marks * 0.5);
         $answer->marked_at = now();
         if ($this->lms->isAdminActor()) {
