@@ -81,7 +81,8 @@
                 </div>
                 <div class="col-md-2 form-group">
                     <label>Duration (min)</label>
-                    <input type="number" min="1" name="duration_minutes" class="form-control" value="{{ old('duration_minutes', $assessment->duration_minutes) }}" placeholder="Timed" @readonly(! $canCreate)>
+                    <input type="number" min="1" name="duration_minutes" class="form-control" value="{{ old('duration_minutes', $assessment->duration_minutes) }}" placeholder="Optional" @readonly(! $canCreate)>
+                    <p class="help-block" style="margin-bottom:0;font-size:11px;">Optional. Used only if questions have no per-question timers (sum of those wins).</p>
                 </div>
                 <div class="col-md-2 form-group">
                     <label>Max attempts *</label>

@@ -5,10 +5,18 @@
     $marks = $row['max_marks'] ?? 1;
     $stem = $row['stem'] ?? '';
     $explanation = $row['explanation'] ?? '';
-    $topic = $row['topic'] ?? '';
+    $timeLimit = $row['time_limit_minutes'] ?? '';
     $opts = $row['options'] ?? [['text'=>''],['text'=>''],['text'=>''],['text'=>'']];
     $correct = (int) ($row['correct_option'] ?? 0);
+    $subs = $row['sub_questions'] ?? null;
+    if (! is_array($subs) || $subs === []) {
+        $subs = [
+            ['text' => '', 'marks' => ''],
+            ['text' => '', 'marks' => ''],
+        ];
+    }
     $prefix = 'questions[' . $index . ']';
+    $isMcq = $type === 'mcq';
 @endphp
 <div class="panel panel-default question-block" data-index="{{ $index }}" style="margin-bottom:16px;">
     <div class="panel-heading" style="display:flex;justify-content:space-between;align-items:center;">
@@ -25,16 +33,22 @@
                     @endforeach
                 </select>
             </div>
-            <div class="col-md-3 form-group">
-                <label>Topic (optional override) <span class="lms-char-hint">(max 255)</span></label>
-                <input type="text" name="{{ $prefix }}[topic]" class="form-control js-topic" data-max="255" maxlength="255" value="{{ $topic }}">
+            <div class="col-md-2 form-group">
+                <label>Time limit (min)</label>
+                <input type="number" min="1" max="600" name="{{ $prefix }}[time_limit_minutes]" class="form-control" value="{{ $timeLimit }}" placeholder="Optional">
+                <p class="help-block m-b-none" style="font-size:11px;">Auto-save &amp; next when up.</p>
             </div>
-            <div class="col-md-3 form-group">
+            <div class="col-md-2 form-group js-max-marks-wrap" style="{{ $isMcq ? '' : 'display:none;' }}">
                 <label>Max marks *</label>
-                <input type="number" step="0.1" min="0.1" name="{{ $prefix }}[max_marks]" class="form-control js-max-marks" value="{{ $marks }}" required>
+                <input type="number" step="0.1" min="0.1" name="{{ $prefix }}[max_marks]" class="form-control js-max-marks" value="{{ $marks }}" @if($isMcq) required @endif>
+            </div>
+            <div class="col-md-2 form-group js-sub-marks-total" style="{{ $isMcq ? 'display:none;' : '' }}">
+                <label>Total marks</label>
+                <div class="form-control js-sub-marks-display" style="background:#f9f9f9;font-weight:700;">0</div>
+                <input type="hidden" name="{{ $prefix }}[max_marks]" class="js-max-marks-hidden" value="{{ $marks }}">
             </div>
             <div class="col-md-12 form-group">
-                <label>Question stem * <span class="lms-char-hint">(max 10,000 characters)</span></label>
+                <label>Question details * <span class="lms-char-hint">(max 10,000 characters)</span></label>
                 <textarea name="{{ $prefix }}[stem]" class="form-control lms-text-editor" rows="4" data-max="10000" data-height="160" data-rich="1">{{ $stem }}</textarea>
             </div>
             <div class="col-md-12 form-group">
@@ -42,7 +56,7 @@
                 <textarea name="{{ $prefix }}[explanation]" class="form-control lms-text-editor" rows="3" data-max="10000" data-height="120" data-rich="1">{{ $explanation }}</textarea>
             </div>
         </div>
-        <div class="js-mcq-options" style="{{ $type === 'mcq' ? '' : 'display:none;' }}">
+        <div class="js-mcq-options" style="{{ $isMcq ? '' : 'display:none;' }}">
             <h5>MCQ options</h5>
             @foreach($opts as $i => $opt)
                 <div class="form-group">
@@ -52,6 +66,28 @@
                     <input type="text" name="{{ $prefix }}[options][{{ $i }}][text]" class="form-control" data-max="500" maxlength="500" value="{{ $opt['text'] ?? '' }}" placeholder="Option {{ $i + 1 }} (max 500)">
                 </div>
             @endforeach
+        </div>
+        <div class="js-sub-questions" style="{{ $isMcq ? 'display:none;' : '' }}">
+            <h5>Sub-questions <span class="text-muted">(a, b, c… — marks each)</span></h5>
+            <div class="js-sub-list">
+                @foreach($subs as $si => $sub)
+                    <div class="row js-sub-row" style="margin-bottom:8px;">
+                        <div class="col-md-1">
+                            <label class="js-sub-letter">{{ chr(97 + (int)$si) }}.</label>
+                        </div>
+                        <div class="col-md-8">
+                            <input type="text" name="{{ $prefix }}[sub_questions][{{ $si }}][text]" class="form-control" value="{{ $sub['text'] ?? '' }}" placeholder="Sub-question prompt">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" step="0.1" min="0" name="{{ $prefix }}[sub_questions][{{ $si }}][marks]" class="form-control js-sub-marks" value="{{ $sub['marks'] ?? '' }}" placeholder="Marks">
+                        </div>
+                        <div class="col-md-1">
+                            <button type="button" class="btn btn-xs btn-default js-remove-sub" title="Remove">&times;</button>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+            <button type="button" class="btn btn-xs btn-success js-add-sub"><i class="fa fa-plus"></i> Add sub-question</button>
         </div>
     </div>
 </div>

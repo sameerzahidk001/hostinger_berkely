@@ -63,8 +63,18 @@
                             @endif
                             · {{ lms_format_number($answer?->finalScore() ?? 0) }} / {{ lms_format_number($answer->max_marks ?? $question->max_marks) }}
                         </p>
+                    @elseif($question->hasSubQuestions())
+                        @foreach($question->subQuestions() as $sub)
+                            @php $sk = (string) ($sub['key'] ?? $loop->index); @endphp
+                            <p class="m-b-xs"><strong>{{ $sk }}.</strong> {{ $sub['text'] ?? '' }}</p>
+                            <div class="well well-sm m-b-sm">{!! nl2br(e($answer?->partAnswer($sk) ?: '-')) !!}</div>
+                        @endforeach
+                        <p>Score: {{ lms_format_number($answer?->finalScore()) }} / {{ lms_format_number($answer->max_marks ?? $question->max_marks) }}</p>
+                        @if($answer && $answer->feedback)
+                            <div class="m-t-sm"><em>Feedback:</em><div class="well well-sm m-t-xs">{!! $answer->feedback !!}</div></div>
+                        @endif
                     @else
-                        <div class="well well-sm">{!! nl2br(e($answer?->textAnswer() ?: '—')) !!}</div>
+                        <div class="well well-sm">{!! nl2br(e($answer?->textAnswer() ?: '-')) !!}</div>
                         <p>Score: {{ lms_format_number($answer?->finalScore()) }} / {{ lms_format_number($answer->max_marks ?? $question->max_marks) }}</p>
                         @if($answer && $answer->feedback)
                             <div class="m-t-sm"><em>Feedback:</em><div class="well well-sm m-t-xs">{!! $answer->feedback !!}</div></div>

@@ -62,6 +62,7 @@
         background: #f8f8f8;
         border-bottom: 1px solid #e7eaec;
     }
+    .lms-q-timer { color: #c0392b; font-weight: 700; margin-left: 12px; }
     .lms-q-step { display: none; }
     .lms-q-step.is-active { display: block; }
     .lms-q-nav {
@@ -105,6 +106,7 @@
     @endif
     <div class="lms-q-progress">
         Question <strong id="lms-q-current">1</strong> of <strong>{{ max(1, $qTotal) }}</strong>
+        <span class="lms-q-timer" id="lms-q-timer" style="display:none;">Question time: <strong id="lms-q-countdown">—</strong></span>
     </div>
 </div>
 <div class="wrapper wrapper-content">
@@ -115,10 +117,18 @@
     <form method="POST" action="{{ route('user.assessments.save', $attempt->id) }}" id="attempt-form">
         @csrf
         @forelse($questions as $i => $question)
-            @php $ans = $answers->get($question->id); @endphp
-            <div class="ibox lms-q-step {{ $i === 0 ? 'is-active' : '' }}" data-q-index="{{ $i }}">
+            @php
+                $ans = $answers->get($question->id);
+                $qMins = (int) ($question->time_limit_minutes ?? 0);
+                $subs = $question->hasSubQuestions() ? $question->subQuestions() : [];
+            @endphp
+            <div class="ibox lms-q-step {{ $i === 0 ? 'is-active' : '' }}" data-q-index="{{ $i }}" data-q-minutes="{{ $qMins }}">
                 <div class="ibox-title">
-                    <h5>Q{{ $i + 1 }}. {{ $question->typeLabel() }} ({{ lms_format_number($question->pivot->marks_override ?? $question->max_marks) }} marks)</h5>
+                    <h5>Q{{ $i + 1 }}. {{ $question->typeLabel() }} ({{ lms_format_number($question->pivot->marks_override ?? $question->max_marks) }} marks)
+                        @if($qMins > 0)
+                            <small class="text-muted">· {{ $qMins }} min for this question</small>
+                        @endif
+                    </h5>
                 </div>
                 <div class="ibox-content">
                     <div class="m-b-sm">{!! $question->stem !!}</div>
@@ -130,6 +140,25 @@
                                         @checked(($ans?->selectedKey() ?? '') === (string)($opt['key'] ?? $loop->index))>
                                     {{ $opt['text'] ?? '' }}
                                 </label>
+                            </div>
+                        @endforeach
+                    @elseif(count($subs) > 0)
+                        @foreach($subs as $sub)
+                            @php $sk = (string) ($sub['key'] ?? $loop->index); @endphp
+                            <div class="form-group" style="border-left:3px solid #e7eaec;padding-left:12px;margin-bottom:16px;">
+                                <label>
+                                    <strong>{{ $sk }}.</strong>
+                                    {{ $sub['text'] ?? '' }}
+                                    <span class="text-muted">({{ lms_format_number($sub['marks'] ?? 0) }} marks)</span>
+                                </label>
+                                <textarea
+                                    name="answers[{{ $question->id }}][parts][{{ $sk }}]"
+                                    class="form-control"
+                                    rows="4"
+                                    data-max="{{ $essayMax }}"
+                                    maxlength="{{ $essayMax }}"
+                                    placeholder="Your answer for {{ $sk }}…"
+                                >{{ $ans?->partAnswer($sk) }}</textarea>
                             </div>
                         @endforeach
                     @else
@@ -144,7 +173,7 @@
                                 rows="6"
                                 data-max="{{ $essayMax }}"
                                 maxlength="{{ $essayMax }}"
-                                placeholder="{{ in_array($question->type, ['simulation', 'case_study'], true) ? ($question->type === 'case_study' ? 'Your case study response…' : 'Your simulation response…') : 'Your essay answer…' }}"
+                                placeholder="Your answer…"
                             >{{ $ans?->textAnswer() }}</textarea>
                         </div>
                     @endif
@@ -174,7 +203,63 @@ document.body.setAttribute('data-lms-exam-lock', '1');
     var btnBack = document.getElementById('lms-q-back');
     var btnNext = document.getElementById('lms-q-next');
     var curLabel = document.getElementById('lms-q-current');
+    var qTimerWrap = document.getElementById('lms-q-timer');
+    var qCountdown = document.getElementById('lms-q-countdown');
+    var form = document.getElementById('attempt-form');
     var idx = 0;
+    var qTimerId = null;
+    var qEndsAt = null;
+
+    function clearQTimer() {
+        if (qTimerId) { clearTimeout(qTimerId); qTimerId = null; }
+        qEndsAt = null;
+        if (qTimerWrap) qTimerWrap.style.display = 'none';
+    }
+
+    function saveProgressThen(cb) {
+        if (!form) { if (cb) cb(); return; }
+        var fd = new FormData(form);
+        fd.set('submit', '0');
+        var token = form.querySelector('input[name="_token"]');
+        fetch(form.action, {
+            method: 'POST',
+            body: fd,
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        }).catch(function () {}).finally(function () {
+            if (cb) cb();
+        });
+    }
+
+    function tickQ() {
+        if (!qEndsAt || !qCountdown) return;
+        var ms = qEndsAt - Date.now();
+        if (ms <= 0) {
+            clearQTimer();
+            qCountdown.textContent = '0s';
+            // Auto-save and move next (or stay on last).
+            saveProgressThen(function () {
+                if (idx < steps.length - 1) {
+                    showStep(idx + 1);
+                }
+            });
+            return;
+        }
+        var s = Math.floor(ms / 1000);
+        var m = Math.floor(s / 60);
+        s = s % 60;
+        qCountdown.textContent = (m > 0 ? (m + 'm ') : '') + s + 's';
+        qTimerId = setTimeout(tickQ, 1000);
+    }
+
+    function startQTimer(stepEl) {
+        clearQTimer();
+        var mins = parseInt(stepEl.getAttribute('data-q-minutes') || '0', 10);
+        if (!mins || mins < 1) return;
+        qEndsAt = Date.now() + mins * 60 * 1000;
+        if (qTimerWrap) qTimerWrap.style.display = 'inline';
+        tickQ();
+    }
 
     function showStep(i) {
         if (!steps.length) return;
@@ -185,16 +270,18 @@ document.body.setAttribute('data-lms-exam-lock', '1');
         if (curLabel) curLabel.textContent = String(idx + 1);
         if (btnBack) btnBack.disabled = idx <= 0;
         if (btnNext) btnNext.disabled = idx >= steps.length - 1;
+        startQTimer(steps[idx]);
         try {
-            var sticky = document.querySelector('.lms-take-sticky');
-            if (sticky) {
-                sticky.scrollIntoView({ block: 'start', behavior: 'smooth' });
-            }
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         } catch (e) {}
     }
 
-    if (btnBack) btnBack.addEventListener('click', function () { showStep(idx - 1); });
-    if (btnNext) btnNext.addEventListener('click', function () { showStep(idx + 1); });
+    if (btnBack) btnBack.addEventListener('click', function () {
+        saveProgressThen(function () { showStep(idx - 1); });
+    });
+    if (btnNext) btnNext.addEventListener('click', function () {
+        saveProgressThen(function () { showStep(idx + 1); });
+    });
     showStep(0);
 })();
 

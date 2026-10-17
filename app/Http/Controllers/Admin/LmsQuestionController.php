@@ -326,7 +326,7 @@ class LmsQuestionController extends Controller
         $courseRule = $this->instructorMustPickCourse() ? 'required|exists:courses,id' : 'nullable|exists:courses,id';
 
         return [
-            'type' => 'required|in:mcq,essay,simulation,case_study',
+            'type' => 'required|in:mcq,essay,read,translation,simulation,case_study',
             'stem' => 'nullable|string',
             'topic' => 'nullable|string|max:255',
             'course_id' => $courseRule,
@@ -337,6 +337,10 @@ class LmsQuestionController extends Controller
             'options.*.text' => 'nullable|string|max:500',
             'options.*.is_correct' => 'nullable',
             'correct_option' => 'nullable|integer|min:0',
+            'time_limit_minutes' => 'nullable|integer|min:1|max:600',
+            'sub_questions' => 'nullable|array',
+            'sub_questions.*.text' => 'nullable|string|max:5000',
+            'sub_questions.*.marks' => 'nullable|numeric|min:0',
         ];
     }
 
@@ -349,7 +353,7 @@ class LmsQuestionController extends Controller
             'topic' => 'nullable|string|max:255',
             'status' => 'required|in:active,disabled',
             'questions' => 'required|array|min:1',
-            'questions.*.type' => 'required|in:mcq,essay,simulation,case_study',
+            'questions.*.type' => 'required|in:mcq,essay,read,translation,simulation,case_study',
             'questions.*.stem' => 'nullable|string',
             'questions.*.topic' => 'nullable|string|max:255',
             'questions.*.max_marks' => 'required|numeric|min:0.1',
@@ -357,6 +361,10 @@ class LmsQuestionController extends Controller
             'questions.*.options' => 'nullable|array',
             'questions.*.options.*.text' => 'nullable|string|max:500',
             'questions.*.correct_option' => 'nullable|integer|min:0',
+            'questions.*.time_limit_minutes' => 'nullable|integer|min:1|max:600',
+            'questions.*.sub_questions' => 'nullable|array',
+            'questions.*.sub_questions.*.text' => 'nullable|string|max:5000',
+            'questions.*.sub_questions.*.marks' => 'nullable|numeric|min:0',
         ];
     }
 
@@ -408,10 +416,12 @@ class LmsQuestionController extends Controller
             'course_id' => $request->input('course_id'),
             'target_role' => $request->input('target_role'),
             'max_marks' => $request->input('max_marks', 1),
+            'time_limit_minutes' => $request->input('time_limit_minutes'),
             'explanation' => $request->input('explanation'),
             'status' => $request->input('status', 'active'),
             'options' => $request->input('options', []),
             'correct_option' => $request->input('correct_option', 0),
+            'sub_questions' => $request->input('sub_questions', []),
         ], [], $creating);
     }
 
@@ -434,11 +444,15 @@ class LmsQuestionController extends Controller
                 : trim((string) ($row['target_role'] ?? ''));
             $q->target_role = $q->course_id ? null : ($role !== '' ? $role : null);
         }
-        $q->max_marks = (float) ($row['max_marks'] ?? 1);
         $explanation = trim((string) ($row['explanation'] ?? ''));
         $q->explanation = $this->isBlankHtml($explanation) ? null : $explanation;
         $status = $defaults['status'] ?? ($row['status'] ?? 'active');
         $q->status = $status === 'active' ? 'active' : 'disabled';
+
+        if (Schema::hasColumn('lms_questions', 'time_limit_minutes')) {
+            $tl = $row['time_limit_minutes'] ?? null;
+            $q->time_limit_minutes = ($tl !== null && $tl !== '' && (int) $tl > 0) ? (int) $tl : null;
+        }
 
         if ($q->type === LmsQuestion::TYPE_MCQ) {
             $options = [];
@@ -462,8 +476,27 @@ class LmsQuestionController extends Controller
                 unset($opt);
             }
             $q->options_json = $options;
+            $q->max_marks = (float) ($row['max_marks'] ?? 1);
         } else {
-            $q->options_json = null;
+            // Sub-questions a/b/c with per-part marks (not for MCQ).
+            $subs = [];
+            $letter = 0;
+            foreach ((array) ($row['sub_questions'] ?? []) as $subRow) {
+                $text = trim((string) ($subRow['text'] ?? ''));
+                $marks = (float) ($subRow['marks'] ?? 0);
+                if ($text === '' && $marks <= 0) {
+                    continue;
+                }
+                $subs[] = [
+                    'key' => chr(97 + $letter),
+                    'text' => $text,
+                    'marks' => $marks > 0 ? $marks : 0.0,
+                ];
+                $letter++;
+            }
+            $q->options_json = $subs !== [] ? $subs : null;
+            $sumMarks = collect($subs)->sum(fn ($s) => (float) ($s['marks'] ?? 0));
+            $q->max_marks = $sumMarks > 0 ? (float) $sumMarks : (float) ($row['max_marks'] ?? 1);
         }
 
         if ($creating) {

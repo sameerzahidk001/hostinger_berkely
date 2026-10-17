@@ -46,10 +46,6 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-2 form-group">
-                        <label>Topic <span class="lms-char-hint">(max {{ $topicMax }})</span></label>
-                        <input type="text" name="topic" class="form-control" data-max="{{ $topicMax }}" maxlength="{{ $topicMax }}" value="{{ old('topic', $question->topic) }}">
-                    </div>
                     <div class="col-md-2 form-group js-q-target-role">
                         <label>Question for</label>
                         <select name="target_role" class="form-control lms-searchable" data-placeholder="Type to find user type">
@@ -69,13 +65,18 @@
                         </select>
                     </div>
                     <div class="col-md-2 form-group">
+                        <label>Time limit (min)</label>
+                        <input type="number" min="1" max="600" name="time_limit_minutes" class="form-control" value="{{ old('time_limit_minutes', $question->time_limit_minutes) }}" placeholder="Optional">
+                    </div>
+                    <div class="col-md-2 form-group" id="edit_max_marks_wrap">
                         <label>Max marks *</label>
-                        <input type="number" step="0.1" min="0.1" name="max_marks" class="form-control" value="{{ old('max_marks', $question->max_marks ?: 1) }}" required>
+                        <input type="number" step="0.1" min="0.1" name="max_marks" id="edit_max_marks" class="form-control" value="{{ old('max_marks', $question->max_marks ?: 1) }}" required>
                     </div>
                     <div class="col-md-12 form-group">
-                        <label>Question stem * <span class="lms-char-hint">(max {{ number_format($stemMax) }} characters)</span></label>
+                        <label>Question details * <span class="lms-char-hint">(max {{ number_format($stemMax) }} characters)</span></label>
                         <textarea name="stem" class="form-control lms-text-editor" rows="4" data-max="{{ $stemMax }}" data-height="180" data-rich="1" required>{{ old('stem', $question->stem) }}</textarea>
                     </div>
+                    <input type="hidden" name="topic" value="{{ old('topic', $question->topic) }}">
                     <div class="col-md-12 form-group">
                         <label>Explanation / model answer notes <span class="lms-char-hint">(max {{ number_format($explanationMax) }} characters)</span></label>
                         <textarea name="explanation" class="form-control lms-text-editor" rows="3" data-max="{{ $explanationMax }}" data-height="140" data-rich="1">{{ old('explanation', $question->explanation) }}</textarea>
@@ -95,6 +96,36 @@
                             <input type="text" name="options[{{ $i }}][text]" class="form-control" data-max="{{ $optionMax }}" maxlength="{{ $optionMax }}" value="{{ $opt['text'] ?? '' }}" placeholder="Option {{ $i + 1 }} (max {{ $optionMax }})">
                         </div>
                     @endforeach
+                </div>
+                @php
+                    $editSubs = old('sub_questions');
+                    if (! is_array($editSubs)) {
+                        $editSubs = $question->subQuestions();
+                    }
+                    if (! is_array($editSubs) || $editSubs === []) {
+                        $editSubs = [['text' => '', 'marks' => ''], ['text' => '', 'marks' => '']];
+                    }
+                @endphp
+                <div id="edit_sub_questions" style="{{ old('type', $question->type) === 'mcq' ? 'display:none;' : '' }}">
+                    <h4>Sub-questions <span class="text-muted">(a, b, c… — marks each)</span></h4>
+                    <div id="edit_sub_list">
+                        @foreach($editSubs as $si => $sub)
+                            <div class="row js-sub-row" style="margin-bottom:8px;">
+                                <div class="col-md-1"><label class="js-sub-letter">{{ chr(97 + (int)$si) }}.</label></div>
+                                <div class="col-md-8">
+                                    <input type="text" name="sub_questions[{{ $si }}][text]" class="form-control" value="{{ $sub['text'] ?? '' }}" placeholder="Sub-question prompt">
+                                </div>
+                                <div class="col-md-2">
+                                    <input type="number" step="0.1" min="0" name="sub_questions[{{ $si }}][marks]" class="form-control js-edit-sub-marks" value="{{ $sub['marks'] ?? '' }}" placeholder="Marks">
+                                </div>
+                                <div class="col-md-1">
+                                    <button type="button" class="btn btn-xs btn-default js-edit-remove-sub">&times;</button>
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                    <button type="button" class="btn btn-xs btn-success" id="edit_add_sub"><i class="fa fa-plus"></i> Add sub-question</button>
+                    <p class="help-block">Total marks = sum of sub-question marks (when any are set).</p>
                 </div>
             @else
                 {{-- Multi create: shared defaults + question blocks --}}
@@ -144,9 +175,10 @@
                                 'max_marks' => 1,
                                 'stem' => '',
                                 'explanation' => '',
-                                'topic' => '',
+                                'time_limit_minutes' => '',
                                 'options' => [['text'=>''],['text'=>''],['text'=>''],['text'=>'']],
                                 'correct_option' => 0,
+                                'sub_questions' => [['text'=>'','marks'=>''],['text'=>'','marks'=>'']],
                             ]];
                         }
                     @endphp
@@ -182,9 +214,10 @@
             'max_marks' => 1,
             'stem' => '',
             'explanation' => '',
-            'topic' => '',
+            'time_limit_minutes' => '',
             'options' => [['text'=>''],['text'=>''],['text'=>''],['text'=>'']],
             'correct_option' => 0,
+            'sub_questions' => [['text'=>'','marks'=>''],['text'=>'','marks'=>'']],
         ],
         'types' => $types,
     ])
@@ -194,21 +227,79 @@
 @push('script')
 <script>
 (function () {
+    var letters = 'abcdefghijklmnopqrstuvwxyz';
+
     function updateTotalMarks() {
         var total = 0;
-        $('#questionBlocks').find('input.js-max-marks').each(function () {
-            var n = parseFloat($(this).val());
-            if (!isNaN(n)) total += n;
+        $('#questionBlocks .question-block').each(function () {
+            var $b = $(this);
+            var type = $b.find('.js-q-type').val();
+            if (type === 'mcq') {
+                var n = parseFloat($b.find('input.js-max-marks').val());
+                if (!isNaN(n)) total += n;
+            } else {
+                var sub = 0;
+                $b.find('.js-sub-marks').each(function () {
+                    var m = parseFloat($(this).val());
+                    if (!isNaN(m)) sub += m;
+                });
+                total += sub;
+                $b.find('.js-sub-marks-display').text(sub.toFixed(1));
+                $b.find('.js-max-marks-hidden').val(sub > 0 ? sub.toFixed(1) : '1');
+            }
         });
         $('#totalMarksDisplay').text(total.toFixed(1));
     }
 
-    function bindBlock($block) {
-        $block.find('.js-q-type').on('change', function () {
-            $block.find('.js-mcq-options').toggle($(this).val() === 'mcq');
+    function reletterSubs($scope) {
+        $scope.find('.js-sub-row').each(function (i) {
+            $(this).find('.js-sub-letter').text((letters[i] || (i + 1)) + '.');
+            $(this).find('[name]').each(function () {
+                var name = $(this).attr('name');
+                if (!name) return;
+                $(this).attr('name', name.replace(/\[sub_questions\]\[\d+\]/, '[sub_questions][' + i + ']'));
+            });
         });
-        $block.find('input.js-max-marks').on('input change', updateTotalMarks);
-        $block.find('.js-remove-block').on('click', function () {
+    }
+
+    function toggleTypeUI($block, type) {
+        var isMcq = type === 'mcq';
+        $block.find('.js-mcq-options').toggle(isMcq);
+        $block.find('.js-sub-questions').toggle(!isMcq);
+        $block.find('.js-max-marks-wrap').toggle(isMcq);
+        $block.find('.js-sub-marks-total').toggle(!isMcq);
+        $block.find('input.js-max-marks').prop('required', isMcq);
+        updateTotalMarks();
+    }
+
+    function bindBlock($block) {
+        $block.find('.js-q-type').off('change.qtype').on('change.qtype', function () {
+            toggleTypeUI($block, $(this).val());
+        });
+        $block.find('input.js-max-marks').off('input.qm change.qm').on('input.qm change.qm', updateTotalMarks);
+        $block.find('.js-sub-marks').off('input.sm change.sm').on('input.sm change.sm', updateTotalMarks);
+        $block.find('.js-add-sub').off('click.addsub').on('click.addsub', function () {
+            var $list = $block.find('.js-sub-list');
+            var idx = $list.find('.js-sub-row').length;
+            var prefix = $block.find('.js-q-type').attr('name').replace('[type]', '');
+            var html = '<div class="row js-sub-row" style="margin-bottom:8px;">' +
+                '<div class="col-md-1"><label class="js-sub-letter">a.</label></div>' +
+                '<div class="col-md-8"><input type="text" name="' + prefix + '[sub_questions][' + idx + '][text]" class="form-control" placeholder="Sub-question prompt"></div>' +
+                '<div class="col-md-2"><input type="number" step="0.1" min="0" name="' + prefix + '[sub_questions][' + idx + '][marks]" class="form-control js-sub-marks" placeholder="Marks"></div>' +
+                '<div class="col-md-1"><button type="button" class="btn btn-xs btn-default js-remove-sub">&times;</button></div></div>';
+            $list.append(html);
+            reletterSubs($block);
+            $block.find('.js-sub-marks').off('input.sm change.sm').on('input.sm change.sm', updateTotalMarks);
+            updateTotalMarks();
+        });
+        $block.off('click.remsub').on('click.remsub', '.js-remove-sub', function () {
+            var $list = $block.find('.js-sub-list');
+            if ($list.find('.js-sub-row').length <= 1) return;
+            $(this).closest('.js-sub-row').remove();
+            reletterSubs($block);
+            updateTotalMarks();
+        });
+        $block.find('.js-remove-block').off('click.rm').on('click.rm', function () {
             if ($('#questionBlocks .question-block').length <= 1) {
                 alert('Keep at least one question.');
                 return;
@@ -222,6 +313,7 @@
             reindexBlocks();
             updateTotalMarks();
         });
+        toggleTypeUI($block, $block.find('.js-q-type').val());
     }
 
     function reindexBlocks() {
@@ -236,8 +328,41 @@
         });
     }
 
-    $('#q_type').on('change', function () {
-        $('#mcq_options').toggle($(this).val() === 'mcq');
+    function syncEditType() {
+        var isMcq = $('#q_type').val() === 'mcq';
+        $('#mcq_options').toggle(isMcq);
+        $('#edit_sub_questions').toggle(!isMcq);
+        $('#edit_max_marks_wrap').toggle(isMcq);
+        $('#edit_max_marks').prop('required', isMcq);
+    }
+
+    $('#q_type').on('change', syncEditType);
+    syncEditType();
+
+    function reletterEdit() {
+        $('#edit_sub_list .js-sub-row').each(function (i) {
+            $(this).find('.js-sub-letter').text((letters[i] || (i + 1)) + '.');
+            $(this).find('[name]').each(function () {
+                var name = $(this).attr('name');
+                if (!name) return;
+                $(this).attr('name', name.replace(/sub_questions\[\d+\]/, 'sub_questions[' + i + ']'));
+            });
+        });
+    }
+    $('#edit_add_sub').on('click', function () {
+        var idx = $('#edit_sub_list .js-sub-row').length;
+        var html = '<div class="row js-sub-row" style="margin-bottom:8px;">' +
+            '<div class="col-md-1"><label class="js-sub-letter">a.</label></div>' +
+            '<div class="col-md-8"><input type="text" name="sub_questions[' + idx + '][text]" class="form-control" placeholder="Sub-question prompt"></div>' +
+            '<div class="col-md-2"><input type="number" step="0.1" min="0" name="sub_questions[' + idx + '][marks]" class="form-control js-edit-sub-marks" placeholder="Marks"></div>' +
+            '<div class="col-md-1"><button type="button" class="btn btn-xs btn-default js-edit-remove-sub">&times;</button></div></div>';
+        $('#edit_sub_list').append(html);
+        reletterEdit();
+    });
+    $(document).on('click', '.js-edit-remove-sub', function () {
+        if ($('#edit_sub_list .js-sub-row').length <= 1) return;
+        $(this).closest('.js-sub-row').remove();
+        reletterEdit();
     });
 
     $('#questionBlocks .question-block').each(function () {
@@ -259,10 +384,6 @@
             window.LmsSearchableSelect.init($block);
         }
         bindBlock($block);
-        var topic = $('#shared_topic').val();
-        if (topic) {
-            $block.find('.js-topic').val(topic);
-        }
         updateTotalMarks();
     });
 })();

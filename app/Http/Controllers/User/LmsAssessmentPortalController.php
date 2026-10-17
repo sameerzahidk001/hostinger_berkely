@@ -126,9 +126,17 @@ class LmsAssessmentPortalController extends Controller
         $essayMax = 15000;
         $errors = [];
         foreach ((array) $request->input('answers', []) as $questionId => $payload) {
-            $text = is_array($payload) ? ($payload['text'] ?? null) : null;
+            if (! is_array($payload)) {
+                continue;
+            }
+            $text = $payload['text'] ?? null;
             if ($text !== null && mb_strlen((string) $text) > $essayMax) {
                 $errors['answers.' . $questionId . '.text'] = 'Answer exceeds ' . number_format($essayMax) . ' characters.';
+            }
+            foreach ((array) ($payload['parts'] ?? []) as $partKey => $partText) {
+                if (mb_strlen((string) $partText) > $essayMax) {
+                    $errors['answers.' . $questionId . '.parts.' . $partKey] = 'Answer part exceeds ' . number_format($essayMax) . ' characters.';
+                }
             }
         }
         if ($errors !== []) {
