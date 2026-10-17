@@ -839,8 +839,8 @@ class AdminController extends Controller
             'panelBaseUrl' => $options['panelBaseUrl'] ?? route('admin.home'),
             'pageTitle' => $options['pageTitle'] ?? 'Dashboard',
             'activityGapComments' => $this->activityGapCommentsFor($activities, $studentActivities),
-            'activityTimezone' => config('app.timezone'),
-            'activityTimezoneLabel' => now()->timezone(config('app.timezone'))->format('T P'),
+            'activityTimezone' => viewer_timezone(),
+            'activityTimezoneLabel' => viewer_timezone_label(),
         ]);
     }
 
@@ -1360,8 +1360,8 @@ class AdminController extends Controller
 
         $exportScope = $exportType === 'student' ? 'student' : 'staff';
         $gapComments = app(ActivityGapCommentService::class)->commentsForFeed($exportScope, $rows);
-        $tzName = config('app.timezone');
-        $tzLabel = now()->timezone($tzName)->format('T P');
+        $tzName = viewer_timezone();
+        $tzLabel = viewer_timezone_label($tzName);
 
         if ($format === 'pdf') {
             $pdf = Pdf::loadView('admin.dashboard.activity-pdf', [
@@ -1418,9 +1418,8 @@ class AdminController extends Controller
                     $prevTs = $ts;
                 }
 
-                $when = optional($activity['occurred_at'] ?? null);
                 fputcsv($handle, [
-                    $when ? $when->format('M j, Y g:i A') : '—',
+                    format_in_viewer_tz($activity['occurred_at'] ?? null),
                     $activity['user_name'] ?? '—',
                     activity_action_label($activity['action'] ?? ''),
                     $activity['item'] ?? '',
