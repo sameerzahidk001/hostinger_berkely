@@ -16,6 +16,7 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
@@ -110,6 +111,7 @@ class LmsAssessmentController extends Controller
         $this->fill($a, $request, true);
         $a->save();
         $this->syncQuestions($a, $request);
+        $this->syncResourceFiles($a, $request);
 
         return redirect()->route('admin.assessments.tests.edit', $a->id)->with('success', 'Test created. Use Assign to give it to users or batches.');
     }
@@ -153,6 +155,7 @@ class LmsAssessmentController extends Controller
             $this->fill($a, $request, false);
             $a->save();
             $this->syncQuestions($a, $request);
+            $this->syncResourceFiles($a, $request);
         }
 
         return redirect()->route('admin.assessments.tests.edit', $a->id)->with('success', 'Test updated.');
@@ -1015,6 +1018,12 @@ class LmsAssessmentController extends Controller
             'status' => 'required|in:draft,published,disabled',
             'question_ids' => 'nullable|array',
             'question_ids.*' => 'exists:lms_questions,id',
+            'reference_files' => 'nullable|array|max:2',
+            'reference_files.*' => 'file|mimes:pdf,doc,docx,jpg,jpeg,png,gif,webp,txt|max:20480',
+            'preseen_files' => 'nullable|array|max:2',
+            'preseen_files.*' => 'file|mimes:pdf,doc,docx,jpg,jpeg,png,gif,webp,txt|max:20480',
+            'remove_reference' => 'nullable|array',
+            'remove_preseen' => 'nullable|array',
         ];
     }
 
@@ -1079,6 +1088,56 @@ class LmsAssessmentController extends Controller
             $sync[$qid] = ['sort_order' => $i];
         }
         $a->questions()->sync($sync);
+    }
+
+    protected function syncResourceFiles(LmsAssessment $a, Request $request): void
+    {
+        if (! Schema::hasColumn('lms_assessments', 'reference_files_json')) {
+            return;
+        }
+        foreach ([
+            'reference' => ['input' => 'reference_files', 'col' => 'reference_files_json', 'remove' => 'remove_reference'],
+            'preseen' => ['input' => 'preseen_files', 'col' => 'preseen_files_json', 'remove' => 'remove_preseen'],
+        ] as $kind => $cfg) {
+            if (! Schema::hasColumn('lms_assessments', $cfg['col'])) {
+                continue;
+            }
+            $existing = is_array($a->{$cfg['col']}) ? $a->{$cfg['col']} : [];
+            $remove = array_map('intval', (array) $request->input($cfg['remove'], []));
+            $kept = [];
+            foreach ($existing as $i => $row) {
+                if (! is_array($row)) {
+                    continue;
+                }
+                if (in_array((int) $i, $remove, true)) {
+                    if (! empty($row['path'])) {
+                        Storage::disk('public')->delete($row['path']);
+                    }
+                    continue;
+                }
+                $kept[] = $row;
+            }
+            $uploads = $request->file($cfg['input'], []);
+            if (! is_array($uploads)) {
+                $uploads = $uploads ? [$uploads] : [];
+            }
+            foreach ($uploads as $file) {
+                if (count($kept) >= 2) {
+                    break;
+                }
+                if (! $file || ! $file->isValid()) {
+                    continue;
+                }
+                $stored = $file->store('lms/tests/' . $a->id . '/' . $kind, 'public');
+                $kept[] = [
+                    'name' => $file->getClientOriginalName(),
+                    'path' => $stored,
+                    'mime' => (string) $file->getClientMimeType(),
+                ];
+            }
+            $a->{$cfg['col']} = $kept !== [] ? array_values($kept) : null;
+        }
+        $a->save();
     }
 
     protected function syncAssignments(LmsAssessment $a, Request $request): void

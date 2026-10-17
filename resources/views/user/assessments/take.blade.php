@@ -21,13 +21,14 @@
         left: 220px;
         right: 0;
         z-index: 1040;
-        background: #fff;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, .1);
+        background: #0d3b66;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, .18);
         margin: 0;
+        color: #fff;
     }
     body.lms-take-mode #page-wrapper > .wrapper-content,
     body.lms-take-mode .wrapper.wrapper-content {
-        margin-top: 150px;
+        margin-top: 190px;
     }
     @media (max-width: 768px) {
         .lms-take-sticky { left: 0; }
@@ -37,30 +38,104 @@
     .lms-take-sticky .page-heading {
         margin: 0;
         padding: 12px 15px 8px;
-        background: #fff;
-        border-bottom: 1px solid #e7eaec;
+        background: #0d3b66;
+        border-bottom: 1px solid #16497a;
+        color: #fff;
     }
     .lms-take-sticky .page-heading h2 {
         margin: 0 0 4px;
         font-size: 20px;
+        color: #fff;
     }
     .lms-take-sticky .breadcrumb {
         margin-bottom: 0;
+        background: transparent;
+    }
+    .lms-take-sticky .breadcrumb > li,
+    .lms-take-sticky .breadcrumb > li a,
+    .lms-take-sticky .breadcrumb > li.active {
+        color: #d7e6f5;
     }
     .lms-take-sticky .lms-take-timer {
         margin: 0;
         border-radius: 0;
-        border-left: none;
-        border-right: none;
+        border: none;
         padding: 10px 15px;
         font-weight: 600;
+        background: #123f6b;
+        color: #fff;
     }
     .lms-take-sticky .lms-q-progress {
         padding: 8px 15px;
         font-size: 13px;
-        color: #676a6c;
-        background: #f8f8f8;
-        border-bottom: 1px solid #e7eaec;
+        color: #0d3b66;
+        background: #fff;
+        border-bottom: 1px solid #d9e4f0;
+    }
+    .lms-res-btns { margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 8px; }
+    .lms-res-btn {
+        display: inline-block;
+        background: #1d4e89;
+        color: #fff !important;
+        border: 1px solid #2b6cb0;
+        border-radius: 3px;
+        padding: 6px 14px;
+        font-weight: 700;
+        font-size: 13px;
+        text-decoration: none !important;
+    }
+    .lms-res-btn:hover, .lms-res-btn:focus { background: #163e6d; color: #fff !important; }
+    .lms-res-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 2000;
+        background: rgba(8, 24, 48, .55);
+    }
+    .lms-res-modal.is-open { display: flex; align-items: stretch; justify-content: center; padding: 24px; }
+    .lms-res-dialog {
+        background: #fff;
+        width: min(1100px, 96vw);
+        height: min(90vh, 860px);
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 8px 32px rgba(0,0,0,.35);
+        border: 1px solid #0d3b66;
+    }
+    .lms-res-dialog-head {
+        background: #0d3b66;
+        color: #fff;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        min-height: 46px;
+    }
+    .lms-res-tab {
+        background: #1d4e89;
+        color: #fff;
+        border: 0;
+        padding: 8px 16px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+    .lms-res-tab.is-active { background: #fff; color: #0d3b66; }
+    .lms-res-close {
+        margin-left: auto;
+        background: transparent;
+        border: 0;
+        color: #fff;
+        font-size: 22px;
+        line-height: 1;
+        cursor: pointer;
+        padding: 4px 8px;
+    }
+    .lms-res-dialog-body { flex: 1; background: #fff; min-height: 0; }
+    .lms-res-dialog-body iframe, .lms-res-dialog-body img {
+        width: 100%;
+        height: 100%;
+        border: 0;
+        background: #fff;
     }
     .lms-q-timer { color: #c0392b; font-weight: 700; margin-left: 12px; }
     .lms-q-step { display: none; }
@@ -85,6 +160,8 @@
 @php
     $essayMax = 15000;
     $qTotal = $questions->count();
+    $refFiles = $attempt->assessment->resourceFiles('reference');
+    $preFiles = $attempt->assessment->resourceFiles('preseen');
 @endphp
 <div class="lms-take-sticky">
     <div class="row wrapper border-bottom white-bg page-heading">
@@ -94,6 +171,16 @@
                 <li><a href="{{ route('user.assessments.index') }}">My Tests</a></li>
                 <li class="active"><strong>In progress</strong></li>
             </ol>
+            @if($refFiles !== [] || $preFiles !== [])
+                <div class="lms-res-btns">
+                    @if($refFiles !== [])
+                        <a href="#" class="lms-res-btn js-open-res" data-kind="reference">Reference Material</a>
+                    @endif
+                    @if($preFiles !== [])
+                        <a href="#" class="lms-res-btn js-open-res" data-kind="preseen">Pre-seen</a>
+                    @endif
+                </div>
+            @endif
         </div>
     </div>
     @if($attempt->expires_at)
@@ -194,6 +281,27 @@
         </div>
     </form>
 </div>
+@if($refFiles !== [] || $preFiles !== [])
+<div class="lms-res-modal" id="lms-res-modal" aria-hidden="true">
+    <div class="lms-res-dialog">
+        <div class="lms-res-dialog-head">
+            @if($refFiles !== [])
+                <button type="button" class="lms-res-tab js-res-kind" data-kind="reference">Reference Material</button>
+            @endif
+            @if($preFiles !== [])
+                <button type="button" class="lms-res-tab js-res-kind" data-kind="preseen">Pre-seen</button>
+            @endif
+            @if(count($refFiles) > 1 || count($preFiles) > 1)
+                <select id="lms-res-file" class="form-control input-sm" style="width:auto;max-width:280px;color:#0d3b66;"></select>
+            @endif
+            <button type="button" class="lms-res-close" id="lms-res-close" title="Close">&times;</button>
+        </div>
+        <div class="lms-res-dialog-body">
+            <iframe id="lms-res-frame" title="Resource"></iframe>
+        </div>
+    </div>
+</div>
+@endif
 @endsection
 @push('script')
 <script>
@@ -439,6 +547,67 @@ document.body.setAttribute('data-lms-exam-lock', '1');
             fd.set('submit', '1');
             if (navigator.sendBeacon) navigator.sendBeacon(form.action, fd);
         } catch (e) {}
+    });
+})();
+(function () {
+    var modal = document.getElementById('lms-res-modal');
+    if (!modal) return;
+    var files = {
+        reference: @json(collect($refFiles)->values()->map(fn ($f, $i) => [
+            'name' => $f['name'],
+            'url' => route('user.assessments.resource', ['attemptId' => $attempt->id, 'kind' => 'reference', 'index' => $i]),
+        ])->all()),
+        preseen: @json(collect($preFiles)->values()->map(fn ($f, $i) => [
+            'name' => $f['name'],
+            'url' => route('user.assessments.resource', ['attemptId' => $attempt->id, 'kind' => 'preseen', 'index' => $i]),
+        ])->all())
+    };
+    var frame = document.getElementById('lms-res-frame');
+    var fileSel = document.getElementById('lms-res-file');
+    var kind = 'reference';
+    function show(k, idx) {
+        kind = k;
+        idx = idx || 0;
+        var list = files[k] || [];
+        document.querySelectorAll('.js-res-kind').forEach(function (btn) {
+            btn.classList.toggle('is-active', btn.getAttribute('data-kind') === k);
+        });
+        if (fileSel) {
+            fileSel.innerHTML = '';
+            list.forEach(function (f, i) {
+                var o = document.createElement('option');
+                o.value = String(i);
+                o.textContent = f.name;
+                if (i === idx) o.selected = true;
+                fileSel.appendChild(o);
+            });
+            fileSel.style.display = list.length > 1 ? '' : 'none';
+        }
+        if (frame && list[idx]) frame.src = list[idx].url;
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden', 'false');
+    }
+    document.querySelectorAll('.js-open-res').forEach(function (btn) {
+        btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            show(btn.getAttribute('data-kind') || 'reference', 0);
+        });
+    });
+    document.querySelectorAll('.js-res-kind').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            show(btn.getAttribute('data-kind') || 'reference', 0);
+        });
+    });
+    if (fileSel) {
+        fileSel.addEventListener('change', function () {
+            show(kind, parseInt(fileSel.value, 10) || 0);
+        });
+    }
+    var closeBtn = document.getElementById('lms-res-close');
+    if (closeBtn) closeBtn.addEventListener('click', function () {
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden', 'true');
+        if (frame) frame.src = 'about:blank';
     });
 })();
 </script>

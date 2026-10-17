@@ -90,8 +90,8 @@
             white-space: normal;
         }
         #assessments-portal .lms-assess-table .col-appt { width: 10%; white-space: nowrap; }
-        #assessments-portal .lms-assess-table .col-title { width: 26%; }
-        #assessments-portal .lms-assess-table .col-timing { width: 30%; }
+        #assessments-portal .lms-assess-table .col-title { width: 22%; }
+        #assessments-portal .lms-assess-table .col-timing { width: 36%; }
         #assessments-portal .lms-assess-table .col-assessor { width: 12%; }
         #assessments-portal .lms-assess-table .col-status { width: 12%; }
         #assessments-portal .lms-assess-table th.col-appt,
@@ -248,7 +248,6 @@
                         </td>
                         @php $assessorUserId = $att ? $att->assessorUserId($asg) : ($asg->marker_user_id ?? null); @endphp
                         <td class="col-timing" data-sort="{{ optional($asg?->available_from)->timestamp ?? 0 }}">
-                            <span class="lms-timing-line"><strong>Exam Appointment Timing:</strong> {{ $asg ? $asg->appointmentWindowLabel() : '—' }}</span>
                             @if($asg)
                                 <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $asg->timezoneLabel() }}</span>
                             @endif
