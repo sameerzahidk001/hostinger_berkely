@@ -46,12 +46,13 @@
                         <th data-sort-col="0">Date <span class="sort-ind"></span></th>
                         <th data-sort-col="1">ID <span class="sort-ind"></span></th>
                         <th data-sort-col="2">Created by <span class="sort-ind"></span></th>
-                        <th data-sort-col="3">Question for <span class="sort-ind"></span></th>
-                        <th data-sort-col="4">Type <span class="sort-ind"></span></th>
-                        <th data-sort-col="5">Topic <span class="sort-ind"></span></th>
-                        <th data-sort-col="6">Stem <span class="sort-ind"></span></th>
-                        <th data-sort-col="7">Marks <span class="sort-ind"></span></th>
-                        <th data-sort-col="8">Status <span class="sort-ind"></span></th>
+                        <th data-sort-col="3">Course <span class="sort-ind"></span></th>
+                        <th data-sort-col="4">Question Set <span class="sort-ind"></span></th>
+                        <th data-sort-col="5">Type <span class="sort-ind"></span></th>
+                        <th data-sort-col="6">Topic <span class="sort-ind"></span></th>
+                        <th data-sort-col="7">Stem <span class="sort-ind"></span></th>
+                        <th data-sort-col="8">Marks <span class="sort-ind"></span></th>
+                        <th data-sort-col="9">Status <span class="sort-ind"></span></th>
                         <th>Action</th>
                     </tr>
                 </thead>
@@ -67,13 +68,14 @@
                                     {{ $row->createdByLabel() }}
                                 @endif
                             </td>
-                            <td data-sort="{{ $row->course->title ?? $row->targetRoleLabel() }}">
+                            <td data-sort="{{ $row->course->title ?? '' }}">
                                 @if($row->course_id && $row->course)
                                     <a href="{{ route('course.edit', $row->course_id) }}">{{ $row->course->title }}</a>
                                 @else
-                                    {{ $row->targetRoleLabel() }}
+                                    —
                                 @endif
                             </td>
+                            <td data-sort="{{ $row->target_role ?: '' }}">{{ $row->questionSetLabel() }}</td>
                             <td data-sort="{{ $row->typeLabel() }}">{{ $row->typeLabel() }}</td>
                             <td data-sort="{{ $row->topic ?: '' }}">{{ $row->topic ?: '—' }}</td>
                             <td data-sort="{{ strip_tags($row->stem) }}">{{ \Illuminate\Support\Str::limit(strip_tags($row->stem), 100) }}</td>
@@ -84,7 +86,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="10" class="text-center">No questions yet.</td></tr>
+                        <tr><td colspan="11" class="text-center">No questions yet.</td></tr>
                     @endforelse
                 </tbody>
             </table>

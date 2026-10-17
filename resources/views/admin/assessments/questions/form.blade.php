@@ -47,8 +47,8 @@
                         </select>
                     </div>
                     <div class="col-md-2 form-group js-q-target-role">
-                        <label>Question for</label>
-                        <select name="target_role" class="form-control lms-searchable" data-placeholder="Type to find user type">
+                        <label>Question Set</label>
+                        <select name="target_role" class="form-control lms-searchable" data-placeholder="Type to find question set">
                             <option value="">—</option>
                             @foreach(($targetRoles ?? []) as $rk => $rl)
                                 <option value="{{ $rk }}" @selected(old('target_role', $question->target_role) === $rk)>{{ $rl }}</option>
@@ -102,16 +102,16 @@
                     if (! is_array($editSubs)) {
                         $editSubs = $question->subQuestions();
                     }
-                    if (! is_array($editSubs) || $editSubs === []) {
-                        $editSubs = [['text' => '', 'marks' => ''], ['text' => '', 'marks' => '']];
+                    if (! is_array($editSubs)) {
+                        $editSubs = [['text' => '', 'marks' => '']];
                     }
                 @endphp
                 <div id="edit_sub_questions" style="{{ old('type', $question->type) === 'mcq' ? 'display:none;' : '' }}">
-                    <h4>Sub-questions <span class="text-muted">(a, b, c… — marks each)</span></h4>
+                    <h4>Sub-questions <span class="text-muted">(optional — 1, 2, 3… marks each)</span></h4>
                     <div id="edit_sub_list">
                         @foreach($editSubs as $si => $sub)
                             <div class="row js-sub-row" style="margin-bottom:8px;">
-                                <div class="col-md-1"><label class="js-sub-letter">{{ chr(97 + (int)$si) }}.</label></div>
+                                <div class="col-md-1"><label class="js-sub-letter">{{ (int)$si + 1 }}.</label></div>
                                 <div class="col-md-8">
                                     <input type="text" name="sub_questions[{{ $si }}][text]" class="form-control" value="{{ $sub['text'] ?? '' }}" placeholder="Sub-question prompt">
                                 </div>
@@ -125,20 +125,20 @@
                         @endforeach
                     </div>
                     <button type="button" class="btn btn-xs btn-success" id="edit_add_sub"><i class="fa fa-plus"></i> Add sub-question</button>
-                    <p class="help-block">Total marks = sum of sub-question marks (when any are set).</p>
+                    <p class="help-block">Optional. Max marks stays as set above; if you enter sub marks, total uses their sum.</p>
                 </div>
             @else
                 {{-- Multi create: shared defaults + question blocks --}}
                 <div class="row m-b-md">
                     <div class="col-md-3 form-group js-shared-target-role">
-                        <label>Question for (all)</label>
-                        <select name="target_role" class="form-control lms-searchable" data-placeholder="Type to find user type">
+                        <label>Question Set (all)</label>
+                        <select name="target_role" class="form-control lms-searchable" data-placeholder="Type to find question set">
                             <option value="">—</option>
                             @foreach(($targetRoles ?? []) as $rk => $rl)
                                 <option value="{{ $rk }}" @selected(old('target_role') === $rk)>{{ $rl }}</option>
                             @endforeach
                         </select>
-                        <p class="help-block m-b-none">Who these questions are for (optional with a course).</p>
+                        <p class="help-block m-b-none">Optional question set (saved with or without a course).</p>
                     </div>
                     <div class="col-md-3 form-group">
                         <label>Course (applies to all)</label>
@@ -178,7 +178,7 @@
                                 'time_limit_minutes' => '',
                                 'options' => [['text'=>''],['text'=>''],['text'=>''],['text'=>'']],
                                 'correct_option' => 0,
-                                'sub_questions' => [['text'=>'','marks'=>''],['text'=>'','marks'=>'']],
+                                'sub_questions' => [['text'=>'','marks'=>'']],
                             ]];
                         }
                     @endphp
@@ -217,7 +217,7 @@
             'time_limit_minutes' => '',
             'options' => [['text'=>''],['text'=>''],['text'=>''],['text'=>'']],
             'correct_option' => 0,
-            'sub_questions' => [['text'=>'','marks'=>''],['text'=>'','marks'=>'']],
+            'sub_questions' => [['text'=>'','marks'=>'']],
         ],
         'types' => $types,
     ])
@@ -233,27 +233,15 @@
         var total = 0;
         $('#questionBlocks .question-block').each(function () {
             var $b = $(this);
-            var type = $b.find('.js-q-type').val();
-            if (type === 'mcq') {
-                var n = parseFloat($b.find('input.js-max-marks').val());
-                if (!isNaN(n)) total += n;
-            } else {
-                var sub = 0;
-                $b.find('.js-sub-marks').each(function () {
-                    var m = parseFloat($(this).val());
-                    if (!isNaN(m)) sub += m;
-                });
-                total += sub;
-                $b.find('.js-sub-marks-display').text(sub.toFixed(1));
-                $b.find('.js-max-marks-hidden').val(sub > 0 ? sub.toFixed(1) : '1');
-            }
+            var n = parseFloat($b.find('input.js-max-marks').val());
+            if (!isNaN(n)) total += n;
         });
         $('#totalMarksDisplay').text(total.toFixed(1));
     }
 
     function reletterSubs($scope) {
         $scope.find('.js-sub-row').each(function (i) {
-            $(this).find('.js-sub-letter').text((letters[i] || (i + 1)) + '.');
+            $(this).find('.js-sub-letter').text((i + 1) + '.');
             $(this).find('[name]').each(function () {
                 var name = $(this).attr('name');
                 if (!name) return;
@@ -266,9 +254,8 @@
         var isMcq = type === 'mcq';
         $block.find('.js-mcq-options').toggle(isMcq);
         $block.find('.js-sub-questions').toggle(!isMcq);
-        $block.find('.js-max-marks-wrap').toggle(isMcq);
-        $block.find('.js-sub-marks-total').toggle(!isMcq);
-        $block.find('input.js-max-marks').prop('required', isMcq);
+        $block.find('.js-max-marks-wrap').show();
+        $block.find('input.js-max-marks').prop('required', true);
         updateTotalMarks();
     }
 
@@ -283,7 +270,7 @@
             var idx = $list.find('.js-sub-row').length;
             var prefix = $block.find('.js-q-type').attr('name').replace('[type]', '');
             var html = '<div class="row js-sub-row" style="margin-bottom:8px;">' +
-                '<div class="col-md-1"><label class="js-sub-letter">a.</label></div>' +
+                '<div class="col-md-1"><label class="js-sub-letter">1.</label></div>' +
                 '<div class="col-md-8"><input type="text" name="' + prefix + '[sub_questions][' + idx + '][text]" class="form-control" placeholder="Sub-question prompt"></div>' +
                 '<div class="col-md-2"><input type="number" step="0.1" min="0" name="' + prefix + '[sub_questions][' + idx + '][marks]" class="form-control js-sub-marks" placeholder="Marks"></div>' +
                 '<div class="col-md-1"><button type="button" class="btn btn-xs btn-default js-remove-sub">&times;</button></div></div>';
@@ -293,8 +280,6 @@
             updateTotalMarks();
         });
         $block.off('click.remsub').on('click.remsub', '.js-remove-sub', function () {
-            var $list = $block.find('.js-sub-list');
-            if ($list.find('.js-sub-row').length <= 1) return;
             $(this).closest('.js-sub-row').remove();
             reletterSubs($block);
             updateTotalMarks();
@@ -332,8 +317,8 @@
         var isMcq = $('#q_type').val() === 'mcq';
         $('#mcq_options').toggle(isMcq);
         $('#edit_sub_questions').toggle(!isMcq);
-        $('#edit_max_marks_wrap').toggle(isMcq);
-        $('#edit_max_marks').prop('required', isMcq);
+        $('#edit_max_marks_wrap').show();
+        $('#edit_max_marks').prop('required', true);
     }
 
     $('#q_type').on('change', syncEditType);
@@ -341,7 +326,7 @@
 
     function reletterEdit() {
         $('#edit_sub_list .js-sub-row').each(function (i) {
-            $(this).find('.js-sub-letter').text((letters[i] || (i + 1)) + '.');
+            $(this).find('.js-sub-letter').text((i + 1) + '.');
             $(this).find('[name]').each(function () {
                 var name = $(this).attr('name');
                 if (!name) return;
@@ -352,7 +337,7 @@
     $('#edit_add_sub').on('click', function () {
         var idx = $('#edit_sub_list .js-sub-row').length;
         var html = '<div class="row js-sub-row" style="margin-bottom:8px;">' +
-            '<div class="col-md-1"><label class="js-sub-letter">a.</label></div>' +
+            '<div class="col-md-1"><label class="js-sub-letter">1.</label></div>' +
             '<div class="col-md-8"><input type="text" name="sub_questions[' + idx + '][text]" class="form-control" placeholder="Sub-question prompt"></div>' +
             '<div class="col-md-2"><input type="number" step="0.1" min="0" name="sub_questions[' + idx + '][marks]" class="form-control js-edit-sub-marks" placeholder="Marks"></div>' +
             '<div class="col-md-1"><button type="button" class="btn btn-xs btn-default js-edit-remove-sub">&times;</button></div></div>';
@@ -360,7 +345,6 @@
         reletterEdit();
     });
     $(document).on('click', '.js-edit-remove-sub', function () {
-        if ($('#edit_sub_list .js-sub-row').length <= 1) return;
         $(this).closest('.js-sub-row').remove();
         reletterEdit();
     });

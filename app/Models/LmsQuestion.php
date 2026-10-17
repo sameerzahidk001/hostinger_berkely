@@ -40,6 +40,17 @@ class LmsQuestion extends Model
         return self::targetRoles()[$role] ?? ($role !== '' ? ucwords(str_replace('_', ' ', $role)) : '—');
     }
 
+    /** Question Set label (independent of Course). */
+    public function questionSetLabel(): string
+    {
+        $role = (string) ($this->target_role ?? '');
+        if ($role === '') {
+            return '—';
+        }
+
+        return self::targetRoles()[$role] ?? ucwords(str_replace('_', ' ', $role));
+    }
+
     /** Public display code, e.g. QB12 */
     public function displayCode(): string
     {
@@ -148,7 +159,7 @@ class LmsQuestion extends Model
                 continue;
             }
             $text = trim((string) ($row['text'] ?? $row['prompt'] ?? ''));
-            $key = (string) ($row['key'] ?? chr(97 + count($out)));
+            $key = (string) ($row['key'] ?? (count($out) + 1));
             $marks = (float) ($row['marks'] ?? 0);
             if ($text === '' && $marks <= 0) {
                 continue;
