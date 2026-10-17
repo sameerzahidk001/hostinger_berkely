@@ -107,6 +107,7 @@
     <div class="lms-q-progress">
         Question <strong id="lms-q-current">1</strong> of <strong>{{ max(1, $qTotal) }}</strong>
         <span class="lms-q-timer" id="lms-q-timer" style="display:none;">Question time: <strong id="lms-q-countdown">—</strong></span>
+        <span id="lms-autosave-hint" class="text-muted" style="margin-left:12px;font-size:12px;"></span>
     </div>
 </div>
 <div class="wrapper wrapper-content">
@@ -217,19 +218,71 @@ document.body.setAttribute('data-lms-exam-lock', '1');
         if (qTimerWrap) qTimerWrap.style.display = 'none';
     }
 
-    function saveProgressThen(cb) {
-        if (form && form.dataset.autoSubmitted) return;
+    var saveInFlight = false;
+    var autosaveHint = document.getElementById('lms-autosave-hint');
+
+    function showAutosaveHint(text) {
+        if (!autosaveHint) return;
+        autosaveHint.textContent = text || '';
+    }
+
+    function silentSave(cb) {
         if (!form) { if (cb) cb(); return; }
+        if (form.dataset.autoSubmitted) { if (cb) cb(); return; }
+        if (saveInFlight) { if (cb) cb(); return; }
+        saveInFlight = true;
         var fd = new FormData(form);
         fd.set('submit', '0');
-        var token = form.querySelector('input[name="_token"]');
+        fd.set('save_mode', '0');
         fetch(form.action, {
             method: 'POST',
             body: fd,
             credentials: 'same-origin',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        }).catch(function () {}).finally(function () {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        }).then(function (res) {
+            return res.json().catch(function () { return {}; });
+        }).then(function (data) {
+            if (data && data.redirect) {
+                form.dataset.autoSubmitted = '1';
+                window.location.href = data.redirect;
+                return;
+            }
+            var now = new Date();
+            var hh = String(now.getHours()).padStart(2, '0');
+            var mm = String(now.getMinutes()).padStart(2, '0');
+            showAutosaveHint('Saved ' + hh + ':' + mm);
+        }).catch(function () {
+            showAutosaveHint('Save retrying…');
+        }).finally(function () {
+            saveInFlight = false;
             if (cb) cb();
+        });
+    }
+
+    function saveProgressThen(cb) {
+        silentSave(cb);
+    }
+
+    setInterval(function () {
+        if (form && !form.dataset.autoSubmitted) silentSave();
+    }, 5 * 60 * 1000);
+
+    if (form) {
+        form.addEventListener('input', function () {
+            showAutosaveHint('Saving every 5 min…');
+        });
+        form.addEventListener('change', function () {
+            showAutosaveHint('Saving every 5 min…');
+        });
+        form.addEventListener('submit', function (e) {
+            if (form.dataset.autoSubmitted) return;
+            var flag = document.getElementById('lms-submit-flag');
+            if (flag && flag.value === '1') return;
+            e.preventDefault();
+            silentSave();
         });
     }
 
@@ -285,6 +338,9 @@ document.body.setAttribute('data-lms-exam-lock', '1');
     });
     if (btnNext) btnNext.addEventListener('click', function () {
         saveProgressThen(function () { showStep(idx + 1); });
+    });
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'hidden') silentSave();
     });
     showStep(0);
 })();
