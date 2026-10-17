@@ -83,6 +83,11 @@
                             <td data-sort="{{ $row->status }}">{{ ucfirst($row->status) }}</td>
                             <td>
                                 <a class="btn btn-xs btn-primary" style="font-weight:700;" href="{{ route('admin.assessments.questions.edit', $row->id) }}">Edit</a>
+                                <form action="{{ route('admin.assessments.questions.destroy', $row->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this question?');">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="btn btn-xs btn-danger">Delete</button>
+                                </form>
                             </td>
                         </tr>
                     @empty
