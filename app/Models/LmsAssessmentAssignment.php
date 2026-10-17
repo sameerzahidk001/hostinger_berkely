@@ -168,9 +168,8 @@ class LmsAssessmentAssignment extends Model
     {
         $start = $this->windowStart();
         if ($start) {
-            $mins = (int) ($this->relationLoaded('assessment')
-                ? ($this->assessment?->duration_minutes ?? 0)
-                : ($this->assessment()->value('duration_minutes') ?? 0));
+            $assessment = $this->relationLoaded('assessment') ? $this->assessment : $this->assessment;
+            $mins = $assessment ? (int) ($assessment->durationMinutes() ?? 0) : 0;
             if ($mins > 0) {
                 return $start->copy()->addMinutes($mins);
             }

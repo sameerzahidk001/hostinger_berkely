@@ -690,6 +690,7 @@ Route::prefix('user')->middleware(['auth', 'approved', 'redirect.panel.from.stud
     Route::get('/my-instructor-rating', [UserInstructorReviewController::class, 'myScore'])->name('user.rate-review.my-score');
     Route::get('/instructor-payments', [UserInstructorBatchPaymentController::class, 'index'])->name('user.instructor-payments.index');
     Route::get('/instructor-payments/{id}/slip', [UserInstructorBatchPaymentController::class, 'slip'])->name('user.instructor-payments.slip');
+    Route::get('/assessments/users/{userId}/preview', [LmsAssessmentPortalController::class, 'userPreview'])->name('user.assessments.user-preview');
     Route::get('/assessments', [LmsAssessmentPortalController::class, 'index'])->name('user.assessments.index');
     Route::get('/mock-exams', [LmsAssessmentPortalController::class, 'mocks'])->name('user.assessments.mocks');
     Route::get('/assessments/{id}/start', [LmsAssessmentPortalController::class, 'start'])->name('user.assessments.start');

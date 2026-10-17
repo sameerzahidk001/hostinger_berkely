@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use Illuminate\Support\Facades\Schema;
+
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -125,5 +127,25 @@ class LmsAssessment extends Model
         }
 
         return $sum;
+    }
+
+    /**
+     * Timed length: sum of per-question timers when any are set, else test-level duration.
+     */
+    public function durationMinutes(): ?int
+    {
+        $sum = 0;
+        if (Schema::hasColumn('lms_questions', 'time_limit_minutes')) {
+            $questions = $this->relationLoaded('questions')
+                ? $this->questions
+                : $this->questions()->get(['lms_questions.id', 'lms_questions.time_limit_minutes']);
+            $sum = (int) $questions->sum(fn ($q) => (int) ($q->time_limit_minutes ?? 0));
+        }
+        if ($sum > 0) {
+            return $sum;
+        }
+        $fallback = (int) ($this->duration_minutes ?? 0);
+
+        return $fallback > 0 ? $fallback : null;
     }
 }

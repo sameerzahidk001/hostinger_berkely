@@ -246,11 +246,11 @@
                             </td>
                             <td class="col-timing" data-sort="{{ optional($assignment->available_from)->timestamp ?? 0 }}">
                                 <span class="lms-timing-line"><strong>Exam Appointment Timing:</strong> {{ $appointment }}</span>
-                                <span class="lms-timing-line"><strong>Exam Duration:</strong> {{ $fmtDuration($assessment->duration_minutes ?? null) }}</span>
+                                <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $assignment->timezoneLabel() }}</span>
+                                <span class="lms-timing-line"><strong>Exam Duration:</strong> {{ $fmtDuration($assessment->durationMinutes()) }}</span>
                                 <span class="lms-timing-line"><strong>Started:</strong> {{ $attempt?->started_at ? $assignment->formatInTimezone($attempt->started_at) : '—' }}</span>
                                 <span class="lms-timing-line"><strong>Ended:</strong> {{ $attempt?->submitted_at ? $assignment->formatInTimezone($attempt->submitted_at) : '—' }}</span>
                                 <span class="lms-timing-line"><strong>Duration spent:</strong> {{ $spend !== null ? $fmtDuration($spend) : '—' }}</span>
-                                <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $assignment->timezoneLabel() }}</span>
                             </td>
                             <td class="col-created" data-sort="{{ $assignment->createdByLabel() }}">
                                 @if($assignment->assigned_by_user_id)

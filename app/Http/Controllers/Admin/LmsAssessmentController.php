@@ -233,40 +233,8 @@ class LmsAssessmentController extends Controller
             403
         );
         $user = User::query()->with('roles:id,name')->findOrFail($userId);
-        $roles = $user->roles
-            ->pluck('name')
-            ->map(fn ($n) => ucwords(str_replace(['_', '-'], ' ', (string) $n)))
-            ->filter()
-            ->implode(', ');
-        $blank = static fn ($v) => ($v !== null && trim((string) $v) !== '') ? trim((string) $v) : '—';
-        $gender = trim((string) ($user->gender ?? ''));
-        if ($gender !== '') {
-            $gender = ucfirst(strtolower($gender));
-        }
-        $isInstructor = $user->roles->contains(
-            fn ($r) => strtolower((string) $r->name) === 'instructor'
-        );
-        // Same gate as public Faculty page (/instructor/{id}).
-        $facultyProfileUrl = (
-            $isInstructor
-            && (int) ($user->is_on_web ?? 0) === 1
-            && (int) ($user->approved ?? 0) === 1
-        ) ? url('/instructor/' . $user->id) : null;
 
-        return response()->json([
-            'id' => (int) $user->id,
-            'name' => $user->name ?: ('User #' . $user->id),
-            'email' => $blank($user->email),
-            'mobile' => $blank($user->mobile_number),
-            'roles' => $roles !== '' ? $roles : '—',
-            'gender' => $gender !== '' ? $gender : '—',
-            'nationality' => $blank($user->nationality),
-            'city' => $blank($user->city),
-            'country' => $blank($user->country),
-            'address' => $blank($user->address),
-            'post_code' => $blank($user->post_code ?? null),
-            'faculty_profile_url' => $facultyProfileUrl,
-        ]);
+        return response()->json($this->assessments->userPreviewPayload($user));
     }
 
     public function editAssignment($assignmentId)
@@ -315,9 +283,10 @@ class LmsAssessmentController extends Controller
 
         $fromLocal = \Carbon\Carbon::parse($request->input('available_from'), $timezone);
         $assignment->available_from = $fromLocal->copy()->timezone(config('app.timezone'))->format('Y-m-d H:i:s');
-        if ($a->duration_minutes) {
+        $a->loadMissing('questions');
+        if ($a->durationMinutes()) {
             $assignment->available_until = $fromLocal->copy()
-                ->addMinutes((int) $a->duration_minutes)
+                ->addMinutes((int) $a->durationMinutes())
                 ->timezone(config('app.timezone'))
                 ->format('Y-m-d H:i:s');
         }
@@ -1096,9 +1065,10 @@ class LmsAssessmentController extends Controller
             $fromLocal = \Carbon\Carbon::parse($request->input('available_from'), $timezone);
             $from = $fromLocal->copy()->timezone(config('app.timezone'))->format('Y-m-d H:i:s');
             // Appointment window length = exam duration from start (student may start within that window).
-            if ($a->duration_minutes) {
+            $a->loadMissing('questions');
+            if ($a->durationMinutes()) {
                 $until = $fromLocal->copy()
-                    ->addMinutes((int) $a->duration_minutes)
+                    ->addMinutes((int) $a->durationMinutes())
                     ->timezone(config('app.timezone'))
                     ->format('Y-m-d H:i:s');
             } elseif ($request->filled('available_until')) {
