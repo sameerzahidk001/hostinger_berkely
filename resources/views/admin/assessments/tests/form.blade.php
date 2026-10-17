@@ -82,12 +82,12 @@
                 <div class="col-md-2 form-group">
                     <label>Duration (min)</label>
                     <input type="number" min="1" name="duration_minutes" class="form-control" value="{{ old('duration_minutes', $assessment->duration_minutes) }}" placeholder="Optional" @readonly(! $canCreate)>
-                    <p class="help-block" style="margin-bottom:0;font-size:11px;">Optional. Used only if questions have no per-question timers (sum of those wins).</p>
+                    <p class="help-block" style="margin-bottom:0;font-size:11px;">Optional if questions have timers.</p>
                 </div>
                 <div class="col-md-2 form-group">
                     <label>Max attempts *</label>
                     <input type="number" min="1" max="50" name="max_attempts" class="form-control" value="{{ old('max_attempts', $assessment->max_attempts ?? 1) }}" @required($canCreate) @readonly(! $canCreate)>
-                    <p class="help-block" style="margin-bottom:0;font-size:11px;">Retake only if N &gt; 1. Each attempt still needs <strong>Assign</strong>.</p>
+                    <p class="help-block" style="margin-bottom:0;font-size:11px;">Retake only if N &gt; 1 + Assign.</p>
                 </div>
                 <div class="col-md-2 form-group">
                     <label>Status *</label>
@@ -100,7 +100,7 @@
                         <input type="hidden" name="status" value="{{ old('status', $assessment->status) }}">
                     @endif
                 </div>
-                <div class="col-md-4 form-group">
+                <div class="col-md-2 form-group">
                     <label>Results mode *</label>
                     <select name="results_mode" class="form-control lms-searchable" data-placeholder="Type to find results mode" data-allow-clear="0" @required($canCreate) @disabled(! $canCreate)>
                         <option value="after_publish" @selected(old('results_mode', $assessment->results_mode) === 'after_publish')>Publish after marking</option>
@@ -110,28 +110,31 @@
                         <input type="hidden" name="results_mode" value="{{ old('results_mode', $assessment->results_mode) }}">
                     @endif
                 </div>
-                <div class="col-md-4 form-group" style="padding-top:28px;">
-                    <label><input type="checkbox" name="shuffle_questions" value="1" @checked(old('shuffle_questions', $assessment->shuffle_questions)) @disabled(! $canCreate)> Shuffle questions</label>
+                <div class="col-md-12 form-group">
+                    <label class="m-b-none"><input type="checkbox" name="shuffle_questions" value="1" @checked(old('shuffle_questions', $assessment->shuffle_questions)) @disabled(! $canCreate)> Shuffle questions</label>
                 </div>
+            </div>
+
+            <h4 style="margin-top:8px;">Exam files <span class="text-muted" style="font-size:13px;font-weight:normal;">(optional — up to 2 files in each box)</span></h4>
+            <p class="help-block">Stored on the server at <code>storage/app/public/lms/tests/{{ $assessment->exists ? $assessment->id : '{test-id}' }}/reference/</code> and <code>.../preseen/</code>. Navy buttons appear in the test only after files are saved.</p>
+            <div class="row">
                 <div class="col-md-6 form-group">
-                    <label>Reference material <span class="text-muted">(optional — up to 2 files)</span></label>
+                    <label>Reference material</label>
                     <input type="file" name="reference_files[]" class="form-control" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.webp,.txt" multiple @disabled(! $canCreate)>
                     @foreach($assessment->resourceFiles('reference') as $ri => $rf)
                         <label class="m-t-xs" style="display:block;font-weight:normal;">
                             <input type="checkbox" name="remove_reference[]" value="{{ $ri }}" @disabled(! $canCreate)> Remove {{ $rf['name'] }}
                         </label>
                     @endforeach
-                    <p class="help-block m-b-none">Shown as a navy <strong>Reference Material</strong> button during the test.</p>
                 </div>
                 <div class="col-md-6 form-group">
-                    <label>Pre-seen <span class="text-muted">(optional — up to 2 files)</span></label>
+                    <label>Pre-seen</label>
                     <input type="file" name="preseen_files[]" class="form-control" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.webp,.txt" multiple @disabled(! $canCreate)>
                     @foreach($assessment->resourceFiles('preseen') as $pi => $pf)
                         <label class="m-t-xs" style="display:block;font-weight:normal;">
                             <input type="checkbox" name="remove_preseen[]" value="{{ $pi }}" @disabled(! $canCreate)> Remove {{ $pf['name'] }}
                         </label>
                     @endforeach
-                    <p class="help-block m-b-none">Shown as a navy <strong>Pre-seen</strong> button during the test.</p>
                 </div>
             </div>
 
