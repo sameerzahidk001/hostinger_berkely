@@ -204,6 +204,7 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
         Route::get('dashboard/accountant', [AdminController::class, 'accountantDashboard'])->name('admin.dashboard.accountant');
         Route::get('dashboard/accountant/export', [AdminController::class, 'exportAccountant'])->name('admin.dashboard.accountant.export');
         Route::get('home/activity-export', [AdminController::class, 'exportActivity'])->name('admin.home.activity-export');
+        Route::post('home/activity-gap-comment', [AdminController::class, 'saveActivityGapComment'])->name('admin.home.activity-gap-comment');
         Route::get('home/content-report-details', [AdminController::class, 'contentReportDetails'])->name('admin.home.content-report-details');
         Route::get('home/content-report-export', [AdminController::class, 'contentReportExport'])->name('admin.home.content-report-export');
         Route::post('home/content-report-activity', [AdminController::class, 'contentReportActivity'])->name('admin.home.content-report-activity');
