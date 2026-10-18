@@ -36,6 +36,11 @@
         .seo-score-pill.good { background: #f8ac59; }
         .seo-score-pill.poor { background: #ed5565; }
         .seo-details small { display: block; color: #676a6c; line-height: 1.5; }
+        .courses-list-wrap { overflow-x: hidden; }
+        .courses-list-table { width: 100% !important; font-size: 12px; }
+        .courses-list-table th, .courses-list-table td {
+            white-space: normal !important; word-break: break-word; vertical-align: top; padding: 6px 5px;
+        }
     </style>
 @endpush
 @section('content')
@@ -65,11 +70,11 @@
                         </div>
                     </div>
                     <div class="ibox-content">
-                        <div class="table-responsive">
-                            <table class="table table-striped table-bordered table-hover dataTables-example">
+                        <div class="courses-list-wrap">
+                            <table class="table table-striped table-bordered table-hover dataTables-example courses-list-table">
                                 <thead>
                                     <tr>
-                                        <th>#</th>
+                                        <th style="width:70px;">Course ID</th>
                                         <th>Title</th>
                                         <th>Categories</th>
                                         <th>Schools</th>
@@ -89,7 +94,7 @@
                                 <tbody>
                                     @forelse($courses as $index => $data)
                                         <tr>
-                                            <td data-order="{{ $data->created_at ? \Carbon\Carbon::parse($data->created_at)->timestamp : 0 }}">{{ $index + 1 }}</td>
+                                            <td data-order="{{ (int) $data->id }}">{{ $data->id }}</td>
                                             <td style="vertical-align: middle;">
                                                 <a href="{{ route('course.details', ['course' => $data->slug]) }}" target="_blank">
                                                     {{ $data->title }}
@@ -224,7 +229,9 @@
                 paging: true,
                 info: true,
                 ordering: true,
-                responsive: true,
+                responsive: false,
+                autoWidth: false,
+                scrollX: false,
                 dom: 'lftip',
                 order: [[0, 'desc']]
             });

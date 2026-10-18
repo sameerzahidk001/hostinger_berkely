@@ -1441,6 +1441,21 @@ if (!function_exists('activity_action_label')) {
     }
 }
 
+if (!function_exists('activity_is_profile_noise')) {
+    /** Hide User Profile Loaded / Updated (and similar) for admin, instructor, and student history. */
+    function activity_is_profile_noise(?string $action, ?string $item = null): bool
+    {
+        $hay = strtolower(trim((string) $action) . ' ' . trim((string) $item));
+        if ($hay === '' || ! str_contains($hay, 'profile')) {
+            return false;
+        }
+
+        return str_contains($hay, 'loaded')
+            || str_contains($hay, 'updated')
+            || str_contains($hay, 'opened');
+    }
+}
+
 if (!function_exists('audit_user_name')) {
     function audit_user_name($model, $fallbackId = null): string
     {

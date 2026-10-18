@@ -27,18 +27,21 @@ Unit 1,"What is 2+2?",2,3,4,5,6,C,1,
 </pre>
             <p class="text-muted">
                 <code>correct</code> = A/B/C/D/E (or 1–5). <code>option_e</code> is optional (5th answer). Leave <code>course_id</code> blank for no course.
-                Download a blank template: <a href="{{ route('admin.assessments.questions.import-template') }}">mcq-import-template.csv</a>
+                The course ID is the number in the first column of <a href="{{ route('admin.courses') }}" target="_blank">Courses List</a>
+                (also shown in the dropdown below). Download a blank template:
+                <a href="{{ route('admin.assessments.questions.import-template') }}">mcq-import-template.csv</a>
             </p>
             <form method="POST" action="{{ route('admin.assessments.questions.import.store') }}" enctype="multipart/form-data">
                 @csrf
                 <div class="form-group">
                     <label>Default course (optional, used when course_id column is empty)</label>
-                    <select name="course_id" class="form-control lms-searchable" data-placeholder="Type to find course">
+                    <select name="course_id" class="form-control lms-searchable" data-placeholder="Type to find course ID or name">
                         <option value="">—</option>
                         @foreach($courses as $course)
-                            <option value="{{ $course->id }}">{{ $course->title }}</option>
+                            <option value="{{ $course->id }}">ID {{ $course->id }} — {{ $course->title }}</option>
                         @endforeach
                     </select>
+                    <p class="help-block">Pick a course here, or type the same ID into the CSV <code>course_id</code> column.</p>
                 </div>
                 <div class="form-group">
                     <label>CSV file *</label>

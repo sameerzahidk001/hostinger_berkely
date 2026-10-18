@@ -21,6 +21,11 @@ class LogAdminPanelActivity
         'admin.logout',
         'admin.auth',
         'admin.login',
+        'user.profile',
+        'user.profile.update',
+        'user.profile.update.password',
+        'admin.profile',
+        'admin.profile.update',
     ];
 
     private const SKIP_PATH_FRAGMENTS = [
@@ -29,6 +34,7 @@ class LogAdminPanelActivity
         'content-report-activity',
         'ckeditor-image-upload',
         'filemanager',
+        '/profile',
     ];
 
     public function handle(Request $request, Closure $next): Response

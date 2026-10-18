@@ -34,6 +34,9 @@ class UserActivityLogService
         if (! $this->tableExists()) {
             return;
         }
+        if (function_exists('activity_is_profile_noise') && activity_is_profile_noise($action, $item)) {
+            return;
+        }
 
         $sessionActions = [
             'Admin Login', 'Staff Login', 'User Login',
@@ -185,7 +188,10 @@ class UserActivityLogService
             ];
 
             return $this->withInferredContentLinks($row);
-        })->all());
+        })->all())->reject(function (array $row) {
+            return function_exists('activity_is_profile_noise')
+                && activity_is_profile_noise($row['action'] ?? '', $row['item'] ?? '');
+        })->values();
     }
 
     /**

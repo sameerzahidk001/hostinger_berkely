@@ -44,6 +44,15 @@ class HistoryController extends Controller
             $query->where('created_at', '<=', Carbon::parse($request->date_to)->endOfDay());
         }
 
+        $query->whereRaw("NOT (
+            (LOWER(COALESCE(action,'')) LIKE '%profile%' OR LOWER(COALESCE(item,'')) LIKE '%profile%')
+            AND (
+                LOWER(CONCAT(COALESCE(action,''),' ',COALESCE(item,''))) LIKE '%loaded%'
+                OR LOWER(CONCAT(COALESCE(action,''),' ',COALESCE(item,''))) LIKE '%updated%'
+                OR LOWER(CONCAT(COALESCE(action,''),' ',COALESCE(item,''))) LIKE '%opened%'
+            )
+        )");
+
         $activities = $query->paginate(20)->withQueryString();
         $filterUsers = $seeAll
             ? User::query()->orderBy('name')->limit(500)->get(['id', 'name', 'email'])
