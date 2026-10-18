@@ -102,7 +102,7 @@ class LmsAssessmentPortalController extends Controller
         $user = Auth::user();
         abort_unless($user, 403);
         $this->assessments->ensure();
-        $attempt = LmsAssessmentAttempt::with(['assessment.questions', 'answers'])
+        $attempt = LmsAssessmentAttempt::with(['assessment.questions', 'assessment.course', 'answers'])
             ->where('user_id', $user->id)
             ->findOrFail($attemptId);
 
@@ -121,8 +121,13 @@ class LmsAssessmentPortalController extends Controller
             $questions = $questions->shuffle()->values();
         }
         $answers = $attempt->answers->keyBy('question_id');
+        $assignment = LmsAssessmentAssignment::query()
+            ->where('assessment_id', $attempt->assessment_id)
+            ->orderBy('id')
+            ->get()
+            ->first(fn ($asg) => $this->assessments->attemptBelongsToAssignment($attempt, $asg));
 
-        return view('user.assessments.take', compact('attempt', 'questions', 'answers'));
+        return view('user.assessments.take', compact('attempt', 'questions', 'answers', 'assignment'));
     }
 
     public function resource($attemptId, $kind, $index)

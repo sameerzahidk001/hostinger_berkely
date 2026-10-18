@@ -72,7 +72,29 @@
         background: #fff;
         border-bottom: 1px solid #d9e4f0;
     }
-    .lms-res-btns { margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 8px; }
+    .lms-take-head-row {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+    }
+    .lms-take-meta { flex: 1; min-width: 0; }
+    .lms-take-line {
+        margin: 0 0 4px;
+        font-size: 13px;
+        line-height: 1.4;
+        color: #fff;
+    }
+    .lms-take-line strong { color: #fff; }
+    .lms-res-btns { margin: 0; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; flex-shrink: 0; }
+    .lms-q-step textarea.form-control,
+    .lms-q-step textarea.form-control:focus {
+        color: #0056b3 !important;
+    }
+    .lms-q-step .ibox-content > .m-b-sm,
+    .lms-q-step .ibox-content > .m-b-sm * {
+        color: #000;
+    }
     .lms-res-btn {
         display: inline-block;
         background: #1d4e89;
@@ -162,6 +184,7 @@
     $qTotal = $questions->count();
     $refFiles = $attempt->assessment->resourceFiles('reference');
     $preFiles = $attempt->assessment->resourceFiles('preseen');
+    $assignment = $assignment ?? null;
     $resModalFiles = [
         'reference' => collect($refFiles)->values()->map(function ($f, $i) use ($attempt) {
             return [
@@ -180,21 +203,24 @@
 <div class="lms-take-sticky">
     <div class="row wrapper border-bottom white-bg page-heading">
         <div class="col-lg-12">
-            <h2>{{ $attempt->assessment->title }}</h2>
-            <ol class="breadcrumb">
-                <li><a href="{{ route('user.assessments.index') }}">My Tests</a></li>
-                <li class="active"><strong>In progress</strong></li>
-            </ol>
-            @if($refFiles !== [] || $preFiles !== [])
-                <div class="lms-res-btns">
-                    @if($refFiles !== [])
-                        <a href="#" class="lms-res-btn js-open-res" data-kind="reference">Reference Material</a>
-                    @endif
-                    @if($preFiles !== [])
-                        <a href="#" class="lms-res-btn js-open-res" data-kind="preseen">Pre-seen</a>
-                    @endif
+            <div class="lms-take-head-row">
+                <div class="lms-take-meta">
+                    <p class="lms-take-line"><strong>Test ID - Test Name:</strong> {{ $attempt->assessment->displayCode() }} - {{ $attempt->assessment->title }}</p>
+                    <p class="lms-take-line"><strong>Course name:</strong> {{ $attempt->assessment->course->title ?? '—' }}</p>
+                    <p class="lms-take-line"><strong>Appointment ID:</strong> {{ $assignment?->displayCode() ?? '—' }}</p>
+                    <p class="lms-take-line" style="margin-bottom:0;"><strong>Appointment Timing:</strong> {{ $assignment ? $assignment->appointmentWindowLabel('d/m/Y H:i') : '—' }}</p>
                 </div>
-            @endif
+                @if($refFiles !== [] || $preFiles !== [])
+                    <div class="lms-res-btns">
+                        @if($refFiles !== [])
+                            <a href="#" class="lms-res-btn js-open-res" data-kind="reference">Reference Material</a>
+                        @endif
+                        @if($preFiles !== [])
+                            <a href="#" class="lms-res-btn js-open-res" data-kind="preseen">Pre-seen</a>
+                        @endif
+                    </div>
+                @endif
+            </div>
         </div>
     </div>
     @if($attempt->expires_at)

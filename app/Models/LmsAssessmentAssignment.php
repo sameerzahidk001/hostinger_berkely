@@ -217,7 +217,7 @@ class LmsAssessmentAssignment extends Model
             return false;
         }
 
-        return now($this->timezoneName())->lt($start);
+        return now()->lt($start);
     }
 
     public function isExpired(): bool
@@ -226,8 +226,7 @@ class LmsAssessmentAssignment extends Model
         if (! $until) {
             return false;
         }
-        $tz = $this->timezoneName();
-        $now = now($tz);
+        $now = now();
 
         // Still upcoming — not missed yet.
         if ($this->isNotYetOpen()) {
