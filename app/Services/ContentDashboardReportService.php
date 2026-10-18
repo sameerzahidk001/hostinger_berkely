@@ -6,6 +6,7 @@ use App\Models\Course;
 use App\Models\CourseAgenda;
 use App\Models\CourseFee;
 use App\Models\Page;
+use App\Models\PageFeePackage;
 use App\Models\PagesSEO;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -297,9 +298,20 @@ class ContentDashboardReportService
         }
 
         if ($module === 'fees') {
+            if (in_array($metric, ['missing_courses', 'missing_pages'], true)) {
+                return [
+                    ['key' => 'title', 'label' => $metric === 'missing_pages' ? 'Page' : 'Course'],
+                    ['key' => 'coverage', 'label' => 'Fee Packages'],
+                    ['key' => 'created_by', 'label' => 'Created By'],
+                    ['key' => 'created_at', 'label' => 'Created'],
+                    ['key' => 'updated_by', 'label' => 'Modified By'],
+                    ['key' => 'updated_at', 'label' => 'Last Modified'],
+                ];
+            }
+
             return [
                 ['key' => 'package_name', 'label' => 'Package Name'],
-                ['key' => 'course', 'label' => 'Course'],
+                ['key' => 'course', 'label' => 'Course / Page'],
                 ['key' => 'price', 'label' => 'Price'],
                 ['key' => 'currency', 'label' => 'Currency'],
                 ['key' => 'discount_amount', 'label' => 'Discount Amount'],
@@ -358,7 +370,33 @@ class ContentDashboardReportService
         }
 
         if ($module === 'fees') {
-            return $this->standardMetricLabels('Fee Packages', $who);
+            return [
+                'total' => 'Total Fee Packages',
+                'fees_in_courses' => 'Total Fee Packages In Courses',
+                'fees_in_pages' => 'Total Fee Packages In Pages',
+                'missing_courses' => 'Missing Fee Packages In Courses',
+                'missing_pages' => 'Missing Fee Packages In Pages',
+                'active_courses' => 'Active Fee Packages In Courses',
+                'active_pages' => 'Active Fee Packages In Pages',
+                'inactive_courses' => 'Inactive Fee Packages In Courses',
+                'inactive_pages' => 'Inactive Fee Packages In Pages',
+                'updated_by_me' => 'Updated Fee Packages By ' . $who,
+                'created_today' => 'Created Fee Packages Today By ' . $who,
+                'created_this_year' => 'Created Fee Packages This Year By ' . $who,
+                'created_yesterday' => 'Created Fee Packages Yesterday By ' . $who,
+                'created_this_week' => 'Created Fee Packages This Week By ' . $who,
+                'created_last_week' => 'Created Fee Packages Last Week By ' . $who,
+                'created_this_month' => 'Created Fee Packages This Month By ' . $who,
+                'created_last_month' => 'Created Fee Packages Last Month By ' . $who,
+                'updated_today' => 'Updated Fee Packages Today By ' . $who,
+                'updated_yesterday' => 'Updated Fee Packages Yesterday By ' . $who,
+                'updated_this_week' => 'Updated Fee Packages This Week By ' . $who,
+                'updated_last_week' => 'Updated Fee Packages Last Week By ' . $who,
+                'updated_this_month' => 'Updated Fee Packages This Month By ' . $who,
+                'updated_last_month' => 'Updated Fee Packages Last Month By ' . $who,
+                'created_in_range' => 'Created Fee Packages - Custom Date Range',
+                'updated_in_range' => 'Updated Fee Packages - Custom Date Range',
+            ];
         }
 
         if ($module === 'seo') {
@@ -493,32 +531,63 @@ class ContentDashboardReportService
 
     public function feePackageStats(?int $actorUserId, ?Carbon $from, ?Carbon $to): array
     {
-        if (! Schema::hasTable('course_fees')) {
-            return $this->emptyStandardStats();
+        $courseHas = Schema::hasTable('course_fees');
+        $pageHas = Schema::hasTable('page_fee_packages');
+        if (! $courseHas && ! $pageHas) {
+            return array_merge($this->emptyStandardStats(), $this->emptyFeeBreakdownStats());
         }
 
-        $hasAudit = Schema::hasColumn('course_fees', 'created_by');
-        $hasShow = Schema::hasColumn('course_fees', 'showonwebsite');
-        $total = (int) CourseFee::count();
-        $active = $hasShow ? (int) CourseFee::where('showonwebsite', 1)->count() : $total;
-        $inactive = $hasShow ? (int) CourseFee::where(function ($q) {
-            $q->where('showonwebsite', 0)->orWhereNull('showonwebsite');
-        })->count() : 0;
+        $hasAudit = $courseHas && Schema::hasColumn('course_fees', 'created_by');
+        $courseTotal = $courseHas ? (int) CourseFee::count() : 0;
+        $pageTotal = $pageHas ? (int) PageFeePackage::count() : 0;
+        $total = $courseTotal + $pageTotal;
+        $activeCourses = $courseHas ? $this->countVisibleFeePackages(CourseFee::query(), 'course_fees', true) : 0;
+        $inactiveCourses = $courseHas ? $this->countVisibleFeePackages(CourseFee::query(), 'course_fees', false) : 0;
+        $activePages = $pageHas ? $this->countVisibleFeePackages(PageFeePackage::query(), 'page_fee_packages', true) : 0;
+        $inactivePages = $pageHas ? $this->countVisibleFeePackages(PageFeePackage::query(), 'page_fee_packages', false) : 0;
+        $missingCourses = $courseHas
+            ? (int) $this->activeCoursesQuery()->whereDoesntHave('courseFeePackages')->count()
+            : 0;
+        $missingPages = $pageHas
+            ? (int) $this->activePagesQuery()->whereDoesntHave('feeServices.categories.packages')->count()
+            : 0;
+
+        if (! $courseHas) {
+            return array_merge($this->emptyStandardStats(), [
+                'total' => $pageTotal,
+                'fees_in_courses' => 0,
+                'fees_in_pages' => $pageTotal,
+                'missing_courses' => 0,
+                'missing_pages' => $missingPages,
+                'active_courses' => 0,
+                'active_pages' => $activePages,
+                'inactive_courses' => 0,
+                'inactive_pages' => $inactivePages,
+            ]);
+        }
 
         return [
             'total' => $total,
-            'active' => $active,
-            'inactive' => $inactive,
+            'fees_in_courses' => $courseTotal,
+            'fees_in_pages' => $pageTotal,
+            'missing_courses' => $missingCourses,
+            'missing_pages' => $missingPages,
+            'active_courses' => $activeCourses,
+            'active_pages' => $activePages,
+            'inactive_courses' => $inactiveCourses,
+            'inactive_pages' => $inactivePages,
+            'active' => $activeCourses,
+            'inactive' => $inactiveCourses,
             'created_by_me' => $hasAudit
                 ? (int) ($actorUserId
                     ? CourseFee::where('created_by', $actorUserId)->count()
                     : CourseFee::count())
-                : ($actorUserId ? 0 : $total),
+                : ($actorUserId ? 0 : $courseTotal),
             'updated_by_me' => $hasAudit
                 ? (int) ($actorUserId
                     ? CourseFee::where('updated_by', $actorUserId)->count()
                     : CourseFee::count())
-                : ($actorUserId ? 0 : $total),
+                : ($actorUserId ? 0 : $courseTotal),
             'created_today' => $this->countCreatedInRange(CourseFee::class, now()->startOfDay(), now()->endOfDay(), false, $hasAudit ? $actorUserId : null),
             'created_yesterday' => $this->countCreatedInRange(CourseFee::class, now()->subDay()->startOfDay(), now()->subDay()->endOfDay(), false, $hasAudit ? $actorUserId : null),
             'created_this_week' => $this->countCreatedInRange(CourseFee::class, $this->thisWeekBounds()[0], $this->thisWeekBounds()[1], false, $hasAudit ? $actorUserId : null),
@@ -636,6 +705,31 @@ class ContentDashboardReportService
 
     private function feePackageDetailRows(string $metric, ?int $actorUserId, ?Carbon $from, ?Carbon $to, ?string $search): Collection
     {
+        if (in_array($metric, ['missing_courses'], true)) {
+            return $this->missingCourseFeeRows($search);
+        }
+        if (in_array($metric, ['missing_pages'], true)) {
+            return $this->missingPageFeeRows($search);
+        }
+
+        $pageOnly = in_array($metric, ['fees_in_pages', 'active_pages', 'inactive_pages'], true);
+
+        if ($pageOnly) {
+            return $this->pageFeePackageDetailRows($metric, $search);
+        }
+
+        if ($metric === 'total') {
+            return $this->courseFeePackageDetailRows('fees_in_courses', $actorUserId, $from, $to, $search)
+                ->concat($this->pageFeePackageDetailRows('fees_in_pages', $search))
+                ->take(10000)
+                ->values();
+        }
+
+        return $this->courseFeePackageDetailRows($metric, $actorUserId, $from, $to, $search);
+    }
+
+    private function courseFeePackageDetailRows(string $metric, ?int $actorUserId, ?Carbon $from, ?Carbon $to, ?string $search): Collection
+    {
         if (! Schema::hasTable('course_fees')) {
             return collect();
         }
@@ -645,12 +739,9 @@ class ContentDashboardReportService
         $query = CourseFee::query()->with(['course']);
 
         match ($metric) {
-            'active' => $hasShow ? $query->where('showonwebsite', 1) : null,
-            'inactive' => $hasShow
-                ? $query->where(function ($q) {
-                    $q->where('showonwebsite', 0)->orWhereNull('showonwebsite');
-                })
-                : $query->whereRaw('1 = 0'),
+            'active', 'active_courses' => $this->applyPackageWebsiteFilter($query, 'course_fees', true),
+            'inactive', 'inactive_courses' => $this->applyPackageWebsiteFilter($query, 'course_fees', false),
+            'fees_in_courses', 'total' => null,
             'created_by_me' => $hasAudit
                 ? ($actorUserId ? $query->where('created_by', $actorUserId) : null)
                 : ($actorUserId ? $query->whereRaw('1 = 0') : null),
@@ -722,6 +813,166 @@ class ContentDashboardReportService
                 'updated_at' => optional($fee->updated_at)?->format('Y-m-d H:i'),
                 'url' => route('course.edit-fee', ['id' => $fee->id]),
                 'web_url' => $fee->course ? course_details_url($fee->course) : null,
+            ];
+        });
+    }
+
+    private function emptyFeeBreakdownStats(): array
+    {
+        return [
+            'fees_in_courses' => 0,
+            'fees_in_pages' => 0,
+            'missing_courses' => 0,
+            'missing_pages' => 0,
+            'active_courses' => 0,
+            'active_pages' => 0,
+            'inactive_courses' => 0,
+            'inactive_pages' => 0,
+        ];
+    }
+
+    private function applyPackageWebsiteFilter($query, string $table, bool $active): void
+    {
+        $hasShow = Schema::hasColumn($table, 'showonwebsite');
+        $hasStatus = Schema::hasColumn($table, 'status');
+        if ($hasShow) {
+            if ($active) {
+                $query->where('showonwebsite', 1);
+            } else {
+                $query->where(function ($q) {
+                    $q->where('showonwebsite', 0)->orWhereNull('showonwebsite');
+                });
+            }
+
+            return;
+        }
+        if ($hasStatus) {
+            $query->where('status', $active ? 1 : 0);
+
+            return;
+        }
+        if (! $active) {
+            $query->whereRaw('1 = 0');
+        }
+    }
+
+    private function countVisibleFeePackages($query, string $table, bool $active): int
+    {
+        $this->applyPackageWebsiteFilter($query, $table, $active);
+
+        return (int) $query->count();
+    }
+
+    private function pageFeePackageDetailRows(string $metric, ?string $search): Collection
+    {
+        if (! Schema::hasTable('page_fee_packages')) {
+            return collect();
+        }
+
+        $hasShow = Schema::hasColumn('page_fee_packages', 'showonwebsite');
+        $query = PageFeePackage::query()->with(['category.service.page']);
+
+        match ($metric) {
+            'active_pages' => $this->applyPackageWebsiteFilter($query, 'page_fee_packages', true),
+            'inactive_pages' => $this->applyPackageWebsiteFilter($query, 'page_fee_packages', false),
+            default => null,
+        };
+
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('package_name', 'like', '%' . $search . '%')
+                    ->orWhere('short_description', 'like', '%' . $search . '%')
+                    ->orWhereHas('category.service.page', function ($pq) use ($search) {
+                        $pq->where('page_name', 'like', '%' . $search . '%')
+                            ->orWhere('url', 'like', '%' . $search . '%');
+                    });
+            });
+        }
+
+        return $query->orderByDesc('updated_at')->limit(10000)->get()->map(function (PageFeePackage $fee) use ($hasShow) {
+            $page = $fee->category?->service?->page;
+            $pageTitle = $page?->page_name ?: ('Page #' . ($fee->category?->service?->page_id ?? $fee->id));
+            $packageName = $fee->package_name ?: 'Fee Package';
+            $isActive = $hasShow ? (int) ($fee->showonwebsite ?? 0) === 1 : (bool) ($fee->status ?? true);
+            $pageId = $fee->category?->service?->page_id;
+
+            return [
+                'id' => $fee->id,
+                'title' => $packageName,
+                'package_name' => $packageName,
+                'course' => $pageTitle,
+                'price' => $fee->price !== null && $fee->price !== '' ? (string) $fee->price : '—',
+                'currency' => $fee->currency ?: '—',
+                'discount_amount' => $fee->discount_amount !== null && $fee->discount_amount !== ''
+                    ? (string) $fee->discount_amount
+                    : '—',
+                'short_description' => $fee->short_description ?: '—',
+                'priority' => $fee->priority !== null && $fee->priority !== '' ? (string) $fee->priority : '—',
+                'show_on_website' => $hasShow ? ($isActive ? 'Yes' : 'No') : '—',
+                'status' => $isActive ? 'Active' : 'Inactive',
+                'created_by' => 'Admin',
+                'updated_by' => 'Admin',
+                'created_at' => optional($fee->created_at)?->format('Y-m-d H:i'),
+                'updated_at' => optional($fee->updated_at)?->format('Y-m-d H:i'),
+                'url' => $pageId ? route('admin.pages.fees.edit', $pageId) : route('admin.pages.fees.index'),
+                'web_url' => $page && ! empty($page->url) ? url($page->url) : null,
+            ];
+        });
+    }
+
+    private function missingCourseFeeRows(?string $search): Collection
+    {
+        $query = $this->activeCoursesQuery()->with(['createdBy', 'updatedBy'])->whereDoesntHave('courseFeePackages');
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('title', 'like', '%' . $search . '%')
+                    ->orWhere('slug', 'like', '%' . $search . '%');
+            });
+        }
+
+        return $query->orderByDesc('updated_at')->limit(10000)->get()->map(function (Course $course) {
+            $title = $course->title ?: ('Course #' . $course->id);
+
+            return [
+                'id' => $course->id,
+                'title' => $title,
+                'course' => $title,
+                'coverage' => 'Missing',
+                'created_by' => audit_user_name($course->createdBy, $course->created_by ?? null),
+                'updated_by' => audit_user_name($course->updatedBy, $course->updated_by ?? null),
+                'created_at' => optional($course->created_at)?->format('M d, Y H:i'),
+                'updated_at' => optional($course->updated_at)?->format('M d, Y H:i'),
+                'url' => route('course.create-fee', $course->id),
+                'web_url' => course_details_url($course),
+            ];
+        });
+    }
+
+    private function missingPageFeeRows(?string $search): Collection
+    {
+        $query = $this->activePagesQuery()->with(['createdBy', 'updatedBy'])
+            ->whereDoesntHave('feeServices.categories.packages');
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('page_name', 'like', '%' . $search . '%')
+                    ->orWhere('url', 'like', '%' . $search . '%');
+            });
+        }
+
+        return $query->orderByDesc('updated_at')->limit(10000)->get()->map(function (Page $page) {
+            $title = $page->page_name ?: ('Page #' . $page->id);
+
+            return [
+                'id' => $page->id,
+                'title' => $title,
+                'course' => $title,
+                'coverage' => 'Missing',
+                'created_by' => audit_user_name($page->createdBy, $page->created_by ?? null),
+                'updated_by' => audit_user_name($page->updatedBy, $page->updated_by ?? null),
+                'created_at' => optional($page->created_at)?->format('M d, Y H:i'),
+                'updated_at' => optional($page->updated_at)?->format('M d, Y H:i'),
+                'url' => route('admin.pages.fees.edit', $page->id),
+                'web_url' => ! empty($page->url) ? url($page->url) : null,
             ];
         });
     }
