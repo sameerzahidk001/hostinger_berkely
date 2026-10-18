@@ -357,17 +357,16 @@ class LmsAssessmentService
 
         $max = $this->maxAttemptsFor($assessment);
         $used = $this->attemptsUsed($user, $assessment);
-        if ($used >= $max) {
-            abort(403, 'Maximum attempts for this test have been reached.');
-        }
 
-        // Must have an open assigned sitting with no attempt yet (retake = new Assign).
+        // Must have an open assigned sitting with no attempt yet (a new Assign is a new sitting).
         // Exception: unassigned skill tests stay open to staff without a sitting row.
-        $assignment = $this->openUnusedAssignmentsFor($user, $assessment)->first();
+        $assignment = $this->openUnusedAssignmentsFor($user, $assessment)->sortBy('id')->first();
         $hasExplicitAssign = $accessRows->contains(fn ($row) => $row['assignment'] !== null);
         if (! $assignment) {
             if ($assessment->isSkill() && ! $hasExplicitAssign) {
-                // open skill — no sitting required
+                if ($used >= $max) {
+                    abort(403, 'Maximum attempts for this test have been reached.');
+                }
             } else {
                 $anyAsg = $accessRows->map(fn ($row) => $row['assignment'])->filter()->first();
                 if ($anyAsg && $anyAsg->isNotYetOpen()) {
@@ -375,6 +374,9 @@ class LmsAssessmentService
                 }
                 if ($anyAsg && $anyAsg->isExpired()) {
                     abort(403, 'The availability window for this exam has ended.');
+                }
+                if ($used >= $max) {
+                    abort(403, 'Maximum attempts for this test have been reached.');
                 }
                 abort(403, 'No open assigned sitting. Ask admin to Assign a retake for this test.');
             }
@@ -709,15 +711,11 @@ class LmsAssessmentService
     }
 
     /**
-     * Retake only when Max attempts (N) > 1 and used < N, plus an open unused Assign sitting.
+     * Retake when admin has assigned a new unused sitting that is open now.
      */
     public function canRetake(User $user, LmsAssessment $assessment, ?LmsAssessmentAssignment $assignment = null): bool
     {
         if (! $assessment->isPublished()) {
-            return false;
-        }
-        $max = $assessment->max_attempts;
-        if ($max === null || (int) $max <= 1) {
             return false;
         }
         if (LmsAssessmentAttempt::query()
@@ -725,10 +723,6 @@ class LmsAssessmentService
             ->where('user_id', $user->id)
             ->where('status', 'in_progress')
             ->exists()) {
-            return false;
-        }
-        $used = $this->attemptsUsed($user, $assessment);
-        if ($used < 1 || $used >= (int) $max) {
             return false;
         }
 
@@ -793,7 +787,7 @@ class LmsAssessmentService
             $meta = $sittingMeta[$aid . ':' . $asgId] ?? ['number' => 1, 'total' => 1];
             $attemptNumber = (int) $meta['number'];
             $max = $this->maxAttemptsFor($assessment);
-            $attemptTotal = $max;
+            $attemptTotal = max($max, (int) $meta['total']);
 
             $attempts = $attemptsByAssessment->get($aid) ?? collect();
             $used = $attempts->count();
@@ -876,17 +870,10 @@ class LmsAssessmentService
                     'can_retake' => false,
                 ]);
             } else {
-                // Cap by Max attempts: unused sittings beyond N stay hidden.
-                if ($used >= $max) {
-                    continue;
-                }
-                // Open unused sitting → Available (attempt 2+ only if N allows retakes).
-                if ($isRetakeSitting && $max <= 1) {
-                    continue;
-                }
+                // Each unused assigned sitting is its own start, even if Max attempts is 1.
                 $available->push($base + [
                     'attempt' => null,
-                    'can_retake' => $isRetakeSitting && $used < $max,
+                    'can_retake' => $isRetakeSitting,
                 ]);
             }
         }
