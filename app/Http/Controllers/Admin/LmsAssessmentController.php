@@ -529,26 +529,25 @@ class LmsAssessmentController extends Controller
                 ->get()
                 ->groupBy(fn ($a) => (int) $a->assessment_id . ':' . (int) $a->user_id);
 
-            foreach ($rowsByKey as $key => &$row) {
-                $pairKey = (int) $row['assessment']->id . ':' . (int) $row['student']->id;
-                $candidates = $attempts->get($pairKey) ?? collect();
-                $asg = $row['assignment'];
-                // Prefer attempt that started inside this sitting's appointment window.
-                $row['attempt'] = $candidates->first(function ($att) use ($asg) {
-                    return $this->assessments->attemptBelongsToAssignment($att, $asg);
-                });
-                // Fallback: only latest sitting without a window match gets the latest attempt.
-                if (! $row['attempt'] && $candidates->isNotEmpty()) {
-                    $latestAsgId = collect($rowsByKey)
-                        ->filter(fn ($r) => (int) $r['assessment']->id === (int) $row['assessment']->id
-                            && (int) $r['student']->id === (int) $row['student']->id)
-                        ->max(fn ($r) => (int) $r['assignment']->id);
-                    if ((int) $asg->id === (int) $latestAsgId) {
-                        $row['attempt'] = $candidates->first();
+            $claimedAttemptIds = [];
+            $grouped = collect($rowsByKey)->groupBy(
+                fn ($r) => (int) $r['assessment']->id . ':' . (int) $r['student']->id
+            );
+            foreach ($grouped as $pairKey => $sittings) {
+                $candidates = ($attempts->get($pairKey) ?? collect())->sortBy('id')->values();
+                foreach ($sittings->sortBy(fn ($r) => (int) $r['assignment']->id) as $sitting) {
+                    $asg = $sitting['assignment'];
+                    $rowKey = (int) $asg->id . ':' . (int) $sitting['student']->id;
+                    $matched = $candidates->first(function ($att) use ($asg, $claimedAttemptIds) {
+                        return ! isset($claimedAttemptIds[(int) $att->id])
+                            && $this->assessments->attemptBelongsToAssignment($att, $asg);
+                    });
+                    $rowsByKey[$rowKey]['attempt'] = $matched;
+                    if ($matched) {
+                        $claimedAttemptIds[(int) $matched->id] = true;
                     }
                 }
             }
-            unset($row);
         }
 
         // Attempt N of T per student+assessment (oldest sitting = 1).
@@ -747,32 +746,24 @@ class LmsAssessmentController extends Controller
                 }
             }
 
-            foreach ($rowsByKey as $key => &$row) {
-                $uid = (int) ($row['student']->id ?? 0);
-                $asg = $row['assignment'];
-                $candidates = $uid > 0 ? ($attemptsByUser->get($uid) ?? collect()) : collect();
-                $matched = $candidates->first(function ($att) use ($asg, $claimedAttemptIds) {
-                    return ! isset($claimedAttemptIds[(int) $att->id])
-                        && $this->assessments->attemptBelongsToAssignment($att, $asg);
-                });
-                // Same student, newest sitting without a window match may claim leftover attempt.
-                if (! $matched && $uid > 0 && $candidates->isNotEmpty()) {
-                    $latestAsgId = collect($rowsByKey)
-                        ->filter(fn ($r) => (int) ($r['student']->id ?? 0) === $uid)
-                        ->max(fn ($r) => (int) $r['assignment']->id);
-                    if ((int) $asg->id === (int) $latestAsgId) {
-                        $matched = $candidates->first(fn ($att) => ! isset($claimedAttemptIds[(int) $att->id]));
+            foreach (collect($rowsByKey)->groupBy(fn ($r) => (int) ($r['student']->id ?? 0)) as $uid => $sittings) {
+                $candidates = $uid > 0 ? ($attemptsByUser->get($uid) ?? collect())->sortBy('id')->values() : collect();
+                foreach ($sittings->sortBy(fn ($r) => (int) $r['assignment']->id) as $sitting) {
+                    $asg = $sitting['assignment'];
+                    $key = (int) $asg->id . ':' . (int) $uid;
+                    $matched = $candidates->first(function ($att) use ($asg, $claimedAttemptIds) {
+                        return ! isset($claimedAttemptIds[(int) $att->id])
+                            && $this->assessments->attemptBelongsToAssignment($att, $asg);
+                    });
+                    if ($matched) {
+                        $claimedAttemptIds[(int) $matched->id] = true;
                     }
+                    $rowsByKey[$key]['attempt'] = $matched;
+                    $meta = $attemptMeta[$key] ?? ['number' => 1, 'total' => max(1, $assignments->count())];
+                    $rowsByKey[$key]['attempt_number'] = $meta['number'];
+                    $rowsByKey[$key]['attempt_total'] = $meta['total'];
                 }
-                if ($matched) {
-                    $claimedAttemptIds[(int) $matched->id] = true;
-                }
-                $row['attempt'] = $matched;
-                $meta = $attemptMeta[(int) $asg->id . ':' . $uid] ?? ['number' => 1, 'total' => max(1, $assignments->count())];
-                $row['attempt_number'] = $meta['number'];
-                $row['attempt_total'] = $meta['total'];
             }
-            unset($row);
 
             // Include any attempt that never matched an assignment sitting (legacy / edge cases).
             foreach ($allAttempts as $att) {

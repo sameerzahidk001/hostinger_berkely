@@ -6,8 +6,9 @@
     $export = $seoRecord ? $scoreExport : 'Not Added';
 @endphp
 <td style="vertical-align: top;" data-order="{{ $seoScore ?? ($seoRecord ? 0 : -1) }}" data-export="{{ $export }}">
+    <div class="lms-cell-stack" style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">
     @if($seoRecord)
-        <div style="margin-bottom:4px;">
+        <div>
             @include('admin.seo.partials.score-pill', [
                 'score' => $seoScore,
                 'title' => 'SEO score',
@@ -18,4 +19,5 @@
         <span class="label label-danger">Not Added</span>
         <a href="{{ $createUrl }}" class="label label-danger" target="_blank">Add</a>
     @endif
+    </div>
 </td>
