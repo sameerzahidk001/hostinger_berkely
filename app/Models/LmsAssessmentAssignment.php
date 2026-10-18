@@ -180,11 +180,16 @@ class LmsAssessmentAssignment extends Model
         $tz = $this->timezoneName();
         try {
             $wall = $this->formatInTimezone($this->available_until, 'Y-m-d H:i:s');
-
-            return Carbon::createFromFormat('Y-m-d H:i:s', $wall, $tz);
+            $until = Carbon::createFromFormat('Y-m-d H:i:s', $wall, $tz);
         } catch (\Throwable $e) {
-            return $this->available_until->copy();
+            $until = $this->available_until->copy();
         }
+        // Zero-length from/until must not expire the sitting the instant it opens.
+        if ($start && $until && $until->lte($start)) {
+            return null;
+        }
+
+        return $until;
     }
 
     /** Display: "15/10/24 22:25 → 16/10/24 01:25" (timezone is shown on its own line). */
@@ -224,14 +229,13 @@ class LmsAssessmentAssignment extends Model
         $tz = $this->timezoneName();
         $now = now($tz);
 
-        // Same from/until (zero-length window) expires as soon as that timestamp is reached.
-        $start = $this->windowStart();
-        if ($start && $start->equalTo($until)) {
-            return $now->gte($until);
-        }
-
         // Still upcoming — not missed yet.
         if ($this->isNotYetOpen()) {
+            return false;
+        }
+
+        $start = $this->windowStart();
+        if ($start && $until->lte($start)) {
             return false;
         }
 

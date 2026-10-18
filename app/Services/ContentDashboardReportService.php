@@ -192,6 +192,7 @@ class ContentDashboardReportService
             'seo_missing_courses' => max(0, $totalActiveCourses - $enteredCourses),
             'page_seo' => $enteredPages,
             'course_seo' => $enteredCourses,
+            ...$this->seoScoreBandCounts(),
             'created_by_me' => $hasAudit
                 ? (int) ($actorUserId
                     ? PagesSEO::where('created_by', $actorUserId)->count()
@@ -367,6 +368,16 @@ class ContentDashboardReportService
                 'seo_entered_courses' => 'SEO Entered Courses',
                 'seo_missing_pages' => 'SEO Missing Pages',
                 'seo_missing_courses' => 'SEO Missing Courses',
+                'courses_seo_90' => 'Courses SEO Score 90-100',
+                'courses_seo_80' => 'Courses SEO Score 80-90',
+                'courses_seo_70' => 'Courses SEO Score 70-80',
+                'courses_seo_50' => 'Courses SEO Score 50-70',
+                'courses_seo_0' => 'Courses SEO Score 0-50',
+                'pages_seo_90' => 'Pages SEO Score 90-100',
+                'pages_seo_80' => 'Pages SEO Score 80-90',
+                'pages_seo_70' => 'Pages SEO Score 70-80',
+                'pages_seo_50' => 'Pages SEO Score 50-70',
+                'pages_seo_0' => 'Pages SEO Score 0-50',
                 'created_by_me' => 'Created SEO By ' . $who,
                 'updated_by_me' => 'Updated SEO By ' . $who,
                 'created_today' => 'Created SEO Today By ' . $who,
@@ -833,6 +844,18 @@ class ContentDashboardReportService
         if ($metric === 'seo_missing_courses') {
             return $this->missingCourseSeoRows($search);
         }
+        if (str_starts_with($metric, 'courses_seo_')) {
+            return $this->filterRowsBySeoScoreBand(
+                $this->courseDetailRows('active', $actorUserId, $from, $to, $search),
+                $metric
+            );
+        }
+        if (str_starts_with($metric, 'pages_seo_')) {
+            return $this->filterRowsBySeoScoreBand(
+                $this->pageDetailRows('active', $actorUserId, $from, $to, $search),
+                $metric
+            );
+        }
 
         if (! Schema::hasTable('pages_s_e_o_s')) {
             return collect();
@@ -1205,6 +1228,109 @@ class ContentDashboardReportService
         return $modelClass::query();
     }
 
+    /** @return array<string, int> */
+    private function seoScoreBandCounts(): array
+    {
+        $counts = [
+            'courses_seo_90' => 0,
+            'courses_seo_80' => 0,
+            'courses_seo_70' => 0,
+            'courses_seo_50' => 0,
+            'courses_seo_0' => 0,
+            'pages_seo_90' => 0,
+            'pages_seo_80' => 0,
+            'pages_seo_70' => 0,
+            'pages_seo_50' => 0,
+            'pages_seo_0' => 0,
+        ];
+        if (! Schema::hasTable('pages_s_e_o_s')) {
+            return $counts;
+        }
+        $analyzer = app(SeoAnalyzerService::class);
+        foreach (PagesSEO::query()->whereNotNull('course_id')->whereIn('course_id', $this->activeCoursesQuery()->select('id'))->get() as $seo) {
+            $key = $this->seoScoreBandKey($this->seoNumericScore($seo, $analyzer), 'courses');
+            if ($key) {
+                $counts[$key]++;
+            }
+        }
+        foreach (PagesSEO::query()->whereNotNull('page_id')->whereIn('page_id', $this->activePagesQuery()->select('id'))->get() as $seo) {
+            $key = $this->seoScoreBandKey($this->seoNumericScore($seo, $analyzer), 'pages');
+            if ($key) {
+                $counts[$key]++;
+            }
+        }
+
+        return $counts;
+    }
+
+    private function seoNumericScore(?PagesSEO $seo, SeoAnalyzerService $analyzer): ?int
+    {
+        if (! $seo) {
+            return null;
+        }
+        try {
+            $analysis = $analyzer->analyzeForTables($seo);
+            if (! isset($analysis['score'])) {
+                return null;
+            }
+
+            return (int) $analysis['score'];
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    private function seoScoreBandKey(?int $score, string $kind): ?string
+    {
+        if ($score === null) {
+            return null;
+        }
+        $prefix = $kind === 'pages' ? 'pages_seo_' : 'courses_seo_';
+        if ($score >= 90) {
+            return $prefix . '90';
+        }
+        if ($score >= 80) {
+            return $prefix . '80';
+        }
+        if ($score >= 70) {
+            return $prefix . '70';
+        }
+        if ($score >= 50) {
+            return $prefix . '50';
+        }
+
+        return $prefix . '0';
+    }
+
+    private function filterRowsBySeoScoreBand(Collection $rows, string $metric): Collection
+    {
+        $want = match (true) {
+            str_ends_with($metric, '_90') => '90',
+            str_ends_with($metric, '_80') => '80',
+            str_ends_with($metric, '_70') => '70',
+            str_ends_with($metric, '_50') => '50',
+            str_ends_with($metric, '_0') => '0',
+            default => null,
+        };
+        if ($want === null) {
+            return $rows;
+        }
+
+        return $rows->filter(function (array $row) use ($want) {
+            $raw = $row['seo_score'] ?? null;
+            if ($raw === null || $raw === '—') {
+                return $want === '0';
+            }
+            $score = is_numeric($raw) ? (int) $raw : (preg_match('/(\d+)/', (string) $raw, $m) ? (int) $m[1] : null);
+            if ($score === null) {
+                return false;
+            }
+            $band = $this->seoScoreBandKey($score, 'courses');
+
+            return $band && str_ends_with($band, '_' . $want);
+        })->values();
+    }
+
     private function emptySeoStats(): array
     {
         return [
@@ -1217,6 +1343,16 @@ class ContentDashboardReportService
             'seo_missing_courses' => 0,
             'page_seo' => 0,
             'course_seo' => 0,
+            'courses_seo_90' => 0,
+            'courses_seo_80' => 0,
+            'courses_seo_70' => 0,
+            'courses_seo_50' => 0,
+            'courses_seo_0' => 0,
+            'pages_seo_90' => 0,
+            'pages_seo_80' => 0,
+            'pages_seo_70' => 0,
+            'pages_seo_50' => 0,
+            'pages_seo_0' => 0,
             'created_by_me' => 0,
             'updated_by_me' => 0,
             'created_today' => 0,
