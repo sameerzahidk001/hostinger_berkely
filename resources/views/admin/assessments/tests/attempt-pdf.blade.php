@@ -17,14 +17,17 @@
         .meta { margin-bottom: 8px; }
         .meta td { padding: 2px 8px 2px 0; vertical-align: top; }
         .q { margin: 16px 0; padding: 12px; border: 1px solid #e5e5e5; page-break-inside: avoid; }
-        .q-title { font-weight: bold; margin-bottom: 8px; }
-        .q-stem { margin: 0 0 16px; padding-bottom: 12px; border-bottom: 1px solid #f0f0f0; }
+        .q-title { font-weight: bold; margin-bottom: 8px; color: #000; }
+        .q-stem { margin: 0 0 16px; padding-bottom: 12px; border-bottom: 1px solid #f0f0f0; color: #000; }
+        .q-stem * { color: #000; }
         .q-answer { margin-top: 16px; }
-        .q-answer .label { font-weight: bold; margin-bottom: 8px; display: block; }
-        .q-answer .body { margin: 0 0 10px; padding: 10px 12px; background: #fafafa; border: 1px solid #eee; }
+        .q-answer .label { font-weight: bold; margin-bottom: 8px; display: block; color: #000; }
+        .q-answer .body { margin: 0 0 10px; padding: 10px 12px; background: #fafafa; border: 1px solid #eee; color: #0056b3; }
+        .q-answer .body * { color: #0056b3; }
         .muted { color: #777; }
         .score { font-size: 14px; font-weight: bold; }
-        .feedback { background: #f7f7f7; padding: 8px; margin-top: 10px; }
+        .feedback { background: #f7f7f7; padding: 8px; margin-top: 10px; color: #cc0000; }
+        .feedback * { color: #cc0000; }
         .footer {
             border-top: 1px solid #eee;
             padding-top: 8px;
