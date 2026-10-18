@@ -94,7 +94,7 @@
                                     @forelse($courses as $index => $data)
                                         <tr>
                                             <td class="col-id" data-order="{{ (int) $data->id }}">{{ $data->id }}</td>
-                                            <td style="vertical-align: middle;">
+                                            <td>
                                                 <a href="{{ route('course.details', ['course' => $data->slug]) }}" target="_blank">
                                                     {{ $data->title }}
                                                 </a>

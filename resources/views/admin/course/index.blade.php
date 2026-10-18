@@ -111,7 +111,7 @@
                                         @endphp
                                         <tr>
                                             <td class="col-id" data-order="{{ (int) $data->id }}">{{ $data->id }}</td>
-                                            <td style="vertical-align: middle;" data-export="{{ $data->title }}">
+                                            <td data-export="{{ $data->title }}">
                                                 <a href="{{ route('course.details', ['course' => $data->slug]) }}"
                                                     target="blank" target="blank">
                                                     {{ $data->title }}

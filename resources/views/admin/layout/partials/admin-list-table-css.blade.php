@@ -19,10 +19,11 @@
     .admin-list-table td {
         white-space: normal !important;
         word-break: break-word;
-        vertical-align: top;
+        vertical-align: top !important;
         padding: 6px 4px;
     }
     .admin-list-table .col-id { width: 44px; text-align: center; }
+    .admin-list-table .col-faq { width: 48px; text-align: center; }
     .admin-list-table .col-status { width: 72px; }
     .admin-list-table .col-status select {
         width: 100%;

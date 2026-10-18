@@ -5,7 +5,7 @@
     $scoreExport = $seoScore !== null ? ($seoScore . '/100') : '—';
     $export = $seoRecord ? $scoreExport : 'Not Added';
 @endphp
-<td style="vertical-align: top;" data-order="{{ $seoScore ?? ($seoRecord ? 0 : -1) }}" data-export="{{ $export }}">
+<td data-order="{{ $seoScore ?? ($seoRecord ? 0 : -1) }}" data-export="{{ $export }}">
     <div class="lms-cell-stack" style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;">
     @if($seoRecord)
         <div>

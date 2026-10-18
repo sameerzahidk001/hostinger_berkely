@@ -50,7 +50,7 @@
                                         <th>Page</th>
                                         <th>URL</th>
                                         <th class="col-status">Status</th>
-                                        <th>FAQ<br>Count</th>
+                                        <th class="col-faq">FAQ<br>Count</th>
                                         <th>SEO</th>
                                         <th>Created</th>
                                         <th>Created<br>By</th>
@@ -70,13 +70,13 @@
                                         @endphp
                                         <tr>
                                             <td class="col-id" data-order="{{ (int) $page->id }}">{{ $page->id }}</td>
-                                            <td style="vertical-align: middle;">
+                                            <td>
                                                 <strong>{{ $page->page_name }}</strong>
                                                 @if ($pageName)
                                                     <span class="badge bg-primary">{{ $pageName }}</span>
                                                 @endif
                                             </td>
-                                            <td style="vertical-align: middle;">
+                                            <td>
                                                 {{ $page->parent
                                                     ? $page->parent->url . '/' . $page->url
                                                     : ($page->category_id
@@ -84,7 +84,7 @@
                                                         : $page->url)
                                                 }}
                                             </td>
-                                            <td class="col-status" style="vertical-align: middle;">
+                                            <td class="col-status">
                                                 <select name="page_status" class="form-control"
                                                     id="page_status_{{ $page->id }}"
                                                     onchange="updatePageStatus(this.value, {{ $page->id }})">
@@ -92,7 +92,7 @@
                                                     <option value="disable" selected>Disabled</option>
                                                 </select>
                                             </td>
-                                            <td style="vertical-align: middle;">{{ $page->faqs->count() }}</td>
+                                            <td class="col-faq">{{ $page->faqs->count() }}</td>
                                             @include('admin.seo.partials.list-seo-cell', [
                                                 'seo' => $page->seo,
                                                 'analysis' => $page->seo_analysis ?? null,
