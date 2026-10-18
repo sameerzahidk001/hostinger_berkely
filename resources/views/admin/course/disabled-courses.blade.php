@@ -36,12 +36,8 @@
         .seo-score-pill.good { background: #f8ac59; }
         .seo-score-pill.poor { background: #ed5565; }
         .seo-details small { display: block; color: #676a6c; line-height: 1.5; }
-        .courses-list-wrap { overflow-x: hidden; }
-        .courses-list-table { width: 100% !important; font-size: 12px; }
-        .courses-list-table th, .courses-list-table td {
-            white-space: normal !important; word-break: break-word; vertical-align: top; padding: 6px 5px;
-        }
     </style>
+    @include('admin.layout.partials.admin-list-table-css')
 @endpush
 @section('content')
     <div class="row wrapper border-bottom white-bg page-heading">
@@ -70,31 +66,34 @@
                         </div>
                     </div>
                     <div class="ibox-content">
-                        <div class="courses-list-wrap">
-                            <table class="table table-striped table-bordered table-hover dataTables-example courses-list-table">
+                        <div class="admin-list-wrap">
+                            <table class="table table-striped table-bordered table-hover dataTables-example admin-list-table">
                                 <thead>
                                     <tr>
-                                        <th style="width:70px;">Course ID</th>
+                                        <th class="col-id">ID</th>
                                         <th>Title</th>
                                         <th>Categories</th>
                                         <th>Schools</th>
-                                        <th>Related Courses</th>
-                                        <th style="width:130px;">Fee Structure</th>
-                                        <th>Course Structure</th>
-                                        <th style="width:130px;">Lecture Plan</th>
+                                        <th>Related<br>Courses</th>
+                                        <th>Fee<br>Structure</th>
+                                        <th>Course<br>Structure</th>
+                                        <th>Lecture<br>Plan</th>
                                         <th>SEO</th>
-                                        <th>FAQ's</th>
+                                        <th>FAQs</th>
                                         <th>Testimonial</th>
                                         <th>Instructors</th>
-                                        <th style="width:100px;">Status</th>
-                                        @include('admin.layout.partials.audit-columns-head')
-                                        <th style="width:130px;">Action</th>
+                                        <th class="col-status">Status</th>
+                                        <th>Created</th>
+                                        <th>Created<br>By</th>
+                                        <th>Last<br>Modified</th>
+                                        <th>Modified<br>By</th>
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @forelse($courses as $index => $data)
                                         <tr>
-                                            <td data-order="{{ (int) $data->id }}">{{ $data->id }}</td>
+                                            <td class="col-id" data-order="{{ (int) $data->id }}">{{ $data->id }}</td>
                                             <td style="vertical-align: middle;">
                                                 <a href="{{ route('course.details', ['course' => $data->slug]) }}" target="_blank">
                                                     {{ $data->title }}
@@ -127,14 +126,16 @@
                                                 @endif
                                             </td>
                                             <td>
+                                                <div class="lms-cell-stack">
                                                 @if ($data->courseFeePackages->isEmpty())
                                                     <a href="{{ route('course.create-fee', ['id' => $data->id]) }}" class="label label-danger" target="_blank">Add</a>
                                                 @else
-                                                    <a href="{{ route('course.fee', ['id' => $data->id]) }}" class="label label-primary mb" target="_blank">View</a>
-                                                    <span class="label {{ $data->fee_visibility ? 'label-primary' : 'label-danger' }} mb">
+                                                    <a href="{{ route('course.fee', ['id' => $data->id]) }}" class="label label-primary" target="_blank">View</a>
+                                                    <span class="label {{ $data->fee_visibility ? 'label-primary' : 'label-danger' }}">
                                                         {{ $data->fee_visibility ? 'Active' : 'Disabled' }}
                                                     </span>
                                                 @endif
+                                                </div>
                                             </td>
                                             <td>
                                                 @if($data->courseStructuresFirst->isEmpty())
@@ -144,6 +145,7 @@
                                                 @endif
                                             </td>
                                             <td>
+                                                <div class="lms-cell-stack">
                                                 @if($data->courseStructures->isEmpty())
                                                     <a href="{{ route('course.course-structure', ['id' => $data->id]) }}" class="label label-danger" target="_blank">Add</a>
                                                 @else
@@ -152,6 +154,7 @@
                                                         {{ $data->lecture_plan_section ? 'Active' : 'Disabled' }}
                                                     </span>
                                                 @endif
+                                                </div>
                                             </td>
                                             @include('admin.seo.partials.list-seo-cell', [
                                                 'seo' => $data->seo,
@@ -182,7 +185,7 @@
                                                     <a href="{{ route('admin.courses.instructors', ['id' => $data->id]) }}" class="label label-danger" target="_blank">Add</a>
                                                 @endif
                                             </td>
-                                            <td>
+                                            <td class="col-status">
                                                 <select name="course_status" class="form-control" id="course_status_{{ $data->id }}" required
                                                     onchange="updateCourseStatus(this.value, {{ $data->id }})">
                                                     <option value="active" @if(is_null($data->deleted_at)) selected @endif>Active</option>
@@ -191,7 +194,7 @@
                                             </td>
                                             @include('admin.layout.partials.audit-columns-cells', ['model' => $data])
                                             <td>
-                                                <div class="btn-group">
+                                                <div class="lms-cell-stack">
                                                     <a href="{{ route('course.edit', ['id' => $data->id]) }}" class="btn-primary btn btn-xs" target="_blank">
                                                         <i class="fa fa-pencil"></i> Edit
                                                     </a>

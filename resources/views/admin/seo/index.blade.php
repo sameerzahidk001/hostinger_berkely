@@ -19,6 +19,7 @@
     .seo-score-pill.poor { background: #ed5565; }
     .seo-details small { display: block; color: #676a6c; line-height: 1.5; }
 </style>
+@include('admin.layout.partials.admin-list-table-css')
 @endpush
 @section('content')
 <div class="row wrapper border-bottom white-bg page-heading">
@@ -40,7 +41,7 @@
                     <small class="text-muted">Click any column header to sort. Open <strong>Edit</strong> for full SEO analysis and live page checks.</small>
                 </div>
                 <div class="ibox-content">
-                    <div class="table-responsive">
+                    <div class="admin-list-wrap">
                         <form action="{{ route('courses-pages-seo.index') }}" method="GET">
                             <div class="row" style="margin-bottom: 6px;">
                                 <div class="col-lg-4">
@@ -60,16 +61,16 @@
                             </div>
                         </form>
 
-                        <table class="table table-striped table-bordered table-hover dataTables-example">
+                        <table class="table table-striped table-bordered table-hover dataTables-example admin-list-table">
                             <thead>
                                 <tr>
-                                    <th style="width:50px;">#</th>
+                                    <th class="col-id">ID</th>
                                     <th>Title</th>
-                                    <th style="width:90px;">Type</th>
-                                    <th style="width:90px;">Score</th>
-                                    <th style="width:220px;">SEO Details</th>
-                                    <th>Meta Description</th>
-                                    <th style="width:110px;">Action</th>
+                                    <th>Type</th>
+                                    <th>Score</th>
+                                    <th>SEO<br>Details</th>
+                                    <th>Meta<br>Description</th>
+                                    <th>Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -82,7 +83,7 @@
                                         $itemHref = seo_list_item_public_href($page_seo, $category_perma ?? 'category');
                                     @endphp
                                     <tr>
-                                        <td data-order="{{ $page_seo->id }}">{{ $loop->iteration }}</td>
+                                        <td class="col-id" data-order="{{ $page_seo->id }}">{{ $page_seo->id }}</td>
                                         <td data-order="{{ $itemTitle }}">
                                             <strong>{{ $itemTitle }}</strong>
                                             @if($itemUrl && $itemHref)
@@ -95,6 +96,7 @@
                                             'analysis' => $analysis,
                                         ])
                                         <td>
+                                            <div class="lms-cell-stack">
                                             <a href="{{ route('courses-pages-seo.edit', $page_seo->id) }}" class="btn-primary btn btn-xs">
                                                 <i class="fa fa-pencil"></i> Edit
                                             </a>
@@ -102,6 +104,7 @@
                                                 'id' => $page_seo->id,
                                                 'action' => route('courses-pages-seo.destroy', $page_seo->id),
                                             ])
+                                            </div>
                                         </td>
                                     </tr>
                                 @empty
@@ -132,6 +135,8 @@
                 info: true,
                 ordering: true,
                 responsive: false,
+                autoWidth: false,
+                scrollX: false,
                 dom: '<"admin-dt-toolbar"<l><B><f>>rtip',
                 order: [[0, 'desc']],
                 buttons: [adminDatatableExcelButton('SEO List', 'seo_list')],

@@ -17,6 +17,7 @@
         .seo-score-pill.poor { background: #ed5565; }
         .seo-details small { display: block; color: #676a6c; line-height: 1.5; }
     </style>
+    @include('admin.layout.partials.admin-list-table-css')
 @endpush
 @section('content')
     <div class="row wrapper border-bottom white-bg page-heading">
@@ -41,18 +42,21 @@
                         <h5>Disabled Pages</h5>
                     </div>
                     <div class="ibox-content">
-                        <div class="table-responsive">
-                            <table class="table table-striped table-bordered table-hover dataTables-example">
+                        <div class="admin-list-wrap">
+                            <table class="table table-striped table-bordered table-hover dataTables-example admin-list-table">
                                 <thead>
                                     <tr>
-                                        <th style="width: 40px;">SR#</th>
+                                        <th class="col-id">ID</th>
                                         <th>Page</th>
                                         <th>URL</th>
-                                        <th style="width:120px;">Status</th>
-                                        <th>FAQ's Count</th>
+                                        <th class="col-status">Status</th>
+                                        <th>FAQ<br>Count</th>
                                         <th>SEO</th>
-                                        @include('admin.layout.partials.audit-columns-head')
-                                        <th style="width:130px;">Action</th>
+                                        <th>Created</th>
+                                        <th>Created<br>By</th>
+                                        <th>Last<br>Modified</th>
+                                        <th>Modified<br>By</th>
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -65,7 +69,7 @@
                                             $pageName = array_search($page->id, $protectedPages);
                                         @endphp
                                         <tr>
-                                            <td style="vertical-align: middle;">{{ ++$index }}</td>
+                                            <td class="col-id" data-order="{{ (int) $page->id }}">{{ $page->id }}</td>
                                             <td style="vertical-align: middle;">
                                                 <strong>{{ $page->page_name }}</strong>
                                                 @if ($pageName)
@@ -80,7 +84,7 @@
                                                         : $page->url)
                                                 }}
                                             </td>
-                                            <td style="vertical-align: middle;">
+                                            <td class="col-status" style="vertical-align: middle;">
                                                 <select name="page_status" class="form-control"
                                                     id="page_status_{{ $page->id }}"
                                                     onchange="updatePageStatus(this.value, {{ $page->id }})">
@@ -98,10 +102,12 @@
                                                 'createUrl' => route('courses-pages-seo.create', ['page_name' => $page->page_name, 'page_id' => $page->id]),
                                             ])
                                             @include('admin.layout.partials.audit-columns-cells', ['model' => $page])
-                                            <td style="vertical-align: middle;" class="center">
-                                                <a href="{{ route('pages.edit', $page->id) }}" class="btn-primary btn btn-xs" target="_blank">
-                                                    <i class="fa fa-pencil"></i> Edit
-                                                </a>
+                                            <td class="center">
+                                                <div class="lms-cell-stack">
+                                                    <a href="{{ route('pages.edit', $page->id) }}" class="btn-primary btn btn-xs" target="_blank">
+                                                        <i class="fa fa-pencil"></i> Edit
+                                                    </a>
+                                                </div>
                                             </td>
                                         </tr>
                                     @empty
@@ -131,9 +137,11 @@
                 paging: true,
                 info: true,
                 ordering: true,
-                responsive: true,
+                responsive: false,
+                autoWidth: false,
+                scrollX: false,
                 dom: 'lftip',
-                order: [[9, 'desc']]
+                order: [[0, 'desc']]
             });
         });
 

@@ -17,6 +17,7 @@
         .seo-score-pill.poor { background: #ed5565; }
         .seo-details small { display: block; color: #676a6c; line-height: 1.5; }
     </style>
+    @include('admin.layout.partials.admin-list-table-css')
     @include('admin.layout.partials.datatable-excel-toolbar')
 @endpush
 @section('content')
@@ -141,18 +142,21 @@
                     </div>
                     <div class="ibox-content">
 
-                        <div class="table-responsive">
-                            <table class="table table-striped table-bordered table-hover dataTables-example">
+                        <div class="admin-list-wrap">
+                            <table class="table table-striped table-bordered table-hover dataTables-example admin-list-table">
                                 <thead>
                                     <tr>
-                                        <th style="width: 40px;">SR#</th>
+                                        <th class="col-id">ID</th>
                                         <th>Page</th>
                                         <th>URL</th>
-                                        <th style="width:90px;">Status</th>
-                                        <th>FAQ's Count</th>
+                                        <th class="col-status">Status</th>
+                                        <th>FAQ<br>Count</th>
                                         <th>SEO</th>
-                                        @include('admin.layout.partials.audit-columns-head')
-                                        <th style="width:130px;">Action</th>
+                                        <th>Created</th>
+                                        <th>Created<br>By</th>
+                                        <th>Last<br>Modified</th>
+                                        <th>Modified<br>By</th>
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -173,7 +177,7 @@
                                             $pageStatusExport = $pageStatus ? 'Active' : 'Disabled';
                                         @endphp
                                         <tr>
-                                            <td style="vertical-align: middle;">{{ ++$index }}</td>
+                                            <td class="col-id" data-order="{{ (int) $page->id }}">{{ $page->id }}</td>
 
                                             <td style="vertical-align: middle;" data-export="{{ $page->page_name }}">
                                                 <a href="{{ url($page->parent 
@@ -190,7 +194,7 @@
                                             <td style="vertical-align: middle;" data-export="{{ $pageUrl }}">
                                                 {{ $pageUrl }}
                                             </td>
-                                            <td style="vertical-align: middle;" data-export="{{ $pageStatusExport }}">
+                                            <td class="col-status" style="vertical-align: middle;" data-export="{{ $pageStatusExport }}">
                                                 @if($pagesStatusEnabled ?? false)
                                                     <select name="page_status" class="form-control"
                                                         id="page_status_{{ $page->id }}"
@@ -214,9 +218,8 @@
                                                 'createUrl' => route('courses-pages-seo.create', ['page_name' => $page->page_name, 'page_id' => $page->id]),
                                             ])
                                             @include('admin.layout.partials.audit-columns-cells', ['model' => $page])
-                                            <td style="vertical-align: middle;" class="center">
-
-                                                <div class="btn-group">
+                                            <td class="center">
+                                                <div class="lms-cell-stack">
                                                     <a href="{{ route('pages.edit', $page->id) }}"
                                                         class="btn-primary btn btn-xs" target="_blank">
                                                         <i class="fa fa-pencil"></i> Edit
@@ -225,7 +228,7 @@
                                                         class="btn btn-warning btn-xs" title="Fee Update in Page">
                                                         <i class="fa fa-money"></i> Fee
                                                     </a>
-                                                    <form action="{{ route('pages.duplicate', $page->id) }}" method="POST" style="display:inline;">
+                                                    <form action="{{ route('pages.duplicate', $page->id) }}" method="POST">
                                                         @csrf
                                                         <button type="submit" class="btn btn-info btn-xs"
                                                             onclick="return confirm('Duplicate this page as a draft? Original stays unchanged.');"
@@ -251,13 +254,16 @@
                                 </tbody>
                                 <tfoot>
                                     <tr>
-                                        <th>SR#</th>
+                                        <th>ID</th>
                                         <th>Page</th>
                                         <th>URL</th>
                                         <th>Status</th>
-                                        <th>FAQ's Count</th>
+                                        <th>FAQ Count</th>
                                         <th>SEO</th>
-                                        @include('admin.layout.partials.audit-columns-head')
+                                        <th>Created</th>
+                                        <th>Created By</th>
+                                        <th>Last Modified</th>
+                                        <th>Modified By</th>
                                         <th>Action</th>
                                     </tr>
                                 </tfoot>
@@ -285,9 +291,11 @@
                 paging: true,
                 info: true,
                 ordering: true,
-                responsive: true,
+                responsive: false,
+                autoWidth: false,
+                scrollX: false,
                 dom: '<"admin-dt-toolbar"<l><B><f>>rtip',
-                order: [[6, 'desc']],
+                order: [[0, 'desc']],
                 buttons: [adminDatatableExcelButton('Pages List', 'pages_list')]
             });
 

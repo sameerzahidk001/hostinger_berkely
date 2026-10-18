@@ -36,52 +36,8 @@
         .seo-score-pill.good { background: #f8ac59; }
         .seo-score-pill.poor { background: #ed5565; }
         .seo-details small { display: block; color: #676a6c; line-height: 1.5; }
-        .courses-list-wrap { overflow-x: hidden; }
-        .courses-list-table {
-            width: 100% !important;
-            table-layout: fixed;
-            font-size: 12px;
-        }
-        .courses-list-table thead th {
-            white-space: normal !important;
-            word-break: break-word;
-            line-height: 1.2;
-            font-size: 11px;
-            font-weight: 700;
-            text-align: center;
-            vertical-align: middle;
-            padding: 6px 4px;
-        }
-        .courses-list-table td {
-            white-space: normal !important;
-            word-break: break-word;
-            vertical-align: top;
-            padding: 6px 4px;
-        }
-        .courses-list-table .col-id { width: 44px; text-align: center; }
-        .courses-list-table .col-status { width: 72px; }
-        .courses-list-table .col-status select {
-            width: 100%;
-            max-width: 72px;
-            padding: 2px 4px;
-            height: auto;
-            font-size: 11px;
-        }
-        .courses-list-table td ul { margin: 0; padding-left: 14px; }
-        .courses-list-table .lms-cell-stack {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 4px;
-        }
-        .courses-list-table .lms-cell-stack .label,
-        .courses-list-table .lms-cell-stack .btn,
-        .courses-list-table .lms-cell-stack form {
-            margin: 0;
-            display: block;
-        }
-        .courses-list-table .label + .label { margin-left: 0; }
     </style>
+    @include('admin.layout.partials.admin-list-table-css')
     @include('admin.layout.partials.datatable-excel-toolbar')
 @endpush
 @section('content')
@@ -122,8 +78,8 @@
                         </div>
                     </div>
                     <div class="ibox-content">
-                        <div class="courses-list-wrap">
-                            <table class="table table-striped table-bordered table-hover dataTables-example courses-list-table">
+                        <div class="admin-list-wrap">
+                            <table class="table table-striped table-bordered table-hover dataTables-example admin-list-table">
                                 <thead>
                                     <tr>
                                         <th class="col-id">ID</th>
