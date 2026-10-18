@@ -150,7 +150,7 @@
                                         <th>Page</th>
                                         <th>URL</th>
                                         <th class="col-status">Status</th>
-                                        <th>FAQ<br>Count</th>
+                                        <th class="col-faq">FAQ<br>Count</th>
                                         <th>SEO</th>
                                         <th>Created</th>
                                         <th>Created<br>By</th>
@@ -179,7 +179,7 @@
                                         <tr>
                                             <td class="col-id" data-order="{{ (int) $page->id }}">{{ $page->id }}</td>
 
-                                            <td style="vertical-align: middle;" data-export="{{ $page->page_name }}">
+                                            <td data-export="{{ $page->page_name }}">
                                                 <a href="{{ url($page->parent 
                                                     ? $page->parent->url . '/' . $page->url 
                                                     : ($page->category_id 
@@ -191,10 +191,10 @@
                                                     <span class="badge bg-primary">{{ $pageName }}</span>
                                                 @endif
                                             </td>
-                                            <td style="vertical-align: middle;" data-export="{{ $pageUrl }}">
+                                            <td data-export="{{ $pageUrl }}">
                                                 {{ $pageUrl }}
                                             </td>
-                                            <td class="col-status" style="vertical-align: middle;" data-export="{{ $pageStatusExport }}">
+                                            <td class="col-status" data-export="{{ $pageStatusExport }}">
                                                 @if($pagesStatusEnabled ?? false)
                                                     <select name="page_status" class="form-control"
                                                         id="page_status_{{ $page->id }}"
@@ -206,7 +206,7 @@
                                                     <span class="label label-primary">Active</span>
                                                 @endif
                                             </td>
-                                            <td style="vertical-align: middle;">
+                                            <td class="col-faq">
                                                 {{ $page->faqs->count() }}
                                             </td>
                                             @include('admin.seo.partials.list-seo-cell', [
