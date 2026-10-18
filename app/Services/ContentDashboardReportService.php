@@ -298,9 +298,9 @@ class ContentDashboardReportService
         }
 
         if ($module === 'fees') {
-            if (in_array($metric, ['missing_courses', 'missing_pages'], true)) {
+            if (in_array($metric, ['missing_courses', 'missing_pages', 'with_courses', 'with_pages'], true)) {
                 return [
-                    ['key' => 'title', 'label' => $metric === 'missing_pages' ? 'Page' : 'Course'],
+                    ['key' => 'title', 'label' => in_array($metric, ['missing_pages', 'with_pages'], true) ? 'Page' : 'Course'],
                     ['key' => 'coverage', 'label' => 'Fee Packages'],
                     ['key' => 'created_by', 'label' => 'Created By'],
                     ['key' => 'created_at', 'label' => 'Created'],
@@ -374,6 +374,8 @@ class ContentDashboardReportService
                 'total' => 'Total Fee Packages',
                 'fees_in_courses' => 'Total Fee Packages In Courses',
                 'fees_in_pages' => 'Total Fee Packages In Pages',
+                'with_courses' => 'Courses With Fee Packages',
+                'with_pages' => 'Pages With Fee Packages',
                 'missing_courses' => 'Missing Fee Packages In Courses',
                 'missing_pages' => 'Missing Fee Packages In Pages',
                 'active_courses' => 'Active Fee Packages In Courses',
@@ -545,8 +547,14 @@ class ContentDashboardReportService
         $inactiveCourses = $courseHas ? $this->countVisibleFeePackages(CourseFee::query(), 'course_fees', false) : 0;
         $activePages = $pageHas ? $this->countVisibleFeePackages(PageFeePackage::query(), 'page_fee_packages', true) : 0;
         $inactivePages = $pageHas ? $this->countVisibleFeePackages(PageFeePackage::query(), 'page_fee_packages', false) : 0;
+        $withCourses = $courseHas
+            ? (int) $this->activeCoursesQuery()->whereHas('courseFeePackages')->count()
+            : 0;
         $missingCourses = $courseHas
             ? (int) $this->activeCoursesQuery()->whereDoesntHave('courseFeePackages')->count()
+            : 0;
+        $withPages = $pageHas
+            ? (int) $this->activePagesQuery()->whereHas('feeServices.categories.packages')->count()
             : 0;
         $missingPages = $pageHas
             ? (int) $this->activePagesQuery()->whereDoesntHave('feeServices.categories.packages')->count()
@@ -557,6 +565,8 @@ class ContentDashboardReportService
                 'total' => $pageTotal,
                 'fees_in_courses' => 0,
                 'fees_in_pages' => $pageTotal,
+                'with_courses' => 0,
+                'with_pages' => $withPages,
                 'missing_courses' => 0,
                 'missing_pages' => $missingPages,
                 'active_courses' => 0,
@@ -570,6 +580,8 @@ class ContentDashboardReportService
             'total' => $total,
             'fees_in_courses' => $courseTotal,
             'fees_in_pages' => $pageTotal,
+            'with_courses' => $withCourses,
+            'with_pages' => $withPages,
             'missing_courses' => $missingCourses,
             'missing_pages' => $missingPages,
             'active_courses' => $activeCourses,
@@ -705,11 +717,11 @@ class ContentDashboardReportService
 
     private function feePackageDetailRows(string $metric, ?int $actorUserId, ?Carbon $from, ?Carbon $to, ?string $search): Collection
     {
-        if (in_array($metric, ['missing_courses'], true)) {
-            return $this->missingCourseFeeRows($search);
+        if (in_array($metric, ['missing_courses', 'with_courses'], true)) {
+            return $this->courseFeeCoverageRows($metric, $search);
         }
-        if (in_array($metric, ['missing_pages'], true)) {
-            return $this->missingPageFeeRows($search);
+        if (in_array($metric, ['missing_pages', 'with_pages'], true)) {
+            return $this->pageFeeCoverageRows($metric, $search);
         }
 
         $pageOnly = in_array($metric, ['fees_in_pages', 'active_pages', 'inactive_pages'], true);
@@ -822,6 +834,8 @@ class ContentDashboardReportService
         return [
             'fees_in_courses' => 0,
             'fees_in_pages' => 0,
+            'with_courses' => 0,
+            'with_pages' => 0,
             'missing_courses' => 0,
             'missing_pages' => 0,
             'active_courses' => 0,
@@ -920,9 +934,15 @@ class ContentDashboardReportService
         });
     }
 
-    private function missingCourseFeeRows(?string $search): Collection
+    private function courseFeeCoverageRows(string $metric, ?string $search): Collection
     {
-        $query = $this->activeCoursesQuery()->with(['createdBy', 'updatedBy'])->whereDoesntHave('courseFeePackages');
+        $hasPackages = $metric === 'with_courses';
+        $query = $this->activeCoursesQuery()->with(['createdBy', 'updatedBy']);
+        if ($hasPackages) {
+            $query->whereHas('courseFeePackages');
+        } else {
+            $query->whereDoesntHave('courseFeePackages');
+        }
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('title', 'like', '%' . $search . '%')
@@ -930,28 +950,33 @@ class ContentDashboardReportService
             });
         }
 
-        return $query->orderByDesc('updated_at')->limit(10000)->get()->map(function (Course $course) {
+        return $query->orderByDesc('updated_at')->limit(10000)->get()->map(function (Course $course) use ($hasPackages) {
             $title = $course->title ?: ('Course #' . $course->id);
 
             return [
                 'id' => $course->id,
                 'title' => $title,
                 'course' => $title,
-                'coverage' => 'Missing',
+                'coverage' => $hasPackages ? 'Has Packages' : 'Missing',
                 'created_by' => audit_user_name($course->createdBy, $course->created_by ?? null),
                 'updated_by' => audit_user_name($course->updatedBy, $course->updated_by ?? null),
                 'created_at' => optional($course->created_at)?->format('M d, Y H:i'),
                 'updated_at' => optional($course->updated_at)?->format('M d, Y H:i'),
-                'url' => route('course.create-fee', $course->id),
+                'url' => $hasPackages ? route('course.edit', $course->id) : route('course.create-fee', $course->id),
                 'web_url' => course_details_url($course),
             ];
         });
     }
 
-    private function missingPageFeeRows(?string $search): Collection
+    private function pageFeeCoverageRows(string $metric, ?string $search): Collection
     {
-        $query = $this->activePagesQuery()->with(['createdBy', 'updatedBy'])
-            ->whereDoesntHave('feeServices.categories.packages');
+        $hasPackages = $metric === 'with_pages';
+        $query = $this->activePagesQuery()->with(['createdBy', 'updatedBy']);
+        if ($hasPackages) {
+            $query->whereHas('feeServices.categories.packages');
+        } else {
+            $query->whereDoesntHave('feeServices.categories.packages');
+        }
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('page_name', 'like', '%' . $search . '%')
@@ -959,14 +984,14 @@ class ContentDashboardReportService
             });
         }
 
-        return $query->orderByDesc('updated_at')->limit(10000)->get()->map(function (Page $page) {
+        return $query->orderByDesc('updated_at')->limit(10000)->get()->map(function (Page $page) use ($hasPackages) {
             $title = $page->page_name ?: ('Page #' . $page->id);
 
             return [
                 'id' => $page->id,
                 'title' => $title,
                 'course' => $title,
-                'coverage' => 'Missing',
+                'coverage' => $hasPackages ? 'Has Packages' : 'Missing',
                 'created_by' => audit_user_name($page->createdBy, $page->created_by ?? null),
                 'updated_by' => audit_user_name($page->updatedBy, $page->updated_by ?? null),
                 'created_at' => optional($page->created_at)?->format('M d, Y H:i'),
