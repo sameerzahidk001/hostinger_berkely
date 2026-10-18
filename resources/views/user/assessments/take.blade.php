@@ -97,16 +97,16 @@
     }
     .lms-res-btn {
         display: inline-block;
-        background: #1d4e89;
-        color: #fff !important;
-        border: 1px solid #2b6cb0;
+        background: #f0ad4e;
+        color: #1a1a1a !important;
+        border: 1px solid #eea236;
         border-radius: 3px;
         padding: 6px 14px;
         font-weight: 700;
         font-size: 13px;
         text-decoration: none !important;
     }
-    .lms-res-btn:hover, .lms-res-btn:focus { background: #163e6d; color: #fff !important; }
+    .lms-res-btn:hover, .lms-res-btn:focus { background: #ec971f; color: #1a1a1a !important; border-color: #d58512; }
     .lms-res-modal {
         display: none;
         position: fixed;
