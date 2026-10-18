@@ -232,14 +232,22 @@ class LmsAssessmentService
         if (! $asg || ! $att->started_at) {
             return false;
         }
-        if ($asg->available_from) {
-            $end = $asg->appointmentEnd() ?: $asg->available_from->copy()->addDays(7);
+        $started = $att->started_at->copy();
+        $start = $asg->windowStart() ?: $asg->available_from;
+        if ($start) {
+            $end = $asg->appointmentEnd();
+            // Must start on/after this sitting — a later Assign must not inherit an older attempt.
+            if ($started->lt($start->copy()->subMinutes(2))) {
+                return false;
+            }
+            if ($end && $started->gt($end->copy()->addMinutes(2))) {
+                return false;
+            }
 
-            return $att->started_at->gte($asg->available_from->copy()->subMinutes(5))
-                && $att->started_at->lte($end->copy()->addDay());
+            return true;
         }
         if ($asg->created_at) {
-            return $att->started_at->gte($asg->created_at->copy()->subMinutes(5));
+            return $started->gte($asg->created_at->copy()->subMinutes(2));
         }
 
         return false;

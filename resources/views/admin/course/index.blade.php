@@ -39,18 +39,48 @@
         .courses-list-wrap { overflow-x: hidden; }
         .courses-list-table {
             width: 100% !important;
-            table-layout: auto;
+            table-layout: fixed;
             font-size: 12px;
         }
-        .courses-list-table th,
+        .courses-list-table thead th {
+            white-space: normal !important;
+            word-break: break-word;
+            line-height: 1.2;
+            font-size: 11px;
+            font-weight: 700;
+            text-align: center;
+            vertical-align: middle;
+            padding: 6px 4px;
+        }
         .courses-list-table td {
             white-space: normal !important;
             word-break: break-word;
             vertical-align: top;
-            padding: 6px 5px;
+            padding: 6px 4px;
+        }
+        .courses-list-table .col-id { width: 44px; text-align: center; }
+        .courses-list-table .col-status { width: 72px; }
+        .courses-list-table .col-status select {
+            width: 100%;
+            max-width: 72px;
+            padding: 2px 4px;
+            height: auto;
+            font-size: 11px;
         }
         .courses-list-table td ul { margin: 0; padding-left: 14px; }
-        .courses-list-table .label { margin-bottom: 3px; }
+        .courses-list-table .lms-cell-stack {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+        }
+        .courses-list-table .lms-cell-stack .label,
+        .courses-list-table .lms-cell-stack .btn,
+        .courses-list-table .lms-cell-stack form {
+            margin: 0;
+            display: block;
+        }
+        .courses-list-table .label + .label { margin-left: 0; }
     </style>
     @include('admin.layout.partials.datatable-excel-toolbar')
 @endpush
@@ -96,21 +126,24 @@
                             <table class="table table-striped table-bordered table-hover dataTables-example courses-list-table">
                                 <thead>
                                     <tr>
-                                        <th style="width:70px;">Course ID</th>
+                                        <th class="col-id">ID</th>
                                         <th>Title</th>
                                         <th>Categories</th>
                                         <th>Schools</th>
-                                        <th>Related Courses</th>
-                                        <th style="width:130px;">Fee Structure</th>
-                                        <th>Course Structure</th>
-                                        <th style="width:130px;">Lecture Plan</th>
+                                        <th>Related<br>Courses</th>
+                                        <th>Fee<br>Structure</th>
+                                        <th>Course<br>Structure</th>
+                                        <th>Lecture<br>Plan</th>
                                         <th>SEO</th>
-                                        <th>FAQ's</th>
+                                        <th>FAQs</th>
                                         <th>Testimonial</th>
                                         <th>Instructors</th>
-                                        <th style="width:100px;">Status</th>
-                                        @include('admin.layout.partials.audit-columns-head')
-                                        <th style="width:130px;">Action</th>
+                                        <th class="col-status">Status</th>
+                                        <th>Created</th>
+                                        <th>Created<br>By</th>
+                                        <th>Last<br>Modified</th>
+                                        <th>Modified<br>By</th>
+                                        <th>Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -121,7 +154,7 @@
                                             $schoolsExport = $data->schools->pluck('name')->filter()->implode(', ');
                                         @endphp
                                         <tr>
-                                            <td data-order="{{ (int) $data->id }}">{{ $data->id }}</td>
+                                            <td class="col-id" data-order="{{ (int) $data->id }}">{{ $data->id }}</td>
                                             <td style="vertical-align: middle;" data-export="{{ $data->title }}">
                                                 <a href="{{ route('course.details', ['course' => $data->slug]) }}"
                                                     target="blank" target="blank">
@@ -162,6 +195,7 @@
                                                 @endif
                                             </td>
                                             <td>
+                                                <div class="lms-cell-stack">
                                                 @if ($data->courseFeePackages->isEmpty())
                                                     <a href="{{ route('course.create-fee', ['id' => $data->id]) }}"
                                                         class="label label-danger" target="_blank">
@@ -169,14 +203,15 @@
                                                     </a>
                                                 @else
                                                     <a href="{{ route('course.fee', ['id' => $data->id]) }}"
-                                                        class="label label-primary mb" target="_blank">
+                                                        class="label label-primary" target="_blank">
                                                         View
                                                     </a>
                                                     <span
-                                                        class="label {{ $data->fee_visibility ? 'label-primary' : 'label-danger' }} mb">
+                                                        class="label {{ $data->fee_visibility ? 'label-primary' : 'label-danger' }}">
                                                         {{ $data->fee_visibility ? 'Active' : 'Disabled' }}
                                                     </span>
                                                 @endif
+                                                </div>
                                             </td>
                                             <td>
                                                 @if($data->courseStructuresFirst->isEmpty())
@@ -192,6 +227,7 @@
                                                 @endif
                                             </td>
                                             <td>
+                                                <div class="lms-cell-stack">
                                                 @if($data->courseStructures->isEmpty())
                                                     <a href="{{ route('course.course-structure', ['id' => $data->id]) }}"
                                                         class="label label-danger" target="_blank">Add</a>
@@ -203,6 +239,7 @@
                                                         {{ $data->lecture_plan_section ? 'Active' : 'Disabled' }}
                                                     </span>
                                                 @endif
+                                                </div>
                                             </td>
                                             @include('admin.seo.partials.list-seo-cell', [
                                                 'seo' => $data->seo,
@@ -251,7 +288,7 @@
                                                     </a>
                                                 @endif
                                             </td>
-                                            <td data-export="{{ $courseStatusExport }}">
+                                            <td class="col-status" data-export="{{ $courseStatusExport }}">
                                                 <select name="course_status" class="form-control"
                                                     id="course_status_{{ $data->id }}"
                                                     onchange="updateCourseStatus(this.value, {{ $data->id }})">
@@ -265,11 +302,19 @@
                                             </td>
                                             @include('admin.layout.partials.audit-columns-cells', ['model' => $data])
                                             <td>
-                                                <div class="btn-group">
+                                                <div class="lms-cell-stack">
                                                     <a href="{{ route('course.edit', ['id' => $data->id]) }}"
                                                         class="btn-primary btn btn-xs" target="_blank">
                                                         <i class="fa fa-pencil"></i> Edit
                                                     </a>
+                                                    <form action="{{ route('course.duplicate', $data->id) }}" method="POST">
+                                                        @csrf
+                                                        <button type="submit" class="btn btn-info btn-xs"
+                                                            onclick="return confirm('Duplicate this course as a disabled draft? Original stays unchanged.');"
+                                                            title="Duplicate course">
+                                                            <i class="fa fa-copy"></i> Duplicate
+                                                        </button>
+                                                    </form>
                                                     @include('admin.layout.partials.delete-button', [
                                                         'id' => $data->id,
                                                         'action' => route('course.delete', $data->id),
