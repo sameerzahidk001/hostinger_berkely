@@ -155,7 +155,7 @@
             <select name="question_ids[]" class="form-control lms-searchable" data-placeholder="Type to find questions" multiple @disabled(! $canCreate)>
                 @foreach($questions as $q)
                     <option value="{{ $q->id }}" @selected(collect($selectedQuestionIds)->contains($q->id))>
-                        #{{ $q->id }} [{{ strtoupper($q->type) }}] {{ \Illuminate\Support\Str::limit(strip_tags($q->stem), 80) }} ({{ lms_format_number($q->max_marks) }} marks)
+                        #{{ $q->id }} [{{ strtoupper($q->type) }}]@if(trim((string) ($q->topic ?? '')) !== '') {{ trim($q->topic) }} ·@endif {{ \Illuminate\Support\Str::limit(strip_tags($q->stem), 80) }} ({{ lms_format_number($q->max_marks) }} marks)
                     </option>
                 @endforeach
             </select>

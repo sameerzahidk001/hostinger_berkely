@@ -972,7 +972,7 @@ class LmsAssessmentController extends Controller
                     $statusText = 'Assigned';
                 }
                 $score = '';
-                if ($attempt && $attempt->score_raw !== null) {
+                if ($attempt && $attempt->results_published && $attempt->score_raw !== null) {
                     $score = lms_format_number($attempt->score_raw) . '/' . lms_format_number($attempt->score_max);
                     if ($attempt->percent() !== null) {
                         $score .= ' (' . lms_format_number($attempt->percent()) . '%)';
