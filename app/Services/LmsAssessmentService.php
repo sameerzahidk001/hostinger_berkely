@@ -695,9 +695,10 @@ class LmsAssessmentService
             }
         }
         $attempt->save();
+        $fresh = $attempt->fresh(['assessment', 'answers.question', 'user']);
+        $this->notifyTestSubmitted($fresh);
 
-        return $attempt->fresh(['assessment', 'answers.question']);
-    }
+        return $fresh;
 
     public function autoMarkMcqs(LmsAssessmentAttempt $attempt, LmsAssessment $assessment): void
     {
@@ -783,6 +784,24 @@ class LmsAssessmentService
         }
     }
 
+    public function notifyTestSubmitted(LmsAssessmentAttempt $attempt): void
+    {
+        $attempt->loadMissing(['user', 'assessment.course']);
+        $user = $attempt->user;
+        if (! $user || empty($user->email)) {
+            return;
+        }
+        $template = $this->lmsEmailTemplate(['lms-test-submitted']);
+        if (! $template) {
+            return;
+        }
+        $this->sendLmsTemplate(
+            $template,
+            $user,
+            $this->assignmentPlaceholders($this->sittingForAttempt($attempt), $user, $attempt)
+        );
+    }
+
     public function notifyResultPublished(LmsAssessmentAttempt $attempt): void
     {
         $attempt->loadMissing(['user', 'assessment.course']);
@@ -794,14 +813,19 @@ class LmsAssessmentService
         if (! $template) {
             return;
         }
-        $assignment = LmsAssessmentAssignment::query()
+        $placeholders = $this->assignmentPlaceholders($this->sittingForAttempt($attempt), $user, $attempt);
+
+        $this->sendLmsTemplate($template, $user, $placeholders);
+    }
+
+    private function sittingForAttempt(LmsAssessmentAttempt $attempt): ?LmsAssessmentAssignment
+    {
+        return LmsAssessmentAssignment::query()
+            ->with(['assessment.course', 'marker'])
             ->where('assessment_id', $attempt->assessment_id)
             ->orderBy('id')
             ->get()
             ->first(fn ($asg) => $this->attemptBelongsToAssignment($attempt, $asg));
-        $placeholders = $this->assignmentPlaceholders($assignment, $user, $attempt);
-
-        $this->sendLmsTemplate($template, $user, $placeholders);
     }
 
     private function lmsEmailTemplate(array $names): ?Email
@@ -883,6 +907,12 @@ class LmsAssessmentService
             '{login_url}' => url('/login'),
             '{portal_url}' => url(route('user.assessments.index', [], false)),
             '{result_url}' => $resultUrl,
+            '{started_at}' => ($attempt && $assignment && $attempt->started_at)
+                ? $assignment->formatInTimezone($attempt->started_at, 'd/m/Y H:i')
+                : ($attempt?->started_at?->format('d/m/Y H:i') ?: '—'),
+            '{submitted_at}' => ($attempt && $assignment && $attempt->submitted_at)
+                ? $assignment->formatInTimezone($attempt->submitted_at, 'd/m/Y H:i')
+                : ($attempt?->submitted_at?->format('d/m/Y H:i') ?: '—'),
         ];
     }
 

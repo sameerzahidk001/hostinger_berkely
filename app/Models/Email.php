@@ -32,6 +32,7 @@ class Email extends Model
             'study-material-instructor-access' => 'Study Material Instructor Access',
             'lms-exam-assigned' => 'LMS Exam Assigned (with appointment)',
             'lms-self-test-assigned' => 'LMS Self Test Assigned (start anytime)',
+            'lms-test-submitted' => 'LMS Test Submitted',
             'lms-test-result-published' => 'LMS Test Result Published',
         ];
     }
@@ -58,6 +59,7 @@ class Email extends Model
             'study-material-student-disabled' => "Folder disabled: <strong>{name}</strong> <strong>{email}</strong> <strong>{folder_name}</strong> <strong>{course_name}</strong> <strong>{reason}</strong> <strong>{portal_url}</strong> <strong>{login_url}</strong>",
             'study-material-instructor-access' => "Folder: <strong>{name}</strong> <strong>{email}</strong> <strong>{folder_name}</strong> <strong>{course_name}</strong> <strong>{validity}</strong> <strong>{access_till}</strong> <strong>{issued_at}</strong> <strong>{portal_url}</strong> <strong>{login_url}</strong>",
             'lms-exam-assigned', 'lms-self-test-assigned', 'lms-test-assigned' => $lmsAssign,
+            'lms-test-submitted' => $lmsAssign . '<br><strong>{started_at}</strong> · <strong>{submitted_at}</strong> · <strong>{portal_url}</strong>',
             'lms-test-result-published' => $lmsAssign . '<br><strong>{result_url}</strong> result page',
             default => '',
         };
