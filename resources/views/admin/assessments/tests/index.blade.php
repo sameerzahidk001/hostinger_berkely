@@ -10,7 +10,7 @@
     }
     .ibox-content.lms-tests-wrap {
         width: 100%;
-        overflow-x: auto;
+        overflow-x: hidden;
     }
     .lms-create-tests-row {
         display: flex;
@@ -37,10 +37,9 @@
     .lms-btn-general:hover, .lms-btn-general:focus { background: #ec971f; color: #fff !important; }
     .lms-btn-skill { background: #5cb85c; }
     .lms-btn-skill:hover, .lms-btn-skill:focus { background: #449d44; color: #fff !important; }
-    .lms-tests-wrap { overflow-x: auto; width: 100%; }
+    .lms-tests-wrap { overflow-x: hidden; width: 100%; }
     .lms-tests-table {
         width: 100% !important;
-        min-width: 100%;
         max-width: 100%;
         table-layout: fixed;
         margin-bottom: 0;
@@ -49,29 +48,34 @@
     .lms-tests-table > thead > tr > th,
     .lms-tests-table > tbody > tr > td {
         vertical-align: middle;
-        padding: 6px 6px;
+        padding: 6px 4px;
         word-wrap: break-word;
-        overflow-wrap: break-word;
+        overflow-wrap: anywhere;
         white-space: normal;
     }
-    .lms-tests-table .col-date { width: 8%; }
-    .lms-tests-table .col-id { width: 6%; }
-    .lms-tests-table .col-title { width: 14%; }
-    .lms-tests-table .col-course { width: 12%; }
+    .lms-tests-table .col-date { width: 7%; }
+    .lms-tests-table .col-id { width: 5%; }
+    .lms-tests-table .col-title { width: 12%; }
+    .lms-tests-table .col-course { width: 11%; }
     .lms-tests-table .col-type { width: 7%; }
-    .lms-tests-table .col-num { width: 5%; text-align: center; }
-    .lms-tests-table .col-status { width: 8%; }
-    .lms-tests-table .col-assessor { width: 11%; }
+    .lms-tests-table .col-num { width: 4%; text-align: center; }
+    .lms-tests-table .col-status { width: 7%; }
+    .lms-tests-table .col-assessor { width: 10%; }
     .lms-tests-table .col-action {
-        width: 16%;
-        overflow-wrap: normal;
-        word-break: normal;
-        white-space: nowrap;
+        width: 25%;
+        white-space: normal;
+    }
+    .lms-tests-table .col-action .btn,
+    .lms-tests-table .col-action form {
+        display: inline-block;
+        margin: 1px 1px 2px 0;
+        vertical-align: middle;
     }
     .lms-tests-table .col-action .btn {
-        margin: 1px 2px 1px 0;
         white-space: nowrap;
         font-weight: 700;
+        font-size: 11px;
+        padding: 3px 6px;
     }
 </style>
 <div class="row wrapper border-bottom white-bg page-heading">
