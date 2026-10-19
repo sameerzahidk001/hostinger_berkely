@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Contracts\Pagination\Paginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
@@ -96,8 +97,8 @@ class ActivityGapCommentService
     {
         $keys = [];
         $prev = null;
-        foreach (Collection::make($rows) as $row) {
-            $cur = $row['occurred_at'] ?? null;
+        foreach ($this->activityRows($rows) as $row) {
+            $cur = is_array($row) ? ($row['occurred_at'] ?? null) : null;
             if ($prev && $cur && abs($cur->getTimestamp() - $prev->getTimestamp()) > 600) {
                 $keys[] = $this->key($scope, $prev->getTimestamp(), $cur->getTimestamp());
             }
@@ -105,5 +106,17 @@ class ActivityGapCommentService
         }
 
         return $keys;
+    }
+
+    private function activityRows($rows): Collection
+    {
+        if ($rows instanceof Paginator) {
+            return Collection::make($rows->items());
+        }
+        if ($rows instanceof Collection) {
+            return $rows->values();
+        }
+
+        return Collection::make($rows ?? [])->values();
     }
 }

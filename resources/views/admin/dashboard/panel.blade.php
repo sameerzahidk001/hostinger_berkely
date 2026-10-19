@@ -353,6 +353,11 @@
                     .activity-gap-comment-form { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; flex: 1; min-width: 240px; }
                     .activity-gap-comment-form .form-control { max-width: 420px; }
                     .activity-gap-saved { margin-top: 4px; color: #676a6c; font-size: 12px; }
+                    .activity-gap-saved-text { color: #e74c3c; font-weight: 700; }
+                    .activity-gap-edit { display: inline-block; }
+                    .activity-gap-edit > summary { list-style: none; cursor: pointer; display: inline-block; }
+                    .activity-gap-edit > summary::-webkit-details-marker { display: none; }
+                    .activity-gap-edit-fields { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 6px; }
                     .activity-tz-note { margin: 0 0 8px; color: #676a6c; }
                 </style>
                 @if(($showStudentTable ?? false) && !($studentActivitiesOnly ?? false))
