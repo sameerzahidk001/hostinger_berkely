@@ -86,13 +86,15 @@ class LmsAssessmentPortalController extends Controller
         return $this->index($request);
     }
 
-    public function start($id)
+    public function start(Request $request, $id)
     {
         $user = Auth::user();
         abort_unless($user, 403);
         $this->assessments->ensure();
         $assessment = LmsAssessment::with('questions')->findOrFail($id);
-        $attempt = $this->assessments->startAttempt($user, $assessment);
+        $assignmentId = $request->filled('assignment') ? (int) $request->input('assignment') : null;
+        $folderId = $request->filled('folder') ? (int) $request->input('folder') : null;
+        $attempt = $this->assessments->startAttempt($user, $assessment, $assignmentId ?: null, $folderId ?: null);
 
         return redirect()->route('user.assessments.take', $attempt->id);
     }
@@ -130,7 +132,7 @@ class LmsAssessmentPortalController extends Controller
         return view('user.assessments.take', compact('attempt', 'questions', 'answers', 'assignment'));
     }
 
-    public function resource($attemptId, $kind, $index)
+    public function resource(Request $request, $attemptId, $kind, $index)
     {
         $user = Auth::user();
         abort_unless($user, 403);
@@ -145,22 +147,84 @@ class LmsAssessmentPortalController extends Controller
         $path = (string) ($files[$i]['url'] ?? $files[$i]['path'] ?? '');
         abort_unless($path !== '', 404);
         $name = str_replace('"', '', (string) ($files[$i]['name'] ?? 'file'));
-        if (preg_match('#workdrive\.zoho#i', $path) || str_starts_with($path, 'http')) {
-            $cached = app(ZohoLmsService::class)->cachedWorkDriveFile($path);
-            abort_unless($cached && ! empty($cached['path']) && is_file($cached['path']), 502, 'File could not be opened.');
-            $mime = $cached['mime'] ?? 'application/octet-stream';
+        $zoho = app(ZohoLmsService::class);
+        $viewKind = $this->examResourceKind($name, (string) ($files[$i]['mime'] ?? ''));
 
-            return response()->file($cached['path'], [
-                'Content-Type' => $mime,
-                'Content-Disposition' => 'inline; filename="' . $name . '"',
-                'X-Frame-Options' => 'SAMEORIGIN',
+        if (! $request->boolean('raw')) {
+            $officeEmbed = null;
+            if ($viewKind === 'office') {
+                $share = $zoho->resolveWorkDriveShareUrl($path) ?: $path;
+                $direct = $zoho->workDriveDirectDownloadUrl($share);
+                if ($direct) {
+                    $officeEmbed = 'https://view.officeapps.live.com/op/embed.aspx?src=' . rawurlencode($direct);
+                }
+            }
+
+            return response()->view('user.assessments.resource-frame', [
+                'name' => $name,
+                'kind' => $viewKind,
+                'rawUrl' => route('user.assessments.resource', [
+                    'attemptId' => $attempt->id,
+                    'kind' => $kind,
+                    'index' => $i,
+                    'raw' => 1,
+                ]),
+                'officeEmbed' => $officeEmbed,
+                'mime' => $zoho->mimeFromExtension(pathinfo($name, PATHINFO_EXTENSION)) ?: 'application/pdf',
             ]);
         }
-        abort_unless(Storage::disk('public')->exists($path), 404);
 
-        return Storage::disk('public')->response($path, $files[$i]['name'], [
-            'Content-Disposition' => 'inline; filename="' . str_replace('"', '', $files[$i]['name']) . '"',
-        ]);
+        $headers = [
+            'X-Content-Type-Options' => 'nosniff',
+            'Cache-Control' => 'private, max-age=120',
+            'Content-Disposition' => 'inline; filename="' . addslashes($name) . '"',
+            'X-Frame-Options' => 'SAMEORIGIN',
+        ];
+
+        if (preg_match('#workdrive\.zoho#i', $path) || str_starts_with($path, 'http')) {
+            $info = $zoho->workDrivePublicFileInfo($path);
+            if (! empty($info['extn'])) {
+                $headers['Content-Type'] = $zoho->mimeFromExtension($info['extn']) ?: 'application/octet-stream';
+            }
+            if (! empty($info['download_url'])) {
+                return $zoho->proxyRemoteStream(
+                    $info['download_url'],
+                    $request->header('Range'),
+                    $headers,
+                    false
+                );
+            }
+
+            $remote = $zoho->fetchRemoteFile($path);
+            abort_unless($remote && ! empty($remote['path']) && is_file($remote['path']), 502, 'File could not be opened.');
+            $headers['Content-Type'] = $remote['mime'] ?? ($headers['Content-Type'] ?? 'application/octet-stream');
+
+            return response()->file($remote['path'], $headers);
+        }
+
+        abort_unless(Storage::disk('public')->exists($path), 404);
+        $localPath = Storage::disk('public')->path($path);
+        $headers['Content-Type'] = $zoho->mimeFromExtension(pathinfo($name, PATHINFO_EXTENSION))
+            ?: (@mime_content_type($localPath) ?: 'application/octet-stream');
+
+        return response()->file($localPath, $headers);
+    }
+
+    protected function examResourceKind(string $name, string $mime = ''): string
+    {
+        $ext = strtolower((string) pathinfo($name, PATHINFO_EXTENSION));
+        $mime = strtolower($mime);
+        if (str_starts_with($mime, 'image/') || in_array($ext, ['png', 'jpg', 'jpeg', 'gif', 'webp'], true)) {
+            return 'image';
+        }
+        if (in_array($ext, ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'], true)) {
+            return 'office';
+        }
+        if ($ext === 'pdf' || str_contains($mime, 'pdf')) {
+            return 'pdf';
+        }
+
+        return 'file';
     }
 
     public function save(Request $request, $attemptId)

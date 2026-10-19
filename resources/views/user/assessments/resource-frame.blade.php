@@ -1,23 +1,25 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ $name ?? 'File' }}</title>
     <style>
-        html, body { margin: 0; height: 100%; background: #fff; font-family: Arial, sans-serif; }
-        .bar { padding: 10px 14px; background: #0d3b66; color: #fff; font-size: 13px; }
-        .bar a { color: #f0ad4e; font-weight: 700; }
-        iframe { width: 100%; height: calc(100% - 42px); border: 0; }
+        html, body { margin: 0; height: 100%; background: #111; }
+        .wrap { width: 100%; height: 100%; }
+        iframe, embed, object, img { width: 100%; height: 100%; border: 0; display: block; background: #111; }
+        img { object-fit: contain; background: #000; }
     </style>
 </head>
 <body>
-    <div class="bar">
-        {{ $name ?? 'File' }}
-        —
-        <a href="{{ $openUrl }}" target="_blank" rel="noopener">Open file in a new tab</a>
+    <div class="wrap">
+        @if(($kind ?? '') === 'image')
+            <img src="{{ $rawUrl }}" alt="{{ $name ?? 'File' }}" draggable="false">
+        @elseif(($kind ?? '') === 'office' && !empty($officeEmbed))
+            <iframe src="{{ $officeEmbed }}" title="{{ $name ?? 'File' }}" allow="fullscreen"></iframe>
+        @else
+            <embed src="{{ $rawUrl }}" type="{{ $mime ?? 'application/pdf' }}" title="{{ $name ?? 'File' }}">
+        @endif
     </div>
-    @if(!empty($embedUrl))
-        <iframe src="{{ $embedUrl }}" title="{{ $name ?? 'File' }}"></iframe>
-    @endif
 </body>
 </html>

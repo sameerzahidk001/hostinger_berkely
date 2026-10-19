@@ -7,6 +7,7 @@ use App\Services\StudyMaterialService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -31,6 +32,7 @@ class AnalyticsController extends Controller
         if (! Schema::hasTable('page_views')) {
             return view('admin.analytics.index', $this->emptyAnalyticsPayload($request));
         }
+        PageView::ensureAnalyticsColumns();
 
         try {
             $period = (string) $request->query('days', '28');
@@ -73,6 +75,37 @@ class AnalyticsController extends Controller
 
             return view('admin.analytics.index', $this->emptyAnalyticsPayload($request));
         }
+    }
+
+    public function ping(Request $request)
+    {
+        if (! Schema::hasTable('page_views') || ! Schema::hasColumn('page_views', 'duration_seconds')) {
+            return response()->json(['ok' => true]);
+        }
+        $url = (string) $request->input('url', '');
+        if ($url === '' || analytics_hidden_url($url)) {
+            return response()->json(['ok' => true]);
+        }
+        $seconds = min(30, max(1, (int) $request->input('seconds', 15)));
+        $sessionId = $request->session()->getId();
+        $rowId = DB::table('page_views')
+            ->where('session_id', $sessionId)
+            ->where('url', $url)
+            ->whereDate('created_at', now()->toDateString())
+            ->orderByDesc('id')
+            ->value('id');
+        if ($rowId) {
+            $patch = [
+                'duration_seconds' => DB::raw('GREATEST(0, COALESCE(duration_seconds, 0) + ' . (int) $seconds . ')'),
+                'updated_at' => now(),
+            ];
+            if (Schema::hasColumn('page_views', 'user_id') && Auth::id()) {
+                $patch['user_id'] = DB::raw('COALESCE(user_id, ' . (int) Auth::id() . ')');
+            }
+            DB::table('page_views')->where('id', $rowId)->update($patch);
+        }
+
+        return response()->json(['ok' => true]);
     }
 
     private function buildPayload(
@@ -152,12 +185,10 @@ class AnalyticsController extends Controller
 
         if ($tab === 'live') {
             $liveSince = now()->subMinutes(5);
-            $liveBase = $this->excludeInnerUrls(
-                PageView::query()->where('updated_at', '>=', $liveSince)
-            );
+            $liveBase = $this->visitorQuery()->where('page_views.updated_at', '>=', $liveSince);
             $liveCount = (int) (clone $liveBase)->count();
             $liveUsers = $liveBase
-                ->orderByDesc('id')
+                ->orderByDesc('page_views.id')
                 ->paginate(100)
                 ->withQueryString();
         }
@@ -166,19 +197,19 @@ class AnalyticsController extends Controller
             $visitsQuery = $this->listingQuery($filterStart, $filterEnd);
             $this->applySearch($visitsQuery, $search);
             $latestPageViews = $visitsQuery
-                ->orderByDesc('id')
+                ->orderByDesc('page_views.id')
                 ->paginate(100)
                 ->withQueryString();
         }
 
         if ($tab === 'pages') {
-            $pagesQuery = $this->listingQuery($filterStart, $filterEnd);
+            $pagesQuery = $this->rangeQuery($filterStart, $filterEnd);
             if ($search !== '') {
                 $pagesQuery->where('url', 'like', '%' . addcslashes($search, '%_\\') . '%');
             }
             $rows = $pagesQuery
-                ->selectRaw('url, SUM(view_count) as visits, MAX(updated_at) as last_visit')
-                ->groupBy('url')
+                ->selectRaw('page_views.url as url, SUM(page_views.view_count) as visits, MAX(page_views.updated_at) as last_visit')
+                ->groupBy('page_views.url')
                 ->orderByDesc('visits')
                 ->limit(100)
                 ->get();
@@ -268,34 +299,56 @@ class AnalyticsController extends Controller
 
     private function rangeQuery(Carbon $start, Carbon $end)
     {
-        return PageView::query()->whereBetween('created_at', [$start, $end]);
+        return $this->excludeInnerUrls(
+            PageView::query()->whereBetween('page_views.created_at', [$start, $end])
+        );
     }
 
     private function listingQuery(Carbon $start, Carbon $end)
     {
-        return $this->excludeInnerUrls($this->rangeQuery($start, $end));
+        return $this->visitorQuery()->whereBetween('page_views.created_at', [$start, $end]);
+    }
+
+    private function visitorQuery()
+    {
+        $query = PageView::query()->select('page_views.*');
+        if (Schema::hasColumn('page_views', 'user_id') && Schema::hasTable('users')) {
+            $query->leftJoin('users', 'users.id', '=', 'page_views.user_id')
+                ->addSelect('users.name as visitor_name');
+        }
+
+        return $this->excludeInnerUrls($query);
     }
 
     /**
-     * Hide system / app inner endpoints and staging junk from Site Kit listings.
+     * Hide LMS / login / system URLs from Site Kit (existing rows and listings).
      */
     private function excludeInnerUrls($query)
     {
+        $col = 'page_views.url';
+
         return $query
-            ->where('url', 'not like', '%/admin/%')
-            ->where('url', 'not like', '%/skin%')
-            ->where('url', 'not like', '%/user/session/%')
-            ->where('url', 'not like', '%/room/webhook%')
-            ->where('url', 'not like', '%/sanctum/%')
-            ->where('url', 'not like', '%/broadcasting/%')
-            ->where('url', 'not like', '%/livewire/%')
-            ->where('url', 'not like', '%/login/captcha%')
-            ->where('url', 'not like', '%/captcha%')
-            ->where('url', 'not like', '%hostingsite.com%')
-            ->where('url', 'not like', '%LSCWP_CTRL%')
-            ->where('url', 'not like', '%.hostingersite.com%')
-            ->where('url', 'not like', '%preview-%')
-            ->whereRaw("LOWER(TRIM(TRAILING '/' FROM SUBSTRING_INDEX(SUBSTRING_INDEX(url, '?', 1), '#', 1))) NOT REGEXP '/user$'");
+            ->where($col, 'not like', '%/admin/%')
+            ->where($col, 'not like', '%/admin')
+            ->where($col, 'not like', '%/user/%')
+            ->where($col, 'not like', '%/user')
+            ->where($col, 'not like', '%/user?%')
+            ->where($col, 'not like', '%/login%')
+            ->where($col, 'not like', '%/register%')
+            ->where($col, 'not like', '%/logout%')
+            ->where($col, 'not like', '%/password%')
+            ->where($col, 'not like', '%/user-behavior%')
+            ->where($col, 'not like', '%/analytics%')
+            ->where($col, 'not like', '%/captcha%')
+            ->where($col, 'not like', '%/skin%')
+            ->where($col, 'not like', '%/room/webhook%')
+            ->where($col, 'not like', '%/sanctum/%')
+            ->where($col, 'not like', '%/broadcasting/%')
+            ->where($col, 'not like', '%/livewire/%')
+            ->where($col, 'not like', '%hostingsite.com%')
+            ->where($col, 'not like', '%LSCWP_CTRL%')
+            ->where($col, 'not like', '%.hostingersite.com%')
+            ->where($col, 'not like', '%preview-%');
     }
 
     private function applySearch($query, string $search): void
@@ -306,9 +359,12 @@ class AnalyticsController extends Controller
 
         $like = '%' . addcslashes($search, '%_\\') . '%';
         $query->where(function ($q) use ($like) {
-            $q->where('url', 'like', $like)
-                ->orWhere('ip_address', 'like', $like)
-                ->orWhere('country', 'like', $like);
+            $q->where('page_views.url', 'like', $like)
+                ->orWhere('page_views.ip_address', 'like', $like)
+                ->orWhere('page_views.country', 'like', $like);
+            if (Schema::hasColumn('page_views', 'user_id')) {
+                $q->orWhere('users.name', 'like', $like);
+            }
         });
     }
 
@@ -368,8 +424,8 @@ class AnalyticsController extends Controller
 
         if ($spanDays > 180) {
             $bucket = $driver === 'mysql'
-                ? "DATE_FORMAT(created_at, '%Y-%m')"
-                : "strftime('%Y-%m', created_at)";
+                ? "DATE_FORMAT(page_views.created_at, '%Y-%m')"
+                : "strftime('%Y-%m', page_views.created_at)";
             $rows = $this->rangeQuery($start, $end)
                 ->selectRaw($bucket . ' as bucket, SUM(view_count) as total')
                 ->groupByRaw($bucket)
@@ -390,8 +446,8 @@ class AnalyticsController extends Controller
         }
 
         $bucket = $driver === 'mysql'
-            ? 'DATE(created_at)'
-            : "date(created_at)";
+            ? 'DATE(page_views.created_at)'
+            : "date(page_views.created_at)";
         $rows = $this->rangeQuery($start, $end)
             ->selectRaw($bucket . ' as bucket, SUM(view_count) as total')
             ->groupByRaw($bucket)

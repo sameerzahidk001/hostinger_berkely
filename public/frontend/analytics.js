@@ -1,4 +1,39 @@
 document.addEventListener('DOMContentLoaded', function () {
+    (function trackTimeSpent() {
+        var path = (window.location.pathname || '/').toLowerCase();
+        var hidden = ['/admin', '/user', '/login', '/register', '/logout', '/password', '/captcha', '/analytics'];
+        if (hidden.some(function (p) { return path === p || path.indexOf(p + '/') === 0; })) {
+            return;
+        }
+        var tokenEl = document.querySelector('meta[name="csrf-token"]');
+        if (!tokenEl) return;
+        var last = Date.now();
+        function ping() {
+            if (document.visibilityState && document.visibilityState !== 'visible') {
+                last = Date.now();
+                return;
+            }
+            var seconds = Math.round((Date.now() - last) / 1000);
+            last = Date.now();
+            if (seconds < 1) return;
+            fetch('/analytics/ping', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': tokenEl.getAttribute('content'),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ url: window.location.href, seconds: Math.min(30, seconds) }),
+                keepalive: true
+            }).catch(function () {});
+        }
+        setInterval(ping, 15000);
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'hidden') ping();
+        });
+        window.addEventListener('pagehide', ping);
+    })();
+
     let scrollDepth = 0;
     let totalHeight = document.body.scrollHeight - window.innerHeight;
 
