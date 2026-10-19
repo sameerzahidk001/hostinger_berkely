@@ -244,7 +244,7 @@
                   @if($showAssessmentsMenu)
                   <li class="{{ request()->is('admin/assessments*') || request()->routeIs('user.assessments.*') ? 'active' : '' }}">
                      <a href="javascript:void(0)"><i class="fa fa-pencil-square-o"></i> <span class="nav-label">Assessments</span> <span class="fa arrow"></span></a>
-                     <ul class="nav nav-second-level">
+                     <ul class="nav nav-second-level collapse {{ request()->is('admin/assessments*') || request()->routeIs('user.assessments.*') ? 'in' : '' }}" @if(request()->is('admin/assessments*') || request()->routeIs('user.assessments.*')) style="height:auto;" @endif>
                         @if($canQbankMenu)
                         <li class="{{ request()->routeIs('admin.assessments.questions.*') ? 'active' : '' }}">
                            <a href="{{ route('admin.assessments.questions.index') }}">Question Bank</a>

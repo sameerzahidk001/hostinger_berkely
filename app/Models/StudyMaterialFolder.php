@@ -116,13 +116,17 @@ class StudyMaterialFolder extends Model
             return true;
         }
 
-        Schema::create('study_material_folder_assessments', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('folder_id')->index();
-            $table->unsignedBigInteger('assessment_id')->index();
-            $table->timestamps();
-            $table->unique(['folder_id', 'assessment_id'], 'sm_folder_assessment_unique');
-        });
+        try {
+            Schema::create('study_material_folder_assessments', function (Blueprint $table) {
+                $table->id();
+                $table->unsignedBigInteger('folder_id')->index();
+                $table->unsignedBigInteger('assessment_id')->index();
+                $table->timestamps();
+                $table->unique(['folder_id', 'assessment_id'], 'sm_folder_assessment_unique');
+            });
+        } catch (\Throwable $e) {
+            return Schema::hasTable('study_material_folder_assessments');
+        }
 
         return Schema::hasTable('study_material_folder_assessments');
     }
