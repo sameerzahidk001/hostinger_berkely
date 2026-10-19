@@ -172,6 +172,13 @@
         border-top: 1px solid #e7eaec;
     }
     .lms-q-nav .lms-q-nav-spacer { flex: 1; }
+    .lms-next-hint {
+        color: #c0392b;
+        font-size: 12px;
+        font-weight: 600;
+        max-width: 340px;
+        line-height: 1.3;
+    }
     @media (max-width: 768px) {
         .lms-take-sticky .page-heading h2 { font-size: 17px; }
     }
@@ -189,15 +196,13 @@
         'reference' => collect($refFiles)->values()->map(function ($f, $i) use ($attempt) {
             return [
                 'name' => $f['name'],
-                'url' => route('user.assessments.resource', ['attemptId' => $attempt->id, 'kind' => 'reference', 'index' => $i, 'embed' => 1]),
-                'open' => route('user.assessments.resource', ['attemptId' => $attempt->id, 'kind' => 'reference', 'index' => $i]),
+                'url' => route('user.assessments.resource', ['attemptId' => $attempt->id, 'kind' => 'reference', 'index' => $i]),
             ];
         })->values()->all(),
         'preseen' => collect($preFiles)->values()->map(function ($f, $i) use ($attempt) {
             return [
                 'name' => $f['name'],
-                'url' => route('user.assessments.resource', ['attemptId' => $attempt->id, 'kind' => 'preseen', 'index' => $i, 'embed' => 1]),
-                'open' => route('user.assessments.resource', ['attemptId' => $attempt->id, 'kind' => 'preseen', 'index' => $i]),
+                'url' => route('user.assessments.resource', ['attemptId' => $attempt->id, 'kind' => 'preseen', 'index' => $i]),
             ];
         })->values()->all(),
     ];
@@ -313,8 +318,8 @@
         @endforelse
 
         <div class="lms-q-nav">
-            <button type="button" class="btn btn-default" id="lms-q-back" disabled>Back</button>
             <button type="button" class="btn btn-primary" id="lms-q-next" @disabled($qTotal <= 1)>Next</button>
+            <span class="lms-next-hint">Once you move to the next question, you cannot return to this question.</span>
             <span class="lms-q-nav-spacer"></span>
             <input type="hidden" name="submit" id="lms-submit-flag" value="0">
             <button type="submit" name="save_mode" value="0" class="btn btn-default">Save progress</button>
@@ -332,10 +337,6 @@
             @if($preFiles !== [])
                 <button type="button" class="lms-res-tab js-res-kind" data-kind="preseen">Pre-seen</button>
             @endif
-            @if(count($refFiles) > 1 || count($preFiles) > 1)
-                <select id="lms-res-file" class="form-control input-sm" style="width:auto;max-width:280px;color:#0d3b66;"></select>
-            @endif
-            <a href="#" class="lms-res-btn" id="lms-res-open" target="_blank" rel="noopener" style="margin-left:8px;">Open file</a>
             <button type="button" class="lms-res-close" id="lms-res-close" title="Close">&times;</button>
         </div>
         <div class="lms-res-dialog-body">
@@ -352,8 +353,8 @@ document.body.classList.add('lms-exam-lock');
 document.body.setAttribute('data-lms-exam-lock', '1');
 (function () {
     var steps = Array.prototype.slice.call(document.querySelectorAll('.lms-q-step'));
-    var btnBack = document.getElementById('lms-q-back');
     var btnNext = document.getElementById('lms-q-next');
+    var nextHint = document.querySelector('.lms-next-hint');
     var curLabel = document.getElementById('lms-q-current');
     var qTimerWrap = document.getElementById('lms-q-timer');
     var qCountdown = document.getElementById('lms-q-countdown');
@@ -485,8 +486,8 @@ document.body.setAttribute('data-lms-exam-lock', '1');
             el.classList.toggle('is-active', n === idx);
         });
         if (curLabel) curLabel.textContent = String(idx + 1);
-        if (btnBack) btnBack.disabled = idx <= 0;
         if (btnNext) btnNext.disabled = idx >= steps.length - 1;
+        if (nextHint) nextHint.style.display = idx >= steps.length - 1 ? 'none' : '';
         startQTimer(idx);
         try {
             window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -505,9 +506,6 @@ document.body.setAttribute('data-lms-exam-lock', '1');
         showStep(steps.length - 1);
     }
 
-    if (btnBack) btnBack.addEventListener('click', function () {
-        saveProgressThen(function () { showStep(idx - 1); });
-    });
     if (btnNext) btnNext.addEventListener('click', function () {
         saveProgressThen(function () { showStep(idx + 1); });
     });
@@ -620,50 +618,28 @@ document.body.setAttribute('data-lms-exam-lock', '1');
     if (!modal) return;
     var files = @json($resModalFiles);
     var frame = document.getElementById('lms-res-frame');
-    var fileSel = document.getElementById('lms-res-file');
-    var openBtn = document.getElementById('lms-res-open');
     var kind = 'reference';
-    function show(k, idx) {
+    function show(k) {
         kind = k;
-        idx = idx || 0;
         var list = files[k] || [];
         document.querySelectorAll('.js-res-kind').forEach(function (btn) {
             btn.classList.toggle('is-active', btn.getAttribute('data-kind') === k);
         });
-        if (fileSel) {
-            fileSel.innerHTML = '';
-            list.forEach(function (f, i) {
-                var o = document.createElement('option');
-                o.value = String(i);
-                o.textContent = f.name;
-                if (i === idx) o.selected = true;
-                fileSel.appendChild(o);
-            });
-            fileSel.style.display = list.length > 1 ? '' : 'none';
-        }
-        if (list[idx]) {
-            if (frame) frame.src = list[idx].url;
-            if (openBtn) openBtn.href = list[idx].open || list[idx].url;
-        }
+        if (frame && list[0]) frame.src = list[0].url;
         modal.classList.add('is-open');
         modal.setAttribute('aria-hidden', 'false');
     }
     document.querySelectorAll('.js-open-res').forEach(function (btn) {
         btn.addEventListener('click', function (e) {
             e.preventDefault();
-            show(btn.getAttribute('data-kind') || 'reference', 0);
+            show(btn.getAttribute('data-kind') || 'reference');
         });
     });
     document.querySelectorAll('.js-res-kind').forEach(function (btn) {
         btn.addEventListener('click', function () {
-            show(btn.getAttribute('data-kind') || 'reference', 0);
+            show(btn.getAttribute('data-kind') || 'reference');
         });
     });
-    if (fileSel) {
-        fileSel.addEventListener('change', function () {
-            show(kind, parseInt(fileSel.value, 10) || 0);
-        });
-    }
     var closeBtn = document.getElementById('lms-res-close');
     if (closeBtn) closeBtn.addEventListener('click', function () {
         modal.classList.remove('is-open');

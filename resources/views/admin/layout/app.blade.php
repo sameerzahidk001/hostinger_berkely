@@ -36,10 +36,6 @@
             display: none !important;
             pointer-events: none !important;
          }
-         #side-menu > li.lms-nav-dashboards > .nav-second-level {
-            display: block !important;
-            height: auto !important;
-         }
       </style>
       @stack('style')
    </head>
@@ -91,9 +87,9 @@
                         || request()->is('admin/dashboard/*');
                   @endphp
                   @if($seesAllDashboards)
-                  <li class="lms-nav-dashboards {{ $dashMenuActive ? 'active' : '' }}">
+                  <li class="{{ $dashMenuActive ? 'active' : '' }}">
                      <a href="javascript:void(0)"><i class="fa fa-th-large"></i> <span class="nav-label">Dashboard</span> <span class="fa arrow"></span></a>
-                     <ul class="nav nav-second-level collapse in" style="height:auto;display:block;">
+                     <ul class="nav nav-second-level">
                         <li class="{{ request()->routeIs('admin.dashboard.content-writers') || request()->is('admin/home') ? 'active' : '' }}">
                            <a href="{{ route('admin.dashboard.content-writers') }}">Staff Dashboard</a>
                         </li>
