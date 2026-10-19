@@ -88,7 +88,7 @@
                 <div class="col-md-2 form-group">
                     <label>Max attempts *</label>
                     <input type="number" min="1" max="50" name="max_attempts" class="form-control" value="{{ old('max_attempts', $assessment->max_attempts ?? 1) }}" @required($canCreate) @readonly(! $canCreate)>
-                    <p class="help-block" style="margin-bottom:0;font-size:11px;">Retake only if N &gt; 1 + Assign.</p>
+                    <p class="help-block" style="margin-bottom:0;font-size:11px;">Exam retake: assign a new sitting. Self test: student can Start/Retake up to this number without a new schedule.</p>
                 </div>
                 <div class="col-md-2 form-group">
                     <label>Status *</label>
@@ -168,7 +168,8 @@
             <a href="{{ route('admin.assessments.tests.index') }}" class="btn btn-default">Back</a>
             @if($assessment->exists)
                 @if($canAssign)
-                    <a href="{{ route('admin.assessments.tests.assign', $assessment->id) }}" class="btn btn-success">Assign users / batches</a>
+                    <a href="{{ route('admin.assessments.tests.assign', $assessment->id) }}" class="btn btn-success">Assign Test (Exam)</a>
+                    <a href="{{ route('admin.assessments.tests.assign', ['id' => $assessment->id, 'mode' => 'self']) }}" class="btn btn-success">Assign Self test</a>
                 @endif
                 <a href="{{ route('admin.assessments.tests.attempts', $assessment->id) }}" class="btn btn-default">View attempts</a>
             @endif

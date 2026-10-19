@@ -36,16 +36,28 @@
     @endif
     <div class="ibox"><div class="ibox-content">
         <p class="help-block">
-            Update appointment timing for <strong>{{ $assessment->title }}</strong>
-            · {{ $takerLabel }}
-            @if($assignment->student?->email)
-                <span class="text-muted">({{ $assignment->student->email }})</span>
+            @if($assignment->isSelfSitting())
+                Self test sitting for <strong>{{ $assessment->title }}</strong>
+                · {{ $takerLabel }}
+                @if($assignment->student?->email)
+                    <span class="text-muted">({{ $assignment->student->email }})</span>
+                @endif
+                — no appointment. The student starts anytime, up to Max attempts on the test.
+            @else
+                Update appointment timing for <strong>{{ $assessment->title }}</strong>
+                · {{ $takerLabel }}
+                @if($assignment->student?->email)
+                    <span class="text-muted">({{ $assignment->student->email }})</span>
+                @endif
+                . Does not create a new sitting — use <strong>Assign again</strong> for a retake.
             @endif
-            . Does not create a new sitting — use <strong>Assign again</strong> for a retake.
         </p>
         <form method="POST" action="{{ route('admin.assessments.tests.update-assignment', $assignment->id) }}">
             @csrf
             @method('PUT')
+            @if($assignment->isSelfSitting())
+                <input type="hidden" name="sitting_kind" value="self">
+            @endif
             <div class="row">
                 <div class="col-md-6 form-group">
                     <label>Assessor <span class="text-muted">(who marks the exam, optional)</span></label>
@@ -56,6 +68,7 @@
                         @endforeach
                     </select>
                 </div>
+                @unless($assignment->isSelfSitting())
                 <div class="col-md-3 form-group">
                     <label>Exam Appointment Start *</label>
                     <input type="datetime-local" name="available_from" id="available_from" class="form-control" value="{{ $fromDefault }}" required>
@@ -64,6 +77,7 @@
                         ({{ $assessment->duration_minutes ? $assessment->duration_minutes . ' min' : 'set duration on the test' }}).
                     </p>
                 </div>
+                @endunless
                 <div class="col-md-3 form-group">
                     <label>Timezone *</label>
                     <select name="timezone" id="assign_timezone" class="form-control lms-searchable" data-placeholder="Type to find timezone" data-allow-clear="0" required>

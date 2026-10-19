@@ -229,12 +229,19 @@
                             || ($a->results_mode === 'instant_mcq' && $att->status === 'graded')
                         );
                         $statusSort = $att ? $att->statusLabel() : ($tab === 'missed' ? 'Missed' : ($tab === 'upcoming' ? 'Upcoming' : 'Available'));
+                        $fromFolder = ! empty($row['from_folder']);
+                        $startParams = ['id' => $a->id];
+                        if ($fromFolder && ! empty($row['folder_id'])) {
+                            $startParams['folder'] = $row['folder_id'];
+                        } elseif ($asg) {
+                            $startParams['assignment'] = $asg->id;
+                        }
                     @endphp
                     <tr>
                         <td class="col-appt" data-sort="{{ $asg->id ?? 0 }}" style="white-space:nowrap;"><strong>{{ $apptId }}</strong></td>
                         <td class="col-title" data-sort="{{ $a->title }}">
                             {{ $a->title }}
-                            <br><small class="text-muted">{{ $a->displayCode() }} · {{ $a->kindLabel() }}</small>
+                            <br><small class="text-muted">{{ $a->displayCode() }} · {{ $a->kindLabel() }}@if($fromFolder) · Folder test@elseif($asg) · {{ $asg->sittingKindLabel() }}@endif</small>
                             <br><small><strong>Attempt {{ $attemptNo }} of {{ $attemptTotal }}</strong></small>
                             @if($course)
                                 <br><small>
@@ -248,8 +255,10 @@
                         </td>
                         @php $assessorUserId = $att ? $att->assessorUserId($asg) : ($asg->marker_user_id ?? null); @endphp
                         <td class="col-timing" data-sort="{{ optional($asg?->available_from)->timestamp ?? 0 }}">
-                            @if($asg)
-                                <span class="lms-timing-line"><strong>Exam Appointment:</strong> {{ $asg->windowStart()?->format('d/m/Y, H:i') ?? '—' }}</span>
+                            @if($fromFolder)
+                                <span class="lms-timing-line"><strong>Exam Appointment:</strong> Start anytime</span>
+                            @elseif($asg)
+                                <span class="lms-timing-line"><strong>Exam Appointment:</strong> {{ $asg->isSelfSitting() ? 'Start anytime' : ($asg->windowStart()?->format('d/m/Y, H:i') ?? '—') }}</span>
                                 <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $asg->timezoneLabel() }}</span>
                             @endif
                             <span class="lms-timing-line"><strong>Exam Duration:</strong> {{ $fmtDuration($a->durationMinutes()) }}</span>
@@ -283,13 +292,13 @@
                         <td class="col-action">
                             @if($tab !== 'missed')
                                 @if($tab === 'available')
-                                    <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.start', $a->id) }}">{{ ($canRetake || $attemptNo > 1) ? 'Start attempt '.$attemptNo : 'Start' }}</a>
+                                    <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.start', $startParams) }}">{{ ($canRetake || $attemptNo > 1) ? 'Retake' : 'Start' }}</a>
                                 @elseif($tab === 'in_progress' && $att)
                                     <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.take', $att->id) }}">Continue</a>
                                 @elseif($att)
                                     <a class="btn btn-xs btn-warning" href="{{ route('user.assessments.result', $att->id) }}">View Details</a>
                                     @if($canRetake)
-                                        <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.start', $a->id) }}">Retake</a>
+                                        <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.start', $startParams) }}">Retake</a>
                                     @endif
                                 @elseif($tab === 'upcoming')
                                     <span class="text-muted">Not open yet</span>

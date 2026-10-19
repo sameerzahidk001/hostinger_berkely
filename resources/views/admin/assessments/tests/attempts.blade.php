@@ -153,7 +153,7 @@
                             <td class="col-appt" data-sort="{{ $assignment->id ?? 0 }}"><strong>{{ $apptId }}</strong></td>
                             <td class="col-test" data-sort="{{ $assessmentRow->title ?? '' }}">
                                 <strong>{{ $assessmentRow->title ?: ('Test #'.$assessmentRow->id) }}</strong>
-                                <br><small class="text-muted">{{ $assessmentRow->displayCode() }} · {{ $assessmentRow->kindLabel() }}</small>
+                                <br><small class="text-muted">{{ $assessmentRow->displayCode() }} · {{ $assessmentRow->kindLabel() }}@if($assignment) · {{ $assignment->sittingKindLabel() }}@endif</small>
                                 <br><small><strong>Attempt {{ $attemptNo }} of {{ $attemptTotal }}</strong></small>
                             </td>
                             <td class="col-taker" data-sort="{{ $student->name ?? '' }}">
@@ -177,7 +177,7 @@
                                 @endif
                             </td>
                             <td class="col-timing" data-sort="{{ optional($assignment->available_from)->timestamp ?? 0 }}">
-                                <span class="lms-timing-line"><strong>Exam Appointment:</strong> {{ $assignment->windowStart()?->format('d/m/Y, H:i') ?? '—' }}</span>
+                                <span class="lms-timing-line"><strong>Exam Appointment:</strong> {{ ($assignment && $assignment->isSelfSitting()) ? 'Start anytime' : ($assignment?->windowStart()?->format('d/m/Y, H:i') ?? '—') }}</span>
                                 <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $assignment->timezoneLabel() }}</span>
                                 <span class="lms-timing-line"><strong>Exam Duration:</strong> {{ $fmtDuration($assessmentRow->durationMinutes()) }}</span>
                                 <span class="lms-timing-line"><strong>Started:</strong> {{ ($attempt?->started_at) ? $assignment->formatInTimezone($attempt->started_at) : '—' }}</span>
@@ -241,7 +241,7 @@
                                         @endif
                                         <button type="submit" class="btn btn-xs btn-danger">Delete</button>
                                     </form>
-                                    <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.assign', $assessmentRow->id) }}">Assign again</a>
+                                    <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.assign', ['id' => $assessmentRow->id, 'mode' => ($assignment && $assignment->isSelfSitting()) ? 'self' : 'exam']) }}">Assign again</a>
                                 @endif
                             </td>
                         </tr>

@@ -10,10 +10,14 @@ use App\Models\LmsAssessmentAssignment;
 use App\Models\LmsAssessmentAttempt;
 use App\Models\LmsAttemptAnswer;
 use App\Models\LmsQuestion;
+use App\Models\StudyMaterialFolder;
+use App\Models\StudyMaterialInstructorAccess;
+use App\Models\StudyMaterialStudentAccess;
 use App\Models\User;
 use Database\Seeders\LmsAssessmentEmailTemplateSeeder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
@@ -64,7 +68,10 @@ class LmsAssessmentService
 
     public function ensure(): bool
     {
-        return LmsAssessmentSchema::ensure();
+        $ok = LmsAssessmentSchema::ensure();
+        StudyMaterialFolder::ensureFolderAssessmentsTable();
+
+        return $ok;
     }
 
     public function canManageAssessments(): bool
@@ -228,7 +235,164 @@ class LmsAssessmentService
             }
         }
 
+        if (method_exists(StudyMaterialFolder::class, 'ensureFolderAssessmentsTable')) {
+            $this->appendFolderSelfTests($user, $out, $kind);
+        }
+
         return $out;
+    }
+
+    /** Active study-material folder IDs this user can open. */
+    public function activeFolderIdsForUser(User $user): array
+    {
+        $ids = [];
+        $userId = (int) $user->id;
+        if (Schema::hasTable('study_material_student_access')) {
+            $ids = array_merge($ids, StudyMaterialStudentAccess::query()
+                ->where('student_id', $userId)
+                ->where('status', 'active')
+                ->where(function ($q) {
+                    $q->whereNull('access_till')->orWhereDate('access_till', '>=', now()->toDateString());
+                })
+                ->pluck('folder_id')
+                ->map(fn ($id) => (int) $id)
+                ->all());
+        }
+        if (Schema::hasTable('study_material_instructor_access')) {
+            $ids = array_merge($ids, StudyMaterialInstructorAccess::query()
+                ->where('instructor_id', $userId)
+                ->where('status', 'active')
+                ->where(function ($q) {
+                    $q->whereNull('access_till')->orWhereDate('access_till', '>=', now()->toDateString());
+                })
+                ->pluck('folder_id')
+                ->map(fn ($id) => (int) $id)
+                ->all());
+        }
+
+        return array_values(array_unique(array_filter($ids)));
+    }
+
+    public function userHasFolderSelfTest(User $user, LmsAssessment $assessment, ?int $folderId = null): bool
+    {
+        if (! method_exists(StudyMaterialFolder::class, 'ensureFolderAssessmentsTable')) {
+            return false;
+        }
+        if (! StudyMaterialFolder::ensureFolderAssessmentsTable()) {
+            return false;
+        }
+        $folderIds = $this->activeFolderIdsForUser($user);
+        if ($folderIds === []) {
+            return false;
+        }
+        if ($folderId) {
+            if (! in_array($folderId, $folderIds, true)) {
+                return false;
+            }
+            $folderIds = [$folderId];
+        }
+
+        return Schema::hasTable('study_material_folder_assessments')
+            && DB::table('study_material_folder_assessments')
+                ->where('assessment_id', $assessment->id)
+                ->whereIn('folder_id', $folderIds)
+                ->exists();
+    }
+
+    /** Attempts for this test that are not tied to an exam/self assignment sitting. */
+    public function folderSelfAttemptsUsed(User $user, LmsAssessment $assessment): int
+    {
+        $attempts = LmsAssessmentAttempt::query()
+            ->where('assessment_id', $assessment->id)
+            ->where('user_id', $user->id)
+            ->get();
+        $assignments = LmsAssessmentAssignment::query()
+            ->where('assessment_id', $assessment->id)
+            ->get();
+
+        return $attempts->filter(function ($att) use ($assignments) {
+            return ! $assignments->contains(fn ($asg) => $this->attemptBelongsToAssignment($att, $asg));
+        })->count();
+    }
+
+    /** Tests attached to a folder, with Start / Continue / Retake state for this user. */
+    public function folderPortalTests(User $user, StudyMaterialFolder $folder): array
+    {
+        if (! StudyMaterialFolder::ensureFolderAssessmentsTable()) {
+            return [];
+        }
+        $folder->loadMissing(['assessments.course', 'assessments.questions']);
+        $rows = [];
+        foreach ($folder->assessments as $assessment) {
+            $used = $this->folderSelfAttemptsUsed($user, $assessment);
+            $max = $this->maxAttemptsFor($assessment);
+            $open = LmsAssessmentAttempt::query()
+                ->where('assessment_id', $assessment->id)
+                ->where('user_id', $user->id)
+                ->where('status', 'in_progress')
+                ->orderByDesc('id')
+                ->first();
+            $latestQuery = LmsAssessmentAttempt::query()
+                ->where('assessment_id', $assessment->id)
+                ->where('user_id', $user->id);
+            if (Schema::hasColumn('lms_assessment_attempts', 'assignment_id')) {
+                $latestQuery->where(function ($q) {
+                    $q->whereNull('assignment_id')->orWhere('assignment_id', 0);
+                });
+            }
+            $latest = $latestQuery->orderByDesc('id')->first();
+            $canStart = $assessment->isPublished() && ! $open && $used < $max;
+            $rows[] = [
+                'assessment' => $assessment,
+                'attempt' => $open ?: $latest,
+                'open' => $open,
+                'used' => $used,
+                'max' => $max,
+                'can_start' => $canStart,
+                'can_continue' => (bool) $open,
+            ];
+        }
+
+        return $rows;
+    }
+
+    protected function appendFolderSelfTests(User $user, Collection $out, ?string $kind): void
+    {
+        if (! StudyMaterialFolder::ensureFolderAssessmentsTable()) {
+            return;
+        }
+        $folderIds = $this->activeFolderIdsForUser($user);
+        if ($folderIds === []) {
+            return;
+        }
+
+        $tests = LmsAssessment::query()
+            ->with(['course:id,title,slug', 'questions'])
+            ->whereIn('status', ['published', 'disabled'])
+            ->whereHas('studyFolders', fn ($q) => $q->whereIn('study_material_folders.id', $folderIds))
+            ->when($kind, fn ($q) => $q->where('kind', $kind))
+            ->orderByDesc('id')
+            ->get();
+
+        $have = $out->map(fn ($row) => (int) $row['assessment']->id)->all();
+        $pivotFolders = DB::table('study_material_folder_assessments')
+            ->whereIn('folder_id', $folderIds)
+            ->get()
+            ->groupBy('assessment_id');
+
+        foreach ($tests as $assessment) {
+            if (in_array((int) $assessment->id, $have, true)) {
+                continue;
+            }
+            $folderId = (int) ($pivotFolders->get($assessment->id)?->first()->folder_id ?? 0);
+            $out->push([
+                'assessment' => $assessment,
+                'assignment' => null,
+                'from_folder' => true,
+                'folder_id' => $folderId > 0 ? $folderId : null,
+            ]);
+            $have[] = (int) $assessment->id;
+        }
     }
 
     /** Whether an attempt belongs to this assignment sitting (window, or created_at if open-ended). */
@@ -236,6 +400,9 @@ class LmsAssessmentService
     {
         if (! $asg || ! $att->started_at) {
             return false;
+        }
+        if (Schema::hasColumn('lms_assessment_attempts', 'assignment_id') && $att->assignment_id) {
+            return (int) $att->assignment_id === (int) $asg->id;
         }
         $started = $att->started_at->copy();
         $start = $asg->windowStart() ?: $asg->available_from;
@@ -319,12 +486,16 @@ class LmsAssessmentService
             ->filter(fn ($row) => (int) $row['assessment']->id === (int) $assessment->id)
             ->map(fn ($row) => $row['assignment'])
             ->filter()
-            ->filter(function (LmsAssessmentAssignment $asg) use ($attempts) {
+            ->filter(function (LmsAssessmentAssignment $asg) use ($attempts, $assessment) {
                 if (! $asg->isAvailableNow()) {
                     return false;
                 }
+                $usedOnSitting = $attempts->filter(fn ($att) => $this->attemptBelongsToAssignment($att, $asg))->count();
+                if ($asg->isSelfSitting()) {
+                    return $usedOnSitting < $this->maxAttemptsFor($assessment);
+                }
 
-                return ! $attempts->contains(fn ($att) => $this->attemptBelongsToAssignment($att, $asg));
+                return $usedOnSitting === 0;
             })
             ->values();
     }
@@ -335,7 +506,7 @@ class LmsAssessmentService
             ->contains(fn ($row) => (int) $row['assessment']->id === (int) $assessment->id);
     }
 
-    public function startAttempt(User $user, LmsAssessment $assessment): LmsAssessmentAttempt
+    public function startAttempt(User $user, LmsAssessment $assessment, ?int $assignmentId = null, ?int $folderId = null): LmsAssessmentAttempt
     {
         $this->ensure();
         abort_unless($assessment->isPublished(), 403);
@@ -361,14 +532,33 @@ class LmsAssessmentService
         }
 
         $max = $this->maxAttemptsFor($assessment);
-        $used = $this->attemptsUsed($user, $assessment);
+        $fromFolder = $folderId
+            ? $this->userHasFolderSelfTest($user, $assessment, $folderId)
+            : $accessRows->contains(fn ($row) => ! empty($row['from_folder']));
+        if ($folderId && ! $fromFolder) {
+            abort(403, 'This test is not part of that folder.');
+        }
 
-        // Must have an open assigned sitting with no attempt yet (a new Assign is a new sitting).
-        // Exception: unassigned skill tests stay open to staff without a sitting row.
-        $assignment = $this->openUnusedAssignmentsFor($user, $assessment)->sortBy('id')->first();
+        $used = $fromFolder
+            ? $this->folderSelfAttemptsUsed($user, $assessment)
+            : $this->attemptsUsed($user, $assessment);
+        $openSittings = $fromFolder
+            ? collect()
+            : $this->openUnusedAssignmentsFor($user, $assessment)->sortBy('id')->values();
+        $assignment = null;
+        if ($assignmentId) {
+            $assignment = $openSittings->first(fn ($asg) => (int) $asg->id === $assignmentId);
+        }
+        if (! $assignment && ! $fromFolder) {
+            $assignment = $openSittings->first();
+        }
         $hasExplicitAssign = $accessRows->contains(fn ($row) => $row['assignment'] !== null);
         if (! $assignment) {
-            if ($assessment->isSkill() && ! $hasExplicitAssign) {
+            if ($fromFolder) {
+                if ($used >= $max) {
+                    abort(403, 'Maximum attempts for this test have been reached.');
+                }
+            } elseif ($assessment->isSkill() && ! $hasExplicitAssign) {
                 if ($used >= $max) {
                     abort(403, 'Maximum attempts for this test have been reached.');
                 }
@@ -392,6 +582,9 @@ class LmsAssessmentService
         $attempt->user_id = $user->id;
         $attempt->status = 'in_progress';
         $attempt->started_at = now();
+        if ($assignment && Schema::hasColumn('lms_assessment_attempts', 'assignment_id')) {
+            $attempt->assignment_id = (int) $assignment->id;
+        }
         // Prefer sum of per-question timers; else optional test-level duration.
         $expires = null;
         $assessment->loadMissing('questions');
@@ -399,7 +592,7 @@ class LmsAssessmentService
         if ($mins > 0) {
             $expires = now()->addMinutes($mins);
         }
-        if ($assignment) {
+        if ($assignment && ! $assignment->isSelfSitting()) {
             $apptEnd = $assignment->appointmentEnd();
             if ($apptEnd) {
                 $expires = $expires ? $expires->min($apptEnd) : $apptEnd->copy();
@@ -822,7 +1015,8 @@ class LmsAssessmentService
     }
 
     /**
-     * Retake when admin has assigned a new unused sitting that is open now.
+     * Exam retake: admin assigned a new unused sitting that is open now.
+     * Self test: remaining attempts on this sitting (Max attempts on the test).
      */
     public function canRetake(User $user, LmsAssessment $assessment, ?LmsAssessmentAssignment $assignment = null): bool
     {
@@ -835,6 +1029,13 @@ class LmsAssessmentService
             ->where('status', 'in_progress')
             ->exists()) {
             return false;
+        }
+        if ($assignment && $assignment->isSelfSitting()) {
+            return $this->openUnusedAssignmentsFor($user, $assessment)
+                ->contains(fn ($asg) => (int) $asg->id === (int) $assignment->id);
+        }
+        if (! $assignment && $this->userHasFolderSelfTest($user, $assessment)) {
+            return $this->folderSelfAttemptsUsed($user, $assessment) < $this->maxAttemptsFor($assessment);
         }
 
         return $this->openUnusedAssignmentsFor($user, $assessment)->isNotEmpty();
@@ -896,21 +1097,45 @@ class LmsAssessmentService
             $aid = (int) $assessment->id;
             $asgId = (int) ($assignment->id ?? 0);
             $meta = $sittingMeta[$aid . ':' . $asgId] ?? ['number' => 1, 'total' => 1];
-            $attemptNumber = (int) $meta['number'];
             $max = $this->maxAttemptsFor($assessment);
-            $attemptTotal = max($max, (int) $meta['total']);
-
             $attempts = $attemptsByAssessment->get($aid) ?? collect();
             $used = $attempts->count();
-            // Retake path only when Max attempts N > 1 and this sitting is 2+.
-            $isRetakeSitting = $attemptNumber > 1 && $max > 1;
+            $fromFolder = ! empty($row['from_folder']);
+            $isSelf = ($assignment && $assignment->isSelfSitting()) || $fromFolder;
 
-            $matched = $attempts->first(function ($att) use ($assignment, $claimedAttemptIds) {
-                return ! isset($claimedAttemptIds[(int) $att->id])
-                    && $this->attemptBelongsToAssignment($att, $assignment);
-            });
-            if ($matched) {
-                $claimedAttemptIds[(int) $matched->id] = true;
+            if ($isSelf) {
+                $sittingAttempts = $attempts
+                    ->filter(function ($att) use ($assignment, $fromFolder, $claimedAttemptIds) {
+                        if (isset($claimedAttemptIds[(int) $att->id])) {
+                            return false;
+                        }
+                        if ($fromFolder) {
+                            return empty($att->assignment_id);
+                        }
+
+                        return $this->attemptBelongsToAssignment($att, $assignment);
+                    })
+                    ->sortBy('id')
+                    ->values();
+                $usedOnSitting = $sittingAttempts->count();
+                $attemptTotal = $max;
+                $matched = $sittingAttempts->sortByDesc('id')->first();
+                $attemptNumber = $matched ? $usedOnSitting : max(1, $usedOnSitting + 1);
+                foreach ($sittingAttempts as $sa) {
+                    $claimedAttemptIds[(int) $sa->id] = true;
+                }
+                $isRetakeSitting = $usedOnSitting > 0 && $usedOnSitting < $max;
+            } else {
+                $attemptNumber = (int) $meta['number'];
+                $attemptTotal = max($max, (int) $meta['total']);
+                $isRetakeSitting = $attemptNumber > 1 && $max > 1;
+                $matched = $attempts->first(function ($att) use ($assignment, $claimedAttemptIds) {
+                    return ! isset($claimedAttemptIds[(int) $att->id])
+                        && $this->attemptBelongsToAssignment($att, $assignment);
+                });
+                if ($matched) {
+                    $claimedAttemptIds[(int) $matched->id] = true;
+                }
             }
 
             $base = [
@@ -920,6 +1145,8 @@ class LmsAssessmentService
                 'max_attempts' => $max,
                 'attempt_number' => $attemptNumber,
                 'attempt_total' => $attemptTotal,
+                'from_folder' => $fromFolder,
+                'folder_id' => $row['folder_id'] ?? null,
             ];
 
             if ($matched && $matched->status === 'in_progress') {
