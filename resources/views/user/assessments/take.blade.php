@@ -91,6 +91,10 @@
     .lms-q-step textarea.form-control:focus {
         color: #0056b3 !important;
     }
+    .lms-written-answer {
+        -webkit-user-select: text;
+        user-select: text;
+    }
     .lms-q-step .ibox-content > .m-b-sm,
     .lms-q-step .ibox-content > .m-b-sm * {
         color: #000;
@@ -287,11 +291,13 @@
                                 </label>
                                 <textarea
                                     name="answers[{{ $question->id }}][parts][{{ $sk }}]"
-                                    class="form-control"
+                                    class="form-control lms-written-answer"
                                     rows="4"
                                     data-max="{{ $essayMax }}"
                                     maxlength="{{ $essayMax }}"
                                     placeholder="Your answer for {{ $sk }}…"
+                                    autocomplete="off"
+                                    spellcheck="true"
                                 >{{ $ans?->partAnswer($sk) }}</textarea>
                             </div>
                         @endforeach
@@ -303,11 +309,13 @@
                             </label>
                             <textarea
                                 name="answers[{{ $question->id }}][text]"
-                                class="form-control"
+                                class="form-control lms-written-answer"
                                 rows="6"
                                 data-max="{{ $essayMax }}"
                                 maxlength="{{ $essayMax }}"
                                 placeholder="Your answer…"
+                                autocomplete="off"
+                                spellcheck="true"
                             >{{ $ans?->textAnswer() }}</textarea>
                         </div>
                     @endif
@@ -646,6 +654,30 @@ document.body.setAttribute('data-lms-exam-lock', '1');
         modal.setAttribute('aria-hidden', 'true');
         if (frame) frame.src = 'about:blank';
     });
+})();
+
+(function () {
+    function isWritten(el) {
+        return el && el.classList && el.classList.contains('lms-written-answer');
+    }
+    function block(e) {
+        if (!isWritten(e.target)) return;
+        e.preventDefault();
+        return false;
+    }
+    ['copy', 'cut', 'paste', 'drop', 'dragover', 'contextmenu'].forEach(function (evt) {
+        document.addEventListener(evt, block, true);
+    });
+    document.addEventListener('keydown', function (e) {
+        if (!isWritten(e.target)) return;
+        var key = (e.key || '').toLowerCase();
+        if ((e.ctrlKey || e.metaKey) && (key === 'c' || key === 'v' || key === 'x' || key === 'insert')) {
+            e.preventDefault();
+        }
+        if (e.shiftKey && key === 'insert') {
+            e.preventDefault();
+        }
+    }, true);
 })();
 </script>
 @endpush
