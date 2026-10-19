@@ -15,6 +15,7 @@ class EmailController extends Controller
     public function index()
     {
         app(StudyMaterialService::class)->ensureEmailTemplates();
+        (new \Database\Seeders\LmsAssessmentEmailTemplateSeeder())->run();
 
         $emails = Email::all();
         return view('admin.emails.index', compact('emails'));

@@ -74,5 +74,6 @@ class Kernel extends HttpKernel
         'restrict.delete' => \App\Http\Middleware\RestrictRoleDelete::class,
         'redirect.panel.from.student' => \App\Http\Middleware\RedirectPanelRolesFromStudentPortal::class,
         'log.admin.activity' => \App\Http\Middleware\LogAdminPanelActivity::class,
+        'lms.exam.lock' => \App\Http\Middleware\LockInProgressExam::class,
     ];
 }

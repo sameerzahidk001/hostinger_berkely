@@ -2,15 +2,20 @@
 
 namespace App\Services;
 
+use App\Mail\UserMail;
 use App\Models\ClassBatch;
+use App\Models\Email;
 use App\Models\LmsAssessment;
 use App\Models\LmsAssessmentAssignment;
 use App\Models\LmsAssessmentAttempt;
 use App\Models\LmsAttemptAnswer;
 use App\Models\LmsQuestion;
 use App\Models\User;
+use Database\Seeders\LmsAssessmentEmailTemplateSeeder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 
 class LmsAssessmentService
@@ -567,6 +572,112 @@ class LmsAssessmentService
             $attempt->graded_by_user_id = Auth::id();
         }
         $attempt->save();
+        $this->notifyResultPublished($attempt->fresh(['user', 'assessment.course']));
+    }
+
+    public function notifyAssignmentCreated(LmsAssessmentAssignment $assignment): void
+    {
+        $assignment->loadMissing(['assessment.course', 'student', 'batch.students']);
+        $template = $this->lmsEmailTemplate('lms-test-assigned');
+        if (! $template) {
+            return;
+        }
+        foreach ($this->assignmentRecipients($assignment) as $user) {
+            $this->sendLmsTemplate($template, $user, $this->assignmentPlaceholders($assignment, $user));
+        }
+    }
+
+    public function notifyResultPublished(LmsAssessmentAttempt $attempt): void
+    {
+        $attempt->loadMissing(['user', 'assessment.course']);
+        $user = $attempt->user;
+        if (! $user) {
+            return;
+        }
+        $template = $this->lmsEmailTemplate('lms-test-result-published');
+        if (! $template) {
+            return;
+        }
+        $assignment = LmsAssessmentAssignment::query()
+            ->where('assessment_id', $attempt->assessment_id)
+            ->orderBy('id')
+            ->get()
+            ->first(fn ($asg) => $this->attemptBelongsToAssignment($attempt, $asg));
+        $placeholders = $this->assignmentPlaceholders($assignment, $user, $attempt);
+
+        $this->sendLmsTemplate($template, $user, $placeholders);
+    }
+
+    private function lmsEmailTemplate(string $name): ?Email
+    {
+        if (! Schema::hasTable('emails')) {
+            return null;
+        }
+        (new LmsAssessmentEmailTemplateSeeder())->run();
+
+        return Email::query()->where('name', $name)->first();
+    }
+
+    /**
+     * @return Collection<int, User>
+     */
+    private function assignmentRecipients(LmsAssessmentAssignment $assignment): Collection
+    {
+        $users = collect();
+        if ($assignment->student) {
+            $users->push($assignment->student);
+        } elseif ($assignment->student_id) {
+            $found = User::query()->find($assignment->student_id);
+            if ($found) {
+                $users->push($found);
+            }
+        }
+        if ($assignment->batch && $assignment->batch->relationLoaded('students')) {
+            $users = $users->merge($assignment->batch->students);
+        } elseif ($assignment->class_batch_id && Schema::hasTable('class_batch_student')) {
+            $batch = ClassBatch::query()->with('students')->find($assignment->class_batch_id);
+            if ($batch) {
+                $users = $users->merge($batch->students);
+            }
+        }
+
+        return $users->filter(fn ($u) => $u && ! empty($u->email))->unique('id')->values();
+    }
+
+    private function assignmentPlaceholders(?LmsAssessmentAssignment $assignment, User $user, ?LmsAssessmentAttempt $attempt = null): array
+    {
+        $assessment = $assignment?->assessment ?: $attempt?->assessment;
+        $testId = $assessment ? $assessment->displayCode() : '—';
+        $testName = $assessment?->title ?: '—';
+        $apptId = $assignment ? $assignment->displayCode() : '—';
+        $apptTime = $assignment ? $assignment->appointmentWindowLabel('d/m/Y H:i') : '—';
+        $resultUrl = $attempt ? url(route('user.assessments.result', $attempt->id, false)) : url(route('user.assessments.index', [], false));
+
+        return [
+            '{name}' => $user->name ?? '',
+            '{email}' => $user->email ?? '',
+            '{test_id}' => $testId,
+            '{test_name}' => $testName,
+            '{course_name}' => $assessment?->course?->title ?: '—',
+            '{appointment_id}' => $apptId,
+            '{appointment_time}' => $apptTime,
+            '{login_url}' => url('/login'),
+            '{portal_url}' => url(route('user.assessments.index', [], false)),
+            '{result_url}' => $resultUrl,
+        ];
+    }
+
+    private function sendLmsTemplate(Email $template, User $user, array $placeholders): void
+    {
+        try {
+            $body = str_replace(array_keys($placeholders), array_values($placeholders), (string) $template->body);
+            $subject = str_replace(array_keys($placeholders), array_values($placeholders), (string) $template->subject);
+            $cc = ! empty($template->cc) ? array_filter(array_map('trim', explode(',', $template->cc))) : [];
+            $bcc = ! empty($template->bcc) ? array_filter(array_map('trim', explode(',', $template->bcc))) : [];
+            Mail::to($user->email)->cc($cc)->bcc($bcc)->send(new UserMail($user, $subject, $body));
+        } catch (\Throwable $e) {
+            Log::warning('LMS email failed: ' . $e->getMessage());
+        }
     }
 
     public function markPartAnswers(LmsAttemptAnswer $answer, array $subs, array $scores, array $feedbacks): void

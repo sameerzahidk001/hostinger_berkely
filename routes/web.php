@@ -662,7 +662,7 @@ Route::get('/login/captcha', [\App\Http\Controllers\Auth\LoginController::class,
 
 Route::post('/noon/webhook', [NoonWebhookController::class, 'handle'])->name('noon.webhook');
 
-Route::prefix('user')->middleware(['auth', 'approved', 'redirect.panel.from.student', 'log.admin.activity'])->group(function () {
+Route::prefix('user')->middleware(['auth', 'approved', 'redirect.panel.from.student', 'log.admin.activity', 'lms.exam.lock'])->group(function () {
 
     // Dashboard
     Route::get('/', [UserHomeController::class, 'index'])->name('user.home');

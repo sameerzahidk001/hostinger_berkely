@@ -922,7 +922,7 @@ class LmsAssessmentController extends Controller
 
         if ($request->boolean('publish')) {
             $this->assessments->publishResults($attempt->fresh(), $request->input('grader_feedback'));
-            return redirect()->route('admin.assessments.tests.attempts', $attempt->assessment_id)
+            return redirect()->route('admin.assessments.tests.assigned-users', ['assessment_id' => $attempt->assessment_id])
                 ->with('success', 'Marks saved and results published to the student.');
         }
 
@@ -944,7 +944,8 @@ class LmsAssessmentController extends Controller
         $attempt = LmsAssessmentAttempt::findOrFail($attemptId);
         $this->assessments->publishResults($attempt);
 
-        return back()->with('success', 'Results published.');
+        return redirect()->route('admin.assessments.tests.assigned-users', ['assessment_id' => $attempt->assessment_id])
+            ->with('success', 'Results published.');
     }
 
 
@@ -1230,7 +1231,8 @@ class LmsAssessmentController extends Controller
             if ($hasTimezoneCol) {
                 $row['timezone'] = $timezone;
             }
-            LmsAssessmentAssignment::create($row);
+            $createdAsg = LmsAssessmentAssignment::create($row);
+            $this->assessments->notifyAssignmentCreated($createdAsg);
             $created++;
         }
         foreach ((array) $request->input('student_ids', []) as $studentId) {
@@ -1252,7 +1254,8 @@ class LmsAssessmentController extends Controller
             if ($hasTimezoneCol) {
                 $row['timezone'] = $timezone;
             }
-            LmsAssessmentAssignment::create($row);
+            $createdAsg = LmsAssessmentAssignment::create($row);
+            $this->assessments->notifyAssignmentCreated($createdAsg);
             $created++;
         }
 
