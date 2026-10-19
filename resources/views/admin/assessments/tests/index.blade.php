@@ -187,7 +187,8 @@
                             @endphp
                             @if($canManageRow)
                                 <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.edit', $row->id) }}">Edit</a>
-                                <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.assign', $row->id) }}">Assign</a>
+                                <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.assign', $row->id) }}">Assign Test</a>
+                                <a class="btn btn-xs btn-default" href="{{ route('admin.assessments.tests.assign', ['id' => $row->id, 'mode' => 'self']) }}">Assign Self test</a>
                             @endif
                             <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.attempts', $row->id) }}">Results</a>
                             @if(!empty($canDelete))

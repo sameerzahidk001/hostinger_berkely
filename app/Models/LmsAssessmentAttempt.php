@@ -11,7 +11,7 @@ class LmsAssessmentAttempt extends Model
     protected $table = 'lms_assessment_attempts';
 
     protected $fillable = [
-        'assessment_id', 'user_id', 'status', 'started_at', 'submitted_at', 'expires_at',
+        'assessment_id', 'assignment_id', 'user_id', 'status', 'started_at', 'submitted_at', 'expires_at',
         'score_raw', 'score_max', 'passed', 'grader_feedback', 'results_published',
         'results_published_at', 'graded_by_admin_id', 'graded_by_user_id', 'graded_at',
     ];

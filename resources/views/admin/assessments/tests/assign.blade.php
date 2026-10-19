@@ -4,7 +4,8 @@
 @include('admin.assessments.partials.searchable-select-assets')
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
-        <h2>Assign: {{ $assessment->title }} <small class="text-muted">ID {{ $assessment->id }}</small></h2>
+        @php $assignMode = $assignMode ?? 'exam'; @endphp
+        <h2>{{ $assignMode === 'self' ? 'Assigning Self test' : 'Assigning Test (Exam)' }}: {{ $assessment->title }} <small class="text-muted">ID {{ $assessment->id }}</small></h2>
         <ol class="breadcrumb">
             <li><a href="{{ lms_portal_home() }}">Home</a></li>
             <li><a href="{{ route('admin.assessments.tests.index') }}">ALL TESTS</a></li>
@@ -18,13 +19,26 @@
         <div class="alert alert-danger"><ul class="m-b-none">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>
     @endif
     <div class="ibox"><div class="ibox-content">
+        <p class="m-b-sm">
+            <a class="btn btn-sm {{ ($assignMode ?? 'exam') === 'exam' ? 'btn-primary' : 'btn-default' }}" href="{{ route('admin.assessments.tests.assign', $assessment->id) }}">1. Assigning Test (Exam)</a>
+            <a class="btn btn-sm {{ ($assignMode ?? 'exam') === 'self' ? 'btn-primary' : 'btn-default' }}" href="{{ route('admin.assessments.tests.assign', ['id' => $assessment->id, 'mode' => 'self']) }}">2. Assigning Self test</a>
+        </p>
         <p class="help-block">
-            Each save creates a <strong>new sitting</strong> of this <strong>same test</strong> (new appointment).
-            That is how a <strong>retake</strong> is given — assign again; the student may start anytime inside the new window.
-            Older sittings stay on Assigned Tests. Optional assessor: if set, that instructor (or Admin) can mark; otherwise Admin / course instructors can mark.
+            @if(($assignMode ?? 'exam') === 'self')
+                Self tests can be given in two ways: <strong>1. Assign Self test</strong> here, or <strong>2. attach the test on a study folder</strong>.
+                This page is way 1 — pick people, no appointment. They click <strong>Start</strong> / <strong>Retake</strong> anytime, up to
+                <strong>Max attempts</strong> (currently {{ max(1, (int) ($assessment->max_attempts ?? 1)) }}).
+                Duration still applies after they start. Optional assessor: if set, that instructor (or Admin) can mark.
+            @else
+                Each save creates a <strong>new exam sitting</strong> with an appointment window.
+                The student may start anytime inside that window. For another exam sitting, assign again (retake window).
+                <strong>No specific start time?</strong> Use <strong>2. Assigning Self test</strong> — that sitting has no Exam Appointment Start; the student clicks Start anytime.
+                Older sittings stay on Assigned Tests. Optional assessor: if set, that instructor (or Admin) can mark; otherwise Admin / course instructors can mark.
+            @endif
         </p>
         <form method="POST" action="{{ route('admin.assessments.tests.assign.save', $assessment->id) }}">
             @csrf
+            <input type="hidden" name="sitting_kind" value="{{ ($assignMode ?? 'exam') === 'self' ? 'self' : 'exam' }}">
             <div class="row">
                 <div class="col-md-6 form-group">
                     <label>Batches</label>
@@ -60,6 +74,7 @@
                     $tzForInput = old('timezone', $selectedTimezone ?? config('app.timezone', 'Asia/Dubai'));
                     $fromForInput = old('available_from');
                 @endphp
+                @if(($assignMode ?? 'exam') !== 'self')
                 <div class="col-md-3 form-group">
                     <label>Exam Appointment Start *</label>
                     <input type="datetime-local" name="available_from" id="available_from" class="form-control" value="{{ $fromForInput }}" required>
@@ -70,6 +85,7 @@
                         Student may start anytime inside that window.
                     </p>
                 </div>
+                @endif
                 <div class="col-md-3 form-group">
                     <label>Timezone *</label>
                     <select name="timezone" id="assign_timezone" class="form-control lms-searchable" data-placeholder="Type to find timezone" data-allow-clear="0" required>

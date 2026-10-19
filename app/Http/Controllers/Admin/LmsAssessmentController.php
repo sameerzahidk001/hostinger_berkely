@@ -197,12 +197,15 @@ class LmsAssessmentController extends Controller
         }
 
         // Assign = add new people only — never preload existing assignees.
+        $assignMode = old('sitting_kind', request('mode')) === 'self' ? 'self' : 'exam';
+
         return view('admin.assessments.tests.assign', array_merge($this->formData($assessment), [
             'selectedBatchIds' => old('batch_ids', []),
             'selectedStudentIds' => old('student_ids', []),
             'selectedMarkerId' => old('marker_user_id'),
             'selectedTimezone' => old('timezone', config('app.timezone', 'Asia/Dubai')),
             'assignFresh' => true,
+            'assignMode' => $assignMode,
         ]));
     }
 
@@ -215,13 +218,15 @@ class LmsAssessmentController extends Controller
             $this->assertInstructorOwnsCourse((int) $a->course_id);
         }
 
+        $isSelf = $request->input('sitting_kind') === 'self';
         $validator = Validator::make($request->all(), [
             'batch_ids' => 'nullable|array',
             'batch_ids.*' => 'exists:class_batches,id',
             'student_ids' => 'nullable|array',
             'student_ids.*' => 'exists:users,id',
             'marker_user_id' => 'nullable|exists:users,id',
-            'available_from' => 'required|date',
+            'sitting_kind' => 'nullable|in:exam,self',
+            'available_from' => $isSelf ? 'nullable|date' : 'required|date',
             'available_until' => 'nullable|date',
             'timezone' => 'required|string|max:64',
         ]);
@@ -237,9 +242,12 @@ class LmsAssessmentController extends Controller
 
         $this->syncAssignments($a, $request);
         $created = (int) $request->attributes->get('lms_assignments_created', $batchCount + $studentCount);
+        $kindNote = $isSelf
+            ? ' Self test: no appointment — the student starts anytime, up to Max attempts on the test.'
+            : ' Exam sitting: student may start anytime inside the appointment window.';
 
         return redirect()->route('admin.assessments.tests.assigned-users', ['assessment_id' => $a->id])
-            ->with('success', $created . ' new sitting' . ($created === 1 ? '' : 's') . ' created for test “' . $a->title . '”. Open Assigned Tests below — each save adds a new row for the same test.');
+            ->with('success', $created . ' new sitting' . ($created === 1 ? '' : 's') . ' created for test “' . $a->title . '”.' . $kindNote);
     }
 
     /** Read-only profile JSON for Assigned Tests / Results popups (no user-edit access required). */
@@ -271,6 +279,7 @@ class LmsAssessmentController extends Controller
             'assignment' => $assignment,
             'selectedMarkerId' => old('marker_user_id', $assignment->marker_user_id),
             'selectedTimezone' => old('timezone', $assignment->timezone ?: config('app.timezone', 'Asia/Dubai')),
+            'assignMode' => $assignment->isSelfSitting() ? 'self' : 'exam',
         ]));
     }
 
@@ -285,9 +294,10 @@ class LmsAssessmentController extends Controller
             $this->assertInstructorOwnsCourse((int) $a->course_id);
         }
 
+        $isSelf = $assignment->isSelfSitting() || $request->input('sitting_kind') === 'self';
         $validator = Validator::make($request->all(), [
             'marker_user_id' => 'nullable|exists:users,id',
-            'available_from' => 'required|date',
+            'available_from' => $isSelf ? 'nullable|date' : 'required|date',
             'timezone' => 'required|string|max:64',
         ]);
         if ($validator->fails()) {
@@ -300,14 +310,19 @@ class LmsAssessmentController extends Controller
             $timezone = (string) config('app.timezone', 'Asia/Dubai');
         }
 
-        $fromLocal = \Carbon\Carbon::parse($request->input('available_from'), $timezone);
-        $assignment->available_from = $fromLocal->copy()->timezone(config('app.timezone'))->format('Y-m-d H:i:s');
-        $a->loadMissing('questions');
-        if ($a->durationMinutes()) {
-            $assignment->available_until = $fromLocal->copy()
-                ->addMinutes((int) $a->durationMinutes())
-                ->timezone(config('app.timezone'))
-                ->format('Y-m-d H:i:s');
+        if ($isSelf) {
+            $assignment->available_from = null;
+            $assignment->available_until = null;
+        } else {
+            $fromLocal = \Carbon\Carbon::parse($request->input('available_from'), $timezone);
+            $assignment->available_from = $fromLocal->copy()->timezone(config('app.timezone'))->format('Y-m-d H:i:s');
+            $a->loadMissing('questions');
+            if ($a->durationMinutes()) {
+                $assignment->available_until = $fromLocal->copy()
+                    ->addMinutes((int) $a->durationMinutes())
+                    ->timezone(config('app.timezone'))
+                    ->format('Y-m-d H:i:s');
+            }
         }
         if (Schema::hasColumn('lms_assessment_assignments', 'timezone')) {
             $assignment->timezone = $timezone;
@@ -396,7 +411,7 @@ class LmsAssessmentController extends Controller
 
         $assignQuery = LmsAssessmentAssignment::query()
             ->with([
-                'assessment:id,title,kind,course_id,audience,duration_minutes,target_role',
+                'assessment:id,title,kind,course_id,audience,duration_minutes,target_role,max_attempts',
                 'assessment.course:id,title',
                 'student:id,name,email',
                 'batch:id,code,name',
@@ -538,14 +553,8 @@ class LmsAssessmentController extends Controller
                 foreach ($sittings->sortBy(fn ($r) => (int) $r['assignment']->id) as $sitting) {
                     $asg = $sitting['assignment'];
                     $rowKey = (int) $asg->id . ':' . (int) $sitting['student']->id;
-                    $matched = $candidates->first(function ($att) use ($asg, $claimedAttemptIds) {
-                        return ! isset($claimedAttemptIds[(int) $att->id])
-                            && $this->assessments->attemptBelongsToAssignment($att, $asg);
-                    });
+                    $matched = $this->matchSittingAttempt($candidates, $asg, $claimedAttemptIds);
                     $rowsByKey[$rowKey]['attempt'] = $matched;
-                    if ($matched) {
-                        $claimedAttemptIds[(int) $matched->id] = true;
-                    }
                 }
             }
         }
@@ -560,8 +569,15 @@ class LmsAssessmentController extends Controller
             foreach ($ordered as $i => $r) {
                 $k = (int) $r['assignment']->id . ':' . (int) $r['student']->id;
                 if (isset($rowsByKey[$k])) {
-                    $rowsByKey[$k]['attempt_number'] = $i + 1;
-                    $rowsByKey[$k]['attempt_total'] = $total;
+                    $asg = $r['assignment'] ?? null;
+                    if ($asg && $asg->isSelfSitting()) {
+                        $max = max(1, (int) ($r['assessment']->max_attempts ?? 1));
+                        $rowsByKey[$k]['attempt_number'] = $rowsByKey[$k]['attempt'] ? min($max, max(1, $i + 1)) : 1;
+                        $rowsByKey[$k]['attempt_total'] = $max;
+                    } else {
+                        $rowsByKey[$k]['attempt_number'] = $i + 1;
+                        $rowsByKey[$k]['attempt_total'] = $total;
+                    }
                 }
             }
         }
@@ -751,13 +767,7 @@ class LmsAssessmentController extends Controller
                 foreach ($sittings->sortBy(fn ($r) => (int) $r['assignment']->id) as $sitting) {
                     $asg = $sitting['assignment'];
                     $key = (int) $asg->id . ':' . (int) $uid;
-                    $matched = $candidates->first(function ($att) use ($asg, $claimedAttemptIds) {
-                        return ! isset($claimedAttemptIds[(int) $att->id])
-                            && $this->assessments->attemptBelongsToAssignment($att, $asg);
-                    });
-                    if ($matched) {
-                        $claimedAttemptIds[(int) $matched->id] = true;
-                    }
+                    $matched = $this->matchSittingAttempt($candidates, $asg, $claimedAttemptIds);
                     $rowsByKey[$key]['attempt'] = $matched;
                     $meta = $attemptMeta[$key] ?? ['number' => 1, 'total' => max(1, $assignments->count())];
                     $rowsByKey[$key]['attempt_number'] = $meta['number'];
@@ -1177,6 +1187,28 @@ class LmsAssessmentController extends Controller
         return null;
     }
 
+    protected function matchSittingAttempt($candidates, ?LmsAssessmentAssignment $asg, array &$claimedAttemptIds)
+    {
+        $belonging = collect($candidates)->filter(function ($att) use ($asg, $claimedAttemptIds) {
+            return ! isset($claimedAttemptIds[(int) $att->id])
+                && $this->assessments->attemptBelongsToAssignment($att, $asg);
+        });
+        if ($asg && $asg->isSelfSitting()) {
+            $matched = $belonging->sortByDesc('id')->first();
+            foreach ($belonging as $att) {
+                $claimedAttemptIds[(int) $att->id] = true;
+            }
+
+            return $matched;
+        }
+        $matched = $belonging->first();
+        if ($matched) {
+            $claimedAttemptIds[(int) $matched->id] = true;
+        }
+
+        return $matched;
+    }
+
     protected function syncAssignments(LmsAssessment $a, Request $request): void
     {
         // Each Save = new assignment sitting(s) for this same test. Never delete older sittings.
@@ -1186,9 +1218,11 @@ class LmsAssessmentController extends Controller
             $timezone = (string) config('app.timezone', 'Asia/Dubai');
         }
 
+        $sittingKind = $request->input('sitting_kind') === 'self' ? 'self' : 'exam';
+        $hasKindCol = Schema::hasColumn('lms_assessment_assignments', 'sitting_kind');
         $from = null;
         $until = null;
-        if ($request->filled('available_from')) {
+        if ($sittingKind !== 'self' && $request->filled('available_from')) {
             // Wall-clock time is in the chosen timezone (not the browser TZ).
             $fromLocal = \Carbon\Carbon::parse($request->input('available_from'), $timezone);
             $from = $fromLocal->copy()->timezone(config('app.timezone'))->format('Y-m-d H:i:s');
@@ -1231,6 +1265,9 @@ class LmsAssessmentController extends Controller
             if ($hasTimezoneCol) {
                 $row['timezone'] = $timezone;
             }
+            if ($hasKindCol) {
+                $row['sitting_kind'] = $sittingKind;
+            }
             $createdAsg = LmsAssessmentAssignment::create($row);
             $this->assessments->notifyAssignmentCreated($createdAsg);
             $created++;
@@ -1253,6 +1290,9 @@ class LmsAssessmentController extends Controller
             }
             if ($hasTimezoneCol) {
                 $row['timezone'] = $timezone;
+            }
+            if ($hasKindCol) {
+                $row['sitting_kind'] = $sittingKind;
             }
             $createdAsg = LmsAssessmentAssignment::create($row);
             $this->assessments->notifyAssignmentCreated($createdAsg);

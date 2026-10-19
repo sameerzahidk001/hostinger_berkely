@@ -50,6 +50,16 @@ class LmsAssessmentSchema
                 $table->string('timezone', 64)->nullable()->after('available_until');
             });
         }
+        if (Schema::hasTable('lms_assessment_assignments') && ! Schema::hasColumn('lms_assessment_assignments', 'sitting_kind')) {
+            Schema::table('lms_assessment_assignments', function (Blueprint $table) {
+                $table->string('sitting_kind', 16)->nullable()->index();
+            });
+        }
+        if (Schema::hasTable('lms_assessment_attempts') && ! Schema::hasColumn('lms_assessment_attempts', 'assignment_id')) {
+            Schema::table('lms_assessment_attempts', function (Blueprint $table) {
+                $table->unsignedBigInteger('assignment_id')->nullable()->index();
+            });
+        }
         if (Schema::hasTable('lms_questions') && ! Schema::hasColumn('lms_questions', 'time_limit_minutes')) {
             Schema::table('lms_questions', function (Blueprint $table) {
                 $table->unsignedInteger('time_limit_minutes')->nullable();

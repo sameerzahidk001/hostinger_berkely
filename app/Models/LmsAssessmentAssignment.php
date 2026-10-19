@@ -5,14 +5,18 @@ namespace App\Models;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Schema;
 
 class LmsAssessmentAssignment extends Model
 {
     protected $table = 'lms_assessment_assignments';
 
+    public const KIND_EXAM = 'exam';
+    public const KIND_SELF = 'self';
+
     protected $fillable = [
         'assessment_id', 'class_batch_id', 'student_id', 'marker_user_id',
-        'available_from', 'available_until', 'timezone',
+        'available_from', 'available_until', 'timezone', 'sitting_kind',
         'assigned_by_admin_id', 'assigned_by_user_id',
     ];
 
@@ -25,6 +29,25 @@ class LmsAssessmentAssignment extends Model
     public function displayCode(): string
     {
         return 'BEXT' . (int) $this->id;
+    }
+
+    public function sittingKind(): string
+    {
+        if (! Schema::hasColumn($this->getTable(), 'sitting_kind')) {
+            return self::KIND_EXAM;
+        }
+
+        return $this->sitting_kind === self::KIND_SELF ? self::KIND_SELF : self::KIND_EXAM;
+    }
+
+    public function isSelfSitting(): bool
+    {
+        return $this->sittingKind() === self::KIND_SELF;
+    }
+
+    public function sittingKindLabel(): string
+    {
+        return $this->isSelfSitting() ? 'Self test' : 'Exam';
     }
 
     public static function timezoneOptions(): array
@@ -195,6 +218,9 @@ class LmsAssessmentAssignment extends Model
     /** Display: "15/10/24 22:25 → 16/10/24 01:25" (timezone is shown on its own line). */
     public function appointmentWindowLabel(string $fmt = 'd/m/y H:i'): string
     {
+        if ($this->isSelfSitting()) {
+            return 'Self test — start anytime';
+        }
         $from = $this->windowStart();
         $until = $this->appointmentEnd();
         if ($from && $until) {
