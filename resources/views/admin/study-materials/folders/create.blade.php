@@ -56,6 +56,7 @@
                         </select>
                         <span class="help-block">Select one or more packages for this folder. Clear all to leave none selected.</span>
                     </div>
+                    @include('admin.study-materials.folders._tests_field')
                     <div class="col-md-6 form-group">
                         <label>Validity (months)</label>
                         <select name="validity_months" class="form-control">
@@ -113,4 +114,5 @@
 @include('admin.study-materials.folders._form_assets', [
     'selectedPackageIds' => old('fee_package_ids', []),
     'selectedInstructorIds' => old('instructor_ids', []),
+    'selectedAssessmentIds' => old('assessment_ids', []),
 ])

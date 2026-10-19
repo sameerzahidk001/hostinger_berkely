@@ -113,6 +113,51 @@
         <div class="alert alert-danger">{{ session('fail') }}</div>
     @endif
     <div class="alert alert-info">Files open inside this page. A <strong>Download</strong> button appears only when download is allowed for that file.</div>
+    @php $folderTests = $folderTests ?? []; @endphp
+    @if($folderTests !== [])
+    <div class="ibox">
+        <div class="ibox-title"><h5>Tests</h5></div>
+        <div class="ibox-content">
+            <p class="text-muted" style="margin-top:0;">These tests are part of this folder. Start anytime — no separate appointment.</p>
+            <table class="table table-striped table-bordered" style="margin-bottom:0;">
+                <thead>
+                    <tr>
+                        <th>Test</th>
+                        <th>Attempts</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($folderTests as $row)
+                        @php
+                            $test = $row['assessment'];
+                            $open = $row['open'] ?? null;
+                            $att = $row['attempt'] ?? null;
+                        @endphp
+                        <tr>
+                            <td>
+                                <strong>{{ $test->title }}</strong>
+                                <br><small class="text-muted">{{ $test->displayCode() }} · {{ $test->kindLabel() }}</small>
+                            </td>
+                            <td>{{ (int) ($row['used'] ?? 0) }} / {{ (int) ($row['max'] ?? 1) }}</td>
+                            <td>
+                                @if(!empty($row['can_continue']) && $open)
+                                    <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.take', $open->id) }}">Continue</a>
+                                @elseif(!empty($row['can_start']))
+                                    <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.start', ['id' => $test->id, 'folder' => $folder->id]) }}">{{ ((int) ($row['used'] ?? 0) > 0) ? 'Retake' : 'Start' }}</a>
+                                @elseif($att && in_array($att->status, ['submitted', 'graded', 'expired'], true))
+                                    <a class="btn btn-xs btn-warning" href="{{ route('user.assessments.result', $att->id) }}">View Details</a>
+                                @else
+                                    <span class="text-muted">{{ $test->isPublished() ? 'No attempts left' : 'Not published' }}</span>
+                                @endif
+                            </td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+    </div>
+    @endif
     <div class="ibox">
         <div class="ibox-content">
             @include('user.study-materials._tree', ['items' => $folder->rootItems])

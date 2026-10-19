@@ -10,6 +10,7 @@ use App\Models\StudyMaterialItem;
 use App\Models\StudyMaterialInstructorAccess;
 use App\Models\StudyMaterialStudentAccess;
 use App\Models\SiteSettings;
+use App\Services\LmsAssessmentService;
 use App\Services\StudyMaterialService;
 use App\Services\ZohoLmsService;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -23,7 +24,8 @@ class StudyMaterialController extends Controller
 {
     public function __construct(
         protected StudyMaterialService $lms,
-        protected ZohoLmsService $zoho
+        protected ZohoLmsService $zoho,
+        protected LmsAssessmentService $assessments
     ) {
     }
 
@@ -46,10 +48,12 @@ class StudyMaterialController extends Controller
             'This folder is disabled or you no longer have access.'
         );
 
+        StudyMaterialFolder::ensureFolderAssessmentsTable();
         $folder = StudyMaterialFolder::with([
             'course',
             'rootItems.childrenRecursive',
             'instructorAccess.instructor',
+            'assessments.course',
         ])->findOrFail($id);
 
         $access = StudyMaterialStudentAccess::query()
@@ -73,7 +77,11 @@ class StudyMaterialController extends Controller
             Auth::id()
         );
 
-        return view('user.study-materials.show', compact('folder', 'access'));
+        $folderTests = Auth::user()
+            ? $this->assessments->folderPortalTests(Auth::user(), $folder)
+            : [];
+
+        return view('user.study-materials.show', compact('folder', 'access', 'folderTests'));
     }
 
     public function viewFile(Request $request, $itemId)

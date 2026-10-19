@@ -140,6 +140,7 @@ Route::get('/school-categories-ajax', [FrontendCourseController::class, 'schoolC
 
 
 Route::post('/user-behavior', [UserBehaviorController::class, 'store']);
+Route::post('/analytics/ping', [AnalyticsController::class, 'ping'])->name('analytics.ping');
 Route::post('/zoho/callback-form', [ZohoController::class, 'callbackForm'])->name('zoho.callback-form');
 Route::post('/zoho/contact-us', [ZohoController::class, 'contactUs'])->name('zoho.contact-us');
 Route::post('/zoho/send-job-application', [ZohoController::class, 'sendJobApplication'])->name('zoho.send-job-application');
@@ -244,6 +245,7 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
             Route::delete('/folders/{id}', [StudyMaterialFolderController::class, 'destroy'])->name('folders.destroy');
             Route::post('/folders/{id}/subfolders', [StudyMaterialFolderController::class, 'storeSubfolder'])->name('folders.subfolders.store');
             Route::post('/folders/{id}/files', [StudyMaterialFolderController::class, 'storeFile'])->name('folders.files.store');
+            Route::post('/folders/{id}/tests', [StudyMaterialFolderController::class, 'syncTests'])->name('folders.tests.sync');
             Route::post('/folders/{id}/send-students', [StudyMaterialFolderController::class, 'sendStudents'])->name('folders.send-students');
             Route::post('/folders/{id}/send-instructors', [StudyMaterialFolderController::class, 'sendInstructors'])->name('folders.send-instructors');
             Route::get('/packages-by-course/{courseId}', [StudyMaterialFolderController::class, 'packagesByCourse'])->name('packages-by-course');

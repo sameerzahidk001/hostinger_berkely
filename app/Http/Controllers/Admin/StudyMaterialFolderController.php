@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\CourseFee;
+use App\Models\LmsAssessment;
 use App\Models\StudyMaterialFolder;
 use App\Models\StudyMaterialItem;
 use App\Models\User;
@@ -70,10 +71,12 @@ class StudyMaterialFolderController extends Controller
 
     public function open($id)
     {
+        StudyMaterialFolder::ensureFolderAssessmentsTable();
         $folder = StudyMaterialFolder::with([
             'course',
             'rootItems.childrenRecursive',
             'instructorAccess.instructor',
+            'assessments.course',
         ])->findOrFail($id);
 
         $access = (object) [
@@ -81,8 +84,19 @@ class StudyMaterialFolderController extends Controller
             'access_till' => null,
             'status' => 'active',
         ];
+        $folderTests = Auth::user()
+            ? app(\App\Services\LmsAssessmentService::class)->folderPortalTests(Auth::user(), $folder)
+            : $folder->assessments->map(fn ($assessment) => [
+                'assessment' => $assessment,
+                'attempt' => null,
+                'open' => null,
+                'used' => 0,
+                'max' => max(1, (int) ($assessment->max_attempts ?? 1)),
+                'can_start' => false,
+                'can_continue' => false,
+            ])->all();
 
-        return view('user.study-materials.show', compact('folder', 'access'));
+        return view('user.study-materials.show', compact('folder', 'access', 'folderTests'));
     }
 
     public function create()
@@ -95,11 +109,15 @@ class StudyMaterialFolderController extends Controller
             ->orderBy('name')
             ->get(['id', 'name', 'email']);
 
+        StudyMaterialFolder::ensureFolderAssessmentsTable();
+
         return view('admin.study-materials.folders.create', [
             'courses' => $courses,
             'instructors' => $instructors,
             'isAdmin' => $this->lms->isAdminActor(),
             'packages' => collect(),
+            'tests' => $this->testsForFolderPicker(),
+            'selectedAssessmentIds' => old('assessment_ids', []),
         ]);
     }
 
@@ -150,6 +168,7 @@ class StudyMaterialFolderController extends Controller
         $folder->save();
         $folder->ensureCode();
         $folder->feePackages()->sync($packageIds);
+        $this->syncFolderAssessments($folder, $request);
 
         $accessTill = $this->lms->computeAccessTill(now(), $folder->validity_months);
 
@@ -226,7 +245,8 @@ class StudyMaterialFolderController extends Controller
     {
         StudyMaterialFolder::ensureHeadOfFacultyColumn();
 
-        $folder = StudyMaterialFolder::with(['rootItems.childrenRecursive', 'instructorAccess.instructor', 'headOfFaculty', 'studentAccess', 'items', 'feePackages', 'course'])->findOrFail($id);
+        StudyMaterialFolder::ensureFolderAssessmentsTable();
+        $folder = StudyMaterialFolder::with(['rootItems.childrenRecursive', 'instructorAccess.instructor', 'headOfFaculty', 'studentAccess', 'items', 'feePackages', 'course', 'assessments'])->findOrFail($id);
         if (! $this->lms->canEditFolder($folder)) {
             $home = $this->lms->isInstructorActor()
                 ? route('user.study-materials.show', $folder->id)
@@ -299,6 +319,8 @@ class StudyMaterialFolderController extends Controller
             'zohoWorkDriveReady' => $this->zoho->isWorkDriveReady(),
             'fileSource' => $this->rememberedFileSource($request),
             'openItemId' => (int) session('study_material_open_item', 0),
+            'tests' => $this->testsForFolderPicker(),
+            'selectedAssessmentIds' => old('assessment_ids', $folder->assessments->pluck('id')->map(fn ($id) => (int) $id)->all()),
         ]);
     }
 
@@ -349,6 +371,7 @@ class StudyMaterialFolderController extends Controller
         if ($this->lms->isAdminActor()) {
             $this->syncFolderFacultyAccess($folder, $request);
         }
+        $this->syncFolderAssessments($folder, $request);
 
         if ($wasActive && $folder->status === 'disabled') {
             $this->lms->notifyAssignedStudentsDisabled($folder, 'folder_disabled');
@@ -736,7 +759,11 @@ class StudyMaterialFolderController extends Controller
             'instructor_id' => 'nullable|exists:users,id',
             'structure' => 'nullable|array',
             'structure.*.name' => 'nullable|string|max:255',
+            'assessment_ids' => 'nullable|array',
         ];
+        if (Schema::hasTable('lms_assessments')) {
+            $rules['assessment_ids.*'] = 'integer|exists:lms_assessments,id';
+        }
 
         if ($lockCourse) {
             unset($rules['course_id'], $rules['fee_package_ids'], $rules['fee_package_ids.*']);
@@ -776,6 +803,56 @@ class StudyMaterialFolderController extends Controller
             ->unique()
             ->values()
             ->all();
+    }
+
+    protected function testsForFolderPicker()
+    {
+        if (! Schema::hasTable('lms_assessments')) {
+            return collect();
+        }
+
+        return LmsAssessment::query()
+            ->with('course:id,title')
+            ->orderByDesc('id')
+            ->get(['id', 'title', 'kind', 'course_id', 'status']);
+    }
+
+    public function syncTests(Request $request, $id)
+    {
+        $folder = StudyMaterialFolder::findOrFail($id);
+        abort_unless($this->lms->canEditFolder($folder), 403);
+        $request->merge(['assessment_ids_present' => 1]);
+        if (Schema::hasTable('lms_assessments')) {
+            $request->validate([
+                'assessment_ids' => 'nullable|array',
+                'assessment_ids.*' => 'integer|exists:lms_assessments,id',
+            ]);
+        }
+        $this->syncFolderAssessments($folder, $request);
+        $count = StudyMaterialFolder::ensureFolderAssessmentsTable()
+            ? $folder->assessments()->count()
+            : 0;
+
+        return redirect()
+            ->route('admin.study-materials.folders.edit', $folder->id)
+            ->with('success', $count . ' self test' . ($count === 1 ? '' : 's') . ' saved on this folder. No extra email was sent.');
+    }
+
+    protected function syncFolderAssessments(StudyMaterialFolder $folder, Request $request): void
+    {
+        if (! StudyMaterialFolder::ensureFolderAssessmentsTable()) {
+            return;
+        }
+        if (! $request->boolean('assessment_ids_present') && ! $request->has('assessment_ids')) {
+            return;
+        }
+        $ids = collect((array) $request->input('assessment_ids', []))
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+        $folder->assessments()->sync($ids);
     }
 
     protected function packagesForCourse($courseId)

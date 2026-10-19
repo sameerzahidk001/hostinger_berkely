@@ -178,7 +178,23 @@
     @endif
 
     <div class="ibox">
-        <div class="ibox-title"><h5>{{ $isAdmin ? '3. Add files' : '2. Add files' }}</h5></div>
+        <div class="ibox-title"><h5>{{ $isAdmin ? '3. Self tests' : '2. Self tests' }}</h5></div>
+        <div class="ibox-content">
+            <p class="help-block" style="margin-top:0;">
+                Attach tests to this folder (not as files). Save here — students with folder access get an anytime self test, with no appointment and no extra email.
+            </p>
+            <form method="POST" action="{{ route('admin.study-materials.folders.tests.sync', $folder->id) }}">
+                @csrf
+                <div class="row">
+                    @include('admin.study-materials.folders._tests_field')
+                </div>
+                <button type="submit" class="btn btn-primary">Save tests</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="ibox">
+        <div class="ibox-title"><h5>{{ $isAdmin ? '4. Add files' : '3. Add files' }}</h5></div>
         <div class="ibox-content">
             <p class="help-block">
                 Select the main folder or a subfolder, then
@@ -187,6 +203,7 @@
                 @else
                     upload to Zoho WorkDrive or paste an existing WorkDrive link.
                 @endif
+                Self tests are not files — attach them in <strong>Self tests</strong> above.
             </p>
             {{-- Default is Paste WorkDrive link. Do not fall back to Upload to Zoho WorkDrive. --}}
             @php
@@ -272,6 +289,7 @@
 @include('admin.study-materials.folders._form_assets', [
     'selectedPackageIds' => $selectedPackageIds ?? [],
     'selectedInstructorIds' => $selectedInstructorIds ?? [],
+    'selectedAssessmentIds' => $selectedAssessmentIds ?? [],
 ])
 @push('script')
 <script>
