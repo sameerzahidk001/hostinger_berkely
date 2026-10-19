@@ -55,6 +55,29 @@
          pointer-events: none;
          opacity: 0.45;
       }
+      /* Dashboard children stay closed until the user clicks Dashboard */
+      #side-menu > li.lms-nav-dashboards:not(.dashboards-open) > ul,
+      #side-menu > li.lms-nav-dashboards:not(.dashboards-open) > ul.collapse,
+      #side-menu > li.lms-nav-dashboards:not(.dashboards-open) > ul.collapse.in,
+      #side-menu > li.lms-nav-dashboards:not(.dashboards-open) > ul.nav-second-level.collapse[style] {
+         display: none !important;
+         height: 0 !important;
+         max-height: 0 !important;
+         overflow: hidden !important;
+         visibility: hidden !important;
+         padding: 0 !important;
+         margin: 0 !important;
+      }
+      #side-menu > li.lms-nav-dashboards.dashboards-open > ul,
+      #side-menu > li.lms-nav-dashboards.dashboards-open > ul.collapse,
+      #side-menu > li.lms-nav-dashboards.dashboards-open > ul.collapse.in,
+      #side-menu > li.lms-nav-dashboards.dashboards-open > ul.nav-second-level.collapse[style] {
+         display: block !important;
+         height: auto !important;
+         max-height: none !important;
+         overflow: visible !important;
+         visibility: visible !important;
+      }
    </style>
 
 </head>
@@ -181,18 +204,13 @@
                </li>
                @if(auth()->user()->hasPermission('dashboard-read') || auth()->user()->roles()->where('name', 'instructor')->exists())
                   @if(is_musa_shaikh_user())
-                  @php
-                     $musaDashActive = request()->routeIs('user.home')
-                        || request()->is('admin/home')
-                        || request()->is('admin/dashboard/*');
-                  @endphp
-                  <li class="{{ $musaDashActive ? 'active' : '' }}">
+                  <li class="lms-nav-dashboards">
                      <a href="javascript:void(0)">
                         <i class="fa fa-th-large"></i>
                         <span class="nav-label">Dashboard</span>
                         <span class="fa arrow"></span>
                      </a>
-                     <ul class="nav nav-second-level">
+                     <ul class="nav nav-second-level collapse" style="display:none;">
                         <li class="{{ request()->routeIs('user.home') ? 'active' : '' }}">
                            <a href="{{ route('user.home') }}">My Dashboard</a>
                         </li>
@@ -492,6 +510,46 @@
                document.body.classList.remove('mobile-sidebar-open');
             }
          });
+      })();
+      (function () {
+         function closeLmsDashboards() {
+            var items = document.querySelectorAll('#side-menu > li.lms-nav-dashboards');
+            for (var i = 0; i < items.length; i++) {
+               var li = items[i];
+               if (li.classList.contains('dashboards-open')) continue;
+               li.classList.remove('active');
+               var ul = li.querySelector(':scope > ul');
+               if (ul) {
+                  ul.classList.remove('in');
+                  ul.classList.add('collapse');
+                  ul.setAttribute('style', 'display:none;');
+               }
+            }
+         }
+         closeLmsDashboards();
+         document.addEventListener('DOMContentLoaded', closeLmsDashboards);
+         window.addEventListener('load', closeLmsDashboards);
+         setTimeout(closeLmsDashboards, 0);
+         setTimeout(closeLmsDashboards, 200);
+         document.addEventListener('click', function (e) {
+            var link = e.target && e.target.closest ? e.target.closest('#side-menu > li.lms-nav-dashboards > a') : null;
+            if (!link) return;
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            var li = link.parentElement;
+            var open = li.classList.toggle('dashboards-open');
+            var ul = li.querySelector(':scope > ul');
+            if (ul) {
+               if (open) {
+                  ul.classList.add('in');
+                  ul.setAttribute('style', 'display:block;height:auto;');
+               } else {
+                  li.classList.remove('active');
+                  ul.classList.remove('in');
+                  ul.setAttribute('style', 'display:none;');
+               }
+            }
+         }, true);
       })();
    </script>
 
