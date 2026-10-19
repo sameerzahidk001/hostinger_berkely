@@ -197,7 +197,9 @@
                 <table class="table table-hover" style="margin-bottom:0;">
                     <thead>
                         <tr>
+                            <th>Visitor</th>
                             <th>Page</th>
+                            <th>Time spent</th>
                             <th>IP</th>
                             <th>Country</th>
                             <th>Last seen</th>
@@ -206,13 +208,15 @@
                     <tbody>
                         @forelse($liveUsers as $row)
                             <tr>
+                                <td>{{ trim((string) ($row->visitor_name ?? '')) !== '' ? $row->visitor_name : 'Guest' }}</td>
                                 <td class="url-cell"><a href="{{ $row->url }}" target="_blank" rel="noopener">{{ $row->url }}</a></td>
+                                <td>{{ analytics_time_spent_label($row) }}</td>
                                 <td>{{ $row->ip_address }}</td>
                                 <td>{{ $row->country ?: '—' }}</td>
                                 <td>{{ $row->updated_at?->diffForHumans() }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="4" class="text-center text-muted">No live users right now.</td></tr>
+                            <tr><td colspan="6" class="text-center text-muted">No live users right now.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -229,7 +233,7 @@
             <form method="GET" class="form-inline m-b-md" style="margin-bottom:16px;">
                 <input type="hidden" name="tab" value="visits">
                 <input type="hidden" name="days" value="{{ $period }}">
-                <input type="text" name="q" class="form-control" value="{{ $search }}" placeholder="Search URL, IP or country" style="min-width:260px;">
+                <input type="text" name="q" class="form-control" value="{{ $search }}" placeholder="Search name, URL, IP or country" style="min-width:260px;">
                 <input type="date" name="from" class="form-control" value="{{ $fromInput }}">
                 <input type="date" name="to" class="form-control" value="{{ $toInput }}">
                 <button type="submit" class="btn btn-primary">Search</button>
@@ -239,7 +243,9 @@
                 <table class="table table-hover" style="margin-bottom:0;">
                     <thead>
                         <tr>
+                            <th>Visitor</th>
                             <th>Page</th>
+                            <th>Time spent</th>
                             <th>IP</th>
                             <th>First Visit</th>
                             <th>Last Visit</th>
@@ -251,7 +257,9 @@
                     <tbody>
                         @forelse($latestPageViews as $row)
                             <tr>
+                                <td>{{ trim((string) ($row->visitor_name ?? '')) !== '' ? $row->visitor_name : 'Guest' }}</td>
                                 <td class="url-cell"><a href="{{ $row->url }}" target="_blank" rel="noopener">{{ $row->url }}</a></td>
+                                <td>{{ analytics_time_spent_label($row) }}</td>
                                 <td>{{ $row->ip_address }}</td>
                                 <td>{{ $row->created_at?->format('M d, Y H:i') }}</td>
                                 <td>{{ $row->updated_at?->format('M d, Y H:i') }}</td>
@@ -260,7 +268,7 @@
                                 <td>{{ $row->view_count }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="7" class="text-center text-muted">No visits in this range.</td></tr>
+                            <tr><td colspan="9" class="text-center text-muted">No visits in this range.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

@@ -2645,6 +2645,81 @@ if (!function_exists('normalize_payment_email_body')) {
     }
 }
 
+if (!function_exists('analytics_hidden_url')) {
+    function analytics_hidden_url(?string $url): bool
+    {
+        $url = trim((string) $url);
+        if ($url === '') {
+            return true;
+        }
+        $lower = strtolower($url);
+        if (
+            str_contains($lower, 'hostingersite.com')
+            || str_contains($lower, 'hostingsite.com')
+            || str_contains($lower, 'lscwp_ctrl')
+            || str_contains($lower, 'preview-')
+        ) {
+            return true;
+        }
+
+        $path = parse_url($url, PHP_URL_PATH);
+        if (! is_string($path) || $path === '') {
+            $path = $url;
+        }
+        $path = '/' . ltrim(strtolower($path), '/');
+        $path = rtrim($path, '/') ?: '/';
+
+        $exact = ['/user-behavior', '/analytics/ping', '/login/captcha'];
+        if (in_array($path, $exact, true)) {
+            return true;
+        }
+
+        $prefixes = [
+            '/admin', '/api', '/user', '/login', '/register', '/logout',
+            '/password', '/email', '/sanctum', '/broadcasting', '/livewire',
+            '/captcha', '/analytics', '/skin', '/room/webhook', '/verify-email',
+        ];
+        foreach ($prefixes as $prefix) {
+            if ($path === $prefix || str_starts_with($path, $prefix . '/')) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
+if (!function_exists('analytics_time_spent_label')) {
+    function analytics_time_spent_label($row): string
+    {
+        $seconds = (int) ($row->duration_seconds ?? 0);
+        if ($seconds <= 0 && ! empty($row->created_at) && ! empty($row->updated_at)) {
+            try {
+                $from = $row->created_at instanceof \Carbon\Carbon ? $row->created_at : \Carbon\Carbon::parse($row->created_at);
+                $to = $row->updated_at instanceof \Carbon\Carbon ? $row->updated_at : \Carbon\Carbon::parse($row->updated_at);
+                $seconds = max(0, $from->diffInSeconds($to));
+            } catch (\Throwable $e) {
+                $seconds = 0;
+            }
+        }
+        $seconds = min($seconds, 8 * 3600);
+        if ($seconds < 5) {
+            return '< 5s';
+        }
+        $hours = intdiv($seconds, 3600);
+        $minutes = intdiv($seconds % 3600, 60);
+        $secs = $seconds % 60;
+        if ($hours > 0) {
+            return $hours . 'h ' . $minutes . 'm';
+        }
+        if ($minutes > 0) {
+            return $minutes . 'm ' . $secs . 's';
+        }
+
+        return $secs . 's';
+    }
+}
+
 if (!function_exists('analytics_channel')) {
     function analytics_channel(?string $referrer, ?string $url = null): string
     {
