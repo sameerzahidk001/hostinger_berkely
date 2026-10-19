@@ -715,6 +715,26 @@ class ZohoLmsService
         return storage_path('app/study-cache/' . sha1($url) . '.bin');
     }
 
+    /** Download a WorkDrive file onto this server so the exam popup can show it in an iframe. */
+    public function cachedWorkDriveFile(string $url): ?array
+    {
+        $cache = $this->remoteFileCachePath($url);
+        if (is_file($cache) && filesize($cache) > 8) {
+            return [
+                'path' => $cache,
+                'mime' => $this->sniffMime($cache, ''),
+            ];
+        }
+        foreach ($this->remoteFileCandidates($url) as $candidate) {
+            $got = $this->downloadRemoteToPath($candidate, $cache);
+            if ($got) {
+                return $got;
+            }
+        }
+
+        return null;
+    }
+
     protected function sniffMime(string $path, ?string $headerMime): string
     {
         $headerMime = strtolower(trim(explode(';', (string) $headerMime)[0]));

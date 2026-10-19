@@ -1025,9 +1025,9 @@ class LmsAssessmentController extends Controller
             'status' => 'required|in:draft,published,disabled',
             'question_ids' => 'nullable|array',
             'question_ids.*' => 'exists:lms_questions,id',
-            'reference_files' => 'nullable|array|max:2',
+            'reference_files' => 'nullable|array|max:1',
             'reference_files.*' => 'file|mimes:pdf,doc,docx,jpg,jpeg,png,gif,webp,txt|max:20480',
-            'preseen_files' => 'nullable|array|max:2',
+            'preseen_files' => 'nullable|array|max:1',
             'preseen_files.*' => 'file|mimes:pdf,doc,docx,jpg,jpeg,png,gif,webp,txt|max:20480',
             'remove_reference' => 'nullable|array',
             'remove_preseen' => 'nullable|array',
@@ -1137,8 +1137,8 @@ class LmsAssessmentController extends Controller
                     continue;
                 }
                 $wantedUploads++;
-                if (count($kept) >= 2) {
-                    break;
+                if (count($kept) >= 1) {
+                    $kept = [];
                 }
                 if (! $this->zoho->isWorkDriveReady()) {
                     $error = 'Connect Zoho WorkDrive OAuth first. Exam files are stored on Zoho Drive, not this server.';
@@ -1164,7 +1164,7 @@ class LmsAssessmentController extends Controller
                 ];
                 $storedUploads++;
             }
-            $a->{$cfg['col']} = $kept !== [] ? array_values($kept) : null;
+            $a->{$cfg['col']} = $kept !== [] ? array_values(array_slice($kept, 0, 1)) : null;
         }
         $a->save();
         if ($wantedUploads > 0 && $storedUploads === 0) {

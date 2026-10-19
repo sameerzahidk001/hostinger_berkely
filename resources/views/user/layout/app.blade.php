@@ -55,10 +55,6 @@
          pointer-events: none;
          opacity: 0.45;
       }
-      #side-menu > li.lms-nav-dashboards > .nav-second-level {
-         display: block !important;
-         height: auto !important;
-      }
    </style>
 
 </head>
@@ -190,13 +186,13 @@
                         || request()->is('admin/home')
                         || request()->is('admin/dashboard/*');
                   @endphp
-                  <li class="lms-nav-dashboards {{ $musaDashActive ? 'active' : '' }}">
+                  <li class="{{ $musaDashActive ? 'active' : '' }}">
                      <a href="javascript:void(0)">
                         <i class="fa fa-th-large"></i>
                         <span class="nav-label">Dashboard</span>
                         <span class="fa arrow"></span>
                      </a>
-                     <ul class="nav nav-second-level collapse in" style="height:auto;display:block;">
+                     <ul class="nav nav-second-level">
                         <li class="{{ request()->routeIs('user.home') ? 'active' : '' }}">
                            <a href="{{ route('user.home') }}">My Dashboard</a>
                         </li>

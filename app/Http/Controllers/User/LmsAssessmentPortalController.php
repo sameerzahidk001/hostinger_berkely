@@ -144,18 +144,17 @@ class LmsAssessmentPortalController extends Controller
         abort_unless(isset($files[$i]), 404);
         $path = (string) ($files[$i]['url'] ?? $files[$i]['path'] ?? '');
         abort_unless($path !== '', 404);
+        $name = str_replace('"', '', (string) ($files[$i]['name'] ?? 'file'));
         if (preg_match('#workdrive\.zoho#i', $path) || str_starts_with($path, 'http')) {
-            $preview = app(ZohoLmsService::class)->workDrivePreviewUrl($path, true) ?: $path;
-            $req = request();
-            if ($req->boolean('embed') || $req->header('Sec-Fetch-Dest') === 'iframe') {
-                return response()->view('user.assessments.resource-frame', [
-                    'name' => $files[$i]['name'] ?? 'File',
-                    'embedUrl' => $preview,
-                    'openUrl' => $preview,
-                ]);
-            }
+            $cached = app(ZohoLmsService::class)->cachedWorkDriveFile($path);
+            abort_unless($cached && ! empty($cached['path']) && is_file($cached['path']), 502, 'File could not be opened.');
+            $mime = $cached['mime'] ?? 'application/octet-stream';
 
-            return redirect()->away($preview);
+            return response()->file($cached['path'], [
+                'Content-Type' => $mime,
+                'Content-Disposition' => 'inline; filename="' . $name . '"',
+                'X-Frame-Options' => 'SAMEORIGIN',
+            ]);
         }
         abort_unless(Storage::disk('public')->exists($path), 404);
 

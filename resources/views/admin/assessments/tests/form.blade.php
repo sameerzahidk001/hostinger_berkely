@@ -116,7 +116,7 @@
                 </div>
             </div>
 
-            <h4 style="margin-top:8px;">Exam files <span class="text-muted" style="font-size:13px;font-weight:normal;">(optional — up to 2 files in each box)</span></h4>
+            <h4 style="margin-top:8px;">Exam files <span class="text-muted" style="font-size:13px;font-weight:normal;">(optional — 1 file per button)</span></h4>
             <p class="help-block">
                 Files upload to <strong>Zoho WorkDrive</strong> (the folder set in Zoho LMS settings). They are not stored on this server.
                 @if(! ($zohoWorkDriveReady ?? false))
@@ -127,7 +127,7 @@
             <div class="row">
                 <div class="col-md-6 form-group">
                     <label>Reference material</label>
-                    <input type="file" name="reference_files[]" class="form-control" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.webp,.txt" multiple @disabled(! $canCreate)>
+                    <input type="file" name="reference_files[]" class="form-control" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.webp,.txt" @disabled(! $canCreate)>
                     @foreach($assessment->resourceFiles('reference') as $ri => $rf)
                         <label class="m-t-xs" style="display:block;font-weight:normal;">
                             <input type="checkbox" name="remove_reference[]" value="{{ $ri }}" @disabled(! $canCreate)> Remove {{ $rf['name'] }}
@@ -139,7 +139,7 @@
                 </div>
                 <div class="col-md-6 form-group">
                     <label>Pre-seen</label>
-                    <input type="file" name="preseen_files[]" class="form-control" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.webp,.txt" multiple @disabled(! $canCreate)>
+                    <input type="file" name="preseen_files[]" class="form-control" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif,.webp,.txt" @disabled(! $canCreate)>
                     @foreach($assessment->resourceFiles('preseen') as $pi => $pf)
                         <label class="m-t-xs" style="display:block;font-weight:normal;">
                             <input type="checkbox" name="remove_preseen[]" value="{{ $pi }}" @disabled(! $canCreate)> Remove {{ $pf['name'] }}
