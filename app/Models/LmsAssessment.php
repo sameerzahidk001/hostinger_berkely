@@ -91,6 +91,16 @@ class LmsAssessment extends Model
         return $this->hasMany(LmsAssessmentAssignment::class, 'assessment_id');
     }
 
+    public function studyFolders(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            StudyMaterialFolder::class,
+            'study_material_folder_assessments',
+            'assessment_id',
+            'folder_id'
+        )->withTimestamps();
+    }
+
     public function attempts(): HasMany
     {
         return $this->hasMany(LmsAssessmentAttempt::class, 'assessment_id');

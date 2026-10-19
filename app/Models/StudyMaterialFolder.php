@@ -107,6 +107,26 @@ class StudyMaterialFolder extends Model
         return Schema::hasColumn('study_material_folders', 'rate_and_review_enabled');
     }
 
+    public static function ensureFolderAssessmentsTable(): bool
+    {
+        if (! Schema::hasTable('study_material_folders') || ! Schema::hasTable('lms_assessments')) {
+            return false;
+        }
+        if (Schema::hasTable('study_material_folder_assessments')) {
+            return true;
+        }
+
+        Schema::create('study_material_folder_assessments', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('folder_id')->index();
+            $table->unsignedBigInteger('assessment_id')->index();
+            $table->timestamps();
+            $table->unique(['folder_id', 'assessment_id'], 'sm_folder_assessment_unique');
+        });
+
+        return Schema::hasTable('study_material_folder_assessments');
+    }
+
     protected static function booted(): void
     {
         static::created(function (self $folder) {
@@ -260,6 +280,16 @@ class StudyMaterialFolder extends Model
     public function studentAccess(): HasMany
     {
         return $this->hasMany(StudyMaterialStudentAccess::class, 'folder_id');
+    }
+
+    public function assessments(): BelongsToMany
+    {
+        return $this->belongsToMany(
+            LmsAssessment::class,
+            'study_material_folder_assessments',
+            'folder_id',
+            'assessment_id'
+        )->withTimestamps();
     }
 
     public function isActive(): bool

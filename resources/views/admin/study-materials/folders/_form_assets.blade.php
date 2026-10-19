@@ -64,6 +64,25 @@
             width: '100%'
         });
     }
+    if ($('#assessment_ids').length) {
+        const selectedAssessmentIds = @json(array_values(array_map('strval', $selectedAssessmentIds ?? [])));
+        const $testSelect = $('#assessment_ids');
+        $testSelect.select2({
+            placeholder: 'Type to find tests',
+            allowClear: true,
+            width: '100%',
+            closeOnSelect: false
+        });
+        if (selectedAssessmentIds.length) {
+            $testSelect.val(selectedAssessmentIds).trigger('change');
+        }
+        $testSelect.closest('form').on('submit', function () {
+            const vals = ($testSelect.val() || []).map(String);
+            $testSelect.find('option').each(function () {
+                this.selected = vals.indexOf(String(this.value)) !== -1;
+            });
+        });
+    }
     if ($('#instructor_ids').length) {
         const selectedInstructorIds = @json(array_values(array_map('strval', $selectedInstructorIds ?? [])));
         const $instructorSelect = $('#instructor_ids');
