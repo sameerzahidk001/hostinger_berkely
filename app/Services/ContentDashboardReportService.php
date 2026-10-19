@@ -182,7 +182,7 @@ class ContentDashboardReportService
         $totalActiveCourses = (int) $this->activeCoursesQuery()->count();
 
         return [
-            'total' => (int) (clone $base)->count(),
+            'total' => $enteredPages + $enteredCourses,
             'active' => (int) (clone $base)->where(function ($q) {
                 $q->whereNotNull('page_id')->orWhereNotNull('course_id');
             })->count(),

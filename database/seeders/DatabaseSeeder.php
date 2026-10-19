@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             StudentPortalPermissionSeeder::class,
             HomepageSectionsSeeder::class,
             StudyMaterialEmailTemplateSeeder::class,
+            LmsAssessmentEmailTemplateSeeder::class,
         ]);
     }
 }

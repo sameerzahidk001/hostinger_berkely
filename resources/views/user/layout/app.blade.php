@@ -44,9 +44,20 @@
          pointer-events: auto;
          opacity: 1;
       }
+      body.lms-exam-lock #side-menu > li.lms-nav-my-tests > a {
+         pointer-events: none;
+      }
+      body.lms-exam-lock #side-menu > li.lms-nav-my-tests > .nav-second-level {
+         display: block !important;
+         height: auto !important;
+      }
       body.lms-exam-lock #side-menu > li.lms-nav-my-tests .nav-second-level li:not(.lms-nav-my-tests-link) {
          pointer-events: none;
          opacity: 0.45;
+      }
+      #side-menu > li.lms-nav-dashboards > .nav-second-level {
+         display: block !important;
+         height: auto !important;
       }
    </style>
 
@@ -179,13 +190,13 @@
                         || request()->is('admin/home')
                         || request()->is('admin/dashboard/*');
                   @endphp
-                  <li class="{{ $musaDashActive ? 'active' : '' }}">
+                  <li class="lms-nav-dashboards {{ $musaDashActive ? 'active' : '' }}">
                      <a href="javascript:void(0)">
                         <i class="fa fa-th-large"></i>
                         <span class="nav-label">Dashboard</span>
                         <span class="fa arrow"></span>
                      </a>
-                     <ul class="nav nav-second-level collapse in" style="height:auto;">
+                     <ul class="nav nav-second-level collapse in" style="height:auto;display:block;">
                         <li class="{{ request()->routeIs('user.home') ? 'active' : '' }}">
                            <a href="{{ route('user.home') }}">My Dashboard</a>
                         </li>

@@ -189,13 +189,15 @@
         'reference' => collect($refFiles)->values()->map(function ($f, $i) use ($attempt) {
             return [
                 'name' => $f['name'],
-                'url' => route('user.assessments.resource', ['attemptId' => $attempt->id, 'kind' => 'reference', 'index' => $i]),
+                'url' => route('user.assessments.resource', ['attemptId' => $attempt->id, 'kind' => 'reference', 'index' => $i, 'embed' => 1]),
+                'open' => route('user.assessments.resource', ['attemptId' => $attempt->id, 'kind' => 'reference', 'index' => $i]),
             ];
         })->values()->all(),
         'preseen' => collect($preFiles)->values()->map(function ($f, $i) use ($attempt) {
             return [
                 'name' => $f['name'],
-                'url' => route('user.assessments.resource', ['attemptId' => $attempt->id, 'kind' => 'preseen', 'index' => $i]),
+                'url' => route('user.assessments.resource', ['attemptId' => $attempt->id, 'kind' => 'preseen', 'index' => $i, 'embed' => 1]),
+                'open' => route('user.assessments.resource', ['attemptId' => $attempt->id, 'kind' => 'preseen', 'index' => $i]),
             ];
         })->values()->all(),
     ];
@@ -205,10 +207,9 @@
         <div class="col-lg-12">
             <div class="lms-take-head-row">
                 <div class="lms-take-meta">
-                    <p class="lms-take-line"><strong>Test ID - Test Name:</strong> {{ $attempt->assessment->displayCode() }} - {{ $attempt->assessment->title }}</p>
+                    <p class="lms-take-line"><strong>Test ID:</strong> {{ $attempt->assessment->displayCode() }} - <strong>Test Name:</strong> {{ $attempt->assessment->title }}</p>
                     <p class="lms-take-line"><strong>Course name:</strong> {{ $attempt->assessment->course->title ?? '—' }}</p>
-                    <p class="lms-take-line"><strong>Appointment ID:</strong> {{ $assignment?->displayCode() ?? '—' }}</p>
-                    <p class="lms-take-line" style="margin-bottom:0;"><strong>Appointment Timing:</strong> {{ $assignment ? $assignment->appointmentWindowLabel('d/m/Y H:i') : '—' }}</p>
+                    <p class="lms-take-line" style="margin-bottom:0;"><strong>Appointment ID:</strong> {{ $assignment?->displayCode() ?? '—' }} · {{ $assignment ? $assignment->appointmentWindowLabel('d/m/Y H:i') : '—' }}</p>
                 </div>
                 @if($refFiles !== [] || $preFiles !== [])
                     <div class="lms-res-btns">
@@ -334,6 +335,7 @@
             @if(count($refFiles) > 1 || count($preFiles) > 1)
                 <select id="lms-res-file" class="form-control input-sm" style="width:auto;max-width:280px;color:#0d3b66;"></select>
             @endif
+            <a href="#" class="lms-res-btn" id="lms-res-open" target="_blank" rel="noopener" style="margin-left:8px;">Open file</a>
             <button type="button" class="lms-res-close" id="lms-res-close" title="Close">&times;</button>
         </div>
         <div class="lms-res-dialog-body">
@@ -359,10 +361,23 @@ document.body.setAttribute('data-lms-exam-lock', '1');
     var idx = 0;
     var qTimerId = null;
     var qEndsAt = null;
+    var startedMs = Date.parse(@json(optional($attempt->started_at)->toIso8601String())) || Date.now();
+    var qEnds = [];
+    (function buildEnds() {
+        var cursor = startedMs;
+        steps.forEach(function (el) {
+            var mins = parseInt(el.getAttribute('data-q-minutes') || '0', 10);
+            if (!mins || mins < 1) {
+                qEnds.push(null);
+                return;
+            }
+            cursor += mins * 60 * 1000;
+            qEnds.push(cursor);
+        });
+    })();
 
     function clearQTimer() {
         if (qTimerId) { clearTimeout(qTimerId); qTimerId = null; }
-        qEndsAt = null;
         if (qTimerWrap) qTimerWrap.style.display = 'none';
     }
 
@@ -441,12 +456,10 @@ document.body.setAttribute('data-lms-exam-lock', '1');
             clearQTimer();
             qCountdown.textContent = '0s';
             if (form && form.dataset.autoSubmitted) return;
-            // Auto-save and move next (or stay on last).
+            if (idx >= steps.length - 1) return;
             saveProgressThen(function () {
                 if (form && form.dataset.autoSubmitted) return;
-                if (idx < steps.length - 1) {
-                    showStep(idx + 1);
-                }
+                resumeFromClock();
             });
             return;
         }
@@ -457,11 +470,10 @@ document.body.setAttribute('data-lms-exam-lock', '1');
         qTimerId = setTimeout(tickQ, 1000);
     }
 
-    function startQTimer(stepEl) {
+    function startQTimer(stepIndex) {
         clearQTimer();
-        var mins = parseInt(stepEl.getAttribute('data-q-minutes') || '0', 10);
-        if (!mins || mins < 1) return;
-        qEndsAt = Date.now() + mins * 60 * 1000;
+        qEndsAt = qEnds[stepIndex] || null;
+        if (!qEndsAt) return;
         if (qTimerWrap) qTimerWrap.style.display = 'inline';
         tickQ();
     }
@@ -475,10 +487,22 @@ document.body.setAttribute('data-lms-exam-lock', '1');
         if (curLabel) curLabel.textContent = String(idx + 1);
         if (btnBack) btnBack.disabled = idx <= 0;
         if (btnNext) btnNext.disabled = idx >= steps.length - 1;
-        startQTimer(steps[idx]);
+        startQTimer(idx);
         try {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         } catch (e) {}
+    }
+
+    function resumeFromClock() {
+        var i = 0;
+        while (i < steps.length) {
+            if (!qEnds[i] || Date.now() < qEnds[i]) {
+                showStep(i);
+                return;
+            }
+            i++;
+        }
+        showStep(steps.length - 1);
     }
 
     if (btnBack) btnBack.addEventListener('click', function () {
@@ -489,8 +513,10 @@ document.body.setAttribute('data-lms-exam-lock', '1');
     });
     document.addEventListener('visibilitychange', function () {
         if (document.visibilityState === 'hidden') silentSave();
+        if (document.visibilityState === 'visible') resumeFromClock();
     });
-    showStep(0);
+    window.addEventListener('pageshow', function () { resumeFromClock(); });
+    resumeFromClock();
 })();
 
 (function () {
@@ -595,6 +621,7 @@ document.body.setAttribute('data-lms-exam-lock', '1');
     var files = @json($resModalFiles);
     var frame = document.getElementById('lms-res-frame');
     var fileSel = document.getElementById('lms-res-file');
+    var openBtn = document.getElementById('lms-res-open');
     var kind = 'reference';
     function show(k, idx) {
         kind = k;
@@ -614,7 +641,10 @@ document.body.setAttribute('data-lms-exam-lock', '1');
             });
             fileSel.style.display = list.length > 1 ? '' : 'none';
         }
-        if (frame && list[idx]) frame.src = list[idx].url;
+        if (list[idx]) {
+            if (frame) frame.src = list[idx].url;
+            if (openBtn) openBtn.href = list[idx].open || list[idx].url;
+        }
         modal.classList.add('is-open');
         modal.setAttribute('aria-hidden', 'false');
     }
