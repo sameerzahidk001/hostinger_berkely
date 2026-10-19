@@ -111,6 +111,65 @@
         text-decoration: none !important;
     }
     .lms-res-btn:hover, .lms-res-btn:focus { background: #ec971f; color: #1a1a1a !important; border-color: #d58512; }
+    .lms-submit-screen-btn {
+        display: inline-block;
+        background: #1ab394;
+        color: #fff !important;
+        border: 1px solid #18a689;
+        border-radius: 3px;
+        padding: 6px 16px;
+        font-weight: 700;
+        font-size: 13px;
+        cursor: pointer;
+    }
+    .lms-submit-screen-btn:hover, .lms-submit-screen-btn:focus { background: #18a689; color: #fff !important; }
+    .lms-submit-modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 3000;
+        background: rgba(8, 24, 48, .55);
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+    .lms-submit-modal.is-open { display: flex; }
+    .lms-submit-dialog {
+        background: #fff;
+        width: min(440px, 94vw);
+        border-radius: 6px;
+        box-shadow: 0 10px 36px rgba(0,0,0,.35);
+        border: 1px solid #0d3b66;
+        padding: 22px 22px 18px;
+        color: #1f2d3d;
+    }
+    .lms-submit-dialog h3 {
+        margin: 0 0 8px;
+        font-size: 20px;
+        font-weight: 700;
+        color: #0d3b66;
+    }
+    .lms-submit-dialog p {
+        margin: 0 0 16px;
+        font-size: 14px;
+        line-height: 1.45;
+        color: #4a5568;
+    }
+    .lms-submit-dialog-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+    }
+    .lms-submit-dialog-actions button {
+        border: 0;
+        border-radius: 4px;
+        padding: 8px 16px;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+    }
+    .lms-submit-cancel { background: #eef1f4; color: #334155; }
+    .lms-submit-go { background: #1ab394; color: #fff; }
     .lms-res-modal {
         display: none;
         position: fixed;
@@ -220,16 +279,15 @@
                     <p class="lms-take-line"><strong>Course name:</strong> {{ $attempt->assessment->course->title ?? '—' }}</p>
                     <p class="lms-take-line" style="margin-bottom:0;"><strong>Appointment ID:</strong> {{ $assignment?->displayCode() ?? '—' }} · {{ $assignment ? $assignment->appointmentWindowLabel('d/m/Y H:i') : '—' }}</p>
                 </div>
-                @if($refFiles !== [] || $preFiles !== [])
-                    <div class="lms-res-btns">
-                        @if($refFiles !== [])
-                            <a href="#" class="lms-res-btn js-open-res" data-kind="reference">Reference Material</a>
-                        @endif
-                        @if($preFiles !== [])
-                            <a href="#" class="lms-res-btn js-open-res" data-kind="preseen">Pre-seen</a>
-                        @endif
-                    </div>
-                @endif
+                <div class="lms-res-btns">
+                    @if($refFiles !== [])
+                        <a href="#" class="lms-res-btn js-open-res" data-kind="reference">Reference Material</a>
+                    @endif
+                    @if($preFiles !== [])
+                        <a href="#" class="lms-res-btn js-open-res" data-kind="preseen">Pre-seen</a>
+                    @endif
+                    <button type="button" class="lms-submit-screen-btn" id="lms-submit-open">Submit</button>
+                </div>
             </div>
         </div>
     </div>
@@ -331,9 +389,18 @@
             <span class="lms-q-nav-spacer"></span>
             <input type="hidden" name="submit" id="lms-submit-flag" value="0">
             <button type="submit" name="save_mode" value="0" class="btn btn-default">Save progress</button>
-            <button type="submit" name="save_mode" value="1" class="btn btn-primary" id="lms-submit-btn">Submit</button>
         </div>
     </form>
+</div>
+<div class="lms-submit-modal" id="lms-submit-modal" aria-hidden="true">
+    <div class="lms-submit-dialog" role="dialog" aria-modal="true" aria-labelledby="lms-submit-title">
+        <h3 id="lms-submit-title">Submit this exam?</h3>
+        <p>Answers will be sent for marking. You cannot change them after submit.</p>
+        <div class="lms-submit-dialog-actions">
+            <button type="button" class="lms-submit-cancel" id="lms-submit-cancel">Cancel</button>
+            <button type="button" class="lms-submit-go" id="lms-submit-confirm">Submit</button>
+        </div>
+    </div>
 </div>
 @if($refFiles !== [] || $preFiles !== [])
 <div class="lms-res-modal" id="lms-res-modal" aria-hidden="true">
@@ -533,18 +600,55 @@ document.body.setAttribute('data-lms-exam-lock', '1');
     var resultUrl = form.getAttribute('data-result-url') || '';
     var end = el ? new Date(el.textContent.trim()) : null;
     if (end && isNaN(end.getTime())) end = null;
-    var submitBtn = document.getElementById('lms-submit-btn');
-    if (submitBtn) {
-        submitBtn.addEventListener('click', function (e) {
-            if (form.dataset.autoSubmitted) return;
-            if (!confirm('Submit this attempt?')) {
-                e.preventDefault();
-                return;
-            }
-            var flag = document.getElementById('lms-submit-flag');
-            if (flag) flag.value = '1';
-        });
+    var submitOpen = document.getElementById('lms-submit-open');
+    var submitModal = document.getElementById('lms-submit-modal');
+    var submitCancel = document.getElementById('lms-submit-cancel');
+    var submitConfirm = document.getElementById('lms-submit-confirm');
+
+    function openSubmitPopup() {
+        if (!submitModal || form.dataset.autoSubmitted) return;
+        submitModal.classList.add('is-open');
+        submitModal.setAttribute('aria-hidden', 'false');
+        if (submitConfirm) {
+            try { submitConfirm.focus(); } catch (e) {}
+        }
     }
+    function closeSubmitPopup() {
+        if (!submitModal) return;
+        submitModal.classList.remove('is-open');
+        submitModal.setAttribute('aria-hidden', 'true');
+    }
+    function confirmSubmitExam() {
+        if (form.dataset.autoSubmitted) return;
+        closeSubmitPopup();
+        var flag = document.getElementById('lms-submit-flag');
+        if (flag) flag.value = '1';
+        var saveMode = document.createElement('input');
+        saveMode.type = 'hidden';
+        saveMode.name = 'save_mode';
+        saveMode.value = '1';
+        form.appendChild(saveMode);
+        if (typeof form.requestSubmit === 'function') {
+            form.requestSubmit();
+        } else {
+            HTMLFormElement.prototype.submit.call(form);
+        }
+    }
+    if (submitOpen) submitOpen.addEventListener('click', function (e) {
+        e.preventDefault();
+        openSubmitPopup();
+    });
+    if (submitCancel) submitCancel.addEventListener('click', function (e) {
+        e.preventDefault();
+        closeSubmitPopup();
+    });
+    if (submitConfirm) submitConfirm.addEventListener('click', function (e) {
+        e.preventDefault();
+        confirmSubmitExam();
+    });
+    if (submitModal) submitModal.addEventListener('click', function (e) {
+        if (e.target === submitModal) closeSubmitPopup();
+    });
 
     function goResult() {
         if (resultUrl) {
@@ -564,6 +668,8 @@ document.body.setAttribute('data-lms-exam-lock', '1');
         Array.prototype.forEach.call(form.querySelectorAll('button'), function (n) {
             n.disabled = true;
         });
+        if (submitOpen) submitOpen.disabled = true;
+        closeSubmitPopup();
         fetch(form.action, {
             method: 'POST',
             body: fd,
