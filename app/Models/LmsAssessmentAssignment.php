@@ -238,6 +238,9 @@ class LmsAssessmentAssignment extends Model
 
     public function isNotYetOpen(): bool
     {
+        if ($this->isSelfSitting()) {
+            return false;
+        }
         $start = $this->windowStart();
         if (! $start) {
             return false;
@@ -248,6 +251,9 @@ class LmsAssessmentAssignment extends Model
 
     public function isExpired(): bool
     {
+        if ($this->isSelfSitting()) {
+            return false;
+        }
         $until = $this->appointmentEnd();
         if (! $until) {
             return false;

@@ -17,11 +17,15 @@ class LockInProgressExam
             return $next($request);
         }
 
-        $attempt = LmsAssessmentAttempt::query()
-            ->where('user_id', $user->id)
-            ->where('status', 'in_progress')
-            ->orderByDesc('id')
-            ->first();
+        try {
+            $attempt = LmsAssessmentAttempt::query()
+                ->where('user_id', $user->id)
+                ->where('status', 'in_progress')
+                ->orderByDesc('id')
+                ->first();
+        } catch (\Throwable $e) {
+            return $next($request);
+        }
         if (! $attempt) {
             return $next($request);
         }
@@ -31,6 +35,9 @@ class LockInProgressExam
             'user.assessments.save',
             'user.assessments.resource',
             'user.assessments.start',
+            'user.assessments.index',
+            'user.assessments.mocks',
+            'user.assessments.result',
             'user.logout',
             'session.ping',
         ])) {

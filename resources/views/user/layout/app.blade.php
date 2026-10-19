@@ -339,7 +339,7 @@
                      <span class="nav-label">Assessments</span>
                      <span class="fa arrow"></span>
                   </a>
-                  <ul class="nav nav-second-level">
+                  <ul class="nav nav-second-level collapse {{ request()->routeIs('user.assessments.*') || request()->is('admin/assessments*') ? 'in' : '' }}" @if(request()->routeIs('user.assessments.*') || request()->is('admin/assessments*')) style="height:auto;" @endif>
                      @if($canQbank)
                      <li class="{{ request()->is('admin/assessments/questions*') ? 'active' : '' }}">
                         <a href="{{ route('admin.assessments.questions.index') }}">Question Bank</a>

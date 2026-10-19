@@ -14,13 +14,17 @@ class LmsAssessmentSchema
             return Schema::hasTable('lms_assessments');
         }
 
-        self::ensureQuestions();
-        self::ensureAssessments();
-        self::ensureAssessmentQuestions();
-        self::ensureAssignments();
-        self::ensureAttempts();
-        self::ensureAnswers();
-        self::ensureAdditiveColumns();
+        try {
+            self::ensureQuestions();
+            self::ensureAssessments();
+            self::ensureAssessmentQuestions();
+            self::ensureAssignments();
+            self::ensureAttempts();
+            self::ensureAnswers();
+            self::ensureAdditiveColumns();
+        } catch (\Throwable $e) {
+            // Hostinger may deny CREATE/ALTER; pages must still open with existing tables.
+        }
 
         $done = true;
 

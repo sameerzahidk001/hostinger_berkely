@@ -525,7 +525,11 @@ class LmsAssessmentService
 
         if ($open) {
             if ($open->isTimedOut()) {
-                $this->submitAttempt($open, true);
+                try {
+                    $this->submitAttempt($open, true);
+                } catch (\Throwable $e) {
+                    Log::warning('LMS timeout submit skipped: ' . $e->getMessage());
+                }
             } else {
                 return $open;
             }
@@ -658,7 +662,11 @@ class LmsAssessmentService
             ->where('expires_at', '<=', now())
             ->get();
         foreach ($open as $attempt) {
-            $this->submitAttempt($attempt, true);
+            try {
+                $this->submitAttempt($attempt, true);
+            } catch (\Throwable $e) {
+                Log::warning('LMS auto-submit skipped: ' . $e->getMessage());
+            }
         }
     }
 
@@ -696,7 +704,11 @@ class LmsAssessmentService
         }
         $attempt->save();
         $fresh = $attempt->fresh(['assessment', 'answers.question', 'user']);
-        $this->notifyTestSubmitted($fresh);
+        try {
+            $this->notifyTestSubmitted($fresh);
+        } catch (\Throwable $e) {
+            Log::warning('LMS submit email skipped: ' . $e->getMessage());
+        }
 
         return $fresh;
     }
@@ -772,6 +784,7 @@ class LmsAssessmentService
 
     public function notifyAssignmentCreated(LmsAssessmentAssignment $assignment): void
     {
+        try {
         $assignment->loadMissing(['assessment.course', 'student', 'batch.students', 'marker']);
         $names = $assignment->isSelfSitting()
             ? ['lms-self-test-assigned']
@@ -783,10 +796,14 @@ class LmsAssessmentService
         foreach ($this->assignmentRecipients($assignment) as $user) {
             $this->sendLmsTemplate($template, $user, $this->assignmentPlaceholders($assignment, $user));
         }
+        } catch (\Throwable $e) {
+            Log::warning('LMS assign email skipped: ' . $e->getMessage());
+        }
     }
 
     public function notifyTestSubmitted(LmsAssessmentAttempt $attempt): void
     {
+        try {
         $attempt->loadMissing(['user', 'assessment.course']);
         $user = $attempt->user;
         if (! $user || empty($user->email)) {
@@ -801,10 +818,14 @@ class LmsAssessmentService
             $user,
             $this->assignmentPlaceholders($this->sittingForAttempt($attempt), $user, $attempt)
         );
+        } catch (\Throwable $e) {
+            Log::warning('LMS submit email skipped: ' . $e->getMessage());
+        }
     }
 
     public function notifyResultPublished(LmsAssessmentAttempt $attempt): void
     {
+        try {
         $attempt->loadMissing(['user', 'assessment.course']);
         $user = $attempt->user;
         if (! $user) {
@@ -817,6 +838,9 @@ class LmsAssessmentService
         $placeholders = $this->assignmentPlaceholders($this->sittingForAttempt($attempt), $user, $attempt);
 
         $this->sendLmsTemplate($template, $user, $placeholders);
+        } catch (\Throwable $e) {
+            Log::warning('LMS result email skipped: ' . $e->getMessage());
+        }
     }
 
     private function sittingForAttempt(LmsAssessmentAttempt $attempt): ?LmsAssessmentAssignment
@@ -831,15 +855,21 @@ class LmsAssessmentService
 
     private function lmsEmailTemplate(array $names): ?Email
     {
-        if (! Schema::hasTable('emails')) {
-            return null;
-        }
-        (new LmsAssessmentEmailTemplateSeeder())->run();
-        foreach ($names as $name) {
-            $found = Email::query()->where('name', $name)->first();
-            if ($found) {
-                return $found;
+        try {
+            if (! Schema::hasTable('emails')) {
+                return null;
             }
+            if (class_exists(LmsAssessmentEmailTemplateSeeder::class)) {
+                (new LmsAssessmentEmailTemplateSeeder())->run();
+            }
+            foreach ($names as $name) {
+                $found = Email::query()->where('name', $name)->first();
+                if ($found) {
+                    return $found;
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning('LMS email template lookup failed: ' . $e->getMessage());
         }
 
         return null;
@@ -1208,7 +1238,11 @@ class LmsAssessmentService
 
             if ($matched && $matched->status === 'in_progress') {
                 if ($matched->isTimedOut()) {
-                    $this->submitAttempt($matched, true);
+                    try {
+                        $this->submitAttempt($matched, true);
+                    } catch (\Throwable $e) {
+                        Log::warning('LMS timeout submit skipped: ' . $e->getMessage());
+                    }
                     $matched = $matched->fresh();
                 } else {
                     if (! empty($inProgressShown[$aid])) {
