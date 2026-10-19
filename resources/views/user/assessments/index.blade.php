@@ -73,9 +73,28 @@
         #assessments-portal .lms-row-marked { color: #1ab394; } /* Completed and Marked — green */
         #assessments-portal .lms-row-missed,
         #assessments-portal .lms-row-expired { color: #ed5565; } /* Missed — red */
-        #assessments-portal .lms-assess-wrap { overflow-x: hidden; }
-        #assessments-portal .lms-assess-table {
+        #assessments-portal .nav-pills {
+            display: flex;
+            flex-wrap: nowrap;
             width: 100%;
+            gap: 6px;
+        }
+        #assessments-portal .nav-pills > li {
+            float: none;
+            flex: 1 1 0;
+            margin: 0;
+        }
+        #assessments-portal .nav-pills > li > a {
+            display: block;
+            text-align: center;
+            margin-right: 0;
+            white-space: nowrap;
+        }
+        #assessments-portal .ibox-content.lms-assess-wrap,
+        #assessments-portal .lms-assess-wrap { overflow-x: auto; width: 100%; }
+        #assessments-portal .lms-assess-table {
+            width: 100% !important;
+            min-width: 100%;
             max-width: 100%;
             table-layout: fixed;
             margin-bottom: 0;
