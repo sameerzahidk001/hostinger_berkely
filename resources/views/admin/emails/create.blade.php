@@ -72,24 +72,7 @@
                         <div class="row">
                             <div class="col-lg-3" style="margin-bottom: 15px;">
                                 <label for="name">Name</label>
-                                <select name="name" id="name" class="form-control">
-                                    <option value="">Select Email</option>
-                                    <option value="user-registration" {{ old('name') == 'user-registration' ? 'selected' : '' }}>User Registration</option>
-                                    <option value="email-verification" {{ old('name') == 'email-verification' ? 'selected' : '' }}>Email Verification</option>
-                                    <option value="user-suspend" {{ old('name') == 'user-suspend' ? 'selected' : '' }}>User Suspend</option>
-                                    <option value="user-active" {{ old('name') == 'user-active' ? 'selected' : '' }}>User Active</option>
-                                    <option value="user-update" {{ old('name') == 'user-update' ? 'selected' : '' }}>User Update</option>
-                                    <option value="password-reset" {{ old('name') == 'password-reset' ? 'selected' : '' }}>Password Reset</option>
-                                    <option value="password-changed" {{ old('name') == 'password-changed' ? 'selected' : '' }}>Password Changed</option>
-                                    <option value="fees-paid" {{ old('name') == 'fees-paid' ? 'selected' : '' }}>Fees Paid</option>
-                                    <option value="send-invoice" {{ old('name') == 'send-invoice' ? 'selected' : '' }}>Send Invoice</option>
-                                    <option value="send-receipt" {{ old('name') == 'send-receipt' ? 'selected' : '' }}>Send Receipt</option>
-                                    <option value="admin-user-update" {{ old('name') == 'admin-user-update' ? 'selected' : '' }}>Admin User Update</option>
-                                    <option value="admin-user-password-changed" {{ old('name') == 'admin-user-password-changed' ? 'selected' : '' }}>Admin User Password Changed</option>
-                                    <option value="study-material-student-access" {{ old('name') == 'study-material-student-access' ? 'selected' : '' }}>Study Material Student Access</option>
-                                    <option value="study-material-student-disabled" {{ old('name') == 'study-material-student-disabled' ? 'selected' : '' }}>Study Material Student Disabled</option>
-                                    <option value="study-material-instructor-access" {{ old('name') == 'study-material-instructor-access' ? 'selected' : '' }}>Study Material Instructor Access</option>
-                                </select>
+                                @include('admin.emails._name_select', ['currentName' => old('name')])
                                 @error('name')
                                     <p class="text-danger text-xs italic">{{ $message }}</p>
                                 @enderror
@@ -176,42 +159,13 @@
             let instructionText = document.getElementById('email-instruction');
             let emailSelect = document.getElementById('name');
 
+            var help = @json(collect(array_keys(\App\Models\Email::templateChoices()))
+                ->push('lms-test-assigned')
+                ->unique()
+                ->mapWithKeys(fn ($k) => [$k => \App\Models\Email::placeholderHelp($k)])
+                ->all());
             function updateInstruction() {
-                if (emailSelect.value === 'user-registration') {
-                    instructionText.innerHTML = "You can use the following placeholders in the email body:<br> <strong>{name}</strong> - User's Name <br> <strong>{email}</strong> - User's Email <br> <strong>{password}</strong> - User's Password <br> <strong>{role}</strong> - User's Role";
-                } else if (emailSelect.value === 'email-verification') {
-                    instructionText.innerHTML = "You can use the following placeholders in the email body:<br> <strong>{name}</strong> - User's Name <br> <strong>{email}</strong> - User's Email <br> <strong>{email-verification}</strong> - Email Verification link";
-                } else if (emailSelect.value === 'user-suspend') {
-                    instructionText.innerHTML = "You can use the following placeholders in the email body:<br> <strong>{name}</strong> - User's Name <br> <strong>{email}</strong> - User's Email";
-                } else if (emailSelect.value === 'user-active') {
-                    instructionText.innerHTML = "You can use the following placeholders in the email body:<br> <strong>{name}</strong> - User's Name <br> <strong>{email}</strong> - User's Email";
-                } else if (emailSelect.value === 'user-update') {
-                    instructionText.innerHTML = "You can use the following placeholders in the email body:<br> <strong>{name}</strong> - User's Name <br> <strong>{email}</strong> - User's Email <br> <strong>{password}</strong> - User's Password";
-                } else if (emailSelect.value === 'fees-paid') {
-                    instructionText.innerHTML = "You can use the following placeholders in the email body:<br> <strong>{name}</strong> - User's Name <br> <strong>{email}</strong> - User's Email <br> <strong>{fees-paid}</strong> - Fees Paid <br> <strong>{fees-installment}</strong> - Fees Installment";
-                } else if(emailSelect.value == 'password-reset') {
-                    instructionText.innerHTML = "You can use the following placeholders in the email body:<br> <strong>{name}</strong> - User's Name <br> <strong>{email}</strong> - User's Email <br> <strong>{password-reset}</strong> - Password Reset";
-                } else if (emailSelect.value === 'fees-paid') {
-                    instructionText.innerHTML = "You can use the following placeholders in the email body:<br> <strong>{name}</strong> - User's Name <br> <strong>{email}</strong> - User's Email <br> <strong>{fees-paid}</strong> - Fees Paid <br> <strong>{fees-installment}</strong> - Fees Installment";
-                } else if (emailSelect.value === 'send-invoice') {
-                    instructionText.innerHTML = "You can use the following placeholders in the email body:<br> <strong>{name}</strong> - User's Name <br> <strong>{email}</strong> - User's Email";
-                } else if (emailSelect.value === 'send-receipt') {
-                    instructionText.innerHTML = "You can use the following placeholders in the email body:<br> <strong>{name}</strong> - User's Name <br> <strong>{email}</strong> - User's Email";
-                } else if (emailSelect.value === 'admin-user-update') {
-                    instructionText.innerHTML = "You can use the following placeholders in the email body:<br> <strong>{name}</strong> - User's Name <br> <strong>{email}</strong> - User's Email";
-                } else if (emailSelect.value === 'admin-user-password-changed') {
-                    instructionText.innerHTML = "You can use the following placeholders in the email body:<br> <strong>{name}</strong> - User's Name <br> <strong>{email}</strong> - User's Email <br> <strong>{password}</strong> - User's Password";
-                } else if (emailSelect.value === 'password-changed') {
-                    instructionText.innerHTML = "You can use the following placeholders in the email body:<br> <strong>{name}</strong> - User's Name <br> <strong>{email}</strong> - User's Email <br> <strong>{password}</strong> - User's Password";
-                } else if (emailSelect.value === 'study-material-student-access') {
-                    instructionText.innerHTML = "Folder email placeholders:<br> <strong>{name}</strong> <strong>{email}</strong> <strong>{folder_name}</strong> <strong>{course_name}</strong> <strong>{head_of_faculty_name}</strong> <strong>{trainer_name}</strong> <strong>{instructor_name}</strong> <strong>{validity}</strong> <strong>{access_till}</strong> <strong>{issued_at}</strong> <strong>{portal_url}</strong> <strong>{login_url}</strong>";
-                } else if (emailSelect.value === 'study-material-student-disabled') {
-                    instructionText.innerHTML = "Sent when student access is disabled or a folder is disabled/deleted:<br> <strong>{name}</strong> <strong>{email}</strong> <strong>{folder_name}</strong> <strong>{course_name}</strong> <strong>{head_of_faculty_name}</strong> <strong>{trainer_name}</strong> <strong>{instructor_name}</strong> <strong>{reason}</strong> <strong>{portal_url}</strong> <strong>{login_url}</strong>";
-                } else if (emailSelect.value === 'study-material-instructor-access') {
-                    instructionText.innerHTML = "Folder email placeholders:<br> <strong>{name}</strong> <strong>{email}</strong> <strong>{folder_name}</strong> <strong>{course_name}</strong> <strong>{validity}</strong> <strong>{access_till}</strong> <strong>{issued_at}</strong> <strong>{portal_url}</strong> <strong>{login_url}</strong>";
-                } else {
-                    instructionText.innerHTML = "";
-                }
+                instructionText.innerHTML = help[emailSelect.value] || "";
             }
 
             // Initialize instruction on page load

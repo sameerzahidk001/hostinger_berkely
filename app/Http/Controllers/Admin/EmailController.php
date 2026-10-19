@@ -122,7 +122,12 @@ class EmailController extends Controller
         ]);
 
         $email = Email::findOrFail($id);
-        $email->update($request->all());
+        $data = $request->only(['subject', 'cc', 'bcc', 'body']);
+        $newName = trim((string) $request->input('name', ''));
+        if ($newName !== '') {
+            $data['name'] = $newName;
+        }
+        $email->update($data);
 
         return redirect()->route('admin.emails.index')->with('success', 'Email Template Updated Successfully.');
     }

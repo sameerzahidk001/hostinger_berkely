@@ -770,8 +770,11 @@ class LmsAssessmentService
 
     public function notifyAssignmentCreated(LmsAssessmentAssignment $assignment): void
     {
-        $assignment->loadMissing(['assessment.course', 'student', 'batch.students']);
-        $template = $this->lmsEmailTemplate('lms-test-assigned');
+        $assignment->loadMissing(['assessment.course', 'student', 'batch.students', 'marker']);
+        $names = $assignment->isSelfSitting()
+            ? ['lms-self-test-assigned']
+            : ['lms-exam-assigned', 'lms-test-assigned', 'New Test assigned'];
+        $template = $this->lmsEmailTemplate($names);
         if (! $template) {
             return;
         }
@@ -787,7 +790,7 @@ class LmsAssessmentService
         if (! $user) {
             return;
         }
-        $template = $this->lmsEmailTemplate('lms-test-result-published');
+        $template = $this->lmsEmailTemplate(['lms-test-result-published']);
         if (! $template) {
             return;
         }
@@ -801,14 +804,20 @@ class LmsAssessmentService
         $this->sendLmsTemplate($template, $user, $placeholders);
     }
 
-    private function lmsEmailTemplate(string $name): ?Email
+    private function lmsEmailTemplate(array $names): ?Email
     {
         if (! Schema::hasTable('emails')) {
             return null;
         }
         (new LmsAssessmentEmailTemplateSeeder())->run();
+        foreach ($names as $name) {
+            $found = Email::query()->where('name', $name)->first();
+            if ($found) {
+                return $found;
+            }
+        }
 
-        return Email::query()->where('name', $name)->first();
+        return null;
     }
 
     /**
@@ -839,18 +848,35 @@ class LmsAssessmentService
 
     private function assignmentPlaceholders(?LmsAssessmentAssignment $assignment, User $user, ?LmsAssessmentAttempt $attempt = null): array
     {
+        if ($assignment) {
+            $assignment->loadMissing(['assessment.course', 'marker']);
+        }
         $assessment = $assignment?->assessment ?: $attempt?->assessment;
         $testId = $assessment ? $assessment->displayCode() : '—';
         $testName = $assessment?->title ?: '—';
         $apptId = $assignment ? $assignment->displayCode() : '—';
         $apptTime = $assignment ? $assignment->appointmentWindowLabel('d/m/Y H:i') : '—';
         $resultUrl = $attempt ? url(route('user.assessments.result', $attempt->id, false)) : url(route('user.assessments.index', [], false));
+        $isSelf = $assignment && $assignment->isSelfSitting();
+        $start = $assignment?->windowStart();
+        $mins = $assessment ? $assessment->durationMinutes() : null;
+        $duration = ($mins === null || $mins === '') ? '—' : (((int) $mins < 60) ? ((int) $mins . ' min') : (intdiv((int) $mins, 60) . 'h' . (((int) $mins % 60) ? (' ' . ((int) $mins % 60) . 'm') : '')));
+        $assessor = $assignment?->marker?->name ?: 'Admin / course instructors';
 
         return [
             '{name}' => $user->name ?? '',
             '{email}' => $user->email ?? '',
             '{test_id}' => $testId,
             '{test_name}' => $testName,
+            '{test_type}' => $assessment ? $assessment->kindLabel() : '—',
+            '{sitting_kind}' => $isSelf ? 'Self test' : 'Exam',
+            '{start_date}' => $isSelf ? 'Start anytime' : ($start ? $assignment->formatInTimezone($start, 'd/m/Y') : '—'),
+            '{start_time}' => $isSelf ? 'Start anytime' : ($start ? $assignment->formatInTimezone($start, 'H:i') : '—'),
+            '{start_datetime}' => $isSelf ? 'Start anytime' : ($start ? $assignment->formatInTimezone($start, 'd/m/Y H:i') : '—'),
+            '{timezone}' => $assignment ? $assignment->timezoneLabel() : '—',
+            '{duration}' => $duration,
+            '{assessor}' => $assessor,
+            '{max_attempts}' => (string) max(1, (int) ($assessment?->max_attempts ?? 1)),
             '{course_name}' => $assessment?->course?->title ?: '—',
             '{appointment_id}' => $apptId,
             '{appointment_time}' => $apptTime,
