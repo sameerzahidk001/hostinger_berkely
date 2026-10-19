@@ -8,17 +8,27 @@
     <td colspan="{{ $colspan }}" class="activity-gap-cell">
         <div class="activity-gap-line">
             <span class="activity-gap-marker">…………………… 10+ minute gap ……………………</span>
-            <form method="POST" action="{{ route('admin.home.activity-gap-comment') }}" class="activity-gap-comment-form">
+            @if($savedComment !== '')
+                <span class="activity-gap-saved-text">— {{ $savedComment }}</span>
+            @endif
+            <form method="POST" action="{{ route('admin.home.activity-gap-comment') }}" class="activity-gap-comment-form {{ $savedComment !== '' ? 'activity-gap-comment-form-saved' : '' }}">
                 @csrf
                 <input type="hidden" name="scope" value="{{ $scope }}">
                 <input type="hidden" name="from_ts" value="{{ $fromTs }}">
                 <input type="hidden" name="to_ts" value="{{ $toTs }}">
-                <input type="text" name="comment" class="form-control input-sm" maxlength="500" value="{{ $savedComment }}" placeholder="Reason / comment for this gap">
-                <button type="submit" class="btn btn-xs btn-primary">Save</button>
+                @if($savedComment !== '')
+                    <details class="activity-gap-edit">
+                        <summary class="btn btn-xs btn-default">Edit</summary>
+                        <div class="activity-gap-edit-fields">
+                            <input type="text" name="comment" class="form-control input-sm" maxlength="500" value="{{ $savedComment }}" placeholder="Reason / comment for this gap">
+                            <button type="submit" class="btn btn-xs btn-primary">Save</button>
+                        </div>
+                    </details>
+                @else
+                    <input type="text" name="comment" class="form-control input-sm" maxlength="500" value="" placeholder="Reason / comment for this gap">
+                    <button type="submit" class="btn btn-xs btn-primary">Save</button>
+                @endif
             </form>
         </div>
-        @if($savedComment !== '')
-            <div class="activity-gap-saved">Comment: {{ $savedComment }}</div>
-        @endif
     </td>
 </tr>
