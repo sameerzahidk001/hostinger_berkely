@@ -36,6 +36,28 @@
             display: none !important;
             pointer-events: none !important;
          }
+         #side-menu > li.lms-nav-dashboards:not(.dashboards-open) > ul,
+         #side-menu > li.lms-nav-dashboards:not(.dashboards-open) > ul.collapse,
+         #side-menu > li.lms-nav-dashboards:not(.dashboards-open) > ul.collapse.in,
+         #side-menu > li.lms-nav-dashboards:not(.dashboards-open) > ul.nav-second-level.collapse[style] {
+            display: none !important;
+            height: 0 !important;
+            max-height: 0 !important;
+            overflow: hidden !important;
+            visibility: hidden !important;
+            padding: 0 !important;
+            margin: 0 !important;
+         }
+         #side-menu > li.lms-nav-dashboards.dashboards-open > ul,
+         #side-menu > li.lms-nav-dashboards.dashboards-open > ul.collapse,
+         #side-menu > li.lms-nav-dashboards.dashboards-open > ul.collapse.in,
+         #side-menu > li.lms-nav-dashboards.dashboards-open > ul.nav-second-level.collapse[style] {
+            display: block !important;
+            height: auto !important;
+            max-height: none !important;
+            overflow: visible !important;
+            visibility: visible !important;
+         }
       </style>
       @stack('style')
    </head>
@@ -83,13 +105,11 @@
                   @php
                      $dashRole = normalize_panel_role(panel_role_name());
                      $seesAllDashboards = panel_sees_all_dashboards() || is_musa_shaikh_user();
-                     $dashMenuActive = request()->is('admin/home')
-                        || request()->is('admin/dashboard/*');
                   @endphp
                   @if($seesAllDashboards)
-                  <li class="{{ $dashMenuActive ? 'active' : '' }}">
+                  <li class="lms-nav-dashboards">
                      <a href="javascript:void(0)"><i class="fa fa-th-large"></i> <span class="nav-label">Dashboard</span> <span class="fa arrow"></span></a>
-                     <ul class="nav nav-second-level">
+                     <ul class="nav nav-second-level collapse" style="display:none;">
                         <li class="{{ request()->routeIs('admin.dashboard.content-writers') || request()->is('admin/home') ? 'active' : '' }}">
                            <a href="{{ route('admin.dashboard.content-writers') }}">Staff Dashboard</a>
                         </li>
@@ -475,11 +495,42 @@
                      .css('height', '');
                });
             }
+            closeLmsDashboards();
+            setTimeout(closeLmsDashboards, 0);
+            setTimeout(closeLmsDashboards, 200);
          });
 
          $(window).on('load', function () {
             clearAdminUiBlockers();
+            closeLmsDashboards();
          });
+         function closeLmsDashboards() {
+            $('#side-menu > li.lms-nav-dashboards').each(function () {
+               var $li = $(this);
+               if ($li.hasClass('dashboards-open')) return;
+               $li.removeClass('active');
+               $li.children('ul').removeClass('in').addClass('collapse').attr('style', 'display:none;');
+            });
+         }
+         document.addEventListener('click', function (e) {
+            var link = e.target && e.target.closest ? e.target.closest('#side-menu > li.lms-nav-dashboards > a') : null;
+            if (!link) return;
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            var li = link.parentElement;
+            var open = li.classList.toggle('dashboards-open');
+            var ul = li.querySelector(':scope > ul');
+            if (ul) {
+               if (open) {
+                  ul.classList.add('in');
+                  ul.setAttribute('style', 'display:block;height:auto;');
+               } else {
+                  li.classList.remove('active');
+                  ul.classList.remove('in');
+                  ul.setAttribute('style', 'display:none;');
+               }
+            }
+         }, true);
 
          $(document).ready(function() {
             @if(session('success'))
