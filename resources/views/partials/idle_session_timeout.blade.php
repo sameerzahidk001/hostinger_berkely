@@ -74,8 +74,8 @@
         }
     }
 
-    ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click'].forEach(function (evt) {
-        document.addEventListener(evt, markActivity, { passive: true });
+    ['mousemove', 'mousedown', 'keydown', 'scroll', 'touchstart', 'click', 'input'].forEach(function (evt) {
+        document.addEventListener(evt, markActivity, { passive: true, capture: true });
     });
 
     document.addEventListener('visibilitychange', function () {

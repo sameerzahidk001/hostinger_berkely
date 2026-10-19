@@ -57,7 +57,7 @@
                                 @forelse($emails as $index => $data)
                                     <tr>
                                         <td>{{ $loop->iteration }}</td>
-                                        <td>{{ $data->name }}</td>
+                                        <td>{{ \App\Models\Email::templateChoices()[$data->name] ?? $data->name }}</td>
                                         <td>{{ $data->subject }}</td>
                                         <td>
                                             <div class="btn-group">
