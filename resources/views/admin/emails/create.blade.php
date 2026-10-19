@@ -159,11 +159,14 @@
             let instructionText = document.getElementById('email-instruction');
             let emailSelect = document.getElementById('name');
 
-            var help = @json(collect(array_keys(\App\Models\Email::templateChoices()))
-                ->push('lms-test-assigned')
-                ->unique()
-                ->mapWithKeys(fn ($k) => [$k => \App\Models\Email::placeholderHelp($k)])
-                ->all());
+            @php
+                $emailHelp = [];
+                foreach (array_keys(\App\Models\Email::templateChoices()) as $helpKey) {
+                    $emailHelp[$helpKey] = \App\Models\Email::placeholderHelp($helpKey);
+                }
+                $emailHelp['lms-test-assigned'] = \App\Models\Email::placeholderHelp('lms-test-assigned');
+            @endphp
+            var help = @json($emailHelp);
             function updateInstruction() {
                 instructionText.innerHTML = help[emailSelect.value] || "";
             }
