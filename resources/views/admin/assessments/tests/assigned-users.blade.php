@@ -12,9 +12,11 @@
     .lms-status-in_progress { color: #f0ad4e; font-weight: 700; }
     .lms-pub-yes { color: #1ab394; font-weight: 700; }
     .lms-pub-no { color: inherit; font-weight: 600; }
-    .lms-assigned-wrap { overflow-x: auto; }
+    .wrapper.wrapper-content { padding-left: 10px; padding-right: 10px; }
+    .lms-assigned-wrap { overflow-x: auto; width: 100%; }
     .lms-assigned-table {
-        width: 100%;
+        width: 100% !important;
+        min-width: 100%;
         max-width: 100%;
         table-layout: fixed;
         margin-bottom: 0;

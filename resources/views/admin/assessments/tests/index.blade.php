@@ -4,11 +4,20 @@
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
 <style>
+    .wrapper.wrapper-content {
+        padding-left: 10px;
+        padding-right: 10px;
+    }
+    .ibox-content.lms-tests-wrap {
+        width: 100%;
+        overflow-x: auto;
+    }
     .lms-create-tests-row {
         display: flex;
         flex-wrap: nowrap;
         gap: 8px;
         align-items: stretch;
+        width: 100%;
         margin: 8px 0 4px;
         overflow-x: auto;
     }
@@ -28,9 +37,10 @@
     .lms-btn-general:hover, .lms-btn-general:focus { background: #ec971f; color: #fff !important; }
     .lms-btn-skill { background: #5cb85c; }
     .lms-btn-skill:hover, .lms-btn-skill:focus { background: #449d44; color: #fff !important; }
-    .lms-tests-wrap { overflow-x: hidden; }
+    .lms-tests-wrap { overflow-x: auto; width: 100%; }
     .lms-tests-table {
-        width: 100%;
+        width: 100% !important;
+        min-width: 100%;
         max-width: 100%;
         table-layout: fixed;
         margin-bottom: 0;
