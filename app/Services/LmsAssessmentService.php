@@ -699,6 +699,7 @@ class LmsAssessmentService
         $this->notifyTestSubmitted($fresh);
 
         return $fresh;
+    }
 
     public function autoMarkMcqs(LmsAssessmentAttempt $attempt, LmsAssessment $assessment): void
     {
