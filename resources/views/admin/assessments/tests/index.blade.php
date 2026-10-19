@@ -10,6 +10,7 @@
     }
     .ibox-content.lms-tests-wrap {
         width: 100%;
+        max-width: 100%;
         overflow-x: hidden;
     }
     .lms-create-tests-row {
@@ -37,45 +38,54 @@
     .lms-btn-general:hover, .lms-btn-general:focus { background: #ec971f; color: #fff !important; }
     .lms-btn-skill { background: #5cb85c; }
     .lms-btn-skill:hover, .lms-btn-skill:focus { background: #449d44; color: #fff !important; }
-    .lms-tests-wrap { overflow-x: hidden; width: 100%; }
+    .lms-tests-wrap { overflow-x: hidden; width: 100%; max-width: 100%; }
     .lms-tests-table {
         width: 100% !important;
         max-width: 100%;
         table-layout: fixed;
         margin-bottom: 0;
         font-size: 12px;
+        border-collapse: collapse;
     }
     .lms-tests-table > thead > tr > th,
     .lms-tests-table > tbody > tr > td {
+        box-sizing: border-box;
         vertical-align: middle;
         padding: 6px 4px;
         word-wrap: break-word;
         overflow-wrap: anywhere;
         white-space: normal;
+        overflow: hidden;
     }
     .lms-tests-table .col-date { width: 7%; }
     .lms-tests-table .col-id { width: 5%; }
-    .lms-tests-table .col-title { width: 12%; }
-    .lms-tests-table .col-course { width: 11%; }
+    .lms-tests-table .col-title { width: 11%; }
+    .lms-tests-table .col-course { width: 10%; }
     .lms-tests-table .col-type { width: 7%; }
     .lms-tests-table .col-num { width: 4%; text-align: center; }
     .lms-tests-table .col-status { width: 7%; }
-    .lms-tests-table .col-assessor { width: 10%; }
+    .lms-tests-table .col-assessor { width: 9%; }
     .lms-tests-table .col-action {
-        width: 25%;
-        white-space: normal;
+        width: 28%;
+        overflow: hidden;
     }
-    .lms-tests-table .col-action .btn,
-    .lms-tests-table .col-action form {
-        display: inline-block;
-        margin: 1px 1px 2px 0;
-        vertical-align: middle;
+    .lms-tests-table .lms-row-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        align-items: center;
     }
-    .lms-tests-table .col-action .btn {
+    .lms-tests-table .lms-row-actions form {
+        margin: 0;
+        display: inline-flex;
+    }
+    .lms-tests-table .lms-row-actions .btn {
+        margin: 0;
         white-space: nowrap;
         font-weight: 700;
         font-size: 11px;
         padding: 3px 6px;
+        line-height: 1.3;
     }
 </style>
 <div class="row wrapper border-bottom white-bg page-heading">
@@ -199,19 +209,21 @@
                             @php
                                 $canManageRow = app(\App\Services\LmsAssessmentService::class)->canManageSittingsFor($row);
                             @endphp
+                            <div class="lms-row-actions">
                             @if($canManageRow)
                                 <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.edit', $row->id) }}">Edit</a>
                                 <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.assign', $row->id) }}">Assign Test</a>
-                                <a class="btn btn-xs btn-default" href="{{ route('admin.assessments.tests.assign', ['id' => $row->id, 'mode' => 'self']) }}">Assign Self test</a>
+                                <a class="btn btn-xs btn-default" href="{{ route('admin.assessments.tests.assign', ['id' => $row->id, 'mode' => 'self']) }}">Self test</a>
                             @endif
                             <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.attempts', $row->id) }}">Results</a>
                             @if(!empty($canDelete))
-                                <form action="{{ route('admin.assessments.tests.destroy', $row->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this test?');">
+                                <form action="{{ route('admin.assessments.tests.destroy', $row->id) }}" method="POST" onsubmit="return confirm('Delete this test?');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-xs btn-danger">Delete</button>
                                 </form>
                             @endif
+                            </div>
                         </td>
                     </tr>
                 @empty
