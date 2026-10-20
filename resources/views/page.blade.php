@@ -188,6 +188,25 @@
                 :title="$section->data['title'] ?? ''"
                 :description="$section->data['description'] ?? ''"
             />
+        @elseif($section->section_type === 'course-agendas')
+            <x-course-agenda-component
+                :id="$section->order + 1"
+                :color="$section->data['color'] ?? '#000000'"
+                :background="$section->data['background'] ?? 'transparent'"
+                :cardColor="$section->data['card_color'] ?? ''"
+                :cardBackground="$section->data['card_background'] ?? 'transparent'"
+                :cardBorderColor="$section->data['card_border_color'] ?? ''"
+                :filterColor="$section->data['filter_color'] ?? ''"
+                :filterBackground="$section->data['filter_background'] ?? 'transparent'"
+                :filterBorderColor="$section->data['filter_border_color'] ?? ''"
+                :activeFilterColor="$section->data['active_filter_color'] ?? ''"
+                :activeFilterBackground="$section->data['active_filter_background'] ?? 'transparent'"
+                :activeFilterBorderColor="$section->data['active_filter_border_color'] ?? ''"
+                :orderby="$section->data['orderby'] ?? ''"
+                :url_target="$section->data['url_target'] ?? ''"
+                :title="$section->data['title'] ?? ''"
+                :description="$section->data['description'] ?? ''"
+            />
         @elseif($section->section_type === 'instructors')
             @if(should_show_global_women_card($page ?? null))
                 @include('partials.global-women-card')
