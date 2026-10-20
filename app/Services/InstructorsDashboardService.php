@@ -329,15 +329,17 @@ class InstructorsDashboardService
 
         $phone = trim((string) ($user->mobile_number ?? ''));
 
+        $city = trim((string) ($user->city ?? ''));
+
         return [
             'id' => $user->id,
             'name' => $user->name ?: '—',
             'email' => $user->email ?: '—',
             'phone' => $phone !== '' ? $phone : '—',
             'gender' => $user->gender ?: '—',
-            'country' => $country !== '' ? $country : '—',
-            'city' => $user->city ?: '—',
-            'nationality' => $user->nationality ?: '—',
+            'country' => method_exists($user, 'displayCountryName') ? $user->displayCountryName() : ($country !== '' ? $country : '—'),
+            'city' => $city !== '' ? $city : '—',
+            'nationality' => method_exists($user, 'displayNationality') ? $user->displayNationality() : ($user->nationality ?: '—'),
             'registered_at' => optional($user->created_at)->format('Y-m-d H:i') ?: '—',
             'url' => route('users.edit', $user->id),
         ];

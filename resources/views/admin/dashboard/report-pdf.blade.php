@@ -69,12 +69,13 @@
                             @if($key === $linkKey && !empty($row['web_url']))
                                 <a href="{{ $row['web_url'] }}"> (Visit Web)</a>
                             @endif
-                            @if($key === 'student' && (isset($row['nationality']) || isset($row['country'])))
+                            @if(in_array($key, ['student', 'name'], true) && (isset($row['nationality']) || isset($row['country'])))
                                 @php
                                     $pdfCity = trim((string) ($row['city'] ?? ''));
+                                    $pdfCity = ($pdfCity !== '' && $pdfCity !== '—') ? $pdfCity : '—';
                                 @endphp
                                 <div>Nationality: {{ $row['nationality'] ?? '—' }}</div>
-                                <div>Country, City: {{ $row['country'] ?? '—' }}, {{ $pdfCity !== '' ? $pdfCity : '—' }}</div>
+                                <div>Country, City: {{ $row['country'] ?? '—' }}, {{ $pdfCity }}</div>
                             @endif
                         </td>
                     @endforeach

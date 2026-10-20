@@ -97,6 +97,22 @@
     var colCount = @json($colCount);
     var currentMetric = 'reg_total';
 
+    function escapeHtml(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+    function livingCell(person) {
+        var city = String(person.city || '').trim();
+        if (!city || city === '—') city = '—';
+        return '<div class="student-living-cell">'
+            + '<strong>' + escapeHtml(person.name || '—') + '</strong>'
+            + '<div>Nationality: ' + escapeHtml(person.nationality || '—') + '</div>'
+            + '<div>Country, City: ' + escapeHtml(person.country || '—') + ', ' + escapeHtml(city) + '</div>'
+            + '</div>';
+    }
     function formatPopupTitle(title, count) {
         var label = String(title || 'People').replace(/\s+\(\d+\)\s*$/, '').trim();
         var upper = label.toUpperCase();
@@ -153,7 +169,7 @@
                 : '—';
             var row = '<tr>'
                 + '<td>' + (index + 1) + '</td>'
-                + '<td>' + (person.name || '—') + '</td>'
+                + '<td>' + livingCell(person) + '</td>'
                 + '<td>' + (person.email || '—') + '</td>';
             if (showPhone) {
                 row += '<td>' + (person.phone || '—') + '</td>';

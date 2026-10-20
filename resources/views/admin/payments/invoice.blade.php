@@ -173,12 +173,11 @@
                         <div style="display: table-cell; width: 50%; vertical-align: top;">
                             <h4 style="margin: 0px">Student Details:</h4>
                             <p style="margin: 0px"><strong>Name:</strong> {{ $user->name }}</p>
+                            <p style="margin: 0px">Nationality: {{ $user->displayNationality() }}</p>
+                            <p style="margin: 0px">Country, City: {{ $user->displayCountryName() }}, {{ trim((string) $user->city) !== '' ? trim((string) $user->city) : '—' }}</p>
                             <p style="margin: 0px"><strong>Email:</strong> {{ $user->email }}</p>
                             <p style="margin: 0px"><strong>Phone:</strong> {{ $user->mobile_number }}</p>
                             <p style="margin: 0px"><strong>Address:</strong> {{ $user->address }}</p>
-                            <p style="margin: 0px"><strong>City:</strong> {{ $user->city ?: '—' }}</p>
-                            <p style="margin: 0px"><strong>Country living:</strong> {{ $user->displayCountryName() }}</p>
-                            <p style="margin: 0px"><strong>Nationality:</strong> {{ $user->displayNationality() }}</p>
                         </div>
                         <div style="display: table-cell; width: 50%; vertical-align: top; text-align: right;">
                             <p style="margin: 0px"><strong>Invoice Date:</strong>

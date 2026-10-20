@@ -108,11 +108,11 @@
                     <div class="receipt-section">
                         <h4>Student Details</h4>
                         <p><strong>Name:</strong> {{ $installment->user->name ?? 'N/A' }}</p>
+                        <p>Nationality: {{ optional($installment->user)->displayNationality() ?? '—' }}</p>
+                        <p>Country, City: {{ optional($installment->user)->displayCountryName() ?? '—' }}, {{ trim((string) optional($installment->user)->city) !== '' ? trim((string) $installment->user->city) : '—' }}</p>
                         <p><strong>Email:</strong> {{ $installment->user->email ?? 'N/A' }}</p>
                         <p><strong>Phone:</strong> {{ $installment->user->mobile_number ?? 'N/A' }}</p>
                         <p><strong>Address:</strong> {{ $installment->user->address ?? 'N/A' }}</p>
-                        <p><strong>Country living:</strong> {{ optional($installment->user)->displayCountryName() ?? '—' }}</p>
-                        <p><strong>Nationality:</strong> {{ optional($installment->user)->displayNationality() ?? '—' }}</p>
                     </div>
 
                     <div class="receipt-section">

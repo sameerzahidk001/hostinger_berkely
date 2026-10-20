@@ -198,12 +198,11 @@
         <div class="section">
             <h4>Student Details</h4>
             <div class="mb-0"><strong>Name:</strong> {{ optional($installment->user)->name ?? 'N/A' }}</div>
+            <div class="mb-0">Nationality: {{ optional($installment->user)->displayNationality() ?? '—' }}</div>
+            <div class="mb-0">Country, City: {{ optional($installment->user)->displayCountryName() ?? '—' }}, {{ trim((string) optional($installment->user)->city) !== '' ? trim((string) optional($installment->user)->city) : '—' }}</div>
             <div class="mb-0"><strong>Email:</strong> {{ optional($installment->user)->email ?? 'N/A' }}</div>
             <div class="mb-0"><strong>Phone:</strong> {{ optional($installment->user)->mobile_number ?? 'N/A' }}</div>
             <div class="mb-0"><strong>Address:</strong> {{ optional($installment->user)->address ?? 'N/A' }}</div>
-            <div class="mb-0"><strong>City:</strong> {{ optional($installment->user)->city ?: '—' }}</div>
-            <div class="mb-0"><strong>Country living:</strong> {{ optional($installment->user)->displayCountryName() ?? '—' }}</div>
-            <div class="mb-0"><strong>Nationality:</strong> {{ optional($installment->user)->displayNationality() ?? '—' }}</div>
         </div>
 
         {{-- Course Details --}}

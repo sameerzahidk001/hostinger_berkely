@@ -366,7 +366,15 @@ class AdminController extends Controller
             foreach ($people as $index => $person) {
                 $line = [$index + 1];
                 foreach ($columns as $col) {
-                    $line[] = $person[$col['key']] ?? '—';
+                    $val = $person[$col['key']] ?? '—';
+                    if (($col['key'] ?? '') === 'name') {
+                        $city = trim((string) ($person['city'] ?? ''));
+                        $city = ($city !== '' && $city !== '—') ? $city : '—';
+                        $val = ($person['name'] ?? '—')
+                            . ' | Nationality: ' . ($person['nationality'] ?? '—')
+                            . ' | Country, City: ' . ($person['country'] ?? '—') . ', ' . $city;
+                    }
+                    $line[] = $val;
                 }
                 fputcsv($handle, $line);
             }
