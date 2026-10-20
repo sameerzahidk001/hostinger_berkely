@@ -938,6 +938,57 @@ class CourseController extends Controller
             $this->persistCourseModuleImageAlts($course, $request);
 
             return redirect()->route('course.edit', ['id' => $id]);
+        } elseif ($courseModule == "image_text_2col_card") {
+            $course = Course::withTrashed()->findOrFail($id);
+
+            if (! ensure_image_text_2col_card_column()) {
+                session()->flash('failed', 'Could not save Image + Text 2 Column Card.');
+
+                return redirect()->route('course.edit', ['id' => $id]);
+            }
+
+            $existing = course_image_text_2col_card($course);
+            $image = $existing['image'] ?? null;
+
+            if ($request->hasFile('image_text_2col_image')) {
+                $file = $request->file('image_text_2col_image');
+                $originalName = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+                $extension = $file->getClientOriginalExtension();
+                $slug = Str::slug($originalName) . '-' . time();
+                $fileName = $slug . '.' . $extension;
+                $destinationPath = public_path('admin/courses');
+                public_upload_move($file, $destinationPath, $fileName);
+                $image = '/admin/courses/' . $fileName;
+            } elseif ($request->filled('image_text_2col_path')) {
+                $image = $request->input('image_text_2col_path');
+            }
+
+            $updated = $course->update([
+                'image_text_2col_card' => [
+                    'status' => (int) $request->input('image_text_2col_status', 0),
+                    'title' => $request->input('image_text_2col_title'),
+                    'description' => $request->input('image_text_2col_description'),
+                    'layout' => $request->input('image_text_2col_layout', 'layout-1'),
+                    'image_placement' => $request->input('image_text_2col_image_placement', 'left'),
+                    'url' => $request->input('image_text_2col_url'),
+                    'url_text' => $request->input('image_text_2col_url_text'),
+                    'url_target' => $request->input('image_text_2col_url_target', '0'),
+                    'image' => $image,
+                    'background_color' => $request->input('image_text_2col_background_color') ?: 'transparent',
+                    'content_background' => $request->input('image_text_2col_content_background') ?: 'transparent',
+                    'color' => $request->input('image_text_2col_color') ?: '#000000',
+                ],
+            ]);
+
+            if ($updated) {
+                session()->flash('sucess', 'Record added successfullly!');
+            } else {
+                session()->flash('failed', 'Failed to add Record!');
+            }
+
+            $this->persistCourseModuleImageAlts($course, $request);
+
+            return redirect()->route('course.edit', ['id' => $id]);
         } elseif ($courseModule == "custom_videos_section") {
             //return $request;
             $course = Course::withTrashed()->findOrFail($id);

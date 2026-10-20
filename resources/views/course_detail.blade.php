@@ -654,6 +654,27 @@
                 </div>
             @endif
 
+            @if (should_show_course_image_text_2col_card($course))
+                @php
+                    $imageTextCard = course_image_text_2col_card($course);
+                @endphp
+                <x-media-section
+                    :id="'course-image-text-2col'"
+                    :backgroundColor="$imageTextCard['background_color'] ?? 'transparent'"
+                    :contentBackground="$imageTextCard['content_background'] ?? 'transparent'"
+                    :color="$imageTextCard['color'] ?? '#000000'"
+                    :layout="$imageTextCard['layout'] ?? 'layout-1'"
+                    :direction="$imageTextCard['image_placement'] ?? 'left'"
+                    :image="media_url($imageTextCard['image'] ?? null)"
+                    :title="$imageTextCard['title'] ?? ''"
+                    :description="demote_page_headings($imageTextCard['description'] ?? '')"
+                    :altText="course_image_alt($course, 'image_text_2col', $imageTextCard['title'] ?? 'Course card')"
+                    :link="!empty($imageTextCard['url']) ? $imageTextCard['url'] : null"
+                    :buttonText="$imageTextCard['url_text'] ?? 'Learn More'"
+                    :urlTarget="$imageTextCard['url_target'] ?? '0'"
+                />
+            @endif
+
             @if ($course->custom_videos_section == 1)
                 <div class="flex gap-3 items-center justify-center mb-3 mt-6">
                     <div class="bg-yellow w-[50px] h-[2px]"></div>
