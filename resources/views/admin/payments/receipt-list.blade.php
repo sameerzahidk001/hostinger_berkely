@@ -109,6 +109,8 @@
                                     <th>Invoice No</th>
                                     <th>Invoice Issued Date</th>
                                     <th>Student</th>
+                                    <th>Country</th>
+                                    <th>Nationality</th>
                                     <th>Invoice Amount</th>
                                     <th>Payment Plan</th>
                                     <th>Due Date</th>
@@ -133,6 +135,8 @@
                                     <td>INV-{{ str_pad($installment->payment_id, 6, '0', STR_PAD_LEFT) }}</td>
                                     <td>{{ \Carbon\Carbon::parse($installment->created_at)->format('Y/m/d') }}</td>
                                     <td>{{ $installment->payment->user->name ?? 'N/A' }}</td>
+                                    <td>{{ ($installment->user ?? $installment->payment->user ?? null)?->displayCountryName() ?? '—' }}</td>
+                                    <td>{{ ($installment->user ?? $installment->payment->user ?? null)?->displayNationality() ?? '—' }}</td>
                                     <td data-export="{{ $invoiceAmountExport }}">{!! format_payment_aed_amount_admin($installment->payment, (float) $installment->payment->price) !!}</td>
                                     <td>{{ $installment->installment_number }}/{{ $installment->payment->total_installment }}</td>
                                     <td>{{ \Carbon\Carbon::parse($installment->due_date)->format('Y/m/d') }}</td>

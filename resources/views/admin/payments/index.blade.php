@@ -127,6 +127,8 @@
                                     <th>Invoice Date</th>
                                     <th>Course</th>
                                     <th>Student</th>
+                                    <th>Country</th>
+                                    <th>Nationality</th>
                                     {{-- <th>Installments Request</th> --}}
                                     <th>Payment Plan</th>
                                     <th>Invoice Amount</th>
@@ -160,6 +162,8 @@
                                     <td data-order="{{ \Carbon\Carbon::parse($payment->created_at)->timestamp }}">{{ \Carbon\Carbon::parse($payment->created_at)->format('Y/m/d') }}</td>
                                     <td data-export="{{ ($payment->course->title ?? 'N/A') . ' - ' . ($payment->courseFee->package_name ?? 'N/A') }}">{{ $payment->course->title ?? 'N/A' }}<br><span class="text-muted">{{ $payment->courseFee->package_name ?? 'N/A' }}</span></td>
                                     <td>{{ $payment->user->name ?? 'N/A' }}</td>
+                                    <td>{{ $payment->user ? $payment->user->displayCountryName() : '—' }}</td>
+                                    <td>{{ $payment->user ? $payment->user->displayNationality() : '—' }}</td>
                                     {{-- <td>{{ $payment->installment_request->installments_requested ?? 'Direct' }}</td> --}}
                                     <td data-export="{{ $payment->installments->count() ?? 0 }}">
                                         <a type="button" href="javascript:void(0)" class="view-installments" data-installments='@json($payment)' data-currency="{{ $payment->courseFee->currency ?? 'AED' }}">

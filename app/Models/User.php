@@ -93,6 +93,27 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->belongsTo(Country::class, 'country', 'iso_code');
     }
 
+    public function displayCountryName(): string
+    {
+        try {
+            $name = trim((string) ($this->countryarray->name ?? ''));
+            if ($name !== '') {
+                return $name;
+            }
+        } catch (\Throwable $e) {
+        }
+        $raw = trim((string) ($this->country ?? ''));
+
+        return $raw !== '' ? $raw : '—';
+    }
+
+    public function displayNationality(): string
+    {
+        $raw = trim((string) ($this->nationality ?? ''));
+
+        return $raw !== '' ? $raw : '—';
+    }
+
     public function payments()
     {
         return $this->hasMany(Payment::class, 'user_id');
