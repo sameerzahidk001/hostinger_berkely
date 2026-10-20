@@ -303,7 +303,7 @@
                                 <span class="lms-row-status lms-row-missed">Missed</span>
                             @elseif($tab === 'upcoming')
                                 <span class="lms-row-status lms-row-upcoming">Upcoming</span>
-                                <br><small class="text-muted">Opens {{ $asg?->windowStart()?->format('d M Y H:i') ?: 'soon' }}</small>
+                                <br><small class="text-muted">Opens {{ ($asg && $asg->windowStart()) ? $asg->withTimezone($asg->windowStart()->format('d M Y H:i')) : 'soon' }}</small>
                             @else
                                 <span class="lms-row-status lms-row-available">Available</span>
                             @endif

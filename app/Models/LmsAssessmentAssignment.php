@@ -107,7 +107,35 @@ class LmsAssessmentAssignment extends Model
             }
         }
 
-        return $carbon->format($fmt);
+        $out = $carbon->format($fmt);
+        if ($this->formatShowsClock($fmt)) {
+            $out = $this->withTimezone($out);
+        }
+
+        return $out;
+    }
+
+    public function withTimezone(string $datetimeText): string
+    {
+        $text = trim($datetimeText);
+        if ($text === '' || $text === '—' || stripos($text, 'anytime') !== false) {
+            return $datetimeText;
+        }
+        $label = $this->timezoneLabel();
+        if ($label === '' || str_contains($text, $label)) {
+            return $datetimeText;
+        }
+
+        return $text . ' (' . $label . ')';
+    }
+
+    private function formatShowsClock(string $fmt): bool
+    {
+        if (in_array($fmt, ['Y-m-d H:i:s', 'Y-m-d H:i:s.u', 'Y-m-d H:i'], true)) {
+            return false;
+        }
+
+        return (bool) preg_match('/[HghisAa]/', $fmt);
     }
 
     public function assessment(): BelongsTo
@@ -215,7 +243,7 @@ class LmsAssessmentAssignment extends Model
         return $until;
     }
 
-    /** Display: "15/10/24 22:25 → 16/10/24 01:25" (timezone is shown on its own line). */
+    /** Display: "15/10/24 22:25 → 16/10/24 01:25 (Asia/Dubai · GST)". */
     public function appointmentWindowLabel(string $fmt = 'd/m/y H:i'): string
     {
         if ($this->isSelfSitting()) {
@@ -223,17 +251,18 @@ class LmsAssessmentAssignment extends Model
         }
         $from = $this->windowStart();
         $until = $this->appointmentEnd();
+        $text = '';
         if ($from && $until) {
-            return $from->format($fmt) . ' → ' . $until->format($fmt);
-        }
-        if ($from) {
-            return $from->format($fmt);
-        }
-        if ($until) {
-            return 'Until ' . $until->format($fmt);
+            $text = $from->format($fmt) . ' → ' . $until->format($fmt);
+        } elseif ($from) {
+            $text = $from->format($fmt);
+        } elseif ($until) {
+            $text = 'Until ' . $until->format($fmt);
+        } else {
+            return 'Open';
         }
 
-        return 'Open';
+        return $this->withTimezone($text);
     }
 
     public function isNotYetOpen(): bool
