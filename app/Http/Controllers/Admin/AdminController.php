@@ -635,7 +635,7 @@ class AdminController extends Controller
                     $row['receipt_date'] ?? ($row['created_at'] ?? ''),
                     $row['receipt_no'] ?? '',
                     $row['invoice_no'] ?? '',
-                    $row['student'] ?? '',
+                    trim(($row['student'] ?? '') . ' | Nationality: ' . ($row['nationality'] ?? '—') . ' | Country, City: ' . ($row['country'] ?? '—') . ', ' . ((trim((string) ($row['city'] ?? '')) !== '') ? trim((string) $row['city']) : '—')),
                     $row['country'] ?? '',
                     $row['nationality'] ?? '',
                     $row['course'] ?? '',

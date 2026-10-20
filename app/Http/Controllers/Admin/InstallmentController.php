@@ -18,7 +18,7 @@ class InstallmentController extends Controller
     // Show Installments Page
     public function index()
     {
-        $installments = Installment::with(['user', 'payment.course', 'payment.courseFee'])->get();
+        $installments = Installment::with(['user.countryarray', 'payment.course', 'payment.courseFee'])->get();
         return view('admin.installment.installments', compact('installments'));
     }
 

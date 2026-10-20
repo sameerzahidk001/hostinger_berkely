@@ -44,7 +44,14 @@
                                 <td>${{ $installment->remaining_amount }}</td>
                 <td>${{ $installment->paid_amount }}</td>
                 <td>{{ $installment->installment_number }}</td>
-                <td>{{ $installment->user->name ?? 'N/A' }}</td>
+                <td class="col-student">
+                    @include('admin.payments.partials.student-living-lines', [
+                        'studentName' => optional($installment->user)->name ?? 'N/A',
+                        'nationality' => optional($installment->user)->displayNationality() ?? '—',
+                        'country' => optional($installment->user)->displayCountryName() ?? '—',
+                        'city' => optional($installment->user)->city,
+                    ])
+                </td>
                 <td>{{ $installment->payment->course->title ?? 'N/A' }}</td>
                 <td>{{ $installment->payment->courseFee->package_name ?? 'N/A' }}</td> <!-- ✅ Added Package Name -->
 
