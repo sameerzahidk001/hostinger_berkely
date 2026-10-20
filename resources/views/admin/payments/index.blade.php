@@ -23,9 +23,14 @@
         font-size: 12px;
         min-width: 1280px;
     }
-    table.dataTables-example .col-country {
+    table.dataTables-example .col-country,
+    table.dataTables-example th.col-country,
+    .dataTables_wrapper .col-country {
+        display: table-cell !important;
+        visibility: visible !important;
         white-space: nowrap !important;
-        min-width: 110px;
+        min-width: 120px;
+        font-weight: 600;
     }
     table.dataTables-example > thead > tr > th,
     table.dataTables-example > tbody > tr > td {
@@ -130,10 +135,10 @@
                                 <tr>
                                     <th>Invoice No</th>
                                     <th>Invoice Date</th>
-                                    <th>Course</th>
                                     <th>Student</th>
                                     <th class="col-country">Country</th>
                                     <th>Nationality</th>
+                                    <th>Course</th>
                                     {{-- <th>Installments Request</th> --}}
                                     <th>Payment Plan</th>
                                     <th>Invoice Amount</th>
@@ -165,13 +170,13 @@
                                 <tr>
                                     <td>INV-{{ str_pad($payment->id, 6, '0', STR_PAD_LEFT) }}</td>
                                     <td data-order="{{ \Carbon\Carbon::parse($payment->created_at)->timestamp }}">{{ \Carbon\Carbon::parse($payment->created_at)->format('Y/m/d') }}</td>
-                                    <td data-export="{{ ($payment->course->title ?? 'N/A') . ' - ' . ($payment->courseFee->package_name ?? 'N/A') }}">{{ $payment->course->title ?? 'N/A' }}<br><span class="text-muted">{{ $payment->courseFee->package_name ?? 'N/A' }}</span></td>
                                     <td>
                                         {{ $payment->user->name ?? 'N/A' }}
-                                        <br><small class="text-muted">{{ $payment->user ? $payment->user->displayCountryName() : '—' }}</small>
+                                        <br><small>{{ $payment->user ? $payment->user->displayCountryName() : '—' }}</small>
                                     </td>
                                     <td class="col-country">{{ $payment->user ? $payment->user->displayCountryName() : '—' }}</td>
                                     <td>{{ $payment->user ? $payment->user->displayNationality() : '—' }}</td>
+                                    <td data-export="{{ ($payment->course->title ?? 'N/A') . ' - ' . ($payment->courseFee->package_name ?? 'N/A') }}">{{ $payment->course->title ?? 'N/A' }}<br><span class="text-muted">{{ $payment->courseFee->package_name ?? 'N/A' }}</span></td>
                                     {{-- <td>{{ $payment->installment_request->installments_requested ?? 'Direct' }}</td> --}}
                                     <td data-export="{{ $payment->installments->count() ?? 0 }}">
                                         <a type="button" href="javascript:void(0)" class="view-installments" data-installments='@json($payment)' data-currency="{{ $payment->courseFee->currency ?? 'AED' }}" data-country="{{ $payment->user ? $payment->user->displayCountryName() : '—' }}">
@@ -232,23 +237,23 @@
                                         @if($payment->installment_request && $payment->installments->count() < 1)
                                             <button class="btn btn-primary btn-sm pay-now"
                                             data-payment-id="{{ $payment->id }}"
-                                            data-course-id="{{ $payment->course?->id ?? '' }}"
-                                            data-course-name="{{ $payment->course?->title ?? 'N/A' }}"
-                                            data-package-id="{{ $payment->courseFee?->id ?? '' }}"
-                                            data-package-name="{{ $payment->courseFee?->package_name ?? 'N/A' }}"
-                                            data-student-id="{{ $payment->user?->id ?? '' }}"
-                                            data-student-name="{{ $payment->user?->name ?? 'N/A' }}"
+                                            data-course-id="{{ optional($payment->course)->id ?? '' }}"
+                                            data-course-name="{{ optional($payment->course)->title ?? 'N/A' }}"
+                                            data-package-id="{{ optional($payment->courseFee)->id ?? '' }}"
+                                            data-package-name="{{ optional($payment->courseFee)->package_name ?? 'N/A' }}"
+                                            data-student-id="{{ optional($payment->user)->id ?? '' }}"
+                                            data-student-name="{{ optional($payment->user)->name ?? 'N/A' }}"
                                             data-price="{{ $payment->price }}"
-                                            data-request-id="{{ $payment->installment_request?->id ?? '' }}"
-                                            data-installments="{{ $payment->installment_request?->installments_requested ?? 0 }}">
+                                            data-request-id="{{ optional($payment->installment_request)->id ?? '' }}"
+                                            data-installments="{{ optional($payment->installment_request)->installments_requested ?? 0 }}">
                                             Make Installment
                                             </button>
                                             @endif
                                             @if ($payment->id && !in_array($payment->id, $shownPaymentIds))
                                             <form action="{{ route('admin.installments.invoice.pdf') }}" method="POST">
                                                 @csrf
-                                                <input type="hidden" name="course_id" value="{{ $payment->course?->id ?? '' }}">
-                                                <input type="hidden" name="user_id" value="{{ $payment->user?->id ?? '' }}">
+                                                <input type="hidden" name="course_id" value="{{ optional($payment->course)->id ?? '' }}">
+                                                <input type="hidden" name="user_id" value="{{ optional($payment->user)->id ?? '' }}">
                                                 <input type="hidden" name="payment_id" value="{{ $payment->id }}">
                                                 <button type="submit" class="btn btn-primary btn-sm"> <i class="fa fa-download"></i> Invoice</button>
                                             </form>
@@ -429,6 +434,9 @@
             responsive: false,
             scrollX: true,
             autoWidth: false,
+            columnDefs: [
+                { targets: 'col-country', visible: true, width: '130px' }
+            ],
             dom: '<"admin-dt-toolbar"<l><B><f>>rtip',
             order: [[1, 'desc']],
             buttons: [adminDatatableExcelButton('Invoices List', 'invoices_list')],

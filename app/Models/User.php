@@ -96,15 +96,33 @@ class User extends Authenticatable implements MustVerifyEmail
     public function displayCountryName(): string
     {
         try {
-            $name = trim((string) ($this->countryarray->name ?? ''));
+            $related = $this->relationLoaded('countryarray') ? $this->countryarray : $this->countryarray()->first();
+            $name = trim((string) ($related->name ?? ''));
             if ($name !== '') {
                 return $name;
             }
         } catch (\Throwable $e) {
         }
-        $raw = trim((string) ($this->country ?? ''));
 
-        return $raw !== '' ? $raw : '—';
+        $raw = trim((string) ($this->country ?? ''));
+        if ($raw === '') {
+            return '—';
+        }
+
+        try {
+            if (class_exists(Country::class) && \Illuminate\Support\Facades\Schema::hasTable('countries')) {
+                $found = Country::query()
+                    ->where('iso_code', $raw)
+                    ->orWhere('name', $raw)
+                    ->value('name');
+                if (! empty($found)) {
+                    return (string) $found;
+                }
+            }
+        } catch (\Throwable $e) {
+        }
+
+        return $raw;
     }
 
     public function displayNationality(): string
