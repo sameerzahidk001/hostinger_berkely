@@ -32,7 +32,7 @@ class PaymentController extends Controller
         Payment::ensureAuditColumns();
         \App\Models\InvoiceTermsTemplate::ensureTable();
         $installments = Installment::get();
-        $payments = Payment::with('user', 'course', 'courseFee', 'page', 'pageFeeService', 'pageFeePackage', 'installments', 'installment_request', 'createdBy', 'updatedBy')
+        $payments = Payment::with('user.countryarray', 'course', 'courseFee', 'page', 'pageFeeService', 'pageFeePackage', 'installments', 'installment_request', 'createdBy', 'updatedBy')
             ->orderByDesc('created_at')
             ->get();
 
@@ -60,7 +60,7 @@ class PaymentController extends Controller
 
     public function receipt()
     {
-        $installments = Installment::with(['payment.user', 'payment.course', 'payment.courseFee', 'user'])
+        $installments = Installment::with(['payment.user.countryarray', 'payment.course', 'payment.courseFee', 'user.countryarray'])
             ->where('status', 'paid')
             ->orderByDesc('created_at')
             ->get();

@@ -55,7 +55,8 @@ class AccountantDashboardService
 
         return $this->paidSalesQuery($from, $to)
             ->with([
-                'user',
+                'user.countryarray',
+                'payment.user.countryarray',
                 'payment.course',
                 'payment.courseFee',
                 'payment.page',
@@ -81,6 +82,7 @@ class AccountantDashboardService
                     ? ('INV-' . str_pad((string) $payment->id, 6, '0', STR_PAD_LEFT))
                     : '—';
                 $receiptNo = 'RC-' . str_pad((string) $installment->id, 6, '0', STR_PAD_LEFT);
+                $studentUser = $installment->user ?: $payment?->user;
 
                 return [
                     'id' => $installment->id,
@@ -88,8 +90,10 @@ class AccountantDashboardService
                     'receipt_date' => $receiptDate,
                     'receipt_no' => $receiptNo,
                     'invoice_no' => $invoiceNo,
-                    'student' => $installment->user?->name
-                        ?: ($installment->user?->email ?: ($payment?->user?->name ?: '—')),
+                    'student' => $studentUser?->name
+                        ?: ($studentUser?->email ?: '—'),
+                    'country' => $studentUser ? $studentUser->displayCountryName() : '—',
+                    'nationality' => $studentUser ? $studentUser->displayNationality() : '—',
                     'course' => $payment
                         ? (method_exists($payment, 'programTitle')
                             ? $payment->programTitle()
