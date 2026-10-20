@@ -201,14 +201,9 @@
             <div class="mb-0"><strong>Email:</strong> {{ optional($installment->user)->email ?? 'N/A' }}</div>
             <div class="mb-0"><strong>Phone:</strong> {{ optional($installment->user)->mobile_number ?? 'N/A' }}</div>
             <div class="mb-0"><strong>Address:</strong> {{ optional($installment->user)->address ?? 'N/A' }}</div>
-            @php
-                $city = optional($installment->user)->city;
-                $country = optional($installment->user)->country;
-            @endphp
-            @if($city || $country)
-                <div class="mb-0"><strong>City/Country:</strong>
-                    {{ trim(($city ? $city : '') . ($country ? ', ' . $country : ''), ', ') }}</div>
-            @endif
+            <div class="mb-0"><strong>City:</strong> {{ optional($installment->user)->city ?: '—' }}</div>
+            <div class="mb-0"><strong>Country:</strong> {{ optional($installment->user)->displayCountryName() ?? '—' }}</div>
+            <div class="mb-0"><strong>Nationality:</strong> {{ optional($installment->user)->displayNationality() ?? '—' }}</div>
         </div>
 
         {{-- Course Details --}}

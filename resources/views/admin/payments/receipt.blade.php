@@ -111,6 +111,8 @@
                         <p><strong>Email:</strong> {{ $installment->user->email ?? 'N/A' }}</p>
                         <p><strong>Phone:</strong> {{ $installment->user->mobile_number ?? 'N/A' }}</p>
                         <p><strong>Address:</strong> {{ $installment->user->address ?? 'N/A' }}</p>
+                        <p><strong>Country:</strong> {{ optional($installment->user)->displayCountryName() ?? '—' }}</p>
+                        <p><strong>Nationality:</strong> {{ optional($installment->user)->displayNationality() ?? '—' }}</p>
                     </div>
 
                     <div class="receipt-section">

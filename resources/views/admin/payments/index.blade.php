@@ -19,8 +19,13 @@
     .ibox-content .table-responsive { overflow-x: auto; }
     table.dataTables-example {
         width: 100% !important;
-        table-layout: fixed;
+        table-layout: auto;
         font-size: 12px;
+        min-width: 1280px;
+    }
+    table.dataTables-example .col-country {
+        white-space: nowrap !important;
+        min-width: 110px;
     }
     table.dataTables-example > thead > tr > th,
     table.dataTables-example > tbody > tr > td {
@@ -127,7 +132,7 @@
                                     <th>Invoice Date</th>
                                     <th>Course</th>
                                     <th>Student</th>
-                                    <th>Country</th>
+                                    <th class="col-country">Country</th>
                                     <th>Nationality</th>
                                     {{-- <th>Installments Request</th> --}}
                                     <th>Payment Plan</th>
@@ -161,12 +166,15 @@
                                     <td>INV-{{ str_pad($payment->id, 6, '0', STR_PAD_LEFT) }}</td>
                                     <td data-order="{{ \Carbon\Carbon::parse($payment->created_at)->timestamp }}">{{ \Carbon\Carbon::parse($payment->created_at)->format('Y/m/d') }}</td>
                                     <td data-export="{{ ($payment->course->title ?? 'N/A') . ' - ' . ($payment->courseFee->package_name ?? 'N/A') }}">{{ $payment->course->title ?? 'N/A' }}<br><span class="text-muted">{{ $payment->courseFee->package_name ?? 'N/A' }}</span></td>
-                                    <td>{{ $payment->user->name ?? 'N/A' }}</td>
-                                    <td>{{ $payment->user ? $payment->user->displayCountryName() : '—' }}</td>
+                                    <td>
+                                        {{ $payment->user->name ?? 'N/A' }}
+                                        <br><small class="text-muted">{{ $payment->user ? $payment->user->displayCountryName() : '—' }}</small>
+                                    </td>
+                                    <td class="col-country">{{ $payment->user ? $payment->user->displayCountryName() : '—' }}</td>
                                     <td>{{ $payment->user ? $payment->user->displayNationality() : '—' }}</td>
                                     {{-- <td>{{ $payment->installment_request->installments_requested ?? 'Direct' }}</td> --}}
                                     <td data-export="{{ $payment->installments->count() ?? 0 }}">
-                                        <a type="button" href="javascript:void(0)" class="view-installments" data-installments='@json($payment)' data-currency="{{ $payment->courseFee->currency ?? 'AED' }}">
+                                        <a type="button" href="javascript:void(0)" class="view-installments" data-installments='@json($payment)' data-currency="{{ $payment->courseFee->currency ?? 'AED' }}" data-country="{{ $payment->user ? $payment->user->displayCountryName() : '—' }}">
                                             {{ $payment->installments->count() ?? 0 }}
                                             <sup>
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 512 512">
@@ -370,6 +378,7 @@
                     <thead>
                         <tr>
                             <th>Invoice No</th>
+                            <th>Country</th>
                             <th>Invoice Issued Date</th>
                             <th>Invoice Amount</th>
                             <th>Payment Plan</th>
@@ -417,7 +426,9 @@
             paging: true,
             info: false,
             ordering: true,
-            responsive: true,
+            responsive: false,
+            scrollX: true,
+            autoWidth: false,
             dom: '<"admin-dt-toolbar"<l><B><f>>rtip',
             order: [[1, 'desc']],
             buttons: [adminDatatableExcelButton('Invoices List', 'invoices_list')],
@@ -572,6 +583,7 @@
     $(document).on('click', '.view-installments', function() {
         const installments = $(this).data('installments');
         const currency = $(this).data('currency');
+        const country = $(this).data('country') || '—';
         let rowsHtml = '';
         installments.installments.forEach((installment, index) => {
             const paymentId = installment.payment_id.toString();
@@ -589,6 +601,7 @@
             rowsHtml += `
                 <tr>
                     <td>INV-${paddedId}</td>
+                    <td>${country}</td>
                     <td>${formattedDate}</td>
                     <td>${formatAdminPaymentAmount(installments, installments.price)}</td>
                     <td>${installment.installment_number}/${installments.total_installment}</td>

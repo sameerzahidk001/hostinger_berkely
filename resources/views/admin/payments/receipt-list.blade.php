@@ -134,7 +134,10 @@
                                 <tr>
                                     <td>INV-{{ str_pad($installment->payment_id, 6, '0', STR_PAD_LEFT) }}</td>
                                     <td>{{ \Carbon\Carbon::parse($installment->created_at)->format('Y/m/d') }}</td>
-                                    <td>{{ $installment->payment->user->name ?? 'N/A' }}</td>
+                                    <td>
+                                        {{ $installment->payment->user->name ?? 'N/A' }}
+                                        <br><small class="text-muted">{{ ($installment->user ?? $installment->payment->user ?? null)?->displayCountryName() ?? '—' }}</small>
+                                    </td>
                                     <td>{{ ($installment->user ?? $installment->payment->user ?? null)?->displayCountryName() ?? '—' }}</td>
                                     <td>{{ ($installment->user ?? $installment->payment->user ?? null)?->displayNationality() ?? '—' }}</td>
                                     <td data-export="{{ $invoiceAmountExport }}">{!! format_payment_aed_amount_admin($installment->payment, (float) $installment->payment->price) !!}</td>
@@ -264,7 +267,9 @@
             paging: true,
             info: false,
             ordering: true,
-            responsive: true,
+            responsive: false,
+            scrollX: true,
+            autoWidth: false,
             dom: '<"admin-dt-toolbar"<l><B><f>>rtip',
             order: [],
             buttons: [adminDatatableExcelButton('Receipts List', 'receipts_list')],

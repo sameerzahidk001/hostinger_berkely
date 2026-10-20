@@ -218,7 +218,10 @@
                                     <td>{{ $row['receipt_date'] ?? $row['created_at'] ?? '—' }}</td>
                                     <td>{{ $row['receipt_no'] ?? '—' }}</td>
                                     <td>{{ $row['invoice_no'] ?? '—' }}</td>
-                                    <td>{{ $row['student'] }}</td>
+                                    <td>
+                                        {{ $row['student'] }}
+                                        <br><small class="text-muted">{{ $row['country'] ?? '—' }}</small>
+                                    </td>
                                     <td>{{ $row['country'] ?? '—' }}</td>
                                     <td>{{ $row['nationality'] ?? '—' }}</td>
                                     <td>{{ $row['course'] }}</td>

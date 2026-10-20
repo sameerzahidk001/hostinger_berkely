@@ -61,7 +61,7 @@ class InstallmentController extends Controller
 
     public function receipt($id)
     {
-        $installment = Installment::with(['user', 'payment.course', 'payment.courseFee'])
+        $installment = Installment::with(['user.countryarray', 'payment.user.countryarray', 'payment.course', 'payment.courseFee'])
             ->where('user_id', Auth::id())
             ->findOrFail($id);
 
@@ -99,7 +99,7 @@ class InstallmentController extends Controller
 
     protected function renderInvoice(Payment $payment)
     {
-        $installments = Installment::with(['payment.course', 'payment.courseFee', 'user'])
+        $installments = Installment::with(['payment.course', 'payment.courseFee', 'user.countryarray', 'payment.user.countryarray'])
             ->where('user_id', Auth::id())
             ->where('payment_id', $payment->id)
             ->orderBy('installment_number')

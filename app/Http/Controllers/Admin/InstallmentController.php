@@ -173,7 +173,7 @@ class InstallmentController extends Controller
 
     public function receipt($id)
     {
-        $installment = Installment::with(['user', 'payment.course', 'payment.courseFee'])->findOrFail($id);
+        $installment = Installment::with(['user.countryarray', 'payment.course', 'payment.courseFee'])->findOrFail($id);
 
         $pdf = Pdf::loadView('admin.payments.receipt-pdf', compact('installment'))
             ->setPaper('a4');
@@ -184,7 +184,7 @@ class InstallmentController extends Controller
     public function generateInvoice(Request $request)
     {
         $course_id = $request->course_id;
-        $installments = Installment::with(['payment.course', 'payment.courseFee', 'user'])
+        $installments = Installment::with(['payment.course', 'payment.courseFee', 'user.countryarray'])
             ->where('user_id', $request->user_id)
             ->where('payment_id', $request->payment_id)
             ->whereHas('payment', function ($query) use ($course_id) {
