@@ -318,6 +318,7 @@ class LmsAssessmentPortalController extends Controller
             'attempt',
             'canSeeScore',
             'canRetake',
+            'assignment',
             'appointmentId',
             'attemptLabel'
         ));
