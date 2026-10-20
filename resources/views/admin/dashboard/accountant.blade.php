@@ -219,8 +219,12 @@
                                     <td>{{ $row['receipt_no'] ?? '—' }}</td>
                                     <td>{{ $row['invoice_no'] ?? '—' }}</td>
                                     <td>
-                                        {{ $row['student'] }}
-                                        <br><small class="text-muted">{{ $row['country'] ?? '—' }}</small>
+                                        @include('admin.payments.partials.student-living-lines', [
+                                            'studentName' => $row['student'] ?? '—',
+                                            'nationality' => $row['nationality'] ?? '—',
+                                            'country' => $row['country'] ?? '—',
+                                            'city' => $row['city'] ?? '',
+                                        ])
                                     </td>
                                     <td>{{ $row['country'] ?? '—' }}</td>
                                     <td>{{ $row['nationality'] ?? '—' }}</td>
