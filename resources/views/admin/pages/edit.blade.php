@@ -240,7 +240,7 @@
                                         <button type="button" class="btn btn-light js-edit-section" style="width: 100%;"
                                             data-section="filterCourses">Filter Courses</button>
                                         <button type="button" class="btn btn-light js-edit-section" style="width: 100%;"
-                                            data-section="course-agendas">Training Calendar</button>
+                                            data-section="course-agendas">Agenda</button>
                                         <button type="button" class="btn btn-light js-edit-section" style="width: 100%;"
                                             data-section="content">Content</button>
                                         <button type="button" class="btn btn-light js-edit-section" style="width: 100%;"
@@ -287,6 +287,9 @@
                                 $sectionType = ucwords(str_replace('-', ' ', $section['section_type'] ?? ''));
                                 if (($section['section_type'] ?? '') === 'media-section') {
                                     $sectionType = 'Image + Text 2 Column Card';
+                                }
+                                if (($section['section_type'] ?? '') === 'course-agendas') {
+                                    $sectionType = 'Agenda';
                                 }
                             @endphp
 
@@ -3638,6 +3641,10 @@
             let sectionName = section.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, str => str.toUpperCase());
             if (section === "mediaSection") {
                 sectionName = "Image + Text 2 Column Card";
+            }
+            if (section === "course-agendas" || section === "agenda") {
+                sectionName = "Agenda";
+                section = "course-agendas";
             }
             const existingSections = document.querySelectorAll(`.ibox-container`);
             const count = existingSections.length;
