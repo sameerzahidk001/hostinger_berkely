@@ -3074,15 +3074,20 @@ if (!function_exists('viewer_timezone_label')) {
 }
 
 if (!function_exists('format_in_viewer_tz')) {
-    function format_in_viewer_tz($value, string $fmt = 'M j, Y g:i A'): string
+    function format_in_viewer_tz($value, string $fmt = 'M j, Y g:i A T'): string
     {
         if (! $value) {
             return '—';
         }
         try {
             $dt = $value instanceof \Carbon\Carbon ? $value->copy() : \Carbon\Carbon::parse($value);
+            $out = $dt->timezone(viewer_timezone())->format($fmt);
+            $label = viewer_timezone_label();
+            if ($label !== '' && preg_match('/[HghisAa]/', $fmt) && ! str_contains($out, $label) && ! str_contains($fmt, 'T') && ! str_contains($fmt, 'e')) {
+                $out .= ' (' . $label . ')';
+            }
 
-            return $dt->timezone(viewer_timezone())->format($fmt);
+            return $out;
         } catch (\Throwable $e) {
             return (string) $value;
         }

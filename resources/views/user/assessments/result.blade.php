@@ -46,7 +46,7 @@
             @else
                 <p class="text-muted">Submitted. Your score will appear here when Admin / Instructor publishes results.</p>
             @endif
-            <p class="text-muted">Submitted: {{ optional($attempt->submitted_at)->format('d M Y H:i') ?? '—' }}</p>
+            <p class="text-muted">Submitted: {{ $assignment && $attempt->submitted_at ? $assignment->formatInTimezone($attempt->submitted_at, 'd M Y H:i') : (function_exists('format_in_viewer_tz') ? format_in_viewer_tz($attempt->submitted_at) : (optional($attempt->submitted_at)->format('d M Y H:i') ?? '—')) }}</p>
         </div>
     </div>
 

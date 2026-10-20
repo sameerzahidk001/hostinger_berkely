@@ -279,6 +279,9 @@
                     <p class="lms-take-line"><strong>Test ID:</strong> {{ $attempt->assessment->displayCode() }} - <strong>Test Name:</strong> {{ $attempt->assessment->title }}</p>
                     <p class="lms-take-line"><strong>Course name:</strong> {{ $attempt->assessment->course->title ?? '—' }}</p>
                     <p class="lms-take-line" style="margin-bottom:0;"><strong>Appointment ID:</strong> {{ $assignment?->displayCode() ?? '—' }} · {{ $assignment ? $assignment->appointmentWindowLabel('d/m/Y H:i') : '—' }}</p>
+                    @if($assignment)
+                        <p class="lms-take-line" style="margin-bottom:0;"><strong>Time zone:</strong> {{ $assignment->timezoneLabel() }}</p>
+                    @endif
                 </div>
                 <div class="lms-res-btns">
                     @if($refFiles !== [])
@@ -293,9 +296,20 @@
         </div>
     </div>
     @if($attempt->expires_at)
+        @php
+            $examTzName = $assignment?->timezoneName()
+                ?: (function_exists('viewer_timezone') ? viewer_timezone() : config('app.timezone'));
+            $examTzLabel = $assignment?->timezoneLabel()
+                ?: (function_exists('viewer_timezone_label') ? viewer_timezone_label($examTzName) : $examTzName);
+            try {
+                $examEndsLabel = $attempt->expires_at->copy()->timezone($examTzName)->format('d/m/Y H:i');
+            } catch (\Throwable $e) {
+                $examEndsLabel = $attempt->expires_at->format('d/m/Y H:i');
+            }
+        @endphp
         <div class="alert alert-warning lms-take-timer">
             Test Ends:
-            <strong id="expires_at_label">{{ $attempt->expires_at->timezone(config('app.timezone'))->format('d/m/Y H:i') }}</strong>
+            <strong id="expires_at_label">{{ $examEndsLabel }} ({{ $examTzLabel }})</strong>
             <span class="hidden" id="expires_at">{{ $attempt->expires_at->toIso8601String() }}</span>
             · Remaining: <strong id="countdown">—</strong>
         </div>
