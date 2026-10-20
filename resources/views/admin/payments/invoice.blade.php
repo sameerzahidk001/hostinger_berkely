@@ -177,7 +177,7 @@
                             <p style="margin: 0px"><strong>Phone:</strong> {{ $user->mobile_number }}</p>
                             <p style="margin: 0px"><strong>Address:</strong> {{ $user->address }}</p>
                             <p style="margin: 0px"><strong>City:</strong> {{ $user->city ?: '—' }}</p>
-                            <p style="margin: 0px"><strong>Country:</strong> {{ $user->displayCountryName() }}</p>
+                            <p style="margin: 0px"><strong>Country living:</strong> {{ $user->displayCountryName() }}</p>
                             <p style="margin: 0px"><strong>Nationality:</strong> {{ $user->displayNationality() }}</p>
                         </div>
                         <div style="display: table-cell; width: 50%; vertical-align: top; text-align: right;">

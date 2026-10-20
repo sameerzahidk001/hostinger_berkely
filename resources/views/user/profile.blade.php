@@ -66,7 +66,7 @@
                         <p><strong>Post Code: </strong> {{ $user->post_code ?? '-' }}</p>
                         <p><strong>Nationality: </strong> {{ $user->nationality ?? '-' }}</p>
                         <p><strong>City: </strong> {{ $user->city ?? '-' }}</p>
-                        <p><strong>Country: </strong> {{ $user->country ?? '-' }}</p>
+                        <p><strong>Country living: </strong> {{ $user->displayCountryName() }}</p>
 
                         @if(optional($user->roles->first())->name === 'instructor')
                             @php
@@ -242,8 +242,9 @@
                                 </div>
 
                                 <div class="col-md-4 mb-3">
-                                    <label for="country">Country</label>
-                                    <select class="form-control" name="country" id="country">
+                                    <label for="country">Country living <span class="text-danger">*</span></label>
+                                    <select class="form-control" name="country" id="country" required>
+                                        <option value="">Select country living</option>
                                         @foreach($countries as $country)
                                             <option value="{{ $country->iso_code }}"
                                                 {{ $country->iso_code == old('country', $user->country) ? 'selected' : '' }}>
@@ -251,6 +252,9 @@
                                             </option>
                                         @endforeach
                                     </select>
+                                    @error('country')
+                                        <p class="text-danger text-xs italic">{{ $message }}</p>
+                                    @enderror
                                 </div>
 
                                 @if(optional($user->roles->first())->name === 'instructor')

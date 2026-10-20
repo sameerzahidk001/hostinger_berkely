@@ -38,7 +38,7 @@ class ProfileController extends Controller
             'city' => 'nullable|string|max:100',
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',
-            'country' => 'nullable|string|max:100',
+            'country' => 'required|string|max:100',
             'experience' => 'nullable|string',
             'short_description' => 'nullable|string',
             'long_description' => 'nullable|string',
@@ -121,6 +121,8 @@ class ProfileController extends Controller
             'podcasts.*.date' => 'nullable|date',
             'podcasts.*.link' => 'nullable|url|max:500',
             'podcasts.*.image' => 'nullable|file|image|mimes:jpeg,png,jpg,webp|max:4096',
+        ], [
+            'country.required' => 'Country living is required',
         ]);
 
         if ($validator->fails()) {
