@@ -270,6 +270,9 @@
                 :title="$section->data['title'] ?? ''"
                 :description="$section->data['description'] ?? ''"
             />
+            @if(should_show_global_women_card($page ?? null))
+                @include('partials.global-women-card')
+            @endif
          @elseif($section->section_type === 'course-agendas')
              {{-- @dd($section->toArray()) --}}
             <x-course-agenda-component 
