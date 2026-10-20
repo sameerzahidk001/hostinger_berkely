@@ -28,12 +28,12 @@
     }
     body.lms-take-mode #page-wrapper > .wrapper-content,
     body.lms-take-mode .wrapper.wrapper-content {
-        margin-top: 190px;
+        margin-top: 230px;
     }
     @media (max-width: 768px) {
         .lms-take-sticky { left: 0; }
         body.lms-take-mode #page-wrapper > .wrapper-content,
-        body.lms-take-mode .wrapper.wrapper-content { margin-top: 160px; }
+        body.lms-take-mode .wrapper.wrapper-content { margin-top: 210px; }
     }
     .lms-take-sticky .page-heading {
         margin: 0;
@@ -276,12 +276,24 @@
         <div class="col-lg-12">
             <div class="lms-take-head-row">
                 <div class="lms-take-meta">
+                    @php
+                        $apptFrom = $assignment?->windowStart();
+                        $apptUntil = $assignment?->appointmentEnd();
+                        if ($assignment && $assignment->isSelfSitting()) {
+                            $apptTiming = 'Self test — start anytime';
+                        } elseif ($apptFrom && $apptUntil) {
+                            $apptTiming = $apptFrom->format('d/m/Y H:i') . ' → ' . $apptUntil->format('d/m/Y H:i');
+                        } elseif ($apptFrom) {
+                            $apptTiming = $apptFrom->format('d/m/Y H:i');
+                        } else {
+                            $apptTiming = '—';
+                        }
+                    @endphp
                     <p class="lms-take-line"><strong>Test ID:</strong> {{ $attempt->assessment->displayCode() }} - <strong>Test Name:</strong> {{ $attempt->assessment->title }}</p>
                     <p class="lms-take-line"><strong>Course name:</strong> {{ $attempt->assessment->course->title ?? '—' }}</p>
-                    <p class="lms-take-line" style="margin-bottom:0;"><strong>Appointment ID:</strong> {{ $assignment?->displayCode() ?? '—' }} · {{ $assignment ? $assignment->appointmentWindowLabel('d/m/Y H:i') : '—' }}</p>
-                    @if($assignment)
-                        <p class="lms-take-line" style="margin-bottom:0;"><strong>Time zone:</strong> {{ $assignment->timezoneLabel() }}</p>
-                    @endif
+                    <p class="lms-take-line"><strong>Appointment ID:</strong> {{ $assignment?->displayCode() ?? '—' }}</p>
+                    <p class="lms-take-line"><strong>Test Appointment Timing:</strong> {{ $apptTiming }}</p>
+                    <p class="lms-take-line" style="margin-bottom:0;"><strong>Time zone:</strong> {{ $assignment?->timezoneLabel() ?? (function_exists('viewer_timezone_label') ? viewer_timezone_label() : config('app.timezone')) }}</p>
                 </div>
                 <div class="lms-res-btns">
                     @if($refFiles !== [])
