@@ -21,16 +21,18 @@
         width: 100% !important;
         table-layout: auto;
         font-size: 12px;
-        min-width: 1280px;
     }
-    table.dataTables-example .col-country,
-    table.dataTables-example th.col-country,
-    .dataTables_wrapper .col-country {
-        display: table-cell !important;
-        visibility: visible !important;
-        white-space: nowrap !important;
-        min-width: 120px;
-        font-weight: 600;
+    .student-living-cell {
+        display: block;
+        min-width: 140px;
+        max-width: 260px;
+        white-space: normal !important;
+        line-height: 1.4;
+    }
+    .student-living-cell div {
+        display: block;
+        font-size: 11px;
+        margin-top: 2px;
     }
     table.dataTables-example > thead > tr > th,
     table.dataTables-example > tbody > tr > td {
@@ -135,10 +137,8 @@
                                 <tr>
                                     <th>Invoice No</th>
                                     <th>Invoice Date</th>
-                                    <th>Student</th>
-                                    <th class="col-country">Country living</th>
-                                    <th>Nationality</th>
                                     <th>Course</th>
+                                    <th>Student</th>
                                     {{-- <th>Installments Request</th> --}}
                                     <th>Payment Plan</th>
                                     <th>Invoice Amount</th>
@@ -170,7 +170,8 @@
                                 <tr>
                                     <td>INV-{{ str_pad($payment->id, 6, '0', STR_PAD_LEFT) }}</td>
                                     <td data-order="{{ \Carbon\Carbon::parse($payment->created_at)->timestamp }}">{{ \Carbon\Carbon::parse($payment->created_at)->format('Y/m/d') }}</td>
-                                    <td>
+                                    <td data-export="{{ ($payment->course->title ?? 'N/A') . ' - ' . ($payment->courseFee->package_name ?? 'N/A') }}">{{ $payment->course->title ?? 'N/A' }}<br><span class="text-muted">{{ $payment->courseFee->package_name ?? 'N/A' }}</span></td>
+                                    <td data-export="{{ ($payment->user->name ?? 'N/A') }} | Nationality: {{ $payment->user ? $payment->user->displayNationality() : '—' }} | Country, City: {{ $payment->user ? $payment->user->displayCountryName() : '—' }}, {{ trim((string) optional($payment->user)->city) !== '' ? trim((string) $payment->user->city) : '—' }}">
                                         @include('admin.payments.partials.student-living-lines', [
                                             'studentName' => $payment->user->name ?? 'N/A',
                                             'nationality' => $payment->user ? $payment->user->displayNationality() : '—',
@@ -178,9 +179,6 @@
                                             'city' => optional($payment->user)->city,
                                         ])
                                     </td>
-                                    <td class="col-country">{{ $payment->user ? $payment->user->displayCountryName() : '—' }}</td>
-                                    <td>{{ $payment->user ? $payment->user->displayNationality() : '—' }}</td>
-                                    <td data-export="{{ ($payment->course->title ?? 'N/A') . ' - ' . ($payment->courseFee->package_name ?? 'N/A') }}">{{ $payment->course->title ?? 'N/A' }}<br><span class="text-muted">{{ $payment->courseFee->package_name ?? 'N/A' }}</span></td>
                                     {{-- <td>{{ $payment->installment_request->installments_requested ?? 'Direct' }}</td> --}}
                                     <td data-export="{{ $payment->installments->count() ?? 0 }}">
                                         <a type="button" href="javascript:void(0)" class="view-installments" data-installments='@json($payment)' data-currency="{{ $payment->courseFee->currency ?? 'AED' }}" data-country="{{ $payment->user ? $payment->user->displayCountryName() : '—' }}">
@@ -436,11 +434,8 @@
             info: false,
             ordering: true,
             responsive: false,
-            scrollX: true,
+            scrollX: false,
             autoWidth: false,
-            columnDefs: [
-                { targets: 'col-country', visible: true, width: '130px' }
-            ],
             dom: '<"admin-dt-toolbar"<l><B><f>>rtip',
             order: [[1, 'desc']],
             buttons: [adminDatatableExcelButton('Invoices List', 'invoices_list')],
