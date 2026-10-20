@@ -14,6 +14,14 @@
     .col {
         flex: 1;
     }
+    table.dataTables-example .col-country,
+    .dataTables_wrapper .col-country {
+        display: table-cell !important;
+        visibility: visible !important;
+        white-space: nowrap !important;
+        min-width: 120px;
+        font-weight: 600;
+    }
 
     .switch {
         position: relative;
@@ -109,7 +117,7 @@
                                     <th>Invoice No</th>
                                     <th>Invoice Issued Date</th>
                                     <th>Student</th>
-                                    <th>Country</th>
+                                    <th class="col-country">Country</th>
                                     <th>Nationality</th>
                                     <th>Invoice Amount</th>
                                     <th>Payment Plan</th>
@@ -136,10 +144,10 @@
                                     <td>{{ \Carbon\Carbon::parse($installment->created_at)->format('Y/m/d') }}</td>
                                     <td>
                                         {{ $installment->payment->user->name ?? 'N/A' }}
-                                        <br><small class="text-muted">{{ ($installment->user ?? $installment->payment->user ?? null)?->displayCountryName() ?? '—' }}</small>
+                                        <br><small>{{ optional($installment->user ?? optional($installment->payment)->user)->displayCountryName() ?? '—' }}</small>
                                     </td>
-                                    <td>{{ ($installment->user ?? $installment->payment->user ?? null)?->displayCountryName() ?? '—' }}</td>
-                                    <td>{{ ($installment->user ?? $installment->payment->user ?? null)?->displayNationality() ?? '—' }}</td>
+                                    <td class="col-country">{{ optional($installment->user ?? optional($installment->payment)->user)->displayCountryName() ?? '—' }}</td>
+                                    <td>{{ optional($installment->user ?? optional($installment->payment)->user)->displayNationality() ?? '—' }}</td>
                                     <td data-export="{{ $invoiceAmountExport }}">{!! format_payment_aed_amount_admin($installment->payment, (float) $installment->payment->price) !!}</td>
                                     <td>{{ $installment->installment_number }}/{{ $installment->payment->total_installment }}</td>
                                     <td>{{ \Carbon\Carbon::parse($installment->due_date)->format('Y/m/d') }}</td>
@@ -270,6 +278,9 @@
             responsive: false,
             scrollX: true,
             autoWidth: false,
+            columnDefs: [
+                { targets: 'col-country', visible: true, width: '130px' }
+            ],
             dom: '<"admin-dt-toolbar"<l><B><f>>rtip',
             order: [],
             buttons: [adminDatatableExcelButton('Receipts List', 'receipts_list')],
