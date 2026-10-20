@@ -170,6 +170,7 @@
     }
     .lms-submit-cancel { background: #eef1f4; color: #334155; }
     .lms-submit-go { background: #1ab394; color: #fff; }
+    .lms-next-go { background: #1c84c6; color: #fff; }
     .lms-res-modal {
         display: none;
         position: fixed;
@@ -385,12 +386,22 @@
 
         <div class="lms-q-nav">
             <button type="button" class="btn btn-primary" id="lms-q-next" @disabled($qTotal <= 1)>Next</button>
-            <span class="lms-next-hint">Once you move to the next question, you cannot return to this question.</span>
+            <span class="lms-next-hint">If you press Next, you cannot come back to this question.</span>
             <span class="lms-q-nav-spacer"></span>
             <input type="hidden" name="submit" id="lms-submit-flag" value="0">
             <button type="submit" name="save_mode" value="0" class="btn btn-default">Save progress</button>
         </div>
     </form>
+</div>
+<div class="lms-submit-modal" id="lms-next-modal" aria-hidden="true">
+    <div class="lms-submit-dialog" role="dialog" aria-modal="true" aria-labelledby="lms-next-title">
+        <h3 id="lms-next-title">Go to the next question?</h3>
+        <p>If you press Next, you cannot come back to the current question. Unused time on this question will not carry forward.</p>
+        <div class="lms-submit-dialog-actions">
+            <button type="button" class="lms-submit-cancel" id="lms-next-cancel">Cancel</button>
+            <button type="button" class="lms-next-go" id="lms-next-confirm">Next</button>
+        </div>
+    </div>
 </div>
 <div class="lms-submit-modal" id="lms-submit-modal" aria-hidden="true">
     <div class="lms-submit-dialog" role="dialog" aria-modal="true" aria-labelledby="lms-submit-title">
@@ -437,20 +448,25 @@ document.body.setAttribute('data-lms-exam-lock', '1');
     var idx = 0;
     var qTimerId = null;
     var qEndsAt = null;
-    var startedMs = Date.parse(@json(optional($attempt->started_at)->toIso8601String())) || Date.now();
-    var qEnds = [];
-    (function buildEnds() {
-        var cursor = startedMs;
-        steps.forEach(function (el) {
-            var mins = parseInt(el.getAttribute('data-q-minutes') || '0', 10);
-            if (!mins || mins < 1) {
-                qEnds.push(null);
-                return;
-            }
-            cursor += mins * 60 * 1000;
-            qEnds.push(cursor);
-        });
-    })();
+    var attemptId = @json($attempt->id);
+    var idxKey = 'lms-take-idx-' + attemptId;
+    var nextModal = document.getElementById('lms-next-modal');
+    var nextCancel = document.getElementById('lms-next-cancel');
+    var nextConfirm = document.getElementById('lms-next-confirm');
+
+    function qMinutes(i) {
+        if (!steps[i]) return 0;
+        return parseInt(steps[i].getAttribute('data-q-minutes') || '0', 10) || 0;
+    }
+    function endKey(i) {
+        return 'lms-take-end-' + attemptId + '-' + i;
+    }
+    function readStore(key) {
+        try { return sessionStorage.getItem(key); } catch (e) { return null; }
+    }
+    function writeStore(key, val) {
+        try { sessionStorage.setItem(key, val); } catch (e) {}
+    }
 
     function clearQTimer() {
         if (qTimerId) { clearTimeout(qTimerId); qTimerId = null; }
@@ -532,10 +548,15 @@ document.body.setAttribute('data-lms-exam-lock', '1');
             clearQTimer();
             qCountdown.textContent = '0s';
             if (form && form.dataset.autoSubmitted) return;
-            if (idx >= steps.length - 1) return;
+            if (idx >= steps.length - 1) {
+                if (typeof window.lmsExamAutoSubmit === 'function') {
+                    window.lmsExamAutoSubmit();
+                }
+                return;
+            }
             saveProgressThen(function () {
                 if (form && form.dataset.autoSubmitted) return;
-                resumeFromClock();
+                goToQuestion(idx + 1);
             });
             return;
         }
@@ -548,8 +569,20 @@ document.body.setAttribute('data-lms-exam-lock', '1');
 
     function startQTimer(stepIndex) {
         clearQTimer();
-        qEndsAt = qEnds[stepIndex] || null;
-        if (!qEndsAt) return;
+        var mins = qMinutes(stepIndex);
+        if (!mins) {
+            qEndsAt = null;
+            return;
+        }
+        var stored = parseInt(readStore(endKey(stepIndex)) || '0', 10);
+        if (stored > Date.now()) {
+            qEndsAt = stored;
+        } else if (stored && stored <= Date.now()) {
+            qEndsAt = stored;
+        } else {
+            qEndsAt = Date.now() + mins * 60 * 1000;
+            writeStore(endKey(stepIndex), String(qEndsAt));
+        }
         if (qTimerWrap) qTimerWrap.style.display = 'inline';
         tickQ();
     }
@@ -557,6 +590,7 @@ document.body.setAttribute('data-lms-exam-lock', '1');
     function showStep(i) {
         if (!steps.length) return;
         idx = Math.max(0, Math.min(i, steps.length - 1));
+        writeStore(idxKey, String(idx));
         steps.forEach(function (el, n) {
             el.classList.toggle('is-active', n === idx);
         });
@@ -569,27 +603,72 @@ document.body.setAttribute('data-lms-exam-lock', '1');
         } catch (e) {}
     }
 
+    function goToQuestion(i) {
+        showStep(i);
+    }
+
     function resumeFromClock() {
-        var i = 0;
-        while (i < steps.length) {
-            if (!qEnds[i] || Date.now() < qEnds[i]) {
-                showStep(i);
-                return;
+        var storedIdx = parseInt(readStore(idxKey) || '0', 10) || 0;
+        storedIdx = Math.max(0, Math.min(storedIdx, Math.max(0, steps.length - 1)));
+        while (storedIdx < steps.length) {
+            var mins = qMinutes(storedIdx);
+            var storedEnd = parseInt(readStore(endKey(storedIdx)) || '0', 10);
+            if (mins > 0 && storedEnd && Date.now() >= storedEnd) {
+                storedIdx++;
+                writeStore(idxKey, String(storedIdx));
+                continue;
             }
-            i++;
+            break;
         }
-        showStep(steps.length - 1);
+        if (storedIdx >= steps.length) {
+            showStep(steps.length - 1);
+            if (typeof window.lmsExamAutoSubmit === 'function') {
+                window.lmsExamAutoSubmit();
+            }
+            return;
+        }
+        showStep(storedIdx);
+    }
+
+    function openNextPopup() {
+        if (!nextModal) {
+            saveProgressThen(function () { goToQuestion(idx + 1); });
+            return;
+        }
+        nextModal.classList.add('is-open');
+        nextModal.setAttribute('aria-hidden', 'false');
+        if (nextConfirm) {
+            try { nextConfirm.focus(); } catch (e) {}
+        }
+    }
+    function closeNextPopup() {
+        if (!nextModal) return;
+        nextModal.classList.remove('is-open');
+        nextModal.setAttribute('aria-hidden', 'true');
     }
 
     if (btnNext) btnNext.addEventListener('click', function () {
-        saveProgressThen(function () { showStep(idx + 1); });
+        if (idx >= steps.length - 1) return;
+        openNextPopup();
+    });
+    if (nextCancel) nextCancel.addEventListener('click', function (e) {
+        e.preventDefault();
+        closeNextPopup();
+    });
+    if (nextConfirm) nextConfirm.addEventListener('click', function (e) {
+        e.preventDefault();
+        closeNextPopup();
+        saveProgressThen(function () { goToQuestion(idx + 1); });
+    });
+    if (nextModal) nextModal.addEventListener('click', function (e) {
+        if (e.target === nextModal) closeNextPopup();
     });
     document.addEventListener('visibilitychange', function () {
         if (document.visibilityState === 'hidden') silentSave();
         if (document.visibilityState === 'visible') resumeFromClock();
     });
     window.addEventListener('pageshow', function () { resumeFromClock(); });
-    resumeFromClock();
+    setTimeout(resumeFromClock, 0);
 })();
 
 (function () {
