@@ -788,7 +788,7 @@ class LmsAssessmentService
         $assignment->loadMissing(['assessment.course', 'student', 'batch.students', 'marker']);
         $names = $assignment->isSelfSitting()
             ? ['lms-self-test-assigned']
-            : ['lms-exam-assigned', 'lms-test-assigned', 'New Test assigned'];
+            : ['lms-exam-assigned'];
         $template = $this->lmsEmailTemplate($names);
         if (! $template) {
             return;

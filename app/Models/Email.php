@@ -36,6 +36,12 @@ class Email extends Model
         ];
     }
 
+    /** Old keys kept in the database but not used or listed. */
+    public static function unusedTemplateNames()
+    {
+        return ['lms-test-assigned', 'New Test assigned'];
+    }
+
     public static function placeholderHelp($name)
     {
         $lmsAssign = 'Use these in subject and body:<br>'

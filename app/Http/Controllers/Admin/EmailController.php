@@ -17,7 +17,10 @@ class EmailController extends Controller
         app(StudyMaterialService::class)->ensureEmailTemplates();
         (new \Database\Seeders\LmsAssessmentEmailTemplateSeeder())->run();
 
-        $emails = Email::all();
+        $emails = Email::query()
+            ->whereNotIn('name', Email::unusedTemplateNames())
+            ->orderBy('id')
+            ->get();
         return view('admin.emails.index', compact('emails'));
     }
 

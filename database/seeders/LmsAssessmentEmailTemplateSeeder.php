@@ -65,19 +65,6 @@ class LmsAssessmentEmailTemplateSeeder extends Seeder
                     . '<p>If you are not signed in, use <a href="{login_url}">this login page</a>.</p>',
             ],
             [
-                'name' => 'lms-test-assigned',
-                'subject' => 'Test assigned: {test_id} - {test_name}',
-                'cc' => null,
-                'bcc' => null,
-                'body' => '<p>Hello {name},</p>'
-                    . '<p>A test has been assigned to you.</p>'
-                    . '<p>Test ID: {test_id} - Test Name: {test_name}</p>'
-                    . '<p>Appointment ID: {appointment_id} · {appointment_time}</p>'
-                    . '<p>Course: {course_name}</p>'
-                    . '<p><a href="{portal_url}">Open My Tests</a></p>'
-                    . '<p>If you are not signed in, use <a href="{login_url}">this login page</a>.</p>',
-            ],
-            [
                 'name' => 'lms-test-submitted',
                 'subject' => 'Test submitted: {test_id} - {test_name}',
                 'cc' => null,
