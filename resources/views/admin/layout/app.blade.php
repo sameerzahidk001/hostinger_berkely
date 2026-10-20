@@ -31,16 +31,20 @@
             }
          }
          .student-living-cell {
-            display: block;
-            min-width: 160px;
+            display: block !important;
+            min-width: 180px;
             white-space: normal !important;
-            line-height: 1.4;
+            line-height: 1.45;
+         }
+         .student-living-cell strong {
+            display: block;
          }
          .student-living-cell div {
-            display: block;
-            font-size: 11px;
+            display: block !important;
+            font-size: 12px;
             margin-top: 2px;
             color: #1a1a1a;
+            white-space: normal !important;
          }
          table th.col-student,
          table td.col-student {
