@@ -222,7 +222,7 @@
                                         <button type="button" class="btn btn-light js-edit-section" style="width: 100%;"
                                             data-section="titleSection">Title Section</button>
                                         <button type="button" class="btn btn-light js-edit-section" style="width: 100%;"
-                                            data-section="mediaSection">Media Section</button>
+                                            data-section="mediaSection">Image + Text 2 Column Card</button>
                                         <button type="button" class="btn btn-light js-edit-section" style="width: 100%;"
                                             data-section="clients">Clients</button>
                                         <button type="button" class="btn btn-light js-edit-section" style="width: 100%;"
@@ -285,6 +285,9 @@
                                 $section['section_type'] = normalize_section_type_key($section['section_type'] ?? '')
                                     ?? ($section['section_type'] ?? '');
                                 $sectionType = ucwords(str_replace('-', ' ', $section['section_type'] ?? ''));
+                                if (($section['section_type'] ?? '') === 'media-section') {
+                                    $sectionType = 'Image + Text 2 Column Card';
+                                }
                             @endphp
 
                             @if ($section['section_type'] === "hero-banner")
@@ -3632,7 +3635,10 @@
 
         function editSections(section) {
             let sectionHTML = "";
-            const sectionName = section.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, str => str.toUpperCase());
+            let sectionName = section.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/^./, str => str.toUpperCase());
+            if (section === "mediaSection") {
+                sectionName = "Image + Text 2 Column Card";
+            }
             const existingSections = document.querySelectorAll(`.ibox-container`);
             const count = existingSections.length;
 
