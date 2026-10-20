@@ -50,7 +50,7 @@
                                         <th>Image</th>
                                         <th>Email</th>
                                         <th>Mobile</th>
-                                        <th>Country</th>
+                                        <th>Country living</th>
                                         <th>IP Address</th>
                                         <th>Created On</th>
                                         <th>Verified On</th>

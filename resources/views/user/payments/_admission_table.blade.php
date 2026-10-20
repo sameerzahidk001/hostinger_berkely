@@ -8,7 +8,7 @@
                 <thead>
                     <tr>
                         <th>Invoice No</th>
-                        <th>Country</th>
+                        <th>Country living</th>
                         <th>Receipt No</th>
                         <th>Invoice Issued Date</th>
                         <th>Invoice Amount</th>

@@ -117,7 +117,7 @@
                                     <th>Invoice No</th>
                                     <th>Invoice Issued Date</th>
                                     <th>Student</th>
-                                    <th class="col-country">Country</th>
+                                    <th class="col-country">Country living</th>
                                     <th>Nationality</th>
                                     <th>Invoice Amount</th>
                                     <th>Payment Plan</th>

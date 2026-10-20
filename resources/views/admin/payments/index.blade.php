@@ -136,7 +136,7 @@
                                     <th>Invoice No</th>
                                     <th>Invoice Date</th>
                                     <th>Student</th>
-                                    <th class="col-country">Country</th>
+                                    <th class="col-country">Country living</th>
                                     <th>Nationality</th>
                                     <th>Course</th>
                                     {{-- <th>Installments Request</th> --}}
@@ -383,7 +383,7 @@
                     <thead>
                         <tr>
                             <th>Invoice No</th>
-                            <th>Country</th>
+                            <th>Country living</th>
                             <th>Invoice Issued Date</th>
                             <th>Invoice Amount</th>
                             <th>Payment Plan</th>

@@ -177,7 +177,7 @@
                             <p><strong>Phone:</strong> {{ $user->mobile_number }}</p>
                             <p><strong>Address:</strong> {{ $user->address }}</p>
                             <p><strong>City:</strong> {{ $user->city ?: '—' }}</p>
-                            <p><strong>Country:</strong> {{ $user->displayCountryName() }}</p>
+                            <p><strong>Country living:</strong> {{ $user->displayCountryName() }}</p>
                             <p><strong>Nationality:</strong> {{ $user->displayNationality() }}</p>
                         </div>
                         <div style="display: table-cell; width: 50%; vertical-align: top; text-align: right;">

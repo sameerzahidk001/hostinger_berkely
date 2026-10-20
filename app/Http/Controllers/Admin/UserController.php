@@ -90,7 +90,7 @@ class UserController extends Controller
             'city' => 'nullable|string|max:100',
             'latitude' => 'nullable|numeric|between:-90,90',
             'longitude' => 'nullable|numeric|between:-180,180',
-            'country' => 'nullable|string|max:100',
+            'country' => 'required|string|max:100',
             'image_path' => 'nullable|string',
             'local_file_input' => 'nullable|file|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             'short_description' => 'nullable|string',
@@ -165,6 +165,8 @@ class UserController extends Controller
             'podcasts.*.image' => 'nullable|file|image|mimes:jpeg,png,jpg,webp|max:4096',
             'lms_permissions' => 'nullable|array',
             'lms_permissions.*' => 'in:create_folder,edit_folder,assign_student_access,manage_batch,manage_schedule,manage_question_bank,create_student_assessments,assign_student_assessments,manage_student_assessments',
+        ], [
+            'country.required' => 'Country living is required',
         ]);
 
         if ($validator->fails()) {
@@ -298,6 +300,7 @@ class UserController extends Controller
                 'image_path' => 'nullable|string',
                 'local_file_input' => 'nullable|file|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
                 'city' => 'nullable|string|max:100',
+                'country' => 'required|string|max:100',
                 'latitude' => 'nullable|numeric|between:-90,90',
                 'longitude' => 'nullable|numeric|between:-180,180',
                 'linkedin' => 'nullable|url|string|max:255',
@@ -377,7 +380,9 @@ class UserController extends Controller
             if (Auth::guard('admin')->check()) {
                 $rules['email'] = 'required|email|unique:users,email,' . $id;
             }
-            $validator = Validator::make($request->all(), $rules);
+            $validator = Validator::make($request->all(), $rules, [
+                'country.required' => 'Country living is required',
+            ]);
             if ($validator->fails()) {
                 return back()->withErrors($validator)->withInput();
             }

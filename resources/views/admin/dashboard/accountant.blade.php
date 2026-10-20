@@ -201,7 +201,7 @@
                                 <th>Receipt Number</th>
                                 <th>Invoice No#</th>
                                 <th>Student</th>
-                                <th>Country</th>
+                                <th>Country living</th>
                                 <th>Nationality</th>
                                 <th>Course</th>
                                 <th>Package</th>

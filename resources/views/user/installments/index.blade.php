@@ -34,7 +34,7 @@
                                 <thead>
                                     <tr>
                                         <th>Invoice No</th>
-                                        <th>Country</th>
+                                        <th>Country living</th>
                                         <th>Invoice Issued Date</th>
                                         <th>Course Name</th>
                                         <th>Package Name</th>

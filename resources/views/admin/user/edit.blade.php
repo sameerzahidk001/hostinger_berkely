@@ -262,8 +262,9 @@
                                     @enderror
                                 </div>
                                 <div class="col-md-4" style="margin-bottom: 15px;">
-                                    <label for="country">Country</label>
-                                    <select class="form-control" name="country" id="country">
+                                    <label for="country">Country living <span class="text-danger">*</span></label>
+                                    <select class="form-control" name="country" id="country" required>
+                                        <option value="">Select country living</option>
                                         @foreach($countries as $country)
                                             <option value="{{ $country->iso_code }}" {{ $country->iso_code == old('country', $user->country) ? 'selected' : '' }}>{{ $country->name }}</option>
                                         @endforeach
