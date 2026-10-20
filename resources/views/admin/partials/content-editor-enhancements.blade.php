@@ -90,6 +90,7 @@
         if (name === 'course_exam_format_duration_overview') return 'course_exam_format_duration_overview';
         if (name === 'performance_standard_description') return 'performance_standard_description';
         if (name === 'custom_videos_desc') return 'custom_videos_desc';
+        if (name === 'image_text_2col_description') return 'image_text_2col_description';
         if (name === 'custom_section_01_description') return 'custom_section_01_description';
         if (name === 'alumni_benefits_description') return 'alumni_benefits_description';
         if (name === 'contact_us_text') return 'contact_us_text';

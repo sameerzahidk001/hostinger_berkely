@@ -48,6 +48,7 @@ return [
             'course_exam_format_duration_overview' => ['label' => 'Exam format / duration overview', 'max' => 5000],
             'performance_standard_description' => ['label' => 'Performance standard description', 'max' => 5000],
             'custom_videos_desc' => ['label' => 'Custom videos description', 'max' => 3000],
+            'image_text_2col_description' => ['label' => 'Image + text 2 column card description', 'max' => 3000],
             'custom_section_01_description' => ['label' => 'Custom section description', 'max' => 5000],
             'alumni_benefits_description' => ['label' => 'Alumni benefits description', 'max' => 5000],
             'contact_us_text' => ['label' => 'Contact us text', 'max' => 3000],

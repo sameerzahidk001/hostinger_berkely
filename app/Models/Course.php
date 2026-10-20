@@ -48,7 +48,8 @@ class Course extends Model
         'overview_section', 'benefits_section', 'who_can_do_section', 'eligibility_section', 'learning_methodology_section',
         'career_path_section', 'exam_section', 'success_stories','success_stories_link_text','alumni_benefits_description', 'contact_us_section', 'contact_us_text',
         'custom_section_01', 'custom_section_01_description' ,'exam_info_custom_01', 'lecture_plan_section',
-        'custom_videos_section', 'custom_videos_desc','custom_videos','related_courses_section','faq_section','banner_section'
+        'custom_videos_section', 'custom_videos_desc','custom_videos','related_courses_section','faq_section','banner_section',
+        'image_text_2col_card',
 
     ];
 
@@ -62,6 +63,7 @@ class Course extends Model
         'exam_location' => 'array',
         'custom_videos ' => 'array',
         'image_alts' => 'array',
+        'image_text_2col_card' => 'array',
     ];
     
     public function courseObjectivePoints()

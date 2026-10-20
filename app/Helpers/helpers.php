@@ -3165,6 +3165,72 @@ if (!function_exists('should_show_global_women_card')) {
     }
 }
 
+if (!function_exists('ensure_image_text_2col_card_column')) {
+    function ensure_image_text_2col_card_column(): bool
+    {
+        static $ready = null;
+
+        if ($ready === true) {
+            return true;
+        }
+
+        if ($ready === false) {
+            return false;
+        }
+
+        try {
+            if (\Illuminate\Support\Facades\Schema::hasTable('courses')
+                && ! \Illuminate\Support\Facades\Schema::hasColumn('courses', 'image_text_2col_card')) {
+                \Illuminate\Support\Facades\Schema::table('courses', function (\Illuminate\Database\Schema\Blueprint $table) {
+                    $table->json('image_text_2col_card')->nullable();
+                });
+            }
+
+            $ready = \Illuminate\Support\Facades\Schema::hasTable('courses')
+                && \Illuminate\Support\Facades\Schema::hasColumn('courses', 'image_text_2col_card');
+
+            return $ready;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('Could not ensure image_text_2col_card column: ' . $e->getMessage());
+            $ready = false;
+
+            return false;
+        }
+    }
+}
+
+if (!function_exists('course_image_text_2col_card')) {
+    function course_image_text_2col_card($course): array
+    {
+        if (! $course || ! ensure_image_text_2col_card_column()) {
+            return [];
+        }
+
+        $raw = $course->image_text_2col_card ?? null;
+        if (is_string($raw)) {
+            $raw = json_decode($raw, true);
+        }
+
+        return is_array($raw) ? $raw : [];
+    }
+}
+
+if (!function_exists('should_show_course_image_text_2col_card')) {
+    function should_show_course_image_text_2col_card($course): bool
+    {
+        $card = course_image_text_2col_card($course);
+        if ((int) ($card['status'] ?? 0) !== 1) {
+            return false;
+        }
+
+        $title = trim((string) ($card['title'] ?? ''));
+        $description = trim(strip_tags((string) ($card['description'] ?? '')));
+        $image = trim((string) ($card['image'] ?? ''));
+
+        return $title !== '' || $description !== '' || $image !== '';
+    }
+}
+
 if (!function_exists('payment_type_options')) {
     function payment_type_options(): array
     {
