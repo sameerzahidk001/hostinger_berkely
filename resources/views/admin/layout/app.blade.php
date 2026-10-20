@@ -30,6 +30,24 @@
                min-width: 720px;
             }
          }
+         .student-living-cell {
+            display: block;
+            min-width: 160px;
+            white-space: normal !important;
+            line-height: 1.4;
+         }
+         .student-living-cell div {
+            display: block;
+            font-size: 11px;
+            margin-top: 2px;
+            color: #1a1a1a;
+         }
+         table th.col-student,
+         table td.col-student {
+            min-width: 180px !important;
+            white-space: normal !important;
+            vertical-align: top;
+         }
          /* Prevent invisible overlays from blocking admin clicks */
          body:not(.modal-open) .modal-backdrop,
          body:not(.modal-open) .sweet-overlay {

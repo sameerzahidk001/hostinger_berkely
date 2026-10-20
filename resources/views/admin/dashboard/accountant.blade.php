@@ -211,9 +211,7 @@
                                 <th>Receipt Date</th>
                                 <th>Receipt Number</th>
                                 <th>Invoice No#</th>
-                                <th>Student</th>
-                                <th>Country living</th>
-                                <th>Nationality</th>
+                                <th class="col-student">Student</th>
                                 <th>Course</th>
                                 <th>Package</th>
                                 <th>Amount (Paid)</th>
@@ -229,7 +227,7 @@
                                     <td>{{ $row['receipt_date'] ?? $row['created_at'] ?? '—' }}</td>
                                     <td>{{ $row['receipt_no'] ?? '—' }}</td>
                                     <td>{{ $row['invoice_no'] ?? '—' }}</td>
-                                    <td>
+                                    <td class="col-student">
                                         @include('admin.payments.partials.student-living-lines', [
                                             'studentName' => $row['student'] ?? '—',
                                             'nationality' => $row['nationality'] ?? '—',
@@ -237,8 +235,6 @@
                                             'city' => $row['city'] ?? '',
                                         ])
                                     </td>
-                                    <td>{{ $row['country'] ?? '—' }}</td>
-                                    <td>{{ $row['nationality'] ?? '—' }}</td>
                                     <td>{{ $row['course'] }}</td>
                                     <td>{{ $row['package'] }}</td>
                                     <td>{{ $row['amount'] }}</td>
@@ -254,14 +250,14 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="13" class="text-center text-muted">No paid sales found for this range.</td>
+                                    <td colspan="11" class="text-center text-muted">No paid sales found for this range.</td>
                                 </tr>
                             @endforelse
                         </tbody>
                         @if($rows->isNotEmpty())
                             <tfoot>
                                 <tr style="font-weight:700;background:#f9f9f9;">
-                                    <td colspan="9" class="text-right">Total</td>
+                                    <td colspan="7" class="text-right">Total</td>
                                     <td>AED {{ number_format((float) ($salesTotalAed ?? 0), 2) }}</td>
                                     <td colspan="3"></td>
                                 </tr>

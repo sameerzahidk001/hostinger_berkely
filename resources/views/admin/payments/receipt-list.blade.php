@@ -116,9 +116,7 @@
                                 <tr>
                                     <th>Invoice No</th>
                                     <th>Invoice Issued Date</th>
-                                    <th>Student</th>
-                                    <th class="col-country">Country living</th>
-                                    <th>Nationality</th>
+                                    <th class="col-student">Student</th>
                                     <th>Invoice Amount</th>
                                     <th>Payment Plan</th>
                                     <th>Due Date</th>
@@ -142,16 +140,20 @@
                                 <tr>
                                     <td>INV-{{ str_pad($installment->payment_id, 6, '0', STR_PAD_LEFT) }}</td>
                                     <td>{{ \Carbon\Carbon::parse($installment->created_at)->format('Y/m/d') }}</td>
-                                    <td>
+                                    @php
+                                        $receiptUser = $installment->user ?? optional($installment->payment)->user;
+                                        $receiptCity = trim((string) optional($receiptUser)->city);
+                                        $receiptNat = $receiptUser ? $receiptUser->displayNationality() : '—';
+                                        $receiptCountry = $receiptUser ? $receiptUser->displayCountryName() : '—';
+                                    @endphp
+                                    <td class="col-student" data-export="{{ (optional($receiptUser)->name ?? 'N/A') }} | Nationality: {{ $receiptNat }} | Country, City: {{ $receiptCountry }}, {{ $receiptCity !== '' ? $receiptCity : '—' }}">
                                         @include('admin.payments.partials.student-living-lines', [
-                                            'studentName' => optional(optional($installment->payment)->user)->name ?? 'N/A',
-                                            'nationality' => optional($installment->user ?? optional($installment->payment)->user)->displayNationality() ?? '—',
-                                            'country' => optional($installment->user ?? optional($installment->payment)->user)->displayCountryName() ?? '—',
-                                            'city' => optional($installment->user ?? optional($installment->payment)->user)->city,
+                                            'studentName' => optional($receiptUser)->name ?? 'N/A',
+                                            'nationality' => $receiptNat,
+                                            'country' => $receiptCountry,
+                                            'city' => $receiptCity,
                                         ])
                                     </td>
-                                    <td class="col-country">{{ optional($installment->user ?? optional($installment->payment)->user)->displayCountryName() ?? '—' }}</td>
-                                    <td>{{ optional($installment->user ?? optional($installment->payment)->user)->displayNationality() ?? '—' }}</td>
                                     <td data-export="{{ $invoiceAmountExport }}">{!! format_payment_aed_amount_admin($installment->payment, (float) $installment->payment->price) !!}</td>
                                     <td>{{ $installment->installment_number }}/{{ $installment->payment->total_installment }}</td>
                                     <td>{{ \Carbon\Carbon::parse($installment->due_date)->format('Y/m/d') }}</td>
