@@ -15,18 +15,42 @@
         flex: 1;
     }
 
-    /* Keep invoices grid readable without forced horizontal scroll when audit cols are added */
     .ibox-content .table-responsive { overflow-x: auto; }
     table.dataTables-example {
         width: 100% !important;
         table-layout: auto;
         font-size: 12px;
+        min-width: 1480px;
+    }
+    table.dataTables-example > thead > tr > th {
+        padding: 8px 10px;
+        vertical-align: middle;
+        white-space: nowrap !important;
+        overflow-wrap: normal;
+        word-break: normal;
+    }
+    table.dataTables-example > tbody > tr > td {
+        padding: 8px 10px;
+        vertical-align: middle;
+        white-space: nowrap;
+        overflow-wrap: normal;
+        word-break: normal;
     }
     table.dataTables-example th.col-student,
     table.dataTables-example td.col-student {
-        min-width: 210px !important;
+        min-width: 230px !important;
         max-width: 280px;
         white-space: normal !important;
+        overflow-wrap: break-word;
+        word-break: break-word;
+        vertical-align: top;
+    }
+    table.dataTables-example td.col-course {
+        min-width: 200px;
+        max-width: 260px;
+        white-space: normal !important;
+        overflow-wrap: break-word;
+        word-break: break-word;
         vertical-align: top;
     }
     .student-living-cell {
@@ -39,14 +63,7 @@
         font-size: 12px;
         margin-top: 3px;
         color: #1a1a1a;
-    }
-    table.dataTables-example > thead > tr > th,
-    table.dataTables-example > tbody > tr > td {
-        padding: 6px 6px;
-        vertical-align: middle;
-        word-wrap: break-word;
-        overflow-wrap: anywhere;
-        white-space: normal;
+        white-space: normal !important;
     }
     table.dataTables-example .btn { margin: 1px 0; padding: 3px 6px; font-size: 11px; }
 
@@ -144,7 +161,7 @@
                                     <th>Invoice No</th>
                                     <th>Invoice Date</th>
                                     <th class="col-student">Student</th>
-                                    <th>Course</th>
+                                    <th class="col-course">Course</th>
                                     {{-- <th>Installments Request</th> --}}
                                     <th>Payment Plan</th>
                                     <th>Invoice Amount</th>
@@ -187,7 +204,7 @@
                                             <div>Country, City: {{ $invUser ? $invUser->displayCountryName() : '—' }}, {{ $invCity !== '' ? $invCity : '—' }}</div>
                                         </div>
                                     </td>
-                                    <td data-export="{{ ($payment->course->title ?? 'N/A') . ' - ' . ($payment->courseFee->package_name ?? 'N/A') }}">{{ $payment->course->title ?? 'N/A' }}<br><span class="text-muted">{{ $payment->courseFee->package_name ?? 'N/A' }}</span></td>
+                                    <td class="col-course" data-export="{{ ($payment->course->title ?? 'N/A') . ' - ' . ($payment->courseFee->package_name ?? 'N/A') }}">{{ $payment->course->title ?? 'N/A' }}<br><span class="text-muted">{{ $payment->courseFee->package_name ?? 'N/A' }}</span></td>
                                     {{-- <td>{{ $payment->installment_request->installments_requested ?? 'Direct' }}</td> --}}
                                     <td data-export="{{ $payment->installments->count() ?? 0 }}">
                                         <a type="button" href="javascript:void(0)" class="view-installments" data-installments='@json($payment)' data-currency="{{ $payment->courseFee->currency ?? 'AED' }}" data-country="{{ $payment->user ? $payment->user->displayCountryName() : '—' }}">
@@ -443,7 +460,7 @@
             info: false,
             ordering: true,
             responsive: false,
-            scrollX: false,
+            scrollX: true,
             autoWidth: false,
             dom: '<"admin-dt-toolbar"<l><B><f>>rtip',
             order: [[1, 'desc']],
