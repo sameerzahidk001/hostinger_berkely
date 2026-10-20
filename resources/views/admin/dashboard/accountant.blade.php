@@ -26,6 +26,17 @@
         color: #1ab394 !important;
         border-color: #1ab394 !important;
     }
+    .student-living-cell {
+        display: block;
+        min-width: 140px;
+        white-space: normal !important;
+        line-height: 1.4;
+    }
+    .student-living-cell div {
+        display: block;
+        font-size: 11px;
+        margin-top: 2px;
+    }
     #accountant-dashboard a.accountant-stat-card {
         display: block;
         text-decoration: none !important;

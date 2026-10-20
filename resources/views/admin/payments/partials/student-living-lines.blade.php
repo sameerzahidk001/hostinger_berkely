@@ -5,6 +5,8 @@
     $city = trim((string) ($city ?? ''));
     $city = $city !== '' ? $city : '—';
 @endphp
-{{ $studentName }}
-<br><small>Nationality: {{ $nationality }}</small>
-<br><small>Country, City: {{ $country }}, {{ $city }}</small>
+<div class="student-living-cell">
+    <strong>{{ $studentName }}</strong>
+    <div>Nationality: {{ $nationality }}</div>
+    <div>Country, City: {{ $country }}, {{ $city }}</div>
+</div>
