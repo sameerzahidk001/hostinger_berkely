@@ -152,14 +152,41 @@
             </div>
 
             <h4>Questions from QBANK</h4>
-            <select name="question_ids[]" class="form-control lms-searchable" data-placeholder="Type to find questions" multiple @disabled(! $canCreate)>
+            @php
+                $qById = $questions->keyBy('id');
+                if ($assessment->relationLoaded('questions')) {
+                    foreach ($assessment->questions as $aq) {
+                        if (! $qById->has($aq->id)) {
+                            $qById->put($aq->id, $aq);
+                        }
+                    }
+                }
+                $orderedQuestionIds = collect(old('question_ids', $selectedQuestionIds ?? []))->map(fn ($id) => (int) $id)->filter()->unique()->values();
+            @endphp
+            <select id="lms-q-picker" class="form-control lms-searchable" data-placeholder="Type to find questions" multiple @disabled(! $canCreate)>
                 @foreach($questions as $q)
-                    <option value="{{ $q->id }}" @selected(collect($selectedQuestionIds)->contains($q->id))>
+                    <option value="{{ $q->id }}" @selected($orderedQuestionIds->contains($q->id))>
                         #{{ $q->id }} [{{ strtoupper($q->type) }}]@if(trim((string) ($q->topic ?? '')) !== '') {{ trim($q->topic) }} ·@endif {{ \Illuminate\Support\Str::limit(strip_tags($q->stem), 80) }} ({{ lms_format_number($q->max_marks) }} marks)
                     </option>
                 @endforeach
             </select>
-            <p class="help-block">Type to find and multi-select. Add questions in Question Bank first. Assign users on the separate Assign page.</p>
+            <p class="help-block">Add questions here, then arrange the sequence below. That order is how they appear in the test (unless Shuffle questions is checked). Assign users on the separate Assign page.</p>
+            <label>Question sequence</label>
+            <ol id="lms-q-order" class="list-group" style="margin-bottom:8px;">
+                @forelse($orderedQuestionIds as $oid)
+                    @php $oq = $qById->get($oid); @endphp
+                    @if($oq)
+                        <li class="list-group-item" data-id="{{ $oq->id }}" style="display:flex;align-items:center;gap:8px;">
+                            <input type="hidden" name="question_ids[]" value="{{ $oq->id }}">
+                            <span class="js-q-label" style="flex:1;">#{{ $oq->id }} [{{ strtoupper($oq->type) }}] {{ \Illuminate\Support\Str::limit(strip_tags($oq->stem), 80) }}</span>
+                            <button type="button" class="btn btn-xs btn-default js-q-up" title="Move up" @disabled(! $canCreate)>&uarr;</button>
+                            <button type="button" class="btn btn-xs btn-default js-q-down" title="Move down" @disabled(! $canCreate)>&darr;</button>
+                        </li>
+                    @endif
+                @empty
+                @endforelse
+            </ol>
+            <p class="help-block m-b-none">Use the arrows to set Q1, Q2, Q3… Save the test after arranging.</p>
             </fieldset>
 
             @if($canCreate)
@@ -188,6 +215,39 @@
     }
     $('#assessment_kind').on('change select2:select', syncKindUi);
     syncKindUi();
+
+    var $picker = $('#lms-q-picker');
+    var $order = $('#lms-q-order');
+    function qLabelFromOption(id) {
+        var opt = $picker.find('option[value="' + id + '"]');
+        return opt.length ? $.trim(opt.text()) : ('#' + id);
+    }
+    function addOrderRow(id) {
+        if (!id || $order.find('li[data-id="' + id + '"]').length) return;
+        var li = $('<li class="list-group-item" data-id="' + id + '" style="display:flex;align-items:center;gap:8px;"></li>');
+        li.append($('<input type="hidden" name="question_ids[]">').val(id));
+        li.append($('<span class="js-q-label" style="flex:1;"></span>').text(qLabelFromOption(id)));
+        li.append('<button type="button" class="btn btn-xs btn-default js-q-up" title="Move up">&uarr;</button>');
+        li.append('<button type="button" class="btn btn-xs btn-default js-q-down" title="Move down">&darr;</button>');
+        $order.append(li);
+    }
+    $picker.on('select2:select', function (e) {
+        addOrderRow(e.params && e.params.data ? e.params.data.id : null);
+    });
+    $picker.on('select2:unselect', function (e) {
+        var id = e.params && e.params.data ? e.params.data.id : null;
+        if (id) $order.find('li[data-id="' + id + '"]').remove();
+    });
+    $order.on('click', '.js-q-up', function () {
+        if ($picker.prop('disabled')) return;
+        var li = $(this).closest('li');
+        li.prev('li').before(li);
+    });
+    $order.on('click', '.js-q-down', function () {
+        if ($picker.prop('disabled')) return;
+        var li = $(this).closest('li');
+        li.next('li').after(li);
+    });
 })();
 </script>
 @endpush
