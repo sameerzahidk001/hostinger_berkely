@@ -93,6 +93,7 @@ class AccountantDashboardService
                     'student' => $studentUser?->name
                         ?: ($studentUser?->email ?: '—'),
                     'country' => $studentUser ? $studentUser->displayCountryName() : '—',
+                    'city' => $studentUser ? trim((string) ($studentUser->city ?? '')) : '',
                     'nationality' => $studentUser ? $studentUser->displayNationality() : '—',
                     'course' => $payment
                         ? (method_exists($payment, 'programTitle')

@@ -171,8 +171,12 @@
                                     <td>INV-{{ str_pad($payment->id, 6, '0', STR_PAD_LEFT) }}</td>
                                     <td data-order="{{ \Carbon\Carbon::parse($payment->created_at)->timestamp }}">{{ \Carbon\Carbon::parse($payment->created_at)->format('Y/m/d') }}</td>
                                     <td>
-                                        {{ $payment->user->name ?? 'N/A' }}
-                                        <br><small>{{ $payment->user ? $payment->user->displayCountryName() : '—' }}</small>
+                                        @include('admin.payments.partials.student-living-lines', [
+                                            'studentName' => $payment->user->name ?? 'N/A',
+                                            'nationality' => $payment->user ? $payment->user->displayNationality() : '—',
+                                            'country' => $payment->user ? $payment->user->displayCountryName() : '—',
+                                            'city' => optional($payment->user)->city,
+                                        ])
                                     </td>
                                     <td class="col-country">{{ $payment->user ? $payment->user->displayCountryName() : '—' }}</td>
                                     <td>{{ $payment->user ? $payment->user->displayNationality() : '—' }}</td>

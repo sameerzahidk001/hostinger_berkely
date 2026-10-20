@@ -143,8 +143,12 @@
                                     <td>INV-{{ str_pad($installment->payment_id, 6, '0', STR_PAD_LEFT) }}</td>
                                     <td>{{ \Carbon\Carbon::parse($installment->created_at)->format('Y/m/d') }}</td>
                                     <td>
-                                        {{ $installment->payment->user->name ?? 'N/A' }}
-                                        <br><small>{{ optional($installment->user ?? optional($installment->payment)->user)->displayCountryName() ?? '—' }}</small>
+                                        @include('admin.payments.partials.student-living-lines', [
+                                            'studentName' => optional(optional($installment->payment)->user)->name ?? 'N/A',
+                                            'nationality' => optional($installment->user ?? optional($installment->payment)->user)->displayNationality() ?? '—',
+                                            'country' => optional($installment->user ?? optional($installment->payment)->user)->displayCountryName() ?? '—',
+                                            'city' => optional($installment->user ?? optional($installment->payment)->user)->city,
+                                        ])
                                     </td>
                                     <td class="col-country">{{ optional($installment->user ?? optional($installment->payment)->user)->displayCountryName() ?? '—' }}</td>
                                     <td>{{ optional($installment->user ?? optional($installment->payment)->user)->displayNationality() ?? '—' }}</td>
