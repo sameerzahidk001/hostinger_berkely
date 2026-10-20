@@ -8,6 +8,7 @@
                 <thead>
                     <tr>
                         <th>Invoice No</th>
+                        <th>Country</th>
                         <th>Receipt No</th>
                         <th>Invoice Issued Date</th>
                         <th>Invoice Amount</th>
@@ -31,6 +32,7 @@
                             @php $invoiceAmount = format_payment_amount($installment->payment); @endphp
                             <tr>
                                 <td>INV-{{ str_pad($installment->payment_id, 6, '0', STR_PAD_LEFT) }}</td>
+                                <td>{{ optional($installment->payment->user ?? $installment->user)->displayCountryName() ?? '—' }}</td>
                                 <td>
                                     @if ($installment->status === 'paid')
                                         RC-{{ str_pad($installment->id, 6, '0', STR_PAD_LEFT) }}

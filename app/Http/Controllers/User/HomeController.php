@@ -28,7 +28,7 @@ class HomeController extends Controller
         $data = [];
 
         if (! $isInstructor && $user->hasPermission('installment-list')) {
-            $data['installments'] = Installment::with(['payment.courseFee', 'payment.course'])
+            $data['installments'] = Installment::with(['payment.courseFee', 'payment.course', 'user.countryarray', 'payment.user.countryarray'])
                 ->where('user_id', Auth::id())
                 ->whereHas('payment', function ($query) {
                     $query->where('status', 'Active');
@@ -56,7 +56,7 @@ class HomeController extends Controller
 
         if (auth()->user()->hasPermission('installment-list')
             || auth()->user()->roles()->where('name', 'student')->exists()) {
-            $data['installments'] = Installment::with(['payment.courseFee', 'payment.course'])
+            $data['installments'] = Installment::with(['payment.courseFee', 'payment.course', 'user.countryarray', 'payment.user.countryarray'])
                 ->where('user_id', Auth::id())
                 ->whereHas('payment', function ($query) {
                     $query->where('status', 'Active');
@@ -74,7 +74,7 @@ class HomeController extends Controller
             'installment_id' => 'required|exists:installments,id',
         ]);
 
-        $installment = Installment::with(['payment.course', 'payment.courseFee', 'user'])
+        $installment = Installment::with(['payment.course', 'payment.courseFee', 'user.countryarray', 'payment.user.countryarray'])
             ->where('user_id', Auth::id())
             ->findOrFail($request->installment_id);
 

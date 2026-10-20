@@ -264,7 +264,9 @@
                 <div class="mb-0"><strong>Email:</strong> {{ $user->email }}</div>
                 <div class="mb-0"><strong>Phone:</strong> {{ $user->mobile_number }}</div>
                 <div class="mb-0"><strong>Address:</strong> {{ $user->address }}</div>
-                <div class="mb-0"><strong>City/Country:</strong> {{ $user->city }}, {{ $user->country }}</div>
+                <div class="mb-0"><strong>City:</strong> {{ $user->city ?: '—' }}</div>
+                <div class="mb-0"><strong>Country:</strong> {{ $user->displayCountryName() }}</div>
+                <div class="mb-0"><strong>Nationality:</strong> {{ $user->displayNationality() }}</div>
             </div>
             <div class="right text-right" style="width: 45%">
                 <div class="mb-0"><strong>Invoice Date:</strong> {{ $invoiceDate }}</div>

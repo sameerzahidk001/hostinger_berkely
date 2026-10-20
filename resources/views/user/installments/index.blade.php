@@ -34,6 +34,7 @@
                                 <thead>
                                     <tr>
                                         <th>Invoice No</th>
+                                        <th>Country</th>
                                         <th>Invoice Issued Date</th>
                                         <th>Course Name</th>
                                         <th>Package Name</th>
@@ -61,6 +62,7 @@
                                                         : (float) ($installment->remaining_amount ?? 0);
                                                 @endphp
                                                 <td>INV-{{ str_pad($installment->payment_id, 6, '0', STR_PAD_LEFT) }}</td>
+                                                <td>{{ optional($installment->payment->user ?? $installment->user)->displayCountryName() ?? '—' }}</td>
                                                 <td>{{ \Carbon\Carbon::parse($installment->created_at)->format('d-M-Y') ?? 'N/A' }}</td>
                                                 <td>@include('partials.course_link', ['course' => $installment->payment->course ?? null, 'fallback' => 'N/A'])</td>
                                                 <td>{{ $installment->payment->courseFee->package_name ?? 'N/A' }}</td>

@@ -223,7 +223,7 @@ class PaymentController extends Controller
 
     public function edit($id)
     {
-        $payment = Payment::with('installments', 'user', 'course', 'courseFee', 'page', 'pageFeePackage')->findOrFail($id);
+        $payment = Payment::with('installments', 'user.countryarray', 'course', 'courseFee', 'page', 'pageFeePackage')->findOrFail($id);
         $users = User::with('roles')->whereHas('roles', function ($query) {
             $query->where('name', 'student');
         })->get();
@@ -461,7 +461,7 @@ class PaymentController extends Controller
 
     public function pushToCrm($id)
     {
-        $payment = Payment::with('installments', 'user', 'course', 'courseFee', 'page', 'pageFeePackage')->findOrFail($id);
+        $payment = Payment::with('installments', 'user.countryarray', 'course', 'courseFee', 'page', 'pageFeePackage')->findOrFail($id);
         PaymentCrmDispatcher::syncPayment($payment);
         $payment->refresh();
 
@@ -474,7 +474,7 @@ class PaymentController extends Controller
 
     public function pushReceiptToCrm($id)
     {
-        $installment = Installment::with('payment.user', 'payment.course', 'payment.courseFee')->findOrFail($id);
+        $installment = Installment::with('payment.user.countryarray', 'payment.course', 'payment.courseFee', 'user.countryarray')->findOrFail($id);
         PaymentCrmDispatcher::syncReceipt($installment);
         $installment->refresh();
 
@@ -778,7 +778,7 @@ class PaymentController extends Controller
 
     public function sendReceipt($id)
     {
-        $installment = Installment::with(['payment.course', 'payment.courseFee', 'user'])->findOrFail($id);
+        $installment = Installment::with(['payment.course', 'payment.courseFee', 'user.countryarray'])->findOrFail($id);
 
         $pdf = PDF::loadView('admin.payments.receipt-pdf', compact('installment'))
             ->setPaper('a4');

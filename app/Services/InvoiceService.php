@@ -34,6 +34,7 @@ class InvoiceService
     {
         $payment->loadMissing([
             'user.roles',
+            'user.countryarray',
             'course',
             'courseFee',
             'page',
