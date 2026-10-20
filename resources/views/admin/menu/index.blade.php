@@ -19,6 +19,15 @@
                 </div>
 
                 <div class="ibox-content">
+                    @if ($errors->any())
+                        <div class="alert alert-danger">
+                            <ul class="mb-0">
+                                @foreach ($errors->all() as $error)
+                                    <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
                     <table class="table table-striped table-bordered table-hover dataTables-example">
                         <thead>
                             <tr>
@@ -34,7 +43,13 @@
                             @foreach ($menus as $menu)
                                 <tr>
                                     <td>{{ ucfirst($menu->menu_group) }}</td>
-                                    <td>{{ $menu->name }}</td>
+                                    <td>
+                                        @if($menu->parent_id)
+                                            <span class="text-muted">{{ optional($menu->parent)->name }} → </span>{{ $menu->name }}
+                                        @else
+                                            <strong>{{ $menu->name }}</strong>
+                                        @endif
+                                    </td>
                                     <td>{{ $menu->link }}</td>
                                     <td>{{ $menu->menu_order }}</td>
                                     <td>{{ $menu->parent ? $menu->parent->name : 'None' }}</td>
@@ -50,8 +65,15 @@
                                         </form>
                                     </td>
                                 </tr>
-                                <!-- Edit Menu Modal for each menu -->
-                                <!-- Edit Menu Modal for each menu -->
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @foreach ($menus as $menu)
                                 <div class="modal fade" id="editMenuModal-{{ $menu->id }}" tabindex="-1" role="dialog"
                                     aria-labelledby="editMenuModalLabel-{{ $menu->id }}">
                                     <div class="modal-dialog" role="document">
@@ -136,9 +158,11 @@
                                                             class="form-control">
                                                             <option value="">None (Will act as its own parent)</option>
                                                             @foreach ($menus as $parent)
+                                                                @if($parent->id !== $menu->id)
                                                                 <option value="{{ $parent->id }}" {{ $menu->parent_id == $parent->id ? 'selected' : '' }}>
-                                                                    {{ $parent->name }}
+                                                                    {{ $parent->parent_id ? (optional($parent->parent)->name . ' → ' . $parent->name) : $parent->name }}
                                                                 </option>
+                                                                @endif
                                                             @endforeach
                                                         </select>
                                                     </div>
@@ -158,14 +182,7 @@
                                         </div>
                                     </div>
                                 </div>
-
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </div>
+    @endforeach
 
     <!-- Add Menu Modal -->
     <div class="modal fade" id="addMenuModal" tabindex="-1" role="dialog" aria-labelledby="addMenuModalLabel">
@@ -230,7 +247,7 @@
                                 <select class="form-control" id="pages">
                                     <option value="">None</option>
                                     @foreach ($pages as $page)
-                                        <option value="{{ $page->id }}" data-link="{{ $page->url }}">
+                                        <option value="{{ $page->id }}" data-link="{{ $page->url }}" data-name="{{ $page->page_name }}">
                                             {{ $page->page_name }}
                                         </option>
                                     @endforeach
@@ -242,7 +259,7 @@
 
                             <div class="form-group">
                                 <label for="page_name">Page Name</label>
-                                <input type="text" class="form-control" name="page_name"
+                                <input type="text" class="form-control" name="page_name" id="page_name"
                                     placeholder="Page name will appear here">
                             </div>
                         </div>
@@ -268,7 +285,9 @@
                             <select name="parent_id" id="parent_id" class="form-control">
                                 <option value="">None (Will act as its own parent)</option>
                                 @foreach ($menus as $menu)
-                                    <option value="{{ $menu->id }}">{{ $menu->name }}</option>
+                                    <option value="{{ $menu->id }}">
+                                        {{ $menu->parent_id ? (optional($menu->parent)->name . ' → ' . $menu->name) : $menu->name }}
+                                    </option>
                                 @endforeach
                             </select>
                         </div>
@@ -297,13 +316,19 @@
     <script>
         $(document).ready(function () {
             $('.dataTables-example').DataTable({
-                pageLength: 10,
+                pageLength: 100,
                 searching: true,
                 lengthChange: true,
                 paging: true,
-                info: false,
+                info: true,
                 ordering: true,
-                responsive: true,
+                responsive: false,
+                autoWidth: false,
+                scrollX: true,
+                order: [[0, 'asc'], [4, 'asc'], [3, 'asc']],
+                columnDefs: [
+                    { targets: -1, orderable: false }
+                ],
                 dom: 'lftip'
             });
         });
@@ -362,13 +387,17 @@
             // Handle existing page selection
             const pagesSelect = document.getElementById('pages');
             const pageNameInput = document.getElementById('page_name');
-            const pageLinkInput = document.getElementById('page_link');
+            const pageLinkInput = document.getElementById('selected_page_link');
 
-            pagesSelect.addEventListener('change', function () {
-                const selectedOption = this.options[this.selectedIndex];
-                pageNameInput.value = selectedOption.getAttribute('data-name') || '';
-                pageLinkInput.value = selectedOption.getAttribute('data-link') || '';
-            });
+            if (pagesSelect && pageNameInput) {
+                pagesSelect.addEventListener('change', function () {
+                    const selectedOption = this.options[this.selectedIndex];
+                    pageNameInput.value = selectedOption.getAttribute('data-name') || '';
+                    if (pageLinkInput) {
+                        pageLinkInput.value = selectedOption.getAttribute('data-link') || '';
+                    }
+                });
+            }
         });
         document.addEventListener('DOMContentLoaded', function () {
             const pageDropdown = document.getElementById('pages');

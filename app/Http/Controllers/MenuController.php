@@ -11,7 +11,12 @@ class MenuController extends Controller
     // Show the list of menu items
     public function index()
     {
-        $menus = Menu::orderBy('menu_order')->get();
+        $menus = Menu::with('parent')
+            ->orderBy('menu_group')
+            ->orderByRaw('CASE WHEN parent_id IS NULL THEN 0 ELSE 1 END')
+            ->orderBy('menu_order')
+            ->orderBy('name')
+            ->get();
         $pages = Page::get();
         return view('admin.menu.index', compact('menus','pages'));
     }
@@ -28,44 +33,49 @@ class MenuController extends Controller
         'menu_group' => 'required|string|max:255',
         'page_id' => 'nullable|exists:pages,id',
         'custom_name' => 'nullable|string|max:255',
-        'custom_url' => 'nullable|url',
+        'custom_url' => 'nullable|string|max:2048',
         'menu_order' => 'nullable|integer',
         'parent_id' => 'nullable|exists:menus,id',
     ]);
+    $parentId = $request->filled('parent_id') ? $request->input('parent_id') : null;
     // Determine if it's a custom menu or an existing page
-    if ($request->filled('custom_name') && $request->filled('custom_url')) {
+    if ($request->filled('custom_name')) {
         $name = $request->input('custom_name');
-        $link = $request->input('custom_url');
+        $link = $request->input('custom_url') ?: '#';
     } elseif ($request->filled('page_id')) {
         $page = Page::find($request->input('page_id'));
-        $name = $request->input('page_name');
-        $link = url('/' . ltrim($request->input('page_link'), '/'));
+        $name = $request->input('page_name') ?: optional($page)->page_name;
+        $link = $request->input('page_link')
+            ? url('/' . ltrim($request->input('page_link'), '/'))
+            : url('/' . ltrim((string) optional($page)->url, '/'));
     } else {
-        return redirect()->back()->withErrors('You must select a page or provide a custom menu.');
+        return redirect()->back()->withInput()->withErrors(['custom_name' => 'Select a page or enter a custom menu name.']);
     }
 
-    // Check if the menu already exists for the same page
     $existingMenu = Menu::where('menu_group', $request->menu_group)
                         ->where('name', $name)
+                        ->where(function ($q) use ($parentId) {
+                            if ($parentId) {
+                                $q->where('parent_id', $parentId);
+                            } else {
+                                $q->whereNull('parent_id');
+                            }
+                        })
                         ->first();
 
     if ($existingMenu) {
-        return redirect()->back()->withErrors('This menu already exists in the selected group.');
+        return redirect()->back()->withInput()->withErrors(['custom_name' => 'This menu already exists in the selected group.']);
     }
 
-    // Create the new menu
     $menu = new Menu([
         'menu_group' => $request->menu_group,
         'name' => $name,
         'link' => $link,
         'menu_order' => $request->menu_order,
         'is_active' => true,
+        'parent_id' => $parentId,
     ]);
 
-    $menu->save();
-
-    // Handle parent menu logic
-    $menu->parent_id = $request->filled('parent_id') ? $request->input('parent_id') : null;
     $menu->save();
 
     return redirect()->route('menu.index')->with('success', 'Menu added successfully.');
@@ -77,30 +87,29 @@ public function update(Request $request, Menu $menu)
         'menu_group' => 'required|string|max:255',
         'page_id' => 'nullable|exists:pages,id',
         'custom_name' => 'nullable|string|max:255',
-        'custom_url' => 'nullable|url',
+        'custom_url' => 'nullable|string|max:2048',
         'menu_order' => 'nullable|integer',
         'parent_id' => 'nullable|exists:menus,id',
         'is_active' => 'nullable|boolean',
     ]);
 
-    // Determine if it's a custom menu or an existing page
-    if ($request->filled('custom_name') && $request->filled('custom_url')) {
+    if ($request->filled('custom_name')) {
         $menu->name = $request->input('custom_name');
-        $menu->link = $request->input('custom_url');
+        if ($request->filled('custom_url')) {
+            $menu->link = $request->input('custom_url');
+        }
     } elseif ($request->filled('page_id')) {
         $page = Page::find($request->input('page_id'));
-        $name = $request->input('page_name');
-        $link = url('/' . ltrim($request->input('page_link'), '/'));
-    } else {
-        return redirect()->back()->withErrors('You must select a page or provide a custom menu.');
+        $menu->name = $request->input('page_name') ?: optional($page)->page_name ?: $menu->name;
+        $pageLink = $request->input('page_link') ?: optional($page)->url;
+        if ($pageLink) {
+            $menu->link = url('/' . ltrim($pageLink, '/'));
+        }
     }
 
-    // Update other fields
     $menu->menu_group = $request->input('menu_group');
     $menu->menu_order = $request->input('menu_order');
     $menu->is_active = $request->input('is_active', true);
-
-    // Handle parent menu logic
     $menu->parent_id = $request->filled('parent_id') ? $request->input('parent_id') : null;
 
     $menu->save();
