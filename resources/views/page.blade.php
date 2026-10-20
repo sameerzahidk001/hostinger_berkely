@@ -163,8 +163,46 @@
             @endphp
             <x-categories :background="$section->data['background'] ?? 'none'" :color="$section->data['color'] ?? 'inherit'" :title="$section->data['title'] ?? ''"
                 :description="$section->data['description'] ?? ''" :categories="$lists" />
+        @elseif($section->section_type === 'filter-courses')
+            <x-filter-courses
+                :id="$section->order + 1"
+                :color="$section->data['color'] ?? '#000000'"
+                :background="$section->data['background'] ?? 'transparent'"
+                :contentColor="$section->data['content_color'] ?? ''"
+                :contentBackground="$section->data['content_background'] ?? 'transparent'"
+                :contentBorderColor="$section->data['content_border_color'] ?? ''"
+                :tabColor="$section->data['tab_color'] ?? ''"
+                :tabBackground="$section->data['tab_background'] ?? 'transparent'"
+                :tabBorderColor="$section->data['tab_border_color'] ?? ''"
+                :activeTabColor="$section->data['active_tab_color'] ?? ''"
+                :activeTabBackground="$section->data['active_tab_background'] ?? 'transparent'"
+                :activeTabBorderColor="$section->data['active_tab_border_color'] ?? ''"
+                :filterColor="$section->data['filter_color'] ?? ''"
+                :filterBackground="$section->data['filter_background'] ?? 'transparent'"
+                :filterBorderColor="$section->data['filter_border_color'] ?? ''"
+                :activeFilterColor="$section->data['active_filter_color'] ?? ''"
+                :activeFilterBackground="$section->data['active_filter_background'] ?? 'transparent'"
+                :activeFilterBorderColor="$section->data['active_filter_border_color'] ?? ''"
+                :orderby="$section->data['orderby'] ?? ''"
+                :url_target="$section->data['url_target'] ?? ''"
+                :title="$section->data['title'] ?? ''"
+                :description="$section->data['description'] ?? ''"
+            />
+            @if(should_show_global_women_card($page ?? null))
+                @include('partials.global-women-card')
+            @endif
         @endif
     @endforeach
+    @php
+        $isCoursesPage = isset($page) && (
+            str_contains(strtolower((string) ($page->url ?? '')), 'course')
+            || str_contains(strtolower((string) ($page->page_name ?? '')), 'course')
+        );
+        $hasFilterCourses = isset($page) && $page->sections->contains(fn ($s) => $s->section_type === 'filter-courses');
+    @endphp
+    @if($isCoursesPage && ! $hasFilterCourses && should_show_global_women_card($page ?? null))
+        @include('partials.global-women-card')
+    @endif
 
     @php
         $pageFeeServices = $pageFeeServices ?? $page->pageFeeServices ?? $page->feeServices ?? collect();

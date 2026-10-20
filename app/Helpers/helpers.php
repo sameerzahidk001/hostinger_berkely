@@ -3083,6 +3083,85 @@ if (!function_exists('format_in_viewer_tz')) {
     }
 }
 
+if (!function_exists('global_women_card')) {
+    function global_women_card(): array
+    {
+        $description = '<p>A Social Enterprise aims at bringing change in women\'s development and future leaders as the ratio of women vs men is drastically getting higher and women have to prepare themselves for leading the world by empowering and inspiring future women leaders, fostering entrepreneurship, and championing their education and healthcare for all.</p>'
+            . '<ul>'
+            . '<li><a href="https://women.berkeleyme.com/" target="_blank" rel="noopener">Power to Women Entrepreneurs</a></li>'
+            . '<li><a href="https://women.berkeleyme.com/" target="_blank" rel="noopener">Past Conferences</a></li>'
+            . '<li><a href="https://women.berkeleyme.com/" target="_blank" rel="noopener">Be a Woman Supporter</a></li>'
+            . '<li><a href="https://women.berkeleyme.com/" target="_blank" rel="noopener">Be a Supporter of Women Entrepreneurs Support Centre</a></li>'
+            . '</ul>';
+
+        $card = [
+            'title' => 'BERKELEY & MS VOICE GLOBAL WOMEN',
+            'description' => $description,
+            'image' => null,
+            'icon' => null,
+            'url' => 'https://women.berkeleyme.com/',
+            'url_text' => 'Learn More',
+            'url_target' => '0',
+            'image_placement' => 'left',
+            'layout' => 'layout-1',
+            'background_color' => 'transparent',
+            'content_background' => 'transparent',
+            'color' => '#000000',
+        ];
+
+        try {
+            if (! class_exists(\App\Models\PageSection::class)
+                || ! \Illuminate\Support\Facades\Schema::hasTable('page_sections')) {
+                return $card;
+            }
+            $sections = \App\Models\PageSection::query()
+                ->where('section_type', 'media-section')
+                ->orderBy('id')
+                ->get();
+            $found = $sections->first(function ($section) {
+                $data = is_string($section->data) ? json_decode($section->data, true) : $section->data;
+                $title = strtolower((string) ($data['title'] ?? ''));
+
+                return str_contains($title, 'global women')
+                    || str_contains($title, 'ms voice')
+                    || str_contains($title, 'voice of global');
+            });
+            if ($found) {
+                $data = is_string($found->data) ? json_decode($found->data, true) : $found->data;
+                if (is_array($data)) {
+                    $card = array_merge($card, array_filter($data, fn ($v) => $v !== null && $v !== ''));
+                }
+            }
+        } catch (\Throwable $e) {
+        }
+
+        return $card;
+    }
+}
+
+if (!function_exists('should_show_global_women_card')) {
+    function should_show_global_women_card($page = null): bool
+    {
+        if (! $page || empty($page->sections)) {
+            return true;
+        }
+        foreach ($page->sections as $section) {
+            if (($section->section_type ?? '') !== 'media-section') {
+                continue;
+            }
+            $data = is_string($section->data) ? json_decode($section->data, true) : $section->data;
+            $title = strtolower((string) ($data['title'] ?? ''));
+            if (str_contains($title, 'global women')
+                || str_contains($title, 'ms voice')
+                || str_contains($title, 'voice of global')) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+}
+
 if (!function_exists('payment_type_options')) {
     function payment_type_options(): array
     {
