@@ -622,6 +622,9 @@ class AdminController extends Controller
                 ],
                 'linkKey' => 'student',
                 'rows' => $rows->all(),
+                'totalKey' => 'amount',
+                'totalLabel' => 'Total',
+                'totalValue' => 'AED ' . number_format($salesTotalAed, 2),
             ])->setPaper('a4', 'landscape');
 
             return $pdf->download($fileStamp . '.pdf');

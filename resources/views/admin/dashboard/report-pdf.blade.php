@@ -86,6 +86,34 @@
                 </tr>
             @endforelse
         </tbody>
+        @if(!empty($totalValue))
+            @php
+                $totalKey = $totalKey ?? 'amount';
+                $beforeTotal = 1;
+                $afterTotal = 0;
+                $foundTotalCol = false;
+                foreach ($columns as $col) {
+                    if (! $foundTotalCol && (($col['key'] ?? '') === $totalKey)) {
+                        $foundTotalCol = true;
+                        continue;
+                    }
+                    if ($foundTotalCol) {
+                        $afterTotal++;
+                    } else {
+                        $beforeTotal++;
+                    }
+                }
+            @endphp
+            <tfoot>
+                <tr>
+                    <td colspan="{{ max(1, $beforeTotal) }}" style="text-align:right;font-weight:700;">{{ $totalLabel ?? 'Total' }}</td>
+                    <td style="font-weight:700;">{{ $totalValue }}</td>
+                    @if($afterTotal > 0)
+                        <td colspan="{{ $afterTotal }}"></td>
+                    @endif
+                </tr>
+            </tfoot>
+        @endif
     </table>
 </body>
 </html>
