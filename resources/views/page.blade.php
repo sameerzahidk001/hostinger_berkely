@@ -188,21 +188,23 @@
                 :title="$section->data['title'] ?? ''"
                 :description="$section->data['description'] ?? ''"
             />
+        @elseif($section->section_type === 'instructors')
             @if(should_show_global_women_card($page ?? null))
                 @include('partials.global-women-card')
             @endif
+            <x-instructors
+                :id="$section->order + 1"
+                :background="$section->data['background'] ?? 'transparent'"
+                :color="$section->data['color'] ?? '#000000'"
+                :cardBackground="$section->data['card_background'] ?? '#ffffff'"
+                :cardColor="$section->data['card_color'] ?? '#000000'"
+                :orderby="$section->data['orderby'] ?? ''"
+                :pagination="$section->data['pagination'] ?? 0"
+                :title="$section->data['title'] ?? ''"
+                :description="$section->data['description'] ?? ''"
+            />
         @endif
     @endforeach
-    @php
-        $isCoursesPage = isset($page) && (
-            str_contains(strtolower((string) ($page->url ?? '')), 'course')
-            || str_contains(strtolower((string) ($page->page_name ?? '')), 'course')
-        );
-        $hasFilterCourses = isset($page) && $page->sections->contains(fn ($s) => $s->section_type === 'filter-courses');
-    @endphp
-    @if($isCoursesPage && ! $hasFilterCourses && should_show_global_women_card($page ?? null))
-        @include('partials.global-women-card')
-    @endif
 
     @php
         $pageFeeServices = $pageFeeServices ?? $page->pageFeeServices ?? $page->feeServices ?? collect();
