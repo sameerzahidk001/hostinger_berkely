@@ -11,12 +11,26 @@ class MenuController extends Controller
     // Show the list of menu items
     public function index()
     {
-        $menus = Menu::with('parent')
+        $all = Menu::with('parent')
             ->orderBy('menu_group')
-            ->orderByRaw('CASE WHEN parent_id IS NULL THEN 0 ELSE 1 END')
             ->orderBy('menu_order')
             ->orderBy('name')
             ->get();
+        $byParent = $all->groupBy(function ($item) {
+            return $item->parent_id ? (string) $item->parent_id : '0';
+        });
+        $menus = collect();
+        foreach ($all->whereNull('parent_id') as $root) {
+            $menus->push($root);
+            foreach ($byParent->get((string) $root->id, collect()) as $child) {
+                $menus->push($child);
+            }
+        }
+        foreach ($all as $item) {
+            if (! $menus->contains('id', $item->id)) {
+                $menus->push($item);
+            }
+        }
         $pages = Page::get();
         return view('admin.menu.index', compact('menus','pages'));
     }
