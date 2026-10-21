@@ -9,7 +9,6 @@
                     <tr>
                         <th>Invoice No</th>
                         <th>Invoice Issued Date</th>
-                        <th>Country of Residence</th>
                         <th>Course Name</th>
                         <th>Package Name</th>
                         <th>Invoice Amount</th>
@@ -19,7 +18,7 @@
                         <th>Receipt No</th>
                         <th>Paid Date</th>
                         <th>Paid Amount</th>
-                        <th>Action</th>
+                        <th class="col-action">Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -41,7 +40,6 @@
                                 <td data-label="Invoice Issued Date" data-order="{{ $issuedAt ? \Carbon\Carbon::parse($issuedAt)->timestamp : 0 }}">
                                     {{ $issuedAt ? \Carbon\Carbon::parse($issuedAt)->format('d-M-Y') : 'N/A' }}
                                 </td>
-                                <td data-label="Country of Residence">{{ optional($payment->user ?? $installment->user)->displayCountryName() ?? '—' }}</td>
                                 <td data-label="Course Name">@include('partials.course_link', ['course' => $payment->course ?? null, 'fallback' => 'N/A'])</td>
                                 <td data-label="Package Name">{{ $payment->courseFee->package_name ?? 'N/A' }}</td>
                                 <td data-label="Invoice Amount">{{ $invoiceAmount['display'] }}</td>
@@ -61,10 +59,10 @@
                                 </td>
                                 <td data-label="Paid Date">{{ $installment->paid_date ?? 'N/A' }}</td>
                                 <td data-label="Paid Amount">{{ format_payment_aed_amount($payment, (float) ($installment->paid_amount ?? 0)) }}</td>
-                                <td data-label="Action">
+                                <td class="col-action" data-label="Action">
+                                    <div class="lms-admission-actions">
                                     @if ($installment->status == 'pending')
                                         <button type="button" class="btn btn-primary btn-sm payNowBtn"
-                                            style="margin-right: 5px; margin-bottom: 5px;"
                                             data-installment-id="{{ $installment->id }}">
                                             <i class="fa fa-credit-card"></i> Pay Now
                                         </button>
@@ -72,8 +70,7 @@
 
                                     @if ($installment->status == 'paid')
                                         <a href="{{ route('user.installments.receipt', $installment->id) }}"
-                                            class="btn btn-primary btn-sm"
-                                            style="margin-right: 5px; margin-bottom: 5px;">
+                                            class="btn btn-primary btn-sm">
                                             <i class="fa fa-file-text-o"></i> Receipt
                                         </a>
                                     @endif
@@ -84,14 +81,14 @@
 
                                     @if ($paymentId && !in_array($paymentId, $shownPaymentIds))
                                         <a href="{{ route('user.installments.invoice', $paymentId) }}"
-                                            class="btn btn-success btn-sm"
-                                            style="display:inline-block; margin-right:5px; margin-bottom: 5px;">
+                                            class="btn btn-success btn-sm">
                                             <i class="fa fa-file-pdf-o"></i> Invoice
                                         </a>
                                         @php
                                             $shownPaymentIds[] = $paymentId;
                                         @endphp
                                     @endif
+                                    </div>
                                 </td>
                             </tr>
                         @endif
