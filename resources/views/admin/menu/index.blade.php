@@ -3,7 +3,7 @@
 @section('title', 'Menu Management')
 
 @section('content')
-    <!-- menu-edit-v3 -->
+    <!-- menu-edit-v4 -->
     <div class="row">
         <div class="col-lg-12">
             <div class="ibox float-e-margins">
@@ -67,8 +67,8 @@
                                     <td>{{ $menu->menu_order }}</td>
                                     <td>{{ $menu->parent ? $menu->parent->name : 'None' }}</td>
                                     <td>
-                                        <button class="btn btn-info btn-sm" data-toggle="modal"
-                                            data-target="#editMenuModal-{{ $menu->id }}">Edit</button>
+                                        <button type="button" class="btn btn-info btn-sm js-open-menu-edit"
+                                            data-modal="#editMenuModal-{{ $menu->id }}">Edit</button>
                                         <form id="delete-form-{{ $menu->id }}" action="{{ route('menu.destroy', $menu->id) }}" method="POST" style="display:inline;">
                                             @csrf
                                             @method('DELETE')
@@ -93,7 +93,7 @@
 
     @foreach ($menus as $menu)
                                 <div class="modal fade" id="editMenuModal-{{ $menu->id }}" tabindex="-1" role="dialog"
-                                    aria-labelledby="editMenuModalLabel-{{ $menu->id }}">
+                                    aria-labelledby="editMenuModalLabel-{{ $menu->id }}" aria-hidden="true">
                                     <div class="modal-dialog" role="document">
                                         <div class="modal-content">
                                             <form action="{{ route('menu.update', $menu->id) }}" method="POST">
@@ -123,42 +123,33 @@
                                                         </select>
                                                     </div>
 
-                                                    <div class="text-center mb-3">
-                                                        <button type="button" class="btn btn-success btn-sm js-show-section" data-section="#editExistingPages-{{ $menu->id }}">Edit Existing Page</button>
-                                                        <button type="button" class="btn btn-info btn-sm js-show-section" data-section="#editCustomMenu-{{ $menu->id }}">Edit Custom Menu</button>
+                                                    <p class="text-muted">Change the name or URL, then click <strong>Update Menu</strong>.</p>
+                                                    <div class="form-group">
+                                                        <label for="custom_name_{{ $menu->id }}">Menu Name</label>
+                                                        <input type="text" name="custom_name"
+                                                            id="custom_name_{{ $menu->id }}" class="form-control"
+                                                            value="{{ $menu->name }}">
                                                     </div>
-                                                    <div id="editExistingPages-{{ $menu->id }}">
-                                                        <h6>Existing page</h6>
-                                                        <div class="form-group">
-                                                            <label for="pages_{{ $menu->id }}">Select Page</label>
-                                                            <select class="form-control js-edit-page"
-                                                                id="pages_{{ $menu->id }}"
-                                                                data-name="#custom_name_{{ $menu->id }}"
-                                                                data-url="#custom_url_{{ $menu->id }}">
-                                                                <option value="">Keep current name and URL</option>
-                                                                @foreach ($pages as $page)
-                                                                    <option value="{{ $page->id }}"
-                                                                        data-name="{{ $page->page_name }}"
-                                                                        data-link="{{ url('/' . ltrim((string) ($page->url ?? $page->page_link ?? ''), '/')) }}">
-                                                                        {{ $page->page_name }}
-                                                                    </option>
-                                                                @endforeach
-                                                            </select>
-                                                        </div>
+                                                    <div class="form-group">
+                                                        <label for="custom_url_{{ $menu->id }}">URL</label>
+                                                        <input type="text" name="custom_url" id="custom_url_{{ $menu->id }}"
+                                                            class="form-control" value="{{ $menu->link }}">
                                                     </div>
-                                                    <div id="editCustomMenu-{{ $menu->id }}">
-                                                        <h6>Custom menu</h6>
-                                                        <div class="form-group">
-                                                            <label for="custom_name_{{ $menu->id }}">Custom Menu Name</label>
-                                                            <input type="text" name="custom_name"
-                                                                id="custom_name_{{ $menu->id }}" class="form-control"
-                                                                value="{{ $menu->name }}">
-                                                        </div>
-                                                        <div class="form-group">
-                                                            <label for="custom_url_{{ $menu->id }}">Custom URL</label>
-                                                            <input type="text" name="custom_url" id="custom_url_{{ $menu->id }}"
-                                                                class="form-control" value="{{ $menu->link }}">
-                                                        </div>
+                                                    <div class="form-group">
+                                                        <label for="pages_{{ $menu->id }}">Or pick an existing page</label>
+                                                        <select class="form-control js-edit-page"
+                                                            id="pages_{{ $menu->id }}"
+                                                            data-name="#custom_name_{{ $menu->id }}"
+                                                            data-url="#custom_url_{{ $menu->id }}">
+                                                            <option value="">Keep current name and URL</option>
+                                                            @foreach ($pages as $page)
+                                                                <option value="{{ $page->id }}"
+                                                                    data-name="{{ $page->page_name }}"
+                                                                    data-link="{{ url('/' . ltrim((string) ($page->url ?? $page->page_link ?? ''), '/')) }}">
+                                                                    {{ $page->page_name }}
+                                                                </option>
+                                                            @endforeach
+                                                        </select>
                                                     </div>
 
                                                     <!-- Parent Menu Selection -->
@@ -357,6 +348,25 @@
                     if (urlEl && opt.getAttribute('data-link')) urlEl.value = opt.getAttribute('data-link');
                 });
             });
+            if (window.jQuery) {
+                $(document).on('click', '.js-open-menu-edit', function (e) {
+                    e.preventDefault();
+                    var sel = $(this).attr('data-modal');
+                    var $m = $(sel);
+                    if (!$m.length) return;
+                    $m.attr('aria-hidden', 'false').removeAttr('inert');
+                    $m.modal('show');
+                });
+                $(document).on('show.bs.modal shown.bs.modal', '.modal', function () {
+                    this.setAttribute('aria-hidden', 'false');
+                    this.removeAttribute('inert');
+                });
+                $(document).on('hide.bs.modal', '.modal', function () {
+                    if (this.contains(document.activeElement)) {
+                        document.activeElement.blur();
+                    }
+                });
+            }
             document.addEventListener('click', function (e) {
                 var button = e.target && e.target.closest ? e.target.closest('.js-show-section') : null;
                 if (!button) return;
