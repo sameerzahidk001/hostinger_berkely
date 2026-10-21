@@ -179,7 +179,7 @@
                         <li class="list-group-item" data-id="{{ $oq->id }}" style="display:flex;align-items:center;gap:8px;">
                             <input type="hidden" name="question_ids[]" value="{{ $oq->id }}">
                             <strong class="js-q-num" style="min-width:36px;">Q{{ $oi + 1 }}</strong>
-                            <span class="js-q-label" style="flex:1;">#{{ $oq->id }} [{{ strtoupper($oq->type) }}] {{ \Illuminate\Support\Str::limit(strip_tags($oq->stem), 80) }}</span>
+                            <span class="js-q-label" style="flex:1;">#{{ $oq->id }} [{{ strtoupper($oq->type) }}]@if(trim((string) ($oq->topic ?? '')) !== '') {{ trim($oq->topic) }} ·@endif {{ \Illuminate\Support\Str::limit(strip_tags($oq->stem), 80) }}</span>
                             <button type="button" class="btn btn-xs btn-default js-q-up" title="Move up" @disabled(! $canCreate)>&uarr;</button>
                             <button type="button" class="btn btn-xs btn-default js-q-down" title="Move down" @disabled(! $canCreate)>&darr;</button>
                         </li>
@@ -231,6 +231,12 @@
                 $(this).prepend($n);
             }
             $n.text('Q' + (i + 1));
+            var id = $(this).attr('data-id');
+            var opt = $picker.find('option[value="' + id + '"]');
+            var $lab = $(this).find('.js-q-label');
+            if ($lab.length && opt.length) {
+                $lab.text($.trim(opt.text()));
+            }
         });
     }
     function addOrderRow(id) {
