@@ -29,10 +29,11 @@
                     @endif
                     @php
                         $submenuCount = $menus->filter(function ($m) { return $m->parent_id; })->count();
+                        $childCounts = $menus->filter(function ($m) { return $m->parent_id; })->groupBy('parent_id')->map->count();
                     @endphp
-                    <p class="text-muted">{{ $menus->count() }} items ({{ $submenuCount }} submenu{{ $submenuCount === 1 ? '' : 's' }}). Submenus sit under their parent and can be edited here.</p>
+                    <p class="text-muted">{{ $menus->count() }} items ({{ $submenuCount }} submenu{{ $submenuCount === 1 ? '' : 's' }}). Website dropdown items (for example School of Law, School of Banking) are the <strong>Submenu</strong> rows under their parent — for those schools that parent is <strong>Academies</strong>, not Online School.</p>
                     <div class="form-group">
-                        <input type="search" id="lms-menu-filter" class="form-control" placeholder="Search menu name, group, or link">
+                        <input type="search" id="lms-menu-filter" class="form-control" placeholder="Search name, parent, or link (try Academies or School of)">
                     </div>
                     <div class="table-responsive" style="overflow:visible;">
                     <table class="table table-striped table-bordered table-hover" id="lms-menu-list">
@@ -53,9 +54,12 @@
                                     <td>
                                         @if($menu->parent_id)
                                             <span style="display:inline-block;padding-left:18px;">↳ {{ $menu->name }}</span>
-                                            <span class="label label-default">Submenu</span>
+                                            <span class="label label-default">Submenu of {{ optional($menu->parent)->name ?: 'parent' }}</span>
                                         @else
                                             <strong>{{ $menu->name }}</strong>
+                                            @if($childCounts->get($menu->id))
+                                                <span class="label label-primary">{{ $childCounts->get($menu->id) }} submenus</span>
+                                            @endif
                                         @endif
                                     </td>
                                     <td>{{ $menu->link }}</td>
