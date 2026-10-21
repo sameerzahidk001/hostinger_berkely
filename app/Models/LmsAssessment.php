@@ -66,8 +66,8 @@ class LmsAssessment extends Model
     public static function kinds(): array
     {
         return [
-            self::KIND_PRACTICE => 'Practice',
-            self::KIND_MOCK => 'Mock Exam',
+            self::KIND_PRACTICE => 'Practice Test',
+            self::KIND_MOCK => 'Mock Test',
             self::KIND_GENERAL => 'General Test',
             self::KIND_SKILL => 'Skill Test',
         ];

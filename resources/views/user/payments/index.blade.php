@@ -2,40 +2,57 @@
 @section('title', 'Admission Information')
 
 @push('style')
-<link href="{{ asset('/admin/css/plugins/dataTables/datatables.min.css') }}" rel="stylesheet">
 <style>
-    .wrapper-content {
-        padding-right: 20px;
-    }
-    .admin-dt-toolbar {
-        display: flex;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 12px 16px;
-        margin-bottom: 14px;
+    .wrapper-content { padding-right: 20px; }
+    .lms-admission-wrap {
+        overflow-x: hidden;
         width: 100%;
     }
-    .admin-dt-toolbar .dataTables_length,
-    .admin-dt-toolbar .dataTables_filter {
-        float: none !important;
-        margin: 0 !important;
-        padding: 0 !important;
+    .lms-admission-wrap,
+    .lms-admission-wrap table,
+    .lms-admission-table {
+        min-width: 0 !important;
+        width: 100% !important;
     }
-    .admin-dt-toolbar .dataTables_length label,
-    .admin-dt-toolbar .dataTables_filter label {
-        margin-bottom: 0;
-        font-weight: normal;
-        display: flex;
-        align-items: center;
-        gap: 8px;
+    .lms-admission-table th,
+    .lms-admission-table td {
+        white-space: normal;
+        word-break: break-word;
+        vertical-align: top;
     }
-    .admin-dt-toolbar .dataTables_filter {
-        margin-left: auto !important;
-    }
-    @media (max-width: 768px) {
-        .admin-dt-toolbar .dataTables_filter {
-            margin-left: 0 !important;
+    @media (max-width: 991px) {
+        .lms-admission-table thead { display: none; }
+        .lms-admission-table,
+        .lms-admission-table tbody,
+        .lms-admission-table tr,
+        .lms-admission-table td {
+            display: block;
             width: 100%;
+        }
+        .lms-admission-table tr {
+            margin-bottom: 12px;
+            border: 1px solid #e7eaec;
+            background: #fff;
+        }
+        .lms-admission-table td {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 8px 12px;
+            border: 0;
+            border-bottom: 1px solid #f1f1f1;
+        }
+        .lms-admission-table td:last-child { border-bottom: 0; }
+        .lms-admission-table td::before {
+            content: attr(data-label);
+            font-weight: 600;
+            flex: 0 0 42%;
+            color: #676a6c;
+        }
+        .table-responsive,
+        .ibox-content,
+        .wrapper-content {
+            overflow-x: hidden !important;
         }
     }
 </style>

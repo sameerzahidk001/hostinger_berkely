@@ -171,13 +171,14 @@
                 @endforeach
             </select>
             <p class="help-block">Add questions here, then arrange the sequence below. That order is how they appear in the test (unless Shuffle questions is checked). Assign users on the separate Assign page.</p>
-            <label>Question sequence</label>
+            <label>Question sequence (Q1, Q2, Q3…)</label>
             <ol id="lms-q-order" class="list-group" style="margin-bottom:8px;">
-                @forelse($orderedQuestionIds as $oid)
+                @forelse($orderedQuestionIds as $oi => $oid)
                     @php $oq = $qById->get($oid); @endphp
                     @if($oq)
                         <li class="list-group-item" data-id="{{ $oq->id }}" style="display:flex;align-items:center;gap:8px;">
                             <input type="hidden" name="question_ids[]" value="{{ $oq->id }}">
+                            <strong class="js-q-num" style="min-width:36px;">Q{{ $oi + 1 }}</strong>
                             <span class="js-q-label" style="flex:1;">#{{ $oq->id }} [{{ strtoupper($oq->type) }}] {{ \Illuminate\Support\Str::limit(strip_tags($oq->stem), 80) }}</span>
                             <button type="button" class="btn btn-xs btn-default js-q-up" title="Move up" @disabled(! $canCreate)>&uarr;</button>
                             <button type="button" class="btn btn-xs btn-default js-q-down" title="Move down" @disabled(! $canCreate)>&darr;</button>
@@ -186,7 +187,7 @@
                 @empty
                 @endforelse
             </ol>
-            <p class="help-block m-b-none">Use the arrows to set Q1, Q2, Q3… Save the test after arranging.</p>
+            <p class="help-block m-b-none">Use ↑ / ↓ so the first row is Q1, second is Q2, third is Q3. Save the test after arranging. Leave Shuffle questions unchecked to keep this order.</p>
             </fieldset>
 
             @if($canCreate)
@@ -222,14 +223,26 @@
         var opt = $picker.find('option[value="' + id + '"]');
         return opt.length ? $.trim(opt.text()) : ('#' + id);
     }
+    function refreshQNumbers() {
+        $order.find('li').each(function (i) {
+            var $n = $(this).find('.js-q-num');
+            if (!$n.length) {
+                $n = $('<strong class="js-q-num" style="min-width:36px;"></strong>');
+                $(this).prepend($n);
+            }
+            $n.text('Q' + (i + 1));
+        });
+    }
     function addOrderRow(id) {
         if (!id || $order.find('li[data-id="' + id + '"]').length) return;
         var li = $('<li class="list-group-item" data-id="' + id + '" style="display:flex;align-items:center;gap:8px;"></li>');
+        li.append($('<strong class="js-q-num" style="min-width:36px;"></strong>'));
         li.append($('<input type="hidden" name="question_ids[]">').val(id));
         li.append($('<span class="js-q-label" style="flex:1;"></span>').text(qLabelFromOption(id)));
         li.append('<button type="button" class="btn btn-xs btn-default js-q-up" title="Move up">&uarr;</button>');
         li.append('<button type="button" class="btn btn-xs btn-default js-q-down" title="Move down">&darr;</button>');
         $order.append(li);
+        refreshQNumbers();
     }
     $picker.on('select2:select', function (e) {
         addOrderRow(e.params && e.params.data ? e.params.data.id : null);
@@ -237,17 +250,21 @@
     $picker.on('select2:unselect', function (e) {
         var id = e.params && e.params.data ? e.params.data.id : null;
         if (id) $order.find('li[data-id="' + id + '"]').remove();
+        refreshQNumbers();
     });
     $order.on('click', '.js-q-up', function () {
         if ($picker.prop('disabled')) return;
         var li = $(this).closest('li');
         li.prev('li').before(li);
+        refreshQNumbers();
     });
     $order.on('click', '.js-q-down', function () {
         if ($picker.prop('disabled')) return;
         var li = $(this).closest('li');
         li.next('li').after(li);
+        refreshQNumbers();
     });
+    refreshQNumbers();
 })();
 </script>
 @endpush

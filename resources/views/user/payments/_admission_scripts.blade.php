@@ -1,4 +1,3 @@
-<script src="{{ asset('/admin/js/plugins/dataTables/datatables.min.js') }}"></script>
 <script>
     $(document).on('click', '.payNowBtn', function () {
         var $btn = $(this);
@@ -37,21 +36,5 @@
                 alert(message);
             }
         });
-    });
-
-    $(document).ready(function () {
-        if ($.fn.DataTable && $('.dataTables-example').length) {
-            $('.dataTables-example').DataTable({
-                pageLength: 10,
-                searching: true,
-                lengthChange: true,
-                paging: true,
-                info: false,
-                ordering: true,
-                responsive: true,
-                dom: '<"admin-dt-toolbar"<l><f>>rtip',
-                order: [[1, 'desc']]
-            });
-        }
     });
 </script>

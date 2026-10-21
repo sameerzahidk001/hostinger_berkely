@@ -91,6 +91,9 @@
     .lms-q-step textarea.form-control:focus {
         color: #0056b3 !important;
     }
+    .lms-q-step textarea.lms-written-answer {
+        min-height: 18em;
+    }
     .lms-written-answer {
         -webkit-user-select: text;
         user-select: text;
@@ -377,7 +380,7 @@
                                 <textarea
                                     name="answers[{{ $question->id }}][parts][{{ $sk }}]"
                                     class="form-control lms-written-answer"
-                                    rows="4"
+                                    rows="12"
                                     data-max="{{ $essayMax }}"
                                     maxlength="{{ $essayMax }}"
                                     placeholder="Your answer for {{ $sk }}…"
@@ -395,7 +398,7 @@
                             <textarea
                                 name="answers[{{ $question->id }}][text]"
                                 class="form-control lms-written-answer"
-                                rows="6"
+                                rows="18"
                                 data-max="{{ $essayMax }}"
                                 maxlength="{{ $essayMax }}"
                                 placeholder="Your answer…"

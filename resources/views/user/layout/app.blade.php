@@ -78,6 +78,13 @@
          overflow: visible !important;
          visibility: visible !important;
       }
+      #side-menu > :not(li) {
+         display: none !important;
+      }
+      .navbar-static-side .pace,
+      .navbar-static-side #lms-idle-overlay {
+         display: none !important;
+      }
    </style>
 
 </head>
@@ -415,7 +422,6 @@
                   <a href="{{ route('user.logout') }}"><i class="fa fa-sign-out"></i> <span
                         class="nav-label">Log out</span></a>
                </li>
-
             </ul>
          </div>
       </nav>
@@ -527,6 +533,26 @@
             }
          }
          closeLmsDashboards();
+         (function stripSidebarJunk() {
+            var menu = document.getElementById('side-menu');
+            if (!menu) return;
+            Array.prototype.slice.call(menu.childNodes).forEach(function (n) {
+               if (n.nodeType === 3) {
+                  n.textContent = '';
+               } else if (n.nodeType === 1 && n.tagName !== 'LI') {
+                  n.parentNode.removeChild(n);
+               }
+            });
+            var side = menu.closest('.navbar-static-side');
+            if (!side) return;
+            Array.prototype.slice.call(side.querySelectorAll('*')).forEach(function (el) {
+               if (el.id === 'side-menu' || menu.contains(el) || el.closest('.nav-header')) return;
+               var t = (el.textContent || '').replace(/\s+/g, ' ').trim().toLowerCase();
+               if (t.indexOf('idle-logout') !== -1 || t.indexOf('lms idle') !== -1) {
+                  el.style.display = 'none';
+               }
+            });
+         })();
          document.addEventListener('DOMContentLoaded', closeLmsDashboards);
          window.addEventListener('load', closeLmsDashboards);
          setTimeout(closeLmsDashboards, 0);

@@ -2,10 +2,6 @@
 
 @section('title', 'Menu Management')
 
-@push('style')
-    <link href="{{ asset('/admin/css/plugins/dataTables/datatables.min.css') }}" rel="stylesheet">
-@endpush
-
 @section('content')
     <div class="row">
         <div class="col-lg-12">
@@ -28,7 +24,9 @@
                             </ul>
                         </div>
                     @endif
-                    <table class="table table-striped table-bordered table-hover dataTables-example">
+                    <p class="text-muted">All parent and submenu items are listed below. Submenus show as Parent → Child.</p>
+                    <div class="table-responsive" style="overflow:visible;">
+                    <table class="table table-striped table-bordered table-hover" id="lms-menu-list">
                         <thead>
                             <tr>
                                 <th>Menu Group</th>
@@ -68,6 +66,7 @@
                             @endforeach
                         </tbody>
                     </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -136,7 +135,7 @@
 
                                                     <!-- Custom Menu Section -->
                                                     <div id="editCustomMenu-{{ $menu->id }}"
-                                                        class="edit-menu-section {{ !$menu->page_id ? '' : 'hidden' }}">
+                                                        class="edit-menu-section">
                                                         <h6>Edit Custom Menu</h6>
                                                         <div class="form-group">
                                                             <label for="custom_name_{{ $menu->id }}">Custom Menu Name</label>
@@ -311,27 +310,8 @@
 
 @push('script')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script src="{{ asset('/admin/js/plugins/dataTables/datatables.min.js') }}"></script>
     <!-- Page-Level Scripts -->
     <script>
-        $(document).ready(function () {
-            $('.dataTables-example').DataTable({
-                pageLength: 100,
-                searching: true,
-                lengthChange: true,
-                paging: true,
-                info: true,
-                ordering: true,
-                responsive: false,
-                autoWidth: false,
-                scrollX: true,
-                order: [[0, 'asc'], [4, 'asc'], [3, 'asc']],
-                columnDefs: [
-                    { targets: -1, orderable: false }
-                ],
-                dom: 'lftip'
-            });
-        });
         function confirmDelete(id) {
             Swal.fire({
                 title: 'Are you sure?',

@@ -46,7 +46,7 @@ class Email extends Model
     {
         $lmsAssign = 'Use these in subject and body:<br>'
             . '<strong>{name}</strong> student name · <strong>{email}</strong><br>'
-            . '<strong>{test_id}</strong> · <strong>{test_name}</strong> · <strong>{test_type}</strong> (Practice / Mock / General / Skill)<br>'
+            . '<strong>{test_id}</strong> · <strong>{test_name}</strong> · <strong>{test_type}</strong> (Practice Test / Mock Test / General Test / Skill Test)<br>'
             . '<strong>{sitting_kind}</strong> Exam or Self test<br>'
             . '<strong>{start_date}</strong> · <strong>{start_time}</strong> · <strong>{start_datetime}</strong> (Self test = Start anytime)<br>'
             . '<strong>{timezone}</strong> · <strong>{duration}</strong> · <strong>{assessor}</strong><br>'

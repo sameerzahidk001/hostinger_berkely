@@ -1,14 +1,14 @@
 @extends('user.layout.app')
-@section('title', $section === 'mocks' ? 'Mock Exams' : ($section === 'skill' ? 'Skill Tests' : 'My Tests'))
+@section('title', $section === 'mocks' ? 'Mock Test' : ($section === 'skill' ? 'Skill Test' : 'My Tests'))
 @include('admin.assessments.partials.sortable-table-assets')
 @php $lmsUserPreviewUrlTpl = route('user.assessments.user-preview', ['userId' => '__ID__']); @endphp
 @section('content')
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
-        <h2>{{ $section === 'mocks' ? 'Mock Exams' : ($section === 'skill' ? 'Skill Tests' : 'My Tests') }}</h2>
+        <h2>{{ $section === 'mocks' ? 'Mock Test' : ($section === 'skill' ? 'Skill Test' : 'My Tests') }}</h2>
         <ol class="breadcrumb">
             <li><a href="{{ route('user.home') }}">Home</a></li>
-            <li class="active"><strong>{{ $section === 'mocks' ? 'Mock Exams' : ($section === 'skill' ? 'Skill Tests' : 'My Tests') }}</strong></li>
+            <li class="active"><strong>{{ $section === 'mocks' ? 'Mock Test' : ($section === 'skill' ? 'Skill Test' : 'My Tests') }}</strong></li>
         </ol>
     </div>
 </div>
@@ -170,10 +170,10 @@
 
     <ul class="nav nav-tabs" style="margin-bottom:15px;">
         <li class="{{ $section === 'all' ? 'active' : '' }}"><a href="{{ route('user.assessments.index', ['section' => 'all', 'tab' => $tab]) }}">All</a></li>
-        <li class="{{ $section === 'mocks' ? 'active' : '' }}"><a href="{{ route('user.assessments.mocks', ['tab' => $tab]) }}">Mock Exams</a></li>
-        <li class="{{ $section === 'practice' ? 'active' : '' }}"><a href="{{ route('user.assessments.index', ['section' => 'practice', 'tab' => $tab]) }}">Practice / General</a></li>
+        <li class="{{ $section === 'mocks' ? 'active' : '' }}"><a href="{{ route('user.assessments.mocks', ['tab' => $tab]) }}">Mock Test</a></li>
+        <li class="{{ $section === 'practice' ? 'active' : '' }}"><a href="{{ route('user.assessments.index', ['section' => 'practice', 'tab' => $tab]) }}">Practice Test / General Test</a></li>
         @if(!empty($isStaff))
-            <li class="{{ $section === 'skill' ? 'active' : '' }}"><a href="{{ route('user.assessments.index', ['section' => 'skill', 'tab' => $tab]) }}">Skill tests</a></li>
+            <li class="{{ $section === 'skill' ? 'active' : '' }}"><a href="{{ route('user.assessments.index', ['section' => 'skill', 'tab' => $tab]) }}">Skill Test</a></li>
         @endif
     </ul>
 
