@@ -185,10 +185,11 @@
                   </li>
                   @endif
                   @if(admin_menu_allowed('pages'))
-                  <li class="{{ request()->is('admin/pages*') || request()->is('admin/faq*') ? 'active' : '' }}">
+                  <li class="{{ request()->is('admin/pages*') || request()->is('admin/faq*') || request()->is('admin/media*') ? 'active' : '' }}">
                      <a href="javascript:void(0)"><i class="fa fa-sitemap"></i> <span class="nav-label">Pages</span> <span class="fa arrow"></span></a>
                      <ul class="nav nav-second-level">
                         <li><a href="{{ route('pages.index') }}">Pages List</a></li>
+                        <li class="{{ request()->is('admin/media*') ? 'active' : '' }}"><a href="{{ route('admin.media.index') }}">Media</a></li>
                         <li><a href="{{ route('admin.pages.disabled') }}">Disabled Pages</a></li>
                         <li class="{{ request()->is('admin/pages/fees*') || request()->is('admin/pages/*/fees*') ? 'active' : '' }}">
                            <a href="{{ route('admin.pages.fees.index') }}">Fee Update in Page</a>
