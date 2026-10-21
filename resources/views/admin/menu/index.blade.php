@@ -3,6 +3,7 @@
 @section('title', 'Menu Management')
 
 @section('content')
+    <!-- menu-edit-v3 -->
     <div class="row">
         <div class="col-lg-12">
             <div class="ibox float-e-margins">
@@ -122,32 +123,42 @@
                                                         </select>
                                                     </div>
 
-                                                    <div class="form-group">
-                                                        <label for="custom_name_{{ $menu->id }}">Menu Name</label>
-                                                        <input type="text" name="custom_name"
-                                                            id="custom_name_{{ $menu->id }}" class="form-control"
-                                                            value="{{ $menu->name }}">
+                                                    <div class="text-center mb-3">
+                                                        <button type="button" class="btn btn-success btn-sm js-show-section" data-section="#editExistingPages-{{ $menu->id }}">Edit Existing Page</button>
+                                                        <button type="button" class="btn btn-info btn-sm js-show-section" data-section="#editCustomMenu-{{ $menu->id }}">Edit Custom Menu</button>
                                                     </div>
-                                                    <div class="form-group">
-                                                        <label for="custom_url_{{ $menu->id }}">URL</label>
-                                                        <input type="text" name="custom_url" id="custom_url_{{ $menu->id }}"
-                                                            class="form-control" value="{{ $menu->link }}">
+                                                    <div id="editExistingPages-{{ $menu->id }}">
+                                                        <h6>Existing page</h6>
+                                                        <div class="form-group">
+                                                            <label for="pages_{{ $menu->id }}">Select Page</label>
+                                                            <select class="form-control js-edit-page"
+                                                                id="pages_{{ $menu->id }}"
+                                                                data-name="#custom_name_{{ $menu->id }}"
+                                                                data-url="#custom_url_{{ $menu->id }}">
+                                                                <option value="">Keep current name and URL</option>
+                                                                @foreach ($pages as $page)
+                                                                    <option value="{{ $page->id }}"
+                                                                        data-name="{{ $page->page_name }}"
+                                                                        data-link="{{ url('/' . ltrim((string) ($page->url ?? $page->page_link ?? ''), '/')) }}">
+                                                                        {{ $page->page_name }}
+                                                                    </option>
+                                                                @endforeach
+                                                            </select>
+                                                        </div>
                                                     </div>
-                                                    <div class="form-group">
-                                                        <label for="pages_{{ $menu->id }}">Or pick an existing page</label>
-                                                        <select class="form-control js-edit-page"
-                                                            id="pages_{{ $menu->id }}"
-                                                            data-name="#custom_name_{{ $menu->id }}"
-                                                            data-url="#custom_url_{{ $menu->id }}">
-                                                            <option value="">Keep current name and URL</option>
-                                                            @foreach ($pages as $page)
-                                                                <option value="{{ $page->id }}"
-                                                                    data-name="{{ $page->page_name }}"
-                                                                    data-link="{{ url('/' . ltrim((string) ($page->url ?? $page->page_link ?? ''), '/')) }}">
-                                                                    {{ $page->page_name }}
-                                                                </option>
-                                                            @endforeach
-                                                        </select>
+                                                    <div id="editCustomMenu-{{ $menu->id }}">
+                                                        <h6>Custom menu</h6>
+                                                        <div class="form-group">
+                                                            <label for="custom_name_{{ $menu->id }}">Custom Menu Name</label>
+                                                            <input type="text" name="custom_name"
+                                                                id="custom_name_{{ $menu->id }}" class="form-control"
+                                                                value="{{ $menu->name }}">
+                                                        </div>
+                                                        <div class="form-group">
+                                                            <label for="custom_url_{{ $menu->id }}">Custom URL</label>
+                                                            <input type="text" name="custom_url" id="custom_url_{{ $menu->id }}"
+                                                                class="form-control" value="{{ $menu->link }}">
+                                                        </div>
                                                     </div>
 
                                                     <!-- Parent Menu Selection -->
@@ -232,10 +243,8 @@
 
                         <!-- Buttons to toggle sections -->
                         <div class="text-center mb-3">
-                            <button type="button" class="btn btn-success btn-sm menu-toggle"
-                                data-target="#existingPages">Add Existing Page</button>
-                            <button type="button" class="btn btn-info btn-sm menu-toggle" data-target="#customMenu">Add
-                                Custom Menu</button>
+                            <button type="button" class="btn btn-success btn-sm js-show-section" data-section="#existingPages">Add Existing Page</button>
+                            <button type="button" class="btn btn-info btn-sm js-show-section" data-section="#customMenu">Add Custom Menu</button>
                         </div>
 
                         <!-- Existing Pages Section -->
@@ -348,6 +357,19 @@
                     if (urlEl && opt.getAttribute('data-link')) urlEl.value = opt.getAttribute('data-link');
                 });
             });
+            document.addEventListener('click', function (e) {
+                var button = e.target && e.target.closest ? e.target.closest('.js-show-section') : null;
+                if (!button) return;
+                e.preventDefault();
+                e.stopPropagation();
+                var sel = button.getAttribute('data-section');
+                var target = sel ? document.querySelector(sel) : null;
+                if (!target) return;
+                target.classList.remove('hidden');
+                if (typeof target.scrollIntoView === 'function') {
+                    target.scrollIntoView({ block: 'nearest' });
+                }
+            });
             // Handle menu section toggling
             document.querySelectorAll('.menu-toggle').forEach(function (button) {
                 button.addEventListener('click', function () {
@@ -355,8 +377,8 @@
                         section.classList.add('hidden');
                     });
 
-                    const target = document.querySelector(this.getAttribute('data-target'));
-                    target.classList.remove('hidden');
+                    const target = document.querySelector(this.getAttribute('data-target') || this.getAttribute('data-section'));
+                    if (target) target.classList.remove('hidden');
                 });
             });
 
