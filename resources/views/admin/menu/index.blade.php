@@ -15,6 +15,9 @@
                 </div>
 
                 <div class="ibox-content">
+                    @if (session('success'))
+                        <div class="alert alert-success">{{ session('success') }}</div>
+                    @endif
                     @if ($errors->any())
                         <div class="alert alert-danger">
                             <ul class="mb-0">
@@ -24,7 +27,13 @@
                             </ul>
                         </div>
                     @endif
-                    <p class="text-muted">All parent and submenu items are listed below. Submenus show as Parent → Child.</p>
+                    @php
+                        $submenuCount = $menus->filter(function ($m) { return $m->parent_id; })->count();
+                    @endphp
+                    <p class="text-muted">{{ $menus->count() }} items ({{ $submenuCount }} submenu{{ $submenuCount === 1 ? '' : 's' }}). Submenus sit under their parent and can be edited here.</p>
+                    <div class="form-group">
+                        <input type="search" id="lms-menu-filter" class="form-control" placeholder="Search menu name, group, or link">
+                    </div>
                     <div class="table-responsive" style="overflow:visible;">
                     <table class="table table-striped table-bordered table-hover" id="lms-menu-list">
                         <thead>
@@ -38,12 +47,13 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach ($menus as $menu)
-                                <tr>
+                            @forelse ($menus as $menu)
+                                <tr class="{{ $menu->parent_id ? 'lms-menu-child' : 'lms-menu-parent' }}">
                                     <td>{{ ucfirst($menu->menu_group) }}</td>
                                     <td>
                                         @if($menu->parent_id)
-                                            <span class="text-muted">{{ optional($menu->parent)->name }} → </span>{{ $menu->name }}
+                                            <span style="display:inline-block;padding-left:18px;">↳ {{ $menu->name }}</span>
+                                            <span class="label label-default">Submenu</span>
                                         @else
                                             <strong>{{ $menu->name }}</strong>
                                         @endif
@@ -63,7 +73,11 @@
                                         </form>
                                     </td>
                                 </tr>
-                            @endforeach
+                            @empty
+                                <tr>
+                                    <td colspan="6">No menu items yet.</td>
+                                </tr>
+                            @endforelse
                         </tbody>
                     </table>
                     </div>
@@ -285,7 +299,7 @@
                                 <option value="">None (Will act as its own parent)</option>
                                 @foreach ($menus as $menu)
                                     <option value="{{ $menu->id }}">
-                                        {{ $menu->parent_id ? (optional($menu->parent)->name . ' → ' . $menu->name) : $menu->name }}
+                                        {{ ucfirst($menu->menu_group) }} — {{ $menu->parent_id ? (optional($menu->parent)->name . ' → ' . $menu->name) : $menu->name }}
                                     </option>
                                 @endforeach
                             </select>
@@ -328,6 +342,16 @@
             });
         }
         document.addEventListener('DOMContentLoaded', function () {
+            var filter = document.getElementById('lms-menu-filter');
+            var table = document.getElementById('lms-menu-list');
+            if (filter && table) {
+                filter.addEventListener('input', function () {
+                    var q = (this.value || '').toLowerCase();
+                    table.querySelectorAll('tbody tr').forEach(function (row) {
+                        row.style.display = !q || (row.textContent || '').toLowerCase().indexOf(q) !== -1 ? '' : 'none';
+                    });
+                });
+            }
             // Handle menu section toggling
             document.querySelectorAll('.menu-toggle').forEach(function (button) {
                 button.addEventListener('click', function () {

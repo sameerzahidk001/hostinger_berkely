@@ -32,7 +32,11 @@ class SiteSettingServiceProvider extends ServiceProvider
                     'menus' => Menu::with('children')->whereNull('parent_id')->orderBy('menu_order')->get(),
                 ];
             }
-            $view->with($shared);
+            foreach ($shared as $key => $value) {
+                if (! $view->offsetExists($key)) {
+                    $view->with($key, $value);
+                }
+            }
         });
     }
 }
