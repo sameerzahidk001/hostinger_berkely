@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\CourseDynamicLabels;
 use App\Http\Controllers\Admin\CourseAgendasController as AdminCourseAgendasController;
 use App\Http\Controllers\Admin\SeoController;
 use App\Http\Controllers\Admin\PagesController;
+use App\Http\Controllers\Admin\MediaController;
 use App\Http\Controllers\Admin\PageFeeController;
 use App\Http\Controllers\Admin\SchoolController;
 use App\Http\Controllers\Admin\CategoryController;
@@ -187,6 +188,8 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
         Route::post('/filemanager/upload/{folder?}', [FileManagerController::class, 'upload'])->where('folder', '.*')->name('filemanager.upload');
         Route::delete('/filemanager/delete/{folder?}', [FileManagerController::class, 'destroy'])->where('folder', '.*')->name('filemanager.delete');
         Route::delete('/filemanager/deleteFolder/{folder?}', [FileManagerController::class, 'deleteFolder'])->where('folder', '.*')->name('filemanager.deleteFolder');
+        Route::get('/media', [MediaController::class, 'index'])->name('admin.media.index');
+        Route::delete('/media', [MediaController::class, 'destroy'])->name('admin.media.destroy');
 
         // FILE MANAGER ENDS
         Route::resource('menu', MenuController::class);
