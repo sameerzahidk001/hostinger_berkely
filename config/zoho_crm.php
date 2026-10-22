@@ -1,7 +1,7 @@
 <?php
 
 return [
-    'enabled' => (bool) env('ZOHO_CRM_ENABLED', false),
+    'enabled' => filter_var(env('ZOHO_CRM_ENABLED', false), FILTER_VALIDATE_BOOLEAN),
     'accounts_url' => env('ZOHO_CRM_ACCOUNTS_URL', env('ZOHO_ACCOUNTS_URL', 'https://accounts.zoho.com')),
     'api_base' => env('ZOHO_CRM_API_BASE', 'https://www.zohoapis.com/crm/v2'),
     'client_id' => env('ZOHO_CRM_CLIENT_ID'),

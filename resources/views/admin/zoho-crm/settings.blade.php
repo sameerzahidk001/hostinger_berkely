@@ -28,6 +28,9 @@
                     <p><strong>Configured:</strong> {{ !empty($status['configured']) ? 'Yes' : 'No' }}</p>
                     <p><strong>Sync enabled:</strong> {{ !empty($status['enabled']) ? 'Yes' : 'No' }}</p>
                     <p><strong>Connected as:</strong> {{ $status['connected_email'] ?: '—' }}</p>
+                    @if(empty($status['enabled']) || empty($status['configured']))
+                        <p class="text-danger">CRM sync will not run until it is <strong>Enabled</strong> and Client ID, Secret, and Refresh Token are saved. Push CRM currently does nothing without this.</p>
+                    @endif
                     @if(!empty($status['error']))
                         <p class="text-danger">{{ $status['error'] }}</p>
                     @endif
