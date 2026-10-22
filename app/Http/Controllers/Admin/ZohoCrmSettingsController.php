@@ -98,22 +98,34 @@ class ZohoCrmSettingsController extends Controller
             ->with('success', 'Zoho CRM connected' . ($status['connected_email'] ? ' as ' . $status['connected_email'] : '') . '.');
     }
 
-    public function backfill(Request $request, ZohoCrmSyncService $sync)
+    public function backfill(Request $request, ZohoCrmSyncService $sync, ZohoCrmOAuthService $oauth)
     {
+        if ($blocked = $oauth->blockedReason()) {
+            return redirect()->route('admin.zoho-crm.settings')->with('fail', $blocked);
+        }
+
         $done = $sync->backfill($request->input('since'), (int) $request->input('limit', 100));
 
         return redirect()
             ->route('admin.zoho-crm.settings')
-            ->with('success', 'Backfilled ' . $done . ' invoice(s) to Zoho CRM.');
+            ->with($done > 0 ? 'success' : 'fail', $done > 0
+                ? 'Backfilled ' . $done . ' invoice(s) to Zoho CRM.'
+                : 'No invoices were synced. Check the CRM error on each invoice, or confirm custom fields and module API names.');
     }
 
-    public function retry(ZohoCrmSyncService $sync)
+    public function retry(ZohoCrmSyncService $sync, ZohoCrmOAuthService $oauth)
     {
+        if ($blocked = $oauth->blockedReason()) {
+            return redirect()->route('admin.zoho-crm.settings')->with('fail', $blocked);
+        }
+
         $done = $sync->retryFailed(50);
 
         return redirect()
             ->route('admin.zoho-crm.settings')
-            ->with('success', 'Retried ' . $done . ' CRM sync(s).');
+            ->with($done > 0 ? 'success' : 'fail', $done > 0
+                ? 'Retried ' . $done . ' CRM sync(s).'
+                : 'No records were synced. Open an invoice and use Push to Zoho CRM to see the error.');
     }
 
     protected function writeEnv(string $key, string $value): void

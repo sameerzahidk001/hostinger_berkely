@@ -23,6 +23,8 @@ use App\Mail\UserMail;
 use App\Services\InvoiceService;
 use App\Services\PageFeeStructureService;
 use App\Services\PaymentCrmDispatcher;
+use App\Services\ZohoCrmOAuthService;
+use App\Services\ZohoCrmSyncService;
 use Illuminate\Support\Facades\Schema;
 
 class PaymentController extends Controller
@@ -461,11 +463,16 @@ class PaymentController extends Controller
 
     public function pushToCrm($id)
     {
+        $oauth = app(ZohoCrmOAuthService::class);
+        if ($blocked = $oauth->blockedReason()) {
+            return redirect()->back()->with('fail', $blocked);
+        }
+
         $payment = Payment::with('installments', 'user.countryarray', 'course', 'courseFee', 'page', 'pageFeePackage')->findOrFail($id);
-        PaymentCrmDispatcher::syncPayment($payment);
+        $ok = app(ZohoCrmSyncService::class)->syncPayment($payment);
         $payment->refresh();
 
-        if (($payment->zoho_crm_sync_status ?? null) === 'failed') {
+        if (! $ok || ($payment->zoho_crm_sync_status ?? null) === 'failed') {
             return redirect()->back()->with('fail', 'CRM push failed: ' . ($payment->zoho_crm_last_error ?: 'unknown error'));
         }
 
@@ -474,11 +481,16 @@ class PaymentController extends Controller
 
     public function pushReceiptToCrm($id)
     {
+        $oauth = app(ZohoCrmOAuthService::class);
+        if ($blocked = $oauth->blockedReason()) {
+            return redirect()->back()->with('fail', $blocked);
+        }
+
         $installment = Installment::with('payment.user.countryarray', 'payment.course', 'payment.courseFee', 'user.countryarray')->findOrFail($id);
-        PaymentCrmDispatcher::syncReceipt($installment);
+        $ok = app(ZohoCrmSyncService::class)->upsertReceipt($installment);
         $installment->refresh();
 
-        if (($installment->zoho_crm_sync_status ?? null) === 'failed') {
+        if (! $ok || ($installment->zoho_crm_sync_status ?? null) === 'failed') {
             return redirect()->back()->with('fail', 'CRM receipt push failed: ' . ($installment->zoho_crm_last_error ?: 'unknown error'));
         }
 

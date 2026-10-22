@@ -20,6 +20,19 @@ class ZohoCrmOAuthService
         return (bool) config('zoho_crm.enabled') && $this->isConfigured();
     }
 
+    public function blockedReason(): ?string
+    {
+        if ($this->isEnabled()) {
+            return null;
+        }
+
+        if (! $this->isConfigured()) {
+            return 'Zoho CRM is not connected. Open Settings → Zoho CRM (Invoices), add Client ID, Client Secret, and Refresh Token, then set Enable CRM sync to Enabled.';
+        }
+
+        return 'Zoho CRM sync is disabled. Open Settings → Zoho CRM (Invoices) and set Enable CRM sync to Enabled.';
+    }
+
     public function accessToken(): string
     {
         if (! $this->isConfigured()) {

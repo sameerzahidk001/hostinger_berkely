@@ -78,7 +78,7 @@ class ZohoCrmSyncService
         }
     }
 
-    public function syncPayment(Payment $payment, bool $attachPdf = true): bool
+    public function syncPayment(Payment $payment, bool $attachPdf = true, bool $syncReceipts = true): bool
     {
         if (! $this->oauth->isEnabled()) {
             return false;
@@ -102,9 +102,11 @@ class ZohoCrmSyncService
                 $this->attachInvoicePdf($payment, $invoiceId);
             }
 
-            foreach ($payment->installments as $installment) {
-                if ((float) ($installment->paid_amount ?? 0) > 0 || strtolower((string) $installment->status) === 'paid') {
-                    $this->upsertReceipt($installment, false);
+            if ($syncReceipts) {
+                foreach ($payment->installments as $installment) {
+                    if ((float) ($installment->paid_amount ?? 0) > 0 || strtolower((string) $installment->status) === 'paid') {
+                        $this->upsertReceipt($installment, false);
+                    }
                 }
             }
 
@@ -141,8 +143,8 @@ class ZohoCrmSyncService
                 throw new \RuntimeException('Installment has no payment.');
             }
 
-            // Ensure parent invoice exists first
-            $this->syncPayment($payment, false);
+            // Ensure parent invoice exists first (do not re-enter receipt upsert).
+            $this->syncPayment($payment, false, false);
 
             $payment->refresh();
             $module = config('zoho_crm.modules.receipt');
@@ -527,9 +529,7 @@ class ZohoCrmSyncService
             ['data' => [$data]]
         );
 
-        if (! $response->successful()) {
-            throw new \RuntimeException('CRM create ' . $module . ' failed: ' . $response->body());
-        }
+        $this->assertZohoWrite($response, 'create ' . $module);
 
         $id = data_get($response->json(), 'data.0.details.id');
         if (! $id) {
@@ -546,9 +546,7 @@ class ZohoCrmSyncService
             ['data' => [array_merge(['id' => $id], $data)]]
         );
 
-        if (! $response->successful()) {
-            throw new \RuntimeException('CRM update ' . $module . ' failed: ' . $response->body());
-        }
+        $this->assertZohoWrite($response, 'update ' . $module);
     }
 
     private function attachFile(string $module, string $recordId, string $filename, string $binary): void
@@ -564,6 +562,18 @@ class ZohoCrmSyncService
                 'record' => $recordId,
                 'body' => $response->body(),
             ]);
+        }
+    }
+
+    private function assertZohoWrite($response, string $action): void
+    {
+        $json = $response->json();
+        $status = strtolower((string) data_get($json, 'data.0.status', ''));
+        $code = (string) data_get($json, 'data.0.code', '');
+        $message = (string) (data_get($json, 'data.0.message') ?: data_get($json, 'message') ?: $response->body());
+
+        if (! $response->successful() || $status === 'error' || ($code !== '' && strtoupper($code) !== 'SUCCESS')) {
+            throw new \RuntimeException('CRM ' . $action . ' failed: ' . $message);
         }
     }
 
