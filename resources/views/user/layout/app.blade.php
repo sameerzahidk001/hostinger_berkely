@@ -25,12 +25,20 @@
             overflow-x: hidden;
          }
       }
-      #page-wrapper {
-         width: auto !important;
-         max-width: none !important;
-         min-width: 0;
-         overflow-x: hidden;
-         box-sizing: border-box;
+      @media (min-width: 769px) {
+         #page-wrapper {
+            margin-left: 220px !important;
+            width: calc(100% - 220px) !important;
+            max-width: calc(100% - 220px) !important;
+            min-width: 0;
+            overflow-x: visible;
+            box-sizing: border-box;
+         }
+         body.mini-navbar #page-wrapper {
+            margin-left: 70px !important;
+            width: calc(100% - 70px) !important;
+            max-width: calc(100% - 70px) !important;
+         }
       }
       #page-wrapper .wrapper-content,
       #page-wrapper .ibox,

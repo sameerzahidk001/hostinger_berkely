@@ -32,6 +32,15 @@
                 </form>
                 @endif
                 <style>
+                    #content-reports-panel,
+                    #content-reports-panel.row {
+                        margin-left: 0 !important;
+                        margin-right: 0 !important;
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        padding-left: 0 !important;
+                        padding-right: 0 !important;
+                    }
                     #content-reports-panel .content-report-module-tabs {
                         display: flex;
                         flex-wrap: wrap;
