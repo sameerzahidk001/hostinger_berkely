@@ -157,8 +157,6 @@
                                     <th class="col-course">Course</th>
                                     <th>Amount</th>
                                     <th>Status</th>
-                                    <th>CRM Sync</th>
-                                    <th>Audit</th>
                                     <th>Action</th>
                                 </tr>
                             </thead>
@@ -207,7 +205,8 @@
                                         <div class="text-muted" style="font-size:11px;margin-top:4px;">Paid {{ $paidInstallmentsCount }}/{{ $payment->installments->count() ?? 0 }}</div>
                                         <div>{!! format_payment_aed_amount_admin($payment, (float) $paidAmountSum) !!}</div>
                                     </td>
-                                    <td data-export="{{ $paymentStatus }} | {{ $payment->status === 'Active' ? 'Active' : 'Inactive' }}">
+                                    <td data-export="{{ $paymentStatus }} | {{ $payment->status === 'Active' ? 'Active' : 'Inactive' }} | {{ $payment->zoho_crm_sync_status ?? 'not synced' }}">
+                                        @php $crmStatus = $payment->zoho_crm_sync_status ?? null; @endphp
                                         <span class="badge badge-{{ $paymentStatus == 'Paid' ? 'primary' : ($paymentStatus == 'Partial' ? 'warning' : 'success') }}">
                                             {{ $paymentStatus }}
                                         </span>
@@ -219,28 +218,22 @@
                                                 <span class="slider round"></span>
                                             </label>
                                         </div>
-                                    </td>
-                                    <td data-export="{{ $payment->zoho_crm_sync_status ?? 'not synced' }}">
-                                        @php $crmStatus = $payment->zoho_crm_sync_status ?? null; @endphp
+                                        <div style="margin-top:6px;">
                                         @if($crmStatus === 'synced' || $crmStatus === 'cancelled')
-                                            <span class="label label-primary">{{ $crmStatus }}</span>
+                                            <span class="label label-primary">CRM {{ $crmStatus }}</span>
                                         @elseif($crmStatus === 'failed')
-                                            <span class="label label-danger">failed</span>
+                                            <span class="label label-danger">CRM failed</span>
                                             @if(!empty($payment->zoho_crm_last_error))
                                                 <div class="text-danger" style="font-size:11px;margin-top:4px;line-height:1.35;">{{ $payment->zoho_crm_last_error }}</div>
                                             @endif
                                         @else
-                                            <span class="label label-default">not synced</span>
+                                            <span class="label label-default">CRM not synced</span>
                                         @endif
-                                        @if(!empty($payment->zoho_crm_synced_at))
-                                            <div class="text-muted" style="font-size:11px;margin-top:2px;">{{ \Carbon\Carbon::parse($payment->zoho_crm_synced_at)->format('Y/m/d H:i') }}</div>
-                                        @endif
-                                    </td>
-                                    <td data-export="{{ $payment->created_at ? \Carbon\Carbon::parse($payment->created_at)->format('M d, Y H:i') : '-' }} | {{ audit_user_name($payment->createdBy ?? null, $payment->created_by ?? null) }}">
-                                        <div>{{ $payment->created_at ? \Carbon\Carbon::parse($payment->created_at)->format('M d, Y H:i') : '-' }}</div>
-                                        <div class="text-muted" style="font-size:11px;">{{ audit_user_name($payment->createdBy ?? null, $payment->created_by ?? null) }}</div>
-                                        <div style="margin-top:6px;">{{ $payment->updated_at ? \Carbon\Carbon::parse($payment->updated_at)->format('M d, Y H:i') : '-' }}</div>
-                                        <div class="text-muted" style="font-size:11px;">{{ audit_user_name($payment->updatedBy ?? null, $payment->updated_by ?? null) }}</div>
+                                        </div>
+                                        <div class="text-muted" style="font-size:11px;margin-top:6px;">
+                                            {{ $payment->created_at ? \Carbon\Carbon::parse($payment->created_at)->format('M d, Y H:i') : '-' }}
+                                            · {{ audit_user_name($payment->createdBy ?? null, $payment->created_by ?? null) }}
+                                        </div>
                                     </td>
                                     <td>
                                         <div class="table-action-stack">
