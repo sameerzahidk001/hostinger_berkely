@@ -35,10 +35,10 @@
     .admin-list-table td ul { margin: 0; padding-left: 14px; }
     .admin-list-table .lms-cell-stack {
         display: flex;
-        flex-direction: row;
+        flex-direction: column;
         flex-wrap: nowrap;
-        align-items: stretch;
-        gap: 6px;
+        align-items: flex-start;
+        gap: 4px;
     }
     .admin-list-table .lms-cell-stack .label,
     .admin-list-table .lms-cell-stack .btn,
