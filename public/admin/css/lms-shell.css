@@ -1,13 +1,23 @@
-.navbar-default.navbar-static-side {
+#wrapper > nav.navbar-default.navbar-static-side,
+#wrapper > nav.navbar-static-side {
+   background-color: #000435 !important;
+   background-image: none !important;
+   z-index: 3000 !important;
+   position: fixed !important;
+   width: 220px;
+   height: 100%;
+   min-height: 100vh;
+}
+#wrapper > nav.navbar-static-side .sidebar-collapse,
+#wrapper > nav.navbar-static-side #side-menu {
    background-color: #000435;
-   z-index: 2001;
 }
 
 @media (min-width: 769px) {
    #page-wrapper {
       margin-left: 220px !important;
-      padding-left: 15px;
-      padding-right: 15px;
+      padding-left: 15px !important;
+      padding-right: 15px !important;
       overflow-x: hidden;
    }
 
