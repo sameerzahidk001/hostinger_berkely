@@ -1,15 +1,18 @@
-/* Sidebar is position:fixed. Put its width in padding so Inspinia
-   margin-left + default block width does not overflow the viewport. */
+.navbar-default.navbar-static-side {
+   background-color: #000435;
+   z-index: 2001;
+}
+
 @media (min-width: 769px) {
    #page-wrapper {
-      margin-left: 0 !important;
-      padding-left: 220px;
-      box-sizing: border-box;
+      margin-left: 220px !important;
+      padding-left: 15px;
+      padding-right: 15px;
       overflow-x: hidden;
    }
 
    body.mini-navbar #page-wrapper {
-      padding-left: 70px;
+      margin-left: 70px !important;
    }
 }
 
