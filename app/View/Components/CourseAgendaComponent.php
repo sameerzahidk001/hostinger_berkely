@@ -75,21 +75,24 @@ class CourseAgendaComponent extends Component
             $orderDirection = $orderParts[1] ?? 'asc';
         }
 
-        $agenda_subjects = CourseAgenda::pluck('subject')
-            ->filter()
-            ->unique()
-            ->sort()
-            ->values();
+        $agenda_subjects = CourseAgenda::query()
+            ->whereNotNull('subject')
+            ->where('subject', '!=', '')
+            ->distinct()
+            ->orderBy('subject')
+            ->pluck('subject');
 
-        $agenda_cities = CourseAgenda::pluck('city')
-            ->filter()
-            ->unique()
-            ->sort()
-            ->values();
+        $agenda_cities = CourseAgenda::query()
+            ->whereNotNull('city')
+            ->where('city', '!=', '')
+            ->distinct()
+            ->orderBy('city')
+            ->pluck('city');
 
         $course_agendas = CourseAgenda::with(['course:id,title,slug','course.categories:id,name','course.categories.schools:id,name'])
             ->whereDate('from', '>', Carbon::today())
             ->orderBy($orderColumn, $orderDirection)
+            ->limit(50)
             ->get();
 
         $countries = Country::all();

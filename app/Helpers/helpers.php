@@ -760,7 +760,7 @@ if (!function_exists('render_cms_html')) {
         }
 
         return strip_cms_inline_backgrounds(
-            rewrite_cms_asset_urls(demote_page_headings($html))
+            rewrite_public_hrefs(rewrite_cms_asset_urls(demote_page_headings($html)))
         );
     }
 }
@@ -1634,6 +1634,71 @@ if (!function_exists('seo_robots_content')) {
         }
 
         return $index . ', ' . $follow;
+    }
+}
+
+if (! function_exists('seo_courses_hub_url')) {
+    function seo_courses_hub_url(): string
+    {
+        return url('/courses');
+    }
+}
+
+if (! function_exists('public_menu_href')) {
+    function public_menu_href(?string $link): string
+    {
+        $link = trim((string) $link);
+        if ($link === '' || $link === '#') {
+            return $link;
+        }
+
+        $path = parse_url($link, PHP_URL_PATH);
+        $path = ltrim(strtolower((string) ($path !== null && $path !== '' ? $path : $link)), '/');
+
+        if ($path === 'legal' || $path === 'course/legal') {
+            return url('/legal');
+        }
+        if ($path === 'berkeley-girls/sixth-form' || $path === 'berkeley-girls/sixth-form/') {
+            return url('/sixth-form');
+        }
+
+        if (! preg_match('#^(https?:)?//|^/|^#|^mailto:|^tel:#i', $link)) {
+            return url('/' . ltrim($link, '/'));
+        }
+
+        return $link;
+    }
+}
+
+if (! function_exists('rewrite_public_hrefs')) {
+    function rewrite_public_hrefs(string $html): string
+    {
+        $html = preg_replace('#href=(["\'])(?:\./)?legal\1#i', 'href=$1/legal$1', $html) ?? $html;
+
+        return preg_replace(
+            '#href=(["\'])(?:\./)?berkeley-girls/sixth-form/?\1#i',
+            'href=$1/sixth-form$1',
+            $html
+        ) ?? $html;
+    }
+}
+
+if (! function_exists('seo_is_utility_path')) {
+    function seo_is_utility_path(?string $path = null): bool
+    {
+        $path = strtolower(trim($path ?? request()->path(), '/'));
+        $prefixes = [
+            'cart', 'checkout', 'login', 'register', 'password', 'search',
+            'agenda_search', 'faculty_search', 'user', 'approval-notice',
+            'thank-you-for-registering', 'page-not-found', 'installments/payment-success',
+        ];
+        foreach ($prefixes as $prefix) {
+            if ($path === $prefix || str_starts_with($path, $prefix . '/')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
 

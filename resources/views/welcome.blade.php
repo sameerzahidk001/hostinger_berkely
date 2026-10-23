@@ -17,7 +17,7 @@
             {{-- @dd($section->data) --}}
             <x-banner 
                 :id="$section->order+1"
-                :breadcrumb="isset($section->data['breadcrumbs']) ? $breadcrumb : []"
+                :breadcrumb="(!empty($section->data['breadcrumbs']) && !empty($breadcrumb)) ? $breadcrumb : []"
                 :title="$section->data['title'] ?? ''" 
                 :subtitle="$section->data['subtitle'] ?? ''"
                 :description="$section->data['description'] ?? ''"

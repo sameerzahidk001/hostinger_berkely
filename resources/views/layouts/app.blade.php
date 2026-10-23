@@ -1,5 +1,16 @@
+@php
+    $docPath = strtolower(trim(request()->path(), '/'));
+    $htmlLang = 'en';
+    $htmlDir = null;
+    if (preg_match('/(?:^|-)arabic$|(?:^|-)ar$/', $docPath) || str_ends_with($docPath, '-arabic')) {
+        $htmlLang = 'ar';
+        $htmlDir = 'rtl';
+    } elseif (preg_match('/(?:^|-)chinese$|(?:^|-)zh(?:-hans)?$/', $docPath)) {
+        $htmlLang = 'zh-Hans';
+    }
+@endphp
 <!doctype html>
-<html lang="en">
+<html lang="{{ $htmlLang }}"@if($htmlDir) dir="{{ $htmlDir }}"@endif>
 
 <head>
     <meta charset="utf-8">
@@ -192,7 +203,7 @@
                         @php
                             $cleanLink = Str::replace(['/course', '/diploma'], '', $menu->link);
                         @endphp
-                        <a href="{{ $menu->link }}"
+                        <a href="{{ public_menu_href($menu->link) }}"
                             class="active:underline decoration-crimson underline-offset-4">{{ $menu->name }}</a>
                         @if ($menu->children->count() > 0)
                             {{-- Classic dropdown panel under the parent item --}}
@@ -201,7 +212,7 @@
                                 <ul class="list-none m-0 p-0 py-2">
                                     @foreach ($menu->children->sortBy('menu_order') as $child)
                                         <li>
-                                            <a href="{{ $child->link }}"
+                                            <a href="{{ public_menu_href($child->link) }}"
                                                 class="flex gap-2 items-start text-black transition-colors duration-150 hover:bg-navy hover:text-white px-4 py-2 whitespace-normal">
                                                 <span aria-hidden="true" class="shrink-0 leading-snug">•</span>
                                                 <span class="text-[15px] leading-snug font-medium">{{ $child->name }}</span>
@@ -291,7 +302,7 @@
                             <div id="dropdownMenu{{ $key }}"
                                 class="{{ $keepOthersOpen ? '' : 'hidden ' }}bg-white px-3 py-2 mt-1 text-black rounded-md dropdownMenu text-[14px] leading-snug{{ $keepOthersOpen ? ' dropdown-keep-open' : '' }}">
                                 @foreach ($menu->children as $child)
-                                    <a href="{{ $child->link }}" class="flex items-start gap-2 py-1.5">
+                                    <a href="{{ public_menu_href($child->link) }}" class="flex items-start gap-2 py-1.5">
                                         <span aria-hidden="true" class="shrink-0">•</span>
                                         <span>{{ $child->name }}</span>
                                     </a>
@@ -299,7 +310,7 @@
                             </div>
                         </div>
                     @else
-                        <a href="{{ $menu->link }}" class="text-white py-1.5">{{ $menu->name }}</a>
+                        <a href="{{ public_menu_href($menu->link) }}" class="text-white py-1.5">{{ $menu->name }}</a>
                     @endif
                 @endforeach
                 @if($settings && $settings->header_button)
@@ -450,7 +461,7 @@
                     <span class="font-bold text-[18px] leading-[27px]"
                         style="color: {{ $footerTitle }}">{{ $widget->title ?? 'Title' }}</span>
                     @if ($widget->description != null)
-                        <div class="mt-2 w-full text-left" style="color: {{ $footerText }}">{!! $widget->description !!}</div>
+                        <div class="mt-2 w-full text-left" style="color: {{ $footerText }}">{!! rewrite_public_hrefs((string) $widget->description) !!}</div>
                     @endif
                     @if ($widget->menu != null)
                         @php
@@ -459,7 +470,7 @@
                         <ul class="list-none m-0 p-0 w-full flex flex-col gap-1.5 items-start text-left">
                             @foreach ($filteredMenus as $menu)
                                 <li class="w-full">
-                                    <a href="{{ $menu->link }}"
+                                    <a href="{{ public_menu_href($menu->link) }}"
                                         class="inline-flex items-start gap-2 font-bold text-[16px] leading-[24px] hover:underline transition-all ease-in duration-200 delay-100 underline-offset-4 text-left"
                                         style="color: {{ $footerText }}">
                                         <span aria-hidden="true" class="shrink-0 leading-[24px]">•</span>

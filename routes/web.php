@@ -76,8 +76,15 @@ Route::view('/test', 'test');
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
 Route::get('/robots.txt', [SitemapController::class, 'robots'])->name('robots');
 
+Route::redirect('/home', '/', 301);
+Route::redirect('/course/legal', '/legal', 301);
+Route::redirect('/berkeley-girls/sixth-form', '/sixth-form', 301);
+Route::get('/page-not-found', function () {
+    abort(404);
+});
+
 // Route::view('/visa', 'visa');
-Route::get('/', [WelcomeController::class, 'index'])->middleware('set.seo')->name('welcome');
+Route::get('/', [WelcomeController::class, 'index'])->name('welcome');
 Route::get('/search', [WelcomeController::class, 'search'])->name('search');
 Route::get('/agenda_search', [WelcomeController::class, 'agenda_search'])->name('agenda_search');
 Route::get('/faculty_search', [WelcomeController::class, 'faculty_search'])->name('faculty_search');
@@ -97,7 +104,7 @@ Route::delete('/cart/{id}', [CartController::class, 'destroy'])->name('cart.dest
 Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index')->middleware(['auth', 'verified', 'approved']);
 Route::post('/checkout/place-order', [CheckoutController::class, 'store'])->name('checkout.store')->middleware(['auth', 'verified', 'approved']);
 
-Route::controller(FrontendController::class)->middleware('set.seo')->group(function () {
+Route::controller(FrontendController::class)->group(function () {
     // Cart & CHECKOUT routes
     Route::get('/optimize', 'optimize');
     //Route::get('/courses', 'courses')->name('courses');
@@ -734,11 +741,9 @@ Route::get('/instructor/{id}', [WelcomeController::class, 'instructorDetails']);
 
 Route::get('/{categoryPerma}/{slug}', [WelcomeController::class, 'categoryDetails'])
     ->where('categoryPerma', '^(?!admin|some-reserved-word)[a-zA-Z0-9_-]+$')
-    ->middleware('set.seo')
     ->name('category.details');
 
 // Catch-All Route for Pages (Must Be Last)
 Route::get('/{any?}', [WelcomeController::class, 'pages'])
     ->where('any', '.*')
-    ->middleware('set.seo')
     ->name('pages');

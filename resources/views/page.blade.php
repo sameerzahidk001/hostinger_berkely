@@ -11,7 +11,7 @@
 
         @elseif ($section->section_type === 'banner')
             <x-banner 
-                :breadcrumb="$section->data['breadcrumbs'] ?? false" 
+                :breadcrumb="(!empty($section->data['breadcrumbs']) && !empty($breadcrumb)) ? $breadcrumb : []" 
                 :title="$section->data['title'] ?? ''" 
                 :subtitle="$section->data['subtitle'] ?? ''"
                 :description="$section->data['description'] ?? ''"
