@@ -42,7 +42,7 @@
     .lms-tests-table {
         width: 100% !important;
         max-width: 100%;
-        table-layout: fixed;
+        table-layout: auto;
         margin-bottom: 0;
         font-size: 12px;
         border-collapse: collapse;

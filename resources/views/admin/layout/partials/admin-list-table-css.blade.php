@@ -2,7 +2,7 @@
     .admin-list-wrap { overflow-x: auto; }
     .admin-list-table {
         width: 100% !important;
-        table-layout: fixed;
+        table-layout: auto;
         font-size: 12px;
     }
     .admin-list-table thead th,
