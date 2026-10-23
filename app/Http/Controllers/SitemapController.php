@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Course;
+use App\Models\Menu;
 use App\Models\Page;
 use App\Models\SiteSettings;
 use Illuminate\Http\Response;
@@ -21,11 +22,19 @@ class SitemapController extends Controller
 
     public function robots(): Response
     {
+        $sitemap = rtrim((string) config('app.url'), '/') . '/sitemap.xml';
         $lines = [
             'User-agent: *',
-            'Disallow:',
+            'Disallow: /search',
+            'Disallow: /search-courses',
+            'Disallow: /cart',
+            'Disallow: /checkout',
+            'Disallow: /login',
+            'Disallow: /register',
+            'Disallow: /admin',
+            'Disallow: /user',
             '',
-            'Sitemap: ' . url('/sitemap.xml'),
+            'Sitemap: ' . $sitemap,
         ];
 
         return response(implode("\n", $lines) . "\n", 200)
@@ -39,13 +48,14 @@ class SitemapController extends Controller
     {
         $urls = [];
         $homeId = SiteSettings::value('home');
+        $linked = $this->linkedPaths();
 
-        $urls[] = [
-            'loc' => url('/'),
-            'lastmod' => now()->toAtomString(),
-            'changefreq' => 'daily',
-            'priority' => '1.0',
-        ];
+            $urls[] = [
+                'loc' => $this->siteUrl('/'),
+                'lastmod' => now()->toAtomString(),
+                'changefreq' => 'daily',
+                'priority' => '1.0',
+            ];
 
         $pageQuery = Page::query()->with('seo')->withCount('sections');
         if (pages_status_enabled() && Schema::hasColumn('pages', 'status')) {
@@ -70,8 +80,12 @@ class SitemapController extends Controller
                 continue;
             }
 
+            if (! $this->isLinkedPath($path, $linked)) {
+                continue;
+            }
+
             $urls[] = [
-                'loc' => url($path),
+                'loc' => $this->siteUrl($path),
                 'lastmod' => optional($page->updated_at)?->toAtomString(),
                 'changefreq' => 'weekly',
                 'priority' => '0.8',
@@ -88,8 +102,12 @@ class SitemapController extends Controller
                 continue;
             }
 
+            if (! $this->isLinkedPath('course/' . $course->slug, $linked) && ! $this->isLinkedPath($course->slug, $linked)) {
+                continue;
+            }
+
             $urls[] = [
-                'loc' => url('course/' . $course->slug),
+                'loc' => $this->siteUrl('course/' . $course->slug),
                 'lastmod' => optional($course->updated_at)?->toAtomString(),
                 'changefreq' => 'weekly',
                 'priority' => '0.7',
@@ -106,5 +124,53 @@ class SitemapController extends Controller
         }
 
         return strtolower((string) ($seo->robots_index ?? 'index')) === 'noindex';
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function linkedPaths(): array
+    {
+        $paths = [''];
+        try {
+            foreach (Menu::query()->pluck('link') as $link) {
+                $href = public_menu_href((string) $link);
+                $path = parse_url($href, PHP_URL_PATH);
+                $paths[] = strtolower(trim((string) ($path ?: $href), '/'));
+            }
+        } catch (\Throwable $e) {
+            return $paths;
+        }
+
+        return array_values(array_unique($paths));
+    }
+
+    /**
+     * @param  array<int, string>  $linked
+     */
+    private function isLinkedPath(string $path, array $linked): bool
+    {
+        $path = strtolower(trim($path, '/'));
+        foreach ($linked as $item) {
+            if ($item === $path) {
+                return true;
+            }
+            if ($item !== '' && str_ends_with('/' . $item, '/' . $path)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function siteUrl(string $path = '/'): string
+    {
+        $base = rtrim((string) config('app.url'), '/');
+        $path = '/' . ltrim($path, '/');
+        if ($path === '/') {
+            return $base . '/';
+        }
+
+        return $base . rtrim($path, '/');
     }
 }

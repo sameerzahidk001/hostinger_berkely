@@ -25,7 +25,7 @@ class SetSEO
         }
 
         $currentUrl = trim($request->path(), '/');
-        $canonical = $this->preferredCanonical($request);
+        $canonical = seo_preferred_canonical($request);
         SEOTools::setCanonical($canonical);
 
         if (seo_is_utility_path($currentUrl) || $request->is('login') || $request->is('register') || $request->is('password*')) {
@@ -49,8 +49,17 @@ class SetSEO
 
         $seo = $seoData?->seo;
 
-        // Always emit robots meta on public pages/courses (defaults to index, follow).
-        SEOTools::metatags()->addMeta('robots', seo_robots_content($seo));
+        $robots = seo_robots_content($seo);
+        if ($seoData instanceof Page) {
+            if (! isset($seoData->sections_count) && ! $seoData->relationLoaded('sections')) {
+                $seoData->loadCount('sections');
+            }
+            $sectionCount = (int) ($seoData->sections_count ?? $seoData->sections?->count() ?? 0);
+            if ($sectionCount === 0) {
+                $robots = 'noindex, follow';
+            }
+        }
+        SEOTools::metatags()->addMeta('robots', $robots);
 
         if ($seoData && $seo) {
             $title = (string) $seo->title;
@@ -156,7 +165,7 @@ class SetSEO
         SEOTools::jsonLdMulti()->newJsonLd();
         SEOTools::jsonLdMulti()->setType('Course');
         SEOTools::jsonLdMulti()->setTitle((string) $course->title);
-        SEOTools::jsonLdMulti()->setUrl($this->preferredCanonical(request()));
+        SEOTools::jsonLdMulti()->setUrl(seo_preferred_canonical(request()));
 
         if ($description !== '') {
             SEOTools::jsonLdMulti()->setDescription($description);
@@ -239,7 +248,7 @@ class SetSEO
             $crumbs[] = ['title' => 'Courses', 'url' => seo_courses_hub_url()];
             $crumbs[] = [
                 'title' => (string) ($seoData->title ?? $seoData->seo?->title ?? 'Course'),
-                'url' => $this->preferredCanonical(request()),
+                'url' => seo_preferred_canonical(request()),
             ];
 
             return $crumbs;
@@ -270,7 +279,7 @@ class SetSEO
 
         $crumbs[] = [
             'title' => (string) $seoData->page_name,
-            'url' => $this->preferredCanonical(request()),
+            'url' => seo_preferred_canonical(request()),
         ];
 
         return $crumbs;
@@ -324,14 +333,4 @@ class SetSEO
         return Page::where('url', $path)->with(['seo', 'faqs'])->first();
     }
 
-    private function preferredCanonical($request): string
-    {
-        $base = rtrim((string) config('app.url'), '/');
-        $path = '/' . ltrim((string) $request->getPathInfo(), '/');
-        if ($path === '/') {
-            return $base . '/';
-        }
-
-        return $base . rtrim($path, '/');
-    }
 }

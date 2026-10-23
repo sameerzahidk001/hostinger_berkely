@@ -112,7 +112,15 @@ class FrontendController extends Controller
                     ->whereDate('from', '>=', now()->toDateString())
                     ->orderBy('from');
             },
-        ])->where('slug', $slug)->firstOrFail();
+        ])->where('slug', $slug)->first();
+
+        if (! $data['course']) {
+            $page = \App\Models\Page::where('url', $slug)->first();
+            if ($page) {
+                return redirect('/' . ltrim((string) $page->full_url, '/'), 301);
+            }
+            abort(404);
+        }
 
         $instructorIds = course_instructor_ids($data['course']);
 
