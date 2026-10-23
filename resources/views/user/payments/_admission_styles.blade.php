@@ -17,23 +17,23 @@
     }
     .lms-admission-table th.col-action,
     .lms-admission-table td.col-action {
-        width: 92px;
-        max-width: 100px;
-        white-space: nowrap;
+        width: auto;
+        max-width: none;
+        white-space: normal;
     }
     .lms-admission-actions {
         display: flex;
-        flex-direction: column;
-        align-items: stretch;
+        flex-wrap: wrap;
+        align-items: flex-start;
         gap: 4px;
-        width: 88px;
+        width: auto;
     }
     .lms-admission-actions .btn {
         margin: 0;
         padding: 4px 6px;
         font-size: 11px;
-        white-space: nowrap;
-        width: 100%;
+        white-space: normal;
+        line-height: 1.25;
     }
     @media (max-width: 991px) {
         .lms-admission-table thead { display: none; }
