@@ -505,7 +505,7 @@ class LmsQuestionController extends Controller
                 }
                 $n++;
                 $subs[] = [
-                    'key' => (string) $n,
+                    'key' => chr(96 + min($n, 26)),
                     'text' => $text,
                     'percent' => max(0, min(100, $percent)),
                 ];
