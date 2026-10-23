@@ -142,7 +142,7 @@
                 @elseif($question->hasSubQuestions())
                     @foreach($question->subQuestions() as $sub)
                         @php $sk = (string) ($sub['key'] ?? $loop->index); @endphp
-                        <span class="label">{{ $sk }}. {{ $sub['text'] ?? '' }}</span>
+                        <span class="label">({{ chr(97 + $loop->index) }}) {{ $sub['text'] ?? '' }}</span>
                         <div class="body">{!! nl2br(e($answer?->partAnswer($sk) ?: '—')) !!}</div>
                         <p><strong>Marks:</strong> {{ lms_format_number($answer?->partScore($sk)) }} / {{ lms_format_number($sub['marks'] ?? 0) }}</p>
                         @if($answer && trim(strip_tags($answer->partFeedback($sk))) !== '')

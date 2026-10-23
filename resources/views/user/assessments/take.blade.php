@@ -373,7 +373,7 @@
                             @php $sk = (string) ($sub['key'] ?? $loop->index); @endphp
                             <div class="form-group" style="border-left:3px solid #e7eaec;padding-left:12px;margin-bottom:16px;">
                                 <label>
-                                    <strong>{{ $sk }}.</strong>
+                                    <strong>({{ chr(97 + $loop->index) }})</strong>
                                     {{ $sub['text'] ?? '' }}
                                     <span class="text-muted">({{ lms_format_number($sub['percent'] ?? 0) }}% · {{ lms_format_number($sub['marks'] ?? 0) }} marks)</span>
                                 </label>

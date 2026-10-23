@@ -65,7 +65,7 @@
                 @foreach($subs as $si => $sub)
                     <div class="row js-sub-row" style="margin-bottom:8px;">
                         <div class="col-md-1">
-                            <label class="js-sub-letter">{{ (int)$si + 1 }}.</label>
+                            <label class="js-sub-letter">({{ chr(97 + (int)$si) }})</label>
                         </div>
                         <div class="col-md-8">
                             <input type="text" name="{{ $prefix }}[sub_questions][{{ $si }}][text]" class="form-control" value="{{ $sub['text'] ?? '' }}" placeholder="Sub-question prompt">
