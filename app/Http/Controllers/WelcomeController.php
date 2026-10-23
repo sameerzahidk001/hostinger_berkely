@@ -49,6 +49,9 @@ class WelcomeController extends Controller
             if (!$page) {
                 abort(404);
             }
+            if (in_array(strtolower($pageSlug), ['page-not-found', 'home'], true)) {
+                abort(404);
+            }
 
             $breadcrumb[] = ['title' => $page->page_name, 'url' => url($page->full_url)];
         }
@@ -321,8 +324,7 @@ class WelcomeController extends Controller
                 $query->orderBy('from');
             }
 
-            // Get final results
-            $results = $query->get();
+            $results = $query->limit(50)->get();
 
             // Return HTML Partial
             $html = view('partials.agenda_results', compact('results'))->render();

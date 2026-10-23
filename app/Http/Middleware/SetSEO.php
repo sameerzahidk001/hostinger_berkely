@@ -13,7 +13,26 @@ class SetSEO
 {
     public function handle($request, Closure $next)
     {
+        if (app()->isProduction()) {
+            $preferredHost = parse_url((string) config('app.url'), PHP_URL_HOST);
+            if ($preferredHost && strcasecmp((string) $request->getHost(), $preferredHost) !== 0) {
+                return redirect()->away(rtrim((string) config('app.url'), '/') . $request->getRequestUri(), 301);
+            }
+        }
+
+        if ($request->is('admin*') || $request->is('user*') || $request->is('instructor*') || $request->is('livewire*')) {
+            return $next($request);
+        }
+
         $currentUrl = trim($request->path(), '/');
+        $canonical = $this->preferredCanonical($request);
+        SEOTools::setCanonical($canonical);
+
+        if (seo_is_utility_path($currentUrl) || $request->is('login') || $request->is('register') || $request->is('password*')) {
+            SEOTools::metatags()->addMeta('robots', 'noindex, follow');
+
+            return $next($request);
+        }
 
         if (Str::startsWith($currentUrl, 'course/')) {
             $course_slug = Str::after($currentUrl, 'course/');
@@ -38,7 +57,7 @@ class SetSEO
             $keywords = (string) $seo->keywords;
             $imageUrl = $seo->thumbnail ? asset($seo->thumbnail) : '';
             $imageAlt = trim((string) ($seo->thumbnail_alt ?? '')) ?: $title;
-            $pageUrl = url()->current();
+            $pageUrl = $canonical;
 
             SEOTools::setTitle($title);
             SEOTools::setDescription($description);
@@ -136,7 +155,7 @@ class SetSEO
         SEOTools::jsonLdMulti()->newJsonLd();
         SEOTools::jsonLdMulti()->setType('Course');
         SEOTools::jsonLdMulti()->setTitle((string) $course->title);
-        SEOTools::jsonLdMulti()->setUrl(url()->current());
+        SEOTools::jsonLdMulti()->setUrl($this->preferredCanonical(request()));
 
         if ($description !== '') {
             SEOTools::jsonLdMulti()->setDescription($description);
@@ -216,10 +235,10 @@ class SetSEO
         ];
 
         if ($seoData instanceof Course) {
-            $crumbs[] = ['title' => 'Course', 'url' => route('welcome')];
+            $crumbs[] = ['title' => 'Courses', 'url' => seo_courses_hub_url()];
             $crumbs[] = [
                 'title' => (string) ($seoData->title ?? $seoData->seo?->title ?? 'Course'),
-                'url' => url()->current(),
+                'url' => $this->preferredCanonical(request()),
             ];
 
             return $crumbs;
@@ -250,7 +269,7 @@ class SetSEO
 
         $crumbs[] = [
             'title' => (string) $seoData->page_name,
-            'url' => url()->current(),
+            'url' => $this->preferredCanonical(request()),
         ];
 
         return $crumbs;
@@ -302,5 +321,16 @@ class SetSEO
         }
 
         return Page::where('url', $path)->with(['seo', 'faqs'])->first();
+    }
+
+    private function preferredCanonical($request): string
+    {
+        $base = rtrim((string) config('app.url'), '/');
+        $path = '/' . ltrim((string) $request->getPathInfo(), '/');
+        if ($path === '/') {
+            return $base . '/';
+        }
+
+        return $base . rtrim($path, '/');
     }
 }

@@ -47,7 +47,7 @@ class SitemapController extends Controller
             'priority' => '1.0',
         ];
 
-        $pageQuery = Page::query()->with('seo');
+        $pageQuery = Page::query()->with('seo')->withCount('sections');
         if (pages_status_enabled() && Schema::hasColumn('pages', 'status')) {
             $pageQuery->where('status', 1);
         }
@@ -62,7 +62,11 @@ class SitemapController extends Controller
             }
 
             $path = trim((string) $page->full_url, '/');
-            if ($path === '') {
+            if ($path === '' || seo_is_utility_path($path) || in_array($path, ['home', 'page-not-found'], true)) {
+                continue;
+            }
+
+            if ((int) ($page->sections_count ?? 0) === 0) {
                 continue;
             }
 

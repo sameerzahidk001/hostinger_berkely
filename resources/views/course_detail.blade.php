@@ -218,13 +218,13 @@
         <section class="flex flex-col-reverse justify-between relative min-h-[500px] md:max-h-[500px] bg-[#000435]">
             <div class="flex text-white min-[1200px]:pl-[72px] md:pr-12 py-[30px] px-6 md:w-[50%] m-0  flex-1 flex-col">
                 @if ($course->dynamicLabel->banner_breadcrumb === 1)
-                    <div class="items-center gap-1 hidden md:flex ">
-                        <a href="#">Home</a>
-                        <img src="{{ asset('frontend/images/svgs/caret-r-o.svg') }}" class="w-4 h-4" alt="Breadcrumb separator">
-                        <span class="font-bold">Course</span>
-                        <img src="{{ asset('frontend/images/svgs/caret-r-o.svg') }}" class="w-4 h-4" alt="Breadcrumb separator">
+                    <nav aria-label="Breadcrumb" class="items-center gap-1 flex flex-wrap">
+                        <a href="{{ url('/') }}">Home</a>
+                        <img src="{{ asset('frontend/images/svgs/caret-r-o.svg') }}" class="w-4 h-4" alt="">
+                        <a href="{{ seo_courses_hub_url() }}">Courses</a>
+                        <img src="{{ asset('frontend/images/svgs/caret-r-o.svg') }}" class="w-4 h-4" alt="">
                         <span class="font-bold">{{ $course->title }}</span>
-                    </div>
+                    </nav>
                 @endif
 
                 <div class="flex flex-col gap-4 my-4">
@@ -262,7 +262,7 @@
                 @php $bannerUrl = displayable_media_url($course->dynamicLabel->banner_image); @endphp
                 @if($bannerUrl)
                 <img src="{{ $bannerUrl }}" alt="{{ course_image_alt($course, 'banner_image', $course->dynamicLabel?->banner_title ?? $course->title) }}"
-                    loading="lazy" width="1200" height="800"
+                    width="1200" height="800" decoding="async" fetchpriority="high"
                     class="object-cover h-full md:max-h-full md:w-full md:h-full">
                 @endif
             </div>

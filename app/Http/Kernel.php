@@ -38,6 +38,7 @@ class Kernel extends HttpKernel
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \App\Http\Middleware\CheckIfUserApproved::class,
             \App\Http\Middleware\LogPageView::class,
+            \App\Http\Middleware\SetSEO::class,
         ],
 
         'api' => [
