@@ -36,7 +36,7 @@
                         @forelse($rows as $row)
                             <tr>
                                 <td>
-                                    <img src="{{ $row['url'] }}" alt="" style="width:72px;height:54px;object-fit:cover;border:1px solid #e7eaec;">
+                                    <img src="{{ $row['url'] }}" alt="{{ $row['name'] }}" class="lms-media-thumb" width="72" height="54" loading="lazy" style="width:72px;height:54px;object-fit:cover;border:1px solid #e7eaec;display:block;background:#f4f4f4;">
                                 </td>
                                 <td>
                                     <a href="{{ $row['url'] }}" target="_blank" rel="noopener">{{ $row['name'] }}</a>
