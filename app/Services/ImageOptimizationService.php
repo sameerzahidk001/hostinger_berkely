@@ -61,6 +61,41 @@ class ImageOptimizationService
         return $this->createVariants($absolutePath, $dir, $slug, $ext);
     }
 
+    public function srcsetForPublicPath(?string $publicPath): ?string
+    {
+        $publicPath = ltrim((string) $publicPath, '/');
+        if ($publicPath === '' || str_contains($publicPath, '..')) {
+            return null;
+        }
+
+        $ext = strtolower(pathinfo($publicPath, PATHINFO_EXTENSION));
+        if (! $this->isRasterImage($ext)) {
+            return null;
+        }
+
+        $dir = str_replace('\\', '/', dirname($publicPath));
+        $slug = pathinfo($publicPath, PATHINFO_FILENAME);
+        $dir = $dir === '.' ? '' : $dir . '/';
+
+        $parts = [];
+        foreach ($this->variantWidths as $name => $width) {
+            $rel = $dir . $slug . '-' . $name . '.' . $ext;
+            if (is_file(public_path($rel))) {
+                $parts[] = asset($rel) . ' ' . $width . 'w';
+            }
+        }
+
+        if (is_file(public_path($publicPath))) {
+            $parts[] = asset($publicPath) . ' 1920w';
+        }
+
+        if (count($parts) < 2) {
+            return null;
+        }
+
+        return implode(', ', $parts);
+    }
+
     public function webpUrl(?string $publicPath): ?string
     {
         $publicPath = ltrim((string) $publicPath, '/');

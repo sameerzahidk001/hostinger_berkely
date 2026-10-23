@@ -21,7 +21,7 @@ class SetSEO
             }
         }
 
-        if ($request->is('admin*') || $request->is('user*') || $request->is('instructor*') || $request->is('livewire*')) {
+        if ($request->is('admin', 'admin/*') || $request->is('user', 'user/*') || $request->is('instructor', 'instructor/*') || $request->is('livewire', 'livewire/*')) {
             return $next($request);
         }
 
@@ -60,7 +60,7 @@ class SetSEO
         $seo = $seoData?->seo;
 
         $robots = seo_robots_content($seo);
-        if ($seoData instanceof Page && seo_page_is_empty($seoData)) {
+        if ($seoData instanceof Page && (seo_page_is_empty($seoData) || ! seo_path_is_menu_linked($currentUrl))) {
             $robots = 'noindex, follow';
         }
         SEOTools::metatags()->addMeta('robots', $robots);
@@ -69,6 +69,7 @@ class SetSEO
             ? (string) ($seoData->title ?? '')
             : (string) ($seoData->page_name ?? '');
         View::share('seoDocLang', seo_document_language($currentUrl, $titleHint));
+        View::share('seoHreflangLinks', seo_hreflang_alternates($currentUrl, $titleHint));
 
         if ($seoData && $seo) {
             $title = (string) $seo->title;
@@ -107,7 +108,18 @@ class SetSEO
             $this->applyBreadcrumbSchema($this->buildBreadcrumbCrumbs($seoData, $currentUrl));
         }
 
-        return $next($request);
+        $response = $next($request);
+        if (method_exists($response, 'getContent') && method_exists($response, 'setContent')) {
+            $type = (string) $response->headers->get('Content-Type', '');
+            if ($type === '' || str_contains($type, 'html')) {
+                $html = $response->getContent();
+                if (is_string($html) && $html !== '') {
+                    $response->setContent(seo_sanitize_public_html($html));
+                }
+            }
+        }
+
+        return $response;
     }
 
     private function applyOrganizationSchema(): void

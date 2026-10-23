@@ -533,8 +533,14 @@ if (!function_exists('optimized_image_tag')) {
         $style = isset($attrs['style']) ? ' style="' . e($attrs['style']) . '"' : '';
         $decoding = ' decoding="async"';
 
+        $srcset = app(\App\Services\ImageOptimizationService::class)->srcsetForPublicPath(
+            str_starts_with($src, 'http') ? null : ltrim($src, '/')
+        );
+        $sizes = $attrs['sizes'] ?? '(max-width: 768px) 100vw, 1200px';
+
         $img = '<img src="' . e($url) . '" alt="' . e($alt) . '" loading="' . $loading . '"'
             . $decoding . $width . $height . $style
+            . ($srcset ? ' srcset="' . e($srcset) . '" sizes="' . e($sizes) . '"' : '')
             . ($class !== '' ? ' class="' . $class . '"' : '')
             . '>';
 
@@ -1763,17 +1769,18 @@ if (! function_exists('seo_hreflang_alternates')) {
     /**
      * @return array<string, string>
      */
-    function seo_hreflang_alternates(?string $path = null): array
+    function seo_hreflang_alternates(?string $path = null, ?string $text = null): array
     {
         static $memo = [];
         $path = trim($path ?? request()->path(), '/');
-        if (array_key_exists($path, $memo)) {
-            return $memo[$path];
+        $memoKey = $path . "\0" . (string) $text;
+        if (array_key_exists($memoKey, $memo)) {
+            return $memo[$memoKey];
         }
 
         $isCourse = str_starts_with(strtolower($path), 'course/');
         $slug = $isCourse ? substr($path, strlen('course/')) : $path;
-        $lang = seo_document_language($slug)['lang'];
+        $lang = seo_document_language($slug, $text)['lang'];
         $base = rtrim((string) config('app.url'), '/');
         $self = $isCourse ? $base . '/course/' . ltrim($slug, '/') : ($path === '' ? $base . '/' : $base . '/' . $path);
 
@@ -1789,20 +1796,49 @@ if (! function_exists('seo_hreflang_alternates')) {
             if ($candidate === '') {
                 continue;
             }
-            $exists = $isCourse
-                ? \App\Models\Course::where('slug', $candidate)->exists()
-                : \App\Models\Page::where('url', $candidate)->exists();
-            if ($exists) {
-                $links[$hreflang] = $isCourse
-                    ? $base . '/course/' . $candidate
-                    : $base . '/' . $candidate;
+            $href = seo_hreflang_live_url($isCourse, $candidate, $base);
+            if ($href) {
+                $links[$hreflang] = $href;
             }
         }
 
         $links[$lang] = $self;
-        $links['x-default'] = $links['en'] ?? $base . '/';
+        $links['x-default'] = $links['en'] ?? $self;
 
-        return $memo[$path] = $links;
+        return $memo[$memoKey] = $links;
+    }
+}
+
+if (! function_exists('seo_hreflang_live_url')) {
+    function seo_hreflang_live_url(bool $isCourse, string $candidate, string $base): ?string
+    {
+        if ($isCourse) {
+            $course = \App\Models\Course::where('slug', $candidate)->with('seo')->first();
+            if (! $course) {
+                return null;
+            }
+            if ($course->seo && strtolower((string) ($course->seo->robots_index ?? 'index')) === 'noindex') {
+                return null;
+            }
+
+            return $base . '/course/' . $candidate;
+        }
+
+        $page = \App\Models\Page::where('url', $candidate)->with('seo')->first();
+        if (! $page) {
+            return null;
+        }
+        if (pages_status_enabled() && \Illuminate\Support\Facades\Schema::hasColumn('pages', 'status') && (int) $page->status !== 1) {
+            return null;
+        }
+        if (seo_page_is_empty($page)) {
+            return null;
+        }
+        if ($page->seo && strtolower((string) ($page->seo->robots_index ?? 'index')) === 'noindex') {
+            return null;
+        }
+
+        return $base . '/' . trim((string) $page->full_url, '/');
     }
 }
 
@@ -1826,13 +1862,97 @@ if (! function_exists('seo_page_is_empty')) {
             }
             $blob .= ' ' . (is_array($data) ? json_encode($data) : (string) $data);
         }
-        if (preg_match('~https?://|\.(jpg|jpeg|png|gif|webp|svg)~i', $blob)) {
-            return false;
-        }
         $text = trim(preg_replace('/\s+/', ' ', strip_tags($blob)));
-        $text = preg_replace('/\b(null|true|false|section_type|orderby|category|id)\b/i', '', $text);
+        $text = preg_replace('/\b(null|true|false|section_type|orderby|category|id|https?|www|jpg|jpeg|png|gif|webp|svg)\b/i', '', $text);
+        $text = preg_replace('~https?://\S+~i', '', (string) $text);
 
         return mb_strlen(trim((string) $text)) < 40;
+    }
+}
+
+if (! function_exists('seo_menu_linked_paths')) {
+    /**
+     * @return array<int, string>
+     */
+    function seo_menu_linked_paths(): array
+    {
+        static $paths = null;
+        if (is_array($paths)) {
+            return $paths;
+        }
+        $paths = [''];
+        try {
+            foreach (\App\Models\Menu::query()->pluck('link') as $link) {
+                $href = public_menu_href((string) $link);
+                $path = parse_url($href, PHP_URL_PATH);
+                $paths[] = strtolower(trim((string) ($path ?: $href), '/'));
+            }
+        } catch (\Throwable $e) {
+            return $paths;
+        }
+
+        return $paths = array_values(array_unique($paths));
+    }
+}
+
+if (! function_exists('seo_path_is_menu_linked')) {
+    function seo_path_is_menu_linked(string $path): bool
+    {
+        $path = strtolower(trim($path, '/'));
+        if ($path === '' || $path === 'course-index') {
+            return true;
+        }
+        foreach (seo_menu_linked_paths() as $item) {
+            if ($item === $path) {
+                return true;
+            }
+            if ($item !== '' && (str_ends_with('/' . $item, '/' . $path) || str_ends_with('/' . $path, '/' . $item))) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
+if (! function_exists('seo_sanitize_public_html')) {
+    function seo_sanitize_public_html(string $html): string
+    {
+        $html = preg_replace_callback('/(<body\b[^>]*>)(.*)(<\/body>)/is', static function (array $m) {
+            $body = preg_replace('/<title\b[^>]*>.*?<\/title>/is', '', $m[2]) ?? $m[2];
+
+            return $m[1] . $body . $m[3];
+        }, $html) ?? $html;
+
+        return seo_add_responsive_srcset($html);
+    }
+}
+
+if (! function_exists('seo_add_responsive_srcset')) {
+    function seo_add_responsive_srcset(string $html): string
+    {
+        return preg_replace_callback('/<img\b([^>]*?)>/i', static function (array $m) {
+            $attrs = $m[1];
+            if (stripos($attrs, 'srcset=') !== false) {
+                return $m[0];
+            }
+            if (! preg_match('/\ssrc=["\']([^"\']+)["\']/i', $attrs, $srcMatch)) {
+                return $m[0];
+            }
+            $src = $srcMatch[1];
+            $path = parse_url($src, PHP_URL_PATH) ?: $src;
+            $path = ltrim((string) $path, '/');
+            if (str_starts_with($path, 'public/')) {
+                $path = substr($path, 7);
+            }
+            $srcset = app(\App\Services\ImageOptimizationService::class)->srcsetForPublicPath($path);
+            if (! $srcset) {
+                return $m[0];
+            }
+            $extra = ' srcset="' . e($srcset) . '" sizes="(max-width: 768px) 100vw, 1200px"';
+
+            return '<img' . rtrim($attrs) . $extra . '>';
+        }, $html) ?? $html;
     }
 }
 

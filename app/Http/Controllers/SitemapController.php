@@ -31,8 +31,9 @@ class SitemapController extends Controller
             'Disallow: /checkout',
             'Disallow: /login',
             'Disallow: /register',
-            'Disallow: /admin',
-            'Disallow: /user',
+            'Disallow: /admin/',
+            'Disallow: /user/',
+            'Disallow: /instructor/',
             '',
             'Sitemap: ' . $sitemap,
         ];
@@ -48,7 +49,6 @@ class SitemapController extends Controller
     {
         $urls = [];
         $homeId = SiteSettings::value('home');
-        $linked = $this->linkedPaths();
 
             $urls[] = [
                 'loc' => $this->siteUrl('/'),
@@ -82,11 +82,11 @@ class SitemapController extends Controller
                 continue;
             }
 
-            if ((int) ($page->sections_count ?? 0) === 0) {
+            if ((int) ($page->sections_count ?? 0) === 0 || seo_page_is_empty($page)) {
                 continue;
             }
 
-            if (! $this->isLinkedPath($path, $linked)) {
+            if (! seo_path_is_menu_linked($path)) {
                 continue;
             }
 

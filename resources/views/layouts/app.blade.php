@@ -2,7 +2,7 @@
     $docLang = $seoDocLang ?? seo_document_language();
     $htmlLang = $docLang['lang'];
     $htmlDir = $docLang['dir'];
-    $hreflangLinks = seo_hreflang_alternates();
+    $hreflangLinks = $seoHreflangLinks ?? seo_hreflang_alternates();
 @endphp
 <!doctype html>
 <html lang="{{ $htmlLang }}"@if($htmlDir) dir="{{ $htmlDir }}"@endif>
