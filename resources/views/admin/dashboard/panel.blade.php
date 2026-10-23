@@ -304,8 +304,8 @@
     if (! ($showStudentTable ?? false)) {
         $activityTab = 'staff';
     }
-    // Date, Activity, Description, Visit Page, Edit Page (+ optional User / Session).
-    $staffColspan = 5
+    // Date, Activity, Description, Links (+ optional User / Session).
+    $staffColspan = 4
         + (($showUserColumn ?? false) ? 1 : 0)
         + (($showSessionColumn ?? false) ? 1 : 0);
     $preserveReportUser = request('report_user');
@@ -460,15 +460,13 @@
                                             $staffDescCol = $staffActCol + 1;
                                             $staffSessionCol = $staffDescCol + 1;
                                             $staffVisitCol = ($showSessionColumn ?? false) ? ($staffSessionCol + 1) : $staffDescCol + 1;
-                                            $staffEditCol = $staffVisitCol + 1;
                                         @endphp
                                         <th data-sort-col="{{ $staffActCol }}" style="width: 160px;cursor:pointer;">Activity <span class="sort-ind"></span></th>
                                         <th data-sort-col="{{ $staffDescCol }}" style="cursor:pointer;">Description <span class="sort-ind"></span></th>
                                         @if($showSessionColumn ?? false)
                                             <th data-sort-col="{{ $staffSessionCol }}" style="width: 140px;cursor:pointer;">Session <span class="sort-ind"></span></th>
                                         @endif
-                                        <th data-sort-col="{{ $staffVisitCol }}" style="width: 100px;cursor:pointer;">Visit Page <span class="sort-ind"></span></th>
-                                        <th data-sort-col="{{ $staffEditCol }}" style="width: 100px;cursor:pointer;">Edit Page <span class="sort-ind"></span></th>
+                                        <th data-sort-col="{{ $staffVisitCol }}" style="width: 110px;cursor:pointer;">Links <span class="sort-ind"></span></th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -519,16 +517,15 @@
                                                     @endif
                                                 </td>
                                             @endif
-                                            <td style="white-space:nowrap;">
+                                            <td>
                                                 @if(!empty($visitUrl))
-                                                    <a href="{{ $visitUrl }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">Visit Page</a>
+                                                    <a href="{{ $visitUrl }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">Visit</a>
                                                 @else
                                                     <span class="text-muted">—</span>
                                                 @endif
-                                            </td>
-                                            <td style="white-space:nowrap;">
+                                                <br>
                                                 @if(!empty($editUrl))
-                                                    <a href="{{ $editUrl }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">Edit Page</a>
+                                                    <a href="{{ $editUrl }}" target="_blank" rel="noopener" style="color:#1c84c6;text-decoration:underline;">Edit</a>
                                                 @else
                                                     <span class="text-muted">—</span>
                                                 @endif

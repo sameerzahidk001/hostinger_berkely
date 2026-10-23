@@ -32,6 +32,11 @@
                 </form>
                 @endif
                 <style>
+                    #content-reports-panel .content-report-module-tabs {
+                        display: flex;
+                        flex-wrap: wrap;
+                        gap: 4px;
+                    }
                     #content-reports-panel .content-report-module-tabs > li > a {
                         color: #fff !important;
                         border: none !important;
@@ -66,12 +71,6 @@
                     #content-reports-panel .content-report-module-tabs > li.active > a.tab-fees,
                     #content-reports-panel .content-report-module-tabs > li > a.tab-fees:hover,
                     #content-reports-panel .content-report-module-tabs > li > a.tab-fees:focus { background: #1b4332; color: #fff !important; }
-                    #content-reports-panel .content-report-stat-value {
-                        font-size: 28px;
-                        font-weight: 700;
-                        line-height: 1.15;
-                        margin: 0 0 6px;
-                    }
                     #content-reports-panel .content-report-stat-value.is-custom-icon {
                         color: #1c84c6 !important;
                         font-size: 26px;
@@ -84,53 +83,64 @@
                     #content-reports-panel .content-report-stat-row {
                         display: flex;
                         flex-wrap: wrap;
+                        margin-left: -6px;
+                        margin-right: -6px;
                     }
-                    #content-reports-panel .content-report-stat-row > [class*="col-"] {
-                        display: flex;
-                        float: none;
+                    #content-reports-panel .content-report-stat-group {
+                        flex: 1 1 220px;
+                        max-width: 100%;
+                        min-width: 0;
+                        padding: 0 6px;
                         margin-bottom: 12px;
-                        width: 20%;
-                        max-width: 20%;
-                        flex: 0 0 20%;
+                        float: none;
                     }
-                    @media (max-width: 1199px) {
-                        #content-reports-panel .content-report-stat-row > [class*="col-"] {
-                            width: 33.333%;
-                            max-width: 33.333%;
-                            flex: 0 0 33.333%;
-                        }
+                    #content-reports-panel .content-report-stat-card {
+                        height: 100%;
+                        border: 1px solid #e7eaec;
+                        border-radius: 4px;
+                        background: #f9f9f9;
+                        padding: 10px 12px;
                     }
-                    @media (max-width: 767px) {
-                        #content-reports-panel .content-report-stat-row > [class*="col-"] {
-                            width: 50%;
-                            max-width: 50%;
-                            flex: 0 0 50%;
-                        }
+                    #content-reports-panel .content-report-stat-card h4 {
+                        margin: 0 0 8px;
+                        font-size: 11px;
+                        font-weight: 700;
+                        text-transform: uppercase;
+                        letter-spacing: .04em;
+                        color: #2f4050;
                     }
                     #content-reports-panel a.content-report-stat {
                         display: flex;
-                        flex-direction: column;
-                        justify-content: flex-start;
+                        align-items: baseline;
+                        justify-content: space-between;
+                        gap: 8px;
                         width: 100%;
-                        min-height: 96px;
-                        border: 1px solid #e7eaec;
-                        border-radius: 4px;
-                        padding: 12px 14px;
-                        background: #f9f9f9;
+                        min-height: 0;
+                        padding: 5px 0;
+                        border: 0;
+                        border-radius: 0;
+                        background: transparent;
                         color: #676a6c;
                         text-decoration: none;
                     }
-                    #content-reports-panel a.content-report-stat-range {
-                        justify-content: center;
-                        min-height: 72px;
+                    #content-reports-panel a.content-report-stat + a.content-report-stat {
+                        border-top: 1px solid #ececec;
+                    }
+                    #content-reports-panel .content-report-stat-value {
+                        font-size: 18px;
+                        font-weight: 700;
+                        line-height: 1.15;
+                        margin: 0;
+                        flex: 0 0 auto;
                     }
                     #content-reports-panel .content-report-stat-label {
-                        font-size: 12px;
+                        font-size: 11px;
                         font-weight: 700;
                         text-transform: uppercase;
                         letter-spacing: .03em;
                         line-height: 1.3;
                         margin: 0;
+                        text-align: right;
                     }
                 </style>
                 <h3 class="content-reports-heading" style="margin:0 0 12px;font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:#2f4050;">
@@ -158,26 +168,64 @@
                     @foreach(['courses' => 'Courses', 'pages' => 'Pages', 'seo' => 'SEO Active', 'training' => 'Training Calendar', 'fees' => 'Fee Package'] as $module => $moduleTitle)
                         @php $stats = $reports[$module] ?? []; @endphp
                         <div role="tabpanel" class="tab-pane {{ $activeTab === $module ? 'active' : '' }}" id="report-{{ $module }}">
-                            <div class="row content-report-stat-row">
-                                @foreach(($metricLabels[$module] ?? []) as $metricKey => $metricLabel)
-                                    @php
-                                        $value = (int) ($stats[$metricKey] ?? 0);
-                                        $hideValue = in_array($metricKey, ['created_in_range', 'updated_in_range'], true);
-                                    @endphp
-                                    <div class="col-lg-3 col-md-4 col-sm-6">
-                                        <a href="javascript:void(0);"
-                                            class="content-report-stat{{ $hideValue ? ' content-report-stat-range' : '' }}"
-                                            data-module="{{ $module }}"
-                                            data-metric="{{ $metricKey }}"
-                                            data-label="{{ $metricLabel }}"
-                                            data-count="{{ $hideValue ? 0 : $value }}">
-                                            @if($hideValue)
-                                                <div class="content-report-stat-value is-custom-icon"><i class="fa fa-calendar"></i></div>
-                                            @else
-                                                <div class="content-report-stat-value">{{ $value }}</div>
-                                            @endif
-                                            <div class="content-report-stat-label">{{ $metricLabel }}</div>
-                                        </a>
+                            <div class="content-report-stat-row">
+                                @php
+                                    $groupedMetrics = ['Overview' => [], 'By user' => [], 'Created' => [], 'Updated' => []];
+                                    foreach (($metricLabels[$module] ?? []) as $metricKey => $metricLabel) {
+                                        if (in_array($metricKey, ['created_by_me', 'updated_by_me'], true)) {
+                                            $groupedMetrics['By user'][$metricKey] = $metricLabel;
+                                        } elseif (str_starts_with($metricKey, 'created_')) {
+                                            $groupedMetrics['Created'][$metricKey] = $metricLabel;
+                                        } elseif (str_starts_with($metricKey, 'updated_')) {
+                                            $groupedMetrics['Updated'][$metricKey] = $metricLabel;
+                                        } else {
+                                            $groupedMetrics['Overview'][$metricKey] = $metricLabel;
+                                        }
+                                    }
+                                    $shortMetric = function (string $key, string $label): string {
+                                        return match (true) {
+                                            str_ends_with($key, '_today') => 'Today',
+                                            str_ends_with($key, '_yesterday') => 'Yesterday',
+                                            str_ends_with($key, '_this_week') => 'This week',
+                                            str_ends_with($key, '_last_week') => 'Last week',
+                                            str_ends_with($key, '_this_month') => 'This month',
+                                            str_ends_with($key, '_last_month') => 'Last month',
+                                            str_ends_with($key, '_this_year') => 'This year',
+                                            str_ends_with($key, '_in_range') => 'Custom date range',
+                                            $key === 'created_by_me' => 'Created',
+                                            $key === 'updated_by_me' => 'Updated',
+                                            $key === 'total' => 'Total',
+                                            $key === 'active' => 'Active',
+                                            $key === 'inactive' => 'Inactive',
+                                            default => $label,
+                                        };
+                                    };
+                                @endphp
+                                @foreach($groupedMetrics as $groupTitle => $groupItems)
+                                    @continue(empty($groupItems))
+                                    <div class="content-report-stat-group">
+                                        <div class="content-report-stat-card">
+                                            <h4>{{ $groupTitle }}</h4>
+                                            @foreach($groupItems as $metricKey => $metricLabel)
+                                                @php
+                                                    $value = (int) ($stats[$metricKey] ?? 0);
+                                                    $hideValue = in_array($metricKey, ['created_in_range', 'updated_in_range'], true);
+                                                @endphp
+                                                <a href="javascript:void(0);"
+                                                    class="content-report-stat{{ $hideValue ? ' content-report-stat-range' : '' }}"
+                                                    data-module="{{ $module }}"
+                                                    data-metric="{{ $metricKey }}"
+                                                    data-label="{{ $metricLabel }}"
+                                                    data-count="{{ $hideValue ? 0 : $value }}">
+                                                    @if($hideValue)
+                                                        <div class="content-report-stat-value is-custom-icon"><i class="fa fa-calendar"></i></div>
+                                                    @else
+                                                        <div class="content-report-stat-value">{{ $value }}</div>
+                                                    @endif
+                                                    <div class="content-report-stat-label">{{ $shortMetric($metricKey, $metricLabel) }}</div>
+                                                </a>
+                                            @endforeach
+                                        </div>
                                     </div>
                                 @endforeach
                             </div>

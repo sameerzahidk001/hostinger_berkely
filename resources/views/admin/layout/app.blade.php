@@ -21,13 +21,7 @@
             .table-responsive,
             .ibox-content,
             .wrapper-content {
-               overflow-x: auto;
-               -webkit-overflow-scrolling: touch;
-            }
-            .table-responsive > table,
-            .dataTables_wrapper .dataTables_scroll,
-            table.dataTables-example {
-               min-width: 720px;
+               overflow-x: hidden;
             }
          }
          .student-living-cell {
@@ -52,19 +46,19 @@
             white-space: normal !important;
             vertical-align: top;
          }
-         #page-wrapper,
-         .wrapper-content,
-         .ibox,
-         .ibox-content,
-         .dataTables_wrapper,
-         .dataTables_scroll,
-         .dataTables_scrollHead,
-         .dataTables_scrollHeadInner,
-         .dataTables_scrollHeadInner table,
-         .dataTables_scrollBody,
-         .dataTables_scrollBody table {
-            width: 100% !important;
+         #page-wrapper .wrapper-content,
+         #page-wrapper .ibox,
+         #page-wrapper .ibox-content,
+         #page-wrapper .dataTables_wrapper,
+         #page-wrapper .dataTables_scroll,
+         #page-wrapper .dataTables_scrollHead,
+         #page-wrapper .dataTables_scrollHeadInner,
+         #page-wrapper .dataTables_scrollHeadInner table,
+         #page-wrapper .dataTables_scrollBody,
+         #page-wrapper .dataTables_scrollBody table {
+            width: 100%;
             max-width: 100%;
+            box-sizing: border-box;
          }
          .ibox-content .table-responsive,
          .admin-list-wrap {
