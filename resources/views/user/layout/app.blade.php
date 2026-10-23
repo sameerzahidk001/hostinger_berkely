@@ -25,21 +25,6 @@
             overflow-x: hidden;
          }
       }
-      @media (min-width: 769px) {
-         #page-wrapper {
-            margin-left: 220px !important;
-            width: auto !important;
-            max-width: none !important;
-            min-width: 0 !important;
-            overflow-x: hidden;
-            box-sizing: border-box !important;
-         }
-         body.mini-navbar #page-wrapper {
-            margin-left: 70px !important;
-            width: auto !important;
-            max-width: none !important;
-         }
-      }
       #page-wrapper .wrapper-content,
       #page-wrapper .ibox,
       #page-wrapper .ibox-content,
@@ -71,6 +56,7 @@
       }
    </style>
    @stack('style')
+   <link href="{{ asset('/admin/css/lms-shell.css') }}?v={{ @filemtime(public_path('admin/css/lms-shell.css')) ?: time() }}" rel="stylesheet">
 
    <style>
       /* During an in-progress exam: disable all left menus except My Tests */

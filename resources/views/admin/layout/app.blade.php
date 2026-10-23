@@ -48,21 +48,7 @@
          }
          #wrapper {
             overflow-x: hidden;
-         }
-         @media (min-width: 769px) {
-            #page-wrapper {
-               margin-left: 220px !important;
-               width: auto !important;
-               max-width: none !important;
-               min-width: 0 !important;
-               overflow-x: hidden;
-               box-sizing: border-box !important;
-            }
-            body.mini-navbar #page-wrapper {
-               margin-left: 70px !important;
-               width: auto !important;
-               max-width: none !important;
-            }
+            max-width: 100%;
          }
          #page-wrapper > .row.border-bottom {
             margin-left: 0 !important;
@@ -172,6 +158,7 @@
          }
       </style>
       @stack('style')
+      <link href="{{ asset('/admin/css/lms-shell.css') }}?v={{ @filemtime(public_path('admin/css/lms-shell.css')) ?: time() }}" rel="stylesheet">
    </head>
    <body class="no-skin-config" data-viewer-tz="{{ function_exists('viewer_timezone') ? viewer_timezone() : config('app.timezone') }}">
       <div id="wrapper">
