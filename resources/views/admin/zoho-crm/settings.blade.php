@@ -117,8 +117,18 @@
                             </div>
                         </div>
                         <p class="help-block text-muted" style="margin-top:10px;">
-                            Contact = student. Deal / Enrolment = course or page fee package. Invoice = INV-######. Receipt = RC-######.
+                            This writes to <strong>Zoho CRM</strong> REST (<code>zohoapis.com/crm/v2</code>), not Zoho Books and not Zoho Invoice.
+                            Zoho Books support will not see these records.
+                        </p>
+                        <ol class="help-block text-muted" style="padding-left:18px;">
+                            <li>Contact = student, matched by email.</li>
+                            <li>Deal = course/package named <code>Course — INV-000123</code>.</li>
+                            <li>Invoice = module API name above (default <code>Invoices</code>). If that module is not in this CRM org, the PDF and INV-###### are stored on the Deal instead.</li>
+                            <li>Receipt = paid installment as <code>RC-######</code> in the Receipts module.</li>
+                        </ol>
+                        <p class="help-block text-muted">
                             Matching is by student email and Website Invoice/Receipt ID (update, do not duplicate).
+                            The exact CRM error is shown on Invoices → CRM Sync after Push CRM.
                         </p>
                         <button class="btn btn-primary" type="submit">Save CRM settings</button>
                     </form>

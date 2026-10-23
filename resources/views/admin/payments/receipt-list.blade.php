@@ -114,16 +114,10 @@
                         <table class="table table-bordered dataTables-example">
                             <thead>
                                 <tr>
-                                    <th>Invoice No</th>
-                                    <th>Invoice Issued Date</th>
+                                    <th>Invoice</th>
                                     <th class="col-student">Student</th>
-                                    <th>Invoice Amount</th>
-                                    <th>Payment Plan</th>
-                                    <th>Due Date</th>
-                                    <th>Due Amount</th>
-                                    <th>Receipt No</th>
-                                    <th>Paid Amount</th>
-                                    <th>Paid Date</th>
+                                    <th>Due</th>
+                                    <th>Receipt</th>
                                     <th>CRM Sync</th>
                                     <th>Action</th>
                                 </tr>
@@ -138,8 +132,12 @@
                                     $paidDateExport = $installment->paid_date ? \Carbon\Carbon::parse($installment->paid_date)->format('Y/m/d') : 'N/A';
                                 @endphp
                                 <tr>
-                                    <td>INV-{{ str_pad($installment->payment_id, 6, '0', STR_PAD_LEFT) }}</td>
-                                    <td>{{ \Carbon\Carbon::parse($installment->created_at)->format('Y/m/d') }}</td>
+                                    <td data-export="INV-{{ str_pad($installment->payment_id, 6, '0', STR_PAD_LEFT) }} | {{ \Carbon\Carbon::parse($installment->created_at)->format('Y/m/d') }} | Plan {{ $installment->installment_number }}/{{ $installment->payment->total_installment }}">
+                                        <strong>INV-{{ str_pad($installment->payment_id, 6, '0', STR_PAD_LEFT) }}</strong>
+                                        <div class="text-muted" style="font-size:11px;margin-top:2px;">{{ \Carbon\Carbon::parse($installment->created_at)->format('Y/m/d') }}</div>
+                                        <div style="margin-top:4px;">Plan {{ $installment->installment_number }}/{{ $installment->payment->total_installment }}</div>
+                                        <div>{!! format_payment_aed_amount_admin($installment->payment, (float) $installment->payment->price) !!}</div>
+                                    </td>
                                     @php
                                         $receiptUser = $installment->user ?? optional($installment->payment)->user;
                                         $receiptCity = trim((string) optional($receiptUser)->city);
@@ -154,25 +152,24 @@
                                             'city' => $receiptCity,
                                         ])
                                     </td>
-                                    <td data-export="{{ $invoiceAmountExport }}">{!! format_payment_aed_amount_admin($installment->payment, (float) $installment->payment->price) !!}</td>
-                                    <td>{{ $installment->installment_number }}/{{ $installment->payment->total_installment }}</td>
-                                    <td>{{ \Carbon\Carbon::parse($installment->due_date)->format('Y/m/d') }}</td>
-                                    <td data-export="{{ $dueAmountExport }}">{!! format_payment_aed_amount_admin($installment->payment, $dueAed) !!}</td>
-                                    <td>RC-{{ str_pad($installment->id, 6, '0', STR_PAD_LEFT) }}</td>
-                                    <td data-export="{{ $paidAmountExport }}">{!! format_payment_aed_amount_admin($installment->payment, (float) $installment->paid_amount) !!}</td>
-                                    <td data-export="{{ $paidDateExport }}">
-                                        @if($installment->paid_date)
-                                        {{ \Carbon\Carbon::parse($installment->paid_date)->format('Y/m/d') }}
-                                        @else
-                                        N/A
-                                        @endif
+                                    <td data-export="{{ $dueAmountExport }} | {{ \Carbon\Carbon::parse($installment->due_date)->format('Y/m/d') }}">
+                                        <div>{{ \Carbon\Carbon::parse($installment->due_date)->format('Y/m/d') }}</div>
+                                        <div>{!! format_payment_aed_amount_admin($installment->payment, $dueAed) !!}</div>
+                                    </td>
+                                    <td data-export="RC-{{ str_pad($installment->id, 6, '0', STR_PAD_LEFT) }} | {{ $paidAmountExport }} | {{ $paidDateExport }}">
+                                        <div>RC-{{ str_pad($installment->id, 6, '0', STR_PAD_LEFT) }}</div>
+                                        <div>{!! format_payment_aed_amount_admin($installment->payment, (float) $installment->paid_amount) !!}</div>
+                                        <div class="text-muted" style="font-size:11px;">{{ $paidDateExport }}</div>
                                     </td>
                                     <td data-export="{{ $installment->zoho_crm_sync_status ?? 'not synced' }}">
                                         @php $rcCrm = $installment->zoho_crm_sync_status ?? null; @endphp
                                         @if($rcCrm === 'synced')
                                             <span class="label label-primary">synced</span>
                                         @elseif($rcCrm === 'failed')
-                                            <span class="label label-danger" title="{{ $installment->zoho_crm_last_error }}">failed</span>
+                                            <span class="label label-danger">failed</span>
+                                            @if(!empty($installment->zoho_crm_last_error))
+                                                <div class="text-danger" style="font-size:11px;margin-top:4px;line-height:1.35;">{{ $installment->zoho_crm_last_error }}</div>
+                                            @endif
                                         @else
                                             <span class="label label-default">not synced</span>
                                         @endif
@@ -182,7 +179,8 @@
                                     </td>
 
                                     <td>
-                                        <form action="{{ route('admin.installments.push-crm', $installment->id) }}" method="POST" style="display:inline-block;margin-right:4px;margin-bottom:4px;">
+                                        <div class="table-action-stack">
+                                        <form action="{{ route('admin.installments.push-crm', $installment->id) }}" method="POST">
                                             @csrf
                                             <button type="submit" class="btn btn-info btn-sm" title="Push receipt to Zoho CRM"><i class="fa fa-cloud-upload"></i> Push CRM</button>
                                         </form>
@@ -209,6 +207,7 @@
                                         <a href="{{ route('admin.payments.send-receipt', $installment->id) }}"
                                             class="btn btn-success btn-sm"><i class="fa fa-send"></i> Send
                                         </a>
+                                        </div>
                                     </td>
                                 </tr>
                                 @endforeach

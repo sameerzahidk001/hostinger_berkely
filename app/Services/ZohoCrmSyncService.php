@@ -89,6 +89,10 @@ class ZohoCrmSyncService
             'user', 'course', 'courseFee', 'page', 'pageFeeService', 'pageFeePackage', 'installments',
         ]);
 
+        $contactId = null;
+        $dealId = null;
+        $invoiceId = null;
+
         try {
             if (! $payment->user) {
                 throw new \RuntimeException('Payment has no student user.');
@@ -96,10 +100,11 @@ class ZohoCrmSyncService
 
             $contactId = $this->upsertContact($payment->user);
             $dealId = $this->upsertDeal($payment, $contactId);
-            $invoiceId = $this->upsertInvoice($payment, $contactId, $dealId);
+            $invoiceTarget = $this->upsertInvoice($payment, $contactId, $dealId);
+            $invoiceId = $invoiceTarget['id'];
 
             if ($attachPdf && $invoiceId) {
-                $this->attachInvoicePdf($payment, $invoiceId);
+                $this->attachInvoicePdf($payment, $invoiceId, $invoiceTarget['module']);
             }
 
             if ($syncReceipts) {
@@ -115,7 +120,7 @@ class ZohoCrmSyncService
 
             return true;
         } catch (\Throwable $e) {
-            $this->markPaymentSynced($payment, null, null, null, $e->getMessage());
+            $this->markPaymentSynced($payment, $contactId, $dealId, $invoiceId, $e->getMessage());
             $this->log('payment', $payment->id, 'syncPayment', false, null, $e->getMessage());
             Log::warning('Zoho CRM payment sync failed', [
                 'payment_id' => $payment->id,
@@ -287,23 +292,43 @@ class ZohoCrmSyncService
         return $this->createRecord($module, $payload);
     }
 
-    public function upsertInvoice(Payment $payment, string $contactId, ?string $dealId): string
+    /**
+     * @return array{id: string, module: string}
+     */
+    public function upsertInvoice(Payment $payment, string $contactId, ?string $dealId): array
     {
-        $module = config('zoho_crm.modules.invoice');
+        $module = (string) config('zoho_crm.modules.invoice');
         $invoiceKey = 'INV-' . $this->pad($payment->id);
         $field = config('zoho_crm.fields.website_invoice_id');
         $payload = $this->buildInvoicePayload($payment, $invoiceKey, $contactId, $dealId);
 
-        $existing = $payment->zoho_crm_invoice_id
-            ?: $this->searchByField($module, $field, $invoiceKey);
+        try {
+            $existing = $payment->zoho_crm_invoice_id
+                ?: $this->searchByField($module, $field, $invoiceKey);
 
-        if ($existing) {
-            $this->updateRecord($module, $existing, $payload);
+            if ($existing) {
+                $this->updateRecord($module, $existing, $payload);
 
-            return $existing;
+                return ['id' => $existing, 'module' => $module];
+            }
+
+            return ['id' => $this->createRecord($module, $payload), 'module' => $module];
+        } catch (\Throwable $e) {
+            if (! $dealId) {
+                throw $e;
+            }
+
+            // Zoho CRM orgs often do not have an Invoices module (that is Zoho Books).
+            // Keep INV-###### on the Deal so the invoice still lands in CRM.
+            $dealModule = (string) config('zoho_crm.modules.deal');
+            $this->updateRecord($dealModule, $dealId, [
+                'Description' => $payload['Description'] ?? ('Website invoice ' . $invoiceKey),
+                $field => $invoiceKey,
+            ]);
+            $this->log('payment', $payment->id, 'invoiceFallbackDeal', true, $invoiceKey, $e->getMessage());
+
+            return ['id' => $dealId, 'module' => $dealModule];
         }
-
-        return $this->createRecord($module, $payload);
     }
 
     /**
@@ -319,23 +344,25 @@ class ZohoCrmSyncService
                 . ' remaining ' . number_format((float) $row->remaining_amount, 2);
         })->implode('; ');
 
+        $subject = $invoiceKey . ' — ' . $payment->programTitle();
+        $description = trim(
+            $subject . "\n"
+            . 'Amount: ' . number_format((float) ($payment->price ?? 0), 2) . ' ' . ($payment->currency ?: 'AED') . "\n"
+            . 'Status: ' . payment_invoice_status($payment) . "\n"
+            . 'Balance due: ' . number_format($this->balanceDue($payment), 2) . "\n"
+            . ($plan ?: '')
+        );
+
         $payload = [
-            'Subject' => $invoiceKey . ' — ' . $payment->programTitle(),
-            'Invoice_Date' => optional($payment->created_at)->toDateString() ?: now()->toDateString(),
+            'Name' => mb_substr($subject, 0, 120),
+            'Subject' => mb_substr($subject, 0, 120),
             'Contact_Name' => ['id' => $contactId],
-            'Grand_Total' => (float) ($payment->price ?? 0),
-            'Currency' => $payment->currency ?: 'AED',
-            'Description' => $plan,
+            'Description' => $description,
             config('zoho_crm.fields.website_invoice_id') => $invoiceKey,
             config('zoho_crm.fields.package_name') => $fee?->package_name,
             config('zoho_crm.fields.balance_due') => $this->balanceDue($payment),
-            config('zoho_crm.fields.invoice_status') => payment_invoice_status($payment),
             config('zoho_crm.fields.installment_no') => $installments->count() . ' of ' . max(1, (int) ($payment->total_installment ?: $installments->count())),
         ];
-
-        if ($dealId) {
-            $payload['Deal_Name__s'] = ['id' => $dealId];
-        }
 
         return array_filter($payload, fn ($v) => $v !== null && $v !== '');
     }
@@ -364,7 +391,7 @@ class ZohoCrmSyncService
         ], fn ($v) => $v !== null && $v !== '');
     }
 
-    public function attachInvoicePdf(Payment $payment, string $crmRecordId): void
+    public function attachInvoicePdf(Payment $payment, string $crmRecordId, ?string $module = null): void
     {
         $payment->loadMissing(['user.roles', 'course', 'courseFee', 'page', 'pageFeePackage', 'installments']);
         $payments = $payment;
@@ -381,7 +408,7 @@ class ZohoCrmSyncService
         )->setPaper('a4');
 
         $this->attachFile(
-            config('zoho_crm.modules.invoice'),
+            $module ?: config('zoho_crm.modules.invoice'),
             $crmRecordId,
             $invoiceNo . '.pdf',
             $pdf->output()
@@ -524,29 +551,58 @@ class ZohoCrmSyncService
 
     private function createRecord(string $module, array $data): string
     {
-        $response = $this->oauth->http()->post(
-            rtrim((string) config('zoho_crm.api_base'), '/') . '/' . $module,
-            ['data' => [$data]]
-        );
+        $payload = $data;
+        for ($i = 0; $i < 8; $i++) {
+            $response = $this->oauth->http()->post(
+                rtrim((string) config('zoho_crm.api_base'), '/') . '/' . $module,
+                ['data' => [$payload]]
+            );
 
-        $this->assertZohoWrite($response, 'create ' . $module);
+            try {
+                $this->assertZohoWrite($response, 'create ' . $module);
+            } catch (\RuntimeException $e) {
+                $dropped = $this->dropInvalidField($payload, $response);
+                if ($dropped === null) {
+                    throw $e;
+                }
+                unset($payload[$dropped]);
+                continue;
+            }
 
-        $id = data_get($response->json(), 'data.0.details.id');
-        if (! $id) {
-            throw new \RuntimeException('CRM create ' . $module . ' returned no id: ' . $response->body());
+            $id = data_get($response->json(), 'data.0.details.id');
+            if (! $id) {
+                throw new \RuntimeException('CRM create ' . $module . ' returned no id: ' . $response->body());
+            }
+
+            return (string) $id;
         }
 
-        return (string) $id;
+        throw new \RuntimeException('CRM create ' . $module . ' failed after removing invalid fields.');
     }
 
     private function updateRecord(string $module, string $id, array $data): void
     {
-        $response = $this->oauth->http()->put(
-            rtrim((string) config('zoho_crm.api_base'), '/') . '/' . $module,
-            ['data' => [array_merge(['id' => $id], $data)]]
-        );
+        $payload = $data;
+        for ($i = 0; $i < 8; $i++) {
+            $response = $this->oauth->http()->put(
+                rtrim((string) config('zoho_crm.api_base'), '/') . '/' . $module,
+                ['data' => [array_merge(['id' => $id], $payload)]]
+            );
 
-        $this->assertZohoWrite($response, 'update ' . $module);
+            try {
+                $this->assertZohoWrite($response, 'update ' . $module);
+
+                return;
+            } catch (\RuntimeException $e) {
+                $dropped = $this->dropInvalidField($payload, $response);
+                if ($dropped === null) {
+                    throw $e;
+                }
+                unset($payload[$dropped]);
+            }
+        }
+
+        throw new \RuntimeException('CRM update ' . $module . ' failed after removing invalid fields.');
     }
 
     private function attachFile(string $module, string $recordId, string $filename, string $binary): void
@@ -573,8 +629,36 @@ class ZohoCrmSyncService
         $message = (string) (data_get($json, 'data.0.message') ?: data_get($json, 'message') ?: $response->body());
 
         if (! $response->successful() || $status === 'error' || ($code !== '' && strtoupper($code) !== 'SUCCESS')) {
-            throw new \RuntimeException('CRM ' . $action . ' failed: ' . $message);
+            $detail = data_get($json, 'data.0.details.api_name')
+                ?: data_get($json, 'data.0.details.json_path')
+                ?: data_get($json, 'code');
+            $suffix = $detail ? ' (' . $detail . ')' : '';
+            $http = $response->status() !== 200 ? ' HTTP ' . $response->status() : '';
+
+            throw new \RuntimeException('CRM ' . $action . ' failed' . $http . ': ' . $message . $suffix);
         }
+    }
+
+    private function dropInvalidField(array $payload, $response): ?string
+    {
+        $apiName = (string) data_get($response->json(), 'data.0.details.api_name', '');
+        if ($apiName !== '' && array_key_exists($apiName, $payload)) {
+            return $apiName;
+        }
+
+        $path = (string) data_get($response->json(), 'data.0.details.json_path', '');
+        if (preg_match('/\.([A-Za-z0-9_]+)$/', $path, $m) && array_key_exists($m[1], $payload)) {
+            return $m[1];
+        }
+
+        $body = strtolower((string) $response->body());
+        foreach (array_keys($payload) as $key) {
+            if (stripos($body, $key) !== false) {
+                return $key;
+            }
+        }
+
+        return null;
     }
 
     private function balanceDue(Payment $payment): float

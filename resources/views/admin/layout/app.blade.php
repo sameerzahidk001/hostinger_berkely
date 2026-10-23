@@ -48,7 +48,7 @@
          }
          table th.col-student,
          table td.col-student {
-            min-width: 180px !important;
+            min-width: 0 !important;
             white-space: normal !important;
             vertical-align: top;
          }
@@ -69,8 +69,7 @@
          .ibox-content .table-responsive,
          .admin-list-wrap {
             width: 100%;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
+            overflow-x: hidden;
          }
          #page-wrapper .ibox-content table.table,
          #page-wrapper .dataTables_wrapper table.table,
@@ -79,6 +78,29 @@
          #page-wrapper table.js-sortable-table {
             width: 100% !important;
             max-width: 100%;
+            min-width: 0 !important;
+            table-layout: auto;
+         }
+         #page-wrapper .ibox-content table.table > thead > tr > th,
+         #page-wrapper .ibox-content table.table > tbody > tr > td {
+            white-space: normal !important;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+            vertical-align: top;
+         }
+         #page-wrapper .ibox-content table.table .table-action-stack {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            align-items: flex-start;
+         }
+         #page-wrapper .ibox-content table.table .table-action-stack form {
+            display: inline;
+            margin: 0;
+         }
+         #page-wrapper .ibox-content table.table .btn {
+            white-space: normal;
+            line-height: 1.25;
          }
          table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control,
          table.dataTable.dtr-inline.collapsed > thead > tr > th.dtr-control,

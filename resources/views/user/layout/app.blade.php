@@ -44,8 +44,7 @@
       }
       .ibox-content .table-responsive {
          width: 100%;
-         overflow-x: auto;
-         -webkit-overflow-scrolling: touch;
+         overflow-x: hidden;
       }
       #page-wrapper .ibox-content table.table,
       #page-wrapper table.js-sortable-table {

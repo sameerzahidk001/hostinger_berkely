@@ -15,41 +15,35 @@
         flex: 1;
     }
 
-    .ibox-content .table-responsive { overflow-x: auto; }
+    .ibox-content .table-responsive { overflow-x: hidden; }
     table.dataTables-example {
         width: 100% !important;
         table-layout: auto;
         font-size: 12px;
-        min-width: 1480px;
+        min-width: 0 !important;
     }
-    table.dataTables-example > thead > tr > th {
-        padding: 8px 10px;
-        vertical-align: middle;
-        white-space: nowrap !important;
-        overflow-wrap: normal;
-        word-break: normal;
-    }
+    table.dataTables-example > thead > tr > th,
     table.dataTables-example > tbody > tr > td {
-        padding: 8px 10px;
-        vertical-align: middle;
-        white-space: nowrap;
-        overflow-wrap: normal;
-        word-break: normal;
+        padding: 8px 8px;
+        vertical-align: top;
+        white-space: normal !important;
+        overflow-wrap: anywhere;
+        word-break: break-word;
     }
     table.dataTables-example th.col-student,
     table.dataTables-example td.col-student {
-        min-width: 230px !important;
-        max-width: 280px;
+        min-width: 0 !important;
+        max-width: none;
         white-space: normal !important;
-        overflow-wrap: break-word;
+        overflow-wrap: anywhere;
         word-break: break-word;
         vertical-align: top;
     }
     table.dataTables-example td.col-course {
-        min-width: 200px;
-        max-width: 260px;
+        min-width: 0;
+        max-width: none;
         white-space: normal !important;
-        overflow-wrap: break-word;
+        overflow-wrap: anywhere;
         word-break: break-word;
         vertical-align: top;
     }
@@ -158,22 +152,13 @@
                         <table class="table table-bordered dataTables-example">
                             <thead>
                                 <tr>
-                                    <th>Invoice No</th>
-                                    <th>Invoice Date</th>
+                                    <th>Invoice</th>
                                     <th class="col-student">Student</th>
                                     <th class="col-course">Course</th>
-                                    {{-- <th>Installments Request</th> --}}
-                                    <th>Payment Plan</th>
-                                    <th>Invoice Amount</th>
-                                    <th>Paid Payments</th>
-                                    <th>Paid Amount</th>
-                                    <th>Payment Status</th>
+                                    <th>Amount</th>
                                     <th>Status</th>
                                     <th>CRM Sync</th>
-                                    <th>Created Date</th>
-                                    <th>Created By</th>
-                                    <th>Modified Date</th>
-                                    <th>Modified By</th>
+                                    <th>Audit</th>
                                     <th>Action</th>
                                 </tr>
                             </thead>
@@ -191,8 +176,20 @@
                                 $paidAmountExport = trim(html_entity_decode(strip_tags(format_payment_aed_amount_admin($payment, (float) $paidAmountSum))));
                                 @endphp
                                 <tr>
-                                    <td>INV-{{ str_pad($payment->id, 6, '0', STR_PAD_LEFT) }}</td>
-                                    <td data-order="{{ \Carbon\Carbon::parse($payment->created_at)->timestamp }}">{{ \Carbon\Carbon::parse($payment->created_at)->format('Y/m/d') }}</td>
+                                    <td data-order="{{ \Carbon\Carbon::parse($payment->created_at)->timestamp }}" data-export="INV-{{ str_pad($payment->id, 6, '0', STR_PAD_LEFT) }} | {{ \Carbon\Carbon::parse($payment->created_at)->format('Y/m/d') }} | Plan {{ $payment->installments->count() ?? 0 }}">
+                                        <strong>INV-{{ str_pad($payment->id, 6, '0', STR_PAD_LEFT) }}</strong>
+                                        <div class="text-muted" style="font-size:11px;margin-top:2px;">{{ \Carbon\Carbon::parse($payment->created_at)->format('Y/m/d') }}</div>
+                                        <div style="margin-top:6px;">
+                                            <a type="button" href="javascript:void(0)" class="view-installments" data-installments='@json($payment)' data-currency="{{ $payment->courseFee->currency ?? 'AED' }}" data-country="{{ $payment->user ? $payment->user->displayCountryName() : '—' }}">
+                                                Plan: {{ $payment->installments->count() ?? 0 }}
+                                                <sup>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 512 512">
+                                                        <path d="M320 0c-17.7 0-32 14.3-32 32s14.3 32 32 32l82.7 0L201.4 265.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L448 109.3l0 82.7c0 17.7 14.3 32 32 32s32-14.3 32-32l0-160c0-17.7-14.3-32-32-32L320 0zM80 32C35.8 32 0 67.8 0 112L0 432c0 44.2 35.8 80 80 80l320 0c44.2 0 80-35.8 80-80l0-112c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 112c0 8.8-7.2 16-16 16L80 448c-8.8 0-16-7.2-16-16l0-320c0-8.8 7.2-16 16-16l112 0c17.7 0 32-14.3 32-32s-14.3-32-32-32L80 32z" />
+                                                    </svg>
+                                                </sup>
+                                            </a>
+                                        </div>
+                                    </td>
                                     <td class="col-student" data-export="{{ ($payment->user->name ?? 'N/A') }} | Nationality: {{ $payment->user ? $payment->user->displayNationality() : '—' }} | Country, City: {{ $payment->user ? $payment->user->displayCountryName() : '—' }}, {{ trim((string) optional($payment->user)->city) !== '' ? trim((string) $payment->user->city) : '—' }}">
                                         @php
                                             $invUser = $payment->user;
@@ -205,41 +202,33 @@
                                         </div>
                                     </td>
                                     <td class="col-course" data-export="{{ ($payment->course->title ?? 'N/A') . ' - ' . ($payment->courseFee->package_name ?? 'N/A') }}">{{ $payment->course->title ?? 'N/A' }}<br><span class="text-muted">{{ $payment->courseFee->package_name ?? 'N/A' }}</span></td>
-                                    {{-- <td>{{ $payment->installment_request->installments_requested ?? 'Direct' }}</td> --}}
-                                    <td data-export="{{ $payment->installments->count() ?? 0 }}">
-                                        <a type="button" href="javascript:void(0)" class="view-installments" data-installments='@json($payment)' data-currency="{{ $payment->courseFee->currency ?? 'AED' }}" data-country="{{ $payment->user ? $payment->user->displayCountryName() : '—' }}">
-                                            {{ $payment->installments->count() ?? 0 }}
-                                            <sup>
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 512 512">
-                                                    <path d="M320 0c-17.7 0-32 14.3-32 32s14.3 32 32 32l82.7 0L201.4 265.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L448 109.3l0 82.7c0 17.7 14.3 32 32 32s32-14.3 32-32l0-160c0-17.7-14.3-32-32-32L320 0zM80 32C35.8 32 0 67.8 0 112L0 432c0 44.2 35.8 80 80 80l320 0c44.2 0 80-35.8 80-80l0-112c0-17.7-14.3-32-32-32s-32 14.3-32 32l0 112c0 8.8-7.2 16-16 16L80 448c-8.8 0-16-7.2-16-16l0-320c0-8.8 7.2-16 16-16l112 0c17.7 0 32-14.3 32-32s-14.3-32-32-32L80 32z" />
-                                                </svg>
-                                            </sup>
-                                        </a>
+                                    <td data-export="{{ $invoiceAmountExport }} | paid {{ $paidInstallmentsCount }}/{{ $payment->installments->count() ?? 0 }} | {{ $paidAmountExport }}">
+                                        <div>{!! format_payment_amount_admin($payment) !!}</div>
+                                        <div class="text-muted" style="font-size:11px;margin-top:4px;">Paid {{ $paidInstallmentsCount }}/{{ $payment->installments->count() ?? 0 }}</div>
+                                        <div>{!! format_payment_aed_amount_admin($payment, (float) $paidAmountSum) !!}</div>
                                     </td>
-                                    <td data-export="{{ $invoiceAmountExport }}">
-                                        {!! format_payment_amount_admin($payment) !!}
-                                    </td>
-                                    <td>{{ $paidInstallmentsCount }}/{{ $payment->installments->count() ?? 0 }}</td>
-                                    <td data-export="{{ $paidAmountExport }}">{!! format_payment_aed_amount_admin($payment, (float) $paidAmountSum) !!}</td>
-                                    <td data-export="{{ $paymentStatus }}">
+                                    <td data-export="{{ $paymentStatus }} | {{ $payment->status === 'Active' ? 'Active' : 'Inactive' }}">
                                         <span class="badge badge-{{ $paymentStatus == 'Paid' ? 'primary' : ($paymentStatus == 'Partial' ? 'warning' : 'success') }}">
                                             {{ $paymentStatus }}
                                         </span>
-                                    </td>
-                                    <td data-export="{{ $payment->status === 'Active' ? 'Active' : 'Inactive' }}">
-                                        <label class="switch">
-                                            <input type="checkbox" class="status-toggle"
-                                                data-payment-id="{{ $payment->id }}"
-                                                {{ $payment->status === 'Active' ? 'checked' : '' }}>
-                                            <span class="slider round"></span>
-                                        </label>
+                                        <div style="margin-top:6px;">
+                                            <label class="switch">
+                                                <input type="checkbox" class="status-toggle"
+                                                    data-payment-id="{{ $payment->id }}"
+                                                    {{ $payment->status === 'Active' ? 'checked' : '' }}>
+                                                <span class="slider round"></span>
+                                            </label>
+                                        </div>
                                     </td>
                                     <td data-export="{{ $payment->zoho_crm_sync_status ?? 'not synced' }}">
                                         @php $crmStatus = $payment->zoho_crm_sync_status ?? null; @endphp
                                         @if($crmStatus === 'synced' || $crmStatus === 'cancelled')
                                             <span class="label label-primary">{{ $crmStatus }}</span>
                                         @elseif($crmStatus === 'failed')
-                                            <span class="label label-danger" title="{{ $payment->zoho_crm_last_error }}">failed</span>
+                                            <span class="label label-danger">failed</span>
+                                            @if(!empty($payment->zoho_crm_last_error))
+                                                <div class="text-danger" style="font-size:11px;margin-top:4px;line-height:1.35;">{{ $payment->zoho_crm_last_error }}</div>
+                                            @endif
                                         @else
                                             <span class="label label-default">not synced</span>
                                         @endif
@@ -247,14 +236,20 @@
                                             <div class="text-muted" style="font-size:11px;margin-top:2px;">{{ \Carbon\Carbon::parse($payment->zoho_crm_synced_at)->format('Y/m/d H:i') }}</div>
                                         @endif
                                     </td>
-                                    @include('admin.layout.partials.audit-columns-cells', ['model' => $payment])
+                                    <td data-export="{{ $payment->created_at ? \Carbon\Carbon::parse($payment->created_at)->format('M d, Y H:i') : '-' }} | {{ audit_user_name($payment->createdBy ?? null, $payment->created_by ?? null) }}">
+                                        <div>{{ $payment->created_at ? \Carbon\Carbon::parse($payment->created_at)->format('M d, Y H:i') : '-' }}</div>
+                                        <div class="text-muted" style="font-size:11px;">{{ audit_user_name($payment->createdBy ?? null, $payment->created_by ?? null) }}</div>
+                                        <div style="margin-top:6px;">{{ $payment->updated_at ? \Carbon\Carbon::parse($payment->updated_at)->format('M d, Y H:i') : '-' }}</div>
+                                        <div class="text-muted" style="font-size:11px;">{{ audit_user_name($payment->updatedBy ?? null, $payment->updated_by ?? null) }}</div>
+                                    </td>
                                     <td>
+                                        <div class="table-action-stack">
                                         <a class="btn btn-primary btn-sm" href="{{ route('admin.payments.edit', $payment->id) }}"><i class="fa fa-edit"></i> Edit</a>
-                                        <form action="{{ route('admin.payments.push-crm', $payment->id) }}" method="POST" style="display:inline-block;">
+                                        <form action="{{ route('admin.payments.push-crm', $payment->id) }}" method="POST">
                                             @csrf
                                             <button type="submit" class="btn btn-info btn-sm" title="Push invoice to Zoho CRM"><i class="fa fa-cloud-upload"></i> Push CRM</button>
                                         </form>
-                                        <form action="{{ route('admin.payments.destroy', $payment->id) }}" method="POST" style="display: inline-block;" onsubmit="return confirm('Are you sure you want to delete this payment?');">
+                                        <form action="{{ route('admin.payments.destroy', $payment->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this payment?');">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-danger btn-sm"><i class="fa fa-trash"></i> Delete</button>
@@ -289,6 +284,7 @@
                                             $shownPaymentIds[] = $payment->id;
                                             @endphp
                                             @endif
+                                        </div>
                                     </td>
                                 </tr>
                                 @endforeach
@@ -463,7 +459,7 @@
             scrollX: false,
             autoWidth: false,
             dom: '<"admin-dt-toolbar"<l><B><f>>rtip',
-            order: [[1, 'desc']],
+            order: [[0, 'desc']],
             buttons: [adminDatatableExcelButton('Invoices List', 'invoices_list')],
         });
 
