@@ -12,7 +12,7 @@
     $reportUsers = $contentReportUsers ?? collect();
 @endphp
 
-<div id="content-reports-panel" style="padding: 0 0 12px;">
+<div id="content-reports-panel" style="padding: 0 10px 12px; max-width: 100%; box-sizing: border-box;">
     <div>
         <div class="ibox float-e-margins">
             <div class="ibox-content">
@@ -38,8 +38,14 @@
                         margin-right: 0 !important;
                         width: 100% !important;
                         max-width: 100% !important;
-                        padding-left: 0 !important;
-                        padding-right: 0 !important;
+                        box-sizing: border-box;
+                    }
+                    #content-reports-panel .ibox,
+                    #content-reports-panel .ibox-content {
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        overflow: visible;
+                        box-sizing: border-box;
                     }
                     #content-reports-panel .content-report-module-tabs {
                         display: flex;
@@ -97,23 +103,10 @@
                     #report-fees .content-report-stat-value { color: #2d6a4f; }
                     #content-reports-panel .content-report-stat-row {
                         display: grid;
-                        grid-template-columns: repeat(4, minmax(0, 1fr));
+                        grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
                         gap: 12px;
-                    }
-                    @media (min-width: 1600px) {
-                        #content-reports-panel .content-report-stat-row {
-                            grid-template-columns: repeat(5, minmax(0, 1fr));
-                        }
-                    }
-                    @media (max-width: 1199px) {
-                        #content-reports-panel .content-report-stat-row {
-                            grid-template-columns: repeat(3, minmax(0, 1fr));
-                        }
-                    }
-                    @media (max-width: 767px) {
-                        #content-reports-panel .content-report-stat-row {
-                            grid-template-columns: repeat(2, minmax(0, 1fr));
-                        }
+                        width: 100%;
+                        max-width: 100%;
                     }
                     #content-reports-panel .content-report-stat-item {
                         min-width: 0;
@@ -143,6 +136,8 @@
                         letter-spacing: .03em;
                         line-height: 1.3;
                         margin: 0;
+                        overflow-wrap: anywhere;
+                        word-break: break-word;
                     }
                 </style>
                 <h3 class="content-reports-heading" style="margin:0 0 12px;font-size:16px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:#2f4050;">

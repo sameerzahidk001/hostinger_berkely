@@ -52,17 +52,27 @@
          @media (min-width: 769px) {
             #page-wrapper {
                margin-left: 220px !important;
-               width: calc(100% - 220px) !important;
-               max-width: calc(100% - 220px) !important;
-               min-width: 0;
-               overflow-x: visible;
-               box-sizing: border-box;
+               width: auto !important;
+               max-width: none !important;
+               min-width: 0 !important;
+               overflow-x: hidden;
+               box-sizing: border-box !important;
             }
             body.mini-navbar #page-wrapper {
                margin-left: 70px !important;
-               width: calc(100% - 70px) !important;
-               max-width: calc(100% - 70px) !important;
+               width: auto !important;
+               max-width: none !important;
             }
+         }
+         #page-wrapper > .row.border-bottom {
+            margin-left: 0 !important;
+            margin-right: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+         }
+         #page-wrapper .navbar-static-top,
+         #page-wrapper .navbar-top-links {
+            max-width: 100%;
          }
          #page-wrapper .wrapper-content,
          #page-wrapper .ibox,
