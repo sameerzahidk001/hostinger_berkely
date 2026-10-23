@@ -19,9 +19,9 @@ class MediaController extends Controller
 
         $rows = [];
         foreach ($files as $file) {
-            $rel = str_replace('\\', '/', $file->getRelativePathname());
+            $rel = str_replace('\\', '/', $file['rel']);
             $key = strtolower($rel);
-            $base = strtolower($file->getFilename());
+            $base = strtolower($file['name']);
             $links = array_values(array_unique(array_merge(
                 $usages['by_path'][$key] ?? [],
                 $usages['by_name'][$base] ?? []
@@ -30,8 +30,8 @@ class MediaController extends Controller
             $rows[] = [
                 'rel' => $rel,
                 'url' => asset($rel),
-                'name' => $file->getFilename(),
-                'mtime' => $file->getMTime(),
+                'name' => $file['name'],
+                'mtime' => $file['mtime'],
                 'links' => $links,
             ];
         }
@@ -75,7 +75,12 @@ class MediaController extends Controller
             }
             foreach (File::allFiles($path) as $file) {
                 if (in_array(strtolower($file->getExtension()), ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'], true)) {
-                    $out[] = $file;
+                    $rel = $dir . '/' . str_replace('\\', '/', $file->getRelativePathname());
+                    $out[] = [
+                        'rel' => $rel,
+                        'name' => $file->getFilename(),
+                        'mtime' => $file->getMTime(),
+                    ];
                 }
             }
         }

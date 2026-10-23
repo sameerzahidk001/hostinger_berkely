@@ -51,9 +51,9 @@
          .lms-row-actions,
          .table-action-stack-col {
             display: flex;
-            flex-direction: column;
-            flex-wrap: nowrap;
-            align-items: flex-start;
+            flex-direction: row;
+            flex-wrap: wrap;
+            align-items: center;
             gap: 4px;
          }
          .table-action-stack .btn,
@@ -65,7 +65,7 @@
          }
          .table-action-stack form,
          .table-action-stack-col form {
-            display: block;
+            display: inline-block;
             margin: 0;
          }
          table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control,

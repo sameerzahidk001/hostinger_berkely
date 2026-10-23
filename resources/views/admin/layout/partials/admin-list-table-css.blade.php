@@ -35,9 +35,9 @@
     .admin-list-table td ul { margin: 0; padding-left: 14px; }
     .admin-list-table .lms-cell-stack {
         display: flex;
-        flex-direction: column;
-        flex-wrap: nowrap;
-        align-items: flex-start;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
         gap: 4px;
     }
     .admin-list-table .lms-cell-stack .label,

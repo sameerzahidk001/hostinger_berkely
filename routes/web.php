@@ -578,7 +578,7 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
         // });
 
         Route::resource('faq', FaqController::class);
-        Route::get('pages/disabled/list', [PagesController::class, 'disabledPages'])->name('admin.pages.disabled');
+        Route::get('pages/inactive', [PagesController::class, 'disabledPages'])->name('admin.pages.disabled');
         Route::post('pages/{id}/update-status', [PagesController::class, 'updateStatus'])->name('pages.update-status');
         Route::post('pages/{id}/duplicate', [PagesController::class, 'duplicate'])->name('pages.duplicate');
         Route::get('pages/fees', [PageFeeController::class, 'index'])->name('admin.pages.fees.index');
