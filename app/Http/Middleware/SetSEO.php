@@ -41,9 +41,10 @@ class SetSEO
             $seoData = $this->resolvePageSeo($currentUrl);
         }
 
-        if (!$seoData) {
-            $defaultSlug = 'general'; // Set your default slug here
-            $seoData = Page::where('url', $defaultSlug)->with(['seo', 'faqs'])->first();
+        if (! $seoData) {
+            SEOTools::metatags()->addMeta('robots', 'noindex, follow');
+
+            return $next($request);
         }
 
         $seo = $seoData?->seo;
