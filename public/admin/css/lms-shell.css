@@ -44,33 +44,23 @@
 
 .table-action-stack,
 .lms-cell-stack,
-.lms-row-actions {
-   display: flex;
-   flex-direction: row;
-   flex-wrap: nowrap;
-   align-items: stretch;
-   gap: 6px;
-}
+.lms-row-actions,
 .table-action-stack-col {
    display: flex;
    flex-direction: column;
+   flex-wrap: nowrap;
+   align-items: flex-start;
    gap: 4px;
-   min-width: 72px;
 }
+.table-action-stack .btn,
 .table-action-stack-col .btn,
-.table-action-stack-col form,
-.table-action-stack-col form .btn {
+.lms-cell-stack .btn,
+.lms-row-actions .btn {
    margin: 0;
-   width: 100%;
-   display: block;
-   text-align: center;
-   box-sizing: border-box;
-}
-.table-action-stack > a.btn-primary,
-.table-action-stack-extra {
-   display: flex !important;
-   align-items: center;
-   justify-content: center;
    white-space: nowrap;
-   align-self: stretch;
+}
+.table-action-stack form,
+.table-action-stack-col form {
+   display: block;
+   margin: 0;
 }
