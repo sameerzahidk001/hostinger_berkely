@@ -60,7 +60,13 @@ class Handler extends ExceptionHandler
             return $this->renderSessionExpired($request);
         }
 
-        return parent::render($request, $e);
+        $response = parent::render($request, $e);
+
+        if ($response->getStatusCode() >= 400) {
+            $response->headers->set('X-Robots-Tag', 'noindex, nofollow');
+        }
+
+        return $response;
     }
 
     protected function renderSessionExpired(Request $request): Response
