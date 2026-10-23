@@ -77,8 +77,11 @@ Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap')
 Route::get('/robots.txt', [SitemapController::class, 'robots'])->name('robots');
 
 Route::redirect('/home', '/', 301);
+Route::redirect('/index.php', '/', 301);
 Route::redirect('/course/legal', '/legal', 301);
 Route::redirect('/berkeley-girls/sixth-form', '/sixth-form', 301);
+Route::redirect('/search-courses', '/search', 301);
+Route::redirect('/search_courses', '/search', 301);
 Route::get('/page-not-found', function () {
     abort(404);
 });

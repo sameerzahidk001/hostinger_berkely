@@ -1,13 +1,8 @@
 @php
-    $docPath = strtolower(trim(request()->path(), '/'));
-    $htmlLang = 'en';
-    $htmlDir = null;
-    if (preg_match('/(?:^|-)arabic$|(?:^|-)ar$/', $docPath) || str_ends_with($docPath, '-arabic')) {
-        $htmlLang = 'ar';
-        $htmlDir = 'rtl';
-    } elseif (preg_match('/(?:^|-)chinese$|(?:^|-)zh(?:-hans)?$/', $docPath)) {
-        $htmlLang = 'zh-Hans';
-    }
+    $docLang = seo_document_language();
+    $htmlLang = $docLang['lang'];
+    $htmlDir = $docLang['dir'];
+    $hreflangLinks = seo_hreflang_alternates();
 @endphp
 <!doctype html>
 <html lang="{{ $htmlLang }}"@if($htmlDir) dir="{{ $htmlDir }}"@endif>
@@ -19,6 +14,10 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     {!! SEOTools::generate() !!}
+    <link rel="canonical" href="{{ seo_preferred_canonical() }}">
+    @foreach($hreflangLinks as $hreflang => $href)
+        <link rel="alternate" hreflang="{{ $hreflang }}" href="{{ $href }}">
+    @endforeach
 
     <link rel="preload" href="{{ asset('frontend/fonts/Trade_Gothic/Trade-Gothic.woff2') }}" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="{{ asset('frontend/output.css') }}">

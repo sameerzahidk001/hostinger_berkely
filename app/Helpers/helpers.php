@@ -1655,11 +1655,17 @@ if (! function_exists('public_menu_href')) {
         $path = parse_url($link, PHP_URL_PATH);
         $path = ltrim(strtolower((string) ($path !== null && $path !== '' ? $path : $link)), '/');
 
+        if ($path === 'home' || $path === 'index.php' || $path === 'index.html') {
+            return url('/');
+        }
         if ($path === 'legal' || $path === 'course/legal') {
             return url('/legal');
         }
         if ($path === 'berkeley-girls/sixth-form' || $path === 'berkeley-girls/sixth-form/') {
             return url('/sixth-form');
+        }
+        if ($path === 'search-courses' || $path === 'search_courses') {
+            return url('/search');
         }
 
         $isAbsolute = str_starts_with($link, '/')
@@ -1680,6 +1686,8 @@ if (! function_exists('rewrite_public_hrefs')) {
     function rewrite_public_hrefs(string $html): string
     {
         $html = preg_replace('#href=(["\'])(?:\./)?legal\1#i', 'href=$1/legal$1', $html) ?? $html;
+        $html = preg_replace('#href=(["\'])(?:\./)?home/?\1#i', 'href=$1/$1', $html) ?? $html;
+        $html = preg_replace('#href=(["\'])(?:\./)?search[-_]courses/?\1#i', 'href=$1/search$1', $html) ?? $html;
 
         return preg_replace(
             '#href=(["\'])(?:\./)?berkeley-girls/sixth-form/?\1#i',
@@ -1695,6 +1703,7 @@ if (! function_exists('seo_is_utility_path')) {
         $path = strtolower(trim($path ?? request()->path(), '/'));
         $prefixes = [
             'cart', 'checkout', 'login', 'register', 'password', 'search',
+            'search-courses', 'search_courses',
             'agenda_search', 'faculty_search', 'user', 'approval-notice',
             'thank-you-for-registering', 'page-not-found', 'installments/payment-success',
         ];
@@ -1705,6 +1714,86 @@ if (! function_exists('seo_is_utility_path')) {
         }
 
         return false;
+    }
+}
+
+if (! function_exists('seo_preferred_canonical')) {
+    function seo_preferred_canonical(?\Illuminate\Http\Request $request = null): string
+    {
+        $request = $request ?: request();
+        $base = rtrim((string) config('app.url'), '/');
+        $path = '/' . ltrim((string) $request->getPathInfo(), '/');
+        if ($path === '/') {
+            return $base . '/';
+        }
+
+        return $base . rtrim($path, '/');
+    }
+}
+
+if (! function_exists('seo_document_language')) {
+    /**
+     * @return array{lang: string, dir: ?string}
+     */
+    function seo_document_language(?string $path = null): array
+    {
+        $path = strtolower(trim($path ?? request()->path(), '/'));
+        if (preg_match('~(^|/|-)arabic(/|-|$)|(^|/)ar(/|$)|(^|/)ar-[a-z]{2}(/|$)~', $path)) {
+            return ['lang' => 'ar', 'dir' => 'rtl'];
+        }
+        if (preg_match('~(^|/|-)chinese(/|-|$)|(^|/|-)zh(-hans|-cn|-tw)?(/|-|$)~', $path)) {
+            return ['lang' => 'zh-Hans', 'dir' => null];
+        }
+
+        return ['lang' => 'en', 'dir' => null];
+    }
+}
+
+if (! function_exists('seo_hreflang_alternates')) {
+    /**
+     * @return array<string, string>
+     */
+    function seo_hreflang_alternates(?string $path = null): array
+    {
+        static $memo = [];
+        $path = trim($path ?? request()->path(), '/');
+        if (array_key_exists($path, $memo)) {
+            return $memo[$path];
+        }
+
+        $isCourse = str_starts_with(strtolower($path), 'course/');
+        $slug = $isCourse ? substr($path, strlen('course/')) : $path;
+        $root = preg_replace('/-(arabic|chinese|ar|zh-hans|zh)$/i', '', $slug) ?: $slug;
+        $candidates = [
+            'en' => $root,
+            'ar' => $root . '-arabic',
+            'zh-Hans' => $root . '-chinese',
+        ];
+
+        $links = [];
+        foreach ($candidates as $hreflang => $candidate) {
+            if ($candidate === '') {
+                continue;
+            }
+            $exists = $isCourse
+                ? \App\Models\Course::where('slug', $candidate)->exists()
+                : \App\Models\Page::where('url', $candidate)->exists();
+            if ($exists) {
+                $links[$hreflang] = $isCourse
+                    ? rtrim((string) config('app.url'), '/') . '/course/' . $candidate
+                    : rtrim((string) config('app.url'), '/') . '/' . $candidate;
+            }
+        }
+
+        if (count($links) < 2) {
+            return $memo[$path] = [];
+        }
+
+        if (isset($links['en'])) {
+            $links['x-default'] = $links['en'];
+        }
+
+        return $memo[$path] = $links;
     }
 }
 
