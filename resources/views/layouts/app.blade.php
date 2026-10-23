@@ -1,5 +1,5 @@
 @php
-    $docLang = seo_document_language();
+    $docLang = $seoDocLang ?? seo_document_language();
     $htmlLang = $docLang['lang'];
     $htmlDir = $docLang['dir'];
     $hreflangLinks = seo_hreflang_alternates();
@@ -482,6 +482,9 @@
                 </div>
             @endforeach
         </div>
+        <p class="w-full text-left mt-6">
+            <a href="{{ route('course.index') }}" class="underline font-bold" style="color: {{ $footerText }}">All programmes</a>
+        </p>
         <div class="flex flex-col md:flex-row  w-full justify-between gap-4 items-center my-8">
             <div
                 class="flex flex-1 justify-center basis-100 flex-grow w-full text-white no-underline font-normal text-base items-center">

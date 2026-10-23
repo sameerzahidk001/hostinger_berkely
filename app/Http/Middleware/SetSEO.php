@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Artesaos\SEOTools\Facades\SEOTools;
 use App\Models\{Page, Course, SiteSettings, PagesSEO};
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\Str;
 
 class SetSEO
@@ -42,6 +43,15 @@ class SetSEO
         }
 
         if (! $seoData) {
+            if ($currentUrl === 'course-index') {
+                SEOTools::setTitle('All programmes');
+                SEOTools::setDescription('Browse Berkeley Independent College programmes.');
+                SEOTools::metatags()->addMeta('robots', 'index, follow');
+                View::share('seoDocLang', seo_document_language($currentUrl, 'All programmes'));
+
+                return $next($request);
+            }
+
             SEOTools::metatags()->addMeta('robots', 'noindex, follow');
 
             return $next($request);
@@ -50,16 +60,15 @@ class SetSEO
         $seo = $seoData?->seo;
 
         $robots = seo_robots_content($seo);
-        if ($seoData instanceof Page) {
-            if (! isset($seoData->sections_count) && ! $seoData->relationLoaded('sections')) {
-                $seoData->loadCount('sections');
-            }
-            $sectionCount = (int) ($seoData->sections_count ?? $seoData->sections?->count() ?? 0);
-            if ($sectionCount === 0) {
-                $robots = 'noindex, follow';
-            }
+        if ($seoData instanceof Page && seo_page_is_empty($seoData)) {
+            $robots = 'noindex, follow';
         }
         SEOTools::metatags()->addMeta('robots', $robots);
+
+        $titleHint = $seoData instanceof Course
+            ? (string) ($seoData->title ?? '')
+            : (string) ($seoData->page_name ?? '');
+        View::share('seoDocLang', seo_document_language($currentUrl, $titleHint));
 
         if ($seoData && $seo) {
             $title = (string) $seo->title;
