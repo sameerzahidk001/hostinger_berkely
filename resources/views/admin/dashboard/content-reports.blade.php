@@ -12,7 +12,7 @@
     $reportUsers = $contentReportUsers ?? collect();
 @endphp
 
-<div id="content-reports-panel" style="padding: 0 10px 12px; max-width: 100%; box-sizing: border-box;">
+<div id="content-reports-panel" class="content-reports-panel" style="padding: 0 10px 12px;">
     <div>
         <div class="ibox float-e-margins">
             <div class="ibox-content">
@@ -32,22 +32,7 @@
                 </form>
                 @endif
                 <style>
-                    #content-reports-panel,
-                    #content-reports-panel.row {
-                        margin-left: 0 !important;
-                        margin-right: 0 !important;
-                        width: 100% !important;
-                        max-width: 100% !important;
-                        box-sizing: border-box;
-                    }
-                    #content-reports-panel .ibox,
-                    #content-reports-panel .ibox-content {
-                        width: 100% !important;
-                        max-width: 100% !important;
-                        overflow: visible;
-                        box-sizing: border-box;
-                    }
-                    #content-reports-panel .content-report-module-tabs {
+                    .content-reports-panel .content-report-module-tabs {
                         display: flex;
                         flex-wrap: wrap;
                         gap: 4px;
@@ -102,16 +87,13 @@
                     #report-training .content-report-stat-value { color: #6f2dbd; }
                     #report-fees .content-report-stat-value { color: #2d6a4f; }
                     #content-reports-panel .content-report-stat-row {
-                        display: flex !important;
-                        flex-wrap: wrap !important;
+                        display: flex;
+                        flex-wrap: wrap;
                         gap: 12px;
-                        width: 100%;
-                        max-width: 100%;
                     }
                     #content-reports-panel .content-report-stat-item {
                         flex: 1 1 230px;
                         min-width: 0;
-                        max-width: 100%;
                         display: flex;
                     }
                     #content-reports-panel a.content-report-stat {

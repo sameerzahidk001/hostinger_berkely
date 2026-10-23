@@ -46,81 +46,15 @@
             white-space: normal !important;
             vertical-align: top;
          }
-         #wrapper {
-            overflow-x: hidden;
-            max-width: 100%;
-         }
-         #page-wrapper > .row.border-bottom {
-            margin-left: 0 !important;
-            margin-right: 0 !important;
-            width: 100% !important;
-            max-width: 100% !important;
-         }
-         #page-wrapper .navbar-static-top,
-         #page-wrapper .navbar-top-links {
-            max-width: 100%;
-         }
-         #page-wrapper .wrapper-content,
-         #page-wrapper .ibox,
-         #page-wrapper .ibox-content,
-         #page-wrapper .dataTables_wrapper,
-         #page-wrapper .dataTables_scroll,
-         #page-wrapper .dataTables_scrollHead,
-         #page-wrapper .dataTables_scrollHeadInner,
-         #page-wrapper .dataTables_scrollHeadInner table,
-         #page-wrapper .dataTables_scrollBody,
-         #page-wrapper .dataTables_scrollBody table {
-            width: 100%;
-            max-width: 100%;
-            min-width: 0;
-            box-sizing: border-box;
-         }
-         #page-wrapper .row,
-         #content-reports-panel.row,
-         #content-reports-panel {
-            margin-left: 0 !important;
-            margin-right: 0 !important;
-            width: 100% !important;
-            max-width: 100% !important;
-         }
-         #page-wrapper .row > [class*="col-"] {
-            box-sizing: border-box;
-         }
-         .ibox-content .table-responsive,
-         .admin-list-wrap {
-            width: 100%;
-            overflow-x: hidden;
-         }
-         #page-wrapper .ibox-content table.table,
-         #page-wrapper .dataTables_wrapper table.table,
-         #page-wrapper table.admin-list-table,
-         #page-wrapper table.lms-tests-table,
-         #page-wrapper table.js-sortable-table {
-            width: 100% !important;
-            max-width: 100%;
-            min-width: 0 !important;
-            table-layout: auto;
-         }
-         #page-wrapper .ibox-content table.table > thead > tr > th,
-         #page-wrapper .ibox-content table.table > tbody > tr > td {
-            white-space: normal !important;
-            word-break: break-word;
-            overflow-wrap: anywhere;
-            vertical-align: top;
-         }
-         #page-wrapper .ibox-content table.table .table-action-stack {
+         .table-action-stack {
             display: flex;
             flex-wrap: wrap;
             gap: 4px;
             align-items: flex-start;
          }
-         #page-wrapper .ibox-content table.table .table-action-stack form {
+         .table-action-stack form {
             display: inline;
             margin: 0;
-         }
-         #page-wrapper .ibox-content table.table .btn {
-            white-space: normal;
-            line-height: 1.25;
          }
          table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control,
          table.dataTable.dtr-inline.collapsed > thead > tr > th.dtr-control,

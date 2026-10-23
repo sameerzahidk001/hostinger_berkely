@@ -19,36 +19,9 @@
    <link href="{{ asset('/admin/css/plugins/sweetalert/sweetalert.css') }}" rel="stylesheet">
    <style>
       @media (max-width: 768px) {
-         .table-responsive,
-         .ibox-content,
-         .wrapper-content {
-            overflow-x: hidden;
+         .table-responsive {
+            overflow-x: auto;
          }
-      }
-      #page-wrapper .wrapper-content,
-      #page-wrapper .ibox,
-      #page-wrapper .ibox-content,
-      #page-wrapper .dataTables_wrapper,
-      #page-wrapper .dataTables_scrollHead,
-      #page-wrapper .dataTables_scrollHeadInner,
-      #page-wrapper .dataTables_scrollHeadInner table {
-         width: 100%;
-         max-width: 100%;
-         min-width: 0;
-         box-sizing: border-box;
-      }
-      #page-wrapper .row {
-         margin-left: 0;
-         margin-right: 0;
-      }
-      .ibox-content .table-responsive {
-         width: 100%;
-         overflow-x: hidden;
-      }
-      #page-wrapper .ibox-content table.table,
-      #page-wrapper table.js-sortable-table {
-         width: 100% !important;
-         max-width: 100%;
       }
       table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control,
       table.dataTable.dtr-inline.collapsed > thead > tr > th.dtr-control {
