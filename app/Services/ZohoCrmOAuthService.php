@@ -8,8 +8,90 @@ use Illuminate\Support\Facades\Log;
 
 class ZohoCrmOAuthService
 {
+    public function __construct()
+    {
+        $this->overlayRuntime();
+    }
+
+    public function runtimePath(): string
+    {
+        return storage_path('app/zoho_crm_runtime.json');
+    }
+
+    /**
+     * Hostinger often keeps config cached, so admin-saved CRM credentials
+     * must also live outside bootstrap/cache/config.php.
+     */
+    public function persistRuntime(array $values): void
+    {
+        $current = $this->runtimeValues();
+        $merged = array_merge($current, $values);
+        foreach ($merged as $key => $value) {
+            if ($value === null || $value === '') {
+                unset($merged[$key]);
+            }
+        }
+        $dir = dirname($this->runtimePath());
+        if (! is_dir($dir)) {
+            mkdir($dir, 0755, true);
+        }
+        file_put_contents(
+            $this->runtimePath(),
+            json_encode($merged, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)
+        );
+        $this->overlayRuntime();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function runtimeValues(): array
+    {
+        $path = $this->runtimePath();
+        if (! is_file($path)) {
+            return [];
+        }
+
+        $data = json_decode((string) file_get_contents($path), true);
+
+        return is_array($data) ? $data : [];
+    }
+
+    public function overlayRuntime(): void
+    {
+        $data = $this->runtimeValues();
+        if ($data === []) {
+            return;
+        }
+
+        $map = [
+            'enabled' => 'zoho_crm.enabled',
+            'client_id' => 'zoho_crm.client_id',
+            'client_secret' => 'zoho_crm.client_secret',
+            'refresh_token' => 'zoho_crm.refresh_token',
+            'api_base' => 'zoho_crm.api_base',
+            'accounts_url' => 'zoho_crm.accounts_url',
+            'module_invoice' => 'zoho_crm.modules.invoice',
+            'module_receipt' => 'zoho_crm.modules.receipt',
+            'module_deal' => 'zoho_crm.modules.deal',
+        ];
+
+        foreach ($map as $key => $configKey) {
+            if (! array_key_exists($key, $data) || $data[$key] === '' || $data[$key] === null) {
+                continue;
+            }
+            $value = $data[$key];
+            if ($key === 'enabled') {
+                $value = filter_var($value, FILTER_VALIDATE_BOOLEAN);
+            }
+            config([$configKey => $value]);
+        }
+    }
+
     public function isConfigured(): bool
     {
+        $this->overlayRuntime();
+
         return filled(config('zoho_crm.client_id'))
             && filled(config('zoho_crm.client_secret'))
             && filled(config('zoho_crm.refresh_token'));
@@ -17,6 +99,8 @@ class ZohoCrmOAuthService
 
     public function isEnabled(): bool
     {
+        $this->overlayRuntime();
+
         return (bool) config('zoho_crm.enabled') && $this->isConfigured();
     }
 
