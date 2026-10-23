@@ -95,18 +95,22 @@
                                 </span>
                             </td>
                             <td>
-                                <a class="btn btn-xs btn-default" href="{{ route('admin.class-batches.edit', $batch->id) }}">
-                                    {{ ($isAdmin || ($lms ?? app(\App\Services\StudyMaterialService::class))->canManageBatch()) ? 'Edit' : 'View' }}
-                                </a>
-                                @if($isAdmin || ($lms ?? app(\App\Services\StudyMaterialService::class))->canManageSchedule())
-                                <a class="btn btn-xs btn-primary" href="{{ route('admin.class-schedules.create', ['batch_id' => $batch->id]) }}">Add schedule</a>
-                                @endif
-                                @if($isAdmin)
-                                    <form action="{{ route('admin.class-batches.destroy', $batch->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this batch?');">
-                                        @csrf @method('DELETE')
-                                        <button type="submit" class="btn btn-xs btn-danger">Delete</button>
-                                    </form>
-                                @endif
+                                <div class="table-action-stack">
+                                    <div class="table-action-stack-col">
+                                        <a class="btn btn-xs btn-default" href="{{ route('admin.class-batches.edit', $batch->id) }}">
+                                            {{ ($isAdmin || ($lms ?? app(\App\Services\StudyMaterialService::class))->canManageBatch()) ? 'Edit' : 'View' }}
+                                        </a>
+                                        @if($isAdmin)
+                                            <form action="{{ route('admin.class-batches.destroy', $batch->id) }}" method="POST" onsubmit="return confirm('Delete this batch?');">
+                                                @csrf @method('DELETE')
+                                                <button type="submit" class="btn btn-xs btn-danger">Delete</button>
+                                            </form>
+                                        @endif
+                                    </div>
+                                    @if($isAdmin || ($lms ?? app(\App\Services\StudyMaterialService::class))->canManageSchedule())
+                                        <a class="btn btn-xs btn-primary table-action-stack-extra" href="{{ route('admin.class-schedules.create', ['batch_id' => $batch->id]) }}">Add schedule</a>
+                                    @endif
+                                </div>
                             </td>
                         </tr>
                     @empty

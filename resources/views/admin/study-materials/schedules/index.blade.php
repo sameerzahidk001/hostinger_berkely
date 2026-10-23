@@ -90,10 +90,14 @@
                                 <td>{{ $b->students_count }}</td>
                                 <td>{{ $b->schedules_count }}</td>
                                 <td>
-                                    <a class="btn btn-xs btn-primary" href="{{ route('admin.class-schedules.batch', $b->id) }}" style="font-weight:700;">Open schedule</a>
-                                    @if($isAdmin || ($lms ?? app(\App\Services\StudyMaterialService::class))->canManageSchedule())
-                                    <a class="btn btn-xs btn-default" href="{{ route('admin.class-schedules.create', ['batch_id' => $b->id]) }}">Add session</a>
-                                    @endif
+                                    <div class="table-action-stack">
+                                        <div class="table-action-stack-col">
+                                            @if($isAdmin || ($lms ?? app(\App\Services\StudyMaterialService::class))->canManageSchedule())
+                                            <a class="btn btn-xs btn-default" href="{{ route('admin.class-schedules.create', ['batch_id' => $b->id]) }}">Add session</a>
+                                            @endif
+                                        </div>
+                                        <a class="btn btn-xs btn-primary table-action-stack-extra" href="{{ route('admin.class-schedules.batch', $b->id) }}" style="font-weight:700;">Open schedule</a>
+                                    </div>
                                 </td>
                             </tr>
                         @empty

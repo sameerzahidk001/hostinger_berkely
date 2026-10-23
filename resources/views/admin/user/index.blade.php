@@ -106,30 +106,31 @@
                                             </td>
 
                                             <td>
-                                                <div class="btn-group">
-                                                    <a href="{{ route('users.edit', $data->id) }}"
-                                                        class="btn-primary btn btn-xs editFaqs">
-                                                        <i class="fa fa-edit"></i>Edit</a>
-                                                    @if(($type === 'instructor' || optional($data->roles->first())->name === 'instructor') && Auth::guard('admin')->check())
-                                                    <a href="{{ route('users.edit', ['id' => $data->id, 'tab' => 'lms']) }}"
-                                                        class="btn btn-xs btn-default">LMS Permission</a>
-                                                    @endif
-                                                    @if(admin_can_delete())
-                                                    <form id="delete-form-{{ $data->id }}"
-                                                        action="{{ route('users.destroy', $data->id) }}" method="POST"
-                                                        style="display:inline;">
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <button type="button" class="btn-danger btn btn-xs"
-                                                            onclick="confirmDelete({{ $data->id }})">
+                                                <div class="table-action-stack">
+                                                    <div class="table-action-stack-col">
+                                                        <a href="{{ route('users.edit', $data->id) }}"
+                                                            class="btn btn-default btn-xs editFaqs">
+                                                            <i class="fa fa-edit"></i> Edit</a>
+                                                        @if(admin_can_delete())
+                                                        <form id="delete-form-{{ $data->id }}"
+                                                            action="{{ route('users.destroy', $data->id) }}" method="POST">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="button" class="btn-danger btn btn-xs"
+                                                                onclick="confirmDelete({{ $data->id }})">
+                                                                <i class="fa fa-trash"></i> Delete
+                                                            </button>
+                                                        </form>
+                                                        @else
+                                                        <button type="button" class="btn-danger btn btn-xs" disabled
+                                                            title="Delete is disabled for your role">
                                                             <i class="fa fa-trash"></i> Delete
                                                         </button>
-                                                    </form>
-                                                    @else
-                                                    <button type="button" class="btn-danger btn btn-xs" disabled
-                                                        title="Delete is disabled for your role">
-                                                        <i class="fa fa-trash"></i> Delete
-                                                    </button>
+                                                        @endif
+                                                    </div>
+                                                    @if(($type === 'instructor' || optional($data->roles->first())->name === 'instructor') && Auth::guard('admin')->check())
+                                                    <a href="{{ route('users.edit', ['id' => $data->id, 'tab' => 'lms']) }}"
+                                                        class="btn btn-xs btn-primary table-action-stack-extra">LMS Permission</a>
                                                     @endif
                                                 </div>
                                             </td>

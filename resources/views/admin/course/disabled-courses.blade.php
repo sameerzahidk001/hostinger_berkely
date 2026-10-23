@@ -194,14 +194,16 @@
                                             </td>
                                             @include('admin.layout.partials.audit-columns-cells', ['model' => $data])
                                             <td>
-                                                <div class="lms-cell-stack">
-                                                    <a href="{{ route('course.edit', ['id' => $data->id]) }}" class="btn-primary btn btn-xs" target="_blank">
-                                                        <i class="fa fa-pencil"></i> Edit
-                                                    </a>
-                                                    @include('admin.layout.partials.delete-button', [
-                                                        'id' => $data->id,
-                                                        'action' => route('course.delete', $data->id),
-                                                    ])
+                                                <div class="table-action-stack">
+                                                    <div class="table-action-stack-col">
+                                                        <a href="{{ route('course.edit', ['id' => $data->id]) }}" class="btn btn-default btn-xs" target="_blank">
+                                                            <i class="fa fa-pencil"></i> Edit
+                                                        </a>
+                                                        @include('admin.layout.partials.delete-button', [
+                                                            'id' => $data->id,
+                                                            'action' => route('course.delete', $data->id),
+                                                        ])
+                                                    </div>
                                                 </div>
                                             </td>
                                         </tr>

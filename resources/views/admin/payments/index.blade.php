@@ -237,15 +237,18 @@
                                     </td>
                                     <td>
                                         <div class="table-action-stack">
-                                        <a class="btn btn-primary btn-sm" href="{{ route('admin.payments.edit', $payment->id) }}"><i class="fa fa-edit"></i> Edit</a>
-                                        <form action="{{ route('admin.payments.push-crm', $payment->id) }}" method="POST">
-                                            @csrf
-                                            <button type="submit" class="btn btn-info btn-sm" title="Push invoice to Zoho CRM"><i class="fa fa-cloud-upload"></i> Push CRM</button>
-                                        </form>
+                                        <div class="table-action-stack-col">
+                                        <a class="btn btn-default btn-sm" href="{{ route('admin.payments.edit', $payment->id) }}"><i class="fa fa-edit"></i> Edit</a>
                                         <form action="{{ route('admin.payments.destroy', $payment->id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this payment?');">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-danger btn-sm"><i class="fa fa-trash"></i> Delete</button>
+                                        </form>
+                                        </div>
+                                        <div class="table-action-stack-col">
+                                        <form action="{{ route('admin.payments.push-crm', $payment->id) }}" method="POST">
+                                            @csrf
+                                            <button type="submit" class="btn btn-info btn-sm" title="Push invoice to Zoho CRM"><i class="fa fa-cloud-upload"></i> Push CRM</button>
                                         </form>
                                         @if(in_array($paymentStatus, ['Pending', 'Partial'], true))
                                             <a class="btn btn-primary btn-sm" href="{{ route('admin.payments.send-invoice', ['id' => $payment->id]) }}"><i class="fa fa-send"></i> Send</a>
@@ -277,6 +280,7 @@
                                             $shownPaymentIds[] = $payment->id;
                                             @endphp
                                             @endif
+                                        </div>
                                         </div>
                                     </td>
                                 </tr>
