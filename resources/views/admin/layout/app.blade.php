@@ -52,6 +52,30 @@
             white-space: normal !important;
             vertical-align: top;
          }
+         #page-wrapper,
+         .wrapper-content,
+         .ibox,
+         .ibox-content,
+         .dataTables_wrapper,
+         .dataTables_scroll,
+         .dataTables_scrollHead,
+         .dataTables_scrollHeadInner,
+         .dataTables_scrollHeadInner table,
+         .dataTables_scrollBody,
+         .dataTables_scrollBody table {
+            width: 100% !important;
+            max-width: 100%;
+         }
+         .ibox-content .table-responsive,
+         .admin-list-wrap {
+            overflow-x: auto;
+         }
+         table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control,
+         table.dataTable.dtr-inline.collapsed > thead > tr > th.dtr-control,
+         table.dataTable.dtr-column > tbody > tr > td.control,
+         table.dataTable.dtr-column > thead > tr > th.control {
+            display: none !important;
+         }
          /* Prevent invisible overlays from blocking admin clicks */
          body:not(.modal-open) .modal-backdrop,
          body:not(.modal-open) .sweet-overlay {
@@ -620,5 +644,23 @@
       @include('partials.session_expired_refresh')
       @include('partials.viewer-tz-sync')
       @stack('script')
+      <script>
+         $(function () {
+            if (!window.jQuery || !$.fn.dataTable) {
+               return;
+            }
+            $('table.dataTable, table.dataTables-example').each(function () {
+               if (!$.fn.dataTable.isDataTable(this)) {
+                  return;
+               }
+               try {
+                  var api = $(this).DataTable();
+                  if (api.responsive && typeof api.responsive.disable === 'function') {
+                     api.responsive.disable();
+                  }
+               } catch (e) {}
+            });
+         });
+      </script>
    </body>
 </html>

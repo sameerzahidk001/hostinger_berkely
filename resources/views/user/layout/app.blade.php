@@ -31,6 +31,21 @@
             min-width: 720px;
          }
       }
+      #page-wrapper,
+      .wrapper-content,
+      .ibox,
+      .ibox-content,
+      .dataTables_wrapper,
+      .dataTables_scrollHead,
+      .dataTables_scrollHeadInner,
+      .dataTables_scrollHeadInner table {
+         width: 100% !important;
+         max-width: 100%;
+      }
+      table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control,
+      table.dataTable.dtr-inline.collapsed > thead > tr > th.dtr-control {
+         display: none !important;
+      }
    </style>
    @stack('style')
 
@@ -585,6 +600,24 @@
    @include('partials.viewer-tz-sync')
 
    @stack('script')
+   <script>
+      $(function () {
+         if (!window.jQuery || !$.fn.dataTable) {
+            return;
+         }
+         $('table.dataTable, table.dataTables-example').each(function () {
+            if (!$.fn.dataTable.isDataTable(this)) {
+               return;
+            }
+            try {
+               var api = $(this).DataTable();
+               if (api.responsive && typeof api.responsive.disable === 'function') {
+                  api.responsive.disable();
+               }
+            } catch (e) {}
+         });
+      });
+   </script>
 </body>
 
 </html>
