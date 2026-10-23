@@ -1662,7 +1662,13 @@ if (! function_exists('public_menu_href')) {
             return url('/sixth-form');
         }
 
-        if (! preg_match('#^(https?:)?//|^/|^#|^mailto:|^tel:#i', $link)) {
+        $isAbsolute = str_starts_with($link, '/')
+            || str_starts_with($link, '#')
+            || str_starts_with($link, 'mailto:')
+            || str_starts_with($link, 'tel:')
+            || (bool) preg_match('~^(?:https?:)?//~i', $link);
+
+        if (! $isAbsolute) {
             return url('/' . ltrim($link, '/'));
         }
 
