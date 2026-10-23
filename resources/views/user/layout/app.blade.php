@@ -30,6 +30,19 @@
    </style>
    @stack('style')
    <link href="{{ asset('/admin/css/lms-shell.css') }}?v={{ @filemtime(public_path('admin/css/lms-shell.css')) ?: time() }}" rel="stylesheet">
+   <style>
+      #wrapper > nav.navbar-default.navbar-static-side {
+         background-color: #000435 !important;
+         z-index: 3000 !important;
+         position: fixed !important;
+      }
+      @media (min-width: 769px) {
+         #page-wrapper {
+            margin-left: 220px !important;
+            padding-left: 15px !important;
+         }
+      }
+   </style>
 
    <style>
       /* During an in-progress exam: disable all left menus except My Tests */
