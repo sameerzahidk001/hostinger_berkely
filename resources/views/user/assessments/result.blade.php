@@ -67,7 +67,7 @@
                     @elseif($question->hasSubQuestions())
                         @foreach($question->subQuestions() as $sub)
                             @php $sk = (string) ($sub['key'] ?? $loop->index); @endphp
-                            <p class="m-b-xs lms-qa-question"><strong>{{ $sk }}.</strong> {{ $sub['text'] ?? '' }}
+                            <p class="m-b-xs lms-qa-question"><strong>({{ chr(97 + $loop->index) }})</strong> {{ $sub['text'] ?? '' }}
                                 <span class="text-muted">({{ lms_format_number($sub['percent'] ?? 0) }}% · {{ lms_format_number($sub['marks'] ?? 0) }} marks)</span></p>
                             <div class="well well-sm m-b-sm lms-qa-answer">{!! nl2br(e($answer?->partAnswer($sk) ?: '-')) !!}</div>
                             <p>Marks: {{ lms_format_number($answer?->partScore($sk)) }} / {{ lms_format_number($sub['marks'] ?? 0) }}</p>

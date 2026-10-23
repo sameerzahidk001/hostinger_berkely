@@ -114,7 +114,7 @@
                     <div id="edit_sub_list">
                         @foreach($editSubs as $si => $sub)
                             <div class="row js-sub-row" style="margin-bottom:8px;">
-                                <div class="col-md-1"><label class="js-sub-letter">{{ (int)$si + 1 }}.</label></div>
+                                <div class="col-md-1"><label class="js-sub-letter">({{ chr(97 + (int)$si) }})</label></div>
                                 <div class="col-md-8">
                                     <input type="text" name="sub_questions[{{ $si }}][text]" class="form-control" value="{{ $sub['text'] ?? '' }}" placeholder="Sub-question prompt">
                                 </div>
@@ -242,9 +242,13 @@
         $('#totalMarksDisplay').text(total.toFixed(1));
     }
 
+    function subLetter(i) {
+        return '(' + letters.charAt(Math.min(i, 25)) + ')';
+    }
+
     function reletterSubs($scope) {
         $scope.find('.js-sub-row').each(function (i) {
-            $(this).find('.js-sub-letter').text((i + 1) + '.');
+            $(this).find('.js-sub-letter').text(subLetter(i));
             $(this).find('[name]').each(function () {
                 var name = $(this).attr('name');
                 if (!name) return;
@@ -273,7 +277,7 @@
             var idx = $list.find('.js-sub-row').length;
             var prefix = $block.find('.js-q-type').attr('name').replace('[type]', '');
             var html = '<div class="row js-sub-row" style="margin-bottom:8px;">' +
-                '<div class="col-md-1"><label class="js-sub-letter">1.</label></div>' +
+                '<div class="col-md-1"><label class="js-sub-letter">(a)</label></div>' +
                 '<div class="col-md-8"><input type="text" name="' + prefix + '[sub_questions][' + idx + '][text]" class="form-control" placeholder="Sub-question prompt"></div>' +
                 '<div class="col-md-2"><input type="number" step="0.1" min="0" max="100" name="' + prefix + '[sub_questions][' + idx + '][percent]" class="form-control js-sub-marks" placeholder="%"></div>' +
                 '<div class="col-md-1"><button type="button" class="btn btn-xs btn-default js-remove-sub">&times;</button></div></div>';
@@ -329,7 +333,7 @@
 
     function reletterEdit() {
         $('#edit_sub_list .js-sub-row').each(function (i) {
-            $(this).find('.js-sub-letter').text((i + 1) + '.');
+            $(this).find('.js-sub-letter').text(subLetter(i));
             $(this).find('[name]').each(function () {
                 var name = $(this).attr('name');
                 if (!name) return;
@@ -340,7 +344,7 @@
     $('#edit_add_sub').on('click', function () {
         var idx = $('#edit_sub_list .js-sub-row').length;
         var html = '<div class="row js-sub-row" style="margin-bottom:8px;">' +
-            '<div class="col-md-1"><label class="js-sub-letter">1.</label></div>' +
+            '<div class="col-md-1"><label class="js-sub-letter">(a)</label></div>' +
             '<div class="col-md-8"><input type="text" name="sub_questions[' + idx + '][text]" class="form-control" placeholder="Sub-question prompt"></div>' +
             '<div class="col-md-2"><input type="number" step="0.1" min="0" max="100" name="sub_questions[' + idx + '][percent]" class="form-control js-edit-sub-marks" placeholder="%"></div>' +
             '<div class="col-md-1"><button type="button" class="btn btn-xs btn-default js-edit-remove-sub">&times;</button></div></div>';

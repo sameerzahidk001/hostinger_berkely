@@ -84,7 +84,7 @@
                                 $sk = (string) ($sub['key'] ?? $loop->index);
                                 $subMax = $sub['marks'] ?? 0;
                             @endphp
-                            <p class="m-b-xs lms-qa-question"><strong>{{ $sk }}.</strong> {{ $sub['text'] ?? '' }}
+                            <p class="m-b-xs lms-qa-question"><strong>({{ chr(97 + $loop->index) }})</strong> {{ $sub['text'] ?? '' }}
                                 <span class="text-muted">({{ lms_format_number($sub['percent'] ?? 0) }}% of {{ lms_format_number($question->max_marks) }} = {{ lms_format_number($subMax) }} marks)</span></p>
                             <div class="well well-sm m-b-sm lms-qa-answer">{!! nl2br(e($answer?->partAnswer($sk) ?: '-')) !!}</div>
                             <div class="row">
