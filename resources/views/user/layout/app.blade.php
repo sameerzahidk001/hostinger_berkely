@@ -25,6 +25,13 @@
             overflow-x: hidden;
          }
       }
+      #page-wrapper {
+         width: auto !important;
+         max-width: none !important;
+         min-width: 0;
+         overflow-x: hidden;
+         box-sizing: border-box;
+      }
       #page-wrapper .wrapper-content,
       #page-wrapper .ibox,
       #page-wrapper .ibox-content,
@@ -34,7 +41,12 @@
       #page-wrapper .dataTables_scrollHeadInner table {
          width: 100%;
          max-width: 100%;
+         min-width: 0;
          box-sizing: border-box;
+      }
+      #page-wrapper .row {
+         margin-left: 0;
+         margin-right: 0;
       }
       .ibox-content .table-responsive {
          width: 100%;

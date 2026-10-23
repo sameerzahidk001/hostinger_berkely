@@ -12,8 +12,8 @@
     $reportUsers = $contentReportUsers ?? collect();
 @endphp
 
-<div class="row" style="padding: 0 10px 12px;" id="content-reports-panel">
-    <div class="col-lg-12">
+<div id="content-reports-panel" style="padding: 0 0 12px;">
+    <div>
         <div class="ibox float-e-margins">
             <div class="ibox-content">
                 @if($showReportUserFilter)
@@ -87,14 +87,27 @@
                     #report-training .content-report-stat-value { color: #6f2dbd; }
                     #report-fees .content-report-stat-value { color: #2d6a4f; }
                     #content-reports-panel .content-report-stat-row {
-                        display: flex;
-                        flex-wrap: wrap;
+                        display: grid;
+                        grid-template-columns: repeat(4, minmax(0, 1fr));
                         gap: 12px;
                     }
+                    @media (min-width: 1600px) {
+                        #content-reports-panel .content-report-stat-row {
+                            grid-template-columns: repeat(5, minmax(0, 1fr));
+                        }
+                    }
+                    @media (max-width: 1199px) {
+                        #content-reports-panel .content-report-stat-row {
+                            grid-template-columns: repeat(3, minmax(0, 1fr));
+                        }
+                    }
+                    @media (max-width: 767px) {
+                        #content-reports-panel .content-report-stat-row {
+                            grid-template-columns: repeat(2, minmax(0, 1fr));
+                        }
+                    }
                     #content-reports-panel .content-report-stat-item {
-                        flex: 1 1 calc(20% - 12px);
-                        min-width: 170px;
-                        max-width: 100%;
+                        min-width: 0;
                         display: flex;
                     }
                     #content-reports-panel a.content-report-stat {
