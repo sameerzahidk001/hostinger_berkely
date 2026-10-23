@@ -42,6 +42,16 @@
          width: 100% !important;
          max-width: 100%;
       }
+      .ibox-content .table-responsive {
+         width: 100%;
+         overflow-x: auto;
+         -webkit-overflow-scrolling: touch;
+      }
+      #page-wrapper .ibox-content table.table,
+      #page-wrapper table.js-sortable-table {
+         width: 100% !important;
+         max-width: 100%;
+      }
       table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control,
       table.dataTable.dtr-inline.collapsed > thead > tr > th.dtr-control {
          display: none !important;

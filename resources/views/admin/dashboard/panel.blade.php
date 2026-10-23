@@ -429,9 +429,25 @@
                         <p class="text-muted small m-b-sm">Leave the user dropdown on <strong>{{ $userFilterEmptyLabel ?? 'None' }}</strong> to show everyone in this list. Dates default to today.</p>
                         <p class="activity-tz-note"><strong>Time zone:</strong> {{ $activityTimezone ?? viewer_timezone() }}@if(!empty($activityTimezoneLabel)) ({{ $activityTimezoneLabel }})@endif — based on your location. Date &amp; Time values below use this zone.</p>
                         <style>
-                            #staffActivityTable thead th { position: sticky; top: 0; background: #f5f5f5; z-index: 2; }
+                            #staffActivityTable,
+                            #studentActivityTable {
+                                width: 100% !important;
+                                table-layout: auto;
+                            }
+                            #staffActivityTable thead th,
+                            #studentActivityTable thead th {
+                                position: sticky;
+                                top: 0;
+                                background: #f5f5f5;
+                                z-index: 2;
+                                white-space: nowrap;
+                            }
+                            #staffActivityTable td:nth-child(4),
+                            #studentActivityTable td:nth-child(4) {
+                                word-break: break-word;
+                            }
                         </style>
-                        <div class="table-responsive" style="max-height:70vh;overflow:auto;">
+                        <div class="table-responsive" style="width:100%;max-height:70vh;overflow:auto;">
                             <table class="table table-striped table-bordered table-hover js-sortable-table" id="staffActivityTable">
                                 <thead>
                                     <tr>
@@ -584,7 +600,7 @@
                         </p>
                         <p class="text-muted small m-b-sm">Leave Student on <strong>None</strong> to see all students. Use dates only when needed.</p>
                         <p class="activity-tz-note"><strong>Time zone:</strong> {{ $activityTimezone ?? viewer_timezone() }}@if(!empty($activityTimezoneLabel)) ({{ $activityTimezoneLabel }})@endif — based on your location. Date &amp; Time values below use this zone.</p>
-                        <div class="table-responsive">
+                        <div class="table-responsive" style="width:100%;overflow:auto;">
                             <table class="table table-striped table-bordered table-hover js-sortable-table" id="studentActivityTable">
                                 <thead>
                                     <tr>

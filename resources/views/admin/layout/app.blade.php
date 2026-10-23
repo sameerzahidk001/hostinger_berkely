@@ -68,7 +68,17 @@
          }
          .ibox-content .table-responsive,
          .admin-list-wrap {
+            width: 100%;
             overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+         }
+         #page-wrapper .ibox-content table.table,
+         #page-wrapper .dataTables_wrapper table.table,
+         #page-wrapper table.admin-list-table,
+         #page-wrapper table.lms-tests-table,
+         #page-wrapper table.js-sortable-table {
+            width: 100% !important;
+            max-width: 100%;
          }
          table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control,
          table.dataTable.dtr-inline.collapsed > thead > tr > th.dtr-control,
