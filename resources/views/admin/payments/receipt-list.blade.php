@@ -180,12 +180,9 @@
 
                                     <td>
                                         <div class="table-action-stack">
-                                        <form action="{{ route('admin.installments.push-crm', $installment->id) }}" method="POST">
-                                            @csrf
-                                            <button type="submit" class="btn btn-info btn-sm" title="Push receipt to Zoho CRM"><i class="fa fa-cloud-upload"></i> Push CRM</button>
-                                        </form>
+                                        <div class="table-action-stack-col">
                                         @if ($installment->payment_method)
-                                        <button class="btn btn-success btn-sm edit-bank-transfer-modal" style="margin-right: 4px; margin-bottom: 4px;"
+                                        <button class="btn btn-default btn-sm edit-bank-transfer-modal"
                                             data-id="{{ $installment->id }}"
                                             data-display-paid="{{ payment_display_amount_from_aed($installment->payment, (float) $installment->paid_amount) }}"
                                             data-currency="{{ payment_display_currency($installment->payment) }}"
@@ -194,19 +191,26 @@
                                             data-paid_date="{{ $installment->paid_date }}">
                                             <i class="fa fa-edit"></i> Edit
                                         </button>
-                                        <a href="{{ route('admin.installments.manual.pay.delete', ['id' => $installment->id]) }}" style="margin-right: 4px; margin-bottom: 4px;"
+                                        <a href="{{ route('admin.installments.manual.pay.delete', ['id' => $installment->id]) }}"
                                             class="btn btn-danger btn-sm"
                                             onclick="return confirmDeleteLink(event, this.href, 'this receipt');">
                                             <i class="fa fa-trash"></i> Delete
                                         </a>
                                         @endif
+                                        </div>
+                                        <div class="table-action-stack-col">
+                                        <form action="{{ route('admin.installments.push-crm', $installment->id) }}" method="POST">
+                                            @csrf
+                                            <button type="submit" class="btn btn-info btn-sm" title="Push receipt to Zoho CRM"><i class="fa fa-cloud-upload"></i> Push CRM</button>
+                                        </form>
                                         <a href="{{ route('admin.installments.receipt', $installment->id) }}"
-                                            class="btn btn-success btn-sm" style="margin-right: 4px; margin-bottom: 4px;">
+                                            class="btn btn-success btn-sm">
                                             <i class="fa fa-download"></i> Receipt
                                         </a>
                                         <a href="{{ route('admin.payments.send-receipt', $installment->id) }}"
-                                            class="btn btn-success btn-sm"><i class="fa fa-send"></i> Send
+                                            class="btn btn-primary btn-sm"><i class="fa fa-send"></i> Send
                                         </a>
+                                        </div>
                                         </div>
                                     </td>
                                 </tr>

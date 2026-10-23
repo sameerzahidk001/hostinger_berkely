@@ -35,15 +35,15 @@
     .admin-list-table td ul { margin: 0; padding-left: 14px; }
     .admin-list-table .lms-cell-stack {
         display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 4px;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: stretch;
+        gap: 6px;
     }
     .admin-list-table .lms-cell-stack .label,
     .admin-list-table .lms-cell-stack .btn,
     .admin-list-table .lms-cell-stack form {
         margin: 0;
-        display: block;
     }
     .admin-list-table .label + .label { margin-left: 0; }
 </style>

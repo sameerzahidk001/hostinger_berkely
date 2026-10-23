@@ -258,23 +258,25 @@
                                             </td>
                                             @include('admin.layout.partials.audit-columns-cells', ['model' => $data])
                                             <td>
-                                                <div class="lms-cell-stack">
-                                                    <a href="{{ route('course.edit', ['id' => $data->id]) }}"
-                                                        class="btn-primary btn btn-xs" target="_blank">
-                                                        <i class="fa fa-pencil"></i> Edit
-                                                    </a>
-                                                    <form action="{{ route('course.duplicate', $data->id) }}" method="POST">
+                                                <div class="table-action-stack">
+                                                    <div class="table-action-stack-col">
+                                                        <a href="{{ route('course.edit', ['id' => $data->id]) }}"
+                                                            class="btn btn-default btn-xs" target="_blank">
+                                                            <i class="fa fa-pencil"></i> Edit
+                                                        </a>
+                                                        @include('admin.layout.partials.delete-button', [
+                                                            'id' => $data->id,
+                                                            'action' => route('course.delete', $data->id),
+                                                        ])
+                                                    </div>
+                                                    <form action="{{ route('course.duplicate', $data->id) }}" method="POST" class="table-action-stack-extra">
                                                         @csrf
-                                                        <button type="submit" class="btn btn-info btn-xs"
+                                                        <button type="submit" class="btn btn-primary btn-xs"
                                                             onclick="return confirm('Duplicate this course as a disabled draft? Original stays unchanged.');"
-                                                            title="Duplicate course">
+                                                            title="Duplicate course" style="height:100%;">
                                                             <i class="fa fa-copy"></i> Duplicate
                                                         </button>
                                                     </form>
-                                                    @include('admin.layout.partials.delete-button', [
-                                                        'id' => $data->id,
-                                                        'action' => route('course.delete', $data->id),
-                                                    ])
                                                 </div>
                                             </td>
 

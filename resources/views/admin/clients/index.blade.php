@@ -73,13 +73,15 @@
                                             </td>
                                             @include('admin.layout.partials.audit-columns-cells', ['model' => $client])
                                             <td>
-                                                <div class="btn-group">
-                                                    <a href="{{ route('admin.clients.edit', $client->id) }}"
-                                                        class="btn btn-primary btn-xs"><i class="fa fa-edit"></i> Edit</a>
-                                                    @include('admin.layout.partials.delete-button', [
-                                                        'id' => $client->id,
-                                                        'action' => route('admin.clients.destroy', $client->id),
-                                                    ])
+                                                <div class="table-action-stack">
+                                                    <div class="table-action-stack-col">
+                                                        <a href="{{ route('admin.clients.edit', $client->id) }}"
+                                                            class="btn btn-default btn-xs"><i class="fa fa-edit"></i> Edit</a>
+                                                        @include('admin.layout.partials.delete-button', [
+                                                            'id' => $client->id,
+                                                            'action' => route('admin.clients.destroy', $client->id),
+                                                        ])
+                                                    </div>
                                                 </div>
                                             </td>
                                         </tr>

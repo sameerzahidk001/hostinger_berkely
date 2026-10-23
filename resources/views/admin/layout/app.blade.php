@@ -46,14 +46,40 @@
             white-space: normal !important;
             vertical-align: top;
          }
-         .table-action-stack {
+         .table-action-stack,
+         .lms-cell-stack,
+         .lms-row-actions {
             display: flex;
-            flex-wrap: wrap;
+            flex-direction: row;
+            flex-wrap: nowrap;
+            align-items: stretch;
+            gap: 6px;
+         }
+         .table-action-stack-col {
+            display: flex;
+            flex-direction: column;
             gap: 4px;
-            align-items: flex-start;
+            min-width: 72px;
+         }
+         .table-action-stack-col .btn,
+         .table-action-stack-col form,
+         .table-action-stack-col form .btn {
+            margin: 0;
+            width: 100%;
+            display: block;
+            text-align: center;
+            box-sizing: border-box;
+         }
+         .table-action-stack > a.btn-primary,
+         .table-action-stack-extra {
+            display: flex !important;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+            align-self: stretch;
          }
          .table-action-stack form {
-            display: inline;
+            display: block;
             margin: 0;
          }
          table.dataTable.dtr-inline.collapsed > tbody > tr > td.dtr-control,

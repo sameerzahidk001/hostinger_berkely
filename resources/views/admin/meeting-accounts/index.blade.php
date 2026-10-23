@@ -85,11 +85,15 @@
                                 @endif
                             </td>
                             <td>
-                                <a class="btn btn-xs btn-primary" href="{{ route('admin.meeting-accounts.edit', $account->id) }}">Edit</a>
-                                <form action="{{ route('admin.meeting-accounts.destroy', $account->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this meeting account?');">
-                                    @csrf @method('DELETE')
-                                    <button type="submit" class="btn btn-xs btn-danger">Delete</button>
-                                </form>
+                                <div class="table-action-stack">
+                                    <div class="table-action-stack-col">
+                                        <a class="btn btn-xs btn-default" href="{{ route('admin.meeting-accounts.edit', $account->id) }}">Edit</a>
+                                        <form action="{{ route('admin.meeting-accounts.destroy', $account->id) }}" method="POST" onsubmit="return confirm('Delete this meeting account?');">
+                                            @csrf @method('DELETE')
+                                            <button type="submit" class="btn btn-xs btn-danger">Delete</button>
+                                        </form>
+                                    </div>
+                                </div>
                             </td>
                         </tr>
                     @empty

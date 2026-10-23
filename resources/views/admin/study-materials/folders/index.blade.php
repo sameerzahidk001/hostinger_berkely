@@ -99,17 +99,21 @@
                             @endif
                             @if(!empty($showFolderActions))
                             <td>
+                                <div class="table-action-stack">
+                                <div class="table-action-stack-col">
                                 @if($isAdmin || ($lms ?? app(\App\Services\StudyMaterialService::class))->canEditFolder($folder))
-                                <a class="btn btn-xs btn-primary" href="{{ route('admin.study-materials.folders.edit', $folder->id) }}">Edit</a>
+                                <a class="btn btn-xs btn-default" href="{{ route('admin.study-materials.folders.edit', $folder->id) }}">Edit</a>
                                 @else
                                     —
                                 @endif
                                 @if($isAdmin)
-                                <form action="{{ route('admin.study-materials.folders.destroy', $folder->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Delete this folder? All student and instructor access will be removed.');">
+                                <form action="{{ route('admin.study-materials.folders.destroy', $folder->id) }}" method="POST" onsubmit="return confirm('Delete this folder? All student and instructor access will be removed.');">
                                     @csrf @method('DELETE')
                                     <button class="btn btn-xs btn-danger" type="submit">Delete</button>
                                 </form>
                                 @endif
+                                </div>
+                                </div>
                             </td>
                             @endif
                             @if(!empty($showFolderAssign) || $isAdmin)

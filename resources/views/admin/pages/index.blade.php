@@ -219,29 +219,33 @@
                                             ])
                                             @include('admin.layout.partials.audit-columns-cells', ['model' => $page])
                                             <td class="center">
-                                                <div class="lms-cell-stack">
-                                                    <a href="{{ route('pages.edit', $page->id) }}"
-                                                        class="btn-primary btn btn-xs" target="_blank">
-                                                        <i class="fa fa-pencil"></i> Edit
-                                                    </a>
-                                                    <a href="{{ route('admin.pages.fees.edit', $page->id) }}"
-                                                        class="btn btn-warning btn-xs" title="Fee Update in Page">
-                                                        <i class="fa fa-money"></i> Fee
-                                                    </a>
-                                                    <form action="{{ route('pages.duplicate', $page->id) }}" method="POST">
-                                                        @csrf
-                                                        <button type="submit" class="btn btn-info btn-xs"
-                                                            onclick="return confirm('Duplicate this page as a draft? Original stays unchanged.');"
-                                                            title="Duplicate page">
-                                                            <i class="fa fa-copy"></i> Duplicate
-                                                        </button>
-                                                    </form>
-                                                    @if(!$pageName)
-                                                        @include('admin.layout.partials.delete-button', [
-                                                            'id' => $page->id,
-                                                            'action' => route('pages.destroy', $page->id),
-                                                        ])
-                                                    @endif
+                                                <div class="table-action-stack">
+                                                    <div class="table-action-stack-col">
+                                                        <a href="{{ route('pages.edit', $page->id) }}"
+                                                            class="btn btn-default btn-xs" target="_blank">
+                                                            <i class="fa fa-pencil"></i> Edit
+                                                        </a>
+                                                        @if(!$pageName)
+                                                            @include('admin.layout.partials.delete-button', [
+                                                                'id' => $page->id,
+                                                                'action' => route('pages.destroy', $page->id),
+                                                            ])
+                                                        @endif
+                                                    </div>
+                                                    <div class="table-action-stack-col">
+                                                        <a href="{{ route('admin.pages.fees.edit', $page->id) }}"
+                                                            class="btn btn-warning btn-xs" title="Fee Update in Page">
+                                                            <i class="fa fa-money"></i> Fee
+                                                        </a>
+                                                        <form action="{{ route('pages.duplicate', $page->id) }}" method="POST">
+                                                            @csrf
+                                                            <button type="submit" class="btn btn-primary btn-xs"
+                                                                onclick="return confirm('Duplicate this page as a draft? Original stays unchanged.');"
+                                                                title="Duplicate page">
+                                                                <i class="fa fa-copy"></i> Duplicate
+                                                            </button>
+                                                        </form>
+                                                    </div>
                                                 </div>
                                             </td>
                                         </tr>
