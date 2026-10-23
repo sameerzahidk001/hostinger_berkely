@@ -56,6 +56,12 @@ class SitemapController extends Controller
                 'changefreq' => 'daily',
                 'priority' => '1.0',
             ];
+        $urls[] = [
+            'loc' => $this->siteUrl('course-index'),
+            'lastmod' => now()->toAtomString(),
+            'changefreq' => 'weekly',
+            'priority' => '0.6',
+        ];
 
         $pageQuery = Page::query()->with('seo')->withCount('sections');
         if (pages_status_enabled() && Schema::hasColumn('pages', 'status')) {
@@ -99,10 +105,6 @@ class SitemapController extends Controller
             }
 
             if (empty($course->slug)) {
-                continue;
-            }
-
-            if (! $this->isLinkedPath('course/' . $course->slug, $linked) && ! $this->isLinkedPath($course->slug, $linked)) {
                 continue;
             }
 

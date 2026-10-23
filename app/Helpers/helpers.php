@@ -1652,6 +1652,15 @@ if (! function_exists('public_menu_href')) {
             return $link;
         }
 
+        $preferredHost = parse_url((string) config('app.url'), PHP_URL_HOST);
+        $linkHost = parse_url($link, PHP_URL_HOST);
+        if ($preferredHost && $linkHost && strcasecmp((string) $linkHost, $preferredHost) !== 0) {
+            $scheme = parse_url((string) config('app.url'), PHP_URL_SCHEME) ?: 'https';
+            $urlPath = parse_url($link, PHP_URL_PATH) ?: '/';
+            $query = parse_url($link, PHP_URL_QUERY);
+            $link = $scheme . '://' . $preferredHost . $urlPath . ($query ? '?' . $query : '');
+        }
+
         $path = parse_url($link, PHP_URL_PATH);
         $path = ltrim(strtolower((string) ($path !== null && $path !== '' ? $path : $link)), '/');
 
@@ -1735,13 +1744,14 @@ if (! function_exists('seo_document_language')) {
     /**
      * @return array{lang: string, dir: ?string}
      */
-    function seo_document_language(?string $path = null): array
+    function seo_document_language(?string $path = null, ?string $text = null): array
     {
         $path = strtolower(trim($path ?? request()->path(), '/'));
-        if (preg_match('~(^|/|-)arabic(/|-|$)|(^|/)ar(/|$)|(^|/)ar-[a-z]{2}(/|$)~', $path)) {
+        $text = (string) $text;
+        if (preg_match('~(^|/|-)arabic(/|-|$)|(^|/)ar(/|$)|in-arabic~', $path) || preg_match('/\p{Arabic}/u', $text)) {
             return ['lang' => 'ar', 'dir' => 'rtl'];
         }
-        if (preg_match('~(^|/|-)chinese(/|-|$)|(^|/|-)zh(-hans|-cn|-tw)?(/|-|$)~', $path)) {
+        if (preg_match('~(^|/|-)chinese(/|-|$)|(^|/|-)zh(-hans|-cn|-tw)?(/|-|$)~', $path) || preg_match('/\p{Han}/u', $text)) {
             return ['lang' => 'zh-Hans', 'dir' => null];
         }
 
@@ -1763,7 +1773,11 @@ if (! function_exists('seo_hreflang_alternates')) {
 
         $isCourse = str_starts_with(strtolower($path), 'course/');
         $slug = $isCourse ? substr($path, strlen('course/')) : $path;
-        $root = preg_replace('/-(arabic|chinese|ar|zh-hans|zh)$/i', '', $slug) ?: $slug;
+        $lang = seo_document_language($slug)['lang'];
+        $base = rtrim((string) config('app.url'), '/');
+        $self = $isCourse ? $base . '/course/' . ltrim($slug, '/') : ($path === '' ? $base . '/' : $base . '/' . $path);
+
+        $root = preg_replace('/-(in-)?(arabic|chinese|ar|zh-hans|zh)$/i', '', $slug) ?: $slug;
         $candidates = [
             'en' => $root,
             'ar' => $root . '-arabic',
@@ -1780,20 +1794,45 @@ if (! function_exists('seo_hreflang_alternates')) {
                 : \App\Models\Page::where('url', $candidate)->exists();
             if ($exists) {
                 $links[$hreflang] = $isCourse
-                    ? rtrim((string) config('app.url'), '/') . '/course/' . $candidate
-                    : rtrim((string) config('app.url'), '/') . '/' . $candidate;
+                    ? $base . '/course/' . $candidate
+                    : $base . '/' . $candidate;
             }
         }
 
-        if (count($links) < 2) {
-            return $memo[$path] = [];
-        }
-
-        if (isset($links['en'])) {
-            $links['x-default'] = $links['en'];
-        }
+        $links[$lang] = $self;
+        $links['x-default'] = $links['en'] ?? $base . '/';
 
         return $memo[$path] = $links;
+    }
+}
+
+if (! function_exists('seo_page_is_empty')) {
+    function seo_page_is_empty(\App\Models\Page $page): bool
+    {
+        if (! $page->relationLoaded('sections') && ! isset($page->sections_count)) {
+            $page->loadCount('sections');
+        }
+        if ((int) ($page->sections_count ?? $page->sections?->count() ?? 0) === 0) {
+            return true;
+        }
+
+        $page->loadMissing('sections');
+        $blob = '';
+        foreach ($page->sections as $section) {
+            $data = $section->data;
+            if (is_string($data)) {
+                $decoded = json_decode($data, true);
+                $data = is_array($decoded) ? $decoded : $data;
+            }
+            $blob .= ' ' . (is_array($data) ? json_encode($data) : (string) $data);
+        }
+        if (preg_match('~https?://|\.(jpg|jpeg|png|gif|webp|svg)~i', $blob)) {
+            return false;
+        }
+        $text = trim(preg_replace('/\s+/', ' ', strip_tags($blob)));
+        $text = preg_replace('/\b(null|true|false|section_type|orderby|category|id)\b/i', '', $text);
+
+        return mb_strlen(trim((string) $text)) < 40;
     }
 }
 

@@ -115,6 +115,7 @@ Route::controller(FrontendController::class)->group(function () {
     //Route::get('/courses', 'courses')->name('courses');
     Route::get('/certifications', 'Certifications')->name('certifications');
     // Route::post('/filter-courses-ajax', 'filterCourses')->name('courses.filter');
+    Route::get('/course-index', 'courseIndex')->name('course.index');
     Route::get('/course/{course}', 'courseDetails')->name('course.details');
     // Route::get('/courses', 'Courses')->name('courses');
     Route::get('/subject/{name}', 'categoryDetails')->name('subject.details');

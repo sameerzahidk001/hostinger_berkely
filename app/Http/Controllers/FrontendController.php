@@ -97,6 +97,17 @@ class FrontendController extends Controller
     //     return response()->json(['html' => $view]);
     // }
 
+    function courseIndex()
+    {
+        $courses = Course::query()
+            ->whereNotNull('slug')
+            ->where('slug', '!=', '')
+            ->orderBy('title')
+            ->get(['id', 'title', 'slug']);
+
+        return view('course-index', compact('courses'));
+    }
+
     function courseDetails(Request $request, $slug = null)
     {
         $data['course'] = Course::with([

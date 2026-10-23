@@ -47,6 +47,13 @@ class WelcomeController extends Controller
 
             $page = $this->resolvePageBySlug($pageSlug);
             if (!$page) {
+                $course = Course::where('slug', $pageSlug)->first();
+                if ($course) {
+                    return redirect()->route('course.details', $course->slug, 301);
+                }
+                if (Category::where('slug', $pageSlug)->exists()) {
+                    return redirect('/subject/' . $pageSlug, 301);
+                }
                 abort(404);
             }
             if (in_array(strtolower($pageSlug), ['page-not-found', 'home'], true)) {
