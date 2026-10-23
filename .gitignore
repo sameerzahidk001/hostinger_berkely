@@ -8,6 +8,7 @@
 /public/hot
 /public/storage
 /storage/*.key
+/storage/app/zoho_crm_runtime.json
 /storage/app/public/
 /storage/app/private/
 /storage/app/preserved-public-uploads/

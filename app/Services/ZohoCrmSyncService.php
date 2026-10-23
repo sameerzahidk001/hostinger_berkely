@@ -81,6 +81,10 @@ class ZohoCrmSyncService
     public function syncPayment(Payment $payment, bool $attachPdf = true, bool $syncReceipts = true): bool
     {
         if (! $this->oauth->isEnabled()) {
+            $reason = $this->oauth->blockedReason() ?: 'Zoho CRM sync is disabled.';
+            $this->ensureSchema();
+            $this->markPaymentSynced($payment, null, null, null, $reason);
+
             return false;
         }
 
@@ -104,7 +108,14 @@ class ZohoCrmSyncService
             $invoiceId = $invoiceTarget['id'];
 
             if ($attachPdf && $invoiceId) {
-                $this->attachInvoicePdf($payment, $invoiceId, $invoiceTarget['module']);
+                try {
+                    $this->attachInvoicePdf($payment, $invoiceId, $invoiceTarget['module']);
+                } catch (\Throwable $pdfError) {
+                    Log::warning('Zoho CRM invoice PDF skipped', [
+                        'payment_id' => $payment->id,
+                        'error' => $pdfError->getMessage(),
+                    ]);
+                }
             }
 
             if ($syncReceipts) {
@@ -120,6 +131,13 @@ class ZohoCrmSyncService
 
             return true;
         } catch (\Throwable $e) {
+            if ($dealId) {
+                $this->markPaymentSynced($payment, $contactId, $dealId, $invoiceId ?: $dealId, null);
+                $this->log('payment', $payment->id, 'syncPaymentDealOnly', true, 'INV-' . $this->pad($payment->id), $e->getMessage());
+
+                return true;
+            }
+
             $this->markPaymentSynced($payment, $contactId, $dealId, $invoiceId, $e->getMessage());
             $this->log('payment', $payment->id, 'syncPayment', false, null, $e->getMessage());
             Log::warning('Zoho CRM payment sync failed', [
@@ -283,13 +301,29 @@ class ZohoCrmSyncService
         $existing = $payment->zoho_crm_deal_id
             ?: $this->searchByField($module, config('zoho_crm.fields.website_invoice_id'), $invoiceKey);
 
+        $minimal = [
+            'Deal_Name' => mb_substr($dealName, 0, 120),
+            'Stage' => 'Qualification',
+            'Closing_Date' => optional($payment->created_at)->toDateString() ?: now()->toDateString(),
+            'Contact_Name' => ['id' => $contactId],
+            'Description' => $invoiceKey . ' · ' . $packageName . ' · ' . number_format((float) ($payment->price ?? 0), 2),
+        ];
+
         if ($existing) {
-            $this->updateRecord($module, $existing, $payload);
+            try {
+                $this->updateRecord($module, $existing, $payload);
+            } catch (\Throwable $e) {
+                $this->updateRecord($module, $existing, $minimal);
+            }
 
             return $existing;
         }
 
-        return $this->createRecord($module, $payload);
+        try {
+            return $this->createRecord($module, $payload);
+        } catch (\Throwable $e) {
+            return $this->createRecord($module, $minimal);
+        }
     }
 
     /**
@@ -318,13 +352,15 @@ class ZohoCrmSyncService
                 throw $e;
             }
 
-            // Zoho CRM orgs often do not have an Invoices module (that is Zoho Books).
-            // Keep INV-###### on the Deal so the invoice still lands in CRM.
             $dealModule = (string) config('zoho_crm.modules.deal');
-            $this->updateRecord($dealModule, $dealId, [
-                'Description' => $payload['Description'] ?? ('Website invoice ' . $invoiceKey),
-                $field => $invoiceKey,
-            ]);
+            try {
+                $this->updateRecord($dealModule, $dealId, [
+                    'Description' => $payload['Description'] ?? ('Website invoice ' . $invoiceKey),
+                    $field => $invoiceKey,
+                ]);
+            } catch (\Throwable $ignored) {
+                // Deal already exists; invoice module is optional.
+            }
             $this->log('payment', $payment->id, 'invoiceFallbackDeal', true, $invoiceKey, $e->getMessage());
 
             return ['id' => $dealId, 'module' => $dealModule];
@@ -553,7 +589,7 @@ class ZohoCrmSyncService
     {
         $payload = $data;
         for ($i = 0; $i < 8; $i++) {
-            $response = $this->oauth->http()->post(
+            $response = $this->oauth->http()->asJson()->post(
                 rtrim((string) config('zoho_crm.api_base'), '/') . '/' . $module,
                 ['data' => [$payload]]
             );
@@ -584,7 +620,7 @@ class ZohoCrmSyncService
     {
         $payload = $data;
         for ($i = 0; $i < 8; $i++) {
-            $response = $this->oauth->http()->put(
+            $response = $this->oauth->http()->asJson()->put(
                 rtrim((string) config('zoho_crm.api_base'), '/') . '/' . $module,
                 ['data' => [array_merge(['id' => $id], $payload)]]
             );

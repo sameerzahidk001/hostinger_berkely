@@ -35,6 +35,14 @@
                         <p class="text-danger">{{ $status['error'] }}</p>
                     @endif
                     <p class="text-muted">Pending sync: {{ $pending }} · Failed: {{ $failed }}</p>
+                    @if(!empty($recentFailures) && $recentFailures->count())
+                        <p class="text-danger" style="margin-top:10px;margin-bottom:4px;"><strong>Latest invoice errors</strong></p>
+                        <ul class="small" style="padding-left:18px;margin-bottom:10px;">
+                            @foreach($recentFailures as $failRow)
+                                <li><strong>INV-{{ str_pad((string) $failRow->id, 6, '0', STR_PAD_LEFT) }}:</strong> {{ $failRow->zoho_crm_last_error ?: 'unknown error' }}</li>
+                            @endforeach
+                        </ul>
+                    @endif
                     <form method="POST" action="{{ route('admin.zoho-crm.retry') }}" style="display:inline;">@csrf
                         <button class="btn btn-warning btn-sm" type="submit">Retry failed</button>
                     </form>
