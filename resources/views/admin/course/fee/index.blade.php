@@ -175,7 +175,7 @@
                 paging: true,
                 info: false,
                 ordering: true,
-                responsive: true,
+                responsive: false,
                 dom: 'lftip'
             });
         });

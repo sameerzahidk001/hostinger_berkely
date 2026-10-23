@@ -460,7 +460,7 @@
             info: false,
             ordering: true,
             responsive: false,
-            scrollX: true,
+            scrollX: false,
             autoWidth: false,
             dom: '<"admin-dt-toolbar"<l><B><f>>rtip',
             order: [[1, 'desc']],

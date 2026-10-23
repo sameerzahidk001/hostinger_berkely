@@ -1,5 +1,5 @@
 <style>
-    .admin-list-wrap { overflow-x: hidden; }
+    .admin-list-wrap { overflow-x: auto; }
     .admin-list-table {
         width: 100% !important;
         table-layout: fixed;

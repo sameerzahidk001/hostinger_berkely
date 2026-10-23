@@ -282,7 +282,7 @@
             info: false,
             ordering: true,
             responsive: false,
-            scrollX: true,
+            scrollX: false,
             autoWidth: false,
             columnDefs: [
                 { targets: 'col-country', visible: true, width: '130px' }
