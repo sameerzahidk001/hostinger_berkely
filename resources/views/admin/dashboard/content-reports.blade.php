@@ -102,14 +102,16 @@
                     #report-training .content-report-stat-value { color: #6f2dbd; }
                     #report-fees .content-report-stat-value { color: #2d6a4f; }
                     #content-reports-panel .content-report-stat-row {
-                        display: grid;
-                        grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
+                        display: flex !important;
+                        flex-wrap: wrap !important;
                         gap: 12px;
                         width: 100%;
                         max-width: 100%;
                     }
                     #content-reports-panel .content-report-stat-item {
+                        flex: 1 1 230px;
                         min-width: 0;
+                        max-width: 100%;
                         display: flex;
                     }
                     #content-reports-panel a.content-report-stat {
