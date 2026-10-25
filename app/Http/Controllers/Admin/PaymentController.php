@@ -60,14 +60,51 @@ class PaymentController extends Controller
         return view('admin.payments.index', compact('payments', 'installments', 'listTitle', 'filter'));
     }
 
-    public function receipt()
+    public function receipt(Request $request)
     {
-        $installments = Installment::with(['payment.user.countryarray', 'payment.course', 'payment.courseFee', 'user.countryarray'])
-            ->where('status', 'paid')
-            ->orderByDesc('created_at')
-            ->get();
+        $dateFrom = trim((string) $request->query('date_from', ''));
+        $dateTo = trim((string) $request->query('date_to', ''));
 
-        return view('admin.payments.receipt-list', compact('installments'));
+        $query = Installment::with(['payment.user.countryarray', 'payment.course', 'payment.courseFee', 'user.countryarray'])
+            ->where('status', 'paid');
+
+        if ($dateFrom !== '' || $dateTo !== '') {
+            $query->where(function ($q) use ($dateFrom, $dateTo) {
+                $q->where(function ($paid) use ($dateFrom, $dateTo) {
+                    $paid->whereNotNull('paid_date');
+                    if ($dateFrom !== '') {
+                        $paid->whereDate('paid_date', '>=', $dateFrom);
+                    }
+                    if ($dateTo !== '') {
+                        $paid->whereDate('paid_date', '<=', $dateTo);
+                    }
+                })->orWhere(function ($created) use ($dateFrom, $dateTo) {
+                    $created->whereNull('paid_date');
+                    if ($dateFrom !== '') {
+                        $created->whereDate('created_at', '>=', $dateFrom);
+                    }
+                    if ($dateTo !== '') {
+                        $created->whereDate('created_at', '<=', $dateTo);
+                    }
+                });
+            });
+        }
+
+        $installments = $query->orderByDesc('paid_date')->orderByDesc('id')->get();
+
+        if ($request->query('export') === 'pdf') {
+            $admin = Auth::guard('admin')->user();
+
+            return PDF::loadView('admin.payments.receipts-list-pdf', [
+                'installments' => $installments,
+                'dateFrom' => $dateFrom,
+                'dateTo' => $dateTo,
+                'username' => $admin->name ?? 'Admin',
+                'generatedAt' => now()->format('Y-m-d H:i'),
+            ])->setPaper('a4', 'landscape')->download('receipts_list_' . now()->format('Ymd_His') . '.pdf');
+        }
+
+        return view('admin.payments.receipt-list', compact('installments', 'dateFrom', 'dateTo'));
     }
 
     public function create()

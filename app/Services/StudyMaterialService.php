@@ -184,7 +184,8 @@ class StudyMaterialService
     }
 
     /**
-     * Students enrolled on a course via active/paid payments (not the full student directory).
+     * Students enrolled on a course via active/paid payments.
+     * Pass a null/0 course id for the full student directory (admin folder assign).
      */
     public function studentsForCourse(?int $courseId, int $limit = 500)
     {
@@ -230,15 +231,15 @@ class StudyMaterialService
 
     public function studentBelongsToCourse(int $studentId, int $courseId): bool
     {
-        if ($studentId <= 0 || $courseId <= 0) {
-            return false;
-        }
-
         if ($this->isAdminActor()) {
             return User::query()
                 ->whereKey($studentId)
                 ->whereHas('roles', fn ($q) => $q->where('name', 'student'))
                 ->exists();
+        }
+
+        if ($studentId <= 0 || $courseId <= 0) {
+            return false;
         }
 
         return User::query()
