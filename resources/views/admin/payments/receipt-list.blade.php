@@ -110,14 +110,29 @@
                     <h5>Receipts</h5>
                 </div>
                 <div class="ibox-content">
+                    <form method="GET" action="{{ route('admin.payments.receipts') }}" class="form-inline" style="margin-bottom:16px;">
+                        <div class="form-group" style="margin-right:10px;">
+                            <label for="date_from" style="margin-right:6px;">From</label>
+                            <input type="date" id="date_from" name="date_from" class="form-control" value="{{ $dateFrom ?? '' }}">
+                        </div>
+                        <div class="form-group" style="margin-right:10px;">
+                            <label for="date_to" style="margin-right:6px;">To</label>
+                            <input type="date" id="date_to" name="date_to" class="form-control" value="{{ $dateTo ?? '' }}">
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm">Search</button>
+                        @if(!empty($dateFrom) || !empty($dateTo))
+                            <a href="{{ route('admin.payments.receipts') }}" class="btn btn-default btn-sm">Clear</a>
+                        @endif
+                    </form>
                     <div class="table-responsive">
                         <table class="table table-bordered dataTables-example">
                             <thead>
                                 <tr>
-                                    <th>Invoice</th>
-                                    <th class="col-student">Student</th>
-                                    <th>Due</th>
-                                    <th>Receipt</th>
+                                    <th>Receipt Number</th>
+                                    <th class="col-student">Student Details</th>
+                                    <th>Receipt Date</th>
+                                    <th>Paid Amount</th>
+                                    <th>Invoice Details</th>
                                     <th>CRM Sync</th>
                                     <th>Action</th>
                                 </tr>
@@ -125,25 +140,20 @@
                             <tbody>
                                 @foreach ($installments as $installment)
                                 @php
-                                    $dueAed = ($installment->status === 'paid') ? 0.0 : (float) ($installment->remaining_amount ?? 0);
-                                    $invoiceAmountExport = trim(html_entity_decode(strip_tags(format_payment_aed_amount_admin($installment->payment, (float) $installment->payment->price))));
-                                    $dueAmountExport = trim(html_entity_decode(strip_tags(format_payment_aed_amount_admin($installment->payment, $dueAed))));
+                                    $invoiceAmountExport = trim(html_entity_decode(strip_tags(format_payment_aed_amount_admin($installment->payment, (float) optional($installment->payment)->price))));
                                     $paidAmountExport = trim(html_entity_decode(strip_tags(format_payment_aed_amount_admin($installment->payment, (float) $installment->paid_amount))));
-                                    $paidDateExport = $installment->paid_date ? \Carbon\Carbon::parse($installment->paid_date)->format('Y/m/d') : 'N/A';
+                                    $paidDateExport = $installment->paid_date
+                                        ? \Carbon\Carbon::parse($installment->paid_date)->format('Y/m/d')
+                                        : ($installment->created_at ? \Carbon\Carbon::parse($installment->created_at)->format('Y/m/d') : 'N/A');
+                                    $receiptUser = $installment->user ?? optional($installment->payment)->user;
+                                    $receiptCity = trim((string) optional($receiptUser)->city);
+                                    $receiptNat = $receiptUser ? $receiptUser->displayNationality() : '—';
+                                    $receiptCountry = $receiptUser ? $receiptUser->displayCountryName() : '—';
                                 @endphp
                                 <tr>
-                                    <td data-export="INV-{{ str_pad($installment->payment_id, 6, '0', STR_PAD_LEFT) }} | {{ \Carbon\Carbon::parse($installment->created_at)->format('Y/m/d') }} | Plan {{ $installment->installment_number }}/{{ $installment->payment->total_installment }}">
-                                        <strong>INV-{{ str_pad($installment->payment_id, 6, '0', STR_PAD_LEFT) }}</strong>
-                                        <div class="text-muted" style="font-size:11px;margin-top:2px;">{{ \Carbon\Carbon::parse($installment->created_at)->format('Y/m/d') }}</div>
-                                        <div style="margin-top:4px;">Plan {{ $installment->installment_number }}/{{ $installment->payment->total_installment }}</div>
-                                        <div>{!! format_payment_aed_amount_admin($installment->payment, (float) $installment->payment->price) !!}</div>
+                                    <td data-export="RC-{{ str_pad($installment->id, 6, '0', STR_PAD_LEFT) }}">
+                                        <strong>RC-{{ str_pad($installment->id, 6, '0', STR_PAD_LEFT) }}</strong>
                                     </td>
-                                    @php
-                                        $receiptUser = $installment->user ?? optional($installment->payment)->user;
-                                        $receiptCity = trim((string) optional($receiptUser)->city);
-                                        $receiptNat = $receiptUser ? $receiptUser->displayNationality() : '—';
-                                        $receiptCountry = $receiptUser ? $receiptUser->displayCountryName() : '—';
-                                    @endphp
                                     <td class="col-student" data-export="{{ (optional($receiptUser)->name ?? 'N/A') }} | Nationality: {{ $receiptNat }} | Country, City: {{ $receiptCountry }}, {{ $receiptCity !== '' ? $receiptCity : '—' }}">
                                         @include('admin.payments.partials.student-living-lines', [
                                             'studentName' => optional($receiptUser)->name ?? 'N/A',
@@ -152,14 +162,13 @@
                                             'city' => $receiptCity,
                                         ])
                                     </td>
-                                    <td data-export="{{ $dueAmountExport }} | {{ \Carbon\Carbon::parse($installment->due_date)->format('Y/m/d') }}">
-                                        <div>{{ \Carbon\Carbon::parse($installment->due_date)->format('Y/m/d') }}</div>
-                                        <div>{!! format_payment_aed_amount_admin($installment->payment, $dueAed) !!}</div>
-                                    </td>
-                                    <td data-export="RC-{{ str_pad($installment->id, 6, '0', STR_PAD_LEFT) }} | {{ $paidAmountExport }} | {{ $paidDateExport }}">
-                                        <div>RC-{{ str_pad($installment->id, 6, '0', STR_PAD_LEFT) }}</div>
-                                        <div>{!! format_payment_aed_amount_admin($installment->payment, (float) $installment->paid_amount) !!}</div>
-                                        <div class="text-muted" style="font-size:11px;">{{ $paidDateExport }}</div>
+                                    <td data-export="{{ $paidDateExport }}">{{ $paidDateExport }}</td>
+                                    <td data-export="{{ $paidAmountExport }}">{!! format_payment_aed_amount_admin($installment->payment, (float) $installment->paid_amount) !!}</td>
+                                    <td data-export="INV-{{ str_pad($installment->payment_id, 6, '0', STR_PAD_LEFT) }} | Plan {{ $installment->installment_number }}/{{ optional($installment->payment)->total_installment }} | {{ $invoiceAmountExport }}">
+                                        <strong>INV-{{ str_pad($installment->payment_id, 6, '0', STR_PAD_LEFT) }}</strong>
+                                        <div class="text-muted" style="font-size:11px;margin-top:2px;">{{ \Carbon\Carbon::parse($installment->created_at)->format('Y/m/d') }}</div>
+                                        <div style="margin-top:4px;">Plan {{ $installment->installment_number }}/{{ optional($installment->payment)->total_installment }}</div>
+                                        <div>{!! format_payment_aed_amount_admin($installment->payment, (float) optional($installment->payment)->price) !!}</div>
                                     </td>
                                     <td data-export="{{ $installment->zoho_crm_sync_status ?? 'not synced' }}">
                                         @php $rcCrm = $installment->zoho_crm_sync_status ?? null; @endphp
@@ -292,7 +301,18 @@
             ],
             dom: '<"admin-dt-toolbar"<l><B><f>>rtip',
             order: [],
-            buttons: [adminDatatableExcelButton('Receipts List', 'receipts_list')],
+            buttons: [
+                adminDatatableExcelButton('Receipts List', 'receipts_list'),
+                {
+                    text: 'Export to PDF',
+                    className: 'btn-excel-export',
+                    action: function () {
+                        var params = new URLSearchParams(window.location.search);
+                        params.set('export', 'pdf');
+                        window.location = @json(route('admin.payments.receipts')) + '?' + params.toString();
+                    }
+                }
+            ],
         });
 
     });

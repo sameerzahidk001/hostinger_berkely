@@ -383,7 +383,7 @@
                                     rows="12"
                                     data-max="{{ $essayMax }}"
                                     maxlength="{{ $essayMax }}"
-                                    placeholder="Your answer for {{ $sk }}…"
+                                    placeholder="Your answer…"
                                     autocomplete="off"
                                     spellcheck="true"
                                 >{{ $ans?->partAnswer($sk) }}</textarea>

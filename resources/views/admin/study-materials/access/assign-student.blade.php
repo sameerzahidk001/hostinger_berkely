@@ -23,6 +23,10 @@
                     You only see courses assigned to you by admin, and students enrolled on that course.
                     Select a folder first to load the matching student list.
                 </div>
+            @else
+                <div class="alert alert-info">
+                    Admin can assign any folder to any student, including students not enrolled on the folder’s course.
+                </div>
             @endif
             <form method="POST" action="{{ route('admin.study-materials.access.assign-student.store') }}">
                 @csrf

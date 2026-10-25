@@ -221,9 +221,9 @@ class StudyMaterialAccessController extends Controller
             $selectedFolder = null;
         }
 
-        $students = $folder
-            ? $this->lms->studentsForCourse((int) $folder->course_id)
-            : ($this->lms->isAdminActor() ? $this->lms->studentsForCourse(null) : collect());
+        $students = $this->lms->isAdminActor()
+            ? $this->lms->studentsForCourse(null)
+            : ($folder ? $this->lms->studentsForCourse((int) $folder->course_id) : collect());
 
         $defaultTill = null;
         if ($folder && !$folder->hasUnlimitedValidity()) {
@@ -256,7 +256,7 @@ class StudyMaterialAccessController extends Controller
         abort_unless($this->lms->canAssignStudentAccess($folder), 403);
         abort_unless($folder->status === 'active', 422, 'Only active folders can be assigned to students.');
 
-        if (! $this->lms->studentBelongsToCourse((int) $request->student_id, (int) $folder->course_id)) {
+        if (! $this->lms->isAdminActor() && ! $this->lms->studentBelongsToCourse((int) $request->student_id, (int) $folder->course_id)) {
             return redirect()->back()
                 ->withErrors(['student_id' => 'You can only assign students enrolled in this course.'])
                 ->withInput();
@@ -321,7 +321,9 @@ class StudyMaterialAccessController extends Controller
             })->values();
         }
 
-        $students = $this->lms->studentsForCourse((int) $access->folder->course_id);
+        $students = $this->lms->isAdminActor()
+            ? $this->lms->studentsForCourse(null)
+            : $this->lms->studentsForCourse((int) $access->folder->course_id);
         if ($access->student && ! $students->contains('id', $access->student_id)) {
             $students = $students->prepend($access->student)->unique('id')->values();
         }
@@ -360,7 +362,7 @@ class StudyMaterialAccessController extends Controller
         $folder = StudyMaterialFolder::findOrFail($request->folder_id);
         abort_unless($this->lms->canAssignStudentAccess($folder), 403);
 
-        if (! $this->lms->studentBelongsToCourse((int) $request->student_id, (int) $folder->course_id)) {
+        if (! $this->lms->isAdminActor() && ! $this->lms->studentBelongsToCourse((int) $request->student_id, (int) $folder->course_id)) {
             return redirect()->back()
                 ->withErrors(['student_id' => 'You can only assign students enrolled in this course.'])
                 ->withInput();
@@ -439,7 +441,9 @@ class StudyMaterialAccessController extends Controller
         $folder = StudyMaterialFolder::findOrFail($folderId);
         abort_unless($this->lms->canAssignStudentAccess($folder), 403);
 
-        $students = $this->lms->studentsForCourse((int) $folder->course_id);
+        $students = $this->lms->isAdminActor()
+            ? $this->lms->studentsForCourse(null)
+            : $this->lms->studentsForCourse((int) $folder->course_id);
 
         return response()->json(
             $students->unique('id')->map(fn ($s) => [

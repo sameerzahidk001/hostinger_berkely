@@ -29,6 +29,8 @@
     .admin-dt-toolbar .dt-buttons {
         display: inline-flex;
         align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
     }
 
     .admin-dt-toolbar .dt-button.btn-excel-export,
