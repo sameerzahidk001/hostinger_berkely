@@ -279,7 +279,7 @@ class LmsAssessmentPortalController extends Controller
             }
 
             return redirect()->to($redirect)
-                ->with('success', 'Submitted. Results appear when published (MCQ-only instant results may show immediately).');
+                ->with('success', 'Submitted.');
         }
 
         if ($request->ajax() || $request->wantsJson()) {
@@ -287,6 +287,49 @@ class LmsAssessmentPortalController extends Controller
         }
 
         return back()->with('success', 'Answers saved.');
+    }
+
+    public function pause($attemptId)
+    {
+        $user = Auth::user();
+        abort_unless($user, 403);
+        $this->assessments->ensure();
+        $attempt = LmsAssessmentAttempt::where('user_id', $user->id)->findOrFail($attemptId);
+        $attempt = $this->assessments->pauseAttempt($attempt);
+
+        return response()->json($this->pausePayload($attempt));
+    }
+
+    public function resume($attemptId)
+    {
+        $user = Auth::user();
+        abort_unless($user, 403);
+        $this->assessments->ensure();
+        $attempt = LmsAssessmentAttempt::where('user_id', $user->id)->findOrFail($attemptId);
+        $attempt = $this->assessments->resumeAttempt($attempt);
+
+        return response()->json($this->pausePayload($attempt));
+    }
+
+    protected function pausePayload(LmsAssessmentAttempt $attempt): array
+    {
+        $examTzName = function_exists('viewer_timezone') ? viewer_timezone() : config('app.timezone');
+        $expiresLabel = null;
+        if ($attempt->expires_at) {
+            try {
+                $expiresLabel = $attempt->expires_at->copy()->timezone($examTzName)->format('d/m/Y H:i');
+            } catch (\Throwable $e) {
+                $expiresLabel = $attempt->expires_at->format('d/m/Y H:i');
+            }
+        }
+
+        return [
+            'ok' => true,
+            'paused' => $attempt->isPaused(),
+            'expires_at' => $attempt->expires_at?->toIso8601String(),
+            'expires_label' => $expiresLabel,
+            'pause_seconds' => $attempt->pauseSecondsTotal(),
+        ];
     }
 
     public function result($attemptId)
@@ -299,8 +342,11 @@ class LmsAssessmentPortalController extends Controller
             ->where('user_id', $user->id)
             ->findOrFail($attemptId);
 
-        $canSeeScore = $attempt->results_published
-            || ($attempt->assessment->results_mode === 'instant_mcq' && $attempt->status === 'graded');
+        $assessment = $attempt->assessment;
+        $canSeeReview = $attempt->results_published
+            || $assessment->isInstantResults()
+            || ($assessment->isPractice() && in_array($attempt->status, ['submitted', 'graded', 'expired'], true));
+        $canSeeScore = $canSeeReview && ! $assessment->hidesOverallMarks();
 
         // Retake only if admin assigned a new open sitting for this test.
         $canRetake = $this->assessments->canRetake($user, $attempt->assessment);
@@ -316,6 +362,7 @@ class LmsAssessmentPortalController extends Controller
 
         return view('user.assessments.result', compact(
             'attempt',
+            'canSeeReview',
             'canSeeScore',
             'canRetake',
             'assignment',
@@ -333,9 +380,12 @@ class LmsAssessmentPortalController extends Controller
             ->where('user_id', $user->id)
             ->findOrFail($attemptId);
 
-        $canSeeScore = $attempt->results_published
-            || ($attempt->assessment->results_mode === 'instant_mcq' && $attempt->status === 'graded');
-        abort_unless($canSeeScore, 403, 'Results are not published yet.');
+        $assessment = $attempt->assessment;
+        $canSeeReview = $attempt->results_published
+            || $assessment->isInstantResults()
+            || ($assessment->isPractice() && in_array($attempt->status, ['submitted', 'graded', 'expired'], true));
+        $canSeeScore = $canSeeReview && ! $assessment->hidesOverallMarks();
+        abort_unless($canSeeReview, 403, 'Results are not published yet.');
 
         $title = Str::slug($attempt->assessment->title ?? 'attempt', '-');
         $filename = 'my-result-' . $attempt->id . '-' . $title . '.pdf';

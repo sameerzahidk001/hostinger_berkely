@@ -253,6 +253,9 @@
                                 <span class="lms-timing-line"><strong>Started:</strong> {{ $attempt?->started_at ? $assignment->formatInTimezone($attempt->started_at) : '—' }}</span>
                                 <span class="lms-timing-line"><strong>Ended:</strong> {{ $attempt?->submitted_at ? $assignment->formatInTimezone($attempt->submitted_at) : '—' }}</span>
                                 <span class="lms-timing-line"><strong>Time spent:</strong> {{ $spend !== null ? $fmtDuration($spend) : '—' }}</span>
+                                @if($attempt && $attempt->pauseSecondsTotal() > 0)
+                                    <span class="lms-timing-line"><strong>Pause duration:</strong> {{ $attempt->pauseDurationLabel() }}</span>
+                                @endif
                             </td>
                             <td class="col-created" data-sort="{{ $assignment->createdByLabel() }}">
                                 @if($assignment->assigned_by_user_id)
@@ -270,7 +273,7 @@
                             </td>
                             <td class="col-status" data-sort="{{ $statusText }}">
                                 <span class="{{ $statusClass }}">{{ $statusText }}</span>
-                                @if($attempt && $attempt->results_published && $attempt->score_raw !== null)
+                                @if($attempt && $attempt->results_published && $attempt->score_raw !== null && ! $assessment->hidesOverallMarks())
                                     <span class="lms-score-line">
                                         {{ lms_format_number($attempt->score_raw) }} / {{ lms_format_number($attempt->score_max) }}
                                         @if($attempt->percent() !== null) ({{ lms_format_number($attempt->percent()) }}%) @endif

@@ -102,12 +102,14 @@
 
     <table class="meta">
         <tr><td class="muted">Test Taker Name</td><td>{{ $attempt->user->name ?? '—' }} ({{ $attempt->user->email ?? '' }})</td></tr>
+        @unless($attempt->assessment->hidesOverallMarks())
         <tr><td class="muted">Test Result</td><td class="score">
             @if($attempt->score_raw !== null)
                 {{ lms_format_number($attempt->score_raw) }} / {{ lms_format_number($attempt->score_max) }}
                 @if($attempt->percent() !== null) ({{ lms_format_number($attempt->percent()) }}%) @endif
             @else — @endif
         </td></tr>
+        @endunless
         <tr><td class="muted">Appointment ID</td><td>{{ $assignment ? $assignment->displayCode() : '—' }}</td></tr>
         <tr><td class="muted">Test Appointment Time</td><td>{{ $assignment ? $assignment->appointmentWindowLabel('d/m/Y H:i') : '—' }}</td></tr>
         <tr><td class="muted">Test ID</td><td>{{ $attempt->assessment->displayCode() }}</td></tr>
@@ -115,6 +117,16 @@
         <tr><td class="muted">Started Time</td><td>{{ $fmtTime($attempt->started_at) }}</td></tr>
         <tr><td class="muted">Ended Time</td><td>{{ $fmtTime($attempt->submitted_at) }}</td></tr>
         <tr><td class="muted">Spent Duration</td><td>{{ $spent !== null ? $spent . ' min' : '—' }}</td></tr>
+        @if($attempt->pauseSecondsTotal() > 0)
+            <tr><td class="muted">Pause Duration</td><td>{{ $attempt->pauseDurationLabel() }}</td></tr>
+            @foreach($attempt->pauseLog() as $pi => $plog)
+                @php
+                    $pStart = !empty($plog['started_at']) ? \Carbon\Carbon::parse($plog['started_at']) : null;
+                    $pEnd = !empty($plog['ended_at']) ? \Carbon\Carbon::parse($plog['ended_at']) : null;
+                @endphp
+                <tr><td class="muted">Pause {{ $pi + 1 }}</td><td>Started {{ $fmtTime($pStart) }} · Ended {{ $fmtTime($pEnd) }}</td></tr>
+            @endforeach
+        @endif
         <tr><td class="muted">Assessor Name</td><td>{{ $attempt->assessorLabel($assignment) }}</td></tr>
         <tr><td class="muted">Published on</td><td>{{ $publishedOn }}</td></tr>
     </table>
@@ -128,7 +140,8 @@
     @foreach($attempt->assessment->questions as $i => $question)
         @php $answer = $attempt->answers->firstWhere('question_id', $question->id); @endphp
         <div class="q">
-            <div class="q-title">Q{{ $i + 1 }}. {{ $question->typeLabel() }} · {{ lms_format_number($question->max_marks) }} marks</div>
+            @php $showMarks = $question->isMcq() || ! $attempt->assessment->hidesOverallMarks(); @endphp
+            <div class="q-title">Q{{ $i + 1 }}. {{ $question->typeLabel() }}@if($showMarks) · {{ lms_format_number($question->max_marks) }} marks@endif</div>
             <div class="q-stem">{!! strip_tags($question->stem, '<p><br><strong><em><ul><ol><li><b><i>') !!}</div>
             <div class="q-answer">
                 @if($question->isMcq())
@@ -144,7 +157,9 @@
                         @php $sk = (string) ($sub['key'] ?? $loop->index); @endphp
                         <span class="label">({{ chr(97 + $loop->index) }}) {{ $sub['text'] ?? '' }}</span>
                         <div class="body">{!! nl2br(e($answer?->partAnswer($sk) ?: '—')) !!}</div>
-                        <p><strong>Marks:</strong> {{ lms_format_number($answer?->partScore($sk)) }} / {{ lms_format_number($sub['marks'] ?? 0) }}</p>
+                        @if($showMarks)
+                            <p><strong>Marks:</strong> {{ lms_format_number($answer?->partScore($sk)) }} / {{ lms_format_number($sub['marks'] ?? 0) }}</p>
+                        @endif
                         @if($answer && trim(strip_tags($answer->partFeedback($sk))) !== '')
                             <div class="feedback"><strong>Feedback:</strong><br>{!! strip_tags($answer->partFeedback($sk), '<p><br><strong><em><ul><ol><li><b><i>') !!}</div>
                         @endif
@@ -154,6 +169,7 @@
                     <div class="body">{!! nl2br(e($answer?->textAnswer() ?: '—')) !!}</div>
                 @endif
             </div>
+            @if($showMarks)
             <p><strong>Score:</strong>
                 @if($answer)
                     {{ lms_format_number($answer->finalScore()) }} / {{ lms_format_number($answer->max_marks) }}
@@ -161,8 +177,12 @@
                     —
                 @endif
             </p>
+            @endif
             @if($answer && $answer->feedback && ! $question->hasSubQuestions())
                 <div class="feedback"><strong>Feedback:</strong><br>{!! strip_tags($answer->feedback, '<p><br><strong><em><ul><ol><li><b><i>') !!}</div>
+            @endif
+            @if(trim(strip_tags((string) ($question->explanation ?? ''))) !== '')
+                <div class="feedback"><strong>Answer explanation:</strong><br>{!! strip_tags($question->explanation, '<p><br><strong><em><ul><ol><li><b><i>') !!}</div>
             @endif
         </div>
     @endforeach
