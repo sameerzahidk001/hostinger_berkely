@@ -126,6 +126,22 @@
         cursor: pointer;
     }
     .lms-submit-screen-btn:hover, .lms-submit-screen-btn:focus { background: #18a689; color: #fff !important; }
+    .lms-pause-screen-btn {
+        display: inline-block;
+        background: #f8ac59;
+        color: #1a1a1a !important;
+        border: 1px solid #f7a54a;
+        border-radius: 3px;
+        padding: 6px 16px;
+        font-weight: 700;
+        font-size: 13px;
+        cursor: pointer;
+    }
+    .lms-pause-screen-btn.is-paused {
+        background: #1c84c6;
+        border-color: #1a7bb9;
+        color: #fff !important;
+    }
     .lms-submit-modal {
         display: none;
         position: fixed;
@@ -293,6 +309,9 @@
                         }
                     @endphp
                     <p class="lms-take-line"><strong>Test ID:</strong> {{ $attempt->assessment->displayCode() }} - <strong>Test Name:</strong> {{ $attempt->assessment->title }}</p>
+                    @if(trim((string) ($attempt->assessment->description ?? '')) !== '')
+                        <p class="lms-take-line" style="white-space:pre-wrap;">{{ $attempt->assessment->description }}</p>
+                    @endif
                     <p class="lms-take-line"><strong>Course name:</strong> {{ $attempt->assessment->course->title ?? '—' }}</p>
                     <p class="lms-take-line"><strong>Appointment ID:</strong> {{ $assignment?->displayCode() ?? '—' }}</p>
                     <p class="lms-take-line"><strong>Test Appointment Timing:</strong> {{ $apptTiming }}</p>
@@ -304,6 +323,9 @@
                     @endif
                     @if($preFiles !== [])
                         <a href="#" class="lms-res-btn js-open-res" data-kind="preseen">Pre-seen</a>
+                    @endif
+                    @if($attempt->assessment->allowsPause())
+                        <button type="button" class="lms-pause-screen-btn {{ $attempt->isPaused() ? 'is-paused' : '' }}" id="lms-pause-btn">{{ $attempt->isPaused() ? 'Resume' : 'Pause' }}</button>
                     @endif
                     <button type="button" class="lms-submit-screen-btn" id="lms-submit-open">Submit</button>
                 </div>
@@ -326,7 +348,7 @@
             Test Ends:
             <strong id="expires_at_label">{{ $examEndsLabel }} ({{ $examTzLabel }})</strong>
             <span class="hidden" id="expires_at">{{ $attempt->expires_at->toIso8601String() }}</span>
-            · Remaining: <strong id="countdown">—</strong>
+            · Remaining: <strong id="countdown">{{ $attempt->isPaused() ? 'Paused' : '—' }}</strong>
         </div>
     @endif
     <div class="lms-q-progress">
@@ -350,7 +372,7 @@
             @endphp
             <div class="ibox lms-q-step {{ $i === 0 ? 'is-active' : '' }}" data-q-index="{{ $i }}" data-q-minutes="{{ $qMins }}">
                 <div class="ibox-title">
-                    <h5>Q{{ $i + 1 }}. {{ $question->typeLabel() }} ({{ lms_format_number($question->pivot->marks_override ?? $question->max_marks) }} marks)
+                    <h5>Q{{ $i + 1 }}. {{ $question->typeLabel() }}@if(! $attempt->assessment->isPractice() || $question->isMcq()) ({{ lms_format_number($question->pivot->marks_override ?? $question->max_marks) }} marks)@endif
                         @if($qMins > 0)
                             <small class="text-muted">· {{ $qMins }} min for this question</small>
                         @endif
@@ -375,7 +397,9 @@
                                 <label>
                                     <strong>({{ chr(97 + $loop->index) }})</strong>
                                     {{ $sub['text'] ?? '' }}
-                                    <span class="text-muted">({{ lms_format_number($sub['percent'] ?? 0) }}% · {{ lms_format_number($sub['marks'] ?? 0) }} marks)</span>
+                                    @if(! $attempt->assessment->isPractice())
+                                        <span class="text-muted">({{ lms_format_number($sub['percent'] ?? 0) }}% · {{ lms_format_number($sub['marks'] ?? 0) }} marks)</span>
+                                    @endif
                                 </label>
                                 <textarea
                                     name="answers[{{ $question->id }}][parts][{{ $sk }}]"
@@ -478,6 +502,7 @@ document.body.setAttribute('data-lms-exam-lock', '1');
     var qTimerId = null;
     var qEndsAt = null;
     var attemptId = @json($attempt->id);
+    window.lmsExamPaused = @json($attempt->isPaused());
     var idxKey = 'lms-take-idx-' + attemptId;
     var nextModal = document.getElementById('lms-next-modal');
     var nextCancel = document.getElementById('lms-next-cancel');
@@ -570,7 +595,33 @@ document.body.setAttribute('data-lms-exam-lock', '1');
         });
     }
 
+    function remainKey(i) {
+        return 'lms-take-remain-' + attemptId + '-' + i;
+    }
+    function freezeQTimer() {
+        if (!qEndsAt) return;
+        var remain = Math.max(0, qEndsAt - Date.now());
+        writeStore(remainKey(idx), String(remain));
+        if (qTimerId) { clearTimeout(qTimerId); qTimerId = null; }
+        if (qCountdown) qCountdown.textContent = 'Paused';
+    }
+    function thawQTimer() {
+        var remain = parseInt(readStore(remainKey(idx)) || '0', 10);
+        if (remain > 0) {
+            qEndsAt = Date.now() + remain;
+            writeStore(endKey(idx), String(qEndsAt));
+            writeStore(remainKey(idx), '');
+        }
+        tickQ();
+    }
+    window.lmsFreezeQuestionTimer = freezeQTimer;
+    window.lmsThawQuestionTimer = thawQTimer;
+
     function tickQ() {
+        if (window.lmsExamPaused) {
+            if (qCountdown) qCountdown.textContent = 'Paused';
+            return;
+        }
         if (!qEndsAt || !qCountdown) return;
         var ms = qEndsAt - Date.now();
         if (ms <= 0) {
@@ -603,6 +654,13 @@ document.body.setAttribute('data-lms-exam-lock', '1');
             qEndsAt = null;
             return;
         }
+        var remainStored = parseInt(readStore(remainKey(stepIndex)) || '0', 10);
+        if (window.lmsExamPaused && remainStored > 0) {
+            qEndsAt = Date.now() + remainStored;
+            if (qTimerWrap) qTimerWrap.style.display = 'inline';
+            freezeQTimer();
+            return;
+        }
         var stored = parseInt(readStore(endKey(stepIndex)) || '0', 10);
         if (stored > Date.now()) {
             qEndsAt = stored;
@@ -613,6 +671,10 @@ document.body.setAttribute('data-lms-exam-lock', '1');
             writeStore(endKey(stepIndex), String(qEndsAt));
         }
         if (qTimerWrap) qTimerWrap.style.display = 'inline';
+        if (window.lmsExamPaused) {
+            freezeQTimer();
+            return;
+        }
         tickQ();
     }
 
@@ -637,6 +699,11 @@ document.body.setAttribute('data-lms-exam-lock', '1');
     }
 
     function resumeFromClock() {
+        if (window.lmsExamPaused) {
+            var pausedIdx = parseInt(readStore(idxKey) || '0', 10) || 0;
+            showStep(pausedIdx);
+            return;
+        }
         var storedIdx = parseInt(readStore(idxKey) || '0', 10) || 0;
         storedIdx = Math.max(0, Math.min(storedIdx, Math.max(0, steps.length - 1)));
         while (storedIdx < steps.length) {
@@ -806,6 +873,11 @@ document.body.setAttribute('data-lms-exam-lock', '1');
     window.lmsExamAutoSubmit = autoSubmit;
 
     function tick() {
+        if (window.lmsExamPaused) {
+            if (out) out.textContent = 'Paused';
+            setTimeout(tick, 1000);
+            return;
+        }
         if (!end) return;
         var ms = end.getTime() - Date.now();
         if (ms <= 0) {
@@ -822,17 +894,79 @@ document.body.setAttribute('data-lms-exam-lock', '1');
         }
         setTimeout(tick, 1000);
     }
+    window.lmsSetExamEnd = function (iso, label) {
+        if (iso) {
+            end = new Date(iso);
+            if (isNaN(end.getTime())) end = null;
+        }
+        var lab = document.getElementById('expires_at_label');
+        if (lab && label) {
+            var tzBits = lab.textContent.split(' (');
+            lab.textContent = label + (tzBits.length > 1 ? ' (' + tzBits.slice(1).join(' (') : '');
+        }
+        if (el && iso) el.textContent = iso;
+    };
     tick();
     document.addEventListener('visibilitychange', function () {
+        if (window.lmsExamPaused) return;
         if (end && Date.now() >= end.getTime()) autoSubmit();
     });
     window.addEventListener('pagehide', function () {
+        if (window.lmsExamPaused) return;
         if (!end || Date.now() < end.getTime() || form.dataset.autoSubmitted) return;
         try {
             var fd = new FormData(form);
             fd.set('submit', '1');
             if (navigator.sendBeacon) navigator.sendBeacon(form.action, fd);
         } catch (e) {}
+    });
+})();
+(function () {
+    var btn = document.getElementById('lms-pause-btn');
+    if (!btn) return;
+    var token = document.querySelector('#attempt-form input[name="_token"]');
+    var pauseUrl = @json(route('user.assessments.pause', $attempt->id));
+    var resumeUrl = @json(route('user.assessments.resume', $attempt->id));
+    var busy = false;
+    function setPausedUi(paused) {
+        window.lmsExamPaused = !!paused;
+        btn.textContent = paused ? 'Resume' : 'Pause';
+        btn.classList.toggle('is-paused', !!paused);
+        if (paused && typeof window.lmsFreezeQuestionTimer === 'function') {
+            window.lmsFreezeQuestionTimer();
+        }
+        if (!paused && typeof window.lmsThawQuestionTimer === 'function') {
+            window.lmsThawQuestionTimer();
+        }
+    }
+    btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (busy) return;
+        busy = true;
+        btn.disabled = true;
+        var goingPause = !window.lmsExamPaused;
+        var fd = new FormData();
+        if (token) fd.append('_token', token.value);
+        fetch(goingPause ? pauseUrl : resumeUrl, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': token ? token.value : ''
+            },
+            body: fd
+        }).then(function (res) { return res.json().catch(function () { return {}; }); })
+        .then(function (data) {
+            if (!data || !data.ok) return;
+            setPausedUi(!!data.paused);
+            if (data.expires_at && typeof window.lmsSetExamEnd === 'function') {
+                window.lmsSetExamEnd(data.expires_at, data.expires_label);
+            }
+        }).finally(function () {
+            busy = false;
+            btn.disabled = false;
+        });
     });
 })();
 (function () {

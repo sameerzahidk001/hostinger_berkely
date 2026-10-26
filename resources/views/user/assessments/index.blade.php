@@ -245,7 +245,8 @@
                         $assessorEmail = $asg?->marker?->email ?? null;
                         $canDownloadPdf = $att && (
                             $att->results_published
-                            || ($a->results_mode === 'instant_mcq' && $att->status === 'graded')
+                            || $a->isInstantResults()
+                            || ($a->isPractice() && in_array($att->status, ['submitted', 'graded', 'expired'], true))
                         );
                         $statusSort = $att ? $att->statusLabel() : ($tab === 'missed' ? 'Missed' : ($tab === 'upcoming' ? 'Upcoming' : 'Available'));
                         $fromFolder = ! empty($row['from_folder']);
@@ -284,6 +285,16 @@
                             <span class="lms-timing-line"><strong>Started:</strong> {{ ($asg && $att?->started_at) ? $asg->formatInTimezone($att->started_at) : (optional($att?->started_at)->format('d/m/y H:i') ?? '—') }}</span>
                             <span class="lms-timing-line"><strong>Ended:</strong> {{ ($asg && $att?->submitted_at) ? $asg->formatInTimezone($att->submitted_at) : (optional($att?->submitted_at)->format('d/m/y H:i') ?? '—') }}</span>
                             <span class="lms-timing-line"><strong>Time spent:</strong> {{ $spend !== null ? $fmtDuration($spend) : '—' }}</span>
+                            @if($att && $att->pauseSecondsTotal() > 0)
+                                <span class="lms-timing-line"><strong>Pause duration:</strong> {{ $att->pauseDurationLabel() }}</span>
+                                @foreach($att->pauseLog() as $pi => $plog)
+                                    @php
+                                        $pStart = !empty($plog['started_at']) ? \Carbon\Carbon::parse($plog['started_at']) : null;
+                                        $pEnd = !empty($plog['ended_at']) ? \Carbon\Carbon::parse($plog['ended_at']) : null;
+                                    @endphp
+                                    <span class="lms-timing-line text-muted">Pause {{ $pi + 1 }}: {{ ($asg && $pStart) ? $asg->formatInTimezone($pStart) : optional($pStart)->format('d/m/y H:i') }} → {{ ($asg && $pEnd) ? $asg->formatInTimezone($pEnd) : optional($pEnd)->format('d/m/y H:i') }}</span>
+                                @endforeach
+                            @endif
                         </td>
                         <td class="col-assessor" data-sort="{{ $assessorName }}">
                             @if($assessorUserId && $assessorName !== '—')
@@ -295,7 +306,7 @@
                         <td class="col-status" data-sort="{{ $statusSort }}">
                             @if($att)
                                 <span class="lms-row-status {{ str_replace('lms-status-', 'lms-row-', $att->statusColorClass()) }}">{{ $att->statusLabel() }}</span>
-                                @if($att->results_published && $att->score_raw !== null)
+                                @if($att->results_published && $att->score_raw !== null && ! $a->hidesOverallMarks())
                                     <br>{{ lms_format_number($att->score_raw) }}/{{ lms_format_number($att->score_max) }}
                                     @if($att->percent() !== null) ({{ lms_format_number($att->percent()) }}%) @endif
                                 @endif

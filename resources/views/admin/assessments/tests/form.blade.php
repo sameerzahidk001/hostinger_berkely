@@ -56,6 +56,7 @@
                 <div class="col-md-12 form-group">
                     <label>Description <span class="lms-char-hint">(max {{ number_format($descriptionMax) }} characters)</span></label>
                     <textarea name="description" class="form-control" rows="3" data-max="{{ $descriptionMax }}" maxlength="{{ $descriptionMax }}" @readonly(! $canCreate)>{{ old('description', $assessment->description) }}</textarea>
+                    <p class="help-block" style="margin-bottom:0;font-size:11px;">Shown to the student on the test screen and on the result page. Optional.</p>
                 </div>
                 <div class="col-md-4 form-group js-course-field" style="{{ $isSkill ? 'display:none;' : '' }}">
                     <label>Course{{ !empty($courseRequired) ? ' *' : '' }}</label>
@@ -105,14 +106,23 @@
                     <label>Results mode *</label>
                     <select name="results_mode" class="form-control lms-searchable" data-placeholder="Type to find results mode" data-allow-clear="0" @required($canCreate) @disabled(! $canCreate)>
                         <option value="after_publish" @selected(old('results_mode', $assessment->results_mode) === 'after_publish')>Publish after marking</option>
-                        <option value="instant_mcq" @selected(old('results_mode', $assessment->results_mode) === 'instant_mcq')>Instant (MCQ-only)</option>
+                        <option value="instant_mcq" @selected(in_array(old('results_mode', $assessment->results_mode), ['instant_mcq', 'instant'], true))>Instant</option>
                     </select>
+                    <p class="help-block" style="margin-bottom:0;font-size:11px;">Instant: student sees questions, their answers and explanations right after submit, for every question type.</p>
                     @if(! $canCreate)
                         <input type="hidden" name="results_mode" value="{{ old('results_mode', $assessment->results_mode) }}">
                     @endif
                 </div>
                 <div class="col-md-12 form-group">
                     <label class="m-b-none"><input type="checkbox" name="shuffle_questions" value="1" @checked(old('shuffle_questions', $assessment->shuffle_questions)) @disabled(! $canCreate)> Shuffle questions</label>
+                    @if($canCreate)
+                        <input type="hidden" name="allow_pause" value="0">
+                    @endif
+                    <label class="m-b-none" style="margin-left:18px;"><input type="checkbox" name="allow_pause" value="1" @checked(old('allow_pause', $assessment->allowsPause())) @disabled(! $canCreate)> Enable Pause button</label>
+                    @if(! $canCreate)
+                        <input type="hidden" name="allow_pause" value="{{ old('allow_pause', $assessment->allowsPause()) ? 1 : 0 }}">
+                    @endif
+                    <p class="help-block" style="margin-bottom:0;font-size:11px;">If checked, the student can pause. Timers stop and the end time is extended by the pause duration.</p>
                 </div>
             </div>
 

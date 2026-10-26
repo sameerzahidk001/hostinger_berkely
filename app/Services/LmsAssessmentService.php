@@ -670,10 +670,62 @@ class LmsAssessmentService
         }
     }
 
+    public function pauseAttempt(LmsAssessmentAttempt $attempt): LmsAssessmentAttempt
+    {
+        abort_unless($attempt->isInProgress(), 403);
+        $attempt->loadMissing('assessment');
+        abort_unless($attempt->assessment && $attempt->assessment->allowsPause(), 403);
+        if ($attempt->paused_at) {
+            return $attempt;
+        }
+        if (! Schema::hasColumn('lms_assessment_attempts', 'paused_at')) {
+            return $attempt;
+        }
+        $attempt->paused_at = now();
+        $attempt->save();
+
+        return $attempt->fresh();
+    }
+
+    public function resumeAttempt(LmsAssessmentAttempt $attempt): LmsAssessmentAttempt
+    {
+        abort_unless($attempt->isInProgress(), 403);
+        if (! $attempt->paused_at || ! Schema::hasColumn('lms_assessment_attempts', 'paused_at')) {
+            return $attempt;
+        }
+        $started = $attempt->paused_at->copy();
+        $ended = now();
+        $seconds = max(0, $started->diffInSeconds($ended));
+        if (Schema::hasColumn('lms_assessment_attempts', 'pause_seconds')) {
+            $attempt->pause_seconds = (int) ($attempt->pause_seconds ?? 0) + $seconds;
+        }
+        if (Schema::hasColumn('lms_assessment_attempts', 'pause_log_json')) {
+            $log = is_array($attempt->pause_log_json) ? $attempt->pause_log_json : [];
+            $log[] = [
+                'started_at' => $started->toIso8601String(),
+                'ended_at' => $ended->toIso8601String(),
+                'seconds' => $seconds,
+            ];
+            $attempt->pause_log_json = $log;
+        }
+        if ($attempt->expires_at && $seconds > 0) {
+            $attempt->expires_at = $attempt->expires_at->copy()->addSeconds($seconds);
+        }
+        $attempt->paused_at = null;
+        $attempt->save();
+
+        return $attempt->fresh();
+    }
+
     public function submitAttempt(LmsAssessmentAttempt $attempt, bool $expired = false): LmsAssessmentAttempt
     {
         if (! in_array($attempt->status, ['in_progress'], true)) {
             return $attempt;
+        }
+
+        if ($attempt->paused_at) {
+            $this->resumeAttempt($attempt);
+            $attempt = $attempt->fresh() ?: $attempt;
         }
 
         if (! $expired && $attempt->expires_at && now()->gte($attempt->expires_at)) {
@@ -694,13 +746,13 @@ class LmsAssessmentService
         $this->recalculateScores($attempt);
 
         $needsManual = $assessment->questions->contains(fn (LmsQuestion $q) => $q->needsManualMark());
+        if ($assessment->isInstantResults() || $assessment->isPractice()) {
+            $attempt->results_published = true;
+            $attempt->results_published_at = now();
+        }
         if (! $needsManual) {
             $attempt->status = 'graded';
             $attempt->graded_at = now();
-            if ($assessment->results_mode === 'instant_mcq') {
-                $attempt->results_published = true;
-                $attempt->results_published_at = now();
-            }
         }
         $attempt->save();
         $fresh = $attempt->fresh(['assessment', 'answers.question', 'user']);

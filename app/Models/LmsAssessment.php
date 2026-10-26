@@ -26,7 +26,7 @@ class LmsAssessment extends Model
 
     protected $fillable = [
         'title', 'description', 'kind', 'audience', 'target_role', 'course_id', 'duration_minutes',
-        'pass_percent', 'max_attempts', 'shuffle_questions', 'results_mode', 'status',
+        'pass_percent', 'max_attempts', 'shuffle_questions', 'results_mode', 'allow_pause', 'status',
         'published_at', 'created_by_admin_id', 'created_by_user_id',
         'reference_files_json', 'preseen_files_json',
     ];
@@ -58,6 +58,7 @@ class LmsAssessment extends Model
         'pass_percent' => 'decimal:2',
         'max_attempts' => 'integer',
         'shuffle_questions' => 'boolean',
+        'allow_pause' => 'boolean',
         'published_at' => 'datetime',
         'reference_files_json' => 'array',
         'preseen_files_json' => 'array',
@@ -125,6 +126,31 @@ class LmsAssessment extends Model
     public function isMock(): bool
     {
         return $this->kind === self::KIND_MOCK;
+    }
+
+    public function isPractice(): bool
+    {
+        return $this->kind === self::KIND_PRACTICE;
+    }
+
+    public function isInstantResults(): bool
+    {
+        return in_array((string) $this->results_mode, ['instant_mcq', 'instant'], true);
+    }
+
+    public function allowsPause(): bool
+    {
+        if (! Schema::hasColumn('lms_assessments', 'allow_pause')) {
+            return false;
+        }
+
+        return (bool) $this->allow_pause;
+    }
+
+    /** Practice tests hide overall marks/%; only MCQ question marks stay visible. */
+    public function hidesOverallMarks(): bool
+    {
+        return $this->isPractice();
     }
 
     public function isSkill(): bool

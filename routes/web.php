@@ -714,6 +714,8 @@ Route::prefix('user')->middleware(['auth', 'approved', 'redirect.panel.from.stud
     Route::get('/assessments/attempts/{attemptId}', [LmsAssessmentPortalController::class, 'take'])->name('user.assessments.take');
     Route::get('/assessments/attempts/{attemptId}/resource/{kind}/{index}', [LmsAssessmentPortalController::class, 'resource'])->name('user.assessments.resource');
     Route::post('/assessments/attempts/{attemptId}', [LmsAssessmentPortalController::class, 'save'])->name('user.assessments.save');
+    Route::post('/assessments/attempts/{attemptId}/pause', [LmsAssessmentPortalController::class, 'pause'])->name('user.assessments.pause');
+    Route::post('/assessments/attempts/{attemptId}/resume', [LmsAssessmentPortalController::class, 'resume'])->name('user.assessments.resume');
     Route::get('/assessments/attempts/{attemptId}/result', [LmsAssessmentPortalController::class, 'result'])->name('user.assessments.result');
     Route::get('/assessments/attempts/{attemptId}/pdf', [LmsAssessmentPortalController::class, 'resultPdf'])->name('user.assessments.result-pdf');
     Route::get('/history', [UserHistoryController::class, 'index'])->name('user.history');

@@ -983,7 +983,7 @@ class LmsAssessmentController extends Controller
                     $statusText = 'Assigned';
                 }
                 $score = '';
-                if ($attempt && $attempt->results_published && $attempt->score_raw !== null) {
+                if ($attempt && $attempt->results_published && $attempt->score_raw !== null && ! ($assessment->hidesOverallMarks())) {
                     $score = lms_format_number($attempt->score_raw) . '/' . lms_format_number($attempt->score_max);
                     if ($attempt->percent() !== null) {
                         $score .= ' (' . lms_format_number($attempt->percent()) . '%)';
@@ -1031,7 +1031,8 @@ class LmsAssessmentController extends Controller
             'max_attempts' => 'required|integer|min:1|max:50',
             'pass_percent' => 'nullable|numeric|min:0|max:100',
             'shuffle_questions' => 'nullable|boolean',
-            'results_mode' => 'required|in:instant_mcq,after_publish',
+            'results_mode' => 'required|in:instant_mcq,instant,after_publish',
+            'allow_pause' => 'nullable|boolean',
             'status' => 'required|in:draft,published,disabled',
             'question_ids' => 'nullable|array',
             'question_ids.*' => 'exists:lms_questions,id',
@@ -1083,7 +1084,11 @@ class LmsAssessmentController extends Controller
         // Retake only when admin/instructor sets N > 1 (each sitting still needs Assign).
         $a->max_attempts = max(1, (int) $request->input('max_attempts', 1));
         $a->shuffle_questions = $request->boolean('shuffle_questions');
-        $a->results_mode = $request->input('results_mode', 'after_publish');
+        $mode = $request->input('results_mode', 'after_publish');
+        $a->results_mode = $mode === 'instant' ? 'instant_mcq' : $mode;
+        if (Schema::hasColumn('lms_assessments', 'allow_pause') && $request->has('allow_pause')) {
+            $a->allow_pause = $request->boolean('allow_pause');
+        }
         $a->status = $request->input('status', 'draft');
         if ($a->status === 'published' && ! $a->published_at) {
             $a->published_at = now();

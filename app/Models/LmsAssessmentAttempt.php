@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,6 +13,7 @@ class LmsAssessmentAttempt extends Model
 
     protected $fillable = [
         'assessment_id', 'assignment_id', 'user_id', 'status', 'started_at', 'submitted_at', 'expires_at',
+        'paused_at', 'pause_seconds', 'pause_log_json',
         'score_raw', 'score_max', 'passed', 'grader_feedback', 'results_published',
         'results_published_at', 'graded_by_admin_id', 'graded_by_user_id', 'graded_at',
     ];
@@ -20,6 +22,9 @@ class LmsAssessmentAttempt extends Model
         'started_at' => 'datetime',
         'submitted_at' => 'datetime',
         'expires_at' => 'datetime',
+        'paused_at' => 'datetime',
+        'pause_seconds' => 'integer',
+        'pause_log_json' => 'array',
         'score_raw' => 'decimal:2',
         'score_max' => 'decimal:2',
         'passed' => 'boolean',
@@ -50,7 +55,65 @@ class LmsAssessmentAttempt extends Model
 
     public function isTimedOut(): bool
     {
+        if ($this->isPaused()) {
+            return false;
+        }
+
         return $this->expires_at && now()->gt($this->expires_at) && $this->isInProgress();
+    }
+
+    public function isPaused(): bool
+    {
+        if (! Schema::hasColumn('lms_assessment_attempts', 'paused_at')) {
+            return false;
+        }
+
+        return $this->isInProgress() && $this->paused_at !== null;
+    }
+
+    public function pauseLog(): array
+    {
+        if (! Schema::hasColumn('lms_assessment_attempts', 'pause_log_json')) {
+            return [];
+        }
+        $raw = $this->pause_log_json;
+        if (! is_array($raw)) {
+            return [];
+        }
+
+        return array_values(array_filter($raw, fn ($row) => is_array($row)));
+    }
+
+    public function pauseSecondsTotal(): int
+    {
+        $base = 0;
+        if (Schema::hasColumn('lms_assessment_attempts', 'pause_seconds')) {
+            $base = (int) ($this->pause_seconds ?? 0);
+        }
+        if ($this->paused_at) {
+            $base += max(0, $this->paused_at->diffInSeconds(now()));
+        }
+
+        return $base;
+    }
+
+    public function pauseDurationLabel(): string
+    {
+        $s = $this->pauseSecondsTotal();
+        if ($s <= 0) {
+            return '—';
+        }
+        $h = intdiv($s, 3600);
+        $m = intdiv($s % 3600, 60);
+        $sec = $s % 60;
+        if ($h > 0) {
+            return $h . 'h ' . $m . 'm ' . $sec . 's';
+        }
+        if ($m > 0) {
+            return $m . 'm ' . $sec . 's';
+        }
+
+        return $sec . 's';
     }
 
     public function percent(): ?float
@@ -94,6 +157,8 @@ class LmsAssessmentAttempt extends Model
         }
 
         $spent = (int) max(0, $this->started_at->diffInMinutes($this->submitted_at));
+        $pauseMin = (int) floor($this->pauseSecondsTotal() / 60);
+        $spent = max(0, $spent - $pauseMin);
         $assessment = $this->assessment;
         $cap = $assessment ? (int) ($assessment->durationMinutes() ?? 0) : 0;
         if ($cap > 0) {
