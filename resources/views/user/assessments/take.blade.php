@@ -527,7 +527,7 @@
             <button type="button" class="lms-res-close" id="lms-res-close" title="Close">&times;</button>
         </div>
         <div class="lms-res-dialog-body">
-            <iframe id="lms-res-frame" title="Resource"></iframe>
+            <iframe id="lms-res-frame" title="Resource" sandbox="allow-scripts allow-same-origin" referrerpolicy="no-referrer" allow=""></iframe>
         </div>
     </div>
 </div>
