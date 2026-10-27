@@ -365,17 +365,16 @@ class LmsAssessmentPortalController extends Controller
             || ($assessment->isPractice() && in_array($attempt->status, ['submitted', 'graded', 'expired'], true));
         $canSeeScore = $canSeeReview && ! $assessment->hidesOverallMarks();
 
-        // Retake only if admin assigned a new open sitting for this test.
-        $canRetake = $this->assessments->canRetake($user, $attempt->assessment);
-
         $assignment = \App\Models\LmsAssessmentAssignment::query()
             ->where('assessment_id', $attempt->assessment_id)
             ->orderBy('id')
             ->get()
             ->first(fn ($asg) => $this->assessments->attemptBelongsToAssignment($attempt, $asg));
+        $canRetake = $this->assessments->canRetake($user, $attempt->assessment, $assignment);
         $meta = $this->assessments->sittingAttemptMeta((int) $user->id, $attempt->assessment, $assignment);
         $appointmentId = $assignment?->displayCode();
-        $attemptLabel = 'Attempt ' . $meta['number'] . ' of ' . $meta['total'];
+        $attemptTotal = max((int) ($meta['total'] ?? 1), $this->assessments->maxAttemptsFor($assessment));
+        $attemptLabel = 'Attempt ' . $meta['number'] . ' of ' . $attemptTotal;
 
         return view('user.assessments.result', compact(
             'attempt',

@@ -131,71 +131,75 @@
         <tr><td class="muted">Published on</td><td>{{ $publishedOn }}</td></tr>
     </table>
 
-    @php $descPlain = trim(strip_tags((string) ($attempt->assessment->description ?? ''))); @endphp
-    @if($descPlain !== '')
-        <h2>Test instructions</h2>
-        <div>{!! strip_tags($attempt->assessment->description, '<p><br><strong><em><ul><ol><li><b><i>') !!}</div>
-    @endif
-
-    @if($attempt->grader_feedback)
-        <h2>Overall feedback</h2>
-        <div class="feedback">{!! strip_tags($attempt->grader_feedback, '<p><br><strong><em><ul><ol><li><b><i>') !!}</div>
-    @endif
+    <?php
+        $pdfAllow = '<p><br><strong><em><ul><ol><li><b><i>';
+        $descPlain = trim(strip_tags((string) ($attempt->assessment->description ?? '')));
+        if ($descPlain !== '') {
+            echo '<h2>Test instructions</h2><div>' . strip_tags((string) $attempt->assessment->description, $pdfAllow) . '</div>';
+        }
+        if ($attempt->grader_feedback) {
+            echo '<h2>Overall feedback</h2><div class="feedback">' . strip_tags((string) $attempt->grader_feedback, $pdfAllow) . '</div>';
+        }
+    ?>
 
     <h2>Questions &amp; answers</h2>
-    @foreach($attempt->assessment->questions as $i => $question)
-        @php
+    <?php
+        $pdfAllow = '<p><br><strong><em><ul><ol><li><b><i>';
+        $pdfHtml = static function ($html) use ($pdfAllow) {
+            return strip_tags((string) $html, $pdfAllow);
+        };
+        foreach ($attempt->assessment->questions as $i => $question) {
             $answer = $attempt->answers->firstWhere('question_id', $question->id);
             $showMarks = $question->isMcq() || ! $attempt->assessment->hidesOverallMarks();
             $subs = $question->hasSubQuestions() ? $question->subQuestions() : [];
             $explPlain = trim(strip_tags((string) ($question->explanation ?? '')));
             $hasFb = $answer && $answer->feedback && count($subs) === 0;
-        @endphp
-        <div class="q">
-            <div class="q-title">Q{{ $i + 1 }}. {{ $question->typeLabel() }}@if($showMarks) · {{ lms_format_number($question->max_marks) }} marks@endif</div>
-            <div class="q-stem">{!! strip_tags($question->stem, '<p><br><strong><em><ul><ol><li><b><i>') !!}</div>
-            <div class="q-answer">
-                @if($question->isMcq())
-                    <span class="label">Answer</span>
-                    <div class="body">
-                        Selected: {{ $answer?->selectedKey() ?? '—' }}
-                        @if($answer && $answer->is_correct !== null)
-                            · {{ $answer->is_correct ? 'Correct' : 'Incorrect' }}
-                        @endif
-                    </div>
-                @elseif(count($subs) > 0)
-                    @foreach($subs as $sub)
-                        @php
-                            $sk = (string) ($sub['key'] ?? $loop->index);
-                            $partFb = $answer ? trim(strip_tags((string) $answer->partFeedback($sk))) : '';
-                        @endphp
-                        <span class="label">({{ chr(97 + $loop->index) }}) {{ $sub['text'] ?? '' }}</span>
-                        <div class="body">{!! nl2br(e($answer?->partAnswer($sk) ?: '—')) !!}</div>
-                        @if($showMarks)
-                            <p><strong>Marks:</strong> {{ lms_format_number($answer?->partScore($sk)) }} / {{ lms_format_number($sub['marks'] ?? 0) }}</p>
-                        @endif
-                        @if($partFb !== '')
-                            <div class="feedback"><strong>Feedback:</strong><br>{!! strip_tags($answer->partFeedback($sk), '<p><br><strong><em><ul><ol><li><b><i>') !!}</div>
-                        @endif
-                    @endforeach
-                @else
-                    <span class="label">Answer</span>
-                    <div class="body">{!! nl2br(e($answer?->textAnswer() ?: '—')) !!}</div>
-                @endif
-            </div>
-            @if($showMarks)
-                <p><strong>Score:</strong>
-                    {{ $answer ? lms_format_number($answer->finalScore()) . ' / ' . lms_format_number($answer->max_marks) : '—' }}
-                </p>
-            @endif
-            @if($hasFb)
-                <div class="feedback"><strong>Feedback:</strong><br>{!! strip_tags($answer->feedback, '<p><br><strong><em><ul><ol><li><b><i>') !!}</div>
-            @endif
-            @if($explPlain !== '')
-                <div class="feedback"><strong>Answer explanation:</strong><br>{!! strip_tags($question->explanation, '<p><br><strong><em><ul><ol><li><b><i>') !!}</div>
-            @endif
-        </div>
-    @endforeach
+            echo '<div class="q">';
+            echo '<div class="q-title">Q' . ($i + 1) . '. ' . e($question->typeLabel());
+            if ($showMarks) {
+                echo ' · ' . e(lms_format_number($question->max_marks)) . ' marks';
+            }
+            echo '</div>';
+            echo '<div class="q-stem">' . $pdfHtml($question->stem) . '</div>';
+            echo '<div class="q-answer">';
+            if ($question->isMcq()) {
+                echo '<span class="label">Answer</span><div class="body">Selected: ' . e($answer?->selectedKey() ?? '—');
+                if ($answer && $answer->is_correct !== null) {
+                    echo ' · ' . ($answer->is_correct ? 'Correct' : 'Incorrect');
+                }
+                echo '</div>';
+            } elseif (count($subs) > 0) {
+                foreach ($subs as $si => $sub) {
+                    $sk = (string) ($sub['key'] ?? $si);
+                    $partFb = $answer ? trim(strip_tags((string) $answer->partFeedback($sk))) : '';
+                    echo '<span class="label">(' . chr(97 + (int) $si) . ') ' . e((string) ($sub['text'] ?? '')) . '</span>';
+                    echo '<div class="body">' . nl2br(e($answer?->partAnswer($sk) ?: '—')) . '</div>';
+                    if ($showMarks) {
+                        echo '<p><strong>Marks:</strong> ' . e(lms_format_number($answer?->partScore($sk))) . ' / ' . e(lms_format_number($sub['marks'] ?? 0)) . '</p>';
+                    }
+                    if ($partFb !== '') {
+                        echo '<div class="feedback"><strong>Feedback:</strong><br>' . $pdfHtml($answer->partFeedback($sk)) . '</div>';
+                    }
+                }
+            } else {
+                echo '<span class="label">Answer</span><div class="body">' . nl2br(e($answer?->textAnswer() ?: '—')) . '</div>';
+            }
+            echo '</div>';
+            if ($showMarks) {
+                $scoreText = $answer
+                    ? lms_format_number($answer->finalScore()) . ' / ' . lms_format_number($answer->max_marks)
+                    : '—';
+                echo '<p><strong>Score:</strong> ' . e($scoreText) . '</p>';
+            }
+            if ($hasFb) {
+                echo '<div class="feedback"><strong>Feedback:</strong><br>' . $pdfHtml($answer->feedback) . '</div>';
+            }
+            if ($explPlain !== '') {
+                echo '<div class="feedback"><strong>Answer explanation:</strong><br>' . $pdfHtml($question->explanation) . '</div>';
+            }
+            echo '</div>';
+        }
+    ?>
 
     @include('partials.invoice-document-footer-pdf')
 </body>

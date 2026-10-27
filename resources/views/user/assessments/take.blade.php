@@ -28,12 +28,12 @@
     }
     body.lms-take-mode #page-wrapper > .wrapper-content,
     body.lms-take-mode .wrapper.wrapper-content {
-        margin-top: 230px;
+        margin-top: 268px;
     }
     @media (max-width: 768px) {
         .lms-take-sticky { left: 0; }
         body.lms-take-mode #page-wrapper > .wrapper-content,
-        body.lms-take-mode .wrapper.wrapper-content { margin-top: 210px; }
+        body.lms-take-mode .wrapper.wrapper-content { margin-top: 250px; }
     }
     .lms-take-sticky .page-heading {
         margin: 0;
@@ -79,6 +79,16 @@
         gap: 16px;
     }
     .lms-take-meta { flex: 1; min-width: 0; }
+    .lms-take-cols {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 24px;
+        width: 100%;
+    }
+    .lms-take-col { min-width: 0; }
+    .lms-take-col-left { flex: 1 1 42%; }
+    .lms-take-col-right { flex: 1 1 58%; }
     .lms-take-line {
         margin: 0 0 4px;
         font-size: 13px;
@@ -86,7 +96,7 @@
         color: #fff;
     }
     .lms-take-line strong { color: #fff; }
-    .lms-res-btns { margin: 0; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; flex-shrink: 0; }
+    .lms-res-btns { margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; flex-shrink: 0; }
     .lms-q-step textarea.form-control,
     .lms-q-step textarea.form-control:focus {
         color: #0056b3 !important;
@@ -104,16 +114,29 @@
     }
     .lms-res-btn {
         display: inline-block;
-        background: #f0ad4e;
-        color: #1a1a1a !important;
-        border: 1px solid #eea236;
+        background: #fff;
+        color: #0d3b66 !important;
+        border: 1px solid #fff;
         border-radius: 3px;
         padding: 6px 14px;
         font-weight: 700;
         font-size: 13px;
         text-decoration: none !important;
+        cursor: pointer;
     }
-    .lms-res-btn:hover, .lms-res-btn:focus { background: #ec971f; color: #1a1a1a !important; border-color: #d58512; }
+    .lms-res-btn:hover, .lms-res-btn:focus { background: #eef4fb; color: #0d3b66 !important; border-color: #d7e6f5; }
+    .lms-save-screen-btn {
+        display: inline-block;
+        background: #f0ad4e;
+        color: #1a1a1a !important;
+        border: 1px solid #eea236;
+        border-radius: 3px;
+        padding: 6px 16px;
+        font-weight: 700;
+        font-size: 13px;
+        cursor: pointer;
+    }
+    .lms-save-screen-btn:hover, .lms-save-screen-btn:focus { background: #ec971f; color: #1a1a1a !important; }
     .lms-submit-screen-btn {
         display: inline-block;
         background: #1ab394;
@@ -143,7 +166,7 @@
         color: #fff !important;
     }
     .lms-res-btns { position: relative; z-index: 1060; pointer-events: auto; }
-    .lms-pause-screen-btn, .lms-submit-screen-btn, .lms-res-btn {
+    .lms-pause-screen-btn, .lms-submit-screen-btn, .lms-res-btn, .lms-save-screen-btn {
         position: relative;
         z-index: 1061;
         pointer-events: auto;
@@ -319,23 +342,31 @@
                             $apptTiming = '—';
                         }
                     @endphp
-                    <p class="lms-take-line"><strong>Test ID:</strong> {{ $attempt->assessment->displayCode() }} - <strong>Test Name:</strong> {{ $attempt->assessment->title }}</p>
-                    <p class="lms-take-line"><strong>Course name:</strong> {{ $attempt->assessment->course->title ?? '—' }}</p>
-                    <p class="lms-take-line"><strong>Appointment ID:</strong> {{ $assignment?->displayCode() ?? '—' }}</p>
-                    <p class="lms-take-line"><strong>Test Appointment Timing:</strong> {{ $apptTiming }}</p>
-                    <p class="lms-take-line" style="margin-bottom:0;"><strong>Time zone:</strong> {{ $assignment?->timezoneLabel() ?? (function_exists('viewer_timezone_label') ? viewer_timezone_label() : config('app.timezone')) }}</p>
-                </div>
-                <div class="lms-res-btns">
-                    @if($refFiles !== [])
-                        <a href="#" class="lms-res-btn js-open-res" data-kind="reference">Reference Material</a>
-                    @endif
-                    @if($preFiles !== [])
-                        <a href="#" class="lms-res-btn js-open-res" data-kind="preseen">Pre-seen</a>
-                    @endif
-                    @if($attempt->assessment->allowsPause())
-                        <button type="button" class="lms-pause-screen-btn {{ $attempt->isPaused() ? 'is-paused' : '' }}" id="lms-pause-btn">{{ $attempt->isPaused() ? 'Resume' : 'Pause' }}</button>
-                    @endif
-                    <button type="button" class="lms-submit-screen-btn" id="lms-submit-open">Submit</button>
+                    <div class="lms-take-cols">
+                        <div class="lms-take-col lms-take-col-left">
+                            <p class="lms-take-line"><strong>Test ID:</strong> {{ $attempt->assessment->displayCode() }}</p>
+                            <p class="lms-take-line"><strong>Test Name:</strong> {{ $attempt->assessment->title }}</p>
+                            <p class="lms-take-line" style="margin-bottom:0;"><strong>Course name:</strong> {{ $attempt->assessment->course->title ?? '—' }}</p>
+                        </div>
+                        <div class="lms-take-col lms-take-col-right">
+                            <p class="lms-take-line"><strong>Appointment ID:</strong> {{ $assignment?->displayCode() ?? '—' }}</p>
+                            <p class="lms-take-line"><strong>Test Appointment Timing:</strong> {{ $apptTiming }}</p>
+                            <p class="lms-take-line"><strong>Time zone:</strong> {{ $assignment?->timezoneLabel() ?? (function_exists('viewer_timezone_label') ? viewer_timezone_label() : config('app.timezone')) }}</p>
+                            <div class="lms-res-btns">
+                                @if($refFiles !== [])
+                                    <a href="#" class="lms-res-btn js-open-res" data-kind="reference">Reference Materials</a>
+                                @endif
+                                @if($preFiles !== [])
+                                    <a href="#" class="lms-res-btn js-open-res" data-kind="preseen">Preseen</a>
+                                @endif
+                                <button type="button" class="lms-save-screen-btn" id="lms-save-btn">Save</button>
+                                @if($attempt->assessment->allowsPause())
+                                    <button type="button" class="lms-pause-screen-btn {{ $attempt->isPaused() ? 'is-paused' : '' }}" id="lms-pause-btn">{{ $attempt->isPaused() ? 'Resume' : 'Pause' }}</button>
+                                @endif
+                                <button type="button" class="lms-submit-screen-btn" id="lms-submit-open">Submit</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -552,6 +583,14 @@ document.body.setAttribute('data-lms-exam-lock', '1');
         autosaveHint.textContent = text || '';
     }
 
+    window.lmsSilentSave = function (cb) { silentSave(cb); };
+    var saveBtn = document.getElementById('lms-save-btn');
+    if (saveBtn) {
+        saveBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            silentSave();
+        });
+    }
     function silentSave(cb) {
         if (!form) { if (cb) cb(); return; }
         if (form.dataset.autoSubmitted) { if (cb) cb(); return; }
@@ -660,7 +699,12 @@ document.body.setAttribute('data-lms-exam-lock', '1');
         var s = Math.floor(ms / 1000);
         var m = Math.floor(s / 60);
         s = s % 60;
-        qCountdown.textContent = (m > 0 ? (m + 'm ') : '') + s + 's';
+        var label = (m > 0 ? (m + 'm ') : '') + s + 's';
+        qCountdown.textContent = label;
+        var examRemain = document.getElementById('countdown');
+        if (examRemain && !window.lmsExamPaused) {
+            examRemain.textContent = label;
+        }
         qTimerId = setTimeout(tickQ, 1000);
     }
 
@@ -913,6 +957,7 @@ document.body.setAttribute('data-lms-exam-lock', '1');
 
     var pausedRemainMs = null;
     var examTickStarted = false;
+    var hasQTimers = !!document.querySelector('.lms-q-step[data-q-minutes]:not([data-q-minutes="0"])');
     function tick() {
         if (!window.lmsExamClockReady) {
             setTimeout(tick, 400);
@@ -942,7 +987,7 @@ document.body.setAttribute('data-lms-exam-lock', '1');
         s = s % 3600;
         var m = Math.floor(s / 60);
         s = s % 60;
-        if (out) {
+        if (out && !hasQTimers) {
             out.textContent = (h > 0 ? (h + 'h ') : '') + m + 'm ' + s + 's';
         }
         setTimeout(tick, 1000);
