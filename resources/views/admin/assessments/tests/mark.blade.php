@@ -69,7 +69,7 @@
         @foreach($attempt->assessment->questions as $question)
             @php $answer = $attempt->answers->firstWhere('question_id', $question->id); @endphp
             <div class="ibox">
-                <div class="ibox-title"><h5>{{ $question->typeLabel() }} · {{ lms_format_number($question->max_marks) }} marks</h5></div>
+                <div class="ibox-title"><h5>Q{{ $loop->iteration }}. {{ $question->typeLabel() }} · {{ lms_format_number($question->max_marks) }} marks</h5></div>
                 <div class="ibox-content">
                     <div class="m-b-sm lms-qa-question">{!! $question->stem !!}</div>
                     @if($question->isMcq())

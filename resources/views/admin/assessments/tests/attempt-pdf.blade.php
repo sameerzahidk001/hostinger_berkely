@@ -131,7 +131,8 @@
         <tr><td class="muted">Published on</td><td>{{ $publishedOn }}</td></tr>
     </table>
 
-    @if(trim(strip_tags((string) ($attempt->assessment->description ?? ''))) !== '')
+    @php $descPlain = trim(strip_tags((string) ($attempt->assessment->description ?? ''))); @endphp
+    @if($descPlain !== '')
         <h2>Test instructions</h2>
         <div>{!! strip_tags($attempt->assessment->description, '<p><br><strong><em><ul><ol><li><b><i>') !!}</div>
     @endif
@@ -147,6 +148,8 @@
             $answer = $attempt->answers->firstWhere('question_id', $question->id);
             $showMarks = $question->isMcq() || ! $attempt->assessment->hidesOverallMarks();
             $subs = $question->hasSubQuestions() ? $question->subQuestions() : [];
+            $explPlain = trim(strip_tags((string) ($question->explanation ?? '')));
+            $hasFb = $answer && $answer->feedback && count($subs) === 0;
         @endphp
         <div class="q">
             <div class="q-title">Q{{ $i + 1 }}. {{ $question->typeLabel() }}@if($showMarks) · {{ lms_format_number($question->max_marks) }} marks@endif</div>
@@ -162,13 +165,16 @@
                     </div>
                 @elseif(count($subs) > 0)
                     @foreach($subs as $sub)
-                        @php $sk = (string) ($sub['key'] ?? $loop->index); @endphp
+                        @php
+                            $sk = (string) ($sub['key'] ?? $loop->index);
+                            $partFb = $answer ? trim(strip_tags((string) $answer->partFeedback($sk))) : '';
+                        @endphp
                         <span class="label">({{ chr(97 + $loop->index) }}) {{ $sub['text'] ?? '' }}</span>
                         <div class="body">{!! nl2br(e($answer?->partAnswer($sk) ?: '—')) !!}</div>
                         @if($showMarks)
                             <p><strong>Marks:</strong> {{ lms_format_number($answer?->partScore($sk)) }} / {{ lms_format_number($sub['marks'] ?? 0) }}</p>
                         @endif
-                        @if($answer && trim(strip_tags($answer->partFeedback($sk))) !== '')
+                        @if($partFb !== '')
                             <div class="feedback"><strong>Feedback:</strong><br>{!! strip_tags($answer->partFeedback($sk), '<p><br><strong><em><ul><ol><li><b><i>') !!}</div>
                         @endif
                     @endforeach
@@ -182,10 +188,10 @@
                     {{ $answer ? lms_format_number($answer->finalScore()) . ' / ' . lms_format_number($answer->max_marks) : '—' }}
                 </p>
             @endif
-            @if($answer && $answer->feedback && count($subs) === 0)
+            @if($hasFb)
                 <div class="feedback"><strong>Feedback:</strong><br>{!! strip_tags($answer->feedback, '<p><br><strong><em><ul><ol><li><b><i>') !!}</div>
             @endif
-            @if(trim(strip_tags((string) ($question->explanation ?? ''))) !== '')
+            @if($explPlain !== '')
                 <div class="feedback"><strong>Answer explanation:</strong><br>{!! strip_tags($question->explanation, '<p><br><strong><em><ul><ol><li><b><i>') !!}</div>
             @endif
         </div>

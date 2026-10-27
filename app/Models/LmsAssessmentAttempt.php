@@ -64,11 +64,22 @@ class LmsAssessmentAttempt extends Model
 
     public function isPaused(): bool
     {
+        if (! $this->isInProgress()) {
+            return false;
+        }
+        if (session()->has($this->pauseSessionKey())) {
+            return true;
+        }
         if (! Schema::hasColumn('lms_assessment_attempts', 'paused_at')) {
             return false;
         }
 
-        return $this->isInProgress() && $this->paused_at !== null;
+        return $this->paused_at !== null;
+    }
+
+    public function pauseSessionKey(): string
+    {
+        return 'lms_attempt_pause_' . (int) $this->id;
     }
 
     public function pauseLog(): array
@@ -90,8 +101,20 @@ class LmsAssessmentAttempt extends Model
         if (Schema::hasColumn('lms_assessment_attempts', 'pause_seconds')) {
             $base = (int) ($this->pause_seconds ?? 0);
         }
-        if ($this->paused_at) {
-            $base += max(0, $this->paused_at->diffInSeconds(now()));
+        $sess = session($this->pauseSessionKey());
+        $started = null;
+        if (is_array($sess) && ! empty($sess['started_at'])) {
+            try {
+                $started = \Carbon\Carbon::parse($sess['started_at']);
+            } catch (\Throwable $e) {
+                $started = null;
+            }
+        }
+        if (! $started && $this->paused_at) {
+            $started = $this->paused_at;
+        }
+        if ($started) {
+            $base += max(0, $started->diffInSeconds(now()));
         }
 
         return $base;
