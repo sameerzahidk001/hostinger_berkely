@@ -142,6 +142,17 @@
         border-color: #1a7bb9;
         color: #fff !important;
     }
+    .lms-res-btns { position: relative; z-index: 1060; pointer-events: auto; }
+    .lms-pause-screen-btn, .lms-submit-screen-btn, .lms-res-btn {
+        position: relative;
+        z-index: 1061;
+        pointer-events: auto;
+    }
+    body.lms-intro-open .lms-q-step,
+    body.lms-intro-open .lms-q-nav,
+    body.lms-intro-open .lms-q-progress {
+        display: none !important;
+    }
     .lms-submit-modal {
         display: none;
         position: fixed;
@@ -309,9 +320,6 @@
                         }
                     @endphp
                     <p class="lms-take-line"><strong>Test ID:</strong> {{ $attempt->assessment->displayCode() }} - <strong>Test Name:</strong> {{ $attempt->assessment->title }}</p>
-                    @if(trim((string) ($attempt->assessment->description ?? '')) !== '')
-                        <p class="lms-take-line" style="white-space:pre-wrap;">{{ $attempt->assessment->description }}</p>
-                    @endif
                     <p class="lms-take-line"><strong>Course name:</strong> {{ $attempt->assessment->course->title ?? '—' }}</p>
                     <p class="lms-take-line"><strong>Appointment ID:</strong> {{ $assignment?->displayCode() ?? '—' }}</p>
                     <p class="lms-take-line"><strong>Test Appointment Timing:</strong> {{ $apptTiming }}</p>
@@ -364,6 +372,15 @@
     @endif
     <form method="POST" action="{{ route('user.assessments.save', $attempt->id) }}" id="attempt-form" data-result-url="{{ route('user.assessments.result', $attempt->id) }}">
         @csrf
+        @if(trim(strip_tags((string) ($attempt->assessment->description ?? ''))) !== '')
+            <div class="ibox" id="lms-intro">
+                <div class="ibox-title"><h5>Test instructions</h5></div>
+                <div class="ibox-content">
+                    <div class="lms-qa-question m-b-sm">{!! $attempt->assessment->description !!}</div>
+                    <button type="button" class="btn btn-primary" id="lms-intro-continue">Continue to Q1</button>
+                </div>
+            </div>
+        @endif
         @forelse($questions as $i => $question)
             @php
                 $ans = $answers->get($question->id);
@@ -761,10 +778,32 @@ document.body.setAttribute('data-lms-exam-lock', '1');
     });
     document.addEventListener('visibilitychange', function () {
         if (document.visibilityState === 'hidden') silentSave();
-        if (document.visibilityState === 'visible') resumeFromClock();
+        if (document.visibilityState === 'visible' && window.lmsExamClockReady) resumeFromClock();
     });
-    window.addEventListener('pageshow', function () { resumeFromClock(); });
-    setTimeout(resumeFromClock, 0);
+    var intro = document.getElementById('lms-intro');
+    var introKey = 'lms-take-intro-' + attemptId;
+    function finishIntro() {
+        if (intro) intro.style.display = 'none';
+        document.body.classList.remove('lms-intro-open');
+        writeStore(introKey, '1');
+        window.lmsExamClockReady = true;
+        resumeFromClock();
+        if (typeof window.lmsStartExamTick === 'function') window.lmsStartExamTick();
+    }
+    if (intro && readStore(introKey) !== '1') {
+        document.body.classList.add('lms-intro-open');
+        window.lmsExamClockReady = false;
+        var introBtn = document.getElementById('lms-intro-continue');
+        if (introBtn) introBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            finishIntro();
+        });
+    } else {
+        if (intro) intro.style.display = 'none';
+        window.lmsExamClockReady = true;
+        window.addEventListener('pageshow', function () { resumeFromClock(); });
+        setTimeout(resumeFromClock, 0);
+    }
 })();
 
 (function () {
@@ -872,11 +911,25 @@ document.body.setAttribute('data-lms-exam-lock', '1');
     }
     window.lmsExamAutoSubmit = autoSubmit;
 
+    var pausedRemainMs = null;
+    var examTickStarted = false;
     function tick() {
+        if (!window.lmsExamClockReady) {
+            setTimeout(tick, 400);
+            return;
+        }
         if (window.lmsExamPaused) {
             if (out) out.textContent = 'Paused';
+            if (end && pausedRemainMs === null) {
+                pausedRemainMs = Math.max(0, end.getTime() - Date.now());
+            }
             setTimeout(tick, 1000);
             return;
+        }
+        if (pausedRemainMs !== null) {
+            end = new Date(Date.now() + pausedRemainMs);
+            pausedRemainMs = null;
+            if (el && end) el.textContent = end.toISOString();
         }
         if (!end) return;
         var ms = end.getTime() - Date.now();
@@ -906,7 +959,18 @@ document.body.setAttribute('data-lms-exam-lock', '1');
         }
         if (el && iso) el.textContent = iso;
     };
-    tick();
+    window.lmsStartExamTick = function () {
+        if (examTickStarted) return;
+        examTickStarted = true;
+        tick();
+    };
+    if (window.lmsExamClockReady) {
+        window.lmsStartExamTick();
+    } else {
+        setTimeout(function () {
+            if (window.lmsExamClockReady) window.lmsStartExamTick();
+        }, 400);
+    }
     document.addEventListener('visibilitychange', function () {
         if (window.lmsExamPaused) return;
         if (end && Date.now() >= end.getTime()) autoSubmit();
@@ -945,6 +1009,7 @@ document.body.setAttribute('data-lms-exam-lock', '1');
         busy = true;
         btn.disabled = true;
         var goingPause = !window.lmsExamPaused;
+        setPausedUi(goingPause);
         var fd = new FormData();
         if (token) fd.append('_token', token.value);
         fetch(goingPause ? pauseUrl : resumeUrl, {
@@ -958,11 +1023,18 @@ document.body.setAttribute('data-lms-exam-lock', '1');
             body: fd
         }).then(function (res) { return res.json().catch(function () { return {}; }); })
         .then(function (data) {
-            if (!data || !data.ok) return;
+            if (!data || !data.ok) {
+                setPausedUi(!goingPause);
+                alert('Could not pause or resume the timer. Please try again.');
+                return;
+            }
             setPausedUi(!!data.paused);
             if (data.expires_at && typeof window.lmsSetExamEnd === 'function') {
                 window.lmsSetExamEnd(data.expires_at, data.expires_label);
             }
+        }).catch(function () {
+            setPausedUi(!goingPause);
+            alert('Could not pause or resume the timer. Please try again.');
         }).finally(function () {
             busy = false;
             btn.disabled = false;

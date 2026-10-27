@@ -51,7 +51,17 @@ class LmsAssessmentController extends Controller
         }
         if ($this->lms->isInstructorActor() && ! $this->lms->isAdminActor() && ! panel_sees_all_dashboards()) {
             $courseIds = $this->lms->coursesForActor()->pluck('id')->map(fn ($id) => (int) $id)->all();
-            $query->whereIn('course_id', $courseIds ?: [0]);
+            $uid = (int) (Auth::id() ?? 0);
+            $markedIds = ($uid > 0 && Schema::hasColumn('lms_assessment_assignments', 'marker_user_id'))
+                ? LmsAssessmentAssignment::query()->where('marker_user_id', $uid)->pluck('assessment_id')->all()
+                : [];
+            $query->where(function ($q) use ($courseIds, $uid, $markedIds) {
+                $q->whereIn('course_id', $courseIds ?: [0])
+                    ->orWhere('created_by_user_id', $uid);
+                if ($markedIds !== []) {
+                    $q->orWhereIn('id', $markedIds);
+                }
+            });
         }
         if ($search !== '') {
             $like = '%' . addcslashes($search, '%_\\') . '%';
@@ -381,12 +391,7 @@ class LmsAssessmentController extends Controller
      */
     public function assignedUsers(Request $request)
     {
-        abort_unless(
-            $this->assessments->canAssignStudentAssessments()
-            || $this->assessments->canManageSkillTests()
-            || $this->assessments->canManageStudentAssessments(),
-            403
-        );
+        abort_unless($this->assessments->actorCanViewAssignedTests(), 403);
         $this->assessments->ensure();
 
         $assessmentId = (int) $request->get('assessment_id', 0);
@@ -405,8 +410,10 @@ class LmsAssessmentController extends Controller
         }
 
         $courseIdsScope = null;
+        $markerOnlyUid = null;
         if ($this->lms->isInstructorActor() && ! $this->lms->isAdminActor() && ! panel_sees_all_dashboards()) {
             $courseIdsScope = $this->lms->coursesForActor()->pluck('id')->map(fn ($id) => (int) $id)->all();
+            $markerOnlyUid = (int) (Auth::id() ?? 0);
         }
 
         $assignQuery = LmsAssessmentAssignment::query()
@@ -453,8 +460,19 @@ class LmsAssessmentController extends Controller
             });
         }
 
-        $assignQuery->whereHas('assessment', function ($q) use ($courseIdsScope) {
-            if ($courseIdsScope !== null) {
+        if ($markerOnlyUid) {
+            $assignQuery->where(function ($q) use ($markerOnlyUid, $courseIdsScope) {
+                $q->where('marker_user_id', $markerOnlyUid)
+                    ->orWhere('assigned_by_user_id', $markerOnlyUid)
+                    ->orWhereHas('assessment', function ($aq) use ($markerOnlyUid, $courseIdsScope) {
+                        $aq->where('created_by_user_id', $markerOnlyUid);
+                        if ($courseIdsScope) {
+                            $aq->orWhereIn('course_id', $courseIdsScope);
+                        }
+                    });
+            });
+        } elseif ($courseIdsScope !== null) {
+            $assignQuery->whereHas('assessment', function ($q) use ($courseIdsScope) {
                 $q->where(function ($inner) use ($courseIdsScope) {
                     $inner->whereIn('course_id', $courseIdsScope ?: [0]);
                     if ($this->assessments->canManageSkillTests()) {
@@ -462,11 +480,13 @@ class LmsAssessmentController extends Controller
                             ->orWhere('audience', LmsAssessment::AUDIENCE_STAFF);
                     }
                 });
-            } elseif (! $this->assessments->canManageSkillTests()) {
+            });
+        } elseif (! $this->assessments->canManageSkillTests()) {
+            $assignQuery->whereHas('assessment', function ($q) {
                 $q->where('kind', '!=', LmsAssessment::KIND_SKILL)
                     ->where('audience', '!=', LmsAssessment::AUDIENCE_STAFF);
-            }
-        });
+            });
+        }
 
         $assignments = $assignQuery->limit(400)->get();
         $rowsByKey = [];
@@ -596,6 +616,7 @@ class LmsAssessmentController extends Controller
             'Assigned' => 'Assigned',
             'In progress' => 'In progress',
             'Marking Required' => 'Marking Required',
+            'Completed' => 'Completed',
             'Completed and Marked' => 'Completed and Marked',
             'Missed' => 'Missed',
         ];
@@ -620,7 +641,20 @@ class LmsAssessmentController extends Controller
         $rows = $rows->take(300);
 
         $assessmentQuery = LmsAssessment::query()->orderBy('title');
-        if ($courseIdsScope !== null) {
+        if ($markerOnlyUid) {
+            $markedIds = Schema::hasColumn('lms_assessment_assignments', 'marker_user_id')
+                ? LmsAssessmentAssignment::query()->where('marker_user_id', $markerOnlyUid)->pluck('assessment_id')->all()
+                : [];
+            $assessmentQuery->where(function ($q) use ($markerOnlyUid, $courseIdsScope, $markedIds) {
+                $q->where('created_by_user_id', $markerOnlyUid);
+                if ($courseIdsScope) {
+                    $q->orWhereIn('course_id', $courseIdsScope);
+                }
+                if ($markedIds !== []) {
+                    $q->orWhereIn('id', $markedIds);
+                }
+            });
+        } elseif ($courseIdsScope !== null) {
             $assessmentQuery->where(function ($q) use ($courseIdsScope) {
                 $q->whereIn('course_id', $courseIdsScope ?: [0]);
                 if ($this->assessments->canManageSkillTests()) {
@@ -668,12 +702,16 @@ class LmsAssessmentController extends Controller
 
     public function attempts(Request $request, $id)
     {
-        abort_unless($this->assessments->canManageStudentAssessments() || $this->assessments->canManageSkillTests(), 403);
         $this->assessments->ensure();
         $assessment = LmsAssessment::with('course:id,title')->findOrFail($id);
+        $isMarker = Schema::hasColumn('lms_assessment_assignments', 'marker_user_id')
+            && LmsAssessmentAssignment::query()
+                ->where('assessment_id', $assessment->id)
+                ->where('marker_user_id', Auth::id())
+                ->exists();
         if ($assessment->isSkill()) {
             abort_unless($this->assessments->canManageSkillTests(), 403);
-        } else {
+        } elseif (! $isMarker) {
             abort_unless($this->assessments->canManageStudentAssessments(), 403);
             $this->assertInstructorOwnsCourse((int) $assessment->course_id);
         }
@@ -826,30 +864,18 @@ class LmsAssessmentController extends Controller
 
     public function mark($attemptId)
     {
-        abort_unless($this->assessments->canManageStudentAssessments() || $this->assessments->canManageSkillTests(), 403);
         $this->assessments->ensure();
         $attempt = LmsAssessmentAttempt::with(['assessment.questions', 'answers.question', 'user'])->findOrFail($attemptId);
-        if ($attempt->assessment?->isSkill()) {
-            abort_unless($this->assessments->canManageSkillTests(), 403);
-        } else {
-            abort_unless($this->assessments->canManageStudentAssessments(), 403);
-            $this->assertInstructorOwnsCourse((int) ($attempt->assessment?->course_id ?? 0));
-        }
+        abort_unless($this->assessments->actorCanAccessAttempt($attempt), 403);
 
         return view('admin.assessments.tests.mark', compact('attempt'));
     }
 
     public function attemptPdf($attemptId)
     {
-        abort_unless($this->assessments->canManageStudentAssessments() || $this->assessments->canManageSkillTests(), 403);
         $this->assessments->ensure();
         $attempt = LmsAssessmentAttempt::with(['assessment.course', 'assessment.questions', 'answers.question', 'user'])->findOrFail($attemptId);
-        if ($attempt->assessment?->isSkill()) {
-            abort_unless($this->assessments->canManageSkillTests(), 403);
-        } else {
-            abort_unless($this->assessments->canManageStudentAssessments(), 403);
-            $this->assertInstructorOwnsCourse((int) ($attempt->assessment?->course_id ?? 0));
-        }
+        abort_unless($this->assessments->actorCanAccessAttempt($attempt), 403);
 
         $title = Str::slug($attempt->assessment->title ?? 'attempt', '-');
         $student = Str::slug($attempt->user->name ?? 'student', '-');
@@ -862,9 +888,9 @@ class LmsAssessmentController extends Controller
 
     public function saveMarks(Request $request, $attemptId)
     {
-        abort_unless($this->assessments->canManageStudentAssessments() || $this->assessments->canManageSkillTests(), 403);
         $this->assessments->ensure();
         $attempt = LmsAssessmentAttempt::with(['answers.question', 'assessment.questions'])->findOrFail($attemptId);
+        abort_unless($this->assessments->actorCanAccessAttempt($attempt), 403);
 
         $feedbackMax = 2000;
         $overallMax = 5000;
@@ -949,9 +975,9 @@ class LmsAssessmentController extends Controller
 
     public function publishAttempt($attemptId)
     {
-        abort_unless($this->assessments->canManageStudentAssessments() || $this->assessments->canManageSkillTests(), 403);
         $this->assessments->ensure();
-        $attempt = LmsAssessmentAttempt::findOrFail($attemptId);
+        $attempt = LmsAssessmentAttempt::with('assessment')->findOrFail($attemptId);
+        abort_unless($this->assessments->actorCanAccessAttempt($attempt), 403);
         $this->assessments->publishResults($attempt);
 
         return redirect()->route('admin.assessments.tests.assigned-users', ['assessment_id' => $attempt->assessment_id])
@@ -1023,7 +1049,7 @@ class LmsAssessmentController extends Controller
 
         return [
             'title' => 'required|string|max:255',
-            'description' => 'nullable|string|max:5000',
+            'description' => 'nullable|string|max:20000',
             'kind' => 'required|in:practice,mock,general,skill',
             'course_id' => ($courseRequired ? 'required' : 'nullable') . '|exists:courses,id',
             'target_role' => ($isSkill ? 'required' : 'nullable') . '|in:' . implode(',', array_keys(LmsAssessment::targetRoles())),

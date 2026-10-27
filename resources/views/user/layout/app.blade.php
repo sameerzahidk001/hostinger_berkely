@@ -326,7 +326,15 @@
                    $canQbank = method_exists($u, 'hasLmsPermission') && $u->hasLmsPermission('manage_question_bank');
                    $canCreateTests = method_exists($u, 'hasLmsPermission') && $u->hasLmsPermission('create_student_assessments');
                    $canAssignTests = method_exists($u, 'hasLmsPermission') && $u->hasLmsPermission('assign_student_assessments');
-                   $canMarkResults = $canCreateTests || $canAssignTests;
+                   $isAssignedMarker = false;
+                   try {
+                       $isAssignedMarker = class_exists(\App\Models\LmsAssessmentAssignment::class)
+                           && \Illuminate\Support\Facades\Schema::hasColumn('lms_assessment_assignments', 'marker_user_id')
+                           && \App\Models\LmsAssessmentAssignment::query()->where('marker_user_id', (int) $u->id)->exists();
+                   } catch (\Throwable $e) {
+                       $isAssignedMarker = false;
+                   }
+                   $canMarkResults = $canCreateTests || $canAssignTests || $isAssignedMarker;
                    $hasMyTests = false;
                    try {
                        if (class_exists(\App\Models\LmsAssessmentAssignment::class)
@@ -347,7 +355,7 @@
                    } catch (\Throwable $e) {
                        $hasMyTests = false;
                    }
-                   $showAssessmentsNav = $canQbank || $canCreateTests || $canAssignTests || $hasMyTests;
+                   $showAssessmentsNav = $canQbank || $canCreateTests || $canAssignTests || $isAssignedMarker || $hasMyTests;
                @endphp
                @if($showAssessmentsNav)
                <li class="lms-nav-my-tests {{ request()->routeIs('user.assessments.*') || request()->is('admin/assessments*') ? 'active' : '' }}">

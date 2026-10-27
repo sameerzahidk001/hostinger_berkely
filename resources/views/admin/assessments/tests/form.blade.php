@@ -4,7 +4,7 @@
 @include('admin.assessments.partials.limited-editor-assets')
 @include('admin.assessments.partials.searchable-select-assets')
 @php
-    $descriptionMax = 5000;
+    $descriptionMax = 20000;
     $canCreate = $canCreate ?? true;
     $canAssign = $canAssign ?? true;
     $isSkill = old('kind', $assessment->kind) === \App\Models\LmsAssessment::KIND_SKILL;
@@ -54,9 +54,9 @@
                     @endif
                 </div>
                 <div class="col-md-12 form-group">
-                    <label>Description <span class="lms-char-hint">(max {{ number_format($descriptionMax) }} characters)</span></label>
-                    <textarea name="description" class="form-control" rows="3" data-max="{{ $descriptionMax }}" maxlength="{{ $descriptionMax }}" @readonly(! $canCreate)>{{ old('description', $assessment->description) }}</textarea>
-                    <p class="help-block" style="margin-bottom:0;font-size:11px;">Shown to the student on the test screen and on the result page. Optional.</p>
+                    <label>Description / test instructions <span class="lms-char-hint">(max {{ number_format($descriptionMax) }} characters)</span></label>
+                    <textarea name="description" class="form-control lms-text-editor" rows="6" data-max="{{ $descriptionMax }}" data-height="220" data-rich="1" @readonly(! $canCreate)>{{ old('description', $assessment->description) }}</textarea>
+                    <p class="help-block" style="margin-bottom:0;font-size:11px;">Shown to the student as instructions before Question 1 (Continue to start). Also on View Details after submit.</p>
                 </div>
                 <div class="col-md-4 form-group js-course-field" style="{{ $isSkill ? 'display:none;' : '' }}">
                     <label>Course{{ !empty($courseRequired) ? ' *' : '' }}</label>

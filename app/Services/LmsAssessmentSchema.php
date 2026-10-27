@@ -79,25 +79,19 @@ class LmsAssessmentSchema
                 $table->json('preseen_files_json')->nullable();
             });
         }
-        if (Schema::hasTable('lms_assessments') && ! Schema::hasColumn('lms_assessments', 'allow_pause')) {
-            Schema::table('lms_assessments', function (Blueprint $table) {
-                $table->boolean('allow_pause')->default(false);
-            });
-        }
-        if (Schema::hasTable('lms_assessment_attempts') && ! Schema::hasColumn('lms_assessment_attempts', 'paused_at')) {
-            Schema::table('lms_assessment_attempts', function (Blueprint $table) {
-                $table->timestamp('paused_at')->nullable();
-            });
-        }
-        if (Schema::hasTable('lms_assessment_attempts') && ! Schema::hasColumn('lms_assessment_attempts', 'pause_seconds')) {
-            Schema::table('lms_assessment_attempts', function (Blueprint $table) {
-                $table->unsignedInteger('pause_seconds')->default(0);
-            });
-        }
-        if (Schema::hasTable('lms_assessment_attempts') && ! Schema::hasColumn('lms_assessment_attempts', 'pause_log_json')) {
-            Schema::table('lms_assessment_attempts', function (Blueprint $table) {
-                $table->json('pause_log_json')->nullable();
-            });
+        foreach ([
+            ['lms_assessments', 'allow_pause', fn (Blueprint $t) => $t->boolean('allow_pause')->default(false)],
+            ['lms_assessment_attempts', 'paused_at', fn (Blueprint $t) => $t->timestamp('paused_at')->nullable()],
+            ['lms_assessment_attempts', 'pause_seconds', fn (Blueprint $t) => $t->unsignedInteger('pause_seconds')->default(0)],
+            ['lms_assessment_attempts', 'pause_log_json', fn (Blueprint $t) => $t->json('pause_log_json')->nullable()],
+        ] as [$table, $column, $cb]) {
+            try {
+                if (Schema::hasTable($table) && ! Schema::hasColumn($table, $column)) {
+                    Schema::table($table, $cb);
+                }
+            } catch (\Throwable $e) {
+                // Hostinger may deny ALTER; pause falls back until the column exists.
+            }
         }
     }
 
