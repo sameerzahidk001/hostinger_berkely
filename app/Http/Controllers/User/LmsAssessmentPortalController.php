@@ -151,15 +151,6 @@ class LmsAssessmentPortalController extends Controller
         $viewKind = $this->examResourceKind($name, (string) ($files[$i]['mime'] ?? ''));
 
         if (! $request->boolean('raw')) {
-            $officeEmbed = null;
-            if ($viewKind === 'office') {
-                $share = $zoho->resolveWorkDriveShareUrl($path) ?: $path;
-                $direct = $zoho->workDriveDirectDownloadUrl($share);
-                if ($direct) {
-                    $officeEmbed = 'https://view.officeapps.live.com/op/embed.aspx?src=' . rawurlencode($direct);
-                }
-            }
-
             return response()->view('user.assessments.resource-frame', [
                 'name' => $name,
                 'kind' => $viewKind,
@@ -169,15 +160,13 @@ class LmsAssessmentPortalController extends Controller
                     'index' => $i,
                     'raw' => 1,
                 ]),
-                'officeEmbed' => $officeEmbed,
-                'mime' => $zoho->mimeFromExtension(pathinfo($name, PATHINFO_EXTENSION)) ?: 'application/pdf',
             ]);
         }
 
         $headers = [
             'X-Content-Type-Options' => 'nosniff',
-            'Cache-Control' => 'private, max-age=120',
-            'Content-Disposition' => 'inline; filename="' . addslashes($name) . '"',
+            'Cache-Control' => 'private, no-store',
+            'Content-Disposition' => 'inline',
             'X-Frame-Options' => 'SAMEORIGIN',
         ];
 
