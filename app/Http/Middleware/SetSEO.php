@@ -21,7 +21,7 @@ class SetSEO
             }
         }
 
-        if ($request->is('admin', 'admin/*') || $request->is('user', 'user/*') || $request->is('instructor', 'instructor/*') || $request->is('livewire', 'livewire/*')) {
+        if ($request->is('admin', 'admin/*') || $request->is('user', 'user/*') || $request->is('instructor', 'instructor/*') || $request->is('livewire', 'livewire/*') || $request->is('sitemap.xml') || $request->is('robots.txt')) {
             return $next($request);
         }
 
