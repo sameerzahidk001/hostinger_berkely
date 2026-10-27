@@ -127,6 +127,11 @@ class LmsAssessmentAttempt extends Model
 
     public function statusLabel(): string
     {
+        $assessment = $this->assessment;
+        if ($assessment && $assessment->isPractice() && in_array($this->status, ['submitted', 'graded', 'expired'], true)) {
+            return 'Completed';
+        }
+
         return match ($this->status) {
             'in_progress' => 'In progress',
             'submitted' => 'Marking Required',
@@ -140,6 +145,11 @@ class LmsAssessmentAttempt extends Model
     /** CSS class key for status colour in tables. */
     public function statusColorClass(): string
     {
+        $assessment = $this->assessment;
+        if ($assessment && $assessment->isPractice() && in_array($this->status, ['submitted', 'graded', 'expired'], true)) {
+            return 'lms-status-marked';
+        }
+
         return match ($this->status) {
             'submitted' => 'lms-status-completed',
             'graded' => 'lms-status-marked',

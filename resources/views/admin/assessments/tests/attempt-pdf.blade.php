@@ -102,14 +102,14 @@
 
     <table class="meta">
         <tr><td class="muted">Test Taker Name</td><td>{{ $attempt->user->name ?? '—' }} ({{ $attempt->user->email ?? '' }})</td></tr>
-        @unless($attempt->assessment->hidesOverallMarks())
+        @if(! $attempt->assessment->hidesOverallMarks())
         <tr><td class="muted">Test Result</td><td class="score">
             @if($attempt->score_raw !== null)
                 {{ lms_format_number($attempt->score_raw) }} / {{ lms_format_number($attempt->score_max) }}
                 @if($attempt->percent() !== null) ({{ lms_format_number($attempt->percent()) }}%) @endif
             @else — @endif
         </td></tr>
-        @endunless
+        @endif
         <tr><td class="muted">Appointment ID</td><td>{{ $assignment ? $assignment->displayCode() : '—' }}</td></tr>
         <tr><td class="muted">Test Appointment Time</td><td>{{ $assignment ? $assignment->appointmentWindowLabel('d/m/Y H:i') : '—' }}</td></tr>
         <tr><td class="muted">Test ID</td><td>{{ $attempt->assessment->displayCode() }}</td></tr>
@@ -131,6 +131,11 @@
         <tr><td class="muted">Published on</td><td>{{ $publishedOn }}</td></tr>
     </table>
 
+    @if(trim(strip_tags((string) ($attempt->assessment->description ?? ''))) !== '')
+        <h2>Test instructions</h2>
+        <div>{!! strip_tags($attempt->assessment->description, '<p><br><strong><em><ul><ol><li><b><i>') !!}</div>
+    @endif
+
     @if($attempt->grader_feedback)
         <h2>Overall feedback</h2>
         <div class="feedback">{!! strip_tags($attempt->grader_feedback, '<p><br><strong><em><ul><ol><li><b><i>') !!}</div>
@@ -138,9 +143,12 @@
 
     <h2>Questions &amp; answers</h2>
     @foreach($attempt->assessment->questions as $i => $question)
-        @php $answer = $attempt->answers->firstWhere('question_id', $question->id); @endphp
+        @php
+            $answer = $attempt->answers->firstWhere('question_id', $question->id);
+            $showMarks = $question->isMcq() || ! $attempt->assessment->hidesOverallMarks();
+            $subs = $question->hasSubQuestions() ? $question->subQuestions() : [];
+        @endphp
         <div class="q">
-            @php $showMarks = $question->isMcq() || ! $attempt->assessment->hidesOverallMarks(); @endphp
             <div class="q-title">Q{{ $i + 1 }}. {{ $question->typeLabel() }}@if($showMarks) · {{ lms_format_number($question->max_marks) }} marks@endif</div>
             <div class="q-stem">{!! strip_tags($question->stem, '<p><br><strong><em><ul><ol><li><b><i>') !!}</div>
             <div class="q-answer">
@@ -152,8 +160,8 @@
                             · {{ $answer->is_correct ? 'Correct' : 'Incorrect' }}
                         @endif
                     </div>
-                @elseif($question->hasSubQuestions())
-                    @foreach($question->subQuestions() as $sub)
+                @elseif(count($subs) > 0)
+                    @foreach($subs as $sub)
                         @php $sk = (string) ($sub['key'] ?? $loop->index); @endphp
                         <span class="label">({{ chr(97 + $loop->index) }}) {{ $sub['text'] ?? '' }}</span>
                         <div class="body">{!! nl2br(e($answer?->partAnswer($sk) ?: '—')) !!}</div>
@@ -170,15 +178,11 @@
                 @endif
             </div>
             @if($showMarks)
-            <p><strong>Score:</strong>
-                @if($answer)
-                    {{ lms_format_number($answer->finalScore()) }} / {{ lms_format_number($answer->max_marks) }}
-                @else
-                    —
-                @endif
-            </p>
+                <p><strong>Score:</strong>
+                    {{ $answer ? lms_format_number($answer->finalScore()) . ' / ' . lms_format_number($answer->max_marks) : '—' }}
+                </p>
             @endif
-            @if($answer && $answer->feedback && ! $question->hasSubQuestions())
+            @if($answer && $answer->feedback && count($subs) === 0)
                 <div class="feedback"><strong>Feedback:</strong><br>{!! strip_tags($answer->feedback, '<p><br><strong><em><ul><ol><li><b><i>') !!}</div>
             @endif
             @if(trim(strip_tags((string) ($question->explanation ?? ''))) !== '')

@@ -150,6 +150,56 @@ class LmsAssessmentService
         return $this->lms->isAdminActor() || panel_sees_all_dashboards();
     }
 
+    public function actorIsAssignedMarker(): bool
+    {
+        $uid = (int) (Auth::id() ?? 0);
+        if ($uid <= 0 || $this->lms->isAdminActor()) {
+            return false;
+        }
+        if (! Schema::hasColumn('lms_assessment_assignments', 'marker_user_id')) {
+            return false;
+        }
+
+        return LmsAssessmentAssignment::query()->where('marker_user_id', $uid)->exists();
+    }
+
+    public function actorCanViewAssignedTests(): bool
+    {
+        return $this->canAssignStudentAssessments()
+            || $this->canManageSkillTests()
+            || $this->canManageStudentAssessments()
+            || $this->actorIsAssignedMarker();
+    }
+
+    public function actorCanAccessAttempt(LmsAssessmentAttempt $attempt): bool
+    {
+        if ($this->lms->isAdminActor() || panel_sees_all_dashboards()) {
+            return true;
+        }
+        $attempt->loadMissing('assessment');
+        if ($attempt->assessment?->isSkill()) {
+            return $this->canManageSkillTests();
+        }
+        $uid = (int) (Auth::id() ?? 0);
+        if ($uid > 0 && Schema::hasColumn('lms_assessment_assignments', 'marker_user_id')) {
+            $asgId = (int) ($attempt->assignment_id ?? 0);
+            $isMarker = LmsAssessmentAssignment::query()
+                ->where('marker_user_id', $uid)
+                ->where('assessment_id', $attempt->assessment_id)
+                ->when($asgId > 0, fn ($q) => $q->where('id', $asgId))
+                ->exists();
+            if ($isMarker) {
+                return true;
+            }
+        }
+        if (! $this->canManageStudentAssessments()) {
+            return false;
+        }
+        $courseId = (int) ($attempt->assessment?->course_id ?? 0);
+
+        return $courseId <= 0 || $this->lms->instructorAssignedToCourse($courseId);
+    }
+
     /** Staff roles that can be assigned assessments (CW, Accountant, Instructor). */
     public function staffRoleNames(): array
     {
@@ -1265,6 +1315,7 @@ class LmsAssessmentService
                 }
                 $isRetakeSitting = $usedOnSitting > 0 && $usedOnSitting < $max;
             } else {
+                $usedOnSitting = 0;
                 $attemptNumber = (int) $meta['number'];
                 $attemptTotal = max($max, (int) $meta['total']);
                 $isRetakeSitting = $attemptNumber > 1 && $max > 1;
@@ -1314,6 +1365,21 @@ class LmsAssessmentService
                 : null;
 
             // Finished sittings stay in Results/Submitted — next open sitting appears under Available.
+            if ($done && $assessment->isPractice()) {
+                $results->push($base + [
+                    'attempt' => $done,
+                    'can_retake' => $isSelf && $usedOnSitting < $max,
+                ]);
+                if ($isSelf && $usedOnSitting < $max && $assessment->isPublished()) {
+                    $available->push($base + [
+                        'attempt' => null,
+                        'can_retake' => true,
+                        'attempt_number' => $usedOnSitting + 1,
+                        'attempt_total' => $max,
+                    ]);
+                }
+                continue;
+            }
             if ($done && $done->results_published) {
                 $results->push($base + [
                     'attempt' => $done,

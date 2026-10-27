@@ -70,7 +70,7 @@
         #assessments-portal .lms-row-submitted,
         #assessments-portal .lms-row-completed { color: #f59e0b; } /* Marking Required — orange */
         #assessments-portal .lms-row-graded,
-        #assessments-portal .lms-row-marked { color: #1ab394; } /* Completed and Marked — green */
+        #assessments-portal .lms-row-marked { color: #1ab394; } /* Completed / Completed and Marked — green */
         #assessments-portal .lms-row-missed,
         #assessments-portal .lms-row-expired { color: #ed5565; } /* Missed — red */
         #assessments-portal .nav-pills {
