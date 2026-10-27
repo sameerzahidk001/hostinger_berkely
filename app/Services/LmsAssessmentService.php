@@ -722,28 +722,60 @@ class LmsAssessmentService
 
     public function pauseAttempt(LmsAssessmentAttempt $attempt): LmsAssessmentAttempt
     {
-        abort_unless($attempt->isInProgress(), 403);
+        if (! $attempt->isInProgress()) {
+            throw new \RuntimeException('This attempt is no longer in progress.');
+        }
         $attempt->loadMissing('assessment');
-        abort_unless($attempt->assessment && $attempt->assessment->allowsPause(), 403);
-        if ($attempt->paused_at) {
-            return $attempt;
+        if (! $attempt->assessment || ! $attempt->assessment->allowsPause()) {
+            throw new \RuntimeException('Pause is not enabled for this test.');
         }
-        if (! Schema::hasColumn('lms_assessment_attempts', 'paused_at')) {
-            return $attempt;
+        if ($attempt->isPaused()) {
+            return $attempt->fresh() ?: $attempt;
         }
-        $attempt->paused_at = now();
+
+        $remaining = 0;
+        if ($attempt->expires_at) {
+            $remaining = max(0, now()->diffInSeconds($attempt->expires_at, false));
+        }
+        $started = now();
+        session([
+            $attempt->pauseSessionKey() => [
+                'started_at' => $started->toIso8601String(),
+                'remaining' => $remaining,
+            ],
+        ]);
+
+        if (Schema::hasColumn('lms_assessment_attempts', 'paused_at')) {
+            $attempt->paused_at = $started;
+        }
+        if ($attempt->expires_at) {
+            // Park the deadline so auto-submit cannot fire while paused.
+            $attempt->expires_at = $started->copy()->addSeconds($remaining)->addDays(7);
+        }
         $attempt->save();
 
-        return $attempt->fresh();
+        return $attempt->fresh() ?: $attempt;
     }
 
     public function resumeAttempt(LmsAssessmentAttempt $attempt): LmsAssessmentAttempt
     {
-        abort_unless($attempt->isInProgress(), 403);
-        if (! $attempt->paused_at || ! Schema::hasColumn('lms_assessment_attempts', 'paused_at')) {
+        if (! $attempt->isInProgress()) {
+            throw new \RuntimeException('This attempt is no longer in progress.');
+        }
+        $sess = session($attempt->pauseSessionKey());
+        $started = null;
+        $remaining = null;
+        if (is_array($sess)) {
+            $started = ! empty($sess['started_at']) ? \Carbon\Carbon::parse($sess['started_at']) : null;
+            $remaining = isset($sess['remaining']) ? (int) $sess['remaining'] : null;
+        }
+        if (! $started && Schema::hasColumn('lms_assessment_attempts', 'paused_at') && $attempt->paused_at) {
+            $started = $attempt->paused_at->copy();
+        }
+        if (! $started) {
             return $attempt;
         }
-        $started = $attempt->paused_at->copy();
+
         $ended = now();
         $seconds = max(0, $started->diffInSeconds($ended));
         if (Schema::hasColumn('lms_assessment_attempts', 'pause_seconds')) {
@@ -758,13 +790,21 @@ class LmsAssessmentService
             ];
             $attempt->pause_log_json = $log;
         }
-        if ($attempt->expires_at && $seconds > 0) {
+        if ($remaining === null && $attempt->expires_at) {
+            $remaining = max(0, $started->copy()->addDays(7)->diffInSeconds($attempt->expires_at, false));
+        }
+        if ($remaining !== null) {
+            $attempt->expires_at = $ended->copy()->addSeconds(max(0, $remaining));
+        } elseif ($attempt->expires_at && $seconds > 0) {
             $attempt->expires_at = $attempt->expires_at->copy()->addSeconds($seconds);
         }
-        $attempt->paused_at = null;
+        if (Schema::hasColumn('lms_assessment_attempts', 'paused_at')) {
+            $attempt->paused_at = null;
+        }
         $attempt->save();
+        session()->forget($attempt->pauseSessionKey());
 
-        return $attempt->fresh();
+        return $attempt->fresh() ?: $attempt;
     }
 
     public function submitAttempt(LmsAssessmentAttempt $attempt, bool $expired = false): LmsAssessmentAttempt

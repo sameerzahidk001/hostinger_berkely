@@ -989,8 +989,8 @@ document.body.setAttribute('data-lms-exam-lock', '1');
     var btn = document.getElementById('lms-pause-btn');
     if (!btn) return;
     var token = document.querySelector('#attempt-form input[name="_token"]');
-    var pauseUrl = @json(route('user.assessments.pause', $attempt->id));
-    var resumeUrl = @json(route('user.assessments.resume', $attempt->id));
+    var form = document.getElementById('attempt-form');
+    var pauseUrl = form ? form.action : @json(route('user.assessments.save', $attempt->id));
     var busy = false;
     function setPausedUi(paused) {
         window.lmsExamPaused = !!paused;
@@ -1012,7 +1012,10 @@ document.body.setAttribute('data-lms-exam-lock', '1');
         setPausedUi(goingPause);
         var fd = new FormData();
         if (token) fd.append('_token', token.value);
-        fetch(goingPause ? pauseUrl : resumeUrl, {
+        fd.append('pause_action', goingPause ? 'pause' : 'resume');
+        fd.append('submit', '0');
+        fd.append('save_mode', '0');
+        fetch(pauseUrl, {
             method: 'POST',
             credentials: 'same-origin',
             headers: {
@@ -1025,11 +1028,11 @@ document.body.setAttribute('data-lms-exam-lock', '1');
         .then(function (data) {
             if (!data || !data.ok) {
                 setPausedUi(!goingPause);
-                alert('Could not pause or resume the timer. Please try again.');
+                alert((data && data.message) ? data.message : 'Could not pause or resume the timer. Please try again.');
                 return;
             }
             setPausedUi(!!data.paused);
-            if (data.expires_at && typeof window.lmsSetExamEnd === 'function') {
+            if (!data.paused && data.expires_at && typeof window.lmsSetExamEnd === 'function') {
                 window.lmsSetExamEnd(data.expires_at, data.expires_label);
             }
         }).catch(function () {

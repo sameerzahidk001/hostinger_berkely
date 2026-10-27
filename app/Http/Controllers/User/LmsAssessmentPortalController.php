@@ -233,6 +233,18 @@ class LmsAssessmentPortalController extends Controller
         abort_unless($user, 403);
         $this->assessments->ensure();
         $attempt = LmsAssessmentAttempt::where('user_id', $user->id)->findOrFail($attemptId);
+        $pauseAction = trim((string) $request->input('pause_action', ''));
+        if (in_array($pauseAction, ['pause', 'resume'], true)) {
+            try {
+                $attempt = $pauseAction === 'pause'
+                    ? $this->assessments->pauseAttempt($attempt)
+                    : $this->assessments->resumeAttempt($attempt);
+
+                return response()->json($this->pausePayload($attempt));
+            } catch (\Throwable $e) {
+                return response()->json(['ok' => false, 'message' => $e->getMessage()], 200);
+            }
+        }
         if (! $attempt->isInProgress()) {
             $redirect = route('user.assessments.result', $attempt->id);
             if ($request->ajax() || $request->wantsJson()) {
@@ -291,24 +303,29 @@ class LmsAssessmentPortalController extends Controller
 
     public function pause($attemptId)
     {
-        $user = Auth::user();
-        abort_unless($user, 403);
-        $this->assessments->ensure();
-        $attempt = LmsAssessmentAttempt::where('user_id', $user->id)->findOrFail($attemptId);
-        $attempt = $this->assessments->pauseAttempt($attempt);
-
-        return response()->json($this->pausePayload($attempt));
+        return $this->pauseOrResume($attemptId, 'pause');
     }
 
     public function resume($attemptId)
+    {
+        return $this->pauseOrResume($attemptId, 'resume');
+    }
+
+    protected function pauseOrResume($attemptId, string $action)
     {
         $user = Auth::user();
         abort_unless($user, 403);
         $this->assessments->ensure();
         $attempt = LmsAssessmentAttempt::where('user_id', $user->id)->findOrFail($attemptId);
-        $attempt = $this->assessments->resumeAttempt($attempt);
+        try {
+            $attempt = $action === 'pause'
+                ? $this->assessments->pauseAttempt($attempt)
+                : $this->assessments->resumeAttempt($attempt);
 
-        return response()->json($this->pausePayload($attempt));
+            return response()->json($this->pausePayload($attempt));
+        } catch (\Throwable $e) {
+            return response()->json(['ok' => false, 'message' => $e->getMessage()], 200);
+        }
     }
 
     protected function pausePayload(LmsAssessmentAttempt $attempt): array
