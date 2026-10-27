@@ -182,11 +182,16 @@
                                 <span class="lms-timing-line"><strong>Exam Appointment:</strong> {{ ($assignment && $assignment->isSelfSitting()) ? 'Start anytime' : ($assignment?->windowStart()?->format('d/m/Y, H:i') ?? '—') }}</span>
                                 <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $assignment->timezoneLabel() }}</span>
                                 <span class="lms-timing-line"><strong>Exam Duration:</strong> {{ $fmtDuration($assessmentRow->durationMinutes()) }}</span>
-                                <span class="lms-timing-line"><strong>Started:</strong> {{ ($attempt?->started_at) ? $assignment->formatInTimezone($attempt->started_at) : '—' }}</span>
-                                <span class="lms-timing-line"><strong>Ended:</strong> {{ ($attempt?->submitted_at) ? $assignment->formatInTimezone($attempt->submitted_at) : '—' }}</span>
-                                <span class="lms-timing-line"><strong>Time spent:</strong> {{ $spend !== null ? $fmtDuration($spend) : '—' }}</span>
-                                @if($attempt && $attempt->pauseSecondsTotal() > 0)
+                                @if($attempt)
+                                    <span class="lms-timing-line"><strong>Started:</strong> {{ $assignment->formatInTimezone($attempt->startedAtForDisplay()) }}</span>
+                                    <span class="lms-timing-line"><strong>Ended:</strong> {{ $assignment->formatInTimezone($attempt->endedAtForDisplay()) }}</span>
+                                    <span class="lms-timing-line"><strong>Time spent:</strong> {{ $spend !== null ? $fmtDuration($spend) : '—' }}</span>
                                     <span class="lms-timing-line"><strong>Pause duration:</strong> {{ $attempt->pauseDurationLabel() }}</span>
+                                @else
+                                    <span class="lms-timing-line"><strong>Started:</strong> —</span>
+                                    <span class="lms-timing-line"><strong>Ended:</strong> —</span>
+                                    <span class="lms-timing-line"><strong>Time spent:</strong> —</span>
+                                    <span class="lms-timing-line"><strong>Pause duration:</strong> —</span>
                                 @endif
                             </td>
                             <td class="col-created" data-sort="{{ $createdBy }}">
@@ -229,12 +234,12 @@
                                 @if($attempt && in_array($attempt->status, ['submitted', 'graded', 'expired'], true))
                                     <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.mark', $attempt->id) }}">View Details</a>
                                     <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.attempt-pdf', $attempt->id) }}" target="_blank">Download PDF</a>
-                                    @unless($attempt->results_published)
+                                    @if(! $attempt->results_published && $attempt->status === 'graded')
                                         <form action="{{ route('admin.assessments.tests.publish-attempt', $attempt->id) }}" method="POST">
                                             @csrf
                                             <button class="btn btn-xs btn-primary" type="submit">Publish</button>
                                         </form>
-                                    @endunless
+                                    @endif
                                 @endif
                                 @if($canManageSitting && $assignment)
                                     <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.edit-assignment', $assignment->id) }}">Edit</a>

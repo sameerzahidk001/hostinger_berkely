@@ -978,6 +978,7 @@ class LmsAssessmentController extends Controller
         $this->assessments->ensure();
         $attempt = LmsAssessmentAttempt::with('assessment')->findOrFail($attemptId);
         abort_unless($this->assessments->actorCanAccessAttempt($attempt), 403);
+        abort_unless($attempt->status === 'graded', 422, 'Mark the attempt before publishing results.');
         $this->assessments->publishResults($attempt);
 
         return redirect()->route('admin.assessments.tests.assigned-users', ['assessment_id' => $attempt->assessment_id])

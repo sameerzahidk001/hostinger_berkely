@@ -282,10 +282,10 @@
                                 <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $asg->timezoneLabel() }}</span>
                             @endif
                             <span class="lms-timing-line"><strong>Exam Duration:</strong> {{ $fmtDuration($a->durationMinutes()) }}</span>
-                            <span class="lms-timing-line"><strong>Started:</strong> {{ ($asg && $att?->started_at) ? $asg->formatInTimezone($att->started_at) : (optional($att?->started_at)->format('d/m/y H:i') ?? '—') }}</span>
-                            <span class="lms-timing-line"><strong>Ended:</strong> {{ ($asg && $att?->submitted_at) ? $asg->formatInTimezone($att->submitted_at) : (optional($att?->submitted_at)->format('d/m/y H:i') ?? '—') }}</span>
-                            <span class="lms-timing-line"><strong>Time spent:</strong> {{ $spend !== null ? $fmtDuration($spend) : '—' }}</span>
-                            @if($att && $att->pauseSecondsTotal() > 0)
+                            @if($att)
+                                <span class="lms-timing-line"><strong>Started:</strong> {{ $asg ? $asg->formatInTimezone($att->startedAtForDisplay()) : (optional($att->startedAtForDisplay())->format('d/m/y H:i') ?? '—') }}</span>
+                                <span class="lms-timing-line"><strong>Ended:</strong> {{ $asg ? $asg->formatInTimezone($att->endedAtForDisplay()) : (optional($att->endedAtForDisplay())->format('d/m/y H:i') ?? '—') }}</span>
+                                <span class="lms-timing-line"><strong>Time spent:</strong> {{ $spend !== null ? $fmtDuration($spend) : '—' }}</span>
                                 <span class="lms-timing-line"><strong>Pause duration:</strong> {{ $att->pauseDurationLabel() }}</span>
                                 @foreach($att->pauseLog() as $pi => $plog)
                                     @php
