@@ -182,14 +182,33 @@ class LmsAssessmentAttempt extends Model
         };
     }
 
+    public function startedAtForDisplay(): ?\Carbon\Carbon
+    {
+        return $this->started_at ?: $this->created_at;
+    }
+
+    public function endedAtForDisplay(): ?\Carbon\Carbon
+    {
+        if ($this->submitted_at) {
+            return $this->submitted_at;
+        }
+        if (in_array($this->status, ['submitted', 'graded', 'expired'], true)) {
+            return $this->graded_at ?: $this->updated_at;
+        }
+
+        return null;
+    }
+
     /** Minutes spent from start to submit (null if incomplete). Capped at exam duration. */
     public function spendMinutes(): ?int
     {
-        if (! $this->started_at || ! $this->submitted_at) {
+        $start = $this->startedAtForDisplay();
+        $end = $this->endedAtForDisplay();
+        if (! $start || ! $end) {
             return null;
         }
 
-        $spent = (int) max(0, $this->started_at->diffInMinutes($this->submitted_at));
+        $spent = (int) max(0, $start->diffInMinutes($end));
         $pauseMin = (int) floor($this->pauseSecondsTotal() / 60);
         $spent = max(0, $spent - $pauseMin);
         $assessment = $this->assessment;

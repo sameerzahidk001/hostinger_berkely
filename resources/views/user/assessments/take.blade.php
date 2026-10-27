@@ -28,12 +28,18 @@
     }
     body.lms-take-mode #page-wrapper > .wrapper-content,
     body.lms-take-mode .wrapper.wrapper-content {
-        margin-top: 268px;
+        margin-top: 196px;
+    }
+    body.lms-intro-open #page-wrapper > .wrapper-content,
+    body.lms-intro-open .wrapper.wrapper-content {
+        margin-top: 148px;
     }
     @media (max-width: 768px) {
         .lms-take-sticky { left: 0; }
         body.lms-take-mode #page-wrapper > .wrapper-content,
-        body.lms-take-mode .wrapper.wrapper-content { margin-top: 250px; }
+        body.lms-take-mode .wrapper.wrapper-content { margin-top: 220px; }
+        body.lms-intro-open #page-wrapper > .wrapper-content,
+        body.lms-intro-open .wrapper.wrapper-content { margin-top: 160px; }
     }
     .lms-take-sticky .page-heading {
         margin: 0;
@@ -56,47 +62,45 @@
     .lms-take-sticky .breadcrumb > li.active {
         color: #d7e6f5;
     }
-    .lms-take-sticky .lms-take-timer {
-        margin: 0;
-        border-radius: 0;
-        border: none;
-        padding: 10px 15px;
-        font-weight: 600;
-        background: #123f6b;
-        color: #fff;
-    }
     .lms-take-sticky .lms-q-progress {
-        padding: 8px 15px;
+        padding: 8px 16px;
         font-size: 13px;
-        color: #0d3b66;
-        background: #fff;
-        border-bottom: 1px solid #d9e4f0;
+        font-weight: 600;
+        color: #fff;
+        background: #123f6b;
+        border-bottom: 1px solid #16497a;
+        white-space: nowrap;
+        overflow-x: auto;
     }
+    .lms-take-sticky .lms-q-progress strong { color: #fff; }
     .lms-take-head-row {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 16px;
-    }
-    .lms-take-meta { flex: 1; min-width: 0; }
-    .lms-take-cols {
-        display: flex;
-        align-items: flex-start;
-        justify-content: space-between;
-        gap: 24px;
+        display: block;
         width: 100%;
     }
+    .lms-take-meta { min-width: 0; }
+    .lms-take-cols {
+        display: grid;
+        grid-template-columns: minmax(220px, 1fr) minmax(280px, 1.2fr);
+        gap: 12px 40px;
+        width: 100%;
+        align-items: start;
+    }
     .lms-take-col { min-width: 0; }
-    .lms-take-col-left { flex: 1 1 42%; }
-    .lms-take-col-right { flex: 1 1 58%; }
     .lms-take-line {
-        margin: 0 0 4px;
+        margin: 0 0 5px;
         font-size: 13px;
-        line-height: 1.4;
+        line-height: 1.45;
         color: #fff;
     }
     .lms-take-line strong { color: #fff; }
-    .lms-res-btns { margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; flex-shrink: 0; }
+    .lms-res-btns {
+        margin: 12px 0 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-end;
+        width: 100%;
+    }
     .lms-q-step textarea.form-control,
     .lms-q-step textarea.form-control:focus {
         color: #0056b3 !important;
@@ -351,49 +355,43 @@
                         <div class="lms-take-col lms-take-col-right">
                             <p class="lms-take-line"><strong>Appointment ID:</strong> {{ $assignment?->displayCode() ?? '—' }}</p>
                             <p class="lms-take-line"><strong>Test Appointment Timing:</strong> {{ $apptTiming }}</p>
-                            <p class="lms-take-line"><strong>Time zone:</strong> {{ $assignment?->timezoneLabel() ?? (function_exists('viewer_timezone_label') ? viewer_timezone_label() : config('app.timezone')) }}</p>
-                            <div class="lms-res-btns">
-                                @if($refFiles !== [])
-                                    <a href="#" class="lms-res-btn js-open-res" data-kind="reference">Reference Materials</a>
-                                @endif
-                                @if($preFiles !== [])
-                                    <a href="#" class="lms-res-btn js-open-res" data-kind="preseen">Preseen</a>
-                                @endif
-                                <button type="button" class="lms-save-screen-btn" id="lms-save-btn">Save</button>
-                                @if($attempt->assessment->allowsPause())
-                                    <button type="button" class="lms-pause-screen-btn {{ $attempt->isPaused() ? 'is-paused' : '' }}" id="lms-pause-btn">{{ $attempt->isPaused() ? 'Resume' : 'Pause' }}</button>
-                                @endif
-                                <button type="button" class="lms-submit-screen-btn" id="lms-submit-open">Submit</button>
-                            </div>
+                            <p class="lms-take-line" style="margin-bottom:0;"><strong>Time zone:</strong> {{ $assignment?->timezoneLabel() ?? (function_exists('viewer_timezone_label') ? viewer_timezone_label() : config('app.timezone')) }}</p>
                         </div>
+                    </div>
+                    <div class="lms-res-btns">
+                        @if($refFiles !== [])
+                            <a href="#" class="lms-res-btn js-open-res" data-kind="reference">Reference Materials</a>
+                        @endif
+                        @if($preFiles !== [])
+                            <a href="#" class="lms-res-btn js-open-res" data-kind="preseen">Preseen</a>
+                        @endif
+                        <button type="button" class="lms-save-screen-btn" id="lms-save-btn">Save</button>
+                        @if($attempt->assessment->allowsPause())
+                            <button type="button" class="lms-pause-screen-btn {{ $attempt->isPaused() ? 'is-paused' : '' }}" id="lms-pause-btn">{{ $attempt->isPaused() ? 'Resume' : 'Pause' }}</button>
+                        @endif
+                        <button type="button" class="lms-submit-screen-btn" id="lms-submit-open">Submit</button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+    @php
+        $examTzName = $assignment?->timezoneName()
+            ?: (function_exists('viewer_timezone') ? viewer_timezone() : config('app.timezone'));
+        $examTzLabel = $assignment?->timezoneLabel()
+            ?: (function_exists('viewer_timezone_label') ? viewer_timezone_label($examTzName) : $examTzName);
+    @endphp
     @if($attempt->expires_at)
-        @php
-            $examTzName = $assignment?->timezoneName()
-                ?: (function_exists('viewer_timezone') ? viewer_timezone() : config('app.timezone'));
-            $examTzLabel = $assignment?->timezoneLabel()
-                ?: (function_exists('viewer_timezone_label') ? viewer_timezone_label($examTzName) : $examTzName);
-            try {
-                $examEndsLabel = $attempt->expires_at->copy()->timezone($examTzName)->format('d/m/Y H:i');
-            } catch (\Throwable $e) {
-                $examEndsLabel = $attempt->expires_at->format('d/m/Y H:i');
-            }
-        @endphp
-        <div class="alert alert-warning lms-take-timer">
-            Test Ends:
-            <strong id="expires_at_label">{{ $examEndsLabel }} ({{ $examTzLabel }})</strong>
-            <span class="hidden" id="expires_at">{{ $attempt->expires_at->toIso8601String() }}</span>
-            · Remaining: <strong id="countdown">{{ $attempt->isPaused() ? 'Paused' : '—' }}</strong>
-        </div>
+        <span class="hidden" id="expires_at">{{ $attempt->expires_at->toIso8601String() }}</span>
+        <span class="hidden" id="expires_at_label">{{ $attempt->expires_at->format('d/m/Y H:i') }}</span>
     @endif
     <div class="lms-q-progress">
         Question <strong id="lms-q-current">1</strong> of <strong>{{ max(1, $qTotal) }}</strong>
-        <span class="lms-q-timer" id="lms-q-timer" style="display:none;">Question time: <strong id="lms-q-countdown">—</strong></span>
-        <span id="lms-autosave-hint" class="text-muted" style="margin-left:12px;font-size:12px;"></span>
+        <span> | Current Question Time: <strong id="lms-q-countdown">{{ $attempt->isPaused() ? 'Paused' : '—' }}</strong></span>
+        <span> | Total Test Remaining Time: <strong id="lms-total-remain">{{ $attempt->isPaused() ? 'Paused' : '—' }}</strong></span>
+        <span> | <span id="lms-autosave-hint"></span></span>
+        <span class="lms-q-timer" id="lms-q-timer" style="display:none;"></span>
+        <span class="hidden" id="countdown"></span>
     </div>
 </div>
 <div class="wrapper wrapper-content">
@@ -618,7 +616,8 @@ document.body.setAttribute('data-lms-exam-lock', '1');
             var now = new Date();
             var hh = String(now.getHours()).padStart(2, '0');
             var mm = String(now.getMinutes()).padStart(2, '0');
-            showAutosaveHint('Saved ' + hh + ':' + mm);
+            var tz = @json($assignment?->timezoneLabel() ?: (function_exists('viewer_timezone_label') ? viewer_timezone_label() : ''));
+            showAutosaveHint('Saved at ' + hh + ':' + mm + (tz ? ' (' + tz + ')' : ''));
         }).catch(function () {
             showAutosaveHint('Save retrying…');
         }).finally(function () {
@@ -654,12 +653,39 @@ document.body.setAttribute('data-lms-exam-lock', '1');
     function remainKey(i) {
         return 'lms-take-remain-' + attemptId + '-' + i;
     }
+    function formatRemain(ms) {
+        ms = Math.max(0, ms);
+        var s = Math.floor(ms / 1000);
+        var h = Math.floor(s / 3600);
+        s = s % 3600;
+        var m = Math.floor(s / 60);
+        s = s % 60;
+        if (h > 0) return h + 'h ' + m + 'm ' + s + 's';
+        return m + 'm ' + s + 's';
+    }
+    function laterQuestionsMs(fromExclusive) {
+        var ms = 0;
+        for (var i = fromExclusive + 1; i < steps.length; i++) {
+            ms += qMinutes(i) * 60 * 1000;
+        }
+        return ms;
+    }
+    function paintRemain(currentMs) {
+        var tot = document.getElementById('lms-total-remain');
+        if (window.lmsExamPaused) {
+            if (qCountdown) qCountdown.textContent = 'Paused';
+            if (tot) tot.textContent = 'Paused';
+            return;
+        }
+        if (qCountdown) qCountdown.textContent = formatRemain(currentMs);
+        if (tot) tot.textContent = formatRemain(currentMs + laterQuestionsMs(idx));
+    }
     function freezeQTimer() {
         if (!qEndsAt) return;
         var remain = Math.max(0, qEndsAt - Date.now());
         writeStore(remainKey(idx), String(remain));
         if (qTimerId) { clearTimeout(qTimerId); qTimerId = null; }
-        if (qCountdown) qCountdown.textContent = 'Paused';
+        paintRemain(remain);
     }
     function thawQTimer() {
         var remain = parseInt(readStore(remainKey(idx)) || '0', 10);
@@ -675,14 +701,14 @@ document.body.setAttribute('data-lms-exam-lock', '1');
 
     function tickQ() {
         if (window.lmsExamPaused) {
-            if (qCountdown) qCountdown.textContent = 'Paused';
+            paintRemain(0);
             return;
         }
         if (!qEndsAt || !qCountdown) return;
         var ms = qEndsAt - Date.now();
         if (ms <= 0) {
             clearQTimer();
-            qCountdown.textContent = '0s';
+            paintRemain(0);
             if (form && form.dataset.autoSubmitted) return;
             if (idx >= steps.length - 1) {
                 if (typeof window.lmsExamAutoSubmit === 'function') {
@@ -696,15 +722,7 @@ document.body.setAttribute('data-lms-exam-lock', '1');
             });
             return;
         }
-        var s = Math.floor(ms / 1000);
-        var m = Math.floor(s / 60);
-        s = s % 60;
-        var label = (m > 0 ? (m + 'm ') : '') + s + 's';
-        qCountdown.textContent = label;
-        var examRemain = document.getElementById('countdown');
-        if (examRemain && !window.lmsExamPaused) {
-            examRemain.textContent = label;
-        }
+        paintRemain(ms);
         qTimerId = setTimeout(tickQ, 1000);
     }
 
@@ -713,6 +731,7 @@ document.body.setAttribute('data-lms-exam-lock', '1');
         var mins = qMinutes(stepIndex);
         if (!mins) {
             qEndsAt = null;
+            paintRemain(0);
             return;
         }
         var remainStored = parseInt(readStore(remainKey(stepIndex)) || '0', 10);
