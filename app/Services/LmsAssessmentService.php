@@ -506,13 +506,26 @@ class LmsAssessmentService
             ->orderBy('id')
             ->get(['id']);
 
-        $total = max(1, $sittings->count());
+        $sitCount = max(1, $sittings->count());
         $number = 1;
         foreach ($sittings->values() as $i => $asg) {
             if ((int) $asg->id === (int) $assignment->id) {
                 $number = $i + 1;
                 break;
             }
+        }
+        $max = $this->maxAttemptsFor($assessment);
+        $usedOnSitting = LmsAssessmentAttempt::query()
+            ->where('assessment_id', $assessment->id)
+            ->where('user_id', $userId)
+            ->get()
+            ->filter(fn ($att) => $this->attemptBelongsToAssignment($att, $assignment))
+            ->count();
+        if ($max > $sitCount) {
+            $number = max(1, $usedOnSitting);
+            $total = $max;
+        } else {
+            $total = max($sitCount, $max);
         }
 
         return ['number' => $number, 'total' => $total];
@@ -541,11 +554,8 @@ class LmsAssessmentService
                     return false;
                 }
                 $usedOnSitting = $attempts->filter(fn ($att) => $this->attemptBelongsToAssignment($att, $asg))->count();
-                if ($asg->isSelfSitting()) {
-                    return $usedOnSitting < $this->maxAttemptsFor($assessment);
-                }
 
-                return $usedOnSitting === 0;
+                return $usedOnSitting < $this->maxAttemptsFor($assessment);
             })
             ->values();
     }
@@ -1332,41 +1342,41 @@ class LmsAssessmentService
             $fromFolder = ! empty($row['from_folder']);
             $isSelf = ($assignment && $assignment->isSelfSitting()) || $fromFolder;
 
-            if ($isSelf) {
-                $sittingAttempts = $attempts
-                    ->filter(function ($att) use ($assignment, $fromFolder, $claimedAttemptIds) {
-                        if (isset($claimedAttemptIds[(int) $att->id])) {
-                            return false;
-                        }
-                        if ($fromFolder) {
-                            return empty($att->assignment_id);
-                        }
+            $sittingAttempts = $attempts
+                ->filter(function ($att) use ($assignment, $fromFolder, $claimedAttemptIds) {
+                    if (isset($claimedAttemptIds[(int) $att->id])) {
+                        return false;
+                    }
+                    if ($fromFolder) {
+                        return empty($att->assignment_id);
+                    }
 
-                        return $this->attemptBelongsToAssignment($att, $assignment);
-                    })
-                    ->sortBy('id')
-                    ->values();
-                $usedOnSitting = $sittingAttempts->count();
-                $attemptTotal = $max;
-                $matched = $sittingAttempts->sortByDesc('id')->first();
-                $attemptNumber = $matched ? $usedOnSitting : max(1, $usedOnSitting + 1);
-                foreach ($sittingAttempts as $sa) {
-                    $claimedAttemptIds[(int) $sa->id] = true;
-                }
-                $isRetakeSitting = $usedOnSitting > 0 && $usedOnSitting < $max;
-            } else {
-                $usedOnSitting = 0;
-                $attemptNumber = (int) $meta['number'];
-                $attemptTotal = max($max, (int) $meta['total']);
-                $isRetakeSitting = $attemptNumber > 1 && $max > 1;
+                    return $this->attemptBelongsToAssignment($att, $assignment);
+                })
+                ->sortBy('id')
+                ->values();
+            $usedOnSitting = $sittingAttempts->count();
+            $attemptTotal = max($max, (int) ($meta['total'] ?? 1));
+            $matched = $sittingAttempts->sortByDesc('id')->first();
+            if (! $matched && ! $isSelf) {
                 $matched = $attempts->first(function ($att) use ($assignment, $claimedAttemptIds) {
                     return ! isset($claimedAttemptIds[(int) $att->id])
                         && $this->attemptBelongsToAssignment($att, $assignment);
                 });
-                if ($matched) {
-                    $claimedAttemptIds[(int) $matched->id] = true;
-                }
             }
+            $attemptNumber = $matched
+                ? max(1, $usedOnSitting)
+                : max(1, $usedOnSitting + 1);
+            if (! $isSelf && $usedOnSitting === 0) {
+                $attemptNumber = (int) ($meta['number'] ?? $attemptNumber);
+            }
+            foreach ($sittingAttempts as $sa) {
+                $claimedAttemptIds[(int) $sa->id] = true;
+            }
+            if ($matched && ! isset($claimedAttemptIds[(int) $matched->id])) {
+                $claimedAttemptIds[(int) $matched->id] = true;
+            }
+            $isRetakeSitting = $usedOnSitting > 0 && $usedOnSitting < $max;
 
             $base = [
                 'assessment' => $assessment,
@@ -1405,17 +1415,18 @@ class LmsAssessmentService
                 : null;
 
             // Finished sittings stay in Results/Submitted — next open sitting appears under Available.
+            $remainingAttempts = $usedOnSitting < $max && $assessment->isPublished();
             if ($done && $assessment->isPractice()) {
                 $results->push($base + [
                     'attempt' => $done,
-                    'can_retake' => $isSelf && $usedOnSitting < $max,
+                    'can_retake' => $remainingAttempts,
                 ]);
-                if ($isSelf && $usedOnSitting < $max && $assessment->isPublished()) {
+                if ($remainingAttempts) {
                     $available->push($base + [
                         'attempt' => null,
                         'can_retake' => true,
                         'attempt_number' => $usedOnSitting + 1,
-                        'attempt_total' => $max,
+                        'attempt_total' => $attemptTotal,
                     ]);
                 }
                 continue;
@@ -1423,15 +1434,31 @@ class LmsAssessmentService
             if ($done && $done->results_published) {
                 $results->push($base + [
                     'attempt' => $done,
-                    'can_retake' => false,
+                    'can_retake' => $remainingAttempts,
                 ]);
+                if ($remainingAttempts) {
+                    $available->push($base + [
+                        'attempt' => null,
+                        'can_retake' => true,
+                        'attempt_number' => $usedOnSitting + 1,
+                        'attempt_total' => $attemptTotal,
+                    ]);
+                }
                 continue;
             }
             if ($done) {
                 $submitted->push($base + [
                     'attempt' => $done,
-                    'can_retake' => false,
+                    'can_retake' => $remainingAttempts,
                 ]);
+                if ($remainingAttempts) {
+                    $available->push($base + [
+                        'attempt' => null,
+                        'can_retake' => true,
+                        'attempt_number' => $usedOnSitting + 1,
+                        'attempt_total' => $attemptTotal,
+                    ]);
+                }
                 continue;
             }
 
