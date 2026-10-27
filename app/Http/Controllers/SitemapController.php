@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Course;
-use App\Models\Menu;
 use App\Models\Page;
 use App\Models\SiteSettings;
 use Illuminate\Http\Response;
@@ -13,7 +12,17 @@ class SitemapController extends Controller
 {
     public function index(): Response
     {
-        $urls = $this->publishedUrls();
+        try {
+            $urls = $this->publishedUrls();
+        } catch (\Throwable $e) {
+            report($e);
+            $urls = [[
+                'loc' => $this->siteUrl('/'),
+                'lastmod' => now()->toAtomString(),
+                'changefreq' => 'daily',
+                'priority' => '1.0',
+            ]];
+        }
 
         $xml = view('sitemap.xml', compact('urls'))->render();
 
@@ -50,12 +59,12 @@ class SitemapController extends Controller
         $urls = [];
         $homeId = SiteSettings::value('home');
 
-            $urls[] = [
-                'loc' => $this->siteUrl('/'),
-                'lastmod' => now()->toAtomString(),
-                'changefreq' => 'daily',
-                'priority' => '1.0',
-            ];
+        $urls[] = [
+            'loc' => $this->siteUrl('/'),
+            'lastmod' => now()->toAtomString(),
+            'changefreq' => 'daily',
+            'priority' => '1.0',
+        ];
         $urls[] = [
             'loc' => $this->siteUrl('course-index'),
             'lastmod' => now()->toAtomString(),
@@ -63,58 +72,76 @@ class SitemapController extends Controller
             'priority' => '0.6',
         ];
 
-        $pageQuery = Page::query()->with('seo')->withCount('sections');
+        $pageQuery = Page::query()
+            ->select(['id', 'url', 'parent_id', 'category_id', 'updated_at'])
+            ->with(['seo', 'parent:id,url,parent_id,category_id'])
+            ->withCount('sections');
+        if (Schema::hasColumn('pages', 'status')) {
+            $pageQuery->addSelect('status');
+        }
         if (pages_status_enabled() && Schema::hasColumn('pages', 'status')) {
             $pageQuery->where('status', 1);
         }
 
-        foreach ($pageQuery->orderBy('id')->get() as $page) {
-            if ($homeId && (int) $page->id === (int) $homeId) {
-                continue;
+        $pageQuery->orderBy('id')->chunkById(40, function ($pages) use (&$urls, $homeId) {
+            $pages->load('sections');
+            foreach ($pages as $page) {
+                try {
+                    if ($homeId && (int) $page->id === (int) $homeId) {
+                        continue;
+                    }
+
+                    if ($this->isNoIndex($page->seo)) {
+                        continue;
+                    }
+
+                    $path = trim((string) $page->full_url, '/');
+                    if ($path === '' || seo_is_utility_path($path) || in_array($path, ['home', 'page-not-found'], true)) {
+                        continue;
+                    }
+
+                    if ((int) ($page->sections_count ?? 0) === 0 || seo_page_is_empty($page)) {
+                        continue;
+                    }
+
+                    if (! seo_path_is_menu_linked($path)) {
+                        continue;
+                    }
+
+                    $urls[] = [
+                        'loc' => $this->siteUrl($path),
+                        'lastmod' => optional($page->updated_at)?->toAtomString(),
+                        'changefreq' => 'weekly',
+                        'priority' => '0.8',
+                    ];
+                } catch (\Throwable $e) {
+                    report($e);
+                }
             }
+        });
 
-            if ($this->isNoIndex($page->seo)) {
-                continue;
+        $courseQuery = Course::query()->select(['id', 'slug', 'updated_at'])->with('seo');
+        $courseQuery->orderBy('id')->chunkById(100, function ($courses) use (&$urls) {
+            foreach ($courses as $course) {
+                try {
+                    if ($this->isNoIndex($course->seo)) {
+                        continue;
+                    }
+                    if (empty($course->slug)) {
+                        continue;
+                    }
+
+                    $urls[] = [
+                        'loc' => $this->siteUrl('course/' . $course->slug),
+                        'lastmod' => optional($course->updated_at)?->toAtomString(),
+                        'changefreq' => 'weekly',
+                        'priority' => '0.7',
+                    ];
+                } catch (\Throwable $e) {
+                    report($e);
+                }
             }
-
-            $path = trim((string) $page->full_url, '/');
-            if ($path === '' || seo_is_utility_path($path) || in_array($path, ['home', 'page-not-found'], true)) {
-                continue;
-            }
-
-            if ((int) ($page->sections_count ?? 0) === 0 || seo_page_is_empty($page)) {
-                continue;
-            }
-
-            if (! seo_path_is_menu_linked($path)) {
-                continue;
-            }
-
-            $urls[] = [
-                'loc' => $this->siteUrl($path),
-                'lastmod' => optional($page->updated_at)?->toAtomString(),
-                'changefreq' => 'weekly',
-                'priority' => '0.8',
-            ];
-        }
-
-        $courseQuery = Course::query()->with('seo');
-        foreach ($courseQuery->orderBy('id')->get() as $course) {
-            if ($this->isNoIndex($course->seo)) {
-                continue;
-            }
-
-            if (empty($course->slug)) {
-                continue;
-            }
-
-            $urls[] = [
-                'loc' => $this->siteUrl('course/' . $course->slug),
-                'lastmod' => optional($course->updated_at)?->toAtomString(),
-                'changefreq' => 'weekly',
-                'priority' => '0.7',
-            ];
-        }
+        });
 
         return $urls;
     }
@@ -126,43 +153,6 @@ class SitemapController extends Controller
         }
 
         return strtolower((string) ($seo->robots_index ?? 'index')) === 'noindex';
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    private function linkedPaths(): array
-    {
-        $paths = [''];
-        try {
-            foreach (Menu::query()->pluck('link') as $link) {
-                $href = public_menu_href((string) $link);
-                $path = parse_url($href, PHP_URL_PATH);
-                $paths[] = strtolower(trim((string) ($path ?: $href), '/'));
-            }
-        } catch (\Throwable $e) {
-            return $paths;
-        }
-
-        return array_values(array_unique($paths));
-    }
-
-    /**
-     * @param  array<int, string>  $linked
-     */
-    private function isLinkedPath(string $path, array $linked): bool
-    {
-        $path = strtolower(trim($path, '/'));
-        foreach ($linked as $item) {
-            if ($item === $path) {
-                return true;
-            }
-            if ($item !== '' && str_ends_with('/' . $item, '/' . $path)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private function siteUrl(string $path = '/'): string

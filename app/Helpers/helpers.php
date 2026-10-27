@@ -1646,7 +1646,7 @@ if (!function_exists('seo_robots_content')) {
 if (! function_exists('seo_courses_hub_url')) {
     function seo_courses_hub_url(): string
     {
-        return url('/courses');
+        return url('/course-index');
     }
 }
 
