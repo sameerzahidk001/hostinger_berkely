@@ -1433,53 +1433,38 @@ class LmsAssessmentService
                 }
             }
 
-            $done = $matched && in_array($matched->status, ['submitted', 'graded', 'expired'], true)
-                ? $matched
-                : null;
+            $finished = $sittingAttempts
+                ->filter(fn ($att) => in_array($att->status, ['submitted', 'graded', 'expired'], true))
+                ->sortBy('id')
+                ->values();
+            if ($matched && in_array($matched->status, ['submitted', 'graded', 'expired'], true)
+                && ! $finished->contains(fn ($att) => (int) $att->id === (int) $matched->id)) {
+                $finished->push($matched);
+            }
 
-            // Finished sittings stay in Results/Submitted — next open sitting appears under Available.
+            // Every finished attempt is its own Submitted/Results row (Marking Required included).
             $remainingAttempts = $usedOnSitting < $max && $assessment->isPublished();
-            if ($done && $assessment->isPractice()) {
-                $results->push($base + [
-                    'attempt' => $done,
-                    'can_retake' => $remainingAttempts,
-                ]);
-                if ($remainingAttempts) {
-                    $available->push($base + [
-                        'attempt' => null,
-                        'can_retake' => true,
-                        'attempt_number' => $usedOnSitting + 1,
-                        'attempt_total' => $attemptTotal,
-                    ]);
+            if ($finished->isNotEmpty()) {
+                $finishTotal = max($attemptTotal, $finished->count());
+                foreach ($finished as $fi => $done) {
+                    $rowBase = $base + [
+                        'attempt' => $done,
+                        'can_retake' => false,
+                        'attempt_number' => $fi + 1,
+                        'attempt_total' => $finishTotal,
+                    ];
+                    if ($assessment->isPractice() || $done->results_published) {
+                        $results->push($rowBase);
+                    } else {
+                        $submitted->push($rowBase);
+                    }
                 }
-                continue;
-            }
-            if ($done && $done->results_published) {
-                $results->push($base + [
-                    'attempt' => $done,
-                    'can_retake' => $remainingAttempts,
-                ]);
                 if ($remainingAttempts) {
                     $available->push($base + [
                         'attempt' => null,
                         'can_retake' => true,
                         'attempt_number' => $usedOnSitting + 1,
-                        'attempt_total' => $attemptTotal,
-                    ]);
-                }
-                continue;
-            }
-            if ($done) {
-                $submitted->push($base + [
-                    'attempt' => $done,
-                    'can_retake' => $remainingAttempts,
-                ]);
-                if ($remainingAttempts) {
-                    $available->push($base + [
-                        'attempt' => null,
-                        'can_retake' => true,
-                        'attempt_number' => $usedOnSitting + 1,
-                        'attempt_total' => $attemptTotal,
+                        'attempt_total' => $finishTotal,
                     ]);
                 }
                 continue;
@@ -1526,6 +1511,44 @@ class LmsAssessmentService
 
             return $row;
         });
+
+        foreach ($attemptsByAssessment as $aid => $atts) {
+            $sample = $items->first(fn ($r) => (int) $r['assessment']->id === (int) $aid);
+            if (! $sample) {
+                continue;
+            }
+            $assessment = $sample['assessment'];
+            foreach ($atts as $att) {
+                if (isset($claimedAttemptIds[(int) $att->id])) {
+                    continue;
+                }
+                if (! in_array($att->status, ['submitted', 'graded', 'expired'], true)) {
+                    continue;
+                }
+                $claimedAttemptIds[(int) $att->id] = true;
+                $matchRow = $items->first(fn ($r) => $this->attemptBelongsToAssignment($att, $r['assignment'] ?? null));
+                $asg = $matchRow['assignment'] ?? $sample['assignment'];
+                $rowBase = [
+                    'assessment' => $assessment,
+                    'assignment' => $asg,
+                    'attempt' => $att,
+                    'attempts_used' => $atts->count(),
+                    'max_attempts' => $this->maxAttemptsFor($assessment),
+                    'attempt_number' => 1,
+                    'attempt_total' => max(1, $atts->count()),
+                    'from_folder' => false,
+                    'folder_id' => null,
+                    'can_retake' => false,
+                ];
+                if ($assessment->isPractice() || $att->results_published) {
+                    $results->push($rowBase);
+                } else {
+                    $submitted->push($rowBase);
+                }
+            }
+        }
+        $submitted = $submitted->unique(fn ($r) => (int) ($r['attempt']->id ?? 0))->values();
+        $results = $results->unique(fn ($r) => (int) ($r['attempt']->id ?? 0))->values();
 
         // One Upcoming/Available row per test for this student. Extra identical assigns
         // stay in attempt_total (Attempt 1 of 3) instead of repeating the mock three times.
