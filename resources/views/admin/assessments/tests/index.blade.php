@@ -147,7 +147,7 @@
                     <th class="col-course" data-sort-col="3">Course / Test for <span class="sort-ind"></span></th>
                     <th class="col-type" data-sort-col="4">Test Type <span class="sort-ind"></span></th>
                     <th class="col-num" data-sort-col="5">Qs <span class="sort-ind"></span></th>
-                    <th class="col-num" data-sort-col="6">Assigned <span class="sort-ind"></span></th>
+                    <th class="col-num" data-sort-col="6" title="Unique students assigned. A batch of 5 counts as 5. The same student assigned again still counts as 1.">Students <span class="sort-ind"></span></th>
                     <th class="col-num" data-sort-col="7" title="How many sittings students have started or submitted">Taken <span class="sort-ind"></span></th>
                     <th class="col-status" data-sort-col="8">Status <span class="sort-ind"></span></th>
                     <th class="col-assessor" data-sort-col="9">Assessor <span class="sort-ind"></span></th>
