@@ -19,12 +19,6 @@
         <div class="ibox-title"><h5>Summary</h5></div>
         <div class="ibox-content">
             <p>Status: <strong class="{{ $attempt->statusColorClass() }}">{{ $attempt->statusLabel() }}</strong></p>
-            @if(trim(strip_tags((string) ($attempt->assessment->description ?? ''))) !== '')
-                <div class="m-t-sm m-b-sm">
-                    <strong>Test instructions</strong>
-                    <div class="well well-sm m-t-xs">{!! $attempt->assessment->description !!}</div>
-                </div>
-            @endif
             @if(!empty($appointmentId) || !empty($attemptLabel))
                 <p class="text-muted" style="margin-bottom:6px;">
                     @if(!empty($appointmentId))Appointment ID: <strong>{{ $appointmentId }}</strong>@endif

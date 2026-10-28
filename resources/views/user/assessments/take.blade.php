@@ -10,10 +10,13 @@
     body.lms-take-mode #page-wrapper {
         overflow: visible !important;
         padding-top: 0;
+        min-height: 0 !important;
+        background: #f3f3f4;
     }
     body.lms-take-mode .wrapper-content {
         overflow: visible !important;
         padding: 0 15px 24px !important;
+        margin-top: 0 !important;
     }
     body.lms-take-mode #page-wrapper > .row.border-bottom {
         display: none !important;
@@ -35,6 +38,10 @@
         top: 0;
         left: 220px;
         right: 0;
+        bottom: auto !important;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none;
         z-index: 1040;
         background: #0d3b66;
         box-shadow: 0 2px 10px rgba(0, 0, 0, .18);
@@ -415,7 +422,7 @@
         <span class="hidden" id="countdown"></span>
     </div>
 </div>
-<div class="wrapper wrapper-content">
+<div class="wrapper wrapper-content" id="lms-take-body">
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if($errors->any())
         <div class="alert alert-danger"><ul class="m-b-none">@foreach($errors->all() as $e)<li>{{ $e }}</li>@endforeach</ul></div>
@@ -557,15 +564,17 @@ document.body.classList.add('lms-take-mode');
 document.body.classList.add('lms-exam-lock');
 document.body.setAttribute('data-lms-exam-lock', '1');
 (function () {
+    var offsetLock = false;
     function applyTakeOffset() {
+        if (offsetLock) return;
         var bar = document.querySelector('.lms-take-sticky');
-        var content = document.querySelector('body.lms-take-mode .wrapper.wrapper-content');
+        var content = document.getElementById('lms-take-body');
         if (!bar || !content) return;
+        offsetLock = true;
+        var h = Math.ceil(bar.offsetHeight || 0);
         content.style.marginTop = '0px';
-        content.style.paddingTop = '0px';
-        var need = Math.ceil(bar.getBoundingClientRect().bottom - content.getBoundingClientRect().top);
-        if (need < 0) need = 0;
-        content.style.marginTop = need + 'px';
+        content.style.paddingTop = h + 'px';
+        requestAnimationFrame(function () { offsetLock = false; });
     }
     applyTakeOffset();
     window.addEventListener('resize', applyTakeOffset);
@@ -887,18 +896,18 @@ document.body.setAttribute('data-lms-exam-lock', '1');
     });
     var intro = document.getElementById('lms-intro');
     var introKey = 'lms-take-intro-' + attemptId;
-    function finishIntro() {
-        if (intro) {
-            intro.style.display = 'none';
-            intro.classList.add('is-done');
-            intro.setAttribute('hidden', 'hidden');
-        }
+    function dismissIntro() {
+        if (intro && intro.parentNode) intro.parentNode.removeChild(intro);
+        intro = null;
         document.body.classList.remove('lms-intro-open');
+        if (typeof window.lmsApplyTakeOffset === 'function') window.lmsApplyTakeOffset();
+    }
+    function finishIntro() {
         writeStore(introKey, '1');
+        dismissIntro();
         window.lmsExamClockReady = true;
         resumeFromClock();
         if (typeof window.lmsStartExamTick === 'function') window.lmsStartExamTick();
-        if (typeof window.lmsApplyTakeOffset === 'function') window.lmsApplyTakeOffset();
     }
     if (intro && readStore(introKey) !== '1') {
         document.body.classList.add('lms-intro-open');
@@ -909,11 +918,7 @@ document.body.setAttribute('data-lms-exam-lock', '1');
             finishIntro();
         });
     } else {
-        if (intro) {
-            intro.style.display = 'none';
-            intro.classList.add('is-done');
-            intro.setAttribute('hidden', 'hidden');
-        }
+        dismissIntro();
         window.lmsExamClockReady = true;
         window.addEventListener('pageshow', function () { resumeFromClock(); });
         setTimeout(resumeFromClock, 0);
