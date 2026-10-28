@@ -1351,15 +1351,41 @@ class LmsAssessmentService
         $results = collect();
         $missed = collect();
 
-        $assessmentIds = $items->pluck('assessment.id')->unique()->filter()->values()->all();
-        $attemptsByAssessment = $assessmentIds === []
-            ? collect()
-            : LmsAssessmentAttempt::query()
+        $userAttemptsQuery = LmsAssessmentAttempt::query()
+            ->with(['assessment.course'])
+            ->where('user_id', $user->id)
+            ->orderByDesc('id');
+        if ($kind) {
+            $userAttemptsQuery->whereHas('assessment', fn ($q) => $q->where('kind', $kind));
+        }
+        try {
+            $userAttempts = $userAttemptsQuery->get();
+        } catch (\Throwable $e) {
+            report($e);
+            $userAttempts = LmsAssessmentAttempt::query()
                 ->where('user_id', $user->id)
-                ->whereIn('assessment_id', $assessmentIds)
                 ->orderByDesc('id')
-                ->get()
-                ->groupBy(fn ($a) => (int) $a->assessment_id);
+                ->get();
+        }
+
+        $itemAssessmentIds = $items->pluck('assessment.id')->map(fn ($id) => (int) $id)->all();
+        foreach ($userAttempts as $att) {
+            $assessment = $att->assessment;
+            if (! $assessment) {
+                continue;
+            }
+            if (in_array((int) $assessment->id, $itemAssessmentIds, true)) {
+                continue;
+            }
+            $asg = null;
+            if (! empty($att->assignment_id)) {
+                $asg = LmsAssessmentAssignment::query()->find($att->assignment_id);
+            }
+            $items->push(['assessment' => $assessment, 'assignment' => $asg]);
+            $itemAssessmentIds[] = (int) $assessment->id;
+        }
+
+        $attemptsByAssessment = $userAttempts->groupBy(fn ($a) => (int) $a->assessment_id);
 
         // Attempt N of T per assessment (oldest assigned sitting = attempt 1).
         $sittingMeta = [];
@@ -1544,10 +1570,10 @@ class LmsAssessmentService
 
         foreach ($attemptsByAssessment as $aid => $atts) {
             $sample = $items->first(fn ($r) => (int) $r['assessment']->id === (int) $aid);
-            if (! $sample) {
+            $assessment = $sample['assessment'] ?? $atts->first()?->assessment;
+            if (! $assessment) {
                 continue;
             }
-            $assessment = $sample['assessment'];
             foreach ($atts as $att) {
                 if (isset($claimedAttemptIds[(int) $att->id])) {
                     continue;
