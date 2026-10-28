@@ -430,6 +430,7 @@ class LmsAssessmentController extends Controller
                 'batch:id,code,name',
                 'marker:id,name',
                 'assignedByUser:id,name',
+                'batch.students',
             ])
             ->orderByDesc('id');
 
@@ -494,7 +495,7 @@ class LmsAssessmentController extends Controller
             });
         }
 
-        $assignments = $assignQuery->limit(400)->get();
+        $assignments = $assignQuery->get();
         $rowsByKey = [];
         $batchStudentCache = [];
 
@@ -608,21 +609,6 @@ class LmsAssessmentController extends Controller
             }
         }
 
-        // One row per student + test. Extra sittings (same mock assigned again) stay in
-        // the database for retake history, but this list shows the live/latest sitting.
-        $collapsed = [];
-        foreach (collect($rowsByKey)->groupBy(
-            fn ($r) => (int) $r['assessment']->id . ':' . (int) ($r['student']->id ?? 0)
-        ) as $pairRows) {
-            $picked = $pairRows->first(function ($r) {
-                return ($r['attempt']->status ?? '') === 'in_progress';
-            }) ?: $pairRows->sortByDesc(fn ($r) => (int) $r['assignment']->id)->first();
-            if ($picked) {
-                $collapsed[] = $picked;
-            }
-        }
-        $rowsByKey = $collapsed;
-
         $rows = collect($rowsByKey)->values()->sortByDesc(function ($row) {
             $attempt = $row['attempt'];
             if ($attempt) {
@@ -658,8 +644,6 @@ class LmsAssessmentController extends Controller
                 return $statusText === $statusFilter;
             })->values();
         }
-
-        $rows = $rows->take(300);
 
         $assessmentQuery = LmsAssessment::query()->orderBy('title');
         if ($markerOnlyUid) {
