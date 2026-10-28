@@ -425,13 +425,11 @@ class LmsAssessmentController extends Controller
 
         $assignQuery = LmsAssessmentAssignment::query()
             ->with([
-                'assessment:id,title,kind,course_id,audience,duration_minutes,target_role,max_attempts',
-                'assessment.course:id,title',
-                'student:id,name,email',
-                'batch:id,code,name',
-                'marker:id,name',
-                'assignedByUser:id,name',
-                'batch.students',
+                'assessment.course',
+                'student',
+                'batch',
+                'marker',
+                'assignedByUser',
             ])
             ->orderByDesc('id');
 
@@ -496,7 +494,12 @@ class LmsAssessmentController extends Controller
             });
         }
 
-        $assignments = $assignQuery->get();
+        try {
+            $assignments = $assignQuery->get();
+        } catch (\Throwable $e) {
+            report($e);
+            $assignments = (clone $assignQuery)->setEagerLoads([])->get();
+        }
         $rowsByKey = [];
         $batchStudentCache = [];
 
@@ -521,7 +524,7 @@ class LmsAssessmentController extends Controller
                 if (! isset($batchStudentCache[$bid])) {
                     $batch = ClassBatch::query()->find($bid);
                     $batchStudentCache[$bid] = $batch
-                        ? $batch->students()->get(['users.id', 'users.name', 'users.email'])
+                        ? $batch->students()->get()
                         : collect();
                 }
                 $students = $batchStudentCache[$bid];
@@ -684,6 +687,33 @@ class LmsAssessmentController extends Controller
 
             return optional($row['assignment']?->created_at)->timestamp ?? 0;
         })->values();
+
+        if ($rows->isEmpty() && $assignments->isNotEmpty()) {
+            foreach ($assignments as $assignment) {
+                $assessment = $assignment->assessment;
+                if (! $assessment) {
+                    continue;
+                }
+                $student = $assignment->student;
+                if (! $student && $assignment->student_id) {
+                    $student = User::query()->find($assignment->student_id);
+                }
+                if (! $student && $assignment->class_batch_id) {
+                    continue;
+                }
+                if (! $student) {
+                    continue;
+                }
+                $rows->push([
+                    'assessment' => $assessment,
+                    'student' => $student,
+                    'assignment' => $assignment,
+                    'attempt' => null,
+                    'attempt_number' => 1,
+                    'attempt_total' => 1,
+                ]);
+            }
+        }
 
         $statusOptions = [
             'Upcoming' => 'Upcoming',
