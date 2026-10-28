@@ -219,7 +219,7 @@
                             $appointment = $assignment?->appointmentWindowLabel() ?? '—';
                             $assessorName = $attempt
                                 ? $attempt->assessorLabel($assignment)
-                                : ($assignment->marker->name ?? 'Admin / course instructors');
+                                : ($assignment?->marker?->name ?? 'Admin / course instructors');
                             $assessorUserId = $attempt
                                 ? $attempt->assessorUserId($assignment)
                                 : ($assignment && $assignment->marker_user_id ? (int) $assignment->marker_user_id : null);
