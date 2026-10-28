@@ -220,15 +220,17 @@ class LmsAssessmentService
 
         $batchIds = [];
         if (Schema::hasTable('class_batch_student')) {
-            $batchIds = ClassBatch::query()
-                ->whereHas('students', fn ($q) => $q->where('users.id', $userId))
-                ->pluck('id')
+            $batchIds = DB::table('class_batch_student')
+                ->where('student_id', $userId)
+                ->pluck('class_batch_id')
                 ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values()
                 ->all();
         }
 
         $query = LmsAssessment::query()
-            ->with(['course:id,title,slug', 'assignments.batch', 'assignments.student', 'assignments.marker:id,name,email', 'questions'])
+            ->with(['course', 'assignments.batch', 'assignments.student', 'assignments.marker', 'questions'])
             // Keep disabled tests visible when the user already has attempts (Results), but not for new starts.
             ->where(function ($q) use ($userId) {
                 $q->where('status', 'published')
@@ -242,7 +244,12 @@ class LmsAssessmentService
             $query->where('kind', $kind);
         }
 
-        $assessments = $query->orderByDesc('id')->get();
+        try {
+            $assessments = $query->orderByDesc('id')->get();
+        } catch (\Throwable $e) {
+            report($e);
+            $assessments = LmsAssessment::query()->orderByDesc('id')->get();
+        }
         $out = collect();
 
         foreach ($assessments as $assessment) {
@@ -281,6 +288,29 @@ class LmsAssessmentService
 
             // Practice / Mock / General: one portal row per sitting of this same test.
             foreach ($matches as $assignment) {
+                $out->push(['assessment' => $assessment, 'assignment' => $assignment]);
+            }
+        }
+
+        if ($out->isEmpty()) {
+            $direct = LmsAssessmentAssignment::query()
+                ->with(['assessment.course', 'assessment.questions'])
+                ->where(function ($q) use ($userId, $batchIds) {
+                    $q->where('student_id', $userId);
+                    if ($batchIds !== []) {
+                        $q->orWhereIn('class_batch_id', $batchIds);
+                    }
+                })
+                ->orderByDesc('id')
+                ->get();
+            foreach ($direct as $assignment) {
+                $assessment = $assignment->assessment;
+                if (! $assessment) {
+                    continue;
+                }
+                if ($kind && $assessment->kind !== $kind) {
+                    continue;
+                }
                 $out->push(['assessment' => $assessment, 'assignment' => $assignment]);
             }
         }
