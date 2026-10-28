@@ -407,7 +407,7 @@
                 <div class="ibox-title"><h5>Test instructions</h5></div>
                 <div class="ibox-content">
                     <div class="lms-qa-question m-b-sm">{!! $attempt->assessment->description !!}</div>
-                    <button type="button" class="btn btn-primary" id="lms-intro-continue">Continue to Q1</button>
+                    <button type="button" class="btn btn-primary" id="lms-intro-continue">Start Test</button>
                 </div>
             </div>
         @endif
