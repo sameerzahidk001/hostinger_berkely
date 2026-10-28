@@ -106,10 +106,12 @@
         <tr><td class="muted">Test Taker Name</td><td>{{ $attempt->user->name ?? '—' }} ({{ $attempt->user->email ?? '' }})</td></tr>
         @if(! $attempt->assessment->hidesOverallMarks())
         <tr><td class="muted">Test Result</td><td class="score">
-            @if($attempt->score_raw !== null)
+            @if(! $attempt->results_published)
+                Pending
+            @elseif($attempt->score_raw !== null)
                 {{ lms_format_number($attempt->score_raw) }} / {{ lms_format_number($attempt->score_max) }}
                 @if($attempt->percent() !== null) ({{ lms_format_number($attempt->percent()) }}%) @endif
-            @else — @endif
+            @else Pending @endif
         </td></tr>
         @endif
         <tr><td class="muted">Appointment ID</td><td>{{ $assignment ? $assignment->displayCode() : '—' }}</td></tr>
