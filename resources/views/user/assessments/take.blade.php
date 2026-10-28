@@ -13,7 +13,22 @@
     }
     body.lms-take-mode .wrapper-content {
         overflow: visible !important;
-        padding-top: 10px;
+        padding: 0 15px 24px !important;
+    }
+    body.lms-take-mode #page-wrapper > .row.border-bottom {
+        display: none !important;
+    }
+    body.lms-take-mode .lms-q-step.is-active {
+        margin-top: 0 !important;
+    }
+    #lms-intro.is-done,
+    #lms-intro[hidden] {
+        display: none !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        border: 0 !important;
     }
     .lms-take-sticky {
         position: fixed;
@@ -65,6 +80,11 @@
         overflow-x: auto;
     }
     .lms-take-sticky .lms-q-progress strong { color: #fff; }
+    .lms-take-sticky .lms-q-sep {
+        color: #f7c948;
+        font-weight: 800;
+        padding: 0 14px;
+    }
     .lms-take-head-row {
         display: block;
         width: 100%;
@@ -388,9 +408,9 @@
     @endif
     <div class="lms-q-progress">
         Question <strong id="lms-q-current">1</strong> of <strong>{{ max(1, $qTotal) }}</strong>
-        <span> | Current Question Time: <strong id="lms-q-countdown">{{ $attempt->isPaused() ? 'Paused' : '—' }}</strong></span>
-        <span> | Total Test Remaining Time: <strong id="lms-total-remain">{{ $attempt->isPaused() ? 'Paused' : '—' }}</strong></span>
-        <span> | <span id="lms-autosave-hint"></span></span>
+        <span><span class="lms-q-sep">|</span>Current Question Time: <strong id="lms-q-countdown">{{ $attempt->isPaused() ? 'Paused' : '—' }}</strong></span>
+        <span><span class="lms-q-sep">|</span>Total Test Remaining Time: <strong id="lms-total-remain">{{ $attempt->isPaused() ? 'Paused' : '—' }}</strong></span>
+        <span><span class="lms-q-sep">|</span><span id="lms-autosave-hint"></span></span>
         <span class="lms-q-timer" id="lms-q-timer" style="display:none;"></span>
         <span class="hidden" id="countdown"></span>
     </div>
@@ -504,7 +524,7 @@
 </div>
 <div class="lms-submit-modal" id="lms-submit-modal" aria-hidden="true">
     <div class="lms-submit-dialog" role="dialog" aria-modal="true" aria-labelledby="lms-submit-title">
-        <h3 id="lms-submit-title">Submit this exam?</h3>
+        <h3 id="lms-submit-title">Submit this test?</h3>
         <p>Answers will be sent for marking. You cannot change them after submit.</p>
         <div class="lms-submit-dialog-actions">
             <button type="button" class="lms-submit-cancel" id="lms-submit-cancel">Cancel</button>
@@ -539,14 +559,13 @@ document.body.setAttribute('data-lms-exam-lock', '1');
 (function () {
     function applyTakeOffset() {
         var bar = document.querySelector('.lms-take-sticky');
-        var wrap = document.getElementById('page-wrapper');
-        if (!bar) return;
-        var extra = Math.ceil(bar.getBoundingClientRect().bottom - (wrap ? wrap.getBoundingClientRect().top : 0));
-        if (extra < 0) extra = 0;
-        document.querySelectorAll('#page-wrapper > .wrapper-content, .wrapper.wrapper-content').forEach(function (el) {
-            el.style.marginTop = extra + 'px';
-            el.style.paddingTop = '8px';
-        });
+        var content = document.querySelector('body.lms-take-mode .wrapper.wrapper-content');
+        if (!bar || !content) return;
+        content.style.marginTop = '0px';
+        content.style.paddingTop = '0px';
+        var need = Math.ceil(bar.getBoundingClientRect().bottom - content.getBoundingClientRect().top);
+        if (need < 0) need = 0;
+        content.style.marginTop = need + 'px';
     }
     applyTakeOffset();
     window.addEventListener('resize', applyTakeOffset);
@@ -869,12 +888,17 @@ document.body.setAttribute('data-lms-exam-lock', '1');
     var intro = document.getElementById('lms-intro');
     var introKey = 'lms-take-intro-' + attemptId;
     function finishIntro() {
-        if (intro) intro.style.display = 'none';
+        if (intro) {
+            intro.style.display = 'none';
+            intro.classList.add('is-done');
+            intro.setAttribute('hidden', 'hidden');
+        }
         document.body.classList.remove('lms-intro-open');
         writeStore(introKey, '1');
         window.lmsExamClockReady = true;
         resumeFromClock();
         if (typeof window.lmsStartExamTick === 'function') window.lmsStartExamTick();
+        if (typeof window.lmsApplyTakeOffset === 'function') window.lmsApplyTakeOffset();
     }
     if (intro && readStore(introKey) !== '1') {
         document.body.classList.add('lms-intro-open');
@@ -885,7 +909,11 @@ document.body.setAttribute('data-lms-exam-lock', '1');
             finishIntro();
         });
     } else {
-        if (intro) intro.style.display = 'none';
+        if (intro) {
+            intro.style.display = 'none';
+            intro.classList.add('is-done');
+            intro.setAttribute('hidden', 'hidden');
+        }
         window.lmsExamClockReady = true;
         window.addEventListener('pageshow', function () { resumeFromClock(); });
         setTimeout(resumeFromClock, 0);

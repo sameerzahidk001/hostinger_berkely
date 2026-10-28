@@ -92,6 +92,26 @@ class LmsAssessment extends Model
         return $this->hasMany(LmsAssessmentAssignment::class, 'assessment_id');
     }
 
+    /** Unique test takers: each student once, batch assignments expand to batch members. */
+    public function assignedPeopleCount(): int
+    {
+        $this->loadMissing(['assignments.batch.students']);
+        $ids = [];
+        foreach ($this->assignments as $assignment) {
+            if ($assignment->student_id) {
+                $ids[(int) $assignment->student_id] = true;
+                continue;
+            }
+            if ($assignment->class_batch_id) {
+                foreach ($assignment->batch?->students ?? [] as $student) {
+                    $ids[(int) $student->id] = true;
+                }
+            }
+        }
+
+        return count($ids);
+    }
+
     public function studyFolders(): BelongsToMany
     {
         return $this->belongsToMany(

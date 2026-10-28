@@ -89,7 +89,7 @@
                 <div class="col-md-2 form-group">
                     <label>Max attempts *</label>
                     <input type="number" min="1" max="50" name="max_attempts" class="form-control" value="{{ old('max_attempts', $assessment->max_attempts ?? 1) }}" @required($canCreate) @readonly(! $canCreate)>
-                    <p class="help-block" style="margin-bottom:0;font-size:11px;">Exam retake: assign a new sitting. Self test: student can Start/Retake up to this number without a new schedule.</p>
+                    <p class="help-block" style="margin-bottom:0;font-size:11px;">Test retake: assign a new sitting. Self test: student can Start/Retake up to this number without a new schedule.</p>
                 </div>
                 <div class="col-md-2 form-group">
                     <label>Status *</label>
@@ -126,7 +126,7 @@
                 </div>
             </div>
 
-            <h4 style="margin-top:8px;">Exam files <span class="text-muted" style="font-size:13px;font-weight:normal;">(optional — 1 file per button)</span></h4>
+            <h4 style="margin-top:8px;">Test files <span class="text-muted" style="font-size:13px;font-weight:normal;">(optional — 1 file per button)</span></h4>
             <p class="help-block">
                 Files upload to <strong>Zoho WorkDrive</strong> (the folder set in Zoho LMS settings). They are not stored on this server.
                 @if(! ($zohoWorkDriveReady ?? false))
@@ -206,7 +206,7 @@
             <a href="{{ route('admin.assessments.tests.index') }}" class="btn btn-default">Back</a>
             @if($assessment->exists)
                 @if($canAssign)
-                    <a href="{{ route('admin.assessments.tests.assign', $assessment->id) }}" class="btn btn-success">Assign Test (Exam)</a>
+                    <a href="{{ route('admin.assessments.tests.assign', $assessment->id) }}" class="btn btn-success">Assign Test</a>
                     <a href="{{ route('admin.assessments.tests.assign', ['id' => $assessment->id, 'mode' => 'self']) }}" class="btn btn-success">Assign Self test</a>
                 @endif
                 <a href="{{ route('admin.assessments.tests.attempts', $assessment->id) }}" class="btn btn-default">View attempts</a>

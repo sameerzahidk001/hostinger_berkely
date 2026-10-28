@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Exam Result PDF</title>
+    <title>Test Result PDF</title>
     <style>
         @page { margin: 15mm; }
         body { font-family: DejaVu Sans, Arial, Helvetica, sans-serif; color: #333; font-size: 12px; line-height: 1.45; }

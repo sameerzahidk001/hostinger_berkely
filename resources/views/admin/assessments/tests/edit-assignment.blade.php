@@ -70,7 +70,7 @@
                 </div>
                 @unless($assignment->isSelfSitting())
                 <div class="col-md-3 form-group">
-                    <label>Exam Appointment Start *</label>
+                    <label>Test Appointment Start *</label>
                     <input type="datetime-local" name="available_from" id="available_from" class="form-control" value="{{ $fromDefault }}" required>
                     <p class="help-block" style="margin-bottom:0;font-size:11px;">
                         Window = start + exam duration

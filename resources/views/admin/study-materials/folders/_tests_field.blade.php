@@ -14,7 +14,7 @@
         @endforeach
     </select>
     <span class="help-block">
-        Type to find tests from ALL TESTS. These are <strong>self tests</strong>: no Exam Appointment Start, no extra email.
+        Type to find tests from ALL TESTS. These are <strong>self tests</strong>: no Test Appointment Start, no extra email.
         Students and instructors who can open this folder can Start anytime here and also under Assessment.
     </span>
 </div>
