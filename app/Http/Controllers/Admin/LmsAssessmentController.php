@@ -16,6 +16,7 @@ use App\Services\ZohoLmsService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
@@ -739,8 +740,27 @@ class LmsAssessmentController extends Controller
             return $this->streamAssignedRowsExcel($rows, 'assigned-tests_' . now()->format('Y-m-d') . '.csv');
         }
 
+        $page = max(1, (int) $request->get('page', 1));
+        $perPage = 10;
+        $total = $rows->count();
+        $lastPage = max(1, (int) ceil(($total ?: 1) / $perPage));
+        if ($page > $lastPage) {
+            $page = $lastPage;
+        }
+        $paged = new LengthAwarePaginator(
+            $rows->forPage($page, $perPage)->values(),
+            $total,
+            $perPage,
+            $page,
+            [
+                'path' => $request->url(),
+                'query' => collect($request->query())->except('page')->all(),
+            ]
+        );
+
         return view('admin.assessments.tests.assigned-users', [
-            'rows' => $rows,
+            'rows' => $paged,
+            'rowsTotal' => $total,
             'selectedAssessment' => $selectedAssessment,
             'assessments' => $assessmentQuery->get(['id', 'title', 'kind']),
             'batches' => Schema::hasTable('class_batches')
