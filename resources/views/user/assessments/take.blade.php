@@ -13,7 +13,7 @@
     }
     body.lms-take-mode .wrapper-content {
         overflow: visible !important;
-        padding-top: 8px;
+        padding-top: 10px;
     }
     .lms-take-sticky {
         position: fixed;
@@ -28,18 +28,10 @@
     }
     body.lms-take-mode #page-wrapper > .wrapper-content,
     body.lms-take-mode .wrapper.wrapper-content {
-        margin-top: 196px;
-    }
-    body.lms-intro-open #page-wrapper > .wrapper-content,
-    body.lms-intro-open .wrapper.wrapper-content {
-        margin-top: 148px;
+        margin-top: 0;
     }
     @media (max-width: 768px) {
         .lms-take-sticky { left: 0; }
-        body.lms-take-mode #page-wrapper > .wrapper-content,
-        body.lms-take-mode .wrapper.wrapper-content { margin-top: 220px; }
-        body.lms-intro-open #page-wrapper > .wrapper-content,
-        body.lms-intro-open .wrapper.wrapper-content { margin-top: 160px; }
     }
     .lms-take-sticky .page-heading {
         margin: 0;
@@ -280,6 +272,15 @@
         border: 0;
         background: #fff;
     }
+    form.lms-paused-lock textarea,
+    form.lms-paused-lock input:not([type="hidden"]),
+    form.lms-paused-lock select,
+    form.lms-paused-lock button:not(.lms-pause-screen-btn):not(#lms-pause-btn):not(#lms-submit-open):not(#lms-save-btn) {
+        pointer-events: none !important;
+        background: #f3f4f6 !important;
+        color: #64748b !important;
+        caret-color: transparent !important;
+    }
     .lms-q-timer { color: #c0392b; font-weight: 700; margin-left: 12px; }
     .lms-q-step { display: none; }
     .lms-q-step.is-active { display: block; }
@@ -488,7 +489,6 @@
             <span class="lms-next-hint">If you press Next, you cannot come back to this question.</span>
             <span class="lms-q-nav-spacer"></span>
             <input type="hidden" name="submit" id="lms-submit-flag" value="0">
-            <button type="submit" name="save_mode" value="0" class="btn btn-default">Save progress</button>
         </div>
     </form>
 </div>
@@ -536,6 +536,28 @@
 document.body.classList.add('lms-take-mode');
 document.body.classList.add('lms-exam-lock');
 document.body.setAttribute('data-lms-exam-lock', '1');
+(function () {
+    function applyTakeOffset() {
+        var bar = document.querySelector('.lms-take-sticky');
+        var wrap = document.getElementById('page-wrapper');
+        if (!bar) return;
+        var extra = Math.ceil(bar.getBoundingClientRect().bottom - (wrap ? wrap.getBoundingClientRect().top : 0));
+        if (extra < 0) extra = 0;
+        document.querySelectorAll('#page-wrapper > .wrapper-content, .wrapper.wrapper-content').forEach(function (el) {
+            el.style.marginTop = extra + 'px';
+            el.style.paddingTop = '8px';
+        });
+    }
+    applyTakeOffset();
+    window.addEventListener('resize', applyTakeOffset);
+    if (window.ResizeObserver) {
+        var bar = document.querySelector('.lms-take-sticky');
+        if (bar) new ResizeObserver(applyTakeOffset).observe(bar);
+    }
+    var introBtn = document.getElementById('lms-intro-continue');
+    if (introBtn) introBtn.addEventListener('click', function () { setTimeout(applyTakeOffset, 0); });
+    window.lmsApplyTakeOffset = applyTakeOffset;
+})();
 (function () {
     var steps = Array.prototype.slice.call(document.querySelectorAll('.lms-q-step'));
     var btnNext = document.getElementById('lms-q-next');
@@ -824,6 +846,7 @@ document.body.setAttribute('data-lms-exam-lock', '1');
     }
 
     if (btnNext) btnNext.addEventListener('click', function () {
+        if (window.lmsExamPaused) return;
         if (idx >= steps.length - 1) return;
         openNextPopup();
     });
@@ -1056,10 +1079,21 @@ document.body.setAttribute('data-lms-exam-lock', '1');
     var form = document.getElementById('attempt-form');
     var pauseUrl = form ? form.action : @json(route('user.assessments.save', $attempt->id));
     var busy = false;
+    function setFormLocked(locked) {
+        var examForm = document.getElementById('attempt-form');
+        if (!examForm) return;
+        examForm.classList.toggle('lms-paused-lock', !!locked);
+        examForm.querySelectorAll('textarea, input[type="text"], input[type="number"]').forEach(function (el) {
+            el.readOnly = !!locked;
+        });
+        var next = document.getElementById('lms-q-next');
+        if (next) next.disabled = !!locked;
+    }
     function setPausedUi(paused) {
         window.lmsExamPaused = !!paused;
         btn.textContent = paused ? 'Resume' : 'Pause';
         btn.classList.toggle('is-paused', !!paused);
+        setFormLocked(paused);
         if (paused && typeof window.lmsFreezeQuestionTimer === 'function') {
             window.lmsFreezeQuestionTimer();
         }
@@ -1067,6 +1101,15 @@ document.body.setAttribute('data-lms-exam-lock', '1');
             window.lmsThawQuestionTimer();
         }
     }
+    if (window.lmsExamPaused) setFormLocked(true);
+    document.addEventListener('keydown', function (e) {
+        if (!window.lmsExamPaused) return;
+        var t = e.target;
+        if (t && (t.id === 'lms-pause-btn' || (t.classList && t.classList.contains('lms-pause-screen-btn')))) return;
+        if (t && (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT')) {
+            e.preventDefault();
+        }
+    }, true);
     btn.addEventListener('click', function (e) {
         e.preventDefault();
         if (busy) return;

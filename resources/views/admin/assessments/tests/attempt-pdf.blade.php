@@ -13,10 +13,10 @@
         .doc-sub { font-size: 11px; color: #444; margin-top: 4px; }
         .doc-sub-muted { font-size: 10px; color: #777; margin-top: 2px; }
         .logo { height: 48px; max-width: 180px; }
-        h2 { font-size: 14px; margin: 18px 0 8px; border-bottom: 1px solid #ddd; padding-bottom: 4px; }
+        h2 { font-size: 14px; margin: 12px 0 6px; border-bottom: 1px solid #ddd; padding-bottom: 4px; page-break-after: avoid; page-break-inside: avoid; }
         .meta { margin-bottom: 8px; }
         .meta td { padding: 2px 8px 2px 0; vertical-align: top; }
-        .q { margin: 16px 0; padding: 12px; border: 1px solid #e5e5e5; page-break-inside: avoid; }
+        .q { margin: 10px 0; padding: 10px; border: 1px solid #e5e5e5; page-break-inside: auto; page-break-before: avoid; }
         .q-title { font-weight: bold; margin-bottom: 8px; color: #000; }
         .q-stem { margin: 0 0 16px; padding-bottom: 12px; border-bottom: 1px solid #f0f0f0; color: #000; }
         .q-stem * { color: #000; }
@@ -31,11 +31,13 @@
         .footer {
             border-top: 1px solid #eee;
             padding-top: 8px;
-            margin-top: 18px;
+            margin-top: 12px;
             font-size: 9px;
             color: #777;
             text-align: center;
             line-height: 1.45;
+            page-break-before: auto;
+            page-break-inside: avoid;
         }
     </style>
 </head>
@@ -142,7 +144,7 @@
         }
     ?>
 
-    <h2>Questions &amp; answers</h2>
+    <h2 style="page-break-after:avoid;">Questions &amp; answers</h2>
     <?php
         $pdfAllow = '<p><br><strong><em><ul><ol><li><b><i>';
         $pdfHtml = static function ($html) use ($pdfAllow) {

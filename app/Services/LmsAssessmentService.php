@@ -550,12 +550,16 @@ class LmsAssessmentService
             ->map(fn ($row) => $row['assignment'])
             ->filter()
             ->filter(function (LmsAssessmentAssignment $asg) use ($attempts, $assessment) {
-                if (! $asg->isAvailableNow()) {
+                $usedOnSitting = $attempts->filter(fn ($att) => $this->attemptBelongsToAssignment($att, $asg))->count();
+                if ($usedOnSitting >= $this->maxAttemptsFor($assessment)) {
                     return false;
                 }
-                $usedOnSitting = $attempts->filter(fn ($att) => $this->attemptBelongsToAssignment($att, $asg))->count();
+                if ($asg->isSelfSitting() || $asg->isAvailableNow()) {
+                    return true;
+                }
 
-                return $usedOnSitting < $this->maxAttemptsFor($assessment);
+                // Remaining attempts on a sitting already started may continue after the window.
+                return $usedOnSitting > 0;
             })
             ->values();
     }
@@ -610,11 +614,30 @@ class LmsAssessmentService
             ? collect()
             : $this->openUnusedAssignmentsFor($user, $assessment)->sortBy('id')->values();
         $assignment = null;
+        $allSittings = $accessRows->map(fn ($row) => $row['assignment'])->filter()->values();
         if ($assignmentId) {
-            $assignment = $openSittings->first(fn ($asg) => (int) $asg->id === $assignmentId);
+            $assignment = $openSittings->first(fn ($asg) => (int) $asg->id === $assignmentId)
+                ?: $allSittings->first(fn ($asg) => (int) $asg->id === $assignmentId);
         }
         if (! $assignment && ! $fromFolder) {
             $assignment = $openSittings->first();
+        }
+        if ($assignment) {
+            $usedOnSitting = LmsAssessmentAttempt::query()
+                ->where('assessment_id', $assessment->id)
+                ->where('user_id', $user->id)
+                ->get()
+                ->filter(fn ($att) => $this->attemptBelongsToAssignment($att, $assignment))
+                ->count();
+            if ($usedOnSitting >= $max) {
+                abort(403, 'Maximum attempts for this test have been reached.');
+            }
+            if (! $assignment->isSelfSitting() && $assignment->isExpired() && $usedOnSitting === 0) {
+                abort(403, 'The availability window for this exam has ended.');
+            }
+            if (! $assignment->isSelfSitting() && $assignment->isNotYetOpen() && $usedOnSitting === 0) {
+                abort(403, 'This exam is not open yet.');
+            }
         }
         $hasExplicitAssign = $accessRows->contains(fn ($row) => $row['assignment'] !== null);
         if (! $assignment) {
@@ -656,7 +679,7 @@ class LmsAssessmentService
         if ($mins > 0) {
             $expires = now()->addMinutes($mins);
         }
-        if ($assignment && ! $assignment->isSelfSitting()) {
+        if ($assignment && ! $assignment->isSelfSitting() && $assignment->isAvailableNow()) {
             $apptEnd = $assignment->appointmentEnd();
             if ($apptEnd) {
                 $expires = $expires ? $expires->min($apptEnd) : $apptEnd->copy();
