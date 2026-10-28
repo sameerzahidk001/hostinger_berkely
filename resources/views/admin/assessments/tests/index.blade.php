@@ -176,7 +176,8 @@
                         </td>
                         <td class="col-type" data-sort="{{ $row->kindLabel() }}">{{ $row->kindLabel() }}</td>
                         <td class="col-num" data-sort="{{ $row->questions_count }}">{{ $row->questions_count }}</td>
-                        <td class="col-num" data-sort="{{ $row->assignments_count }}">{{ $row->assignments_count }}</td>
+                        @php $assignedPeople = $row->assignedPeopleCount(); @endphp
+                        <td class="col-num" data-sort="{{ $assignedPeople }}">{{ $assignedPeople }}</td>
                         <td class="col-num" data-sort="{{ $row->attempts_count }}">{{ $row->attempts_count }}</td>
                         <td class="col-status" data-sort="{{ $row->status }}">
                             @php

@@ -5,7 +5,7 @@
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
         @php $assignMode = $assignMode ?? 'exam'; @endphp
-        <h2>{{ $assignMode === 'self' ? 'Assigning Self test' : 'Assigning Test (Exam)' }}: {{ $assessment->title }} <small class="text-muted">ID {{ $assessment->id }}</small></h2>
+        <h2>{{ $assignMode === 'self' ? 'Assigning Self test' : 'Assigning Test' }}: {{ $assessment->title }} <small class="text-muted">ID {{ $assessment->id }}</small></h2>
         <ol class="breadcrumb">
             <li><a href="{{ lms_portal_home() }}">Home</a></li>
             <li><a href="{{ route('admin.assessments.tests.index') }}">ALL TESTS</a></li>
@@ -20,7 +20,7 @@
     @endif
     <div class="ibox"><div class="ibox-content">
         <p class="m-b-sm">
-            <a class="btn btn-sm {{ ($assignMode ?? 'exam') === 'exam' ? 'btn-primary' : 'btn-default' }}" href="{{ route('admin.assessments.tests.assign', $assessment->id) }}">1. Assigning Test (Exam)</a>
+            <a class="btn btn-sm {{ ($assignMode ?? 'exam') === 'exam' ? 'btn-primary' : 'btn-default' }}" href="{{ route('admin.assessments.tests.assign', $assessment->id) }}">1. Assigning Test</a>
             <a class="btn btn-sm {{ ($assignMode ?? 'exam') === 'self' ? 'btn-primary' : 'btn-default' }}" href="{{ route('admin.assessments.tests.assign', ['id' => $assessment->id, 'mode' => 'self']) }}">2. Assigning Self test</a>
         </p>
         <p class="help-block">
@@ -32,7 +32,7 @@
             @else
                 Each save creates a <strong>new exam sitting</strong> with an appointment window.
                 The student may start anytime inside that window. For another exam sitting, assign again (retake window).
-                <strong>No specific start time?</strong> Use <strong>2. Assigning Self test</strong> — that sitting has no Exam Appointment Start; the student clicks Start anytime.
+                <strong>No specific start time?</strong> Use <strong>2. Assigning Self test</strong> — that sitting has no Test Appointment Start; the student clicks Start anytime.
                 Older sittings stay on Assigned Tests. Optional assessor: if set, that instructor (or Admin) can mark; otherwise Admin / course instructors can mark.
             @endif
         </p>
@@ -76,7 +76,7 @@
                 @endphp
                 @if(($assignMode ?? 'exam') !== 'self')
                 <div class="col-md-3 form-group">
-                    <label>Exam Appointment Start *</label>
+                    <label>Test Appointment Start *</label>
                     <input type="datetime-local" name="available_from" id="available_from" class="form-control" value="{{ $fromForInput }}" required>
                     <p class="help-block" style="margin-bottom:0;font-size:11px;">
                         Type the start time using the <strong>Timezone</strong> on the right (compare with “Now” below).

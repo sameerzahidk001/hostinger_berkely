@@ -40,7 +40,7 @@ class LmsAssessmentController extends Controller
 
         $kind = trim((string) $request->get('kind', ''));
         $search = trim((string) $request->get('search', ''));
-        $query = LmsAssessment::query()->withCount(['questions', 'assignments', 'attempts'])->orderByDesc('id');
+        $query = LmsAssessment::query()->withCount(['questions', 'attempts'])->orderByDesc('id');
 
         if ($kind !== '' && array_key_exists($kind, LmsAssessment::kinds())) {
             $query->where('kind', $kind);
@@ -76,7 +76,8 @@ class LmsAssessmentController extends Controller
         return view('admin.assessments.tests.index', [
             'rows' => $query->with([
                 'course:id,title',
-                'assignments' => fn ($q) => $q->with('marker:id,name')->whereNotNull('marker_user_id'),
+                'assignments.marker:id,name',
+                'assignments.batch.students',
             ])->paginate(20)->withQueryString(),
             'kinds' => LmsAssessment::kinds(),
             'kind' => $kind,

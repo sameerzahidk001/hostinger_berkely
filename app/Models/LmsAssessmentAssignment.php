@@ -47,7 +47,7 @@ class LmsAssessmentAssignment extends Model
 
     public function sittingKindLabel(): string
     {
-        return $this->isSelfSitting() ? 'Self test' : 'Exam';
+        return $this->isSelfSitting() ? 'Self test' : 'Test';
     }
 
     public static function timezoneOptions(): array

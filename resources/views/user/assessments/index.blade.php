@@ -276,12 +276,12 @@
                         @php $assessorUserId = $att ? $att->assessorUserId($asg) : ($asg->marker_user_id ?? null); @endphp
                         <td class="col-timing" data-sort="{{ optional($asg?->available_from)->timestamp ?? 0 }}">
                             @if($fromFolder)
-                                <span class="lms-timing-line"><strong>Exam Appointment:</strong> Start anytime</span>
+                                <span class="lms-timing-line"><strong>Test Appointment:</strong> Start anytime</span>
                             @elseif($asg)
-                                <span class="lms-timing-line"><strong>Exam Appointment:</strong> {{ $asg->isSelfSitting() ? 'Start anytime' : ($asg->windowStart()?->format('d/m/Y, H:i') ?? '—') }}</span>
+                                <span class="lms-timing-line"><strong>Test Appointment:</strong> {{ $asg->isSelfSitting() ? 'Start anytime' : ($asg->windowStart()?->format('d/m/Y, H:i') ?? '—') }}</span>
                                 <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $asg->timezoneLabel() }}</span>
                             @endif
-                            <span class="lms-timing-line"><strong>Exam Duration:</strong> {{ $fmtDuration($a->durationMinutes()) }}</span>
+                            <span class="lms-timing-line"><strong>Test Duration:</strong> {{ $fmtDuration($a->durationMinutes()) }}</span>
                             @if($att)
                                 <span class="lms-timing-line"><strong>Started:</strong> {{ $asg ? $asg->formatInTimezone($att->startedAtForDisplay()) : (optional($att->startedAtForDisplay())->format('d/m/y H:i') ?? '—') }}</span>
                                 <span class="lms-timing-line"><strong>Ended:</strong> {{ $asg ? $asg->formatInTimezone($att->endedAtForDisplay()) : (optional($att->endedAtForDisplay())->format('d/m/y H:i') ?? '—') }}</span>

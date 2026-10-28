@@ -633,10 +633,10 @@ class LmsAssessmentService
                 abort(403, 'Maximum attempts for this test have been reached.');
             }
             if (! $assignment->isSelfSitting() && $assignment->isExpired() && $usedOnSitting === 0) {
-                abort(403, 'The availability window for this exam has ended.');
+                abort(403, 'The availability window for this test has ended.');
             }
             if (! $assignment->isSelfSitting() && $assignment->isNotYetOpen() && $usedOnSitting === 0) {
-                abort(403, 'This exam is not open yet.');
+                abort(403, 'This test is not open yet.');
             }
         }
         $hasExplicitAssign = $accessRows->contains(fn ($row) => $row['assignment'] !== null);
@@ -652,10 +652,10 @@ class LmsAssessmentService
             } else {
                 $anyAsg = $accessRows->map(fn ($row) => $row['assignment'])->filter()->first();
                 if ($anyAsg && $anyAsg->isNotYetOpen()) {
-                    abort(403, 'This exam is not open yet.');
+                    abort(403, 'This test is not open yet.');
                 }
                 if ($anyAsg && $anyAsg->isExpired()) {
-                    abort(403, 'The availability window for this exam has ended.');
+                    abort(403, 'The availability window for this test has ended.');
                 }
                 if ($used >= $max) {
                     abort(403, 'Maximum attempts for this test have been reached.');
