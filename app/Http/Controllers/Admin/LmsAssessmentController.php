@@ -864,7 +864,7 @@ class LmsAssessmentController extends Controller
                     if (! isset($batchStudentCache[$bid])) {
                         $batch = ClassBatch::query()->find($bid);
                         $batchStudentCache[$bid] = $batch
-                            ? $batch->students()->get(['users.id', 'users.name', 'users.email'])
+                            ? $batch->students()->get()
                             : collect();
                     }
                     $students = $batchStudentCache[$bid];
