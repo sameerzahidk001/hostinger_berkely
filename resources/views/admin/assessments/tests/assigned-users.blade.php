@@ -196,10 +196,10 @@
                             if ($attempt) {
                                 $statusClass = $attempt->statusColorClass();
                                 $statusText = $attempt->statusLabel();
-                            } elseif ($assignment->isNotYetOpen()) {
+                            } elseif ($assignment && $assignment->isNotYetOpen()) {
                                 $statusClass = 'lms-status-upcoming';
                                 $statusText = 'Upcoming';
-                            } elseif ($assignment->isExpired()) {
+                            } elseif ($assignment && $assignment->isExpired()) {
                                 $statusClass = 'lms-status-missed';
                                 $statusText = 'Missed';
                             } else {
@@ -207,23 +207,23 @@
                                 $statusText = 'Assigned';
                             }
                             $spend = $attempt?->spendMinutes();
-                            $appointment = $assignment->appointmentWindowLabel();
+                            $appointment = $assignment?->appointmentWindowLabel() ?? '—';
                             $assessorName = $attempt
                                 ? $attempt->assessorLabel($assignment)
                                 : ($assignment->marker->name ?? 'Admin / course instructors');
                             $assessorUserId = $attempt
                                 ? $attempt->assessorUserId($assignment)
-                                : ($assignment->marker_user_id ? (int) $assignment->marker_user_id : null);
+                                : ($assignment && $assignment->marker_user_id ? (int) $assignment->marker_user_id : null);
                             $course = $assessment->course ?? null;
-                            $apptId = $assignment->displayCode();
+                            $apptId = $assignment?->displayCode() ?? '—';
                             $attemptNo = (int) ($row['attempt_number'] ?? 1);
                             $attemptTotal = (int) ($row['attempt_total'] ?? 1);
                         @endphp
                         <tr>
-                            <td class="col-appt" data-sort="{{ $assignment->id }}"><strong>{{ $apptId }}</strong></td>
+                            <td class="col-appt" data-sort="{{ $assignment->id ?? 0 }}"><strong>{{ $apptId }}</strong></td>
                             <td class="col-test" data-sort="{{ $assessment->title ?? ('Test #'.($assignment->assessment_id ?? '')) }}">
                                 <strong>{{ $assessment->title ?: ('Test #'.$assessment->id) }}</strong>
-                                <br><small class="text-muted">{{ $assessment->displayCode() }} · {{ $assessment->kindLabel() }} · {{ $assignment->sittingKindLabel() }}</small>
+                                <br><small class="text-muted">{{ $assessment->displayCode() }} · {{ $assessment->kindLabel() }}@if($assignment) · {{ $assignment->sittingKindLabel() }}@endif</small>
                                 <br><small><strong>Attempt {{ $attemptNo }} of {{ $attemptTotal }}</strong></small>
                             </td>
                             <td class="col-taker" data-sort="{{ $row['student']->name ?? '' }}">
@@ -233,7 +233,7 @@
                                     {{ $row['student']->name ?? '—' }}
                                 @endif
                                 <br><small class="text-muted">{{ $row['student']->email ?? '' }}</small>
-                                @if($assignment->batch)
+                                @if($assignment?->batch)
                                     <br><small class="text-muted">Batch: {{ $assignment->batch->code ?? $assignment->batch->name }}</small>
                                 @endif
                                 @if($course)
@@ -246,13 +246,13 @@
                                     </small>
                                 @endif
                             </td>
-                            <td class="col-timing" data-sort="{{ optional($assignment->available_from)->timestamp ?? 0 }}">
-                                <span class="lms-timing-line"><strong>Test Appointment:</strong> {{ $assignment->isSelfSitting() ? 'Start anytime' : ($assignment->windowStart()?->format('d/m/Y, H:i') ?? '—') }}</span>
-                                <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $assignment->timezoneLabel() }}</span>
+                            <td class="col-timing" data-sort="{{ optional($assignment?->available_from)->timestamp ?? 0 }}">
+                                <span class="lms-timing-line"><strong>Test Appointment:</strong> {{ ($assignment && $assignment->isSelfSitting()) ? 'Start anytime' : ($assignment?->windowStart()?->format('d/m/Y, H:i') ?? '—') }}</span>
+                                <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $assignment?->timezoneLabel() ?? '—' }}</span>
                                 <span class="lms-timing-line"><strong>Test Duration:</strong> {{ $fmtDuration($assessment->durationMinutes()) }}</span>
                                 @if($attempt)
-                                    <span class="lms-timing-line"><strong>Started:</strong> {{ $assignment->formatInTimezone($attempt->startedAtForDisplay()) }}</span>
-                                    <span class="lms-timing-line"><strong>Ended:</strong> {{ $assignment->formatInTimezone($attempt->endedAtForDisplay()) }}</span>
+                                    <span class="lms-timing-line"><strong>Started:</strong> {{ $assignment ? $assignment->formatInTimezone($attempt->startedAtForDisplay()) : (optional($attempt->startedAtForDisplay())->format('d/m/Y, H:i') ?? '—') }}</span>
+                                    <span class="lms-timing-line"><strong>Ended:</strong> {{ $assignment ? $assignment->formatInTimezone($attempt->endedAtForDisplay()) : (optional($attempt->endedAtForDisplay())->format('d/m/Y, H:i') ?? '—') }}</span>
                                     <span class="lms-timing-line"><strong>Time spent:</strong> {{ $spend !== null ? $fmtDuration($spend) : '—' }}</span>
                                     <span class="lms-timing-line"><strong>Pause duration:</strong> {{ $attempt->pauseDurationLabel() }}</span>
                                 @else
@@ -262,11 +262,11 @@
                                     <span class="lms-timing-line"><strong>Pause duration:</strong> —</span>
                                 @endif
                             </td>
-                            <td class="col-created" data-sort="{{ $assignment->createdByLabel() }}">
-                                @if($assignment->assigned_by_user_id)
+                            <td class="col-created" data-sort="{{ $assignment?->createdByLabel() ?? '—' }}">
+                                @if($assignment && $assignment->assigned_by_user_id)
                                     <a href="#" class="lms-user-preview" data-user-id="{{ $assignment->assigned_by_user_id }}">{{ $assignment->createdByLabel() }}</a>
                                 @else
-                                    {{ $assignment->createdByLabel() }}
+                                    {{ $assignment?->createdByLabel() ?? '—' }}
                                 @endif
                             </td>
                             <td class="col-assessor" data-sort="{{ $assessorName }}">

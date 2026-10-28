@@ -560,30 +560,82 @@ class LmsAssessmentController extends Controller
             }
         }
 
-        $pairs = collect($rowsByKey)->values();
-        if ($pairs->isNotEmpty()) {
-            $assessmentIds = $pairs->pluck('assessment.id')->unique()->all();
-            $userIds = $pairs->pluck('student.id')->unique()->all();
-            $attempts = LmsAssessmentAttempt::query()
+        $assessmentIds = $assignments->pluck('assessment_id')->map(fn ($id) => (int) $id)->unique()->filter()->values()->all();
+        if ($assessmentId > 0) {
+            $assessmentIds[] = $assessmentId;
+            $assessmentIds = array_values(array_unique($assessmentIds));
+        }
+        $allAttempts = $assessmentIds === []
+            ? collect()
+            : LmsAssessmentAttempt::query()
+                ->with([
+                    'user:id,name,email',
+                    'assessment:id,title,kind,course_id,audience,duration_minutes,target_role,max_attempts',
+                    'assessment.course:id,title',
+                ])
                 ->whereIn('assessment_id', $assessmentIds)
-                ->whereIn('user_id', $userIds)
-                ->orderByDesc('id')
-                ->get()
-                ->groupBy(fn ($a) => (int) $a->assessment_id . ':' . (int) $a->user_id);
+                ->orderBy('id')
+                ->get();
 
-            $claimedAttemptIds = [];
-            $grouped = collect($rowsByKey)->groupBy(
-                fn ($r) => (int) $r['assessment']->id . ':' . (int) $r['student']->id
-            );
-            foreach ($grouped as $pairKey => $sittings) {
-                $candidates = ($attempts->get($pairKey) ?? collect())->sortBy('id')->values();
-                foreach ($sittings->sortBy(fn ($r) => (int) $r['assignment']->id) as $sitting) {
-                    $asg = $sitting['assignment'];
-                    $rowKey = (int) $asg->id . ':' . (int) $sitting['student']->id;
-                    $matched = $this->matchSittingAttempt($candidates, $asg, $claimedAttemptIds);
-                    $rowsByKey[$rowKey]['attempt'] = $matched;
+        $claimedAttemptIds = [];
+        $attemptsByPair = $allAttempts->groupBy(fn ($a) => (int) $a->assessment_id . ':' . (int) $a->user_id);
+        $grouped = collect($rowsByKey)->groupBy(
+            fn ($r) => (int) $r['assessment']->id . ':' . (int) ($r['student']->id ?? 0)
+        );
+        foreach ($grouped as $pairKey => $sittings) {
+            $candidates = ($attemptsByPair->get($pairKey) ?? collect())->sortBy('id')->values();
+            foreach ($sittings->sortBy(fn ($r) => (int) $r['assignment']->id) as $sitting) {
+                $asg = $sitting['assignment'];
+                $rowKey = (int) $asg->id . ':' . (int) $sitting['student']->id;
+                $matched = $this->matchSittingAttempt($candidates, $asg, $claimedAttemptIds);
+                $rowsByKey[$rowKey]['attempt'] = $matched;
+                foreach ($candidates as $extra) {
+                    if (isset($claimedAttemptIds[(int) $extra->id])) {
+                        continue;
+                    }
+                    if (! $this->assessments->attemptBelongsToAssignment($extra, $asg)) {
+                        continue;
+                    }
+                    $claimedAttemptIds[(int) $extra->id] = true;
+                    $rowsByKey['attempt:' . $extra->id] = [
+                        'assessment' => $sitting['assessment'],
+                        'student' => $sitting['student'],
+                        'assignment' => $asg,
+                        'attempt' => $extra,
+                    ];
                 }
             }
+        }
+
+        foreach ($allAttempts as $att) {
+            if (isset($claimedAttemptIds[(int) $att->id])) {
+                continue;
+            }
+            $claimedAttemptIds[(int) $att->id] = true;
+            $student = $att->user ?: User::query()->find($att->user_id) ?: (object) [
+                'id' => (int) $att->user_id,
+                'name' => 'User #' . $att->user_id,
+                'email' => '',
+            ];
+            if ($search !== '') {
+                $needle = mb_strtolower($search);
+                $hay = mb_strtolower(($student->name ?? '') . ' ' . ($student->email ?? '') . ' ' . ($att->assessment->title ?? ''));
+                if (! str_contains($hay, $needle)) {
+                    continue;
+                }
+            }
+            $asg = $assignments->first(fn ($row) => (int) $row->id === (int) ($att->assignment_id ?? 0))
+                ?: $assignments->first(fn ($row) => $this->assessments->attemptBelongsToAssignment($att, $row));
+            $assessment = $att->assessment ?: $asg?->assessment;
+            if (! $assessment) {
+                continue;
+            }
+            $rowsByKey['attempt:' . $att->id] = [
+                'assessment' => $assessment,
+                'student' => $student,
+                'assignment' => $asg ?: $assignments->firstWhere('assessment_id', $att->assessment_id),
+                'attempt' => $att,
+            ];
         }
 
         // Attempt N of T per student+assessment (oldest sitting = 1).
@@ -591,10 +643,10 @@ class LmsAssessmentController extends Controller
             fn ($r) => (int) $r['assessment']->id . ':' . (int) $r['student']->id
         );
         foreach ($sittingsByPair as $pairRows) {
-            $ordered = $pairRows->sortBy(fn ($r) => (int) $r['assignment']->id)->values();
+            $ordered = $pairRows->sortBy(fn ($r) => (int) ($r['assignment']->id ?? 0))->values();
             $total = $ordered->count();
             foreach ($ordered as $i => $r) {
-                $k = (int) $r['assignment']->id . ':' . (int) $r['student']->id;
+                $k = (int) ($r['assignment']->id ?? 0) . ':' . (int) ($r['student']->id ?? 0);
                 if (isset($rowsByKey[$k])) {
                     $asg = $r['assignment'] ?? null;
                     if ($asg && $asg->isSelfSitting()) {
@@ -608,6 +660,12 @@ class LmsAssessmentController extends Controller
                 }
             }
         }
+        foreach ($rowsByKey as $k => $r) {
+            if (! isset($r['attempt_number'])) {
+                $rowsByKey[$k]['attempt_number'] = 1;
+                $rowsByKey[$k]['attempt_total'] = 1;
+            }
+        }
 
         $rows = collect($rowsByKey)->values()->sortByDesc(function ($row) {
             $attempt = $row['attempt'];
@@ -615,7 +673,7 @@ class LmsAssessmentController extends Controller
                 return optional($attempt->submitted_at ?: $attempt->updated_at)->timestamp ?? 0;
             }
 
-            return optional($row['assignment']->created_at)->timestamp ?? 0;
+            return optional($row['assignment']?->created_at)->timestamp ?? 0;
         })->values();
 
         $statusOptions = [
@@ -633,9 +691,9 @@ class LmsAssessmentController extends Controller
                 $assignment = $row['assignment'];
                 if ($attempt) {
                     $statusText = $attempt->statusLabel();
-                } elseif ($assignment->isNotYetOpen()) {
+                } elseif ($assignment && $assignment->isNotYetOpen()) {
                     $statusText = 'Upcoming';
-                } elseif ($assignment->isExpired()) {
+                } elseif ($assignment && $assignment->isExpired()) {
                     $statusText = 'Missed';
                 } else {
                     $statusText = 'Assigned';
@@ -1230,15 +1288,9 @@ class LmsAssessmentController extends Controller
             return ! isset($claimedAttemptIds[(int) $att->id])
                 && $this->assessments->attemptBelongsToAssignment($att, $asg);
         });
-        if ($asg && $asg->isSelfSitting()) {
-            $matched = $belonging->sortByDesc('id')->first();
-            foreach ($belonging as $att) {
-                $claimedAttemptIds[(int) $att->id] = true;
-            }
-
-            return $matched;
-        }
-        $matched = $belonging->first();
+        $matched = $asg && $asg->isSelfSitting()
+            ? $belonging->sortByDesc('id')->first()
+            : $belonging->first();
         if ($matched) {
             $claimedAttemptIds[(int) $matched->id] = true;
         }
