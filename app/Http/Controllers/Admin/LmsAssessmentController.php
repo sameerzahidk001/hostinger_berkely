@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -522,10 +523,12 @@ class LmsAssessmentController extends Controller
                     continue;
                 }
                 if (! isset($batchStudentCache[$bid])) {
-                    $batch = ClassBatch::query()->find($bid);
-                    $batchStudentCache[$bid] = $batch
-                        ? $batch->students()->get()
+                    $ids = Schema::hasTable('class_batch_student')
+                        ? DB::table('class_batch_student')->where('class_batch_id', $bid)->pluck('student_id')
                         : collect();
+                    $batchStudentCache[$bid] = $ids->isEmpty()
+                        ? collect()
+                        : User::query()->whereIn('id', $ids)->get();
                 }
                 $students = $batchStudentCache[$bid];
             }
@@ -698,7 +701,20 @@ class LmsAssessmentController extends Controller
                 if (! $student && $assignment->student_id) {
                     $student = User::query()->find($assignment->student_id);
                 }
-                if (! $student && $assignment->class_batch_id) {
+                if (! $student && $assignment->class_batch_id && Schema::hasTable('class_batch_student')) {
+                    $ids = DB::table('class_batch_student')
+                        ->where('class_batch_id', (int) $assignment->class_batch_id)
+                        ->pluck('student_id');
+                    foreach (User::query()->whereIn('id', $ids)->get() as $batchStudent) {
+                        $rows->push([
+                            'assessment' => $assessment,
+                            'student' => $batchStudent,
+                            'assignment' => $assignment,
+                            'attempt' => null,
+                            'attempt_number' => 1,
+                            'attempt_total' => 1,
+                        ]);
+                    }
                     continue;
                 }
                 if (! $student) {
@@ -709,6 +725,38 @@ class LmsAssessmentController extends Controller
                     'student' => $student,
                     'assignment' => $assignment,
                     'attempt' => null,
+                    'attempt_number' => 1,
+                    'attempt_total' => 1,
+                ]);
+            }
+        }
+
+        if ($rows->isEmpty()) {
+            try {
+                $fallbackAttempts = LmsAssessmentAttempt::query()
+                    ->with(['user', 'assessment.course'])
+                    ->when($assessmentId > 0, fn ($q) => $q->where('assessment_id', $assessmentId))
+                    ->orderByDesc('id')
+                    ->limit(2000)
+                    ->get();
+            } catch (\Throwable $e) {
+                report($e);
+                $fallbackAttempts = collect();
+            }
+            foreach ($fallbackAttempts as $att) {
+                $assessment = $att->assessment;
+                if (! $assessment) {
+                    continue;
+                }
+                $student = $att->user ?: User::query()->find($att->user_id);
+                if (! $student) {
+                    continue;
+                }
+                $rows->push([
+                    'assessment' => $assessment,
+                    'student' => $student,
+                    'assignment' => null,
+                    'attempt' => $att,
                     'attempt_number' => 1,
                     'attempt_total' => 1,
                 ]);
