@@ -63,6 +63,7 @@
     .lms-tests-table .col-course { width: 10%; }
     .lms-tests-table .col-type { width: 7%; }
     .lms-tests-table .col-num { width: 4%; text-align: center; }
+    .lms-tests-table .col-assigned { width: 8%; text-align: center; white-space: normal; }
     .lms-tests-table .col-status { width: 7%; }
     .lms-tests-table .col-assessor { width: 9%; }
     .lms-tests-table .col-action {
@@ -147,7 +148,7 @@
                     <th class="col-course" data-sort-col="3">Course / Test for <span class="sort-ind"></span></th>
                     <th class="col-type" data-sort-col="4">Test Type <span class="sort-ind"></span></th>
                     <th class="col-num" data-sort-col="5">Qs <span class="sort-ind"></span></th>
-                    <th class="col-num" data-sort-col="6" title="Unique students assigned. A batch of 5 counts as 5. The same student assigned again still counts as 1.">Students <span class="sort-ind"></span></th>
+                    <th class="col-num col-assigned" data-sort-col="6" title="Unique students assigned. A batch of 5 counts as 5. The same student assigned again still counts as 1.">Assigned students <span class="sort-ind"></span></th>
                     <th class="col-num" data-sort-col="7" title="How many sittings students have started or submitted">Taken <span class="sort-ind"></span></th>
                     <th class="col-status" data-sort-col="8">Status <span class="sort-ind"></span></th>
                     <th class="col-assessor" data-sort-col="9">Assessor <span class="sort-ind"></span></th>
@@ -177,7 +178,7 @@
                         <td class="col-type" data-sort="{{ $row->kindLabel() }}">{{ $row->kindLabel() }}</td>
                         <td class="col-num" data-sort="{{ $row->questions_count }}">{{ $row->questions_count }}</td>
                         @php $assignedPeople = $row->assignedPeopleCount(); @endphp
-                        <td class="col-num" data-sort="{{ $assignedPeople }}">{{ $assignedPeople }}</td>
+                        <td class="col-num col-assigned" data-sort="{{ $assignedPeople }}">{{ $assignedPeople }}</td>
                         <td class="col-num" data-sort="{{ $row->attempts_count }}">{{ $row->attempts_count }}</td>
                         <td class="col-status" data-sort="{{ $row->status }}">
                             @php
