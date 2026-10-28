@@ -135,10 +135,6 @@
 
     <?php
         $pdfAllow = '<p><br><strong><em><ul><ol><li><b><i>';
-        $descPlain = trim(strip_tags((string) ($attempt->assessment->description ?? '')));
-        if ($descPlain !== '') {
-            echo '<h2>Test instructions</h2><div>' . strip_tags((string) $attempt->assessment->description, $pdfAllow) . '</div>';
-        }
         if ($attempt->grader_feedback) {
             echo '<h2>Overall feedback</h2><div class="feedback">' . strip_tags((string) $attempt->grader_feedback, $pdfAllow) . '</div>';
         }

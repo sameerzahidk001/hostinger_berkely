@@ -56,7 +56,7 @@
                 <div class="col-md-12 form-group">
                     <label>Description / test instructions <span class="lms-char-hint">(max {{ number_format($descriptionMax) }} characters)</span></label>
                     <textarea name="description" class="form-control lms-text-editor" rows="6" data-max="{{ $descriptionMax }}" data-height="220" data-rich="1" @readonly(! $canCreate)>{{ old('description', $assessment->description) }}</textarea>
-                    <p class="help-block" style="margin-bottom:0;font-size:11px;">Shown to the student as instructions before Question 1 (Continue to start). Also on View Details after submit.</p>
+                    <p class="help-block" style="margin-bottom:0;font-size:11px;">Shown to the student as instructions before they click Start Test. Not shown after submit.</p>
                 </div>
                 <div class="col-md-4 form-group js-course-field" style="{{ $isSkill ? 'display:none;' : '' }}">
                     <label>Course{{ !empty($courseRequired) ? ' *' : '' }}</label>
