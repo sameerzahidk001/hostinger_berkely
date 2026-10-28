@@ -66,6 +66,15 @@
     .lms-assigned-table .col-actions .btn-danger { color: #fff !important; background: #d9534f; border-color: #d43f3a; }
     .lms-assigned-table .col-status .lms-score-line { display: block; margin-top: 4px; font-weight: 600; color: #333; }
     .lms-assigned-table .col-timing .lms-timing-line { display: block; line-height: 1.35; }
+    .lms-assigned-pager {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 12px 0 4px;
+        flex-wrap: wrap;
+    }
+    .lms-assigned-pager .lms-page-label { font-weight: 600; color: #333; }
 </style>
 @php
     $fmtDuration = function ($minutes) {
@@ -169,7 +178,7 @@
                 @else
                     All assigned test takers
                 @endif
-                <small class="text-muted">({{ $rows->count() }})</small>
+                <small class="text-muted">({{ $rowsTotal ?? $rows->count() }})</small>
             </h5>
         </div>
         <div class="ibox-content lms-assigned-wrap">
@@ -328,6 +337,21 @@
                     @endforelse
                 </tbody>
             </table>
+            @if(method_exists($rows, 'lastPage') && $rows->lastPage() > 1)
+                <div class="lms-assigned-pager">
+                    @if($rows->onFirstPage())
+                        <span class="btn btn-default btn-sm disabled">Back</span>
+                    @else
+                        <a class="btn btn-default btn-sm" href="{{ $rows->previousPageUrl() }}">Back</a>
+                    @endif
+                    <span class="lms-page-label">Page {{ $rows->currentPage() }} of {{ $rows->lastPage() }} (10 per page)</span>
+                    @if($rows->hasMorePages())
+                        <a class="btn btn-primary btn-sm" href="{{ $rows->nextPageUrl() }}">Next</a>
+                    @else
+                        <span class="btn btn-primary btn-sm disabled">Next</span>
+                    @endif
+                </div>
+            @endif
         </div>
     </div>
 </div>
