@@ -257,6 +257,11 @@ class LmsAssessmentController extends Controller
             ? ' Self test: no appointment — the student starts anytime, up to Max attempts on the test.'
             : ' Exam sitting: student may start anytime inside the appointment window.';
 
+        if ($created === 0) {
+            return redirect()->route('admin.assessments.tests.assigned-users', ['assessment_id' => $a->id])
+                ->with('success', 'Those people already have this unused sitting. No extra assignment was created.');
+        }
+
         return redirect()->route('admin.assessments.tests.assigned-users', ['assessment_id' => $a->id])
             ->with('success', $created . ' new sitting' . ($created === 1 ? '' : 's') . ' created for test “' . $a->title . '”.' . $kindNote);
     }
@@ -1316,6 +1321,9 @@ class LmsAssessmentController extends Controller
             if ($hasKindCol) {
                 $row['sitting_kind'] = $sittingKind;
             }
+            if ($this->hasUnusedDuplicateSitting($a, $row, $hasKindCol)) {
+                continue;
+            }
             $createdAsg = LmsAssessmentAssignment::create($row);
             $this->assessments->notifyAssignmentCreated($createdAsg);
             $created++;
@@ -1342,6 +1350,9 @@ class LmsAssessmentController extends Controller
             if ($hasKindCol) {
                 $row['sitting_kind'] = $sittingKind;
             }
+            if ($this->hasUnusedDuplicateSitting($a, $row, $hasKindCol)) {
+                continue;
+            }
             $createdAsg = LmsAssessmentAssignment::create($row);
             $this->assessments->notifyAssignmentCreated($createdAsg);
             $created++;
@@ -1349,6 +1360,39 @@ class LmsAssessmentController extends Controller
 
         // Stash count for flash message.
         $request->attributes->set('lms_assignments_created', $created);
+    }
+
+    /** Same test + same people + same start, still unused → do not create another sitting. */
+    protected function hasUnusedDuplicateSitting(LmsAssessment $a, array $row, bool $hasKindCol): bool
+    {
+        $q = LmsAssessmentAssignment::query()->where('assessment_id', $a->id);
+        if (! empty($row['class_batch_id'])) {
+            $q->where('class_batch_id', (int) $row['class_batch_id']);
+        } else {
+            $q->where('student_id', (int) ($row['student_id'] ?? 0));
+        }
+        if ($hasKindCol && ! empty($row['sitting_kind'])) {
+            $q->where('sitting_kind', $row['sitting_kind']);
+        }
+        if (! empty($row['available_from'])) {
+            $q->where('available_from', $row['available_from']);
+        } else {
+            $q->whereNull('available_from');
+        }
+        $ids = $q->pluck('id');
+        if ($ids->isEmpty()) {
+            return false;
+        }
+        if (! Schema::hasColumn('lms_assessment_attempts', 'assignment_id')) {
+            return true;
+        }
+        $used = LmsAssessmentAttempt::query()
+            ->whereIn('assignment_id', $ids->all())
+            ->pluck('assignment_id')
+            ->map(fn ($id) => (int) $id)
+            ->unique();
+
+        return $ids->contains(fn ($id) => ! $used->contains((int) $id));
     }
 
     protected function formData(LmsAssessment $assessment): array
