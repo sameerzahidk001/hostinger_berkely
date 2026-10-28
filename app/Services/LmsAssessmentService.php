@@ -1527,6 +1527,27 @@ class LmsAssessmentService
             return $row;
         });
 
+        // One Upcoming/Available row per test for this student. Extra identical assigns
+        // stay in attempt_total (Attempt 1 of 3) instead of repeating the mock three times.
+        $collapseOpen = function (Collection $rows) {
+            return $rows->groupBy(function ($r) {
+                $from = optional($r['assignment']?->available_from)->timestamp ?? 0;
+
+                return (int) $r['assessment']->id . ':' . $from;
+            })->map(function ($group) {
+                $picked = $group->sortBy(fn ($r) => (int) ($r['assignment']->id ?? 0))->first();
+                $picked['attempt_total'] = max(
+                    (int) ($picked['attempt_total'] ?? 1),
+                    (int) $group->max('attempt_total'),
+                    $group->count()
+                );
+
+                return $picked;
+            })->values();
+        };
+        $available = $collapseOpen($available);
+        $upcoming = $collapseOpen($upcoming);
+
         return compact('available', 'upcoming', 'inProgress', 'submitted', 'results', 'missed');
     }
 }
