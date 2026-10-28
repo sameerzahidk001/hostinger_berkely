@@ -2,20 +2,21 @@
 @section('title', 'Taking: ' . ($attempt->assessment->title ?? 'Assessment'))
 @push('style')
 <style>
-    /* Fixed take header — sticky fails when ancestors use overflow. */
+    /* Keep the take header in document flow so questions cannot slide under it. */
+    html,
     body.lms-take-mode,
-    body.lms-take-mode #wrapper {
+    body.lms-take-mode #wrapper,
+    body.lms-take-mode #page-wrapper {
         overflow: visible !important;
     }
     body.lms-take-mode #page-wrapper {
-        overflow: visible !important;
         padding-top: 0;
         min-height: 0 !important;
         background: #f3f3f4;
     }
     body.lms-take-mode .wrapper-content {
         overflow: visible !important;
-        padding: 0 15px 24px !important;
+        padding: 8px 15px 24px !important;
         margin-top: 0 !important;
     }
     body.lms-take-mode #page-wrapper > .row.border-bottom {
@@ -34,14 +35,14 @@
         border: 0 !important;
     }
     .lms-take-sticky {
-        position: fixed;
+        position: sticky;
         top: 0;
-        left: 220px;
-        right: 0;
+        left: auto;
+        right: auto;
+        width: 100%;
         bottom: auto !important;
         height: auto !important;
         min-height: 0 !important;
-        max-height: none;
         z-index: 1040;
         background: #0d3b66;
         box-shadow: 0 2px 10px rgba(0, 0, 0, .18);
@@ -50,10 +51,8 @@
     }
     body.lms-take-mode #page-wrapper > .wrapper-content,
     body.lms-take-mode .wrapper.wrapper-content {
-        margin-top: 0;
-    }
-    @media (max-width: 768px) {
-        .lms-take-sticky { left: 0; }
+        margin-top: 0 !important;
+        padding-top: 8px !important;
     }
     .lms-take-sticky .page-heading {
         margin: 0;
@@ -564,29 +563,6 @@ document.body.classList.add('lms-take-mode');
 document.body.classList.add('lms-exam-lock');
 document.body.setAttribute('data-lms-exam-lock', '1');
 (function () {
-    var offsetLock = false;
-    function applyTakeOffset() {
-        if (offsetLock) return;
-        var bar = document.querySelector('.lms-take-sticky');
-        var content = document.getElementById('lms-take-body');
-        if (!bar || !content) return;
-        offsetLock = true;
-        var h = Math.ceil(bar.offsetHeight || 0);
-        content.style.marginTop = '0px';
-        content.style.paddingTop = h + 'px';
-        requestAnimationFrame(function () { offsetLock = false; });
-    }
-    applyTakeOffset();
-    window.addEventListener('resize', applyTakeOffset);
-    if (window.ResizeObserver) {
-        var bar = document.querySelector('.lms-take-sticky');
-        if (bar) new ResizeObserver(applyTakeOffset).observe(bar);
-    }
-    var introBtn = document.getElementById('lms-intro-continue');
-    if (introBtn) introBtn.addEventListener('click', function () { setTimeout(applyTakeOffset, 0); });
-    window.lmsApplyTakeOffset = applyTakeOffset;
-})();
-(function () {
     var steps = Array.prototype.slice.call(document.querySelectorAll('.lms-q-step'));
     var btnNext = document.getElementById('lms-q-next');
     var nextHint = document.querySelector('.lms-next-hint');
@@ -900,7 +876,6 @@ document.body.setAttribute('data-lms-exam-lock', '1');
         if (intro && intro.parentNode) intro.parentNode.removeChild(intro);
         intro = null;
         document.body.classList.remove('lms-intro-open');
-        if (typeof window.lmsApplyTakeOffset === 'function') window.lmsApplyTakeOffset();
     }
     function finishIntro() {
         writeStore(introKey, '1');
