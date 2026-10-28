@@ -78,7 +78,8 @@
         return optional($dt)->format('d/m/Y H:i') ?? '—';
     };
     $spent = $attempt->spendMinutes();
-    $publishedOn = $attempt->results_published
+    $isPublished = (bool) $attempt->results_published;
+    $publishedOn = $isPublished
         ? ($attempt->results_published_at
             ? $fmtTime($attempt->results_published_at)
             : 'Yes')
@@ -106,12 +107,12 @@
         <tr><td class="muted">Test Taker Name</td><td>{{ $attempt->user->name ?? '—' }} ({{ $attempt->user->email ?? '' }})</td></tr>
         @if(! $attempt->assessment->hidesOverallMarks())
         <tr><td class="muted">Test Result</td><td class="score">
-            @if(! $attempt->results_published)
-                Pending
-            @elseif($attempt->score_raw !== null)
+            @if($isPublished && $attempt->score_raw !== null)
                 {{ lms_format_number($attempt->score_raw) }} / {{ lms_format_number($attempt->score_max) }}
                 @if($attempt->percent() !== null) ({{ lms_format_number($attempt->percent()) }}%) @endif
-            @else Pending @endif
+            @else
+                Pending
+            @endif
         </td></tr>
         @endif
         <tr><td class="muted">Appointment ID</td><td>{{ $assignment ? $assignment->displayCode() : '—' }}</td></tr>
@@ -150,7 +151,7 @@
         };
         foreach ($attempt->assessment->questions as $i => $question) {
             $answer = $attempt->answers->firstWhere('question_id', $question->id);
-            $showMarks = $question->isMcq() || ! $attempt->assessment->hidesOverallMarks();
+            $showMarks = $isPublished && ($question->isMcq() || ! $attempt->assessment->hidesOverallMarks());
             $subs = $question->hasSubQuestions() ? $question->subQuestions() : [];
             $explPlain = trim(strip_tags((string) ($question->explanation ?? '')));
             $hasFb = $answer && $answer->feedback && count($subs) === 0;
