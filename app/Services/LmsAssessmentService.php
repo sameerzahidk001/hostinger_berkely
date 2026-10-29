@@ -525,9 +525,9 @@ class LmsAssessmentService
      *
      * @return array{number:int,total:int}
      */
-    public function sittingAttemptMeta(int $userId, LmsAssessment $assessment, ?LmsAssessmentAssignment $assignment): array
+    public function sittingAttemptMeta(int $userId, ?LmsAssessment $assessment, ?LmsAssessmentAssignment $assignment): array
     {
-        if (! $assignment) {
+        if (! $assessment || ! $assignment) {
             return ['number' => 1, 'total' => 1];
         }
 

@@ -1137,7 +1137,11 @@ class LmsAssessmentController extends Controller
     public function mark($attemptId)
     {
         $this->assessments->ensure();
-        $attempt = LmsAssessmentAttempt::with(['assessment.questions', 'answers.question', 'user'])->findOrFail($attemptId);
+        $attempt = LmsAssessmentAttempt::with(['answers.question', 'user'])->findOrFail($attemptId);
+        $assessment = LmsAssessment::withTrashed()->with('questions')->find($attempt->assessment_id);
+        if ($assessment) {
+            $attempt->setRelation('assessment', $assessment);
+        }
         abort_unless($this->assessments->actorCanAccessAttempt($attempt), 403);
 
         return view('admin.assessments.tests.mark', compact('attempt'));
@@ -1146,7 +1150,11 @@ class LmsAssessmentController extends Controller
     public function attemptPdf($attemptId)
     {
         $this->assessments->ensure();
-        $attempt = LmsAssessmentAttempt::with(['assessment.course', 'assessment.questions', 'answers.question', 'user'])->findOrFail($attemptId);
+        $attempt = LmsAssessmentAttempt::with(['answers.question', 'user'])->findOrFail($attemptId);
+        $assessment = LmsAssessment::withTrashed()->with(['course', 'questions'])->find($attempt->assessment_id);
+        if ($assessment) {
+            $attempt->setRelation('assessment', $assessment);
+        }
         abort_unless($this->assessments->actorCanAccessAttempt($attempt), 403);
 
         $title = Str::slug($attempt->assessment->title ?? 'attempt', '-');
@@ -1161,7 +1169,11 @@ class LmsAssessmentController extends Controller
     public function saveMarks(Request $request, $attemptId)
     {
         $this->assessments->ensure();
-        $attempt = LmsAssessmentAttempt::with(['answers.question', 'assessment.questions'])->findOrFail($attemptId);
+        $attempt = LmsAssessmentAttempt::with(['answers.question'])->findOrFail($attemptId);
+        $assessment = LmsAssessment::withTrashed()->with('questions')->find($attempt->assessment_id);
+        if ($assessment) {
+            $attempt->setRelation('assessment', $assessment);
+        }
         abort_unless($this->assessments->actorCanAccessAttempt($attempt), 403);
 
         $feedbackMax = 2000;
