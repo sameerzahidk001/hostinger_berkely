@@ -491,7 +491,15 @@ class LmsAssessmentController extends Controller
             $assignments = $assignQuery->get();
         } catch (\Throwable $e) {
             report($e);
-            $assignments = LmsAssessmentAssignment::query()->orderByDesc('id')->get();
+            $assignments = collect();
+        }
+        if ($assignments->isEmpty() && Schema::hasTable('lms_assessment_assignments')) {
+            try {
+                $raw = DB::table('lms_assessment_assignments')->orderByDesc('id')->get();
+                $assignments = LmsAssessmentAssignment::hydrate($raw->map(fn ($row) => (array) $row)->all());
+            } catch (\Throwable $e) {
+                report($e);
+            }
         }
 
         $assessmentIds = $assignments->pluck('assessment_id')->map(fn ($id) => (int) $id)->unique()->filter()->values()->all();
@@ -499,15 +507,18 @@ class LmsAssessmentController extends Controller
             $assessmentIds[] = $assessmentId;
             $assessmentIds = array_values(array_unique($assessmentIds));
         }
+        $assessmentQuery = fn () => class_exists(LmsAssessment::class)
+            ? LmsAssessment::withTrashed()->whereIn('id', $assessmentIds)
+            : LmsAssessment::query()->whereIn('id', $assessmentIds);
         try {
             $assessmentsById = $assessmentIds === []
                 ? collect()
-                : LmsAssessment::query()->with('course')->whereIn('id', $assessmentIds)->get()->keyBy('id');
+                : $assessmentQuery()->with('course')->get()->keyBy('id');
         } catch (\Throwable $e) {
             report($e);
             $assessmentsById = $assessmentIds === []
                 ? collect()
-                : LmsAssessment::query()->whereIn('id', $assessmentIds)->get()->keyBy('id');
+                : LmsAssessment::withTrashed()->whereIn('id', $assessmentIds)->get()->keyBy('id');
         }
         foreach ($assignments as $assignment) {
             $found = $assessmentsById->get((int) $assignment->assessment_id);
@@ -548,6 +559,14 @@ class LmsAssessmentController extends Controller
                         : User::query()->whereIn('id', $ids)->get();
                 }
                 $students = $batchStudentCache[$bid];
+                if ($students->isEmpty()) {
+                    $batch = $assignment->batch ?: ClassBatch::query()->find($bid);
+                    $students = collect([(object) [
+                        'id' => 0,
+                        'name' => $batch ? ($batch->code . ' — ' . $batch->name) : ('Batch #' . $bid),
+                        'email' => 'Batch assignment (no students linked yet)',
+                    ]]);
+                }
             }
 
             if ($batchId > 0 && $assignment->student_id) {
@@ -588,22 +607,52 @@ class LmsAssessmentController extends Controller
             $attemptQuery = LmsAssessmentAttempt::query()->orderByDesc('id')->limit(3000);
             if ($assessmentId > 0) {
                 $attemptQuery->where('assessment_id', $assessmentId);
-            } elseif ($assessmentIds !== []) {
-                $attemptQuery->whereIn('assessment_id', $assessmentIds);
             }
             $allAttempts = $attemptQuery->get();
-            try {
-                $allAttempts->load(['user', 'assessment.course']);
-            } catch (\Throwable $e) {
-                report($e);
-            }
         } catch (\Throwable $e) {
             report($e);
-            $allAttempts = LmsAssessmentAttempt::query()->orderByDesc('id')->limit(3000)->get();
+            $allAttempts = collect();
+        }
+        $markerIds = $assignments->pluck('marker_user_id')->filter()->map(fn ($id) => (int) $id)->unique()->values();
+        $attemptUserIds = $allAttempts->pluck('user_id')->filter()->map(fn ($id) => (int) $id)->unique()->values();
+        $peopleIds = $markerIds->merge($attemptUserIds)->unique()->values();
+        $peopleById = $peopleIds->isEmpty()
+            ? collect()
+            : User::query()->whereIn('id', $peopleIds)->get()->keyBy('id');
+        foreach ($assignments as $assignment) {
+            $marker = $peopleById->get((int) ($assignment->marker_user_id ?? 0));
+            if ($marker) {
+                $assignment->setRelation('marker', $marker);
+            }
+        }
+        $assignmentIdsFromAttempts = $allAttempts->pluck('assignment_id')->filter()->map(fn ($id) => (int) $id)->unique()->values();
+        $missingAsgIds = $assignmentIdsFromAttempts->diff($assignments->pluck('id')->map(fn ($id) => (int) $id))->filter();
+        if ($missingAsgIds->isNotEmpty()) {
+            foreach (LmsAssessmentAssignment::query()->whereIn('id', $missingAsgIds->all())->get() as $extraAsg) {
+                $assignments->push($extraAsg);
+                $found = $assessmentsById->get((int) $extraAsg->assessment_id);
+                if ($found) {
+                    $extraAsg->setRelation('assessment', $found);
+                }
+            }
+        }
+        $assignmentsById = $assignments->keyBy(fn ($row) => (int) $row->id);
+        $attemptAssessmentIds = $allAttempts->pluck('assessment_id')->map(fn ($id) => (int) $id)->unique()->filter()->values();
+        $missingAssessmentIds = $attemptAssessmentIds->diff($assessmentsById->keys()->map(fn ($id) => (int) $id))->filter();
+        if ($missingAssessmentIds->isNotEmpty()) {
+            foreach (LmsAssessment::withTrashed()->whereIn('id', $missingAssessmentIds->all())->get() as $extraAssessment) {
+                $assessmentsById->put($extraAssessment->id, $extraAssessment);
+            }
+        }
+        foreach ($allAttempts as $att) {
+            $found = $assessmentsById->get((int) $att->assessment_id);
+            if ($found) {
+                $att->setRelation('assessment', $found);
+            }
         }
 
+        $claimedAttemptIds = [];
         try {
-            $claimedAttemptIds = [];
             $attemptsByPair = $allAttempts->groupBy(fn ($a) => (int) $a->assessment_id . ':' . (int) $a->user_id);
             $grouped = collect($rowsByKey)->groupBy(
                 fn ($r) => (int) ($r['assessment']->id ?? 0) . ':' . (int) ($r['student']->id ?? 0)
@@ -636,38 +685,47 @@ class LmsAssessmentController extends Controller
                 }
             }
 
-            foreach ($allAttempts as $att) {
-                if (isset($claimedAttemptIds[(int) $att->id])) {
-                    continue;
-                }
-                $claimedAttemptIds[(int) $att->id] = true;
-                $student = $att->user ?: User::query()->find($att->user_id) ?: (object) [
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        foreach ($allAttempts as $att) {
+            if (isset($claimedAttemptIds[(int) ($att->id ?? 0)])) {
+                continue;
+            }
+            $claimedAttemptIds[(int) $att->id] = true;
+            $student = $att->user
+                ?: $peopleById->get((int) $att->user_id)
+                ?: User::query()->find($att->user_id)
+                ?: (object) [
                     'id' => (int) $att->user_id,
                     'name' => 'User #' . $att->user_id,
                     'email' => '',
                 ];
-                if ($search !== '') {
-                    $needle = mb_strtolower($search);
-                    $hay = mb_strtolower(($student->name ?? '') . ' ' . ($student->email ?? '') . ' ' . ($att->assessment->title ?? ''));
-                    if (! str_contains($hay, $needle)) {
-                        continue;
-                    }
-                }
-                $asg = $assignments->first(fn ($row) => (int) $row->id === (int) ($att->assignment_id ?? 0))
-                    ?: $assignments->first(fn ($row) => $this->assessments->attemptBelongsToAssignment($att, $row));
-                $assessment = $att->assessment ?: $asg?->assessment;
-                if (! $assessment) {
+            if ($search !== '') {
+                $needle = mb_strtolower($search);
+                $hay = mb_strtolower(($student->name ?? '') . ' ' . ($student->email ?? '') . ' ' . ($att->assessment->title ?? ''));
+                if (! str_contains($hay, $needle)) {
                     continue;
                 }
-                $rowsByKey['attempt:' . $att->id] = [
-                    'assessment' => $assessment,
-                    'student' => $student,
-                    'assignment' => $asg ?: $assignments->firstWhere('assessment_id', $att->assessment_id),
-                    'attempt' => $att,
-                ];
             }
-        } catch (\Throwable $e) {
-            report($e);
+            $asg = $assignmentsById->get((int) ($att->assignment_id ?? 0))
+                ?: $assignments->first(fn ($row) => $this->assessments->attemptBelongsToAssignment($att, $row));
+            $assessment = $att->assessment
+                ?: $asg?->assessment
+                ?: $assessmentsById->get((int) $att->assessment_id);
+            if (! $assessment && $att->assessment_id) {
+                $assessment = LmsAssessment::withTrashed()->find($att->assessment_id);
+            }
+            if (! $assessment) {
+                continue;
+            }
+            $rowsByKey['attempt:' . $att->id] = [
+                'assessment' => $assessment,
+                'student' => $student,
+                'assignment' => $asg,
+                'attempt' => $att,
+            ];
         }
 
         // Attempt N of T per student+assessment (oldest sitting = 1).

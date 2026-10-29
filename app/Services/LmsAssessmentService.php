@@ -292,27 +292,29 @@ class LmsAssessmentService
             }
         }
 
-        if ($out->isEmpty()) {
-            $direct = LmsAssessmentAssignment::query()
-                ->with(['assessment.course', 'assessment.questions'])
-                ->where(function ($q) use ($userId, $batchIds) {
-                    $q->where('student_id', $userId);
-                    if ($batchIds !== []) {
-                        $q->orWhereIn('class_batch_id', $batchIds);
-                    }
-                })
-                ->orderByDesc('id')
-                ->get();
-            foreach ($direct as $assignment) {
-                $assessment = $assignment->assessment;
-                if (! $assessment) {
-                    continue;
+        $seenAsg = $out->map(fn ($row) => (int) ($row['assignment']->id ?? 0))->filter()->all();
+        $direct = LmsAssessmentAssignment::query()
+            ->with(['assessment.course', 'assessment.questions'])
+            ->where(function ($q) use ($userId, $batchIds) {
+                $q->where('student_id', $userId);
+                if ($batchIds !== []) {
+                    $q->orWhereIn('class_batch_id', $batchIds);
                 }
-                if ($kind && $assessment->kind !== $kind) {
-                    continue;
-                }
-                $out->push(['assessment' => $assessment, 'assignment' => $assignment]);
+            })
+            ->orderByDesc('id')
+            ->get();
+        foreach ($direct as $assignment) {
+            if (in_array((int) $assignment->id, $seenAsg, true)) {
+                continue;
             }
+            $assessment = $assignment->assessment;
+            if (! $assessment) {
+                continue;
+            }
+            if ($kind && $assessment->kind !== $kind) {
+                continue;
+            }
+            $out->push(['assessment' => $assessment, 'assignment' => $assignment]);
         }
 
         if (method_exists(StudyMaterialFolder::class, 'ensureFolderAssessmentsTable')) {
