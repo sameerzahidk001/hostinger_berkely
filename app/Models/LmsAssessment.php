@@ -93,37 +93,44 @@ class LmsAssessment extends Model
         return $this->hasMany(LmsAssessmentAssignment::class, 'assessment_id');
     }
 
-    /** Unique test takers: each student once, batch assignments expand to batch members. */
+    /** Assigned sitting rows: one per student assign, batch size per batch assign, plus leftover attempts. */
     public function assignedPeopleCount(): int
     {
-        $ids = [];
         $assignments = $this->relationLoaded('assignments')
             ? $this->assignments
             : $this->assignments()->get(['id', 'assessment_id', 'student_id', 'class_batch_id']);
-        $batchIds = [];
+        $count = 0;
+        $assignmentIds = [];
+        $batchCounts = [];
         foreach ($assignments as $assignment) {
+            $assignmentIds[] = (int) $assignment->id;
             if ($assignment->student_id) {
-                $ids[(int) $assignment->student_id] = true;
-            } elseif ($assignment->class_batch_id) {
-                $batchIds[] = (int) $assignment->class_batch_id;
+                $count++;
+                continue;
             }
-        }
-        if ($batchIds !== [] && Schema::hasTable('class_batch_student')) {
-            foreach (DB::table('class_batch_student')->whereIn('class_batch_id', array_values(array_unique($batchIds)))->pluck('student_id') as $sid) {
-                if ((int) $sid > 0) {
-                    $ids[(int) $sid] = true;
+            if ($assignment->class_batch_id && Schema::hasTable('class_batch_student')) {
+                $bid = (int) $assignment->class_batch_id;
+                if (! isset($batchCounts[$bid])) {
+                    $batchCounts[$bid] = (int) DB::table('class_batch_student')->where('class_batch_id', $bid)->count();
                 }
+                $count += max(1, $batchCounts[$bid]);
             }
         }
         if (Schema::hasTable('lms_assessment_attempts')) {
-            foreach (LmsAssessmentAttempt::query()->where('assessment_id', $this->id)->pluck('user_id') as $uid) {
-                if ((int) $uid > 0) {
-                    $ids[(int) $uid] = true;
-                }
+            $orphanQuery = LmsAssessmentAttempt::query()->where('assessment_id', $this->id);
+            if ($assignmentIds !== [] && Schema::hasColumn('lms_assessment_attempts', 'assignment_id')) {
+                $orphanQuery->where(function ($q) use ($assignmentIds) {
+                    $q->whereNull('assignment_id')
+                        ->orWhere('assignment_id', 0)
+                        ->orWhereNotIn('assignment_id', $assignmentIds);
+                });
+            } elseif ($assignmentIds !== []) {
+                $orphanQuery->whereRaw('0 = 1');
             }
+            $count += (int) $orphanQuery->count();
         }
 
-        return count($ids);
+        return $count;
     }
 
     public function studyFolders(): BelongsToMany
