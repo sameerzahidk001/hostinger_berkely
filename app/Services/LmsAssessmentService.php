@@ -1584,7 +1584,8 @@ class LmsAssessmentService
                     continue;
                 }
                 if (! empty($att->assignment_id)
-                    && ! $items->contains(fn ($r) => (int) ($r['assignment']->id ?? 0) === (int) $att->assignment_id)) {
+                    && ! $items->contains(fn ($r) => (int) ($r['assignment']->id ?? 0) === (int) $att->assignment_id)
+                    && ! LmsAssessmentAssignment::query()->whereKey($att->assignment_id)->exists()) {
                     continue;
                 }
                 if (method_exists($assessment, 'trashed') && $assessment->trashed()) {
