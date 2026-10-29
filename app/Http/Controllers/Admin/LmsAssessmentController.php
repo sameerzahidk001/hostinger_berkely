@@ -424,15 +424,7 @@ class LmsAssessmentController extends Controller
             $markerOnlyUid = (int) (Auth::id() ?? 0);
         }
 
-        $assignQuery = LmsAssessmentAssignment::query()
-            ->with([
-                'assessment.course',
-                'student',
-                'batch',
-                'marker',
-                'assignedByUser',
-            ])
-            ->orderByDesc('id');
+        $assignQuery = LmsAssessmentAssignment::query()->orderByDesc('id');
 
         if ($assessmentId > 0) {
             $assignQuery->where('assessment_id', $assessmentId);
@@ -499,13 +491,38 @@ class LmsAssessmentController extends Controller
             $assignments = $assignQuery->get();
         } catch (\Throwable $e) {
             report($e);
-            $assignments = (clone $assignQuery)->setEagerLoads([])->get();
+            $assignments = LmsAssessmentAssignment::query()->orderByDesc('id')->get();
         }
+
+        $assessmentIds = $assignments->pluck('assessment_id')->map(fn ($id) => (int) $id)->unique()->filter()->values()->all();
+        if ($assessmentId > 0) {
+            $assessmentIds[] = $assessmentId;
+            $assessmentIds = array_values(array_unique($assessmentIds));
+        }
+        try {
+            $assessmentsById = $assessmentIds === []
+                ? collect()
+                : LmsAssessment::query()->with('course')->whereIn('id', $assessmentIds)->get()->keyBy('id');
+        } catch (\Throwable $e) {
+            report($e);
+            $assessmentsById = $assessmentIds === []
+                ? collect()
+                : LmsAssessment::query()->whereIn('id', $assessmentIds)->get()->keyBy('id');
+        }
+        foreach ($assignments as $assignment) {
+            $found = $assessmentsById->get((int) $assignment->assessment_id);
+            if ($found) {
+                $assignment->setRelation('assessment', $found);
+            }
+        }
+
         $rowsByKey = [];
         $batchStudentCache = [];
 
         foreach ($assignments as $assignment) {
-            $assessment = $assignment->assessment;
+            $assessment = $assignment->relationLoaded('assessment')
+                ? $assignment->assessment
+                : $assessmentsById->get((int) $assignment->assessment_id);
             if (! $assessment) {
                 continue;
             }
@@ -567,22 +584,22 @@ class LmsAssessmentController extends Controller
             }
         }
 
-        $assessmentIds = $assignments->pluck('assessment_id')->map(fn ($id) => (int) $id)->unique()->filter()->values()->all();
-        if ($assessmentId > 0) {
-            $assessmentIds[] = $assessmentId;
-            $assessmentIds = array_values(array_unique($assessmentIds));
-        }
         try {
-            $allAttempts = $assessmentIds === []
-                ? collect()
-                : LmsAssessmentAttempt::query()
-                    ->with(['user', 'assessment.course'])
-                    ->whereIn('assessment_id', $assessmentIds)
-                    ->orderBy('id')
-                    ->get();
+            $attemptQuery = LmsAssessmentAttempt::query()->orderByDesc('id')->limit(3000);
+            if ($assessmentId > 0) {
+                $attemptQuery->where('assessment_id', $assessmentId);
+            } elseif ($assessmentIds !== []) {
+                $attemptQuery->whereIn('assessment_id', $assessmentIds);
+            }
+            $allAttempts = $attemptQuery->get();
+            try {
+                $allAttempts->load(['user', 'assessment.course']);
+            } catch (\Throwable $e) {
+                report($e);
+            }
         } catch (\Throwable $e) {
             report($e);
-            $allAttempts = collect();
+            $allAttempts = LmsAssessmentAttempt::query()->orderByDesc('id')->limit(3000)->get();
         }
 
         try {

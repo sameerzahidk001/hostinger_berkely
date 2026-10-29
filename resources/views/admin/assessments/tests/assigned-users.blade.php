@@ -199,9 +199,12 @@
                 <tbody>
                     @forelse($rows as $row)
                         @php
-                            $attempt = $row['attempt'];
-                            $assignment = $row['assignment'];
-                            $assessment = $row['assessment'];
+                            $attempt = $row['attempt'] ?? null;
+                            $assignment = $row['assignment'] ?? null;
+                            $assessment = $row['assessment'] ?? $attempt?->assessment;
+                            if (! $assessment) {
+                                continue;
+                            }
                             if ($attempt) {
                                 $statusClass = $attempt->statusColorClass();
                                 $statusText = $attempt->statusLabel();
@@ -228,6 +231,7 @@
                             $attemptNo = (int) ($row['attempt_number'] ?? 1);
                             $attemptTotal = (int) ($row['attempt_total'] ?? 1);
                         @endphp
+                        @if($assessment)
                         <tr>
                             <td class="col-appt" data-sort="{{ $assignment->id ?? 0 }}"><strong>{{ $apptId }}</strong></td>
                             <td class="col-test" data-sort="{{ $assessment->title ?? ('Test #'.($assignment->assessment_id ?? '')) }}">
@@ -332,6 +336,7 @@
                                 @endif
                             </td>
                         </tr>
+                        @endif
                     @empty
                         <tr><td colspan="9" class="text-center text-muted">No assigned test takers found.</td></tr>
                     @endforelse
