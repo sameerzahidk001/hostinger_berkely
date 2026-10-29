@@ -709,11 +709,7 @@ class LmsAssessmentController extends Controller
                     continue;
                 }
             }
-            $asg = $assignmentsById->get((int) ($att->assignment_id ?? 0))
-                ?: $assignments->first(fn ($row) => $this->assessments->attemptBelongsToAssignment($att, $row));
-            if (! $asg && ! empty($att->assignment_id)) {
-                $asg = LmsAssessmentAssignment::query()->find($att->assignment_id);
-            }
+            $asg = $this->assignmentForAttempt($att, $assignments, $assignmentsById);
             $assessment = $att->assessment
                 ?: $asg?->assessment
                 ?: $assessmentsById->get((int) $att->assessment_id)
@@ -1462,6 +1458,68 @@ class LmsAssessmentController extends Controller
         }
 
         return null;
+    }
+
+    protected function assignmentForAttempt($att, $assignments, $assignmentsById): ?LmsAssessmentAssignment
+    {
+        if (! empty($att->assignment_id)) {
+            $found = $assignmentsById->get((int) $att->assignment_id)
+                ?: LmsAssessmentAssignment::query()->find($att->assignment_id);
+            if ($found) {
+                return $found;
+            }
+        }
+        $belong = collect($assignments)->first(
+            fn ($row) => $this->assessments->attemptBelongsToAssignment($att, $row)
+        );
+        if ($belong) {
+            return $belong;
+        }
+        $sameStudent = collect($assignments)
+            ->filter(function ($row) use ($att) {
+                return (int) $row->assessment_id === (int) $att->assessment_id
+                    && (int) ($row->student_id ?? 0) === (int) $att->user_id;
+            })
+            ->sortBy(fn ($row) => (int) $row->id)
+            ->values();
+        if ($sameStudent->count() === 1) {
+            return $sameStudent->first();
+        }
+        if ($att->started_at && $sameStudent->isNotEmpty()) {
+            $picked = $sameStudent->filter(function ($row) use ($att) {
+                if (! $row->created_at) {
+                    return true;
+                }
+
+                return $att->started_at->gte($row->created_at->copy()->subMinutes(2));
+            })->last();
+
+            return $picked ?: $sameStudent->last();
+        }
+
+        $batchSittings = collect($assignments)->filter(function ($row) use ($att) {
+            return (int) $row->assessment_id === (int) $att->assessment_id
+                && ! empty($row->class_batch_id);
+        });
+        if ($batchSittings->isNotEmpty() && Schema::hasTable('class_batch_student')) {
+            $batchIds = DB::table('class_batch_student')
+                ->where('student_id', (int) $att->user_id)
+                ->whereIn('class_batch_id', $batchSittings->pluck('class_batch_id')->all())
+                ->pluck('class_batch_id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+            $fromBatch = $batchSittings
+                ->filter(fn ($row) => in_array((int) $row->class_batch_id, $batchIds, true))
+                ->sortBy(fn ($row) => (int) $row->id);
+            if ($fromBatch->count() === 1) {
+                return $fromBatch->first();
+            }
+            if ($fromBatch->isNotEmpty()) {
+                return $fromBatch->last();
+            }
+        }
+
+        return $sameStudent->last();
     }
 
     protected function matchSittingAttempt($candidates, ?LmsAssessmentAssignment $asg, array &$claimedAttemptIds)
