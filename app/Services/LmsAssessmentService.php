@@ -1583,14 +1583,6 @@ class LmsAssessmentService
                 if (! in_array($att->status, ['submitted', 'graded', 'expired'], true)) {
                     continue;
                 }
-                if (! empty($att->assignment_id)
-                    && ! $items->contains(fn ($r) => (int) ($r['assignment']->id ?? 0) === (int) $att->assignment_id)
-                    && ! LmsAssessmentAssignment::query()->whereKey($att->assignment_id)->exists()) {
-                    continue;
-                }
-                if (method_exists($assessment, 'trashed') && $assessment->trashed()) {
-                    continue;
-                }
                 $claimedAttemptIds[(int) $att->id] = true;
                 $matchRow = $items->first(fn ($r) => $this->attemptBelongsToAssignment($att, $r['assignment'] ?? null));
                 $asg = $matchRow['assignment'] ?? $sample['assignment'];
