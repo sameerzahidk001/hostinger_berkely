@@ -3,6 +3,7 @@
 @include('admin.assessments.partials.sortable-table-assets')
 @php $lmsUserPreviewUrlTpl = route('user.assessments.user-preview', ['userId' => '__ID__']); @endphp
 @section('content')
+<!-- lms-my-tests-20261029 -->
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
         <h2>{{ $section === 'mocks' ? 'Mock Test' : ($section === 'skill' ? 'Skill Test' : 'My Tests') }}</h2>
@@ -340,7 +341,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="text-center">Nothing in this tab.</td></tr>
+                    <tr><td colspan="6" class="text-center">No live tests in this tab.</td></tr>
                 @endforelse
             </tbody>
         </table>
