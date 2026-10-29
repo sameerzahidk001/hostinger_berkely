@@ -229,92 +229,68 @@ class LmsAssessmentService
                 ->all();
         }
 
-        $query = LmsAssessment::query()
-            ->with(['course', 'assignments.batch', 'assignments.student', 'assignments.marker', 'questions'])
-            // Keep disabled tests visible when the user already has attempts (Results), but not for new starts.
-            ->where(function ($q) use ($userId) {
-                $q->where('status', 'published')
-                    ->orWhere(function ($inner) use ($userId) {
-                        $inner->where('status', 'disabled')
-                            ->whereHas('attempts', fn ($aq) => $aq->where('user_id', $userId));
-                    });
-            });
-
-        if ($kind) {
-            $query->where('kind', $kind);
-        }
-
-        try {
-            $assessments = $query->orderByDesc('id')->get();
-        } catch (\Throwable $e) {
-            report($e);
-            $assessments = LmsAssessment::query()->orderByDesc('id')->get();
-        }
-        $out = collect();
-
-        foreach ($assessments as $assessment) {
-            $matches = $assessment->assignments
-                ->filter(function (LmsAssessmentAssignment $a) use ($userId, $batchIds) {
-                    if ($a->student_id && (int) $a->student_id === $userId) {
-                        return true;
-                    }
-                    if ($a->class_batch_id && in_array((int) $a->class_batch_id, $batchIds, true)) {
-                        return true;
-                    }
-
-                    return false;
-                })
-                ->sortByDesc(fn (LmsAssessmentAssignment $a) => (int) $a->id)
-                ->values();
-            $matches->each(fn (LmsAssessmentAssignment $a) => $a->setRelation('assessment', $assessment));
-
-            if ($assessment->isSkill() || $assessment->audience === LmsAssessment::AUDIENCE_STAFF) {
-                if (! $isStaff) {
-                    continue;
-                }
-                // Unassigned skill tests are available to all staff; assigned ones must match.
-                if ($assessment->assignments->isNotEmpty() && $matches->isEmpty()) {
-                    continue;
-                }
-                if ($matches->isEmpty()) {
-                    $out->push(['assessment' => $assessment, 'assignment' => null]);
-                    continue;
-                }
-                foreach ($matches as $assignment) {
-                    $out->push(['assessment' => $assessment, 'assignment' => $assignment]);
-                }
-                continue;
-            }
-
-            // Practice / Mock / General: one portal row per sitting of this same test.
-            foreach ($matches as $assignment) {
-                $out->push(['assessment' => $assessment, 'assignment' => $assignment]);
-            }
-        }
-
-        $seenAsg = $out->map(fn ($row) => (int) ($row['assignment']->id ?? 0))->filter()->all();
-        $direct = LmsAssessmentAssignment::query()
-            ->with(['assessment.course', 'assessment.questions'])
+        $assignQuery = LmsAssessmentAssignment::query()
             ->where(function ($q) use ($userId, $batchIds) {
                 $q->where('student_id', $userId);
                 if ($batchIds !== []) {
                     $q->orWhereIn('class_batch_id', $batchIds);
                 }
             })
-            ->orderByDesc('id')
-            ->get();
+            ->orderByDesc('id');
+        $direct = $assignQuery->get();
+        $assessmentIds = $direct->pluck('assessment_id')->map(fn ($id) => (int) $id)->unique()->filter()->values()->all();
+        $assessmentsById = $assessmentIds === []
+            ? collect()
+            : LmsAssessment::query()->with('course')->whereIn('id', $assessmentIds)->get()->keyBy(fn ($row) => (int) $row->id);
+
+        $out = collect();
         foreach ($direct as $assignment) {
-            if (in_array((int) $assignment->id, $seenAsg, true)) {
-                continue;
-            }
-            $assessment = $assignment->assessment;
-            if (! $assessment) {
+            $assessment = $assessmentsById->get((int) $assignment->assessment_id);
+            if (! $assessment || (method_exists($assessment, 'trashed') && $assessment->trashed())) {
                 continue;
             }
             if ($kind && $assessment->kind !== $kind) {
                 continue;
             }
+            if ($assessment->isSkill() || $assessment->audience === LmsAssessment::AUDIENCE_STAFF) {
+                if (! $isStaff) {
+                    continue;
+                }
+            }
+            if (! $assessment->isPublished()) {
+                $hasAttempt = LmsAssessmentAttempt::query()
+                    ->where('assessment_id', $assessment->id)
+                    ->where('user_id', $userId)
+                    ->exists();
+                if (! $hasAttempt) {
+                    continue;
+                }
+            }
+            $assignment->setRelation('assessment', $assessment);
             $out->push(['assessment' => $assessment, 'assignment' => $assignment]);
+        }
+
+        if ($isStaff) {
+            $skillQuery = LmsAssessment::query()
+                ->with('course')
+                ->where(function ($q) {
+                    $q->where('kind', LmsAssessment::KIND_SKILL)
+                        ->orWhere('audience', LmsAssessment::AUDIENCE_STAFF);
+                })
+                ->where('status', 'published');
+            if ($kind) {
+                $skillQuery->where('kind', $kind);
+            }
+            foreach ($skillQuery->orderByDesc('id')->get() as $assessment) {
+                $already = $out->contains(fn ($row) => (int) $row['assessment']->id === (int) $assessment->id);
+                if ($already) {
+                    continue;
+                }
+                if ($assessment->assignments()->exists()) {
+                    continue;
+                }
+                $out->push(['assessment' => $assessment, 'assignment' => null]);
+            }
         }
 
         if (method_exists(StudyMaterialFolder::class, 'ensureFolderAssessmentsTable')) {
@@ -1356,6 +1332,7 @@ class LmsAssessmentService
         $userAttemptsQuery = LmsAssessmentAttempt::query()
             ->with(['assessment.course'])
             ->where('user_id', $user->id)
+            ->whereHas('assessment')
             ->orderByDesc('id');
         if ($kind) {
             $userAttemptsQuery->whereHas('assessment', fn ($q) => $q->where('kind', $kind));
@@ -1372,8 +1349,8 @@ class LmsAssessmentService
 
         $itemAssessmentIds = $items->pluck('assessment.id')->map(fn ($id) => (int) $id)->all();
         foreach ($userAttempts as $att) {
-            $assessment = $att->assessment;
-            if (! $assessment) {
+            $assessment = $att->assessment ?: LmsAssessment::query()->find($att->assessment_id);
+            if (! $assessment || (method_exists($assessment, 'trashed') && $assessment->trashed())) {
                 continue;
             }
             if (in_array((int) $assessment->id, $itemAssessmentIds, true)) {
@@ -1573,7 +1550,7 @@ class LmsAssessmentService
         foreach ($attemptsByAssessment as $aid => $atts) {
             $sample = $items->first(fn ($r) => (int) $r['assessment']->id === (int) $aid);
             $assessment = $sample['assessment'] ?? $atts->first()?->assessment;
-            if (! $assessment) {
+            if (! $assessment || (method_exists($assessment, 'trashed') && $assessment->trashed())) {
                 continue;
             }
             foreach ($atts as $att) {
