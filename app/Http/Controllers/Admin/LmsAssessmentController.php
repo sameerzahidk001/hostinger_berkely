@@ -511,16 +511,16 @@ class LmsAssessmentController extends Controller
         try {
             $assessmentsById = $assessmentIds === []
                 ? collect()
-                : LmsAssessment::withTrashed()->with('course')->whereIn('id', $assessmentIds)->get()->keyBy(fn ($row) => (int) $row->id);
+                : LmsAssessment::query()->with('course')->whereIn('id', $assessmentIds)->get()->keyBy(fn ($row) => (int) $row->id);
         } catch (\Throwable $e) {
             report($e);
             $assessmentsById = $assessmentIds === []
                 ? collect()
-                : LmsAssessment::withTrashed()->whereIn('id', $assessmentIds)->get()->keyBy(fn ($row) => (int) $row->id);
+                : LmsAssessment::query()->whereIn('id', $assessmentIds)->get()->keyBy(fn ($row) => (int) $row->id);
         }
         foreach ($assignments as $assignment) {
             $aid = (int) $assignment->assessment_id;
-            $found = $assessmentsById->get($aid) ?: LmsAssessment::withTrashed()->find($aid);
+            $found = $assessmentsById->get($aid) ?: LmsAssessment::query()->find($aid);
             if ($found) {
                 $assessmentsById->put($aid, $found);
                 $assignment->setRelation('assessment', $found);
@@ -645,7 +645,7 @@ class LmsAssessmentController extends Controller
         $attemptAssessmentIds = $allAttempts->pluck('assessment_id')->map(fn ($id) => (int) $id)->unique()->filter()->values();
         $missingAssessmentIds = $attemptAssessmentIds->diff($assessmentsById->keys()->map(fn ($id) => (int) $id))->filter();
         if ($missingAssessmentIds->isNotEmpty()) {
-            foreach (LmsAssessment::withTrashed()->whereIn('id', $missingAssessmentIds->all())->get() as $extraAssessment) {
+            foreach (LmsAssessment::query()->whereIn('id', $missingAssessmentIds->all())->get() as $extraAssessment) {
                 $assessmentsById->put((int) $extraAssessment->id, $extraAssessment);
             }
         }
@@ -718,7 +718,7 @@ class LmsAssessmentController extends Controller
             $assessment = $att->assessment
                 ?: $asg?->assessment
                 ?: $assessmentsById->get((int) $att->assessment_id)
-                ?: LmsAssessment::withTrashed()->find($att->assessment_id);
+                ?: LmsAssessment::query()->find($att->assessment_id);
             if (! $assessment) {
                 continue;
             }
