@@ -238,10 +238,10 @@ class LmsAssessmentAttempt extends Model
             return 'Admin';
         }
         if ($assignment && $assignment->marker) {
-            return $assignment->marker->name ?? '—';
+            return $assignment->marker->name ?? 'Admin / course instructors';
         }
 
-        return '—';
+        return 'Admin / course instructors';
     }
 
     /** User id for linking assessor profile, when the assessor is a portal user. */
