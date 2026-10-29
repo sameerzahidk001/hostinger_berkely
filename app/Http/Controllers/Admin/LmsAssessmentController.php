@@ -77,9 +77,8 @@ class LmsAssessmentController extends Controller
 
         return view('admin.assessments.tests.index', [
             'rows' => $query->with([
-                'course:id,title',
-                'assignments.marker:id,name',
-                'assignments.batch.students',
+                'course',
+                'assignments.marker',
             ])->paginate(20)->withQueryString(),
             'kinds' => LmsAssessment::kinds(),
             'kind' => $kind,
