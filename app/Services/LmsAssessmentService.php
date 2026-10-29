@@ -70,8 +70,34 @@ class LmsAssessmentService
     {
         $ok = LmsAssessmentSchema::ensure();
         StudyMaterialFolder::ensureFolderAssessmentsTable();
+        $this->restorePublishedAssignedTests();
 
         return $ok;
+    }
+
+    /** Soft-deleted published tests with sittings must still be sat today. */
+    private function restorePublishedAssignedTests(): void
+    {
+        static $done = false;
+        if ($done) {
+            return;
+        }
+        $done = true;
+        if (! Schema::hasColumn('lms_assessments', 'deleted_at')) {
+            return;
+        }
+        try {
+            $ids = LmsAssessmentAssignment::query()->pluck('assessment_id')->unique()->filter()->values()->all();
+            if ($ids === []) {
+                return;
+            }
+            LmsAssessment::onlyTrashed()
+                ->where('status', 'published')
+                ->whereIn('id', $ids)
+                ->restore();
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     public function canManageAssessments(): bool
@@ -220,16 +246,27 @@ class LmsAssessmentService
 
         $batchIds = [];
         if (Schema::hasTable('class_batch_student')) {
+            $studentCol = Schema::hasColumn('class_batch_student', 'student_id') ? 'student_id' : 'user_id';
             $batchIds = DB::table('class_batch_student')
-                ->where('student_id', $userId)
+                ->where($studentCol, $userId)
                 ->pluck('class_batch_id')
                 ->map(fn ($id) => (int) $id)
-                ->unique()
-                ->values()
                 ->all();
         }
+        if (Schema::hasTable('class_schedule_student') && Schema::hasTable('class_schedules')) {
+            $scheduleIds = DB::table('class_schedule_student')->where('student_id', $userId)->pluck('class_schedule_id');
+            $fromSchedules = DB::table('class_schedules')
+                ->whereIn('id', $scheduleIds)
+                ->whereNotNull('batch_id')
+                ->pluck('batch_id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+            $batchIds = array_merge($batchIds, $fromSchedules);
+        }
+        $batchIds = array_values(array_unique(array_filter($batchIds)));
 
         $assignQuery = LmsAssessmentAssignment::query()
+            ->with('marker')
             ->where(function ($q) use ($userId, $batchIds) {
                 $q->where('student_id', $userId);
                 if ($batchIds !== []) {
