@@ -268,7 +268,7 @@
                             </td>
                             <td class="col-timing" data-sort="{{ optional($assignment?->available_from)->timestamp ?? 0 }}">
                                 <span class="lms-timing-line"><strong>Test Appointment:</strong> {{ ($assignment && $assignment->isSelfSitting()) ? 'Start anytime' : ($assignment?->windowStart()?->format('d/m/Y, H:i') ?? '—') }}</span>
-                                <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $assignment?->timezoneLabel() ?? '—' }}</span>
+                                <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $assignment?->timezoneLabel() ?? config('app.timezone', 'Asia/Dubai') }}</span>
                                 <span class="lms-timing-line"><strong>Test Duration:</strong> {{ $fmtDuration($assessment->durationMinutes()) }}</span>
                                 @if($attempt)
                                     <span class="lms-timing-line"><strong>Started:</strong> {{ $assignment ? $assignment->formatInTimezone($attempt->startedAtForDisplay()) : (optional($attempt->startedAtForDisplay())->format('d/m/Y, H:i') ?? '—') }}</span>

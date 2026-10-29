@@ -614,8 +614,9 @@ class LmsAssessmentController extends Controller
             $allAttempts = collect();
         }
         $markerIds = $assignments->pluck('marker_user_id')->filter()->map(fn ($id) => (int) $id)->unique()->values();
+        $creatorIds = $assignments->pluck('assigned_by_user_id')->filter()->map(fn ($id) => (int) $id)->unique()->values();
         $attemptUserIds = $allAttempts->pluck('user_id')->filter()->map(fn ($id) => (int) $id)->unique()->values();
-        $peopleIds = $markerIds->merge($attemptUserIds)->unique()->values();
+        $peopleIds = $markerIds->merge($creatorIds)->merge($attemptUserIds)->unique()->values();
         $peopleById = $peopleIds->isEmpty()
             ? collect()
             : User::query()->whereIn('id', $peopleIds)->get()->keyBy('id');
@@ -623,6 +624,10 @@ class LmsAssessmentController extends Controller
             $marker = $peopleById->get((int) ($assignment->marker_user_id ?? 0));
             if ($marker) {
                 $assignment->setRelation('marker', $marker);
+            }
+            $creator = $peopleById->get((int) ($assignment->assigned_by_user_id ?? 0));
+            if ($creator) {
+                $assignment->setRelation('assignedByUser', $creator);
             }
         }
         $assignmentIdsFromAttempts = $allAttempts->pluck('assignment_id')->filter()->map(fn ($id) => (int) $id)->unique()->values();
@@ -751,6 +756,32 @@ class LmsAssessmentController extends Controller
             if (! isset($r['attempt_number'])) {
                 $rowsByKey[$k]['attempt_number'] = 1;
                 $rowsByKey[$k]['attempt_total'] = 1;
+            }
+            $asg = $r['assignment'] ?? null;
+            $att = $r['attempt'] ?? null;
+            if (! $asg && $att) {
+                $asg = $this->assignmentForAttempt($att, $assignments, $assignmentsById);
+                if ($asg) {
+                    $rowsByKey[$k]['assignment'] = $asg;
+                    $r['assignment'] = $asg;
+                }
+            }
+            if ($asg) {
+                $marker = $peopleById->get((int) ($asg->marker_user_id ?? 0));
+                if ($marker) {
+                    $asg->setRelation('marker', $marker);
+                }
+                $creator = $peopleById->get((int) ($asg->assigned_by_user_id ?? 0));
+                if ($creator) {
+                    $asg->setRelation('assignedByUser', $creator);
+                }
+            }
+            $assessment = $r['assessment'] ?? $asg?->assessment;
+            if ($assessment && ! $assessment->relationLoaded('course') && ! empty($assessment->course_id)) {
+                $assessment->loadMissing('course');
+            }
+            if ($assessment) {
+                $rowsByKey[$k]['assessment'] = $assessment;
             }
         }
 
@@ -1519,7 +1550,26 @@ class LmsAssessmentController extends Controller
             }
         }
 
-        return $sameStudent->last();
+        $sameTest = collect($assignments)
+            ->filter(fn ($row) => (int) $row->assessment_id === (int) $att->assessment_id)
+            ->sortBy(fn ($row) => (int) $row->id)
+            ->values();
+        if ($sameTest->count() === 1) {
+            return $sameTest->first();
+        }
+        if ($att->started_at && $sameTest->isNotEmpty()) {
+            $picked = $sameTest->filter(function ($row) use ($att) {
+                if (! $row->created_at) {
+                    return true;
+                }
+
+                return $att->started_at->gte($row->created_at->copy()->subMinutes(2));
+            })->last();
+
+            return $picked ?: $sameTest->last();
+        }
+
+        return $sameStudent->last() ?: $sameTest->last();
     }
 
     protected function matchSittingAttempt($candidates, ?LmsAssessmentAssignment $asg, array &$claimedAttemptIds)
