@@ -33,7 +33,7 @@
             (int) $attempt->user_id,
             $attempt->assessment,
             $markAsg
-        );
+        ) ?: ['number' => 1, 'total' => 1];
     @endphp
     <p><strong>{{ $attempt->user->name ?? '' }}</strong> · {{ $attempt->statusLabel() }}
         @if($attempt->score_raw !== null)
