@@ -509,29 +509,36 @@ class LmsAssessmentController extends Controller
         try {
             $assessmentsById = $assessmentIds === []
                 ? collect()
-                : LmsAssessment::query()->with('course')->whereIn('id', $assessmentIds)->get()->keyBy('id');
+                : LmsAssessment::query()->with('course')->whereIn('id', $assessmentIds)->get()->keyBy(fn ($row) => (int) $row->id);
         } catch (\Throwable $e) {
             report($e);
             $assessmentsById = $assessmentIds === []
                 ? collect()
-                : LmsAssessment::query()->whereIn('id', $assessmentIds)->get()->keyBy('id');
+                : LmsAssessment::query()->whereIn('id', $assessmentIds)->get()->keyBy(fn ($row) => (int) $row->id);
         }
+        $trashedAssessmentIds = $assessmentIds === []
+            ? []
+            : LmsAssessment::onlyTrashed()->whereIn('id', $assessmentIds)->pluck('id')->map(fn ($id) => (int) $id)->all();
         foreach ($assignments as $assignment) {
-            $found = $assessmentsById->get((int) $assignment->assessment_id);
+            $aid = (int) $assignment->assessment_id;
+            $found = $assessmentsById->get($aid);
+            if (! $found && ! in_array($aid, $trashedAssessmentIds, true)) {
+                $found = LmsAssessment::query()->find($aid);
+                if ($found) {
+                    $assessmentsById->put($aid, $found);
+                }
+            }
             if ($found) {
                 $assignment->setRelation('assessment', $found);
             }
         }
-        $assignments = $assignments->filter(function ($assignment) {
-            $assessment = $assignment->assessment;
-            if (! $assessment) {
-                return false;
-            }
-            if (method_exists($assessment, 'trashed') && $assessment->trashed()) {
+        $assignments = $assignments->filter(function ($assignment) use ($trashedAssessmentIds) {
+            $aid = (int) $assignment->assessment_id;
+            if (in_array($aid, $trashedAssessmentIds, true)) {
                 return false;
             }
 
-            return true;
+            return (bool) $assignment->assessment;
         })->values();
 
         $rowsByKey = [];
@@ -719,11 +726,17 @@ class LmsAssessmentController extends Controller
             $asg = $assignmentsById->get((int) ($att->assignment_id ?? 0))
                 ?: $assignments->first(fn ($row) => $this->assessments->attemptBelongsToAssignment($att, $row));
             if (! empty($att->assignment_id) && ! $asg) {
-                continue;
+                $asg = LmsAssessmentAssignment::query()->find($att->assignment_id);
+                if (! $asg) {
+                    continue;
+                }
             }
             $assessment = $att->assessment
                 ?: $asg?->assessment
                 ?: $assessmentsById->get((int) $att->assessment_id);
+            if (! $assessment) {
+                $assessment = LmsAssessment::query()->find($att->assessment_id);
+            }
             if (! $assessment || (method_exists($assessment, 'trashed') && $assessment->trashed())) {
                 continue;
             }
