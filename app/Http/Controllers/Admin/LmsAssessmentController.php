@@ -719,7 +719,15 @@ class LmsAssessmentController extends Controller
                 ?: $asg?->assessment
                 ?: $assessmentsById->get((int) $att->assessment_id)
                 ?: LmsAssessment::query()->find($att->assessment_id);
-            if (! $assessment) {
+            if (! $assessment || (method_exists($assessment, 'trashed') && $assessment->trashed())) {
+                continue;
+            }
+            if (! $asg) {
+                continue;
+            }
+            $sitKey = (int) $asg->id . ':' . (int) $student->id;
+            if (isset($rowsByKey[$sitKey]) && empty($rowsByKey[$sitKey]['attempt'])) {
+                $rowsByKey[$sitKey]['attempt'] = $att;
                 continue;
             }
             $rowsByKey['attempt:' . $att->id] = [
@@ -783,7 +791,21 @@ class LmsAssessmentController extends Controller
             if ($assessment) {
                 $rowsByKey[$k]['assessment'] = $assessment;
             }
+            if (! $assessment || (method_exists($assessment, 'trashed') && $assessment->trashed())) {
+                unset($rowsByKey[$k]);
+            }
         }
+        $rowsByKey = collect($rowsByKey)->filter(function ($r) {
+            $assessment = $r['assessment'] ?? null;
+            if (! $assessment) {
+                return false;
+            }
+            if (method_exists($assessment, 'trashed') && $assessment->trashed()) {
+                return false;
+            }
+
+            return true;
+        })->all();
 
         $rows = collect($rowsByKey)->values()->sortByDesc(function ($row) {
             $attempt = $row['attempt'];
@@ -1512,76 +1534,42 @@ class LmsAssessmentController extends Controller
                 return $found;
             }
         }
+        $fromStudent = LmsAssessmentAssignment::query()
+            ->where('assessment_id', (int) $att->assessment_id)
+            ->where('student_id', (int) $att->user_id)
+            ->orderByDesc('id')
+            ->first();
+        if ($fromStudent) {
+            return $fromStudent;
+        }
         $belong = collect($assignments)->first(
             fn ($row) => $this->assessments->attemptBelongsToAssignment($att, $row)
         );
         if ($belong) {
             return $belong;
         }
-        $sameStudent = collect($assignments)
-            ->filter(function ($row) use ($att) {
-                return (int) $row->assessment_id === (int) $att->assessment_id
-                    && (int) ($row->student_id ?? 0) === (int) $att->user_id;
-            })
-            ->sortBy(fn ($row) => (int) $row->id)
-            ->values();
-        if ($sameStudent->count() === 1) {
-            return $sameStudent->first();
-        }
-        if ($att->started_at && $sameStudent->isNotEmpty()) {
-            $picked = $sameStudent->filter(function ($row) use ($att) {
-                if (! $row->created_at) {
-                    return true;
-                }
-
-                return $att->started_at->gte($row->created_at->copy()->subMinutes(2));
-            })->last();
-
-            return $picked ?: $sameStudent->last();
-        }
-
-        $batchSittings = collect($assignments)->filter(function ($row) use ($att) {
-            return (int) $row->assessment_id === (int) $att->assessment_id
-                && ! empty($row->class_batch_id);
-        });
-        if ($batchSittings->isNotEmpty() && Schema::hasTable('class_batch_student')) {
+        if (Schema::hasTable('class_batch_student')) {
             $batchIds = DB::table('class_batch_student')
                 ->where('student_id', (int) $att->user_id)
-                ->whereIn('class_batch_id', $batchSittings->pluck('class_batch_id')->all())
                 ->pluck('class_batch_id')
                 ->map(fn ($id) => (int) $id)
                 ->all();
-            $fromBatch = $batchSittings
-                ->filter(fn ($row) => in_array((int) $row->class_batch_id, $batchIds, true))
-                ->sortBy(fn ($row) => (int) $row->id);
-            if ($fromBatch->count() === 1) {
-                return $fromBatch->first();
-            }
-            if ($fromBatch->isNotEmpty()) {
-                return $fromBatch->last();
-            }
-        }
-
-        $sameTest = collect($assignments)
-            ->filter(fn ($row) => (int) $row->assessment_id === (int) $att->assessment_id)
-            ->sortBy(fn ($row) => (int) $row->id)
-            ->values();
-        if ($sameTest->count() === 1) {
-            return $sameTest->first();
-        }
-        if ($att->started_at && $sameTest->isNotEmpty()) {
-            $picked = $sameTest->filter(function ($row) use ($att) {
-                if (! $row->created_at) {
-                    return true;
+            if ($batchIds !== []) {
+                $fromBatch = LmsAssessmentAssignment::query()
+                    ->where('assessment_id', (int) $att->assessment_id)
+                    ->whereIn('class_batch_id', $batchIds)
+                    ->orderByDesc('id')
+                    ->first();
+                if ($fromBatch) {
+                    return $fromBatch;
                 }
-
-                return $att->started_at->gte($row->created_at->copy()->subMinutes(2));
-            })->last();
-
-            return $picked ?: $sameTest->last();
+            }
         }
 
-        return $sameStudent->last() ?: $sameTest->last();
+        return LmsAssessmentAssignment::query()
+            ->where('assessment_id', (int) $att->assessment_id)
+            ->orderByDesc('id')
+            ->first();
     }
 
     protected function matchSittingAttempt($candidates, ?LmsAssessmentAssignment $asg, array &$claimedAttemptIds)
