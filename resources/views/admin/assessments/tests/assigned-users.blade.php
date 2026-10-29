@@ -230,7 +230,8 @@
                                 ? $attempt->assessorUserId($assignment)
                                 : ($assignment && $assignment->marker_user_id ? (int) $assignment->marker_user_id : null);
                             $course = $assessment->course ?? null;
-                            $apptId = $assignment?->displayCode() ?? '—';
+                            $apptId = $assignment?->displayCode()
+                                ?? (! empty($attempt?->assignment_id) ? ('BEXT' . (int) $attempt->assignment_id) : '—');
                             $attemptNo = (int) ($row['attempt_number'] ?? 1);
                             $attemptTotal = (int) ($row['attempt_total'] ?? 1);
                         @endphp
