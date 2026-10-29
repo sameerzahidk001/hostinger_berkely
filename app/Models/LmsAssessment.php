@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 use Illuminate\Database\Eloquent\Model;
@@ -95,16 +96,29 @@ class LmsAssessment extends Model
     /** Unique test takers: each student once, batch assignments expand to batch members. */
     public function assignedPeopleCount(): int
     {
-        $this->loadMissing(['assignments.batch.students']);
         $ids = [];
-        foreach ($this->assignments as $assignment) {
+        $assignments = $this->relationLoaded('assignments')
+            ? $this->assignments
+            : $this->assignments()->get(['id', 'assessment_id', 'student_id', 'class_batch_id']);
+        $batchIds = [];
+        foreach ($assignments as $assignment) {
             if ($assignment->student_id) {
                 $ids[(int) $assignment->student_id] = true;
-                continue;
+            } elseif ($assignment->class_batch_id) {
+                $batchIds[] = (int) $assignment->class_batch_id;
             }
-            if ($assignment->class_batch_id) {
-                foreach ($assignment->batch?->students ?? [] as $student) {
-                    $ids[(int) $student->id] = true;
+        }
+        if ($batchIds !== [] && Schema::hasTable('class_batch_student')) {
+            foreach (DB::table('class_batch_student')->whereIn('class_batch_id', array_values(array_unique($batchIds)))->pluck('student_id') as $sid) {
+                if ((int) $sid > 0) {
+                    $ids[(int) $sid] = true;
+                }
+            }
+        }
+        if (Schema::hasTable('lms_assessment_attempts')) {
+            foreach (LmsAssessmentAttempt::query()->where('assessment_id', $this->id)->pluck('user_id') as $uid) {
+                if ((int) $uid > 0) {
+                    $ids[(int) $uid] = true;
                 }
             }
         }
