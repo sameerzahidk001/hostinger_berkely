@@ -30,8 +30,8 @@
                 <strong>Max attempts</strong> (currently {{ max(1, (int) ($assessment->max_attempts ?? 1)) }}).
                 Duration still applies after they start. Optional assessor: if set, that instructor (or Admin) can mark.
             @else
-                Each save creates a <strong>new exam sitting</strong> with an appointment window.
-                The student may start anytime inside that window. For another exam sitting, assign again (retake window).
+                Each save creates a <strong>new exam sitting</strong> with an appointment window for the people you select now.
+                Existing sittings keep their own appointment, assessor, and times. The student may start anytime inside that window. For another exam sitting, assign again (retake window).
                 <strong>No specific start time?</strong> Use <strong>2. Assigning Self test</strong> — that sitting has no Test Appointment Start; the student clicks Start anytime.
                 Older sittings stay on Assigned Tests. Optional assessor: if set, that instructor (or Admin) can mark; otherwise Admin / course instructors can mark.
             @endif

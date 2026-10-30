@@ -471,7 +471,22 @@ class LmsAssessmentService
             return false;
         }
         if (Schema::hasColumn('lms_assessment_attempts', 'assignment_id') && $att->assignment_id) {
-            return (int) $att->assignment_id === (int) $asg->id;
+            if ((int) $att->assignment_id !== (int) $asg->id) {
+                return false;
+            }
+            if ($asg->isSelfSitting() || ! $att->started_at) {
+                return true;
+            }
+            $start = $asg->windowStart() ?: $asg->available_from;
+            if ($start && $att->started_at->lt($start->copy()->subMinutes(2))) {
+                return false;
+            }
+            $end = $asg->appointmentEnd();
+            if ($end && $att->started_at->gt($end->copy()->addMinutes(2))) {
+                return false;
+            }
+
+            return true;
         }
         $started = $att->started_at->copy();
         $start = $asg->windowStart() ?: $asg->available_from;
