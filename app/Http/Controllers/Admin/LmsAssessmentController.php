@@ -1576,58 +1576,36 @@ class LmsAssessmentController extends Controller
         $users = $ids->isEmpty()
             ? collect()
             : User::query()->whereIn('id', $ids)->get();
-        if ($users->count() <= 1) {
+        if ($users->isEmpty()) {
             try {
                 if ($batch) {
-                    $users = $users->concat($batch->students()->get())->unique('id')->values();
+                    $users = $batch->students()->get();
                 }
             } catch (\Throwable $e) {
                 report($e);
             }
         }
-        if ($users->count() <= 1 && $batch && ! empty($batch->course_id)) {
-            $users = $users->concat($this->studentsEnrolledOnCourse((int) $batch->course_id))->unique('id')->values();
-        }
 
         return $users;
-    }
-
-    protected function studentsEnrolledOnCourse(int $courseId)
-    {
-        if ($courseId <= 0) {
-            return collect();
-        }
-        try {
-            $query = User::query()->whereHas('payments', function ($payments) use ($courseId) {
-                $payments->where('course_id', $courseId);
-            });
-            try {
-                $query->whereHas('roles', fn ($q) => $q->where('name', 'student'));
-            } catch (\Throwable $e) {
-                // roles join optional
-            }
-
-            return $query->orderBy('name')->limit(800)->get(['id', 'name', 'email']);
-        } catch (\Throwable $e) {
-            report($e);
-
-            return collect();
-        }
     }
 
     protected function expandSittingStudents($students, $assignment, $assessment, array &$batchStudentCache)
     {
         $students = collect($students)->filter(fn ($row) => $row && ! empty($row->id))->values();
+        if ($this->isCimaCohortSitting($assessment, $assignment, $students)) {
+            $cohort = $this->cimaCohortUsers();
+            if ($cohort->isNotEmpty()) {
+                $bat = ClassBatch::query()->where('code', 'BAT-0003')->first();
+                if ($bat && $assignment) {
+                    $assignment->setRelation('batch', $bat);
+                }
+
+                return $cohort->unique(fn ($row) => (int) $row->id)->values();
+            }
+        }
         $batchIds = [];
         if (! empty($assignment?->class_batch_id)) {
             $batchIds[] = (int) $assignment->class_batch_id;
-        }
-        foreach ($students as $person) {
-            $batchIds = array_merge($batchIds, $this->batchIdsForUser((int) $person->id));
-        }
-        $courseId = (int) ($assessment->course_id ?? 0);
-        if ($batchIds === [] && $courseId > 0 && Schema::hasTable('class_batches')) {
-            $batchIds = ClassBatch::query()->where('course_id', $courseId)->pluck('id')->map(fn ($id) => (int) $id)->all();
         }
         $batchIds = array_values(array_unique(array_filter($batchIds)));
         foreach ($batchIds as $bid) {
@@ -1641,12 +1619,6 @@ class LmsAssessmentController extends Controller
                     $assignment->setRelation('batch', $batch);
                 }
             }
-        }
-        if ($courseId > 0) {
-            $students = $students->concat($this->studentsEnrolledOnCourse($courseId));
-        }
-        if ($this->isCimaCohortSitting($assessment, $assignment, $students)) {
-            $students = $students->concat($this->cimaCohortUsers());
         }
 
         return $students->unique(fn ($row) => (int) ($row->id ?? 0))->filter(fn ($row) => (int) ($row->id ?? 0) > 0)->values();
@@ -1682,7 +1654,7 @@ class LmsAssessmentController extends Controller
         $course = mb_strtolower(trim((string) ($assessment->course->title ?? '')));
         $batchCode = mb_strtolower(trim((string) ($assignment?->batch?->code ?? '')));
         $hay = $title . ' ' . $course . ' ' . $batchCode;
-        if (str_contains($hay, 'cima') || str_contains($hay, 'bat-0003') || str_contains($hay, 'management case')) {
+        if (str_contains($hay, 'bat-0003') || str_contains($hay, 'management case') || str_contains($hay, 'cima mcs')) {
             return true;
         }
         foreach ($students as $person) {
