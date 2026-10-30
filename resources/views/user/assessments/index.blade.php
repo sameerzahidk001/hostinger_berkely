@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.sortable-table-assets')
 @php $lmsUserPreviewUrlTpl = route('user.assessments.user-preview', ['userId' => '__ID__']); @endphp
 @section('content')
-<!-- lms-my-tests-20261030 -->
+<!-- lms-my-tests-20261030k -->
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
         <h2>{{ $section === 'mocks' ? 'Mock Test' : ($section === 'skill' ? 'Skill Test' : 'My Tests') }}</h2>
@@ -237,7 +237,13 @@
                         $maxAtt = $row['max_attempts'] ?? null;
                         $canRetake = !empty($row['can_retake']);
                         $attemptNo = (int) ($row['attempt_number'] ?? 1);
-                        $attemptTotal = max(1, (int) ($row['attempt_total'] ?? ($maxAtt ?: 1)), $attemptNo);
+                        $attemptTotal = max(
+                            1,
+                            (int) ($row['attempt_total'] ?? 1),
+                            (int) ($maxAtt ?: 0),
+                            (int) ($a->max_attempts ?? 0),
+                            $attemptNo
+                        );
                         $apptId = $asg ? $asg->displayCode() : '—';
                         $course = $a->course ?? null;
                         $assessorName = $att

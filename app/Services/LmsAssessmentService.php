@@ -650,12 +650,8 @@ class LmsAssessmentService
             ->get()
             ->filter(fn ($att) => $this->attemptBelongsToAssignment($att, $assignment))
             ->count();
-        if ($max > $sitCount) {
-            $number = max(1, $usedOnSitting);
-            $total = $max;
-        } else {
-            $total = max($sitCount, $max);
-        }
+        $number = max(1, $usedOnSitting ?: $number);
+        $total = max($max, 1);
 
         return ['number' => $number, 'total' => $total];
     }
@@ -1426,19 +1422,19 @@ class LmsAssessmentService
         if ($this->attemptSlotsUsed($user, $assessment) >= $max) {
             return false;
         }
-        if (! $assignment && $this->userHasFolderSelfTest($user, $assessment)) {
-            return $this->folderSelfAttemptsUsed($user, $assessment) < $max;
-        }
-        if ($this->missedExamSlotCount($user, $assessment) > 0) {
-            return true;
-        }
         $latest = LmsAssessmentAttempt::query()
             ->where('assessment_id', $assessment->id)
             ->where('user_id', $user->id)
             ->whereIn('status', ['submitted', 'graded', 'expired'])
             ->orderByDesc('id')
             ->first();
-        if ($latest && $this->attemptResultsUnlocked($assessment, $latest)) {
+        if ($latest) {
+            return $this->attemptResultsUnlocked($assessment, $latest);
+        }
+        if (! $assignment && $this->userHasFolderSelfTest($user, $assessment)) {
+            return $this->folderSelfAttemptsUsed($user, $assessment) < $max;
+        }
+        if ($this->missedExamSlotCount($user, $assessment) > 0) {
             return true;
         }
         if ($assignment && $assignment->isSelfSitting()) {
@@ -1461,6 +1457,9 @@ class LmsAssessmentService
             ->where('assessment_id', $assessment->id)
             ->where('user_id', $user->id)
             ->get();
+        if ($attempts->isNotEmpty()) {
+            return 0;
+        }
         $examSittings = $this->availableAssessmentsForUser($user, $assessment->kind)
             ->filter(fn ($row) => (int) ($row['assessment']->id ?? 0) === (int) $assessment->id)
             ->map(fn ($row) => $row['assignment'] ?? null)
@@ -1704,7 +1703,7 @@ class LmsAssessmentService
             $remainingAttempts = $isSelf && $usedOnSitting < $max && $assessment->isPublished() && $hasUnlockedResults
                 && $this->attemptSlotsUsed($user, $assessment) < $max;
             if ($finished->isNotEmpty()) {
-                $finishTotal = max($attemptTotal, $finished->count());
+                $finishTotal = max($max, $attemptTotal, $finished->count());
                 foreach ($finished as $fi => $done) {
                     $rowBase = $base + [
                         'attempt' => $done,
@@ -1784,7 +1783,7 @@ class LmsAssessmentService
                     'attempts_used' => $atts->count(),
                     'max_attempts' => $this->maxAttemptsFor($assessment),
                     'attempt_number' => 1,
-                    'attempt_total' => max(1, $atts->count()),
+                    'attempt_total' => max(1, $atts->count(), $this->maxAttemptsFor($assessment)),
                     'from_folder' => false,
                     'folder_id' => null,
                     'can_retake' => false,
