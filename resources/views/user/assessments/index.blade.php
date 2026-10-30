@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.sortable-table-assets')
 @php $lmsUserPreviewUrlTpl = route('user.assessments.user-preview', ['userId' => '__ID__']); @endphp
 @section('content')
-<!-- lms-my-tests-20261029 -->
+<!-- lms-my-tests-20261030 -->
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
         <h2>{{ $section === 'mocks' ? 'Mock Test' : ($section === 'skill' ? 'Skill Test' : 'My Tests') }}</h2>
@@ -324,22 +324,24 @@
                             @endif
                         </td>
                         <td class="col-action">
-                            @if($tab !== 'missed')
-                                @if($tab === 'available')
-                                    <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.start', $startParams) }}">{{ ($canRetake || $attemptNo > 1) ? 'Retake' : 'Start' }}</a>
-                                @elseif($tab === 'in_progress' && $att)
-                                    <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.take', $att->id) }}">Continue</a>
-                                @elseif($att)
-                                    <a class="btn btn-xs btn-warning" href="{{ route('user.assessments.result', $att->id) }}">View Details</a>
-                                    @if($canRetake)
-                                        <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.start', $startParams) }}">Retake</a>
-                                    @endif
-                                @elseif($tab === 'upcoming')
-                                    <span class="text-muted">Not open yet</span>
+                            @if($tab === 'missed')
+                                @if($canRetake)
+                                    <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.start', $startParams) }}">Retake</a>
                                 @endif
-                                @if($canDownloadPdf)
-                                    <a class="btn btn-xs btn-info" href="{{ route('user.assessments.result-pdf', $att->id) }}" target="_blank">Download PDF</a>
+                            @elseif($tab === 'available')
+                                <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.start', $startParams) }}">{{ ($canRetake || $attemptNo > 1) ? 'Retake' : 'Start' }}</a>
+                            @elseif($tab === 'in_progress' && $att)
+                                <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.take', $att->id) }}">Continue</a>
+                            @elseif($att)
+                                <a class="btn btn-xs btn-warning" href="{{ route('user.assessments.result', $att->id) }}">View Details</a>
+                                @if($canRetake)
+                                    <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.start', $startParams) }}">Retake</a>
                                 @endif
+                            @elseif($tab === 'upcoming')
+                                <span class="text-muted">Not open yet</span>
+                            @endif
+                            @if($canDownloadPdf)
+                                <a class="btn btn-xs btn-info" href="{{ route('user.assessments.result-pdf', $att->id) }}" target="_blank">Download PDF</a>
                             @endif
                         </td>
                     </tr>

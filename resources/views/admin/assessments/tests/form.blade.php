@@ -89,7 +89,7 @@
                 <div class="col-md-2 form-group">
                     <label>Max attempts *</label>
                     <input type="number" min="1" max="50" name="max_attempts" class="form-control" value="{{ old('max_attempts', $assessment->max_attempts ?? 1) }}" @required($canCreate) @readonly(! $canCreate)>
-                    <p class="help-block" style="margin-bottom:0;font-size:11px;">Test retake: assign a new sitting. Self test: student can Start/Retake up to this number without a new schedule.</p>
+                    <p class="help-block" style="margin-bottom:0;font-size:11px;">If they miss a scheduled sitting, or after results are published, they get Retake (start anytime) until this number of attempts is used.</p>
                 </div>
                 <div class="col-md-2 form-group">
                     <label>Status *</label>
