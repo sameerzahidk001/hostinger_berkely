@@ -435,83 +435,18 @@ class LmsAssessmentController extends Controller
             $markerOnlyUid = (int) (Auth::id() ?? 0);
         }
 
-        $assignQuery = LmsAssessmentAssignment::query()->orderByDesc('id');
-
-        if ($assessmentId > 0) {
-            $assignQuery->where('assessment_id', $assessmentId);
-        }
-        if ($batchId > 0) {
-            $batchStudentIds = ClassBatch::find($batchId)?->students()->pluck('users.id')->map(fn ($id) => (int) $id)->all() ?? [];
-            $assignQuery->where(function ($q) use ($batchId, $batchStudentIds) {
-                $q->where('class_batch_id', $batchId);
-                if ($batchStudentIds !== []) {
-                    $q->orWhereIn('student_id', $batchStudentIds);
-                }
-            });
-        }
-        if ($courseId > 0) {
-            $assignQuery->whereHas('assessment', fn ($q) => $q->where('course_id', $courseId));
-        }
-        if ($kind !== '' && array_key_exists($kind, LmsAssessment::kinds())) {
-            $assignQuery->whereHas('assessment', fn ($q) => $q->where('kind', $kind));
-        }
-        if ($search !== '') {
-            $like = '%' . addcslashes($search, '%_\\') . '%';
-            $assignQuery->where(function ($q) use ($like, $search) {
-                $q->whereHas('assessment', function ($aq) use ($like) {
-                    $aq->where('title', 'like', $like)
-                        ->orWhereHas('course', fn ($cq) => $cq->where('title', 'like', $like));
-                })
-                    ->orWhereHas('student', fn ($sq) => $sq->where('name', 'like', $like)->orWhere('email', 'like', $like))
-                    ->orWhereHas('batch', fn ($bq) => $bq->where('name', 'like', $like)->orWhere('code', 'like', $like));
-                if (ctype_digit($search)) {
-                    $q->orWhere('assessment_id', (int) $search);
-                }
-            });
-        }
-
-        if ($markerOnlyUid) {
-            $assignQuery->where(function ($q) use ($markerOnlyUid, $courseIdsScope) {
-                $q->where('marker_user_id', $markerOnlyUid)
-                    ->orWhere('assigned_by_user_id', $markerOnlyUid)
-                    ->orWhereHas('assessment', function ($aq) use ($markerOnlyUid, $courseIdsScope) {
-                        $aq->where('created_by_user_id', $markerOnlyUid);
-                        if ($courseIdsScope) {
-                            $aq->orWhereIn('course_id', $courseIdsScope);
-                        }
-                    });
-            });
-        } elseif ($courseIdsScope !== null) {
-            $assignQuery->whereHas('assessment', function ($q) use ($courseIdsScope) {
-                $q->where(function ($inner) use ($courseIdsScope) {
-                    $inner->whereIn('course_id', $courseIdsScope ?: [0]);
-                    if ($this->assessments->canManageSkillTests()) {
-                        $inner->orWhere('kind', LmsAssessment::KIND_SKILL)
-                            ->orWhere('audience', LmsAssessment::AUDIENCE_STAFF);
-                    }
-                });
-            });
-        } elseif (! $this->assessments->canManageSkillTests()) {
-            $assignQuery->whereHas('assessment', function ($q) {
-                $q->where('kind', '!=', LmsAssessment::KIND_SKILL)
-                    ->where('audience', '!=', LmsAssessment::AUDIENCE_STAFF);
-            });
-        }
-
+        $assignments = collect();
         try {
-            $assignments = $assignQuery->get();
+            $raw = Schema::hasTable('lms_assessment_assignments')
+                ? DB::table('lms_assessment_assignments')->orderByDesc('id')->get()
+                : collect();
+            $assignments = LmsAssessmentAssignment::hydrate($raw->map(fn ($row) => (array) $row)->all());
         } catch (\Throwable $e) {
             report($e);
-            $assignments = collect();
-        }
-        if (Schema::hasTable('lms_assessment_assignments')) {
             try {
-                $raw = DB::table('lms_assessment_assignments')->orderByDesc('id')->get();
-                if ($raw->count() > $assignments->count()) {
-                    $assignments = LmsAssessmentAssignment::hydrate($raw->map(fn ($row) => (array) $row)->all());
-                }
-            } catch (\Throwable $e) {
-                report($e);
+                $assignments = LmsAssessmentAssignment::query()->orderByDesc('id')->get();
+            } catch (\Throwable $e2) {
+                $assignments = collect();
             }
         }
 
@@ -538,6 +473,56 @@ class LmsAssessmentController extends Controller
                 $assignment->setRelation('assessment', $found);
             }
         }
+
+        $assignments = $assignments->filter(function ($assignment) use (
+            $assessmentId, $batchId, $courseId, $kind, $search, $markerOnlyUid, $courseIdsScope
+        ) {
+            $assessment = $assignment->assessment ?? null;
+            if ($assessmentId > 0 && (int) $assignment->assessment_id !== $assessmentId) {
+                return false;
+            }
+            if ($batchId > 0 && (int) ($assignment->class_batch_id ?? 0) !== $batchId) {
+                return false;
+            }
+            if ($courseId > 0 && (int) ($assessment->course_id ?? 0) !== $courseId) {
+                return false;
+            }
+            if ($kind !== '' && $assessment && $assessment->kind !== $kind) {
+                return false;
+            }
+            if ($markerOnlyUid) {
+                $ok = (int) ($assignment->marker_user_id ?? 0) === $markerOnlyUid
+                    || (int) ($assignment->assigned_by_user_id ?? 0) === $markerOnlyUid
+                    || (int) ($assessment->created_by_user_id ?? 0) === $markerOnlyUid
+                    || ($courseIdsScope && in_array((int) ($assessment->course_id ?? 0), $courseIdsScope, true));
+                if (! $ok) {
+                    return false;
+                }
+            } elseif ($courseIdsScope !== null) {
+                $inCourse = in_array((int) ($assessment->course_id ?? 0), $courseIdsScope ?: [0], true);
+                $skillOk = $this->assessments->canManageSkillTests()
+                    && $assessment
+                    && ($assessment->isSkill() || $assessment->audience === LmsAssessment::AUDIENCE_STAFF);
+                if (! $inCourse && ! $skillOk) {
+                    return false;
+                }
+            } elseif (! $this->assessments->canManageSkillTests() && $assessment && ($assessment->isSkill() || $assessment->audience === LmsAssessment::AUDIENCE_STAFF)) {
+                return false;
+            }
+            if ($search !== '') {
+                $needle = mb_strtolower($search);
+                $hay = mb_strtolower(
+                    ($assessment->title ?? '') . ' ' . ($assessment->course->title ?? '') . ' '
+                    . ($assignment->id ?? '') . ' ' . ($assignment->assessment_id ?? '')
+                );
+                $idMatch = ctype_digit($search) && (int) $search === (int) $assignment->assessment_id;
+                if (! str_contains($hay, $needle) && ! $idMatch) {
+                    return false;
+                }
+            }
+
+            return true;
+        })->values();
 
         $rowsByKey = [];
         $batchStudentCache = [];
@@ -1548,6 +1533,7 @@ class LmsAssessmentController extends Controller
     protected function studentsForBatchId(int $bid)
     {
         $ids = collect();
+        $batch = ClassBatch::query()->find($bid);
         if (Schema::hasTable('class_batch_student')) {
             if (Schema::hasColumn('class_batch_student', 'student_id')) {
                 $ids = $ids->merge(
@@ -1561,7 +1547,11 @@ class LmsAssessmentController extends Controller
             }
         }
         if (Schema::hasTable('class_schedule_student') && Schema::hasTable('class_schedules')) {
-            $scheduleIds = DB::table('class_schedules')->where('batch_id', $bid)->pluck('id');
+            $scheduleQuery = DB::table('class_schedules')->where('batch_id', $bid);
+            if ($batch && Schema::hasColumn('class_schedules', 'batch_name')) {
+                $scheduleQuery->orWhere('batch_name', $batch->code)->orWhere('batch_name', $batch->name);
+            }
+            $scheduleIds = $scheduleQuery->pluck('id');
             if ($scheduleIds->isNotEmpty()) {
                 $ids = $ids->merge(
                     DB::table('class_schedule_student')->whereIn('class_schedule_id', $scheduleIds)->pluck('student_id')
@@ -1572,12 +1562,19 @@ class LmsAssessmentController extends Controller
         $users = $ids->isEmpty()
             ? collect()
             : User::query()->whereIn('id', $ids)->get();
-        if ($users->isEmpty()) {
+        if ($users->count() <= 1) {
             try {
-                $batch = ClassBatch::query()->find($bid);
                 if ($batch) {
-                    $users = $batch->students()->get();
+                    $users = $users->concat($batch->students()->get())->unique('id')->values();
                 }
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+        if ($users->count() <= 1 && $batch && ! empty($batch->course_id)) {
+            try {
+                $fromCourse = $this->lms->studentsForCourse((int) $batch->course_id, 800);
+                $users = $users->concat($fromCourse)->unique('id')->values();
             } catch (\Throwable $e) {
                 report($e);
             }
