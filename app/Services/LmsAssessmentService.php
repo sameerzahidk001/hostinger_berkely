@@ -330,11 +330,80 @@ class LmsAssessmentService
             }
         }
 
+        $this->attachCimaCohortSittingsForUser($user, $out, $kind);
+
         if (method_exists(StudyMaterialFolder::class, 'ensureFolderAssessmentsTable')) {
             $this->appendFolderSelfTests($user, $out, $kind);
         }
 
         return $out;
+    }
+
+    protected function cimaCohortEmails(): array
+    {
+        return [
+            'k_vinu83@yahoo.com',
+            'kartik.chaturvedi469@gmail.com',
+            'jahanps@gmail.com',
+            'osamaym@hotmail.com',
+            'vananthan1@gmail.com',
+        ];
+    }
+
+    protected function isCimaCohortEmail(?string $email): bool
+    {
+        $email = mb_strtolower(trim((string) $email));
+
+        return $email !== '' && in_array($email, $this->cimaCohortEmails(), true);
+    }
+
+    /** The five BAT-0003 CIMA people see that sitting even if they are not on the batch pivot. */
+    protected function attachCimaCohortSittingsForUser(User $user, Collection $out, ?string $kind = null): void
+    {
+        if (! $this->isCimaCohortEmail($user->email ?? null)) {
+            return;
+        }
+        try {
+            $aids = LmsAssessment::query()
+                ->where(function ($q) {
+                    $q->where('title', 'like', '%CIMA MCS%')
+                        ->orWhere('title', 'like', '%Management Case Study%');
+                })
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->filter()
+                ->values();
+            if ($aids->isEmpty()) {
+                return;
+            }
+            $assignments = LmsAssessmentAssignment::query()
+                ->with(['marker', 'assessment.course'])
+                ->whereIn('assessment_id', $aids->all())
+                ->orderBy('id')
+                ->get();
+        } catch (\Throwable $e) {
+            return;
+        }
+        $seen = $out->map(fn ($row) => (int) ($row['assignment']->id ?? 0) . ':' . (int) ($row['assessment']->id ?? 0))->all();
+        foreach ($assignments as $assignment) {
+            $assessment = $assignment->assessment ?: LmsAssessment::query()->with('course')->find($assignment->assessment_id);
+            if (! $assessment || (method_exists($assessment, 'trashed') && $assessment->trashed())) {
+                continue;
+            }
+            if ($kind && $assessment->kind !== $kind) {
+                continue;
+            }
+            if (! $assessment->isPublished()) {
+                continue;
+            }
+            $key = (int) $assignment->id . ':' . (int) $assessment->id;
+            if (in_array($key, $seen, true)) {
+                continue;
+            }
+            $assignment->setRelation('assessment', $assessment);
+            $out->push(['assessment' => $assessment, 'assignment' => $assignment]);
+            $seen[] = $key;
+        }
     }
 
     /** Active study-material folder IDs this user can open. */
