@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.searchable-select-assets')
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
-<!-- lms-assigned-tests-20261029 -->
+<!-- lms-assigned-tests-20261029c -->
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
@@ -220,19 +220,36 @@
                                 $statusText = 'Assigned';
                             }
                             $spend = $attempt?->spendMinutes();
-                            $appointment = $assignment?->appointmentWindowLabel() ?? '—';
+                            $appointment = $assignment?->appointmentWindowLabel();
+                            if ($appointment === null || $appointment === '') {
+                                $appointment = '—';
+                            }
                             $assessorName = $attempt
                                 ? $attempt->assessorLabel($assignment)
-                                : ($assignment?->marker?->name ?? 'Admin / course instructors');
+                                : ($assignment?->marker?->name ?? '');
                             if ($assessorName === '' || $assessorName === '—') {
-                                $assessorName = $assignment?->marker?->name ?? 'Admin / course instructors';
+                                $assessorName = $assignment?->marker?->name
+                                    ?? 'Admin / course instructors';
                             }
                             $assessorUserId = $attempt
                                 ? $attempt->assessorUserId($assignment)
                                 : ($assignment && $assignment->marker_user_id ? (int) $assignment->marker_user_id : null);
                             $course = $assessment->course ?? null;
                             $apptId = $assignment?->displayCode()
-                                ?? (! empty($attempt?->assignment_id) ? ('BEXT' . (int) $attempt->assignment_id) : '—');
+                                ?? (! empty($attempt?->assignment_id) ? ('BEXT' . (int) $attempt->assignment_id) : null);
+                            if ($apptId === null || $apptId === '' || $apptId === 'BEXT0') {
+                                $apptId = ! empty($attempt?->id) ? ('Sit' . (int) $attempt->id) : '—';
+                            }
+                            $timezoneLabel = $assignment?->timezoneLabel();
+                            if ($timezoneLabel === null || $timezoneLabel === '') {
+                                $timezoneLabel = (string) config('app.timezone', 'Asia/Dubai');
+                            }
+                            $createdBy = $assignment?->createdByLabel();
+                            if ($createdBy === null || $createdBy === '') {
+                                $createdBy = method_exists($assessment, 'createdByLabel')
+                                    ? $assessment->createdByLabel()
+                                    : 'Admin';
+                            }
                             $attemptNo = (int) ($row['attempt_number'] ?? 1);
                             $attemptTotal = (int) ($row['attempt_total'] ?? 1);
                         @endphp
@@ -266,7 +283,7 @@
                             </td>
                             <td class="col-timing" data-sort="{{ optional($assignment?->available_from)->timestamp ?? 0 }}">
                                 <span class="lms-timing-line"><strong>Test Appointment:</strong> {{ ($assignment && $assignment->isSelfSitting()) ? 'Start anytime' : ($assignment?->windowStart()?->format('d/m/Y, H:i') ?? '—') }}</span>
-                                <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $assignment?->timezoneLabel() ?? config('app.timezone', 'Asia/Dubai') }}</span>
+                                <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $timezoneLabel }}</span>
                                 <span class="lms-timing-line"><strong>Test Duration:</strong> {{ $fmtDuration($assessment->durationMinutes()) }}</span>
                                 @if($attempt)
                                     <span class="lms-timing-line"><strong>Started:</strong> {{ $assignment ? $assignment->formatInTimezone($attempt->startedAtForDisplay()) : (optional($attempt->startedAtForDisplay())->format('d/m/Y, H:i') ?? '—') }}</span>
@@ -280,11 +297,11 @@
                                     <span class="lms-timing-line"><strong>Pause duration:</strong> —</span>
                                 @endif
                             </td>
-                            <td class="col-created" data-sort="{{ $assignment?->createdByLabel() ?? '—' }}">
+                            <td class="col-created" data-sort="{{ $createdBy }}">
                                 @if($assignment && $assignment->assigned_by_user_id)
-                                    <a href="#" class="lms-user-preview" data-user-id="{{ $assignment->assigned_by_user_id }}">{{ $assignment->createdByLabel() }}</a>
+                                    <a href="#" class="lms-user-preview" data-user-id="{{ $assignment->assigned_by_user_id }}">{{ $createdBy }}</a>
                                 @else
-                                    {{ $assignment?->createdByLabel() ?? '—' }}
+                                    {{ $createdBy }}
                                 @endif
                             </td>
                             <td class="col-assessor" data-sort="{{ $assessorName }}">

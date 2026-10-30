@@ -154,6 +154,23 @@ class LmsAssessment extends Model
         return 'BST' . (int) $this->id;
     }
 
+    public function createdByLabel(): string
+    {
+        if ($this->created_by_user_id) {
+            $user = User::query()->find($this->created_by_user_id);
+
+            return $user?->name ?: ('User #' . $this->created_by_user_id);
+        }
+        if ($this->created_by_admin_id && class_exists(Admin::class)) {
+            $admin = Admin::query()->find($this->created_by_admin_id);
+            if ($admin) {
+                return $admin->name ?? $admin->email ?? 'Admin';
+            }
+        }
+
+        return 'Admin';
+    }
+
     public function kindLabel(): string
     {
         return self::kinds()[$this->kind] ?? ucfirst((string) $this->kind);

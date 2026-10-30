@@ -70,34 +70,8 @@ class LmsAssessmentService
     {
         $ok = LmsAssessmentSchema::ensure();
         StudyMaterialFolder::ensureFolderAssessmentsTable();
-        $this->restorePublishedAssignedTests();
 
         return $ok;
-    }
-
-    /** Soft-deleted published tests with sittings must still be sat today. */
-    private function restorePublishedAssignedTests(): void
-    {
-        static $done = false;
-        if ($done) {
-            return;
-        }
-        $done = true;
-        if (! Schema::hasColumn('lms_assessments', 'deleted_at')) {
-            return;
-        }
-        try {
-            $ids = LmsAssessmentAssignment::query()->pluck('assessment_id')->unique()->filter()->values()->all();
-            if ($ids === []) {
-                return;
-            }
-            LmsAssessment::onlyTrashed()
-                ->where('status', 'published')
-                ->whereIn('id', $ids)
-                ->restore();
-        } catch (\Throwable $e) {
-            report($e);
-        }
     }
 
     public function canManageAssessments(): bool
