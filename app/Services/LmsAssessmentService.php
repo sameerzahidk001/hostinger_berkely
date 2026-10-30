@@ -385,6 +385,7 @@ class LmsAssessmentService
             return;
         }
         $seen = $out->map(fn ($row) => (int) ($row['assignment']->id ?? 0) . ':' . (int) ($row['assessment']->id ?? 0))->all();
+        $userId = (int) $user->id;
         foreach ($assignments as $assignment) {
             $assessment = $assignment->assessment ?: LmsAssessment::query()->with('course')->find($assignment->assessment_id);
             if (! $assessment || (method_exists($assessment, 'trashed') && $assessment->trashed())) {
@@ -394,6 +395,17 @@ class LmsAssessmentService
                 continue;
             }
             if (! $assessment->isPublished()) {
+                continue;
+            }
+            $forThisStudent = (int) ($assignment->student_id ?? 0) === $userId;
+            $isSelf = method_exists($assignment, 'isSelfSitting') && $assignment->isSelfSitting();
+            if ($isSelf && ! $forThisStudent) {
+                continue;
+            }
+            if (! $forThisStudent && empty($assignment->class_batch_id)) {
+                continue;
+            }
+            if (! $forThisStudent && ! $isSelf && empty($assignment->available_from)) {
                 continue;
             }
             $key = (int) $assignment->id . ':' . (int) $assessment->id;
