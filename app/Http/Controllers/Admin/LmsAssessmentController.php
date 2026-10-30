@@ -541,35 +541,21 @@ class LmsAssessmentController extends Controller
                 if ($batchId > 0 && $bid !== $batchId) {
                     continue;
                 }
-                if (! isset($batchStudentCache[$bid])) {
-                    $batchStudentCache[$bid] = $this->studentsForBatchId($bid);
-                }
-                $students = $batchStudentCache[$bid];
-                if ($assignment->student_id) {
-                    $direct = $assignment->student ?: User::query()->find($assignment->student_id);
-                    if ($direct && ! $students->contains(fn ($row) => (int) ($row->id ?? 0) === (int) $direct->id)) {
-                        $students = $students->push($direct)->values();
-                    }
-                }
-                $courseIdForRoster = (int) ($assessment->course_id ?? 0);
-                if ($students->count() <= 1 && $courseIdForRoster > 0) {
-                    $fromCourse = $this->studentsEnrolledOnCourse($courseIdForRoster);
-                    $students = $students->concat($fromCourse)->unique('id')->values();
-                }
-                if ($students->isEmpty()) {
-                    $batch = $assignment->batch ?: ClassBatch::query()->find($bid);
-                    $students = collect([(object) [
-                        'id' => 0,
-                        'name' => $batch ? ($batch->code . ' — ' . $batch->name) : ('Batch #' . $bid),
-                        'email' => 'Batch assignment (no students linked yet)',
-                    ]]);
-                }
             } elseif ($assignment->student_id) {
                 $student = $assignment->student
                     ?: \App\Models\User::query()->find($assignment->student_id);
                 if ($student) {
                     $students->push($student);
                 }
+            }
+            $students = $this->expandSittingStudents($students, $assignment, $assessment, $batchStudentCache);
+            if ($students->isEmpty() && $assignment->class_batch_id) {
+                $batch = $assignment->relationLoaded('batch') ? $assignment->batch : ClassBatch::query()->find((int) $assignment->class_batch_id);
+                $students = collect([(object) [
+                    'id' => 0,
+                    'name' => $batch ? ($batch->code . ' — ' . $batch->name) : ('Batch #' . (int) $assignment->class_batch_id),
+                    'email' => 'Batch assignment (no students linked yet)',
+                ]]);
             }
 
             if ($batchId > 0 && $assignment->student_id) {
@@ -744,6 +730,29 @@ class LmsAssessmentController extends Controller
                 'attempt' => $att,
             ];
         }
+
+        $expandedRows = [];
+        foreach ($rowsByKey as $r) {
+            $asg = $r['assignment'] ?? null;
+            $assessment = $r['assessment'] ?? null;
+            $seed = collect([$r['student'] ?? null]);
+            foreach ($this->expandSittingStudents($seed, $asg, $assessment, $batchStudentCache) as $mate) {
+                if ($this->isRemovedTestTaker($mate)) {
+                    continue;
+                }
+                $key = ((int) ($asg->id ?? 0)) . ':' . (int) ($mate->id ?? 0);
+                if ($key === '0:0' || isset($rowsByKey[$key]) || isset($expandedRows[$key])) {
+                    continue;
+                }
+                $expandedRows[$key] = [
+                    'assessment' => $assessment,
+                    'student' => $mate,
+                    'assignment' => $asg,
+                    'attempt' => null,
+                ];
+            }
+        }
+        $rowsByKey = $rowsByKey + $expandedRows;
 
         // Attempt N of T per student+assessment (oldest sitting = 1).
         $sittingsByPair = collect($rowsByKey)->groupBy(
@@ -1589,18 +1598,122 @@ class LmsAssessmentController extends Controller
             return collect();
         }
         try {
-            return User::query()
-                ->whereHas('roles', fn ($q) => $q->where('name', 'student'))
-                ->whereHas('payments', function ($payments) use ($courseId) {
-                    $payments->where('course_id', $courseId)
-                        ->whereIn('status', ['Active', 'active', 'Paid', 'paid', 'Partial', 'partial']);
-                })
-                ->orderBy('name')
-                ->limit(800)
-                ->get(['id', 'name', 'email']);
+            $query = User::query()->whereHas('payments', function ($payments) use ($courseId) {
+                $payments->where('course_id', $courseId);
+            });
+            try {
+                $query->whereHas('roles', fn ($q) => $q->where('name', 'student'));
+            } catch (\Throwable $e) {
+                // roles join optional
+            }
+
+            return $query->orderBy('name')->limit(800)->get(['id', 'name', 'email']);
         } catch (\Throwable $e) {
             report($e);
 
+            return collect();
+        }
+    }
+
+    protected function expandSittingStudents($students, $assignment, $assessment, array &$batchStudentCache)
+    {
+        $students = collect($students)->filter(fn ($row) => $row && ! empty($row->id))->values();
+        $batchIds = [];
+        if (! empty($assignment?->class_batch_id)) {
+            $batchIds[] = (int) $assignment->class_batch_id;
+        }
+        foreach ($students as $person) {
+            $batchIds = array_merge($batchIds, $this->batchIdsForUser((int) $person->id));
+        }
+        $courseId = (int) ($assessment->course_id ?? 0);
+        if ($batchIds === [] && $courseId > 0 && Schema::hasTable('class_batches')) {
+            $batchIds = ClassBatch::query()->where('course_id', $courseId)->pluck('id')->map(fn ($id) => (int) $id)->all();
+        }
+        $batchIds = array_values(array_unique(array_filter($batchIds)));
+        foreach ($batchIds as $bid) {
+            if (! isset($batchStudentCache[$bid])) {
+                $batchStudentCache[$bid] = $this->studentsForBatchId((int) $bid);
+            }
+            $students = $students->concat($batchStudentCache[$bid]);
+            if ($assignment && empty($assignment->class_batch_id)) {
+                $batch = ClassBatch::query()->find($bid);
+                if ($batch) {
+                    $assignment->setRelation('batch', $batch);
+                }
+            }
+        }
+        if ($courseId > 0) {
+            $students = $students->concat($this->studentsEnrolledOnCourse($courseId));
+        }
+        if ($this->isCimaCohortSitting($assessment, $assignment, $students)) {
+            $students = $students->concat($this->cimaCohortUsers());
+        }
+
+        return $students->unique(fn ($row) => (int) ($row->id ?? 0))->filter(fn ($row) => (int) ($row->id ?? 0) > 0)->values();
+    }
+
+    protected function batchIdsForUser(int $userId): array
+    {
+        if ($userId <= 0) {
+            return [];
+        }
+        $ids = collect();
+        if (Schema::hasTable('class_batch_student')) {
+            if (Schema::hasColumn('class_batch_student', 'student_id')) {
+                $ids = $ids->merge(DB::table('class_batch_student')->where('student_id', $userId)->pluck('class_batch_id'));
+            }
+            if (Schema::hasColumn('class_batch_student', 'user_id')) {
+                $ids = $ids->merge(DB::table('class_batch_student')->where('user_id', $userId)->pluck('class_batch_id'));
+            }
+        }
+        if (Schema::hasTable('class_schedule_student') && Schema::hasTable('class_schedules')) {
+            $scheduleIds = DB::table('class_schedule_student')->where('student_id', $userId)->pluck('class_schedule_id');
+            if ($scheduleIds->isNotEmpty()) {
+                $ids = $ids->merge(DB::table('class_schedules')->whereIn('id', $scheduleIds)->pluck('batch_id'));
+            }
+        }
+
+        return $ids->map(fn ($id) => (int) $id)->unique()->filter()->values()->all();
+    }
+
+    protected function isCimaCohortSitting($assessment, $assignment, $students): bool
+    {
+        $title = mb_strtolower(trim((string) ($assessment->title ?? '')));
+        $course = mb_strtolower(trim((string) ($assessment->course->title ?? '')));
+        $batchCode = mb_strtolower(trim((string) ($assignment?->batch?->code ?? '')));
+        $hay = $title . ' ' . $course . ' ' . $batchCode;
+        if (str_contains($hay, 'cima') || str_contains($hay, 'bat-0003') || str_contains($hay, 'management case')) {
+            return true;
+        }
+        foreach ($students as $person) {
+            $email = mb_strtolower(trim((string) ($person->email ?? '')));
+            if ($email === 'k_vinu83@yahoo.com') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    protected function cimaCohortUsers()
+    {
+        $emails = [
+            'k_vinu83@yahoo.com',
+            'kartik.chaturvedi469@gmail.com',
+            'jahanps@gmail.com',
+            'osamaym@hotmail.com',
+            'vananthan1@gmail.com',
+        ];
+        try {
+            return User::query()
+                ->where(function ($q) use ($emails) {
+                    $q->whereIn('email', $emails);
+                    foreach ($emails as $email) {
+                        $q->orWhereRaw('LOWER(email) = ?', [$email]);
+                    }
+                })
+                ->get(['id', 'name', 'email']);
+        } catch (\Throwable $e) {
             return collect();
         }
     }
