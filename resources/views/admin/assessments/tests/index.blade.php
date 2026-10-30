@@ -148,8 +148,8 @@
                     <th class="col-course" data-sort-col="3">Course / Test for <span class="sort-ind"></span></th>
                     <th class="col-type" data-sort-col="4">Test Type <span class="sort-ind"></span></th>
                     <th class="col-num" data-sort-col="5">Qs <span class="sort-ind"></span></th>
-                    <th class="col-num col-assigned" data-sort-col="6" title="Assigned sittings on Assigned Tests. The same student assigned 3 times counts as 3. A batch of 5 counts as 5.">Assigned students <span class="sort-ind"></span></th>
-                    <th class="col-num" data-sort-col="7" title="How many sittings students have started or submitted">Taken <span class="sort-ind"></span></th>
+                    <th class="col-num col-assigned" data-sort-col="6" title="Unique people on Assigned Tests for this test (first sitting only).">Assigned students <span class="sort-ind"></span></th>
+                    <th class="col-num" data-sort-col="7" title="How many of those people started or submitted">Taken <span class="sort-ind"></span></th>
                     <th class="col-status" data-sort-col="8">Status <span class="sort-ind"></span></th>
                     <th class="col-assessor" data-sort-col="9">Assessor <span class="sort-ind"></span></th>
                     <th class="col-action">Action</th>
@@ -177,9 +177,12 @@
                         </td>
                         <td class="col-type" data-sort="{{ $row->kindLabel() }}">{{ $row->kindLabel() }}</td>
                         <td class="col-num" data-sort="{{ $row->questions_count }}">{{ $row->questions_count }}</td>
-                        @php $assignedPeople = $row->assignedPeopleCount(); @endphp
+                        @php
+                            $assignedPeople = $row->assignedPeopleCount();
+                            $takenPeople = $row->takenPeopleCount();
+                        @endphp
                         <td class="col-num col-assigned" data-sort="{{ $assignedPeople }}">{{ $assignedPeople }}</td>
-                        <td class="col-num" data-sort="{{ $row->attempts_count }}">{{ $row->attempts_count }}</td>
+                        <td class="col-num" data-sort="{{ $takenPeople }}">{{ $takenPeople }}</td>
                         <td class="col-status" data-sort="{{ $row->status }}">
                             @php
                                 $st = (string) ($row->status ?? '');
