@@ -56,15 +56,16 @@ class LmsAssessmentController extends Controller
             $markedIds = ($uid > 0 && Schema::hasColumn('lms_assessment_assignments', 'marker_user_id'))
                 ? LmsAssessmentAssignment::query()->where('marker_user_id', $uid)->pluck('assessment_id')->all()
                 : [];
-            $query->where(function ($q) use ($uid, $markedIds) {
-                $q->where('created_by_user_id', $uid);
-                if ($markedIds !== []) {
-                    $q->orWhereIn('id', $markedIds);
-                }
-                if ($uid <= 0 && $markedIds === []) {
-                    $q->whereRaw('1 = 0');
-                }
-            });
+            if ($uid <= 0) {
+                $query->whereRaw('1 = 0');
+            } else {
+                $query->where(function ($q) use ($uid, $markedIds) {
+                    $q->where('created_by_user_id', $uid);
+                    if ($markedIds !== []) {
+                        $q->orWhereIn('id', $markedIds);
+                    }
+                });
+            }
         }
         if ($search !== '') {
             $like = '%' . addcslashes($search, '%_\\') . '%';
@@ -492,10 +493,7 @@ class LmsAssessmentController extends Controller
                 return false;
             }
             if ($markerOnlyUid) {
-                $ok = (int) ($assignment->marker_user_id ?? 0) === $markerOnlyUid
-                    || (int) ($assignment->assigned_by_user_id ?? 0) === $markerOnlyUid
-                    || (int) ($assessment->created_by_user_id ?? 0) === $markerOnlyUid
-                    || ($courseIdsScope && in_array((int) ($assessment->course_id ?? 0), $courseIdsScope, true));
+                $ok = (int) ($assignment->marker_user_id ?? 0) === $markerOnlyUid;
                 if (! $ok) {
                     return false;
                 }
@@ -717,6 +715,9 @@ class LmsAssessmentController extends Controller
                 continue;
             }
             $asg = $this->assignmentForAttempt($att, $assignments, $assignmentsById);
+            if ($markerOnlyUid && (int) ($asg->marker_user_id ?? 0) !== (int) $markerOnlyUid) {
+                continue;
+            }
             if ($asg) {
                 $sitKey = (int) $asg->id . ':' . (int) $student->id;
                 if (isset($rowsByKey[$sitKey]) && empty($rowsByKey[$sitKey]['attempt'])) {
@@ -960,11 +961,8 @@ class LmsAssessmentController extends Controller
             $markedIds = Schema::hasColumn('lms_assessment_assignments', 'marker_user_id')
                 ? LmsAssessmentAssignment::query()->where('marker_user_id', $markerOnlyUid)->pluck('assessment_id')->all()
                 : [];
-            $assessmentQuery->where(function ($q) use ($markerOnlyUid, $courseIdsScope, $markedIds) {
+            $assessmentQuery->where(function ($q) use ($markerOnlyUid, $markedIds) {
                 $q->where('created_by_user_id', $markerOnlyUid);
-                if ($courseIdsScope) {
-                    $q->orWhereIn('course_id', $courseIdsScope);
-                }
                 if ($markedIds !== []) {
                     $q->orWhereIn('id', $markedIds);
                 }
