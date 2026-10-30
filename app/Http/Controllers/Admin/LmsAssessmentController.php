@@ -834,6 +834,8 @@ class LmsAssessmentController extends Controller
             return true;
         })->all();
 
+        $rowsByKey = $this->keepFirstCimaCohortAttempt($rowsByKey);
+
         foreach ($rowsByKey as $k => $r) {
             $disp = $this->sittingDisplayForRow($r);
             if (! empty($disp['_assignment'])) {
@@ -1828,6 +1830,55 @@ class LmsAssessmentController extends Controller
         if ($assessment) {
             $asg->setRelation('assessment', $assessment);
         }
+    }
+
+    protected function keepFirstCimaCohortAttempt(array $rowsByKey): array
+    {
+        $picked = [];
+        $out = [];
+        foreach ($rowsByKey as $k => $r) {
+            $asg = $r['assignment'] ?? null;
+            $assessment = $r['assessment'] ?? null;
+            if (! $this->isCimaCohortSitting($assessment, $asg, collect([$r['student'] ?? null]))) {
+                $out[$k] = $r;
+                continue;
+            }
+            $pair = (int) ($assessment->id ?? 0) . ':' . (int) ($r['student']->id ?? 0);
+            if (! isset($picked[$pair]) || $this->cimaRowBeats($r, $rowsByKey[$picked[$pair]] ?? [])) {
+                $picked[$pair] = $k;
+            }
+        }
+        foreach ($picked as $k) {
+            $rowsByKey[$k]['attempt_number'] = 1;
+            $rowsByKey[$k]['attempt_total'] = 1;
+            $out[$k] = $rowsByKey[$k];
+        }
+
+        return $out;
+    }
+
+    protected function cimaRowBeats(array $candidate, array $current): bool
+    {
+        $candHas = ! empty($candidate['attempt']);
+        $curHas = ! empty($current['attempt']);
+        if ($candHas !== $curHas) {
+            return $candHas;
+        }
+        $candId = (int) ($candidate['assignment']->id ?? 0);
+        $curId = (int) ($current['assignment']->id ?? 0);
+        if ($candId === 0 && $curId > 0) {
+            return false;
+        }
+        if ($curId === 0 && $candId > 0) {
+            return true;
+        }
+        if ($candId !== $curId) {
+            return $candId > 0 && ($curId === 0 || $candId < $curId);
+        }
+        $candNo = (int) ($candidate['attempt_number'] ?? 1);
+        $curNo = (int) ($current['attempt_number'] ?? 1);
+
+        return $candNo < $curNo;
     }
 
     protected function isCimaCohortSitting($assessment, $assignment, $students): bool
