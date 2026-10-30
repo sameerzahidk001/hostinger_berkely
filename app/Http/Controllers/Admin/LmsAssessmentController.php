@@ -589,6 +589,9 @@ class LmsAssessmentController extends Controller
             }
 
             foreach ($students as $student) {
+                if ($this->isRemovedTestTaker($student)) {
+                    continue;
+                }
                 // One row per assignment sitting (same test can appear many times).
                 $key = (int) $assignment->id . ':' . (int) $student->id;
                 if (isset($rowsByKey[$key])) {
@@ -714,21 +717,26 @@ class LmsAssessmentController extends Controller
                     continue;
                 }
             }
-            $asg = $this->assignmentForAttempt($att, $assignments, $assignmentsById);
             $assessment = $att->assessment
-                ?: $asg?->assessment
                 ?: $assessmentsById->get((int) $att->assessment_id)
                 ?: LmsAssessment::query()->find($att->assessment_id);
             if (! $assessment || (method_exists($assessment, 'trashed') && $assessment->trashed())) {
                 continue;
             }
-            if (! $asg) {
+            if ($this->isRemovedTestTaker($student)) {
                 continue;
             }
-            $sitKey = (int) $asg->id . ':' . (int) $student->id;
-            if (isset($rowsByKey[$sitKey]) && empty($rowsByKey[$sitKey]['attempt'])) {
-                $rowsByKey[$sitKey]['attempt'] = $att;
-                continue;
+            $asg = $this->ensureAssignmentForLiveAttempt($att, $assessment, $assignments, $assignmentsById);
+            if (! $asg) {
+                $asg = $this->assignmentForAttempt($att, $assignments, $assignmentsById);
+            }
+            if ($asg) {
+                $this->fillEmptySittingFields($asg, $assessment, $assignments);
+                $sitKey = (int) $asg->id . ':' . (int) $student->id;
+                if (isset($rowsByKey[$sitKey]) && empty($rowsByKey[$sitKey]['attempt'])) {
+                    $rowsByKey[$sitKey]['attempt'] = $att;
+                    continue;
+                }
             }
             $rowsByKey['attempt:' . $att->id] = [
                 'assessment' => $assessment,
@@ -775,6 +783,7 @@ class LmsAssessmentController extends Controller
                 }
             }
             if ($asg) {
+                $this->fillEmptySittingFields($asg, $r['assessment'] ?? $asg->assessment, $assignments);
                 $marker = $peopleById->get((int) ($asg->marker_user_id ?? 0));
                 if ($marker) {
                     $asg->setRelation('marker', $marker);
@@ -801,6 +810,9 @@ class LmsAssessmentController extends Controller
                 return false;
             }
             if (method_exists($assessment, 'trashed') && $assessment->trashed()) {
+                return false;
+            }
+            if ($this->isRemovedTestTaker($r['student'] ?? null)) {
                 return false;
             }
 
@@ -870,17 +882,18 @@ class LmsAssessmentController extends Controller
             }
             foreach ($fallbackAttempts as $att) {
                 $assessment = $att->assessment;
-                if (! $assessment) {
+                if (! $assessment || (method_exists($assessment, 'trashed') && $assessment->trashed())) {
                     continue;
                 }
                 $student = $att->user ?: User::query()->find($att->user_id);
-                if (! $student) {
+                if (! $student || $this->isRemovedTestTaker($student)) {
                     continue;
                 }
+                $asg = $this->ensureAssignmentForLiveAttempt($att, $assessment, $assignments, $assignments->keyBy(fn ($row) => (int) $row->id));
                 $rows->push([
                     'assessment' => $assessment,
                     'student' => $student,
-                    'assignment' => null,
+                    'assignment' => $asg,
                     'attempt' => $att,
                     'attempt_number' => 1,
                     'attempt_total' => 1,
@@ -1523,6 +1536,153 @@ class LmsAssessmentController extends Controller
         }
 
         return null;
+    }
+
+    protected function isRemovedTestTaker($student): bool
+    {
+        if (! $student) {
+            return false;
+        }
+        $name = mb_strtolower(trim((string) ($student->name ?? '')));
+        $email = mb_strtolower(trim((string) ($student->email ?? '')));
+
+        return str_contains($name, 'imthiyas') || str_contains($email, 'imthiyas');
+    }
+
+    protected function siblingSitting($assessment, $assignments): ?LmsAssessmentAssignment
+    {
+        $aid = (int) ($assessment->id ?? 0);
+        $fromList = collect($assignments)->first(
+            fn ($row) => (int) ($row->assessment_id ?? 0) === $aid && ! empty($row->marker_user_id)
+        );
+        if ($fromList) {
+            return $fromList;
+        }
+        $any = collect($assignments)->first(fn ($row) => (int) ($row->assessment_id ?? 0) === $aid);
+        if ($any) {
+            return $any;
+        }
+        try {
+            return LmsAssessmentAssignment::query()
+                ->where('assessment_id', $aid)
+                ->orderByDesc('id')
+                ->first();
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    protected function fillEmptySittingFields($asg, $assessment, $assignments): void
+    {
+        if (! $asg instanceof LmsAssessmentAssignment) {
+            return;
+        }
+        $sibling = $this->siblingSitting($assessment, $assignments);
+        $dirty = false;
+        if (trim((string) ($asg->timezone ?? '')) === '') {
+            $asg->timezone = trim((string) ($sibling?->timezone ?? '')) ?: 'Asia/Dubai';
+            $dirty = true;
+        }
+        if (empty($asg->marker_user_id) && ! empty($sibling?->marker_user_id)) {
+            $asg->marker_user_id = (int) $sibling->marker_user_id;
+            $dirty = true;
+        }
+        if (empty($asg->assigned_by_user_id) && empty($asg->assigned_by_admin_id)) {
+            if (! empty($sibling?->assigned_by_user_id) || ! empty($sibling?->assigned_by_admin_id)) {
+                $asg->assigned_by_user_id = $sibling->assigned_by_user_id;
+                $asg->assigned_by_admin_id = $sibling->assigned_by_admin_id;
+            } else {
+                $asg->assigned_by_user_id = $assessment->created_by_user_id ?? null;
+                $asg->assigned_by_admin_id = $assessment->created_by_admin_id ?? null;
+            }
+            $dirty = true;
+        }
+        if ($dirty) {
+            try {
+                $asg->save();
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+        if (! empty($asg->marker_user_id) && ! $asg->relationLoaded('marker')) {
+            $marker = User::query()->find($asg->marker_user_id);
+            if ($marker) {
+                $asg->setRelation('marker', $marker);
+            }
+        }
+        if (! empty($asg->assigned_by_user_id) && ! $asg->relationLoaded('assignedByUser')) {
+            $creator = User::query()->find($asg->assigned_by_user_id);
+            if ($creator) {
+                $asg->setRelation('assignedByUser', $creator);
+            }
+        }
+    }
+
+    protected function ensureAssignmentForLiveAttempt($att, $assessment, $assignments, $assignmentsById): ?LmsAssessmentAssignment
+    {
+        $found = $this->assignmentForAttempt($att, $assignments, $assignmentsById);
+        if ($found) {
+            if (Schema::hasColumn('lms_assessment_attempts', 'assignment_id') && empty($att->assignment_id)) {
+                try {
+                    $att->assignment_id = (int) $found->id;
+                    $att->save();
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+            }
+
+            return $found;
+        }
+        if (! $assessment || (method_exists($assessment, 'trashed') && $assessment->trashed())) {
+            return null;
+        }
+        try {
+            $sibling = $this->siblingSitting($assessment, $assignments);
+            $asg = new LmsAssessmentAssignment();
+            $asg->assessment_id = (int) $att->assessment_id;
+            $asg->student_id = (int) $att->user_id;
+            if (Schema::hasColumn($asg->getTable(), 'timezone')) {
+                $asg->timezone = trim((string) ($sibling?->timezone ?? '')) ?: 'Asia/Dubai';
+            }
+            if (Schema::hasColumn($asg->getTable(), 'marker_user_id')) {
+                $asg->marker_user_id = $sibling?->marker_user_id;
+            }
+            if (Schema::hasColumn($asg->getTable(), 'sitting_kind')) {
+                $asg->sitting_kind = $sibling?->sitting_kind ?: LmsAssessmentAssignment::KIND_SELF;
+            }
+            if (Schema::hasColumn($asg->getTable(), 'assigned_by_user_id')) {
+                $asg->assigned_by_user_id = $sibling?->assigned_by_user_id ?? ($assessment->created_by_user_id ?? null);
+            }
+            if (Schema::hasColumn($asg->getTable(), 'assigned_by_admin_id')) {
+                $asg->assigned_by_admin_id = $sibling?->assigned_by_admin_id ?? ($assessment->created_by_admin_id ?? null);
+            }
+            if (Schema::hasColumn($asg->getTable(), 'available_from') && ! empty($att->started_at)) {
+                $asg->available_from = $att->started_at;
+            }
+            $asg->save();
+            if (Schema::hasColumn('lms_assessment_attempts', 'assignment_id')) {
+                $att->assignment_id = (int) $asg->id;
+                $att->save();
+            }
+            if (! empty($asg->marker_user_id)) {
+                $marker = User::query()->find($asg->marker_user_id);
+                if ($marker) {
+                    $asg->setRelation('marker', $marker);
+                }
+            }
+            if (! empty($asg->assigned_by_user_id)) {
+                $creator = User::query()->find($asg->assigned_by_user_id);
+                if ($creator) {
+                    $asg->setRelation('assignedByUser', $creator);
+                }
+            }
+
+            return $asg;
+        } catch (\Throwable $e) {
+            report($e);
+
+            return null;
+        }
     }
 
     protected function assignmentForAttempt($att, $assignments, $assignmentsById): ?LmsAssessmentAssignment
