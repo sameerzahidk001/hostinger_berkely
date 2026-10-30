@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.searchable-select-assets')
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
-<!-- lms-assigned-tests-20261030i -->
+<!-- lms-assigned-tests-20261030j -->
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
@@ -322,6 +322,9 @@
                             </td>
                             <td class="col-status" data-sort="{{ $statusText }}">
                                 <span class="{{ $statusClass }}">{{ $statusText }}</span>
+                                @if($statusText === 'Missed' && (int) ($assessment->max_attempts ?? 1) > 1)
+                                    <br><small class="text-muted">Student can Retake</small>
+                                @endif
                                 @if($attempt && $attempt->results_published && $attempt->score_raw !== null && ! $assessment->hidesOverallMarks())
                                     <span class="lms-score-line">
                                         {{ lms_format_number($attempt->score_raw) }} / {{ lms_format_number($attempt->score_max) }}
