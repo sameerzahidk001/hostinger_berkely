@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.searchable-select-assets')
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
-<!-- lms-assigned-tests-20261029d -->
+<!-- lms-assigned-tests-20261030a -->
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
@@ -355,6 +355,12 @@
                                         <button type="submit" class="btn btn-xs btn-danger">Delete</button>
                                     </form>
                                     <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.assign', ['id' => $assessment->id, 'mode' => $assignment->isSelfSitting() ? 'self' : 'exam']) }}">Assign again</a>
+                                @elseif($canManageSitting && $attempt)
+                                    <form action="{{ route('admin.assessments.tests.destroy-attempt', $attempt->id) }}" method="POST" onsubmit="return confirm('Delete this test taker sitting?');">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="btn btn-xs btn-danger">Delete</button>
+                                    </form>
                                 @endif
                             </td>
                         </tr>

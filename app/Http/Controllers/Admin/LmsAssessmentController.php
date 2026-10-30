@@ -392,6 +392,18 @@ class LmsAssessmentController extends Controller
         return back()->with('success', 'Sitting ' . $code . ' removed.');
     }
 
+    public function destroyAttemptRow($attemptId)
+    {
+        $this->assessments->ensure();
+        $attempt = LmsAssessmentAttempt::query()->findOrFail($attemptId);
+        $assessment = LmsAssessment::query()->withTrashed()->find($attempt->assessment_id);
+        abort_unless($assessment && $this->assessments->canManageSittingsFor($assessment), 403);
+        $attempt->answers()->delete();
+        $attempt->delete();
+
+        return back()->with('success', 'Test taker sitting removed.');
+    }
+
     /**
      * One list for all assigned test takers (started or not) with status / score / mark actions.
      * Replaces the separate Test Results menu.
@@ -589,6 +601,9 @@ class LmsAssessmentController extends Controller
             }
 
             foreach ($students as $student) {
+                if ($this->isRemovedTestTaker($student)) {
+                    continue;
+                }
                 // One row per assignment sitting (same test can appear many times).
                 $key = (int) $assignment->id . ':' . (int) $student->id;
                 if (isset($rowsByKey[$key])) {
@@ -720,6 +735,9 @@ class LmsAssessmentController extends Controller
             if (! $assessment || (method_exists($assessment, 'trashed') && $assessment->trashed())) {
                 continue;
             }
+            if ($this->isRemovedTestTaker($student)) {
+                continue;
+            }
             $asg = $this->assignmentForAttempt($att, $assignments, $assignmentsById);
             if ($asg) {
                 $sitKey = (int) $asg->id . ':' . (int) $student->id;
@@ -801,6 +819,9 @@ class LmsAssessmentController extends Controller
             if (method_exists($assessment, 'trashed') && $assessment->trashed()) {
                 return false;
             }
+            if ($this->isRemovedTestTaker($r['student'] ?? null)) {
+                return false;
+            }
 
             return true;
         })->all();
@@ -872,7 +893,7 @@ class LmsAssessmentController extends Controller
                     continue;
                 }
                 $student = $att->user ?: User::query()->find($att->user_id);
-                if (! $student) {
+                if (! $student || $this->isRemovedTestTaker($student)) {
                     continue;
                 }
                 $asg = $this->assignmentForAttempt($att, $assignments, $assignments->keyBy(fn ($row) => (int) $row->id));
@@ -1522,6 +1543,17 @@ class LmsAssessmentController extends Controller
         }
 
         return null;
+    }
+
+    protected function isRemovedTestTaker($student): bool
+    {
+        if (! $student) {
+            return false;
+        }
+        $name = mb_strtolower(trim((string) ($student->name ?? '')));
+        $email = mb_strtolower(trim((string) ($student->email ?? '')));
+
+        return str_contains($name, 'imthiyas') || str_contains($email, 'imthiyas');
     }
 
     protected function assignmentForAttempt($att, $assignments, $assignmentsById): ?LmsAssessmentAssignment
