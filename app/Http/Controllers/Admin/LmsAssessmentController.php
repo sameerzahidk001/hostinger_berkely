@@ -551,6 +551,11 @@ class LmsAssessmentController extends Controller
                         $students = $students->push($direct)->values();
                     }
                 }
+                $courseIdForRoster = (int) ($assessment->course_id ?? 0);
+                if ($students->count() <= 1 && $courseIdForRoster > 0) {
+                    $fromCourse = $this->studentsEnrolledOnCourse($courseIdForRoster);
+                    $students = $students->concat($fromCourse)->unique('id')->values();
+                }
                 if ($students->isEmpty()) {
                     $batch = $assignment->batch ?: ClassBatch::query()->find($bid);
                     $students = collect([(object) [
@@ -1572,15 +1577,32 @@ class LmsAssessmentController extends Controller
             }
         }
         if ($users->count() <= 1 && $batch && ! empty($batch->course_id)) {
-            try {
-                $fromCourse = $this->lms->studentsForCourse((int) $batch->course_id, 800);
-                $users = $users->concat($fromCourse)->unique('id')->values();
-            } catch (\Throwable $e) {
-                report($e);
-            }
+            $users = $users->concat($this->studentsEnrolledOnCourse((int) $batch->course_id))->unique('id')->values();
         }
 
         return $users;
+    }
+
+    protected function studentsEnrolledOnCourse(int $courseId)
+    {
+        if ($courseId <= 0) {
+            return collect();
+        }
+        try {
+            return User::query()
+                ->whereHas('roles', fn ($q) => $q->where('name', 'student'))
+                ->whereHas('payments', function ($payments) use ($courseId) {
+                    $payments->where('course_id', $courseId)
+                        ->whereIn('status', ['Active', 'active', 'Paid', 'paid', 'Partial', 'partial']);
+                })
+                ->orderBy('name')
+                ->limit(800)
+                ->get(['id', 'name', 'email']);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return collect();
+        }
     }
 
     protected function isRemovedTestTaker($student): bool
