@@ -52,16 +52,17 @@ class LmsAssessmentController extends Controller
                 ->where('audience', '!=', LmsAssessment::AUDIENCE_STAFF);
         }
         if ($this->lms->isInstructorActor() && ! $this->lms->isAdminActor() && ! panel_sees_all_dashboards()) {
-            $courseIds = $this->lms->coursesForActor()->pluck('id')->map(fn ($id) => (int) $id)->all();
             $uid = (int) (Auth::id() ?? 0);
             $markedIds = ($uid > 0 && Schema::hasColumn('lms_assessment_assignments', 'marker_user_id'))
                 ? LmsAssessmentAssignment::query()->where('marker_user_id', $uid)->pluck('assessment_id')->all()
                 : [];
-            $query->where(function ($q) use ($courseIds, $uid, $markedIds) {
-                $q->whereIn('course_id', $courseIds ?: [0])
-                    ->orWhere('created_by_user_id', $uid);
+            $query->where(function ($q) use ($uid, $markedIds) {
+                $q->where('created_by_user_id', $uid);
                 if ($markedIds !== []) {
                     $q->orWhereIn('id', $markedIds);
+                }
+                if ($uid <= 0 && $markedIds === []) {
+                    $q->whereRaw('1 = 0');
                 }
             });
         }
