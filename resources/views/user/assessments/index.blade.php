@@ -242,7 +242,10 @@
                         $course = $a->course ?? null;
                         $assessorName = $att
                             ? $att->assessorLabel($asg)
-                            : ($asg?->marker?->name ?? '—');
+                            : ($asg?->marker?->name ?? 'Admin / course instructors');
+                        if ($assessorName === '' || $assessorName === '—') {
+                            $assessorName = $asg?->marker?->name ?? 'Admin / course instructors';
+                        }
                         $assessorEmail = $asg?->marker?->email ?? null;
                         $canDownloadPdf = $att && (
                             $att->results_published

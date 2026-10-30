@@ -263,6 +263,26 @@ class LmsAssessmentService
                 ->all();
             $batchIds = array_merge($batchIds, $fromSchedules);
         }
+        $paidCourseIds = [];
+        try {
+            if (class_exists(\App\Models\Payment::class) && Schema::hasTable('payments')) {
+                $paidCourseIds = \App\Models\Payment::query()
+                    ->where('user_id', $userId)
+                    ->whereIn('status', ['Active', 'active', 'Paid', 'paid', 'Partial', 'partial'])
+                    ->pluck('course_id')
+                    ->map(fn ($id) => (int) $id)
+                    ->unique()
+                    ->filter()
+                    ->values()
+                    ->all();
+            }
+        } catch (\Throwable $e) {
+            $paidCourseIds = [];
+        }
+        if ($paidCourseIds !== [] && Schema::hasTable('class_batches')) {
+            $fromPaid = ClassBatch::query()->whereIn('course_id', $paidCourseIds)->pluck('id')->map(fn ($id) => (int) $id)->all();
+            $batchIds = array_merge($batchIds, $fromPaid);
+        }
         $batchIds = array_values(array_unique(array_filter($batchIds)));
 
         $assignQuery = LmsAssessmentAssignment::query()
