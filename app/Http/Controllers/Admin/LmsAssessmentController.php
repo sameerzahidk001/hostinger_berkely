@@ -1843,14 +1843,25 @@ class LmsAssessmentController extends Controller
                 $out[$k] = $r;
                 continue;
             }
+            $isSelf = $asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting();
+            if ($isSelf || ! empty($r['attempt'])) {
+                $max = max(1, (int) ($assessment->max_attempts ?? $r['attempt_total'] ?? 1));
+                $rowsByKey[$k]['attempt_total'] = max((int) ($r['attempt_total'] ?? 1), $max);
+                $out[$k] = $rowsByKey[$k];
+                continue;
+            }
             $pair = (int) ($assessment->id ?? 0) . ':' . (int) ($r['student']->id ?? 0);
             if (! isset($picked[$pair]) || $this->cimaRowBeats($r, $rowsByKey[$picked[$pair]] ?? [])) {
                 $picked[$pair] = $k;
             }
         }
         foreach ($picked as $k) {
+            if (isset($out[$k])) {
+                continue;
+            }
+            $max = max(1, (int) ($rowsByKey[$k]['assessment']->max_attempts ?? 1));
             $rowsByKey[$k]['attempt_number'] = 1;
-            $rowsByKey[$k]['attempt_total'] = 1;
+            $rowsByKey[$k]['attempt_total'] = max((int) ($rowsByKey[$k]['attempt_total'] ?? 1), $max);
             $out[$k] = $rowsByKey[$k];
         }
 

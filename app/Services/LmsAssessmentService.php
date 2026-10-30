@@ -669,7 +669,10 @@ class LmsAssessmentService
 
         $used = $fromFolder
             ? $this->folderSelfAttemptsUsed($user, $assessment)
-            : $this->attemptsUsed($user, $assessment);
+            : $this->attemptSlotsUsed($user, $assessment);
+        if ($used >= $max) {
+            abort(403, 'Maximum attempts for this test have been reached.');
+        }
         $openSittings = $fromFolder
             ? collect()
             : $this->openUnusedAssignmentsFor($user, $assessment)->sortBy('id')->values();
@@ -689,36 +692,34 @@ class LmsAssessmentService
                 ->get()
                 ->filter(fn ($att) => $this->attemptBelongsToAssignment($att, $assignment))
                 ->count();
-            if ($usedOnSitting >= $max) {
-                abort(403, 'Maximum attempts for this test have been reached.');
-            }
+            $allowAnytimeRetake = $this->canRetake($user, $assessment, $assignment);
             if (! $assignment->isSelfSitting() && $assignment->isExpired() && $usedOnSitting === 0) {
-                abort(403, 'The availability window for this test has ended.');
-            }
-            if (! $assignment->isSelfSitting() && $assignment->isNotYetOpen() && $usedOnSitting === 0) {
+                if ($allowAnytimeRetake) {
+                    $assignment = $this->ensureAnytimeRetakeSitting($user, $assessment, $assignment);
+                } else {
+                    abort(403, 'The availability window for this test has ended.');
+                }
+            } elseif (! $assignment->isSelfSitting() && $assignment->isNotYetOpen() && $usedOnSitting === 0) {
                 abort(403, 'This test is not open yet.');
+            } elseif ($usedOnSitting > 0 && $allowAnytimeRetake && ! $assignment->isSelfSitting()) {
+                $assignment = $this->ensureAnytimeRetakeSitting($user, $assessment, $assignment);
             }
         }
         $hasExplicitAssign = $accessRows->contains(fn ($row) => $row['assignment'] !== null);
         if (! $assignment) {
             if ($fromFolder) {
-                if ($used >= $max) {
-                    abort(403, 'Maximum attempts for this test have been reached.');
-                }
+                // folder self tests already passed the slot check above
             } elseif ($assessment->isSkill() && ! $hasExplicitAssign) {
-                if ($used >= $max) {
-                    abort(403, 'Maximum attempts for this test have been reached.');
-                }
+                // skill tests without an assignment already passed the slot check above
+            } elseif ($this->canRetake($user, $assessment, $allSittings->first())) {
+                $assignment = $this->ensureAnytimeRetakeSitting($user, $assessment, $allSittings->first());
             } else {
-                $anyAsg = $accessRows->map(fn ($row) => $row['assignment'])->filter()->first();
+                $anyAsg = $allSittings->first();
                 if ($anyAsg && $anyAsg->isNotYetOpen()) {
                     abort(403, 'This test is not open yet.');
                 }
                 if ($anyAsg && $anyAsg->isExpired()) {
                     abort(403, 'The availability window for this test has ended.');
-                }
-                if ($used >= $max) {
-                    abort(403, 'Maximum attempts for this test have been reached.');
                 }
                 abort(403, 'No open assigned sitting. Ask admin to Assign a retake for this test.');
             }
@@ -1337,8 +1338,8 @@ class LmsAssessmentService
     }
 
     /**
-     * Exam retake: admin assigned a new unused sitting that is open now.
-     * Self test: remaining attempts on this sitting (Max attempts on the test).
+     * Retake when slots remain (Max attempts) and either the scheduled sitting was missed
+     * or a finished attempt has published results. Retake starts anytime (no new appointment).
      */
     public function canRetake(User $user, LmsAssessment $assessment, ?LmsAssessmentAssignment $assignment = null): bool
     {
@@ -1352,15 +1353,115 @@ class LmsAssessmentService
             ->exists()) {
             return false;
         }
+        $max = $this->maxAttemptsFor($assessment);
+        if ($this->attemptSlotsUsed($user, $assessment) >= $max) {
+            return false;
+        }
+        if (! $assignment && $this->userHasFolderSelfTest($user, $assessment)) {
+            return $this->folderSelfAttemptsUsed($user, $assessment) < $max;
+        }
+        if ($this->missedExamSlotCount($user, $assessment) > 0) {
+            return true;
+        }
+        $latest = LmsAssessmentAttempt::query()
+            ->where('assessment_id', $assessment->id)
+            ->where('user_id', $user->id)
+            ->whereIn('status', ['submitted', 'graded', 'expired'])
+            ->orderByDesc('id')
+            ->first();
+        if ($latest && $this->attemptResultsUnlocked($assessment, $latest)) {
+            return true;
+        }
         if ($assignment && $assignment->isSelfSitting()) {
             return $this->openUnusedAssignmentsFor($user, $assessment)
                 ->contains(fn ($asg) => (int) $asg->id === (int) $assignment->id);
         }
-        if (! $assignment && $this->userHasFolderSelfTest($user, $assessment)) {
-            return $this->folderSelfAttemptsUsed($user, $assessment) < $this->maxAttemptsFor($assessment);
-        }
 
         return $this->openUnusedAssignmentsFor($user, $assessment)->isNotEmpty();
+    }
+
+    public function attemptSlotsUsed(User $user, LmsAssessment $assessment): int
+    {
+        return $this->attemptsUsed($user, $assessment) + $this->missedExamSlotCount($user, $assessment);
+    }
+
+    /** One missed scheduled exam counts as one used slot (so the next start is attempt 2). */
+    public function missedExamSlotCount(User $user, LmsAssessment $assessment): int
+    {
+        $attempts = LmsAssessmentAttempt::query()
+            ->where('assessment_id', $assessment->id)
+            ->where('user_id', $user->id)
+            ->get();
+        $examSittings = $this->availableAssessmentsForUser($user, $assessment->kind)
+            ->filter(fn ($row) => (int) ($row['assessment']->id ?? 0) === (int) $assessment->id)
+            ->map(fn ($row) => $row['assignment'] ?? null)
+            ->filter()
+            ->filter(fn ($asg) => ! $asg->isSelfSitting() && $asg->isExpired());
+        $hasUnusedMiss = $examSittings->contains(function ($asg) use ($attempts) {
+            return $attempts->filter(fn ($att) => $this->attemptBelongsToAssignment($att, $asg))->isEmpty();
+        });
+
+        return $hasUnusedMiss ? 1 : 0;
+    }
+
+    public function attemptResultsUnlocked(LmsAssessment $assessment, LmsAssessmentAttempt $attempt): bool
+    {
+        if ($attempt->results_published) {
+            return true;
+        }
+        if (method_exists($assessment, 'isInstantResults') && $assessment->isInstantResults()) {
+            return true;
+        }
+
+        return $assessment->isPractice() && in_array($attempt->status, ['submitted', 'graded', 'expired'], true);
+    }
+
+    /** Create or reuse a start-anytime sitting for a remaining attempt after miss/publish. */
+    public function ensureAnytimeRetakeSitting(User $user, LmsAssessment $assessment, ?LmsAssessmentAssignment $source = null): LmsAssessmentAssignment
+    {
+        $existing = LmsAssessmentAssignment::query()
+            ->where('assessment_id', (int) $assessment->id)
+            ->where('student_id', (int) $user->id)
+            ->orderBy('id')
+            ->get()
+            ->first(function ($asg) use ($user, $assessment) {
+                if (! $asg->isSelfSitting()) {
+                    return false;
+                }
+                $used = LmsAssessmentAttempt::query()
+                    ->where('assessment_id', $assessment->id)
+                    ->where('user_id', $user->id)
+                    ->get()
+                    ->filter(fn ($att) => $this->attemptBelongsToAssignment($att, $asg))
+                    ->count();
+
+                return $used === 0;
+            });
+        if ($existing) {
+            return $existing;
+        }
+
+        $asg = new LmsAssessmentAssignment();
+        $asg->assessment_id = (int) $assessment->id;
+        $asg->student_id = (int) $user->id;
+        if (Schema::hasColumn($asg->getTable(), 'sitting_kind')) {
+            $asg->sitting_kind = LmsAssessmentAssignment::KIND_SELF;
+        }
+        if (Schema::hasColumn($asg->getTable(), 'timezone')) {
+            $asg->timezone = $source->timezone ?? (string) config('app.timezone', 'Asia/Dubai');
+        }
+        if (Schema::hasColumn($asg->getTable(), 'marker_user_id') && ! empty($source?->marker_user_id)) {
+            $asg->marker_user_id = (int) $source->marker_user_id;
+        }
+        if (Schema::hasColumn($asg->getTable(), 'available_from')) {
+            $asg->available_from = null;
+        }
+        if (Schema::hasColumn($asg->getTable(), 'available_until')) {
+            $asg->available_until = null;
+        }
+        $asg->save();
+
+        return $asg;
     }
 
     /** Allowed attempt total for display / gating (defaults to 1 when unset). */
@@ -1529,8 +1630,10 @@ class LmsAssessmentService
                 $finished->push($matched);
             }
 
-            // Every finished attempt is its own Submitted/Results row (Marking Required included).
-            $remainingAttempts = $usedOnSitting < $max && $assessment->isPublished();
+            // Remaining exam/self retakes: only after published (or instant/practice) results.
+            $hasUnlockedResults = $finished->contains(fn ($done) => $this->attemptResultsUnlocked($assessment, $done));
+            $remainingAttempts = $isSelf && $usedOnSitting < $max && $assessment->isPublished() && $hasUnlockedResults
+                && $this->attemptSlotsUsed($user, $assessment) < $max;
             if ($finished->isNotEmpty()) {
                 $finishTotal = max($attemptTotal, $finished->count());
                 foreach ($finished as $fi => $done) {
@@ -1571,7 +1674,9 @@ class LmsAssessmentService
             if ($assignment && $assignment->isExpired()) {
                 $missed->push($base + [
                     'attempt' => null,
-                    'can_retake' => false,
+                    'can_retake' => $this->canRetake($user, $assessment, $assignment),
+                    'attempt_number' => 1,
+                    'attempt_total' => $max,
                 ]);
             } elseif ($assignment && $assignment->isNotYetOpen()) {
                 $upcoming->push($base + [
@@ -1586,18 +1691,6 @@ class LmsAssessmentService
                 ]);
             }
         }
-
-        // Result/Submitted: Retake only when Max attempts allows and an open unused sitting exists.
-        $results = $results->map(function ($row) use ($user) {
-            $row['can_retake'] = $this->canRetake($user, $row['assessment'], $row['assignment'] ?? null);
-
-            return $row;
-        });
-        $submitted = $submitted->map(function ($row) use ($user) {
-            $row['can_retake'] = $this->canRetake($user, $row['assessment'], $row['assignment'] ?? null);
-
-            return $row;
-        });
 
         foreach ($attemptsByAssessment as $aid => $atts) {
             $sample = $items->first(fn ($r) => (int) $r['assessment']->id === (int) $aid);
@@ -1636,6 +1729,16 @@ class LmsAssessmentService
         }
         $submitted = $submitted->unique(fn ($r) => (int) ($r['attempt']->id ?? 0))->values();
         $results = $results->unique(fn ($r) => (int) ($r['attempt']->id ?? 0))->values();
+        $results = $results->map(function ($row) use ($user) {
+            $row['can_retake'] = $this->canRetake($user, $row['assessment'], $row['assignment'] ?? null);
+
+            return $row;
+        });
+        $submitted = $submitted->map(function ($row) use ($user) {
+            $row['can_retake'] = $this->canRetake($user, $row['assessment'], $row['assignment'] ?? null);
+
+            return $row;
+        });
 
         // One Upcoming/Available row per test for this student. Extra identical assigns
         // stay in attempt_total (Attempt 1 of 3) instead of repeating the mock three times.
@@ -1657,6 +1760,9 @@ class LmsAssessmentService
         };
         $available = $collapseOpen($available);
         $upcoming = $collapseOpen($upcoming);
+        $missed = $missed->groupBy(fn ($r) => (int) $r['assessment']->id)->map(function ($group) {
+            return $group->sortBy(fn ($r) => (int) ($r['assignment']->id ?? 0))->first();
+        })->values();
 
         return compact('available', 'upcoming', 'inProgress', 'submitted', 'results', 'missed');
     }
