@@ -31,6 +31,18 @@ class LmsAssessmentAssignment extends Model
         return 'BEXT' . (int) $this->id;
     }
 
+    /** Unique per test-taker when several people share one batch sitting. */
+    public function displayCodeForStudent($studentId = null): string
+    {
+        $code = $this->displayCode();
+        $sid = (int) $studentId;
+        if ($sid > 0) {
+            return $code . '-' . $sid;
+        }
+
+        return $code;
+    }
+
     public function sittingKind(): string
     {
         if (! Schema::hasColumn($this->getTable(), 'sitting_kind')) {

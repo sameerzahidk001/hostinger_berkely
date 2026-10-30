@@ -477,7 +477,7 @@ class LmsAssessmentController extends Controller
         }
 
         $assignments = $assignments->filter(function ($assignment) use (
-            $assessmentId, $batchId, $courseId, $kind, $search, $markerOnlyUid, $courseIdsScope
+            $assessmentId, $batchId, $courseId, $kind, $markerOnlyUid, $courseIdsScope
         ) {
             $assessment = $assignment->assessment ?? null;
             if ($assessmentId > 0 && (int) $assignment->assessment_id !== $assessmentId) {
@@ -507,17 +507,6 @@ class LmsAssessmentController extends Controller
                 }
             } elseif (! $this->assessments->canManageSkillTests() && $assessment && ($assessment->isSkill() || $assessment->audience === LmsAssessment::AUDIENCE_STAFF)) {
                 return false;
-            }
-            if ($search !== '') {
-                $needle = mb_strtolower($search);
-                $hay = mb_strtolower(
-                    ($assessment->title ?? '') . ' ' . ($assessment->course->title ?? '') . ' '
-                    . ($assignment->id ?? '') . ' ' . ($assignment->assessment_id ?? '')
-                );
-                $idMatch = ctype_digit($search) && (int) $search === (int) $assignment->assessment_id;
-                if (! str_contains($hay, $needle) && ! $idMatch) {
-                    return false;
-                }
             }
 
             return true;
@@ -698,13 +687,6 @@ class LmsAssessmentController extends Controller
                     'name' => 'User #' . $att->user_id,
                     'email' => '',
                 ];
-            if ($search !== '') {
-                $needle = mb_strtolower($search);
-                $hay = mb_strtolower(($student->name ?? '') . ' ' . ($student->email ?? '') . ' ' . ($att->assessment->title ?? ''));
-                if (! str_contains($hay, $needle)) {
-                    continue;
-                }
-            }
             $assessment = $att->assessment
                 ?: $assessmentsById->get((int) $att->assessment_id)
                 ?: LmsAssessment::query()->find($att->assessment_id);
@@ -845,6 +827,26 @@ class LmsAssessmentController extends Controller
             }
             unset($disp['_assignment']);
             $rowsByKey[$k]['sitting_display'] = $disp;
+        }
+
+        if ($search !== '') {
+            $needle = mb_strtolower($search);
+            $rowsByKey = collect($rowsByKey)->filter(function ($r) use ($needle, $search) {
+                $disp = $r['sitting_display'] ?? [];
+                $hay = mb_strtolower(
+                    ($r['student']->name ?? '') . ' ' . ($r['student']->email ?? '') . ' '
+                    . ($r['assessment']->title ?? '') . ' ' . ($r['assessment']->course->title ?? '') . ' '
+                    . ($disp['appt_id'] ?? '') . ' ' . ($r['assignment']->id ?? '') . ' ' . ($r['assessment']->id ?? '')
+                );
+                if (str_contains($hay, $needle)) {
+                    return true;
+                }
+
+                return ctype_digit($search) && (
+                    (int) $search === (int) ($r['assessment']->id ?? 0)
+                    || (int) $search === (int) ($r['student']->id ?? 0)
+                );
+            })->all();
         }
 
         $rows = collect($rowsByKey)->values()->sortByDesc(function ($row) {
@@ -1761,9 +1763,12 @@ class LmsAssessmentController extends Controller
             $row['assignment'] = $asg;
         }
         $this->hydrateSittingDisplay($asg, $assessment);
-        $apptId = ($asg && ! empty($asg->id)) ? $asg->displayCode() : null;
+        $studentId = (int) ($row['student']->id ?? 0);
+        $apptId = ($asg && ! empty($asg->id))
+            ? $asg->displayCodeForStudent($studentId)
+            : null;
         if (! $apptId && ! empty($attempt?->assignment_id)) {
-            $apptId = 'BEXT' . (int) $attempt->assignment_id;
+            $apptId = 'BEXT' . (int) $attempt->assignment_id . ($studentId > 0 ? ('-' . $studentId) : '');
         }
         $start = $asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()
             ? 'Start anytime'
@@ -1842,24 +1847,14 @@ class LmsAssessmentController extends Controller
                 $out[$k] = $r;
                 continue;
             }
-            $isSelf = $asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting();
-            if ($isSelf || ! empty($r['attempt'])) {
-                $max = max(1, (int) ($assessment->max_attempts ?? $r['attempt_total'] ?? 1));
-                $rowsByKey[$k]['attempt_total'] = max((int) ($r['attempt_total'] ?? 1), $max);
-                $out[$k] = $rowsByKey[$k];
-                continue;
-            }
             $pair = (int) ($assessment->id ?? 0) . ':' . (int) ($r['student']->id ?? 0);
             if (! isset($picked[$pair]) || $this->cimaRowBeats($r, $rowsByKey[$picked[$pair]] ?? [])) {
                 $picked[$pair] = $k;
             }
         }
         foreach ($picked as $k) {
-            if (isset($out[$k])) {
-                continue;
-            }
             $max = max(1, (int) ($rowsByKey[$k]['assessment']->max_attempts ?? 1));
-            $rowsByKey[$k]['attempt_number'] = 1;
+            $rowsByKey[$k]['attempt_number'] = (int) ($rowsByKey[$k]['attempt_number'] ?? 1);
             $rowsByKey[$k]['attempt_total'] = max((int) ($rowsByKey[$k]['attempt_total'] ?? 1), $max);
             $out[$k] = $rowsByKey[$k];
         }

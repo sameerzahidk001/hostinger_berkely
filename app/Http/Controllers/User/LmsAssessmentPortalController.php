@@ -361,7 +361,11 @@ class LmsAssessmentPortalController extends Controller
             ->first(fn ($asg) => $this->assessments->attemptBelongsToAssignment($attempt, $asg));
         $canRetake = $this->assessments->canRetake($user, $attempt->assessment, $assignment);
         $meta = $this->assessments->sittingAttemptMeta((int) $user->id, $attempt->assessment, $assignment);
-        $appointmentId = $assignment?->displayCode();
+        $appointmentId = $assignment
+            ? (method_exists($assignment, 'displayCodeForStudent')
+                ? $assignment->displayCodeForStudent((int) $user->id)
+                : $assignment->displayCode())
+            : null;
         $attemptTotal = max((int) ($meta['total'] ?? 1), $this->assessments->maxAttemptsFor($assessment));
         $attemptLabel = 'Attempt ' . $meta['number'] . ' of ' . $attemptTotal;
 
