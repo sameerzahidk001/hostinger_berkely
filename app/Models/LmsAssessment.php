@@ -111,7 +111,14 @@ class LmsAssessment extends Model
             if ($assignment->class_batch_id && Schema::hasTable('class_batch_student')) {
                 $bid = (int) $assignment->class_batch_id;
                 if (! isset($batchCounts[$bid])) {
-                    $batchCounts[$bid] = (int) DB::table('class_batch_student')->where('class_batch_id', $bid)->count();
+                    $pivot = DB::table('class_batch_student')->where('class_batch_id', $bid);
+                    $batchCounts[$bid] = (int) $pivot->count();
+                    if ($batchCounts[$bid] === 0 && Schema::hasTable('class_schedules') && Schema::hasTable('class_schedule_student')) {
+                        $scheduleIds = DB::table('class_schedules')->where('batch_id', $bid)->pluck('id');
+                        $batchCounts[$bid] = $scheduleIds->isEmpty()
+                            ? 0
+                            : (int) DB::table('class_schedule_student')->whereIn('class_schedule_id', $scheduleIds)->distinct()->count('student_id');
+                    }
                 }
                 $count += max(1, $batchCounts[$bid]);
             }

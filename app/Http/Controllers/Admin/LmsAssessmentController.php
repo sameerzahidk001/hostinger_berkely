@@ -523,16 +523,16 @@ class LmsAssessmentController extends Controller
         try {
             $assessmentsById = $assessmentIds === []
                 ? collect()
-                : LmsAssessment::query()->with('course')->whereIn('id', $assessmentIds)->get()->keyBy(fn ($row) => (int) $row->id);
+                : LmsAssessment::withTrashed()->with('course')->whereIn('id', $assessmentIds)->get()->keyBy(fn ($row) => (int) $row->id);
         } catch (\Throwable $e) {
             report($e);
             $assessmentsById = $assessmentIds === []
                 ? collect()
-                : LmsAssessment::query()->whereIn('id', $assessmentIds)->get()->keyBy(fn ($row) => (int) $row->id);
+                : LmsAssessment::withTrashed()->whereIn('id', $assessmentIds)->get()->keyBy(fn ($row) => (int) $row->id);
         }
         foreach ($assignments as $assignment) {
             $aid = (int) $assignment->assessment_id;
-            $found = $assessmentsById->get($aid) ?: LmsAssessment::query()->find($aid);
+            $found = $assessmentsById->get($aid) ?: LmsAssessment::withTrashed()->find($aid);
             if ($found) {
                 $assessmentsById->put($aid, $found);
                 $assignment->setRelation('assessment', $found);
@@ -551,26 +551,21 @@ class LmsAssessmentController extends Controller
             }
 
             $students = collect();
-            if ($assignment->student_id) {
-                $student = $assignment->student
-                    ?: \App\Models\User::query()->find($assignment->student_id);
-                if ($student) {
-                    $students->push($student);
-                }
-            } elseif ($assignment->class_batch_id) {
+            if ($assignment->class_batch_id) {
                 $bid = (int) $assignment->class_batch_id;
                 if ($batchId > 0 && $bid !== $batchId) {
                     continue;
                 }
                 if (! isset($batchStudentCache[$bid])) {
-                    $ids = Schema::hasTable('class_batch_student')
-                        ? DB::table('class_batch_student')->where('class_batch_id', $bid)->pluck('student_id')
-                        : collect();
-                    $batchStudentCache[$bid] = $ids->isEmpty()
-                        ? collect()
-                        : User::query()->whereIn('id', $ids)->get();
+                    $batchStudentCache[$bid] = $this->studentsForBatchId($bid);
                 }
                 $students = $batchStudentCache[$bid];
+                if ($assignment->student_id) {
+                    $direct = $assignment->student ?: User::query()->find($assignment->student_id);
+                    if ($direct && ! $students->contains(fn ($row) => (int) ($row->id ?? 0) === (int) $direct->id)) {
+                        $students = $students->push($direct)->values();
+                    }
+                }
                 if ($students->isEmpty()) {
                     $batch = $assignment->batch ?: ClassBatch::query()->find($bid);
                     $students = collect([(object) [
@@ -578,6 +573,12 @@ class LmsAssessmentController extends Controller
                         'name' => $batch ? ($batch->code . ' — ' . $batch->name) : ('Batch #' . $bid),
                         'email' => 'Batch assignment (no students linked yet)',
                     ]]);
+                }
+            } elseif ($assignment->student_id) {
+                $student = $assignment->student
+                    ?: \App\Models\User::query()->find($assignment->student_id);
+                if ($student) {
+                    $students->push($student);
                 }
             }
 
@@ -660,7 +661,7 @@ class LmsAssessmentController extends Controller
         $attemptAssessmentIds = $allAttempts->pluck('assessment_id')->map(fn ($id) => (int) $id)->unique()->filter()->values();
         $missingAssessmentIds = $attemptAssessmentIds->diff($assessmentsById->keys()->map(fn ($id) => (int) $id))->filter();
         if ($missingAssessmentIds->isNotEmpty()) {
-            foreach (LmsAssessment::query()->whereIn('id', $missingAssessmentIds->all())->get() as $extraAssessment) {
+            foreach (LmsAssessment::withTrashed()->whereIn('id', $missingAssessmentIds->all())->get() as $extraAssessment) {
                 $assessmentsById->put((int) $extraAssessment->id, $extraAssessment);
             }
         }
@@ -807,7 +808,9 @@ class LmsAssessmentController extends Controller
             if ($assessment) {
                 $rowsByKey[$k]['assessment'] = $assessment;
             }
-            if (! $assessment || (method_exists($assessment, 'trashed') && $assessment->trashed())) {
+            if (! $assessment) {
+                unset($rowsByKey[$k]);
+            } elseif (method_exists($assessment, 'trashed') && $assessment->trashed() && empty($r['assignment'])) {
                 unset($rowsByKey[$k]);
             }
         }
@@ -816,7 +819,7 @@ class LmsAssessmentController extends Controller
             if (! $assessment) {
                 return false;
             }
-            if (method_exists($assessment, 'trashed') && $assessment->trashed()) {
+            if (method_exists($assessment, 'trashed') && $assessment->trashed() && empty($r['assignment'])) {
                 return false;
             }
             if ($this->isRemovedTestTaker($r['student'] ?? null)) {
@@ -1055,10 +1058,7 @@ class LmsAssessmentController extends Controller
                 } elseif ($assignment->class_batch_id && Schema::hasTable('class_batches')) {
                     $bid = (int) $assignment->class_batch_id;
                     if (! isset($batchStudentCache[$bid])) {
-                        $batch = ClassBatch::query()->find($bid);
-                        $batchStudentCache[$bid] = $batch
-                            ? $batch->students()->get()
-                            : collect();
+                        $batchStudentCache[$bid] = $this->studentsForBatchId($bid);
                     }
                     $students = $batchStudentCache[$bid];
                     if ($students->isEmpty()) {
@@ -1543,6 +1543,47 @@ class LmsAssessmentController extends Controller
         }
 
         return null;
+    }
+
+    protected function studentsForBatchId(int $bid)
+    {
+        $ids = collect();
+        if (Schema::hasTable('class_batch_student')) {
+            if (Schema::hasColumn('class_batch_student', 'student_id')) {
+                $ids = $ids->merge(
+                    DB::table('class_batch_student')->where('class_batch_id', $bid)->pluck('student_id')
+                );
+            }
+            if (Schema::hasColumn('class_batch_student', 'user_id')) {
+                $ids = $ids->merge(
+                    DB::table('class_batch_student')->where('class_batch_id', $bid)->pluck('user_id')
+                );
+            }
+        }
+        if (Schema::hasTable('class_schedule_student') && Schema::hasTable('class_schedules')) {
+            $scheduleIds = DB::table('class_schedules')->where('batch_id', $bid)->pluck('id');
+            if ($scheduleIds->isNotEmpty()) {
+                $ids = $ids->merge(
+                    DB::table('class_schedule_student')->whereIn('class_schedule_id', $scheduleIds)->pluck('student_id')
+                );
+            }
+        }
+        $ids = $ids->map(fn ($id) => (int) $id)->unique()->filter()->values();
+        $users = $ids->isEmpty()
+            ? collect()
+            : User::query()->whereIn('id', $ids)->get();
+        if ($users->isEmpty()) {
+            try {
+                $batch = ClassBatch::query()->find($bid);
+                if ($batch) {
+                    $users = $batch->students()->get();
+                }
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
+
+        return $users;
     }
 
     protected function isRemovedTestTaker($student): bool
