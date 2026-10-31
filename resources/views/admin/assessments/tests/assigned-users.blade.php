@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.searchable-select-assets')
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
-<!-- lms-assigned-tests-20261030n -->
+<!-- lms-assigned-tests-20261030o -->
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
@@ -221,6 +221,15 @@
                             }
                             $spend = $attempt?->spendMinutes();
                             $disp = $row['sitting_display'] ?? [];
+                            if (! $attempt && ! empty($disp['status'])) {
+                                $statusText = $disp['status'];
+                                $statusClass = match ($statusText) {
+                                    'Missed' => 'lms-status-missed',
+                                    'Upcoming' => 'lms-status-upcoming',
+                                    'Marking Required' => 'lms-status-completed',
+                                    default => 'lms-status-available',
+                                };
+                            }
                             $appointment = $disp['appointment'] ?? $assignment?->appointmentWindowLabel();
                             if ($appointment === null || $appointment === '') {
                                 $appointment = '—';
