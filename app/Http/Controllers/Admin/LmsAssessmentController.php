@@ -51,7 +51,7 @@ class LmsAssessmentController extends Controller
             $query->where('kind', '!=', LmsAssessment::KIND_SKILL)
                 ->where('audience', '!=', LmsAssessment::AUDIENCE_STAFF);
         }
-        if ($this->lms->isInstructorActor() && ! $this->lms->isAdminActor() && ! panel_sees_all_dashboards()) {
+        if ($this->shouldScopeTestsToOwnAssignments()) {
             $uid = (int) (Auth::id() ?? 0);
             $markedIds = ($uid > 0 && Schema::hasColumn('lms_assessment_assignments', 'marker_user_id'))
                 ? LmsAssessmentAssignment::query()->where('marker_user_id', $uid)->pluck('assessment_id')->all()
@@ -432,7 +432,7 @@ class LmsAssessmentController extends Controller
 
         $courseIdsScope = null;
         $markerOnlyUid = null;
-        if ($this->lms->isInstructorActor() && ! $this->lms->isAdminActor() && ! panel_sees_all_dashboards()) {
+        if ($this->shouldScopeTestsToOwnAssignments()) {
             $courseIdsScope = $this->lms->coursesForActor()->pluck('id')->map(fn ($id) => (int) $id)->all();
             $markerOnlyUid = (int) (Auth::id() ?? 0);
         }
@@ -2257,5 +2257,18 @@ class LmsAssessmentController extends Controller
                 && ! panel_sees_all_dashboards()
                 && ! $assessment->isSkill(),
         ];
+    }
+
+    /** Instructors and Musa: only tests they created or were assigned to mark. Real Admin still sees all. */
+    protected function shouldScopeTestsToOwnAssignments(): bool
+    {
+        if ($this->lms->isAdminActor()) {
+            return false;
+        }
+        if ($this->lms->isInstructorActor()) {
+            return true;
+        }
+
+        return function_exists('is_musa_shaikh_user') && is_musa_shaikh_user();
     }
 }
