@@ -748,7 +748,10 @@ class LmsAssessmentService
     public function startAttempt(User $user, LmsAssessment $assessment, ?int $assignmentId = null, ?int $folderId = null): LmsAssessmentAttempt
     {
         $this->ensure();
-        abort_unless($assessment->isPublished(), 403);
+        abort_unless(
+            $assessment->isPublished() || $this->canRetake($user, $assessment),
+            403
+        );
         abort_unless($this->userCanAccessAssessment($user, $assessment), 403);
 
         $accessRows = $this->availableAssessmentsForUser($user, $assessment->kind)
@@ -1458,9 +1461,6 @@ class LmsAssessmentService
      */
     public function canRetake(User $user, LmsAssessment $assessment, ?LmsAssessmentAssignment $assignment = null): bool
     {
-        if (! $assessment->isPublished()) {
-            return false;
-        }
         if (LmsAssessmentAttempt::query()
             ->where('assessment_id', $assessment->id)
             ->where('user_id', $user->id)
@@ -1481,11 +1481,17 @@ class LmsAssessmentService
         if ($latest) {
             return $this->attemptResultsUnlocked($assessment, $latest);
         }
+        $missedThisSitting = $assignment
+            && ! $assignment->isSelfSitting()
+            && ($assignment->isExpired() || $this->isCimaCohortEmail($user->email ?? null));
+        if ($missedThisSitting || $this->missedExamSlotCount($user, $assessment) > 0) {
+            return $max > 1;
+        }
+        if (! $assessment->isPublished()) {
+            return false;
+        }
         if (! $assignment && $this->userHasFolderSelfTest($user, $assessment)) {
             return $this->folderSelfAttemptsUsed($user, $assessment) < $max;
-        }
-        if ($this->missedExamSlotCount($user, $assessment) > 0) {
-            return true;
         }
         if ($assignment && $assignment->isSelfSitting()) {
             return $this->openUnusedAssignmentsFor($user, $assessment)
@@ -1797,7 +1803,7 @@ class LmsAssessmentService
                 if ($assignment && ($assignment->isExpired() || $cimaUnused)) {
                     $missed->push($base + [
                         'attempt' => null,
-                        'can_retake' => $this->canRetake($user, $assessment, $assignment),
+                        'can_retake' => $max > 1 || $this->canRetake($user, $assessment, $assignment),
                     ]);
                 }
                 continue;
@@ -1812,7 +1818,7 @@ class LmsAssessmentService
             if ($examWindowPassed) {
                 $missed->push($base + [
                     'attempt' => null,
-                    'can_retake' => $this->canRetake($user, $assessment, $assignment),
+                    'can_retake' => $max > 1 || $this->canRetake($user, $assessment, $assignment),
                     'attempt_number' => 1,
                     'attempt_total' => $max,
                 ]);
