@@ -399,13 +399,14 @@ class LmsAssessmentService
             }
             $forThisStudent = (int) ($assignment->student_id ?? 0) === $userId;
             $isSelf = method_exists($assignment, 'isSelfSitting') && $assignment->isSelfSitting();
-            if ($isSelf && ! $forThisStudent) {
-                continue;
-            }
-            if (! $forThisStudent && $isSelf) {
+            // Only the scheduled exam sitting. Do not inject self/anytime rows (those looked like extra Available tests).
+            if ($isSelf) {
                 continue;
             }
             if (! $forThisStudent && empty($assignment->class_batch_id) && empty($assignment->available_from)) {
+                continue;
+            }
+            if (empty($assignment->available_from) && empty($assignment->available_until)) {
                 continue;
             }
             $key = (int) $assignment->id . ':' . (int) $assessment->id;
@@ -413,7 +414,7 @@ class LmsAssessmentService
                 continue;
             }
             $assignment->setRelation('assessment', $assessment);
-            if (! $isSelf && method_exists($assignment, 'applyMissingExamWindow')) {
+            if (method_exists($assignment, 'applyMissingExamWindow')) {
                 $assignment->applyMissingExamWindow('2026-10-26 20:30:00', 'Asia/Dubai', 180);
             }
             $out->push(['assessment' => $assessment, 'assignment' => $assignment]);
@@ -1754,7 +1755,13 @@ class LmsAssessmentService
                 continue;
             }
 
-            if ($assignment && $assignment->isExpired()) {
+            $examWindowPassed = $assignment
+                && ! $assignment->isSelfSitting()
+                && ($assignment->isExpired()
+                    || ($this->isCimaCohortEmail($user->email ?? null)
+                        && $assignment->windowStart()
+                        && now()->gt($assignment->windowStart()->copy()->addMinutes(max(1, (int) ($assessment->durationMinutes() ?: 180))))));
+            if ($examWindowPassed) {
                 $missed->push($base + [
                     'attempt' => null,
                     'can_retake' => $this->canRetake($user, $assessment, $assignment),
