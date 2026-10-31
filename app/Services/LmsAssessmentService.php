@@ -339,6 +339,47 @@ class LmsAssessmentService
         return $out;
     }
 
+    /** Sitting this student is on (direct or batch), so Missed/Available can show BEXT. */
+    protected function resolveAssignmentForUser(User $user, LmsAssessment $assessment): ?LmsAssessmentAssignment
+    {
+        $userId = (int) $user->id;
+        $aid = (int) $assessment->id;
+        if ($userId <= 0 || $aid <= 0) {
+            return null;
+        }
+        try {
+            $own = LmsAssessmentAssignment::query()
+                ->where('assessment_id', $aid)
+                ->where('student_id', $userId)
+                ->orderByDesc('id')
+                ->first();
+            if ($own) {
+                return $own;
+            }
+            $batchIds = [];
+            if (Schema::hasTable('class_batch_student')) {
+                $studentCol = Schema::hasColumn('class_batch_student', 'student_id') ? 'student_id' : 'user_id';
+                $batchIds = DB::table('class_batch_student')
+                    ->where($studentCol, $userId)
+                    ->pluck('class_batch_id')
+                    ->map(fn ($id) => (int) $id)
+                    ->all();
+            }
+            $batchIds = array_values(array_unique(array_filter($batchIds)));
+            if ($batchIds !== []) {
+                return LmsAssessmentAssignment::query()
+                    ->where('assessment_id', $aid)
+                    ->whereIn('class_batch_id', $batchIds)
+                    ->orderByDesc('id')
+                    ->first();
+            }
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        return null;
+    }
+
     protected function cimaCohortEmails(): array
     {
         return [
@@ -1628,6 +1669,9 @@ class LmsAssessmentService
             $assessment = $row['assessment'];
             /** @var LmsAssessmentAssignment|null $assignment */
             $assignment = $row['assignment'];
+            if (! $assignment || empty($assignment->id)) {
+                $assignment = $this->resolveAssignmentForUser($user, $assessment);
+            }
             $aid = (int) $assessment->id;
             $asgId = (int) ($assignment->id ?? 0);
             $meta = $sittingMeta[$aid . ':' . $asgId] ?? ['number' => 1, 'total' => 1];

@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.sortable-table-assets')
 @php $lmsUserPreviewUrlTpl = route('user.assessments.user-preview', ['userId' => '__ID__']); @endphp
 @section('content')
-<!-- lms-my-tests-20261030p -->
+<!-- lms-my-tests-20261030q -->
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
         <h2>{{ $section === 'mocks' ? 'Mock Test' : ($section === 'skill' ? 'Skill Test' : 'My Tests') }}</h2>
@@ -244,11 +244,14 @@
                             (int) ($a->max_attempts ?? 0),
                             $attemptNo
                         );
-                        $apptId = $asg
-                            ? (method_exists($asg, 'displayCodeForStudent')
-                                ? $asg->displayCodeForStudent(auth()->id())
-                                : $asg->displayCode())
-                            : '—';
+                        $apptId = '—';
+                        if ($asg && ! empty($asg->id) && method_exists($asg, 'displayCodeForStudent')) {
+                            $apptId = $asg->displayCodeForStudent(auth()->id());
+                        } elseif ($asg && ! empty($asg->id)) {
+                            $apptId = $asg->displayCode();
+                        } elseif ($att && ! empty($att->assignment_id)) {
+                            $apptId = 'BEXT' . (int) $att->assignment_id . '-' . (int) auth()->id();
+                        }
                         $course = $a->course ?? null;
                         $assessorName = $att
                             ? $att->assessorLabel($asg)
