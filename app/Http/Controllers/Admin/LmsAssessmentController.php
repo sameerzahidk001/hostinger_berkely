@@ -566,7 +566,7 @@ class LmsAssessmentController extends Controller
             }
 
             foreach ($students as $student) {
-                if ($this->isRemovedTestTaker($student)) {
+                if ($this->isRemovedTestTaker($student, $assessment)) {
                     continue;
                 }
                 // One row per assignment sitting (same test can appear many times).
@@ -693,7 +693,7 @@ class LmsAssessmentController extends Controller
             if (! $assessment || (method_exists($assessment, 'trashed') && $assessment->trashed())) {
                 continue;
             }
-            if ($this->isRemovedTestTaker($student)) {
+            if ($this->isRemovedTestTaker($student, $assessment)) {
                 continue;
             }
             $asg = $this->assignmentForAttempt($att, $assignments, $assignmentsById);
@@ -721,7 +721,7 @@ class LmsAssessmentController extends Controller
             $assessment = $r['assessment'] ?? null;
             $seed = collect([$r['student'] ?? null]);
             foreach ($this->expandSittingStudents($seed, $asg, $assessment, $batchStudentCache) as $mate) {
-                if ($this->isRemovedTestTaker($mate)) {
+                if ($this->isRemovedTestTaker($mate, $assessment)) {
                     continue;
                 }
                 $key = ((int) ($asg->id ?? 0)) . ':' . (int) ($mate->id ?? 0);
@@ -837,7 +837,7 @@ class LmsAssessmentController extends Controller
             if (method_exists($assessment, 'trashed') && $assessment->trashed() && empty($r['assignment'])) {
                 return false;
             }
-            if ($this->isRemovedTestTaker($r['student'] ?? null)) {
+            if ($this->isRemovedTestTaker($r['student'] ?? null, $r['assessment'] ?? null)) {
                 return false;
             }
 
@@ -942,7 +942,7 @@ class LmsAssessmentController extends Controller
                     continue;
                 }
                 $student = $att->user ?: User::query()->find($att->user_id);
-                if (! $student || $this->isRemovedTestTaker($student)) {
+                if (! $student || $this->isRemovedTestTaker($student, $assessment)) {
                     continue;
                 }
                 $asg = $this->assignmentForAttempt($att, $assignments, $assignments->keyBy(fn ($row) => (int) $row->id));
@@ -1852,18 +1852,14 @@ class LmsAssessmentController extends Controller
         if (! $asg instanceof LmsAssessmentAssignment) {
             return;
         }
-        if (! $asg->relationLoaded('batch') || ! $asg->batch) {
-            $batch = ! empty($asg->class_batch_id)
-                ? ClassBatch::query()->find($asg->class_batch_id)
-                : ClassBatch::query()->where('code', 'BAT-0003')->first();
+        if ((! $asg->relationLoaded('batch') || ! $asg->batch) && ! empty($asg->class_batch_id)) {
+            $batch = ClassBatch::query()->find($asg->class_batch_id);
             if ($batch) {
                 $asg->setRelation('batch', $batch);
             }
         }
-        if (! $asg->relationLoaded('marker') || ! $asg->marker) {
-            $marker = ! empty($asg->marker_user_id)
-                ? User::query()->find($asg->marker_user_id)
-                : User::query()->where('name', 'like', 'Muhammad Sadiq%')->first();
+        if ((! $asg->relationLoaded('marker') || ! $asg->marker) && ! empty($asg->marker_user_id)) {
+            $marker = User::query()->find($asg->marker_user_id);
             if ($marker) {
                 $asg->setRelation('marker', $marker);
             }
@@ -1980,15 +1976,20 @@ class LmsAssessmentController extends Controller
         }
     }
 
-    protected function isRemovedTestTaker($student): bool
+    /** Hide Imthiyas only on the CIMA MCS sitting, not on other batch tests. */
+    protected function isRemovedTestTaker($student, $assessment = null): bool
     {
         if (! $student) {
             return false;
         }
         $name = mb_strtolower(trim((string) ($student->name ?? '')));
         $email = mb_strtolower(trim((string) ($student->email ?? '')));
+        if (! str_contains($name, 'imthiyas') && ! str_contains($email, 'imthiyas')) {
+            return false;
+        }
+        $hay = mb_strtolower(trim((string) ($assessment->title ?? '') . ' ' . (string) ($assessment->course->title ?? '')));
 
-        return str_contains($name, 'imthiyas') || str_contains($email, 'imthiyas');
+        return str_contains($hay, 'cima mcs') || str_contains($hay, 'management case');
     }
 
     protected function assignmentForAttempt($att, $assignments, $assignmentsById): ?LmsAssessmentAssignment

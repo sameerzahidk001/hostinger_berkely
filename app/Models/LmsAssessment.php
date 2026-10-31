@@ -168,7 +168,7 @@ class LmsAssessment extends Model
         }
 
         $ids = $ids->map(fn ($id) => (int) $id)->unique()->filter()->values();
-        if ($ids->isEmpty()) {
+        if ($ids->isEmpty() || ! $isCima) {
             return $ids;
         }
         try {
