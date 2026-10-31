@@ -402,10 +402,10 @@ class LmsAssessmentService
             if ($isSelf && ! $forThisStudent) {
                 continue;
             }
-            if (! $forThisStudent && empty($assignment->class_batch_id)) {
+            if (! $forThisStudent && $isSelf) {
                 continue;
             }
-            if (! $forThisStudent && ! $isSelf && empty($assignment->available_from)) {
+            if (! $forThisStudent && empty($assignment->class_batch_id) && empty($assignment->available_from)) {
                 continue;
             }
             $key = (int) $assignment->id . ':' . (int) $assessment->id;

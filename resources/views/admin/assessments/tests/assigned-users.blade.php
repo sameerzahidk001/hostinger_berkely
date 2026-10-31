@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.searchable-select-assets')
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
-<!-- lms-assigned-tests-20261030m -->
+<!-- lms-assigned-tests-20261030n -->
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
@@ -212,7 +212,7 @@
                             } elseif ($assignment && $assignment->isNotYetOpen()) {
                                 $statusClass = 'lms-status-upcoming';
                                 $statusText = 'Upcoming';
-                            } elseif ($assignment && $assignment->isExpired()) {
+                            } elseif ($assignment && ! $assignment->isSelfSitting() && $assignment->isExpired()) {
                                 $statusClass = 'lms-status-missed';
                                 $statusText = 'Missed';
                             } else {
@@ -241,10 +241,14 @@
                             if ((int) $durationMins <= 0 && !empty($disp['appointment'])) {
                                 $durationMins = 180;
                             }
-                            $apptId = $disp['appt_id'] ?? $assignment?->displayCode()
-                                ?? (! empty($attempt?->assignment_id) ? ('BEXT' . (int) $attempt->assignment_id) : null);
-                            if ($apptId === null || $apptId === '' || $apptId === 'BEXT0') {
-                                $apptId = ! empty($attempt?->id) ? ('Sit' . (int) $attempt->id) : '—';
+                            $studentId = (int) ($row['student']->id ?? 0);
+                            $apptId = $disp['appt_id'] ?? null;
+                            if ($assignment && $studentId > 0 && method_exists($assignment, 'displayCodeForStudent')) {
+                                $apptId = $assignment->displayCodeForStudent($studentId);
+                            } elseif ($apptId === null || $apptId === '' || $apptId === 'BEXT0') {
+                                $apptId = ! empty($attempt?->assignment_id)
+                                    ? ('BEXT' . (int) $attempt->assignment_id . ($studentId > 0 ? ('-' . $studentId) : ''))
+                                    : (! empty($attempt?->id) ? ('Sit' . (int) $attempt->id) : '—');
                             }
                             $timezoneLabel = $disp['timezone'] ?? $assignment?->timezoneLabel();
                             if ($timezoneLabel === null || $timezoneLabel === '') {
@@ -259,6 +263,26 @@
                             $batchCode = $disp['batch'] ?? ($assignment?->batch?->code ?? $assignment?->batch?->name);
                             $attemptNo = (int) ($row['attempt_number'] ?? 1);
                             $attemptTotal = (int) ($row['attempt_total'] ?? 1);
+                            if (! $attempt && $statusText === 'Assigned' && ! ($assignment && $assignment->isSelfSitting())) {
+                                $startCheck = $assignment && method_exists($assignment, 'windowStart') ? $assignment->windowStart() : null;
+                                if (! $startCheck && ! empty($appointment) && $appointment !== '—' && stripos((string) $appointment, 'anytime') === false) {
+                                    try {
+                                        $startCheck = \Carbon\Carbon::createFromFormat('d/m/Y, H:i', $appointment);
+                                    } catch (\Throwable $e) {
+                                        $startCheck = null;
+                                    }
+                                }
+                                if ($startCheck) {
+                                    $endCheck = $assignment && method_exists($assignment, 'appointmentEnd') ? $assignment->appointmentEnd() : null;
+                                    if (! $endCheck) {
+                                        $endCheck = $startCheck->copy()->addMinutes(max(1, (int) $durationMins));
+                                    }
+                                    if (now()->gt($endCheck)) {
+                                        $statusClass = 'lms-status-missed';
+                                        $statusText = 'Missed';
+                                    }
+                                }
+                            }
                         @endphp
                         @if($assessment)
                         <tr>
