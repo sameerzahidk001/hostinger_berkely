@@ -53,6 +53,20 @@ class LmsAssessmentPortalController extends Controller
             }
         }
 
+        if (! $request->has('tab')
+            && $tab === 'available'
+            && $buckets['available']->isEmpty()
+            && $buckets['missed']->isNotEmpty()) {
+            $tab = 'missed';
+        }
+
+        if (! $request->has('tab')
+            && $tab === 'available'
+            && $buckets['available']->isEmpty()
+            && $buckets['missed']->isNotEmpty()) {
+            $tab = 'missed';
+        }
+
         $list = match ($tab) {
             'upcoming' => $buckets['upcoming'],
             'in_progress' => $buckets['inProgress'],

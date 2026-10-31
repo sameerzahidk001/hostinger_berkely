@@ -1810,11 +1810,27 @@ class LmsAssessmentController extends Controller
         $tz = $asg?->timezoneLabel() ?: null;
         $isCohort = $this->isCimaCohortSitting($assessment, $asg, collect([$row['student'] ?? null]));
         if ($isCohort) {
-            $apptId = ($apptId && $apptId !== '—' && $apptId !== 'BEXT0') ? $apptId : (($asg && ! empty($asg->id)) ? $asg->displayCode() : $apptId);
+            $apptId = ($apptId && $apptId !== '—' && $apptId !== 'BEXT0') ? $apptId : (($asg && ! empty($asg->id)) ? $asg->displayCodeForStudent($studentId) : $apptId);
+            if ($asg && ! $attempt && $asg->isSelfSitting() && Schema::hasColumn($asg->getTable(), 'sitting_kind')) {
+                $asg->sitting_kind = LmsAssessmentAssignment::KIND_EXAM;
+            }
+            if ($asg && ! ($asg->isSelfSitting() && $attempt)) {
+                $asg->applyMissingExamWindow('2026-10-26 20:30:00', 'Asia/Dubai', 180);
+            }
             $start = $asg?->windowStart()?->format('d/m/Y, H:i') ?: '26/10/2026, 20:30';
             $tz = ($tz && $tz !== '') ? $tz : 'Asia/Dubai · GST';
             $created = ($created && $created !== '') ? $created : 'Admin';
             $assessor = ($assessor && $assessor !== '' && $assessor !== '—') ? $assessor : 'Muhammad Sadiq';
+        }
+        $status = 'Assigned';
+        if ($attempt) {
+            $status = $attempt->statusLabel();
+        } elseif ($asg && ! $asg->isSelfSitting() && $asg->isNotYetOpen()) {
+            $status = 'Upcoming';
+        } elseif ($asg && ! $asg->isSelfSitting() && $asg->isExpired()) {
+            $status = 'Missed';
+        } elseif (! $attempt && $isCohort && ! ($asg && $asg->isSelfSitting())) {
+            $status = 'Missed';
         }
 
         return [
@@ -1826,6 +1842,7 @@ class LmsAssessmentController extends Controller
             'assessor_id' => $asg?->marker_user_id ?? ($asg?->marker?->id ?? null),
             'batch' => $asg?->batch?->code ?: ($isCohort ? 'BAT-0003' : null),
             'course' => $assessment?->course?->title ?? ($isCohort ? 'CIMA Management Case Study' : null),
+            'status' => $status,
             '_assignment' => $asg,
         ];
     }

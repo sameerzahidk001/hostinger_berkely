@@ -57,6 +57,23 @@ class LmsAssessmentAssignment extends Model
         return $this->sittingKind() === self::KIND_SELF;
     }
 
+    /** In-memory exam window so Missed/Assigned matches the appointment shown. Does not save. */
+    public function applyMissingExamWindow(string $fromLocal, string $tz = 'Asia/Dubai', int $minutes = 180): void
+    {
+        if ($this->isSelfSitting()) {
+            return;
+        }
+        if (trim((string) ($this->timezone ?? '')) === '') {
+            $this->timezone = $tz;
+        }
+        if ($this->windowStart()) {
+            return;
+        }
+        $start = Carbon::parse($fromLocal, $tz);
+        $this->available_from = $start->copy()->timezone(config('app.timezone', $tz));
+        $this->available_until = $start->copy()->addMinutes(max(1, $minutes))->timezone(config('app.timezone', $tz));
+    }
+
     public function sittingKindLabel(): string
     {
         return $this->isSelfSitting() ? 'Self test' : 'Test';

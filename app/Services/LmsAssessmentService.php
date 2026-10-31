@@ -413,6 +413,9 @@ class LmsAssessmentService
                 continue;
             }
             $assignment->setRelation('assessment', $assessment);
+            if (! $isSelf && method_exists($assignment, 'applyMissingExamWindow')) {
+                $assignment->applyMissingExamWindow('2026-10-26 20:30:00', 'Asia/Dubai', 180);
+            }
             $out->push(['assessment' => $assessment, 'assignment' => $assignment]);
             $seen[] = $key;
         }
