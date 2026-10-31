@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.sortable-table-assets')
 @php $lmsUserPreviewUrlTpl = route('user.assessments.user-preview', ['userId' => '__ID__']); @endphp
 @section('content')
-<!-- lms-my-tests-20261030r -->
+<!-- lms-my-tests-20261030s -->
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
         <h2>{{ $section === 'mocks' ? 'Mock Test' : ($section === 'skill' ? 'Skill Test' : 'My Tests') }}</h2>
@@ -338,7 +338,7 @@
                         </td>
                         <td class="col-action">
                             @if($tab === 'missed')
-                                @if($canRetake)
+                                @if($canRetake || $attemptTotal > 1)
                                     <a class="btn btn-xs btn-primary" href="{{ route('user.assessments.start', $startParams) }}">Retake</a>
                                 @endif
                             @elseif($tab === 'available')
