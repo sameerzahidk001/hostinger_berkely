@@ -425,9 +425,15 @@ class LmsAssessmentService
         } catch (\Throwable $e) {
             return;
         }
-        $seen = $out->map(fn ($row) => (int) ($row['assignment']->id ?? 0) . ':' . (int) ($row['assessment']->id ?? 0))->all();
-        $userId = (int) $user->id;
-        foreach ($assignments as $assignment) {
+        $seenAids = $out->map(fn ($row) => (int) ($row['assessment']->id ?? 0))->all();
+        foreach ($assignments->groupBy(fn ($row) => (int) $row->assessment_id) as $aid => $group) {
+            $assignment = $group->first(fn ($row) => ! $row->isSelfSitting() && ! empty($row->available_from))
+                ?: $group->first(fn ($row) => ! $row->isSelfSitting() && ! empty($row->class_batch_id))
+                ?: $group->first(fn ($row) => ! $row->isSelfSitting())
+                ?: $group->sortBy('id')->first();
+            if (! $assignment) {
+                continue;
+            }
             $assessment = $assignment->assessment ?: LmsAssessment::query()->with('course')->find($assignment->assessment_id);
             if (! $assessment || (method_exists($assessment, 'trashed') && $assessment->trashed())) {
                 continue;
@@ -435,31 +441,18 @@ class LmsAssessmentService
             if ($kind && $assessment->kind !== $kind) {
                 continue;
             }
-            if (! $assessment->isPublished()) {
+            if (in_array((int) $assessment->id, $seenAids, true)) {
                 continue;
             }
-            $forThisStudent = (int) ($assignment->student_id ?? 0) === $userId;
-            $isSelf = method_exists($assignment, 'isSelfSitting') && $assignment->isSelfSitting();
-            // Only the scheduled exam sitting. Do not inject self/anytime rows (those looked like extra Available tests).
-            if ($isSelf) {
-                continue;
-            }
-            if (! $forThisStudent && empty($assignment->class_batch_id) && empty($assignment->available_from)) {
-                continue;
-            }
-            if (empty($assignment->available_from) && empty($assignment->available_until)) {
-                continue;
-            }
-            $key = (int) $assignment->id . ':' . (int) $assessment->id;
-            if (in_array($key, $seen, true)) {
-                continue;
+            if ($assignment->isSelfSitting() && Schema::hasColumn($assignment->getTable(), 'sitting_kind')) {
+                $assignment->sitting_kind = LmsAssessmentAssignment::KIND_EXAM;
             }
             $assignment->setRelation('assessment', $assessment);
             if (method_exists($assignment, 'applyMissingExamWindow')) {
                 $assignment->applyMissingExamWindow('2026-10-26 20:30:00', 'Asia/Dubai', 180);
             }
             $out->push(['assessment' => $assessment, 'assignment' => $assignment]);
-            $seen[] = $key;
+            $seenAids[] = (int) $assessment->id;
         }
     }
 
@@ -1672,13 +1665,21 @@ class LmsAssessmentService
             if (! $assignment || empty($assignment->id)) {
                 $assignment = $this->resolveAssignmentForUser($user, $assessment);
             }
+            $fromFolder = ! empty($row['from_folder']);
+            if ($this->isCimaCohortEmail($user->email ?? null) && $assignment && ! $fromFolder) {
+                if ($assignment->isSelfSitting() && Schema::hasColumn($assignment->getTable(), 'sitting_kind')) {
+                    $assignment->sitting_kind = LmsAssessmentAssignment::KIND_EXAM;
+                }
+                if (method_exists($assignment, 'applyMissingExamWindow')) {
+                    $assignment->applyMissingExamWindow('2026-10-26 20:30:00', 'Asia/Dubai', 180);
+                }
+            }
             $aid = (int) $assessment->id;
             $asgId = (int) ($assignment->id ?? 0);
             $meta = $sittingMeta[$aid . ':' . $asgId] ?? ['number' => 1, 'total' => 1];
             $max = $this->maxAttemptsFor($assessment);
             $attempts = $attemptsByAssessment->get($aid) ?? collect();
             $used = $attempts->count();
-            $fromFolder = ! empty($row['from_folder']);
             $isSelf = ($assignment && $assignment->isSelfSitting()) || $fromFolder;
 
             $sittingAttempts = $attempts
@@ -1790,10 +1791,13 @@ class LmsAssessmentService
 
             // Disabled tests: keep taken/missed history, but never offer a new start.
             if (! $assessment->isPublished()) {
-                if ($assignment && $assignment->isExpired()) {
+                $cimaUnused = $this->isCimaCohortEmail($user->email ?? null)
+                    && $assignment
+                    && ! $assignment->isSelfSitting();
+                if ($assignment && ($assignment->isExpired() || $cimaUnused)) {
                     $missed->push($base + [
                         'attempt' => null,
-                        'can_retake' => false,
+                        'can_retake' => $this->canRetake($user, $assessment, $assignment),
                     ]);
                 }
                 continue;
