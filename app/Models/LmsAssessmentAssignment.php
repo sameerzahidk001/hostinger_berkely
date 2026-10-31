@@ -230,12 +230,14 @@ class LmsAssessmentAssignment extends Model
     public function appointmentEnd(): ?Carbon
     {
         $start = $this->windowStart();
-        if ($start) {
+        if ($start && ! $this->isSelfSitting()) {
             $assessment = $this->relationLoaded('assessment') ? $this->assessment : $this->assessment;
             $mins = $assessment ? (int) ($assessment->durationMinutes() ?? 0) : 0;
-            if ($mins > 0) {
-                return $start->copy()->addMinutes($mins);
+            if ($mins <= 0) {
+                $mins = 180;
             }
+
+            return $start->copy()->addMinutes($mins);
         }
         if (! $this->available_until) {
             return null;

@@ -738,6 +738,32 @@ class LmsAssessmentController extends Controller
         }
         $rowsByKey = $rowsByKey + $expandedRows;
 
+        $claimedAttemptIds = [];
+        foreach ($rowsByKey as $r) {
+            if (! empty($r['attempt']->id)) {
+                $claimedAttemptIds[(int) $r['attempt']->id] = true;
+            }
+        }
+        foreach ($allAttempts as $att) {
+            if (isset($claimedAttemptIds[(int) $att->id])) {
+                continue;
+            }
+            foreach ($rowsByKey as $k => $r) {
+                if (! empty($r['attempt'])) {
+                    continue;
+                }
+                if ((int) ($r['student']->id ?? 0) !== (int) $att->user_id) {
+                    continue;
+                }
+                if ((int) ($r['assessment']->id ?? 0) !== (int) $att->assessment_id) {
+                    continue;
+                }
+                $rowsByKey[$k]['attempt'] = $att;
+                $claimedAttemptIds[(int) $att->id] = true;
+                break;
+            }
+        }
+
         // Attempt N of T per student+assessment (oldest sitting = 1).
         $sittingsByPair = collect($rowsByKey)->groupBy(
             fn ($r) => (int) ($r['assessment']->id ?? 0) . ':' . (int) ($r['student']->id ?? 0)
@@ -1684,17 +1710,20 @@ class LmsAssessmentController extends Controller
         }
         $cands = collect($assignments)->filter(
             fn ($row) => $aids->contains((int) ($row->assessment_id ?? 0))
+                && ! (method_exists($row, 'isSelfSitting') && $row->isSelfSitting())
         )->values();
         if ($cands->isEmpty() && $aids->isNotEmpty()) {
             try {
-                $cands = LmsAssessmentAssignment::query()->whereIn('assessment_id', $aids->all())->orderBy('id')->get();
+                $cands = LmsAssessmentAssignment::query()->whereIn('assessment_id', $aids->all())->orderBy('id')->get()
+                    ->filter(fn ($row) => ! (method_exists($row, 'isSelfSitting') && $row->isSelfSitting()))
+                    ->values();
             } catch (\Throwable $e) {
                 $cands = collect();
             }
         }
         $picked = $cands->first(fn ($row) => ! empty($row->class_batch_id) && ! empty($row->available_from))
-            ?: $cands->first(fn ($row) => ! empty($row->class_batch_id))
             ?: $cands->first(fn ($row) => ! empty($row->available_from))
+            ?: $cands->first(fn ($row) => ! empty($row->class_batch_id))
             ?: $cands->first(fn ($row) => ! empty($row->marker_user_id))
             ?: $cands->sortBy('id')->first();
 
@@ -1707,10 +1736,13 @@ class LmsAssessmentController extends Controller
             return null;
         }
         try {
-            $found = LmsAssessmentAssignment::query()
+            $foundRows = LmsAssessmentAssignment::query()
                 ->where('assessment_id', (int) $assessment->id)
                 ->orderBy('id')
-                ->first();
+                ->get();
+            $found = $foundRows->first(fn ($row) => ! (method_exists($row, 'isSelfSitting') && $row->isSelfSitting()) && ! empty($row->available_from))
+                ?: $foundRows->first(fn ($row) => ! (method_exists($row, 'isSelfSitting') && $row->isSelfSitting()))
+                ?: $foundRows->first();
             if ($found) {
                 $this->hydrateSittingDisplay($found, $assessment);
 
