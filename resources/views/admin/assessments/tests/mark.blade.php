@@ -4,7 +4,7 @@
 @include('admin.assessments.partials.limited-editor-assets')
 @include('admin.assessments.partials.qa-colors')
 @php
-    $feedbackMax = 2000;
+    $feedbackMax = 5000;
     $overallMax = 5000;
 @endphp
 <div class="row wrapper border-bottom white-bg page-heading">

@@ -232,7 +232,7 @@
                                         && app(\App\Services\LmsAssessmentService::class)->canManageSittingsFor($assessmentRow);
                                 @endphp
                                 @if($attempt && in_array($attempt->status, ['submitted', 'graded', 'expired'], true))
-                                    <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.mark', $attempt->id) }}">View Details</a>
+                                    <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.mark', $attempt->id) }}">Mark</a>
                                     <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.attempt-pdf', $attempt->id) }}" target="_blank">Download PDF</a>
                                     @if(! $attempt->results_published && $attempt->status === 'graded')
                                         <form action="{{ route('admin.assessments.tests.publish-attempt', $attempt->id) }}" method="POST">
