@@ -199,7 +199,7 @@ class LmsAssessmentService
 
     public function actorCanAccessAttempt(LmsAssessmentAttempt $attempt): bool
     {
-        if ($this->lms->isAdminActor() || panel_sees_all_dashboards()) {
+        if ($this->lms->isAdminActor()) {
             return true;
         }
         $attempt->loadMissing('assessment');
@@ -207,23 +207,31 @@ class LmsAssessmentService
             return $this->canManageSkillTests();
         }
         $uid = (int) (Auth::id() ?? 0);
-        if ($uid > 0 && Schema::hasColumn('lms_assessment_assignments', 'marker_user_id')) {
-            $asgId = (int) ($attempt->assignment_id ?? 0);
-            $isMarker = LmsAssessmentAssignment::query()
-                ->where('marker_user_id', $uid)
-                ->where('assessment_id', $attempt->assessment_id)
-                ->when($asgId > 0, fn ($q) => $q->where('id', $asgId))
-                ->exists();
-            if ($isMarker) {
+        if ($uid <= 0) {
+            return false;
+        }
+        if ((int) ($attempt->assessment->created_by_user_id ?? 0) === $uid) {
+            return true;
+        }
+        if (Schema::hasTable('lms_assessment_assignments')) {
+            $forThisTest = LmsAssessmentAssignment::query()
+                ->where('assessment_id', (int) $attempt->assessment_id);
+            if (Schema::hasColumn('lms_assessment_assignments', 'marker_user_id')
+                && (clone $forThisTest)->where('marker_user_id', $uid)->exists()) {
+                return true;
+            }
+            if (Schema::hasColumn('lms_assessment_assignments', 'assigned_by_user_id')
+                && (clone $forThisTest)->where('assigned_by_user_id', $uid)->exists()) {
                 return true;
             }
         }
-        if (! $this->canManageStudentAssessments()) {
-            return false;
-        }
-        $courseId = (int) ($attempt->assessment?->course_id ?? 0);
+        if ($this->lms->isInstructorActor()) {
+            $courseId = (int) ($attempt->assessment?->course_id ?? 0);
 
-        return $courseId <= 0 || $this->lms->instructorAssignedToCourse($courseId);
+            return $courseId <= 0 || $this->lms->instructorAssignedToCourse($courseId);
+        }
+
+        return false;
     }
 
     /** Staff roles that can be assigned assessments (CW, Accountant, Instructor). */
