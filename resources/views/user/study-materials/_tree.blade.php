@@ -35,7 +35,12 @@
                             : ($item->isExternal() ? 'fa-cloud text-info' : 'fa-file-o text-muted');
                     @endphp
                     <div class="sm-file-card">
-                        @php $kind = $item->portalKind(); @endphp
+                        @php
+                            $kind = $item->portalKind();
+                            if (method_exists($item, 'resolvedIconType') && $item->resolvedIconType() === 'video') {
+                                $kind = 'video';
+                            }
+                        @endphp
                         <a href="{{ $item->portalPreviewUrl() }}"
                            class="sm-file-link"
                            data-sm-file
@@ -43,14 +48,13 @@
                            data-sm-name="{{ $item->name }}"
                            @if($item->allowsDownload()) data-sm-download="{{ $item->portalDownloadUrl() }}" @endif
                            @if($item->portalPosterUrl()) data-sm-poster="{{ $item->portalPosterUrl() }}" @endif>
-                            <i class="fa {{ $iconClass }} sm-file-icon"></i>
+                            <i class="fa {{ $kind === 'video' ? 'fa-file-video-o text-info' : $iconClass }} sm-file-icon"></i>
                             <span class="sm-file-name">{{ $item->name }}</span>
                         </a>
                         @if($kind === 'video')
                             @php
                                 $previewUrl = $item->portalPreviewUrl();
                                 $posterUrl = $item->portalPosterUrl();
-                                $isWorkdrive = $item->isExternal() && str_contains($previewUrl, 'workdrive');
                             @endphp
                             <a href="{{ $previewUrl }}"
                                class="sm-video-thumb"
@@ -61,10 +65,8 @@
                                @if($posterUrl) data-sm-poster="{{ $posterUrl }}" @endif>
                                 @if($posterUrl)
                                     <img src="{{ $posterUrl }}" alt="{{ $item->name }}">
-                                @elseif($isWorkdrive)
-                                    <iframe src="{{ $previewUrl }}" title="{{ $item->name }}" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen></iframe>
                                 @else
-                                    <video muted playsinline preload="metadata" src="{{ $previewUrl }}#t=0.8"></video>
+                                    <i class="fa fa-file-video-o sm-video-mark"></i>
                                 @endif
                                 <div class="sm-video-play"><span><i class="fa fa-play"></i></span></div>
                             </a>
