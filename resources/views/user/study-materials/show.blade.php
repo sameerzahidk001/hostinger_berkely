@@ -55,11 +55,21 @@
 .sm-file-player,
 .sm-video-thumb{
     position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
     background:#000435;
     margin:0 12px 12px;
     border-radius:4px;
     overflow:hidden;
-    aspect-ratio:16/9;
+    width:calc(100% - 24px);
+    height:170px;
+    min-height:170px;
+}
+.sm-video-thumb .sm-video-mark{
+    font-size:46px;
+    color:#7dd3fc;
+    z-index:1;
 }
 .sm-file-player video,
 .sm-file-player iframe,
@@ -75,19 +85,19 @@
 .sm-video-play{
     position:absolute;
     inset:0;
-    display:flex;
+    display:flex !important;
     align-items:center;
     justify-content:center;
     color:#fff;
     font-size:28px;
     pointer-events:none;
-    text-shadow:0 2px 8px rgba(0,0,0,.45);
+    z-index:2;
 }
 .sm-video-play span{
     width:52px;
     height:52px;
     border-radius:50%;
-    background:rgba(248,150,31,.95);
+    background:#f8961f;
     color:#1e1e1e;
     display:flex;
     align-items:center;

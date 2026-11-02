@@ -111,15 +111,19 @@ class StudyMaterialItem extends Model
 
     public function resolvedIconType(): string
     {
+        $guessed = self::guessIconTypeFromName(
+            $this->name . ' ' . ($this->original_name ?? ''),
+            $this->mime
+        );
+        if ($guessed === 'video') {
+            return 'video';
+        }
         $chosen = self::normalizeIconType($this->icon_type);
         if ($chosen) {
             return $chosen;
         }
 
-        return self::guessIconTypeFromName(
-            $this->name . ' ' . ($this->original_name ?? ''),
-            $this->mime
-        ) ?: 'file';
+        return $guessed ?: 'file';
     }
 
     public function iconFaClass(): string

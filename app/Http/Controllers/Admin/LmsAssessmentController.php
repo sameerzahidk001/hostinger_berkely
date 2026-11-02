@@ -572,18 +572,6 @@ class LmsAssessmentController extends Controller
                 }
             }
 
-            if ($search !== '') {
-                $needle = mb_strtolower($search);
-                $students = $students->filter(function ($student) use ($needle, $assessment) {
-                    $hay = mb_strtolower(
-                        ($student->name ?? '') . ' ' . ($student->email ?? '') . ' '
-                        . ($assessment->title ?? '') . ' ' . ($assessment->course->title ?? '')
-                    );
-
-                    return str_contains($hay, $needle);
-                });
-            }
-
             foreach ($students as $student) {
                 if ($this->isRemovedTestTaker($student, $assessment)) {
                     continue;
@@ -879,18 +867,25 @@ class LmsAssessmentController extends Controller
             $needle = mb_strtolower($search);
             $rowsByKey = collect($rowsByKey)->filter(function ($r) use ($needle, $search) {
                 $disp = $r['sitting_display'] ?? [];
-                $hay = mb_strtolower(
+                $assessment = $r['assessment'] ?? null;
+                $assignment = $r['assignment'] ?? null;
+                $hay = mb_strtolower(trim(
                     ($r['student']->name ?? '') . ' ' . ($r['student']->email ?? '') . ' '
-                    . ($r['assessment']->title ?? '') . ' ' . ($r['assessment']->course->title ?? '') . ' '
-                    . ($disp['appt_id'] ?? '') . ' ' . ($r['assignment']->id ?? '') . ' ' . ($r['assessment']->id ?? '')
-                );
-                if (str_contains($hay, $needle)) {
+                    . ($assessment->title ?? '') . ' ' . (optional(optional($assessment)->course)->title ?? '') . ' '
+                    . (($assessment && method_exists($assessment, 'displayCode')) ? $assessment->displayCode() : '') . ' '
+                    . ($disp['appt_id'] ?? '') . ' ' . ($disp['appointment'] ?? '') . ' '
+                    . ($disp['assessor'] ?? '') . ' ' . ($disp['batch'] ?? '') . ' '
+                    . (optional(optional($assignment)->batch)->code ?? '') . ' ' . (optional(optional($assignment)->batch)->name ?? '') . ' '
+                    . ($assignment->id ?? '') . ' ' . ($assessment->id ?? '')
+                ));
+                if ($needle !== '' && str_contains($hay, $needle)) {
                     return true;
                 }
 
                 return ctype_digit($search) && (
-                    (int) $search === (int) ($r['assessment']->id ?? 0)
+                    (int) $search === (int) ($assessment->id ?? 0)
                     || (int) $search === (int) ($r['student']->id ?? 0)
+                    || (int) $search === (int) ($assignment->id ?? 0)
                 );
             })->all();
         }
@@ -914,11 +909,9 @@ class LmsAssessmentController extends Controller
                 if (! $student && $assignment->student_id) {
                     $student = User::query()->find($assignment->student_id);
                 }
-                if (! $student && $assignment->class_batch_id && Schema::hasTable('class_batch_student')) {
-                    $ids = DB::table('class_batch_student')
-                        ->where('class_batch_id', (int) $assignment->class_batch_id)
-                        ->pluck('student_id');
-                    foreach (User::query()->whereIn('id', $ids)->get() as $batchStudent) {
+                if (! $student && $assignment->class_batch_id) {
+                    $cache = [];
+                    foreach ($this->expandSittingStudents(collect(), $assignment, $assessment, $cache) as $batchStudent) {
                         $rows->push([
                             'assessment' => $assessment,
                             'student' => $batchStudent,
