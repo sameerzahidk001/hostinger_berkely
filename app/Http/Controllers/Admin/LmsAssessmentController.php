@@ -368,10 +368,17 @@ class LmsAssessmentController extends Controller
         if ($deny = $this->denyNonAdminSittingChange()) {
             return $deny;
         }
-        $assignment = LmsAssessmentAssignment::with('assessment')->findOrFail($assignmentId);
-        abort_unless($assignment->assessment, 404);
-
+        $assignedUrl = route('admin.assessments.tests.assigned-users');
+        $assignment = LmsAssessmentAssignment::with('assessment')->find($assignmentId);
         $attemptId = (int) $request->input('attempt_id', 0);
+        if (! $assignment) {
+            if ($attemptId > 0) {
+                return $this->destroyAttemptRow($attemptId);
+            }
+
+            return redirect($assignedUrl)->with('error', 'That sitting was already removed.');
+        }
+
         if ($attemptId > 0) {
             $attempt = LmsAssessmentAttempt::query()
                 ->where('id', $attemptId)
@@ -398,7 +405,7 @@ class LmsAssessmentController extends Controller
         $code = $assignment->displayCode();
         $assignment->delete();
 
-        return back()->with('success', 'Sitting ' . $code . ' removed.');
+        return redirect($assignedUrl)->with('success', 'Sitting ' . $code . ' removed.');
     }
 
     public function destroyAttemptRow($attemptId)
@@ -407,13 +414,15 @@ class LmsAssessmentController extends Controller
         if ($deny = $this->denyNonAdminSittingChange()) {
             return $deny;
         }
-        $attempt = LmsAssessmentAttempt::query()->findOrFail($attemptId);
-        $assessment = LmsAssessment::query()->withTrashed()->find($attempt->assessment_id);
-        abort_unless($assessment, 404);
+        $assignedUrl = route('admin.assessments.tests.assigned-users');
+        $attempt = LmsAssessmentAttempt::query()->find($attemptId);
+        if (! $attempt) {
+            return redirect($assignedUrl)->with('error', 'That sitting was already removed.');
+        }
         $attempt->answers()->delete();
         $attempt->delete();
 
-        return back()->with('success', 'Test taker sitting removed.');
+        return redirect($assignedUrl)->with('success', 'Test taker sitting removed.');
     }
 
     /**
