@@ -274,6 +274,55 @@ class LmsAssessmentAssignment extends Model
         return $until;
     }
 
+    /** Single start timestamp for list columns (never blank when a window exists). */
+    public function appointmentStartLabel(string $fmt = 'd/m/Y, H:i'): string
+    {
+        if ($this->isSelfSitting()) {
+            return 'Start anytime';
+        }
+        $start = $this->windowStart();
+        if ($start) {
+            return $start->format($fmt);
+        }
+        if ($this->available_from) {
+            try {
+                $formatted = $this->formatInTimezone($this->available_from, $fmt);
+                if (is_string($formatted) && trim($formatted) !== '') {
+                    return $formatted;
+                }
+            } catch (\Throwable $e) {
+                // fall through
+            }
+        }
+        $window = $this->appointmentWindowLabel($fmt);
+        if ($window === '' || $window === 'Open') {
+            return 'Open (no appointment set)';
+        }
+
+        return $window;
+    }
+
+    public function assessorDisplayName(): string
+    {
+        $marker = $this->relationLoaded('marker') ? $this->marker : $this->marker;
+        $name = trim((string) ($marker->name ?? ''));
+        if ($name !== '' && $name !== '—') {
+            return $name;
+        }
+        if (! empty($this->marker_user_id)) {
+            $user = User::query()->find((int) $this->marker_user_id);
+            if ($user) {
+                $this->setRelation('marker', $user);
+                $loaded = trim((string) ($user->name ?? ''));
+                if ($loaded !== '') {
+                    return $loaded;
+                }
+            }
+        }
+
+        return 'Admin / course instructors';
+    }
+
     /** Display: "15/10/24 22:25 → 16/10/24 01:25 (Asia/Dubai · GST)". */
     public function appointmentWindowLabel(string $fmt = 'd/m/y H:i'): string
     {

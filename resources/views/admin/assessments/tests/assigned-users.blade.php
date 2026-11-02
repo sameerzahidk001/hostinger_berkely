@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.searchable-select-assets')
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
-<!-- lms-assigned-tests-20261031e -->
+<!-- lms-assigned-tests-20261102a -->
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
@@ -17,9 +17,9 @@
     .lms-assigned-wrap { overflow-x: auto; width: 100%; }
     .lms-assigned-table {
         width: 100% !important;
-        min-width: 100%;
-        max-width: 100%;
-        table-layout: fixed;
+        min-width: 1480px;
+        max-width: none;
+        table-layout: auto;
         margin-bottom: 0;
         font-size: 12px;
     }
@@ -31,14 +31,14 @@
         overflow-wrap: break-word;
         white-space: normal;
     }
-    .lms-assigned-table .col-appt { width: 9%; white-space: nowrap !important; }
-    .lms-assigned-table .col-test { width: 16%; }
-    .lms-assigned-table .col-taker { width: 13%; }
-    .lms-assigned-table .col-timing { width: 28%; }
-    .lms-assigned-table .col-created { width: 8%; }
-    .lms-assigned-table .col-assessor { width: 9%; }
-    .lms-assigned-table .col-status { width: 12%; }
-    .lms-assigned-table .col-pub { width: 6%; }
+    .lms-assigned-table .col-appt { min-width: 110px; white-space: nowrap !important; }
+    .lms-assigned-table .col-test { min-width: 180px; }
+    .lms-assigned-table .col-taker { min-width: 150px; }
+    .lms-assigned-table .col-timing { min-width: 280px; }
+    .lms-assigned-table .col-created { min-width: 110px; }
+    .lms-assigned-table .col-assessor { min-width: 140px; }
+    .lms-assigned-table .col-status { min-width: 130px; }
+    .lms-assigned-table .col-pub { min-width: 80px; }
     .lms-assigned-table .col-actions {
         width: 11%;
         overflow-wrap: normal;
@@ -231,16 +231,24 @@
                                     default => 'lms-status-available',
                                 };
                             }
-                            $appointment = $disp['appointment'] ?? $assignment?->appointmentWindowLabel();
-                            if ($appointment === null || $appointment === '') {
-                                $appointment = '—';
+                            $appointment = $disp['appointment'] ?? null;
+                            if ($appointment === null || $appointment === '' || $appointment === '—') {
+                                $appointment = $assignment && method_exists($assignment, 'appointmentStartLabel')
+                                    ? $assignment->appointmentStartLabel()
+                                    : ($assignment?->appointmentWindowLabel() ?: '—');
                             }
-                            $assessorName = $disp['assessor'] ?? ($attempt
-                                ? $attempt->assessorLabel($assignment)
-                                : ($assignment?->marker?->name ?? ''));
+                            $assessorName = $disp['assessor'] ?? '';
                             if ($assessorName === '' || $assessorName === '—') {
-                                $assessorName = $assignment?->marker?->name
-                                    ?? 'Admin / course instructors';
+                                $assessorName = $attempt
+                                    ? $attempt->assessorLabel($assignment)
+                                    : ($assignment && method_exists($assignment, 'assessorDisplayName')
+                                        ? $assignment->assessorDisplayName()
+                                        : ($assignment?->marker?->name ?? 'Admin / course instructors'));
+                            }
+                            if ($assessorName === '' || $assessorName === '—') {
+                                $assessorName = $assignment && method_exists($assignment, 'assessorDisplayName')
+                                    ? $assignment->assessorDisplayName()
+                                    : 'Admin / course instructors';
                             }
                             $assessorUserId = $disp['assessor_id'] ?? ($attempt
                                 ? $attempt->assessorUserId($assignment)

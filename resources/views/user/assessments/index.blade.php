@@ -95,9 +95,9 @@
         #assessments-portal .lms-assess-wrap { overflow-x: auto; width: 100%; }
         #assessments-portal .lms-assess-table {
             width: 100% !important;
-            min-width: 100%;
-            max-width: 100%;
-            table-layout: fixed;
+            min-width: 1100px;
+            max-width: none;
+            table-layout: auto;
             margin-bottom: 0;
         }
         #assessments-portal .lms-assess-table > thead > tr > th,
@@ -109,11 +109,11 @@
             overflow-wrap: break-word;
             white-space: normal;
         }
-        #assessments-portal .lms-assess-table .col-appt { width: 10%; white-space: nowrap; }
-        #assessments-portal .lms-assess-table .col-title { width: 22%; }
-        #assessments-portal .lms-assess-table .col-timing { width: 36%; }
-        #assessments-portal .lms-assess-table .col-assessor { width: 12%; }
-        #assessments-portal .lms-assess-table .col-status { width: 12%; }
+        #assessments-portal .lms-assess-table .col-appt { min-width: 110px; white-space: nowrap; }
+        #assessments-portal .lms-assess-table .col-title { min-width: 180px; }
+        #assessments-portal .lms-assess-table .col-timing { min-width: 260px; }
+        #assessments-portal .lms-assess-table .col-assessor { min-width: 140px; }
+        #assessments-portal .lms-assess-table .col-status { min-width: 110px; }
         #assessments-portal .lms-assess-table th.col-appt,
         #assessments-portal .lms-assess-table td.col-appt {
             white-space: nowrap !important;
@@ -255,9 +255,13 @@
                         $course = $a->course ?? null;
                         $assessorName = $att
                             ? $att->assessorLabel($asg)
-                            : ($asg?->marker?->name ?? 'Admin / course instructors');
+                            : ($asg && method_exists($asg, 'assessorDisplayName')
+                                ? $asg->assessorDisplayName()
+                                : ($asg?->marker?->name ?? 'Admin / course instructors'));
                         if ($assessorName === '' || $assessorName === '—') {
-                            $assessorName = $asg?->marker?->name ?? 'Admin / course instructors';
+                            $assessorName = $asg && method_exists($asg, 'assessorDisplayName')
+                                ? $asg->assessorDisplayName()
+                                : ($asg?->marker?->name ?? 'Admin / course instructors');
                         }
                         $assessorEmail = $asg?->marker?->email ?? null;
                         $canDownloadPdf = $att && (
@@ -295,7 +299,7 @@
                             @if($fromFolder)
                                 <span class="lms-timing-line"><strong>Test Appointment:</strong> Start anytime</span>
                             @elseif($asg)
-                                <span class="lms-timing-line"><strong>Test Appointment:</strong> {{ $asg->isSelfSitting() ? 'Start anytime' : ($asg->windowStart()?->format('d/m/Y, H:i') ?? '—') }}</span>
+                                <span class="lms-timing-line"><strong>Test Appointment:</strong> {{ method_exists($asg, 'appointmentStartLabel') ? $asg->appointmentStartLabel() : ($asg->isSelfSitting() ? 'Start anytime' : ($asg->windowStart()?->format('d/m/Y, H:i') ?? '—')) }}</span>
                                 <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $asg->timezoneLabel() }}</span>
                             @endif
                             <span class="lms-timing-line"><strong>Test Duration:</strong> {{ $fmtDuration($a->durationMinutes()) }}</span>

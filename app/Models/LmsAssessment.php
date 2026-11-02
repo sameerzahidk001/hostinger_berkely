@@ -93,6 +93,46 @@ class LmsAssessment extends Model
         return $this->hasMany(LmsAssessmentAssignment::class, 'assessment_id');
     }
 
+    public function primaryExamAssignment(): ?LmsAssessmentAssignment
+    {
+        $asgs = $this->relationLoaded('assignments')
+            ? $this->assignments
+            : $this->assignments()->get();
+        $timed = $asgs->first(function ($a) {
+            return ! $a->isSelfSitting() && $a->windowStart();
+        });
+        if ($timed) {
+            return $timed;
+        }
+
+        return $asgs->first(fn ($a) => ! $a->isSelfSitting()) ?: $asgs->first();
+    }
+
+    public function appointmentSummaryLabel(): string
+    {
+        $asg = $this->primaryExamAssignment();
+
+        return $asg ? $asg->appointmentStartLabel() : '—';
+    }
+
+    public function markerUsers()
+    {
+        $asgs = $this->relationLoaded('assignments')
+            ? $this->assignments
+            : $this->assignments()->with('marker')->get();
+
+        return $asgs->map(function ($a) {
+            if ($a->relationLoaded('marker') && $a->marker) {
+                return $a->marker;
+            }
+            if (! empty($a->marker_user_id)) {
+                return User::query()->find((int) $a->marker_user_id);
+            }
+
+            return null;
+        })->filter()->unique('id')->values();
+    }
+
     /** Unique people on Assigned Tests for this test (first sitting only; matches that list). */
     public function assignedPeopleCount(): int
     {

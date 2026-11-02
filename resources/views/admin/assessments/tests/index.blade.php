@@ -41,7 +41,8 @@
     .lms-tests-wrap { overflow-x: auto; width: 100%; max-width: 100%; }
     .lms-tests-table {
         width: 100% !important;
-        max-width: 100%;
+        min-width: 1360px;
+        max-width: none;
         table-layout: auto;
         margin-bottom: 0;
         font-size: 12px;
@@ -55,17 +56,18 @@
         word-wrap: break-word;
         overflow-wrap: anywhere;
         white-space: normal;
-        overflow: hidden;
+        overflow: visible;
     }
-    .lms-tests-table .col-date { width: 7%; }
-    .lms-tests-table .col-id { width: 5%; }
-    .lms-tests-table .col-title { width: 11%; }
-    .lms-tests-table .col-course { width: 10%; }
-    .lms-tests-table .col-type { width: 7%; }
-    .lms-tests-table .col-num { width: 4%; text-align: center; }
-    .lms-tests-table .col-assigned { width: 8%; text-align: center; white-space: normal; }
-    .lms-tests-table .col-status { width: 7%; }
-    .lms-tests-table .col-assessor { width: 9%; }
+    .lms-tests-table .col-date { min-width: 110px; }
+    .lms-tests-table .col-appt { min-width: 150px; }
+    .lms-tests-table .col-id { min-width: 70px; }
+    .lms-tests-table .col-title { min-width: 140px; }
+    .lms-tests-table .col-course { min-width: 130px; }
+    .lms-tests-table .col-type { min-width: 90px; }
+    .lms-tests-table .col-num { min-width: 52px; text-align: center; }
+    .lms-tests-table .col-assigned { min-width: 90px; text-align: center; white-space: normal; }
+    .lms-tests-table .col-status { min-width: 90px; }
+    .lms-tests-table .col-assessor { min-width: 140px; }
     .lms-tests-table .col-action {
         width: 28%;
         overflow: hidden;
@@ -143,25 +145,32 @@
             <thead>
                 <tr>
                     <th class="col-date" data-sort-col="0">Date <span class="sort-ind"></span></th>
-                    <th class="col-id" data-sort-col="1">Test ID <span class="sort-ind"></span></th>
-                    <th class="col-title" data-sort-col="2">Test Name <span class="sort-ind"></span></th>
-                    <th class="col-course" data-sort-col="3">Course / Test for <span class="sort-ind"></span></th>
-                    <th class="col-type" data-sort-col="4">Test Type <span class="sort-ind"></span></th>
-                    <th class="col-num" data-sort-col="5">Qs <span class="sort-ind"></span></th>
-                    <th class="col-num col-assigned" data-sort-col="6" title="Unique people on Assigned Tests for this test (first sitting only).">Assigned students <span class="sort-ind"></span></th>
-                    <th class="col-num" data-sort-col="7" title="How many of those people started or submitted">Taken <span class="sort-ind"></span></th>
-                    <th class="col-status" data-sort-col="8">Status <span class="sort-ind"></span></th>
-                    <th class="col-assessor" data-sort-col="9">Assessor <span class="sort-ind"></span></th>
+                    <th class="col-appt" data-sort-col="1">Test Appointment <span class="sort-ind"></span></th>
+                    <th class="col-id" data-sort-col="2">Test ID <span class="sort-ind"></span></th>
+                    <th class="col-title" data-sort-col="3">Test Name <span class="sort-ind"></span></th>
+                    <th class="col-course" data-sort-col="4">Course / Test for <span class="sort-ind"></span></th>
+                    <th class="col-type" data-sort-col="5">Test Type <span class="sort-ind"></span></th>
+                    <th class="col-num" data-sort-col="6">Qs <span class="sort-ind"></span></th>
+                    <th class="col-num col-assigned" data-sort-col="7" title="Unique people on Assigned Tests for this test (first sitting only).">Assigned students <span class="sort-ind"></span></th>
+                    <th class="col-num" data-sort-col="8" title="How many of those people started or submitted">Taken <span class="sort-ind"></span></th>
+                    <th class="col-status" data-sort-col="9">Status <span class="sort-ind"></span></th>
+                    <th class="col-assessor" data-sort-col="10">Assessor <span class="sort-ind"></span></th>
                     <th class="col-action">Action</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($rows as $row)
                     @php
-                        $markers = $row->assignments->pluck('marker')->filter()->unique('id');
+                        $markers = method_exists($row, 'markerUsers')
+                            ? $row->markerUsers()
+                            : $row->assignments->pluck('marker')->filter()->unique('id');
+                        $appointmentLabel = method_exists($row, 'appointmentSummaryLabel')
+                            ? $row->appointmentSummaryLabel()
+                            : '—';
                     @endphp
                     <tr>
                         <td class="col-date" data-sort="{{ optional($row->created_at)->timestamp ?? 0 }}">{{ optional($row->created_at)->format('d/m/y H:i') ?? '—' }}</td>
+                        <td class="col-appt" data-sort="{{ $appointmentLabel }}">{{ $appointmentLabel }}</td>
                         <td class="col-id" data-sort="{{ $row->id }}">{{ $row->displayCode() }}</td>
                         <td class="col-title" data-sort="{{ $row->title }}">{{ $row->title }}</td>
                         <td class="col-course" data-sort="{{ $row->course->title ?? $row->targetRoleLabel() }}">
@@ -237,7 +246,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="11" class="text-center">No assessments yet.</td></tr>
+                    <tr><td colspan="12" class="text-center">No assessments yet.</td></tr>
                 @endforelse
             </tbody>
         </table>
