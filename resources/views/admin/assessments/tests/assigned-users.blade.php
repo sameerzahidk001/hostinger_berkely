@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.searchable-select-assets')
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
-<!-- lms-assigned-tests-20261102f KEEP: Appointment Date & Time + Assessor as early columns; full batch roster; Next pager -->
+<!-- lms-assigned-tests-20261102g KEEP: Appointment Date & Time + Assessor as early columns; full batch roster; Next pager -->
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
@@ -130,9 +130,9 @@
     @if(session('error'))<div class="alert alert-danger">{{ session('error') }}</div>@endif
     <p class="text-muted m-b-sm">
         All assigned test takers (started or not), including people who never opened the test.
-        <strong>Missed</strong> = appointment start + test duration has passed and they did not start (no extra wait).
+        <strong>Missed</strong> = they did not start. For CIMA SCS/MCS that is as soon as the appointment start has passed (no wait for duration). Other tests wait until start + duration.
         Status shows <strong>Marking Required</strong> until the assessor marks a submitted sitting.
-        <span class="text-muted">List 20261102f</span>
+        <span class="text-muted">List 20261102g</span>
     </p>
     <div class="ibox"><div class="ibox-content">
         <form method="GET" class="m-b-md" style="margin-bottom:15px;">
@@ -235,9 +235,18 @@
                             if (! $assessment) {
                                 continue;
                             }
+                            $disp = $row['sitting_display'] ?? [];
                             if ($attempt) {
                                 $statusClass = $attempt->statusColorClass();
                                 $statusText = $attempt->statusLabel();
+                            } elseif (! empty($disp['status'])) {
+                                $statusText = $disp['status'];
+                                $statusClass = match ($statusText) {
+                                    'Missed' => 'lms-status-missed',
+                                    'Upcoming' => 'lms-status-upcoming',
+                                    'Marking Required' => 'lms-status-completed',
+                                    default => 'lms-status-available',
+                                };
                             } elseif ($assignment && $assignment->isNotYetOpen()) {
                                 $statusClass = 'lms-status-upcoming';
                                 $statusText = 'Upcoming';
@@ -249,16 +258,6 @@
                                 $statusText = 'Assigned';
                             }
                             $spend = $attempt?->spendMinutes();
-                            $disp = $row['sitting_display'] ?? [];
-                            if (! $attempt && ! empty($disp['status'])) {
-                                $statusText = $disp['status'];
-                                $statusClass = match ($statusText) {
-                                    'Missed' => 'lms-status-missed',
-                                    'Upcoming' => 'lms-status-upcoming',
-                                    'Marking Required' => 'lms-status-completed',
-                                    default => 'lms-status-available',
-                                };
-                            }
                             $appointment = $disp['appointment'] ?? null;
                             if ($appointment === null || $appointment === '' || $appointment === '—') {
                                 $appointment = $assignment && method_exists($assignment, 'appointmentStartLabel')

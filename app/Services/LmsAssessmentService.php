@@ -436,11 +436,11 @@ class LmsAssessmentService
 
     public function sittingCanStartAfterWindow(LmsAssessment $assessment, ?LmsAssessmentAssignment $assignment = null): bool
     {
-        if ($assignment && $assignment->isSelfSitting()) {
-            return true;
-        }
         if ($this->usesStrictExamWindow($assessment)) {
             return false;
+        }
+        if ($assignment && $assignment->isSelfSitting()) {
+            return true;
         }
 
         return $assessment->isMock()
@@ -1863,12 +1863,18 @@ class LmsAssessmentService
                 continue;
             }
 
-            $examWindowPassed = $assignment
-                && ! $assignment->isSelfSitting()
-                && ($assignment->isExpired()
-                    || ($this->isCimaCohortEmail($user->email ?? null)
-                        && $assignment->windowStart()
-                        && now()->gt($assignment->windowStart()->copy()->addMinutes(max(1, (int) ($assessment->durationMinutes() ?: 180))))));
+            $examWindowPassed = false;
+            if ($assignment) {
+                $start = $assignment->windowStart();
+                $strict = $this->usesStrictExamWindow($assessment);
+                if ($start && now()->lt($start)) {
+                    $examWindowPassed = false;
+                } elseif ($strict) {
+                    $examWindowPassed = true;
+                } elseif (! $assignment->isSelfSitting() && $assignment->isExpired()) {
+                    $examWindowPassed = true;
+                }
+            }
             if ($examWindowPassed && $this->sittingCanStartAfterWindow($assessment, $assignment)) {
                 $examWindowPassed = false;
             }
