@@ -59,6 +59,11 @@ class LmsAssessmentSchema
                 $table->string('sitting_kind', 16)->nullable()->index();
             });
         }
+        if (Schema::hasTable('lms_assessment_assignments') && ! Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
+            Schema::table('lms_assessment_assignments', function (Blueprint $table) {
+                $table->json('roster_user_ids')->nullable();
+            });
+        }
         if (Schema::hasTable('lms_assessment_attempts') && ! Schema::hasColumn('lms_assessment_attempts', 'assignment_id')) {
             Schema::table('lms_assessment_attempts', function (Blueprint $table) {
                 $table->unsignedBigInteger('assignment_id')->nullable()->index();

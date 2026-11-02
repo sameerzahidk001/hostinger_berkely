@@ -74,6 +74,15 @@
         #assessments-portal .lms-row-marked { color: #1ab394; } /* Completed / Completed and Marked — green */
         #assessments-portal .lms-row-missed,
         #assessments-portal .lms-row-expired { color: #ed5565; } /* Missed — red */
+        .lms-assigned-pager {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            padding: 12px 0 4px;
+            flex-wrap: wrap;
+        }
+        .lms-assigned-pager .lms-page-label { font-weight: 600; color: #333; }
         #assessments-portal .nav-pills {
             display: flex;
             flex-wrap: nowrap;
@@ -369,6 +378,7 @@
                 @endforelse
             </tbody>
         </table>
+        @include('admin.assessments.partials.table-pager', ['pager' => $list])
     </div></div>
 </div>
 @if($tab === 'upcoming' && $nextOpenAtMs)
