@@ -11,7 +11,7 @@ return [
         'defaults'       => [
             'title'        => "BERKELEY SCHOOL OF BUSINESS, ARTS & SCIENCES", // set false to total remove
             'titleBefore'  => true, // Put defaults.title before page title, like 'It's Over 9000! - Dashboard'
-            'description'  => 'Experience the transformative power of education at our center, where we empower minds to create a better future. Immerse yourself in the academic excellence at Berkeley Hills, located in the heart of California. Our center offers a dynamic learning environment, fostering innovation and critical thinking. Join us and be part of a community dedicated to making a difference in the world. Your journey to a brighter future starts here.', // set false to total remove
+            'description'  => 'Berkeley Independent College (EduBerkeley) offers professional qualifications, school programmes, and higher education taught with UK academic standards.', // set false to total remove
             'separator'    => ' - ',
             'keywords'     => ["BERKELEY SCHOOL OF BUSINESS, ARTS & SCIENCES", "professional certification"],
             'canonical'    => false, // Set to null or 'full' to use Url::full(), set to 'current' to use Url::current(), set false to total remove
@@ -37,7 +37,7 @@ return [
          */
         'defaults' => [
             'title'       => 'BERKELEY SCHOOL OF BUSINESS, ARTS & SCIENCES', // set false to total remove
-            'description' => 'Experience the transformative power of education at our center, where we empower minds to create a better future. Immerse yourself in the academic excellence at Berkeley Hills, located in the heart of California. Our center offers a dynamic learning environment, fostering innovation and critical thinking. Join us and be part of a community dedicated to making a difference in the world. Your journey to a brighter future starts here.', // set false to total remove
+            'description' => 'Berkeley Independent College (EduBerkeley) offers professional qualifications, school programmes, and higher education taught with UK academic standards.', // set false to total remove
             'url'         => false, // Set null for using Url::current(), set false to total remove
             'type'        => false,
             'site_name'   => false,
@@ -59,9 +59,9 @@ return [
          */
         'defaults' => [
             'title'       => 'BERKELEY SCHOOL OF BUSINESS, ARTS & SCIENCES', // set false to total remove
-            'description' => 'Experience the transformative power of education at our center, where we empower minds to create a better future. Immerse yourself in the academic excellence at Berkeley Hills, located in the heart of California. Our center offers a dynamic learning environment, fostering innovation and critical thinking. Join us and be part of a community dedicated to making a difference in the world. Your journey to a brighter future starts here.', // set false to total remove
+            'description' => 'Berkeley Independent College (EduBerkeley) offers professional qualifications, school programmes, and higher education taught with UK academic standards.', // set false to total remove
             'url'         => false, // Set to null or 'full' to use Url::full(), set to 'current' to use Url::current(), set false to total remove
-            'type'        => 'WebPage',
+            'type'        => false,
             'images'      => [],
         ],
     ],
