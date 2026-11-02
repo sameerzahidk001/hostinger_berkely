@@ -12,6 +12,7 @@ use App\Services\LmsAssessmentService;
 use App\Services\ZohoLmsService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -75,6 +76,24 @@ class LmsAssessmentPortalController extends Controller
             'missed' => $buckets['missed'],
             default => $buckets['available'],
         };
+        $list = collect($list)->values();
+        $page = max(1, (int) $request->get('page', 1));
+        $perPage = 15;
+        $total = $list->count();
+        $lastPage = max(1, (int) ceil(($total ?: 1) / $perPage));
+        if ($page > $lastPage) {
+            $page = $lastPage;
+        }
+        $list = new LengthAwarePaginator(
+            $list->forPage($page, $perPage)->values(),
+            $total,
+            $perPage,
+            $page,
+            [
+                'path' => $request->url(),
+                'query' => collect($request->query())->except('page')->all(),
+            ]
+        );
 
         return view('user.assessments.index', [
             'list' => $list,

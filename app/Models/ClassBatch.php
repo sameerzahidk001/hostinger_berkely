@@ -70,6 +70,69 @@ class ClassBatch extends Model
             ->withTimestamps();
     }
 
+    /** Every user id on this batch: pivot, Eloquent roster, and schedule students. */
+    public static function studentUserIdsFor(int $batchId)
+    {
+        $ids = collect();
+        if ($batchId <= 0) {
+            return $ids;
+        }
+        $batch = static::query()->find($batchId);
+        try {
+            if (Schema::hasTable('class_batch_student')) {
+                $rows = DB::table('class_batch_student')->where('class_batch_id', $batchId)->get();
+                foreach ($rows as $row) {
+                    $arr = (array) $row;
+                    foreach (['student_id', 'user_id', 'learner_id'] as $col) {
+                        if (! empty($arr[$col])) {
+                            $ids->push((int) $arr[$col]);
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // keep other sources
+        }
+        try {
+            if ($batch) {
+                $ids = $ids->merge($batch->students()->pluck('users.id'));
+            }
+        } catch (\Throwable $e) {
+            // pivot relation may disagree with live columns
+        }
+        try {
+            if (Schema::hasTable('class_schedules') && Schema::hasTable('class_schedule_student')) {
+                $scheduleQuery = DB::table('class_schedules')->where('batch_id', $batchId);
+                if ($batch && Schema::hasColumn('class_schedules', 'batch_name')) {
+                    $name = trim((string) $batch->name);
+                    $code = trim((string) $batch->code);
+                    if ($code !== '') {
+                        $scheduleQuery->orWhere('batch_name', $code);
+                    }
+                    if ($name !== '') {
+                        $scheduleQuery->orWhere('batch_name', $name);
+                    }
+                }
+                $scheduleIds = $scheduleQuery->pluck('id');
+                if ($scheduleIds->isNotEmpty()) {
+                    $srows = DB::table('class_schedule_student')->whereIn('class_schedule_id', $scheduleIds)->get();
+                    foreach ($srows as $row) {
+                        $arr = (array) $row;
+                        foreach (['student_id', 'user_id'] as $col) {
+                            if (! empty($arr[$col])) {
+                                $ids->push((int) $arr[$col]);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // keep pivot ids
+        }
+
+        return $ids->map(fn ($id) => (int) $id)->unique()->filter()->values();
+    }
+
     public function schedules(): HasMany
     {
         return $this->hasMany(ClassSchedule::class, 'batch_id');

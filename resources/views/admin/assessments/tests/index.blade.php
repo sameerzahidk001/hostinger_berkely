@@ -43,6 +43,15 @@
     .lms-btn-general:hover, .lms-btn-general:focus { background: #ec971f; color: #fff !important; }
     .lms-btn-skill { background: #5cb85c; }
     .lms-btn-skill:hover, .lms-btn-skill:focus { background: #449d44; color: #fff !important; }
+    .lms-assigned-pager {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 12px 0 4px;
+        flex-wrap: wrap;
+    }
+    .lms-assigned-pager .lms-page-label { font-weight: 600; color: #333; }
     .lms-tests-wrap { overflow-x: auto; width: 100% !important; max-width: 100%; }
     .lms-tests-table {
         width: 100% !important;
@@ -249,7 +258,7 @@
                 @endforelse
             </tbody>
         </table>
-        {{ $rows->links() }}
+        @include('admin.assessments.partials.table-pager', ['pager' => $rows])
     </div></div>
 </div>
 @include('admin.assessments.partials.user-preview-modal')

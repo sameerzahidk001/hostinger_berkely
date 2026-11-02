@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.searchable-select-assets')
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
-<!-- lms-assigned-tests-20261102d KEEP: Appointment Date & Time + Assessor as early columns -->
+<!-- lms-assigned-tests-20261102e KEEP: Appointment Date & Time + Assessor as early columns; full batch roster; Next pager -->
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
@@ -130,7 +130,7 @@
     @if(session('error'))<div class="alert alert-danger">{{ session('error') }}</div>@endif
     <p class="text-muted m-b-sm">
         All assigned test takers (started or not), including people who never opened the test.
-        <strong>Missed</strong> = appointment window ended and they did not start.
+        <strong>Missed</strong> = appointment start + test duration has passed and they did not start (no extra wait).
         Status shows <strong>Marking Required</strong> until the assessor marks a submitted sitting.
     </p>
     <div class="ibox"><div class="ibox-content">
@@ -450,21 +450,7 @@
                     @endforelse
                 </tbody>
             </table>
-            @if(method_exists($rows, 'lastPage') && $rows->lastPage() > 1)
-                <div class="lms-assigned-pager">
-                    @if($rows->onFirstPage())
-                        <span class="btn btn-default btn-sm disabled">Back</span>
-                    @else
-                        <a class="btn btn-default btn-sm" href="{{ $rows->previousPageUrl() }}">Back</a>
-                    @endif
-                    <span class="lms-page-label">Page {{ $rows->currentPage() }} of {{ $rows->lastPage() }} ({{ $rows->perPage() }} per page)</span>
-                    @if($rows->hasMorePages())
-                        <a class="btn btn-primary btn-sm" href="{{ $rows->nextPageUrl() }}">Next</a>
-                    @else
-                        <span class="btn btn-primary btn-sm disabled">Next</span>
-                    @endif
-                </div>
-            @endif
+            @include('admin.assessments.partials.table-pager', ['pager' => $rows])
         </div>
     </div>
 </div>

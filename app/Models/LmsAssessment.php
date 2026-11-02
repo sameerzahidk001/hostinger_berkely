@@ -227,28 +227,7 @@ class LmsAssessment extends Model
 
     protected function studentIdsForBatch(int $batchId)
     {
-        $ids = collect();
-        if ($batchId <= 0) {
-            return $ids;
-        }
-        if (Schema::hasTable('class_batch_student')) {
-            if (Schema::hasColumn('class_batch_student', 'student_id')) {
-                $ids = $ids->merge(DB::table('class_batch_student')->where('class_batch_id', $batchId)->pluck('student_id'));
-            }
-            if (Schema::hasColumn('class_batch_student', 'user_id')) {
-                $ids = $ids->merge(DB::table('class_batch_student')->where('class_batch_id', $batchId)->pluck('user_id'));
-            }
-        }
-        if (Schema::hasTable('class_schedules') && Schema::hasTable('class_schedule_student')) {
-            $scheduleIds = DB::table('class_schedules')->where('batch_id', $batchId)->pluck('id');
-            if ($scheduleIds->isNotEmpty()) {
-                $ids = $ids->merge(
-                    DB::table('class_schedule_student')->whereIn('class_schedule_id', $scheduleIds)->pluck('student_id')
-                );
-            }
-        }
-
-        return $ids->map(fn ($id) => (int) $id)->unique()->filter()->values();
+        return ClassBatch::studentUserIdsFor($batchId);
     }
 
     public function studyFolders(): BelongsToMany

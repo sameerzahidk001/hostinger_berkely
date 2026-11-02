@@ -424,7 +424,14 @@ class LmsAssessmentService
         ));
 
         return str_contains($hay, 'cima')
-            && (str_contains($hay, 'mcs') || str_contains($hay, 'management case') || str_contains($hay, 'case study'));
+            && (
+                str_contains($hay, 'mcs')
+                || str_contains($hay, 'scs')
+                || str_contains($hay, 'fcs')
+                || str_contains($hay, 'management case')
+                || str_contains($hay, 'strategic case')
+                || str_contains($hay, 'case study')
+            );
     }
 
     public function sittingCanStartAfterWindow(LmsAssessment $assessment, ?LmsAssessmentAssignment $assignment = null): bool
@@ -1292,13 +1299,13 @@ class LmsAssessmentService
                 $users->push($found);
             }
         }
-        if ($assignment->batch && $assignment->batch->relationLoaded('students')) {
-            $users = $users->merge($assignment->batch->students);
-        } elseif ($assignment->class_batch_id && Schema::hasTable('class_batch_student')) {
-            $batch = ClassBatch::query()->with('students')->find($assignment->class_batch_id);
-            if ($batch) {
-                $users = $users->merge($batch->students);
-            }
+        $rosterIds = collect($assignment->roster_user_ids ?? []);
+        if ($assignment->class_batch_id) {
+            $rosterIds = $rosterIds->merge(ClassBatch::studentUserIdsFor((int) $assignment->class_batch_id));
+        }
+        $rosterIds = $rosterIds->map(fn ($id) => (int) $id)->unique()->filter()->values();
+        if ($rosterIds->isNotEmpty()) {
+            $users = $users->merge(User::query()->whereIn('id', $rosterIds->all())->get());
         }
 
         return $users->filter(fn ($u) => $u && ! empty($u->email))->unique('id')->values();

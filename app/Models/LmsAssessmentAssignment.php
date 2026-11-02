@@ -17,12 +17,13 @@ class LmsAssessmentAssignment extends Model
     protected $fillable = [
         'assessment_id', 'class_batch_id', 'student_id', 'marker_user_id',
         'available_from', 'available_until', 'timezone', 'sitting_kind',
-        'assigned_by_admin_id', 'assigned_by_user_id',
+        'assigned_by_admin_id', 'assigned_by_user_id', 'roster_user_ids',
     ];
 
     protected $casts = [
         'available_from' => 'datetime',
         'available_until' => 'datetime',
+        'roster_user_ids' => 'array',
     ];
 
     /** Public appointment / sitting code, e.g. BEXT12 */
