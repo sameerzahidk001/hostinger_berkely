@@ -1038,7 +1038,7 @@ class LmsAssessmentController extends Controller
         }
 
         $page = max(1, (int) $request->get('page', 1));
-        $perPage = 10;
+        $perPage = 50;
         $total = $rows->count();
         $lastPage = max(1, (int) ceil(($total ?: 1) / $perPage));
         if ($page > $lastPage) {
@@ -1650,6 +1650,16 @@ class LmsAssessmentController extends Controller
                 report($e);
             }
         }
+        $found = $users->pluck('id')->map(fn ($id) => (int) $id)->all();
+        foreach ($ids as $sid) {
+            if (! in_array((int) $sid, $found, true)) {
+                $users->push((object) [
+                    'id' => (int) $sid,
+                    'name' => 'User #' . (int) $sid,
+                    'email' => '',
+                ]);
+            }
+        }
 
         return $users;
     }
@@ -1657,17 +1667,6 @@ class LmsAssessmentController extends Controller
     protected function expandSittingStudents($students, $assignment, $assessment, array &$batchStudentCache)
     {
         $students = collect($students)->filter(fn ($row) => $row && ! empty($row->id))->values();
-        if ($this->isCimaCohortSitting($assessment, $assignment, $students)) {
-            $cohort = $this->cimaCohortUsers();
-            if ($cohort->isNotEmpty()) {
-                $bat = ClassBatch::query()->where('code', 'BAT-0003')->first();
-                if ($bat && $assignment) {
-                    $assignment->setRelation('batch', $bat);
-                }
-
-                return $cohort->unique(fn ($row) => (int) $row->id)->values();
-            }
-        }
         $batchIds = [];
         if (! empty($assignment?->class_batch_id)) {
             $batchIds[] = (int) $assignment->class_batch_id;
@@ -1682,6 +1681,16 @@ class LmsAssessmentController extends Controller
                 $batch = ClassBatch::query()->find($bid);
                 if ($batch) {
                     $assignment->setRelation('batch', $batch);
+                }
+            }
+        }
+        if ($this->isCimaCohortSitting($assessment, $assignment, $students)) {
+            $cohort = $this->cimaCohortUsers();
+            if ($cohort->isNotEmpty()) {
+                $students = $students->concat($cohort);
+                $bat = ClassBatch::query()->where('code', 'BAT-0003')->first();
+                if ($bat && $assignment && empty($assignment->class_batch_id)) {
+                    $assignment->setRelation('batch', $bat);
                 }
             }
         }
@@ -1907,6 +1916,26 @@ class LmsAssessmentController extends Controller
         }
         if ($assessment) {
             $asg->setRelation('assessment', $assessment);
+        }
+        if (! $asg->windowStart() && $assessment && ! empty($assessment->id)) {
+            try {
+                $timed = LmsAssessmentAssignment::query()
+                    ->where('assessment_id', (int) $assessment->id)
+                    ->whereNotNull('available_from')
+                    ->orderBy('id')
+                    ->first();
+                if ($timed && $timed->available_from) {
+                    $asg->available_from = $timed->available_from;
+                    if (! empty($timed->available_until)) {
+                        $asg->available_until = $timed->available_until;
+                    }
+                    if (trim((string) ($asg->timezone ?? '')) === '') {
+                        $asg->timezone = $timed->timezone ?: 'Asia/Dubai';
+                    }
+                }
+            } catch (\Throwable $e) {
+                // keep empty window
+            }
         }
     }
 

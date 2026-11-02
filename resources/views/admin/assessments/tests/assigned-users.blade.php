@@ -450,7 +450,7 @@
                     @else
                         <a class="btn btn-default btn-sm" href="{{ $rows->previousPageUrl() }}">Back</a>
                     @endif
-                    <span class="lms-page-label">Page {{ $rows->currentPage() }} of {{ $rows->lastPage() }} (10 per page)</span>
+                    <span class="lms-page-label">Page {{ $rows->currentPage() }} of {{ $rows->lastPage() }} ({{ $rows->perPage() }} per page)</span>
                     @if($rows->hasMorePages())
                         <a class="btn btn-primary btn-sm" href="{{ $rows->nextPageUrl() }}">Next</a>
                     @else
