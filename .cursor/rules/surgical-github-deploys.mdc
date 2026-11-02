@@ -11,3 +11,5 @@ alwaysApply: true
 - When adding or updating anything: change **only** what was requested. Do not reverse, rewrite, or “cleanup” unrelated finalized work (HoF, instructors, access grants, idle logout, invoices, etc.).
 - Avoid migrations that rewrite historical `created_by` / `updated_by` or other live content. Show fallbacks in the UI instead (e.g. missing audit → “Admin”).
 - If a feature needs a new DB column, keep it additive and nullable with safe runtime guards (`Schema::hasColumn` / `class_exists`) so GitHub pull alone does not break the site.
+- Assigned Tests must keep **Appointment Date & Time** (timezone on the second line) and **Assessor** as early visible columns. Do not drop, hide, or squeeze them. Do not put appointment/timezone back in Test Time Details.
+- ALL TESTS must **not** have a Test Appointment column (one test can have many sittings). Keep Assessor there.

@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.searchable-select-assets')
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
-<!-- lms-assigned-tests-20261102c -->
+<!-- lms-assigned-tests-20261102d KEEP: Appointment Date & Time + Assessor as early columns -->
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
@@ -35,30 +35,31 @@
     .lms-assigned-table {
         width: 100% !important;
         min-width: 100% !important;
-        table-layout: auto;
+        max-width: 100% !important;
+        table-layout: fixed;
         margin-bottom: 0;
         font-size: 12px;
     }
     .lms-assigned-table > thead > tr > th,
     .lms-assigned-table > tbody > tr > td {
-        vertical-align: middle;
+        vertical-align: top;
         padding: 6px 5px;
         word-wrap: break-word;
         overflow-wrap: break-word;
         white-space: normal;
         overflow: visible;
     }
-    .lms-assigned-table .col-appt { min-width: 108px; white-space: nowrap !important; }
-    .lms-assigned-table .col-when { min-width: 150px; font-weight: 700; }
-    .lms-assigned-table .col-assessor { min-width: 130px; font-weight: 700; }
-    .lms-assigned-table .col-test { min-width: 160px; }
-    .lms-assigned-table .col-taker { min-width: 140px; }
-    .lms-assigned-table .col-timing { min-width: 220px; }
-    .lms-assigned-table .col-created { min-width: 100px; }
-    .lms-assigned-table .col-status { min-width: 110px; }
-    .lms-assigned-table .col-pub { min-width: 70px; }
+    .lms-assigned-table .col-appt { width: 8%; white-space: nowrap !important; }
+    .lms-assigned-table .col-when { width: 13%; font-weight: 700; }
+    .lms-assigned-table .col-assessor { width: 10%; font-weight: 700; }
+    .lms-assigned-table .col-test { width: 14%; }
+    .lms-assigned-table .col-taker { width: 13%; }
+    .lms-assigned-table .col-timing { width: 16%; }
+    .lms-assigned-table .col-created { width: 8%; }
+    .lms-assigned-table .col-status { width: 8%; }
+    .lms-assigned-table .col-pub { width: 4%; }
     .lms-assigned-table .col-actions {
-        min-width: 110px;
+        width: 6%;
         overflow-wrap: normal;
         word-break: normal;
         white-space: normal;
@@ -206,7 +207,7 @@
                 <thead>
                     <tr>
                         <th class="col-appt" data-sort-col="0" style="white-space:nowrap;">Appointment ID <span class="sort-ind"></span></th>
-                        <th class="col-when" data-sort-col="1">Appointment time <span class="sort-ind"></span></th>
+                        <th class="col-when" data-sort-col="1">Appointment Date &amp; Time <span class="sort-ind"></span></th>
                         <th class="col-assessor" data-sort-col="2">Assessor <span class="sort-ind"></span></th>
                         <th class="col-test" data-sort-col="3">Test Details <span class="sort-ind"></span></th>
                         <th class="col-taker" data-sort-col="4">Test Taker <span class="sort-ind"></span></th>
@@ -324,7 +325,10 @@
                         @if($assessment)
                         <tr>
                             <td class="col-appt" data-sort="{{ $assignment->id ?? 0 }}"><strong>{{ $apptId }}</strong></td>
-                            <td class="col-when" data-sort="{{ $appointment }}">{{ $appointment }}</td>
+                            <td class="col-when" data-sort="{{ $appointment }}">
+                                <span class="lms-timing-line">{{ $appointment }}</span>
+                                <span class="lms-timing-line text-muted">{{ $timezoneLabel }}</span>
+                            </td>
                             <td class="col-assessor" data-sort="{{ $assessorName }}">
                                 @if($assessorUserId)
                                     <a href="#" class="lms-user-preview" data-user-id="{{ $assessorUserId }}">{{ $assessorName }}</a>
@@ -360,8 +364,6 @@
                                 @endif
                             </td>
                             <td class="col-timing" data-sort="{{ optional($assignment?->available_from)->timestamp ?? 0 }}">
-                                <span class="lms-timing-line"><strong>Test Appointment:</strong> {{ $appointment }}</span>
-                                <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $timezoneLabel }}</span>
                                 <span class="lms-timing-line"><strong>Test Duration:</strong> {{ $fmtDuration($durationMins) }}</span>
                                 @if($attempt)
                                     <span class="lms-timing-line"><strong>Started:</strong> {{ $assignment ? $assignment->formatInTimezone($attempt->startedAtForDisplay()) : (optional($attempt->startedAtForDisplay())->format('d/m/Y, H:i') ?? '—') }}</span>

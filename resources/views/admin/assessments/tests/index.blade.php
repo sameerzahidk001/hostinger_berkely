@@ -63,16 +63,15 @@
         white-space: normal;
         overflow: visible;
     }
-    .lms-tests-table .col-date { width: 8%; }
-    .lms-tests-table .col-appt { width: 11%; }
-    .lms-tests-table .col-id { width: 6%; }
-    .lms-tests-table .col-title { width: 12%; }
-    .lms-tests-table .col-course { width: 11%; }
-    .lms-tests-table .col-type { width: 8%; }
+    .lms-tests-table .col-date { width: 9%; }
+    .lms-tests-table .col-id { width: 7%; }
+    .lms-tests-table .col-title { width: 14%; }
+    .lms-tests-table .col-course { width: 13%; }
+    .lms-tests-table .col-type { width: 9%; }
     .lms-tests-table .col-num { width: 5%; text-align: center; }
-    .lms-tests-table .col-assigned { width: 7%; text-align: center; white-space: normal; }
-    .lms-tests-table .col-status { width: 7%; }
-    .lms-tests-table .col-assessor { width: 9%; }
+    .lms-tests-table .col-assigned { width: 8%; text-align: center; white-space: normal; }
+    .lms-tests-table .col-status { width: 8%; }
+    .lms-tests-table .col-assessor { width: 11%; }
     .lms-tests-table .col-action {
         width: 16%;
         overflow: visible;
@@ -150,16 +149,15 @@
             <thead>
                 <tr>
                     <th class="col-date" data-sort-col="0">Date <span class="sort-ind"></span></th>
-                    <th class="col-appt" data-sort-col="1">Test Appointment <span class="sort-ind"></span></th>
-                    <th class="col-id" data-sort-col="2">Test ID <span class="sort-ind"></span></th>
-                    <th class="col-title" data-sort-col="3">Test Name <span class="sort-ind"></span></th>
-                    <th class="col-course" data-sort-col="4">Course / Test for <span class="sort-ind"></span></th>
-                    <th class="col-type" data-sort-col="5">Test Type <span class="sort-ind"></span></th>
-                    <th class="col-num" data-sort-col="6">Qs <span class="sort-ind"></span></th>
-                    <th class="col-num col-assigned" data-sort-col="7" title="Unique people on Assigned Tests for this test (first sitting only).">Assigned students <span class="sort-ind"></span></th>
-                    <th class="col-num" data-sort-col="8" title="How many of those people started or submitted">Taken <span class="sort-ind"></span></th>
-                    <th class="col-status" data-sort-col="9">Status <span class="sort-ind"></span></th>
-                    <th class="col-assessor" data-sort-col="10">Assessor <span class="sort-ind"></span></th>
+                    <th class="col-id" data-sort-col="1">Test ID <span class="sort-ind"></span></th>
+                    <th class="col-title" data-sort-col="2">Test Name <span class="sort-ind"></span></th>
+                    <th class="col-course" data-sort-col="3">Course / Test for <span class="sort-ind"></span></th>
+                    <th class="col-type" data-sort-col="4">Test Type <span class="sort-ind"></span></th>
+                    <th class="col-num" data-sort-col="5">Qs <span class="sort-ind"></span></th>
+                    <th class="col-num col-assigned" data-sort-col="6" title="Unique people on Assigned Tests for this test (first sitting only).">Assigned students <span class="sort-ind"></span></th>
+                    <th class="col-num" data-sort-col="7" title="How many of those people started or submitted">Taken <span class="sort-ind"></span></th>
+                    <th class="col-status" data-sort-col="8">Status <span class="sort-ind"></span></th>
+                    <th class="col-assessor" data-sort-col="9">Assessor <span class="sort-ind"></span></th>
                     <th class="col-action">Action</th>
                 </tr>
             </thead>
@@ -169,13 +167,9 @@
                         $markers = method_exists($row, 'markerUsers')
                             ? $row->markerUsers()
                             : $row->assignments->pluck('marker')->filter()->unique('id');
-                        $appointmentLabel = method_exists($row, 'appointmentSummaryLabel')
-                            ? $row->appointmentSummaryLabel()
-                            : '—';
                     @endphp
                     <tr>
                         <td class="col-date" data-sort="{{ optional($row->created_at)->timestamp ?? 0 }}">{{ optional($row->created_at)->format('d/m/y H:i') ?? '—' }}</td>
-                        <td class="col-appt" data-sort="{{ $appointmentLabel }}">{{ $appointmentLabel }}</td>
                         <td class="col-id" data-sort="{{ $row->id }}">{{ $row->displayCode() }}</td>
                         <td class="col-title" data-sort="{{ $row->title }}">{{ $row->title }}</td>
                         <td class="col-course" data-sort="{{ $row->course->title ?? $row->targetRoleLabel() }}">
@@ -251,7 +245,7 @@
                         </td>
                     </tr>
                 @empty
-                    <tr><td colspan="12" class="text-center">No assessments yet.</td></tr>
+                    <tr><td colspan="11" class="text-center">No assessments yet.</td></tr>
                 @endforelse
             </tbody>
         </table>
