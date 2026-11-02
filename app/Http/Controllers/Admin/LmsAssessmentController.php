@@ -1911,6 +1911,12 @@ class LmsAssessmentController extends Controller
         $assessor = $asg && method_exists($asg, 'assessorDisplayName')
             ? $asg->assessorDisplayName()
             : ($asg?->marker?->name ?: null);
+        $assessorId = $asg?->marker_user_id ?? ($asg?->marker?->id ?? null);
+        $namedMarker = $this->sameTestNamedMarker($assessment);
+        if ($namedMarker && ($assessor === null || $assessor === '' || $assessor === '—' || $assessor === 'Admin / course instructors')) {
+            $assessor = $namedMarker->name;
+            $assessorId = (int) $namedMarker->id;
+        }
         $created = $asg?->createdByLabel() ?: null;
         $tz = $asg?->timezoneLabel() ?: null;
         $isCohort = $this->isCimaCohortSitting($assessment, $asg, collect([$row['student'] ?? null]));
@@ -1932,6 +1938,25 @@ class LmsAssessmentController extends Controller
             $created = ($created && $created !== '') ? $created : 'Admin';
         }
         $status = 'Assigned';
+        if ($this->appointmentLooksBlank($start) && $assessment && ! empty($assessment->id)) {
+            try {
+                $timed = LmsAssessmentAssignment::query()
+                    ->where('assessment_id', (int) $assessment->id)
+                    ->whereNotNull('available_from')
+                    ->orderByDesc('id')
+                    ->first();
+                if ($timed) {
+                    $this->hydrateSittingDisplay($timed, $assessment);
+                    $copied = $timed->appointmentStartLabel();
+                    if (! $this->appointmentLooksBlank($copied)) {
+                        $start = $copied;
+                        $tz = $timed->timezoneLabel() ?: $tz;
+                    }
+                }
+            } catch (\Throwable $e) {
+                // keep this sitting's label
+            }
+        }
         if ($attempt) {
             $status = $attempt->statusLabel();
         } else {
@@ -1944,7 +1969,7 @@ class LmsAssessmentController extends Controller
             'timezone' => $tz ?: (string) config('app.timezone', 'Asia/Dubai'),
             'created_by' => $created ?: 'Admin',
             'assessor' => $assessor ?: 'Admin / course instructors',
-            'assessor_id' => $asg?->marker_user_id ?? ($asg?->marker?->id ?? null),
+            'assessor_id' => $assessorId,
             'batch' => $asg?->batch?->code ?: ($isCohort ? 'BAT-0003' : null),
             'course' => $assessment?->course?->title ?? ($isCohort ? 'CIMA Management Case Study' : null),
             'status' => $status,
@@ -1989,7 +2014,7 @@ class LmsAssessmentController extends Controller
                 $timed = LmsAssessmentAssignment::query()
                     ->where('assessment_id', (int) $assessment->id)
                     ->whereNotNull('available_from')
-                    ->orderBy('id')
+                    ->orderByDesc('id')
                     ->first();
                 if (! $timed && ! empty($assessment->course_id)) {
                     $timed = LmsAssessmentAssignment::query()
@@ -1998,7 +2023,7 @@ class LmsAssessmentController extends Controller
                             $q->where('course_id', (int) $assessment->course_id)
                                 ->where('kind', $assessment->kind ?? 'mock');
                         })
-                        ->orderBy('id')
+                        ->orderByDesc('id')
                         ->first();
                 }
                 if ($timed && $timed->available_from) {
@@ -2478,6 +2503,46 @@ class LmsAssessmentController extends Controller
         }
 
         return 'Assigned';
+    }
+
+    protected function appointmentLooksBlank(?string $label): bool
+    {
+        $label = trim((string) $label);
+
+        return $label === ''
+            || $label === '—'
+            || $label === 'Open'
+            || $label === 'Open (no appointment set)'
+            || $label === 'Start anytime'
+            || $label === 'Self test — start anytime';
+    }
+
+    /** Named assessor saved on any sitting of this same test (newest first). Display only. */
+    protected function sameTestNamedMarker($assessment): ?User
+    {
+        if (! $assessment || empty($assessment->id)) {
+            return null;
+        }
+        try {
+            $row = LmsAssessmentAssignment::query()
+                ->with('marker')
+                ->where('assessment_id', (int) $assessment->id)
+                ->whereNotNull('marker_user_id')
+                ->orderByDesc('id')
+                ->first();
+            if (! $row) {
+                return null;
+            }
+            $marker = $row->marker ?: User::query()->find((int) $row->marker_user_id);
+            $name = trim((string) ($marker->name ?? ''));
+            if ($name === '' || $name === '—') {
+                return null;
+            }
+
+            return $marker;
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     /** Appointment window already ended — unused exam rows become Missed immediately (no extra delay). */
