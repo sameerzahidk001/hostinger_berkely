@@ -874,7 +874,7 @@ class LmsAssessmentController extends Controller
                     . ($assessment->title ?? '') . ' ' . (optional(optional($assessment)->course)->title ?? '') . ' '
                     . (($assessment && method_exists($assessment, 'displayCode')) ? $assessment->displayCode() : '') . ' '
                     . ($disp['appt_id'] ?? '') . ' ' . ($disp['appointment'] ?? '') . ' '
-                    . ($disp['assessor'] ?? '') . ' ' . ($disp['batch'] ?? '') . ' '
+                    . ($disp['assessor'] ?? '') . ' ' . ($disp['batch'] ?? '') . ' ' . ($disp['status'] ?? '') . ' '
                     . (optional(optional($assignment)->batch)->code ?? '') . ' ' . (optional(optional($assignment)->batch)->name ?? '') . ' '
                     . ($assignment->id ?? '') . ' ' . ($assessment->id ?? '')
                 ));
@@ -890,13 +890,19 @@ class LmsAssessmentController extends Controller
             })->all();
         }
 
-        $rows = collect($rowsByKey)->values()->sortByDesc(function ($row) {
-            $attempt = $row['attempt'];
-            if ($attempt) {
-                return optional($attempt->submitted_at ?: $attempt->updated_at)->timestamp ?? 0;
-            }
+        $rows = collect($rowsByKey)->values()->sortBy(function ($row) {
+            $status = (string) (($row['sitting_display']['status'] ?? ''));
+            $rank = match ($status) {
+                'Missed' => 0,
+                'Upcoming' => 1,
+                'Assigned', 'Available' => 2,
+                'In progress' => 3,
+                default => 4,
+            };
+            $title = mb_strtolower((string) ($row['assessment']->title ?? ''));
+            $name = mb_strtolower((string) ($row['student']->name ?? ''));
 
-            return optional($row['assignment']?->created_at)->timestamp ?? 0;
+            return sprintf('%d-%s-%s', $rank, $title, $name);
         })->values();
 
         if ($rows->isEmpty() && $assignments->isNotEmpty()) {
@@ -979,18 +985,25 @@ class LmsAssessmentController extends Controller
             'Completed and Marked' => 'Completed and Marked',
             'Missed' => 'Missed',
         ];
+        $statusCounts = [
+            'Missed' => $rows->filter(fn ($r) => ($r['sitting_display']['status'] ?? '') === 'Missed')->count(),
+            'Upcoming' => $rows->filter(fn ($r) => ($r['sitting_display']['status'] ?? '') === 'Upcoming')->count(),
+        ];
         if ($statusFilter !== '' && array_key_exists($statusFilter, $statusOptions)) {
             $rows = $rows->filter(function ($row) use ($statusFilter) {
-                $attempt = $row['attempt'];
-                $assignment = $row['assignment'];
-                if ($attempt) {
-                    $statusText = $attempt->statusLabel();
-                } elseif ($assignment && $assignment->isNotYetOpen()) {
-                    $statusText = 'Upcoming';
-                } elseif ($assignment && $assignment->isExpired()) {
-                    $statusText = 'Missed';
-                } else {
-                    $statusText = 'Assigned';
+                $statusText = $row['sitting_display']['status'] ?? '';
+                if ($statusText === '') {
+                    $attempt = $row['attempt'];
+                    $assignment = $row['assignment'];
+                    if ($attempt) {
+                        $statusText = $attempt->statusLabel();
+                    } elseif ($assignment && $assignment->isNotYetOpen()) {
+                        $statusText = 'Upcoming';
+                    } elseif ($assignment && ! $assignment->isSelfSitting() && $assignment->isExpired()) {
+                        $statusText = 'Missed';
+                    } else {
+                        $statusText = 'Assigned';
+                    }
                 }
 
                 return $statusText === $statusFilter;
@@ -1051,6 +1064,7 @@ class LmsAssessmentController extends Controller
         return view('admin.assessments.tests.assigned-users', [
             'rows' => $paged,
             'rowsTotal' => $total,
+            'statusCounts' => $statusCounts ?? ['Missed' => 0, 'Upcoming' => 0],
             'selectedAssessment' => $selectedAssessment,
             'assessments' => $assessmentQuery->get(['id', 'title', 'kind']),
             'batches' => Schema::hasTable('class_batches')
@@ -1959,14 +1973,11 @@ class LmsAssessmentController extends Controller
                     $unusedOther[$k] = $r;
                 }
             }
+            foreach ($unusedExam as $k => $r) {
+                $out[$k] = $r;
+            }
             if ($used !== []) {
                 foreach ($used as $k => $r) {
-                    $out[$k] = $r;
-                }
-                continue;
-            }
-            if ($unusedExam !== []) {
-                foreach ($unusedExam as $k => $r) {
                     $out[$k] = $r;
                 }
                 continue;
