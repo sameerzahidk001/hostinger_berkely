@@ -60,7 +60,9 @@ class SetSEO
         $seo = $seoData?->seo;
 
         $robots = seo_robots_content($seo);
-        if ($seoData instanceof Page && (seo_page_is_empty($seoData) || ! seo_path_is_menu_linked($currentUrl))) {
+        // Thin/empty pages stay out of Google. Menu membership does not control indexing —
+        // Admin / Content Writer set index vs noindex on the SEO form (WordPress-style).
+        if ($seoData instanceof Page && seo_page_is_empty($seoData)) {
             $robots = 'noindex, follow';
         }
         SEOTools::metatags()->addMeta('robots', $robots);

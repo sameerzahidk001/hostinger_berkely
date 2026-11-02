@@ -34,6 +34,16 @@ class SitemapController extends Controller
         $sitemap = rtrim((string) config('app.url'), '/') . '/sitemap.xml';
         $lines = [
             'User-agent: *',
+            'Allow: /images/',
+            'Allow: /frontend/images/',
+            'Allow: /admin/images/',
+            'Allow: /storage/',
+            'Allow: /*.jpg$',
+            'Allow: /*.jpeg$',
+            'Allow: /*.png$',
+            'Allow: /*.gif$',
+            'Allow: /*.webp$',
+            'Allow: /*.svg$',
             'Disallow: /search',
             'Disallow: /search-courses',
             'Disallow: /cart',
@@ -76,6 +86,9 @@ class SitemapController extends Controller
             ->select(['id', 'url', 'parent_id', 'category_id', 'updated_at'])
             ->with(['seo', 'parent:id,url,parent_id,category_id'])
             ->withCount('sections');
+        if (Schema::hasColumn('pages', 'page_name')) {
+            $pageQuery->addSelect('page_name');
+        }
         if (Schema::hasColumn('pages', 'status')) {
             $pageQuery->addSelect('status');
         }
@@ -104,15 +117,12 @@ class SitemapController extends Controller
                         continue;
                     }
 
-                    if (! seo_path_is_menu_linked($path)) {
-                        continue;
-                    }
-
                     $urls[] = [
                         'loc' => $this->siteUrl($path),
                         'lastmod' => optional($page->updated_at)?->toAtomString(),
                         'changefreq' => 'weekly',
                         'priority' => '0.8',
+                        'images' => $this->imagesForSeo($page->seo, $page->page_name ?? null),
                     ];
                 } catch (\Throwable $e) {
                     report($e);
@@ -120,7 +130,13 @@ class SitemapController extends Controller
             }
         });
 
-        $courseQuery = Course::query()->select(['id', 'slug', 'updated_at'])->with('seo');
+        $courseCols = ['id', 'slug', 'title', 'updated_at'];
+        foreach (['thumbnail', 'post_image', 'overview_img'] as $col) {
+            if (Schema::hasColumn('courses', $col)) {
+                $courseCols[] = $col;
+            }
+        }
+        $courseQuery = Course::query()->select($courseCols)->with('seo');
         $courseQuery->orderBy('id')->chunkById(100, function ($courses) use (&$urls) {
             foreach ($courses as $course) {
                 try {
@@ -136,6 +152,7 @@ class SitemapController extends Controller
                         'lastmod' => optional($course->updated_at)?->toAtomString(),
                         'changefreq' => 'weekly',
                         'priority' => '0.7',
+                        'images' => $this->imagesForCourse($course),
                     ];
                 } catch (\Throwable $e) {
                     report($e);
@@ -153,6 +170,74 @@ class SitemapController extends Controller
         }
 
         return strtolower((string) ($seo->robots_index ?? 'index')) === 'noindex';
+    }
+
+    private function imagesForCourse(Course $course): array
+    {
+        $title = trim((string) ($course->seo->title ?? $course->title ?? ''));
+        $alt = trim((string) ($course->seo->thumbnail_alt ?? '')) ?: $title;
+        $paths = [
+            $course->seo->thumbnail ?? null,
+            $course->thumbnail ?? null,
+            $course->post_image ?? null,
+            $course->overview_img ?? null,
+        ];
+
+        return $this->uniqueImageEntries($paths, $title, $alt);
+    }
+
+    private function imagesForSeo($seo, ?string $fallbackTitle = null): array
+    {
+        if (! $seo) {
+            return [];
+        }
+        $title = trim((string) ($seo->title ?? $fallbackTitle ?? ''));
+        $alt = trim((string) ($seo->thumbnail_alt ?? '')) ?: $title;
+
+        return $this->uniqueImageEntries([$seo->thumbnail ?? null], $title, $alt);
+    }
+
+    /**
+     * @param  array<int, mixed>  $paths
+     * @return array<int, array{loc:string,title:?string,caption:?string}>
+     */
+    private function uniqueImageEntries(array $paths, ?string $title, ?string $alt): array
+    {
+        $out = [];
+        $seen = [];
+        foreach ($paths as $path) {
+            $url = $this->publicImageUrl($path);
+            if ($url === null || isset($seen[$url])) {
+                continue;
+            }
+            $seen[$url] = true;
+            $out[] = [
+                'loc' => $url,
+                'title' => $title !== '' ? $title : null,
+                'caption' => $alt !== '' ? $alt : null,
+            ];
+        }
+
+        return $out;
+    }
+
+    private function publicImageUrl(mixed $path): ?string
+    {
+        if (! is_string($path) && ! is_array($path)) {
+            return null;
+        }
+        $url = function_exists('media_url') ? media_url($path) : null;
+        if (! is_string($url) || $url === '') {
+            return null;
+        }
+        if (str_starts_with($url, 'data:')) {
+            return null;
+        }
+        if (! str_starts_with($url, 'http://') && ! str_starts_with($url, 'https://')) {
+            $url = rtrim((string) config('app.url'), '/') . '/' . ltrim($url, '/');
+        }
+
+        return $url;
     }
 
     private function siteUrl(string $path = '/'): string
