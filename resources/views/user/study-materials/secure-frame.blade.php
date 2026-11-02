@@ -24,7 +24,7 @@
     @php $kind = $item->portalKind(); @endphp
     <div class="wrap">
         @if($kind === 'video')
-            <video src="{{ $rawUrl }}" controls playsinline @if($item->portalPosterUrl()) poster="{{ $item->portalPosterUrl() }}" @endif></video>
+            <video src="{{ $rawUrl }}" controls playsinline allowfullscreen @if($item->portalPosterUrl()) poster="{{ $item->portalPosterUrl() }}" @endif></video>
         @elseif($kind === 'image')
             <img src="{{ $rawUrl }}" alt="{{ $item->name }}" draggable="false">
         @elseif($kind === 'audio')
