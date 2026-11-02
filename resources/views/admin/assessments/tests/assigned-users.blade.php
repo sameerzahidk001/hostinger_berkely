@@ -129,7 +129,9 @@
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if(session('error'))<div class="alert alert-danger">{{ session('error') }}</div>@endif
     <p class="text-muted m-b-sm">
-        All assigned test takers (started or not). Status shows <strong>Marking Required</strong> until the assessor marks a submitted sitting.
+        All assigned test takers (started or not), including people who never opened the test.
+        <strong>Missed</strong> = appointment window ended and they did not start.
+        Status shows <strong>Marking Required</strong> until the assessor marks a submitted sitting.
     </p>
     <div class="ibox"><div class="ibox-content">
         <form method="GET" class="m-b-md" style="margin-bottom:15px;">
