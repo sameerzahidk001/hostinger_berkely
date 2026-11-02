@@ -362,7 +362,11 @@ class LmsAssessmentController extends Controller
     {
         $this->assessments->ensure();
         $assignment = LmsAssessmentAssignment::with('assessment')->findOrFail($assignmentId);
-        abort_unless($assignment->assessment && $this->assessments->actorCanRemoveSitting(), 403);
+        abort_unless(
+            $assignment->assessment
+            && (Auth::guard('admin')->check() || $this->assessments->actorCanRemoveSitting()),
+            403
+        );
 
         $attemptId = (int) $request->input('attempt_id', 0);
         if ($attemptId > 0) {
@@ -399,7 +403,11 @@ class LmsAssessmentController extends Controller
         $this->assessments->ensure();
         $attempt = LmsAssessmentAttempt::query()->findOrFail($attemptId);
         $assessment = LmsAssessment::query()->withTrashed()->find($attempt->assessment_id);
-        abort_unless($assessment && $this->assessments->actorCanRemoveSitting(), 403);
+        abort_unless(
+            $assessment
+            && (Auth::guard('admin')->check() || $this->assessments->actorCanRemoveSitting()),
+            403
+        );
         $attempt->answers()->delete();
         $attempt->delete();
 
