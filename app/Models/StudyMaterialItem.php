@@ -102,6 +102,9 @@ class StudyMaterialItem extends Model
         if (str_contains($mime, 'zip') || preg_match('/\.(zip|rar|7z|tar|gz)(\s|$)/', $name)) {
             return 'zip';
         }
+        if (preg_match('/masterclass|recording|lecture|webinar|video/i', $name)) {
+            return 'video';
+        }
 
         return null;
     }

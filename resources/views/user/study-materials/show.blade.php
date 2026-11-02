@@ -50,6 +50,21 @@
     border-radius:6px;
     background:#fff;
     min-height:52px;
+    overflow:hidden;
+}
+.sm-file-player{
+    background:#000;
+    margin:0 12px 12px;
+    border-radius:4px;
+    overflow:hidden;
+}
+.sm-file-player video,
+.sm-file-player iframe{
+    display:block;
+    width:100%;
+    height:220px;
+    border:0;
+    background:#000;
 }
 .sm-file-link{
     display:flex;

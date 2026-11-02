@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.searchable-select-assets')
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
-<!-- lms-assigned-tests-20261102b -->
+<!-- lms-assigned-tests-20261102c -->
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
@@ -35,8 +35,7 @@
     .lms-assigned-table {
         width: 100% !important;
         min-width: 100% !important;
-        max-width: 100% !important;
-        table-layout: fixed;
+        table-layout: auto;
         margin-bottom: 0;
         font-size: 12px;
     }
@@ -49,16 +48,17 @@
         white-space: normal;
         overflow: visible;
     }
-    .lms-assigned-table .col-appt { width: 8%; white-space: nowrap !important; }
-    .lms-assigned-table .col-test { width: 15%; }
-    .lms-assigned-table .col-taker { width: 13%; }
-    .lms-assigned-table .col-timing { width: 24%; }
-    .lms-assigned-table .col-created { width: 8%; }
-    .lms-assigned-table .col-assessor { width: 9%; }
-    .lms-assigned-table .col-status { width: 9%; }
-    .lms-assigned-table .col-pub { width: 5%; }
+    .lms-assigned-table .col-appt { min-width: 108px; white-space: nowrap !important; }
+    .lms-assigned-table .col-when { min-width: 150px; font-weight: 700; }
+    .lms-assigned-table .col-assessor { min-width: 130px; font-weight: 700; }
+    .lms-assigned-table .col-test { min-width: 160px; }
+    .lms-assigned-table .col-taker { min-width: 140px; }
+    .lms-assigned-table .col-timing { min-width: 220px; }
+    .lms-assigned-table .col-created { min-width: 100px; }
+    .lms-assigned-table .col-status { min-width: 110px; }
+    .lms-assigned-table .col-pub { min-width: 70px; }
     .lms-assigned-table .col-actions {
-        width: 9%;
+        min-width: 110px;
         overflow-wrap: normal;
         word-break: normal;
         white-space: normal;
@@ -206,13 +206,14 @@
                 <thead>
                     <tr>
                         <th class="col-appt" data-sort-col="0" style="white-space:nowrap;">Appointment ID <span class="sort-ind"></span></th>
-                        <th class="col-test" data-sort-col="1">Test Details <span class="sort-ind"></span></th>
-                        <th class="col-taker" data-sort-col="2">Test Taker <span class="sort-ind"></span></th>
-                        <th class="col-timing" data-sort-col="3">Test Time Details <span class="sort-ind"></span></th>
-                        <th class="col-created" data-sort-col="4">Created by <span class="sort-ind"></span></th>
-                        <th class="col-assessor" data-sort-col="5">Assessor <span class="sort-ind"></span></th>
-                        <th class="col-status" data-sort-col="6">Status <span class="sort-ind"></span></th>
-                        <th class="col-pub" data-sort-col="7">Published <span class="sort-ind"></span></th>
+                        <th class="col-when" data-sort-col="1">Appointment time <span class="sort-ind"></span></th>
+                        <th class="col-assessor" data-sort-col="2">Assessor <span class="sort-ind"></span></th>
+                        <th class="col-test" data-sort-col="3">Test Details <span class="sort-ind"></span></th>
+                        <th class="col-taker" data-sort-col="4">Test Taker <span class="sort-ind"></span></th>
+                        <th class="col-timing" data-sort-col="5">Test Time Details <span class="sort-ind"></span></th>
+                        <th class="col-created" data-sort-col="6">Created by <span class="sort-ind"></span></th>
+                        <th class="col-status" data-sort-col="7">Status <span class="sort-ind"></span></th>
+                        <th class="col-pub" data-sort-col="8">Published <span class="sort-ind"></span></th>
                         <th class="col-actions">Action</th>
                     </tr>
                 </thead>
@@ -323,6 +324,14 @@
                         @if($assessment)
                         <tr>
                             <td class="col-appt" data-sort="{{ $assignment->id ?? 0 }}"><strong>{{ $apptId }}</strong></td>
+                            <td class="col-when" data-sort="{{ $appointment }}">{{ $appointment }}</td>
+                            <td class="col-assessor" data-sort="{{ $assessorName }}">
+                                @if($assessorUserId)
+                                    <a href="#" class="lms-user-preview" data-user-id="{{ $assessorUserId }}">{{ $assessorName }}</a>
+                                @else
+                                    {{ $assessorName }}
+                                @endif
+                            </td>
                             <td class="col-test" data-sort="{{ $assessment->title ?? ('Test #'.($assignment->assessment_id ?? '')) }}">
                                 <strong>{{ $assessment->title ?: ('Test #'.$assessment->id) }}</strong>
                                 <br><small class="text-muted">{{ $assessment->displayCode() }} · {{ $assessment->kindLabel() }}@if($assignment) · {{ $assignment->sittingKindLabel() }}@endif</small>
@@ -371,13 +380,6 @@
                                     <a href="#" class="lms-user-preview" data-user-id="{{ $assignment->assigned_by_user_id }}">{{ $createdBy }}</a>
                                 @else
                                     {{ $createdBy }}
-                                @endif
-                            </td>
-                            <td class="col-assessor" data-sort="{{ $assessorName }}">
-                                @if($assessorUserId)
-                                    <a href="#" class="lms-user-preview" data-user-id="{{ $assessorUserId }}">{{ $assessorName }}</a>
-                                @else
-                                    {{ $assessorName }}
                                 @endif
                             </td>
                             <td class="col-status" data-sort="{{ $statusText }}">
@@ -435,7 +437,7 @@
                         </tr>
                         @endif
                     @empty
-                        <tr><td colspan="9" class="text-center text-muted">No assigned test takers found.</td></tr>
+                        <tr><td colspan="10" class="text-center text-muted">No assigned test takers found.</td></tr>
                     @endforelse
                 </tbody>
             </table>
