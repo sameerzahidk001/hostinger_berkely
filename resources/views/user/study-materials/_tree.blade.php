@@ -35,16 +35,26 @@
                             : ($item->isExternal() ? 'fa-cloud text-info' : 'fa-file-o text-muted');
                     @endphp
                     <div class="sm-file-card">
+                        @php $kind = $item->portalKind(); @endphp
                         <a href="{{ $item->portalPreviewUrl() }}"
                            class="sm-file-link"
                            data-sm-file
-                           data-sm-kind="{{ $item->portalKind() }}"
+                           data-sm-kind="{{ $kind }}"
                            data-sm-name="{{ $item->name }}"
                            @if($item->allowsDownload()) data-sm-download="{{ $item->portalDownloadUrl() }}" @endif
                            @if($item->portalPosterUrl()) data-sm-poster="{{ $item->portalPosterUrl() }}" @endif>
                             <i class="fa {{ $iconClass }} sm-file-icon"></i>
                             <span class="sm-file-name">{{ $item->name }}</span>
                         </a>
+                        @if($kind === 'video')
+                            <div class="sm-file-player">
+                                @if($item->isExternal() && str_contains($item->portalPreviewUrl(), 'workdrive'))
+                                    <iframe src="{{ $item->portalPreviewUrl() }}" title="{{ $item->name }}" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+                                @else
+                                    <video controls playsinline preload="metadata" controlslist="nodownload" src="{{ $item->portalPreviewUrl() }}" @if($item->portalPosterUrl()) poster="{{ $item->portalPosterUrl() }}" @endif></video>
+                                @endif
+                            </div>
+                        @endif
                     </div>
                 @endforeach
             </div>
