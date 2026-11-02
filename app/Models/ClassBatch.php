@@ -111,6 +111,20 @@ class ClassBatch extends Model
                     }
                     if ($name !== '') {
                         $scheduleQuery->orWhere('batch_name', $name);
+                        $scheduleQuery->orWhere('batch_name', 'like', '%' . $name . '%');
+                    }
+                    if (Schema::hasColumn('class_schedules', 'course_id') && ! empty($batch->course_id)) {
+                        $scheduleQuery->orWhere(function ($q) use ($batch, $name, $code) {
+                            $q->where('course_id', (int) $batch->course_id);
+                            $q->where(function ($n) use ($name, $code) {
+                                if ($code !== '') {
+                                    $n->orWhere('batch_name', 'like', '%' . $code . '%');
+                                }
+                                if ($name !== '') {
+                                    $n->orWhere('batch_name', 'like', '%' . $name . '%');
+                                }
+                            });
+                        });
                     }
                 }
                 $scheduleIds = $scheduleQuery->pluck('id');
