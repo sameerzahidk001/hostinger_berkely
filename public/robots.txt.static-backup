@@ -1,6 +1,22 @@
 User-agent: *
-Disallow:
+Allow: /images/
+Allow: /frontend/images/
+Allow: /admin/images/
+Allow: /storage/
+Allow: /*.jpg$
+Allow: /*.jpeg$
+Allow: /*.png$
+Allow: /*.gif$
+Allow: /*.webp$
+Allow: /*.svg$
+Disallow: /search
+Disallow: /search-courses
+Disallow: /cart
+Disallow: /checkout
+Disallow: /login
+Disallow: /register
+Disallow: /admin/
+Disallow: /user/
+Disallow: /instructor/
 
-# Absolute sitemap URL is also served dynamically at /robots.txt by the app.
-# Keep this file in sync if your host serves public/robots.txt before Laravel.
-Sitemap: /sitemap.xml
+Sitemap: https://eduberkeley.com/sitemap.xml
