@@ -42,6 +42,12 @@
             @else
                 <p class="text-muted">Submitted. Your score will appear here when Admin / Instructor publishes results.</p>
             @endif
+            @if(!empty($canSeeReview) && trim(strip_tags((string) ($attempt->assessment->description ?? ''))) !== '')
+                <div class="m-t-sm">
+                    <strong>Test instructions:</strong>
+                    <div class="well well-sm m-t-xs">{!! $attempt->assessment->description !!}</div>
+                </div>
+            @endif
             @if(!empty($canSeeReview) && $attempt->grader_feedback)
                 <div class="m-t-sm lms-qa-feedback">
                     <strong>Overall feedback:</strong>

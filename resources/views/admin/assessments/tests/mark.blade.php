@@ -46,6 +46,14 @@
     </p>
     <form method="POST" action="{{ route('admin.assessments.tests.save-marks', $attempt->id) }}" id="markAttemptForm">
         @csrf
+        @if(trim(strip_tags((string) ($attempt->assessment->description ?? ''))) !== '')
+            <div class="ibox">
+                <div class="ibox-title"><h5>Test instructions</h5></div>
+                <div class="ibox-content">
+                    <div class="lms-qa-question">{!! $attempt->assessment->description !!}</div>
+                </div>
+            </div>
+        @endif
         <div class="ibox">
             <div class="ibox-title"><h5>Overall feedback to student *</h5></div>
             <div class="ibox-content lms-qa-feedback">

@@ -1916,6 +1916,11 @@ class LmsAssessmentService
             return $group->sortBy(fn ($r) => (int) ($r['assignment']->id ?? 0))->first();
         })->values();
 
+        $hasAppointment = fn ($r) => ! empty($r['assignment']->id);
+        $available = $available->filter($hasAppointment)->values();
+        $upcoming = $upcoming->filter($hasAppointment)->values();
+        $missed = $missed->filter($hasAppointment)->values();
+
         return compact('available', 'upcoming', 'inProgress', 'submitted', 'results', 'missed');
     }
 }

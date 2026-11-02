@@ -245,7 +245,6 @@
                                     <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.edit-assignment', $assignment->id) }}">Edit</a>
                                     <form action="{{ route('admin.assessments.tests.destroy-assignment', $assignment->id) }}" method="POST" onsubmit="return confirm('Delete this sitting ({{ $apptId }})?');">
                                         @csrf
-                                        @method('DELETE')
                                         @if($attempt)
                                             <input type="hidden" name="attempt_id" value="{{ $attempt->id }}">
                                         @endif
