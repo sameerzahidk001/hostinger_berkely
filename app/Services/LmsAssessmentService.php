@@ -416,6 +416,32 @@ class LmsAssessmentService
         return $email !== '' && in_array($email, $this->cimaCohortEmails(), true);
     }
 
+    /** CIMA case sittings expire. Mock/practice/general stay startable after the clock. */
+    public function usesStrictExamWindow(LmsAssessment $assessment): bool
+    {
+        $hay = mb_strtolower(trim(
+            (string) ($assessment->title ?? '') . ' ' . (string) ($assessment->course->title ?? '')
+        ));
+
+        return str_contains($hay, 'cima')
+            && (str_contains($hay, 'mcs') || str_contains($hay, 'management case') || str_contains($hay, 'case study'));
+    }
+
+    public function sittingCanStartAfterWindow(LmsAssessment $assessment, ?LmsAssessmentAssignment $assignment = null): bool
+    {
+        if ($assignment && $assignment->isSelfSitting()) {
+            return true;
+        }
+        if ($this->usesStrictExamWindow($assessment)) {
+            return false;
+        }
+
+        return $assessment->isMock()
+            || $assessment->isPractice()
+            || $assessment->kind === LmsAssessment::KIND_GENERAL
+            || $assessment->isSkill();
+    }
+
     /** The five BAT-0003 CIMA people see that sitting even if they are not on the batch pivot. */
     protected function attachCimaCohortSittingsForUser(User $user, Collection $out, ?string $kind = null): void
     {
@@ -750,6 +776,9 @@ class LmsAssessmentService
                 if ($asg->isSelfSitting() || $asg->isAvailableNow()) {
                     return true;
                 }
+                if ($usedOnSitting === 0 && $this->sittingCanStartAfterWindow($assessment, $asg)) {
+                    return true;
+                }
 
                 // Remaining attempts on a sitting already started may continue after the window.
                 return $usedOnSitting > 0;
@@ -830,7 +859,9 @@ class LmsAssessmentService
                 ->count();
             $allowAnytimeRetake = $this->canRetake($user, $assessment, $assignment);
             if (! $assignment->isSelfSitting() && $assignment->isExpired() && $usedOnSitting === 0) {
-                if ($allowAnytimeRetake) {
+                if ($this->sittingCanStartAfterWindow($assessment, $assignment)) {
+                    // Mock/practice/general stay startable on the same sitting.
+                } elseif ($allowAnytimeRetake) {
                     $assignment = $this->ensureAnytimeRetakeSitting($user, $assessment, $assignment);
                 } else {
                     abort(403, 'The availability window for this test has ended.');
@@ -854,7 +885,7 @@ class LmsAssessmentService
                 if ($anyAsg && $anyAsg->isNotYetOpen()) {
                     abort(403, 'This test is not open yet.');
                 }
-                if ($anyAsg && $anyAsg->isExpired()) {
+                if ($anyAsg && $anyAsg->isExpired() && ! $this->sittingCanStartAfterWindow($assessment, $anyAsg)) {
                     abort(403, 'The availability window for this test has ended.');
                 }
                 abort(403, 'No open assigned sitting. Ask admin to Assign a retake for this test.');
@@ -1501,6 +1532,7 @@ class LmsAssessmentService
         }
         $missedThisSitting = $assignment
             && ! $assignment->isSelfSitting()
+            && ! $this->sittingCanStartAfterWindow($assessment, $assignment)
             && ($assignment->isExpired() || $this->isCimaCohortEmail($user->email ?? null));
         if ($missedThisSitting || $this->missedExamSlotCount($user, $assessment) > 0) {
             return $max > 1;
@@ -1538,7 +1570,11 @@ class LmsAssessmentService
             ->filter(fn ($row) => (int) ($row['assessment']->id ?? 0) === (int) $assessment->id)
             ->map(fn ($row) => $row['assignment'] ?? null)
             ->filter()
-            ->filter(fn ($asg) => ! $asg->isSelfSitting() && $asg->isExpired());
+            ->filter(function ($asg) use ($assessment) {
+                return ! $asg->isSelfSitting()
+                    && $asg->isExpired()
+                    && ! $this->sittingCanStartAfterWindow($assessment, $asg);
+            });
         $hasUnusedMiss = $examSittings->contains(function ($asg) use ($attempts) {
             return $attempts->filter(fn ($att) => $this->attemptBelongsToAssignment($att, $asg))->isEmpty();
         });
@@ -1826,6 +1862,9 @@ class LmsAssessmentService
                     || ($this->isCimaCohortEmail($user->email ?? null)
                         && $assignment->windowStart()
                         && now()->gt($assignment->windowStart()->copy()->addMinutes(max(1, (int) ($assessment->durationMinutes() ?: 180))))));
+            if ($examWindowPassed && $this->sittingCanStartAfterWindow($assessment, $assignment)) {
+                $examWindowPassed = false;
+            }
             if ($examWindowPassed) {
                 $missed->push($base + [
                     'attempt' => null,
@@ -1919,7 +1958,7 @@ class LmsAssessmentService
             return $group->sortBy(fn ($r) => (int) ($r['assignment']->id ?? 0))->first();
         })->values();
 
-        $hasAppointment = fn ($r) => ! empty($r['assignment']->id);
+        $hasAppointment = fn ($r) => ! empty($r['assignment']->id) || ! empty($r['from_folder']);
         $available = $available->filter($hasAppointment)->values();
         $upcoming = $upcoming->filter($hasAppointment)->values();
         $missed = $missed->filter($hasAppointment)->values();
