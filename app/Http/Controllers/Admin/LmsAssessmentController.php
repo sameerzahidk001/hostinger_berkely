@@ -1854,7 +1854,6 @@ class LmsAssessmentController extends Controller
                 return $found;
             }
             $batch = ClassBatch::query()->where('code', 'BAT-0003')->first();
-            $marker = User::query()->where('name', 'like', 'Muhammad Sadiq%')->first();
             $asg = new LmsAssessmentAssignment();
             $asg->assessment_id = (int) $assessment->id;
             if (Schema::hasColumn($asg->getTable(), 'class_batch_id') && $batch) {
@@ -1865,9 +1864,6 @@ class LmsAssessmentController extends Controller
             }
             if (Schema::hasColumn($asg->getTable(), 'sitting_kind')) {
                 $asg->sitting_kind = LmsAssessmentAssignment::KIND_EXAM;
-            }
-            if (Schema::hasColumn($asg->getTable(), 'marker_user_id') && $marker) {
-                $asg->marker_user_id = (int) $marker->id;
             }
             if (Schema::hasColumn($asg->getTable(), 'available_from')) {
                 $fromLocal = \Carbon\Carbon::parse('2026-10-26 20:30:00', 'Asia/Dubai');
@@ -1912,14 +1908,9 @@ class LmsAssessmentController extends Controller
             : ($asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()
                 ? 'Start anytime'
                 : ($asg?->windowStart()?->format('d/m/Y, H:i') ?: null));
-        $cimaCase = $assessment && method_exists($this->assessments, 'usesStrictExamWindow')
-            && $this->assessments->usesStrictExamWindow($assessment);
         $assessor = $asg && method_exists($asg, 'assessorDisplayName')
             ? $asg->assessorDisplayName()
             : ($asg?->marker?->name ?: null);
-        if ($cimaCase && ($assessor === null || $assessor === '' || $assessor === '—' || $assessor === 'Admin / course instructors')) {
-            $assessor = 'Muhammad Sadiq';
-        }
         $created = $asg?->createdByLabel() ?: null;
         $tz = $asg?->timezoneLabel() ?: null;
         $isCohort = $this->isCimaCohortSitting($assessment, $asg, collect([$row['student'] ?? null]));
@@ -1939,7 +1930,6 @@ class LmsAssessmentController extends Controller
             }
             $tz = ($tz && $tz !== '') ? $tz : 'Asia/Dubai · GST';
             $created = ($created && $created !== '') ? $created : 'Admin';
-            $assessor = ($assessor && $assessor !== '' && $assessor !== '—') ? $assessor : 'Muhammad Sadiq';
         }
         $status = 'Assigned';
         if ($attempt) {
@@ -2022,23 +2012,6 @@ class LmsAssessmentController extends Controller
                 }
             } catch (\Throwable $e) {
                 // keep empty window
-            }
-        }
-        if (empty($asg->marker_user_id) && $assessment && ! empty($assessment->id)) {
-            try {
-                $marked = LmsAssessmentAssignment::query()
-                    ->where('assessment_id', (int) $assessment->id)
-                    ->whereNotNull('marker_user_id')
-                    ->orderBy('id')
-                    ->first();
-                if ($marked && ! empty($marked->marker_user_id)) {
-                    $asg->marker_user_id = $marked->marker_user_id;
-                    if ($marked->relationLoaded('marker') && $marked->marker) {
-                        $asg->setRelation('marker', $marked->marker);
-                    }
-                }
-            } catch (\Throwable $e) {
-                // keep empty assessor
             }
         }
     }
