@@ -197,6 +197,16 @@ class LmsAssessmentService
             || $this->actorIsAssignedMarker();
     }
 
+    /** Admin, HoF, or anyone who can open Assigned Tests may remove a sitting. */
+    public function actorCanRemoveSitting(): bool
+    {
+        if ($this->lms->isAdminActor() || (function_exists('panel_sees_all_dashboards') && panel_sees_all_dashboards())) {
+            return true;
+        }
+
+        return $this->lms->isInstructorActor() && $this->actorCanViewAssignedTests();
+    }
+
     public function actorCanAccessAttempt(LmsAssessmentAttempt $attempt): bool
     {
         if ($this->lms->isAdminActor()) {

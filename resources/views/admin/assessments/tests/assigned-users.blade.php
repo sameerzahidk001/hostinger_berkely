@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.searchable-select-assets')
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
-<!-- lms-assigned-tests-20261031a -->
+<!-- lms-assigned-tests-20261031b -->
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
@@ -376,13 +376,8 @@
                             </td>
                             <td class="col-actions">
                                 @php
-                                    $canManageSitting = $assessment
-                                        && (
-                                            app(\App\Services\StudyMaterialService::class)->isAdminActor()
-                                            || app(\App\Services\LmsAssessmentService::class)->canManageSittingsFor($assessment)
-                                            || ($assignment && (int) ($assignment->assigned_by_user_id ?? 0) === (int) auth()->id())
-                                            || ($assignment && (int) ($assignment->marker_user_id ?? 0) === (int) auth()->id())
-                                        );
+                                    $lmsSvc = app(\App\Services\LmsAssessmentService::class);
+                                    $canManageSitting = $assessment && $lmsSvc->actorCanRemoveSitting();
                                 @endphp
                                 @if($attempt && in_array($attempt->status, ['submitted', 'graded', 'expired'], true))
                                     <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.mark', $attempt->id) }}">Mark</a>
