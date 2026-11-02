@@ -45,10 +45,10 @@
             border-top: 1px solid #eee;
             padding-top: 8px;
             margin-top: 12px;
-            font-size: 9px;
-            color: #777;
-            text-align: center;
-            line-height: 1.45;
+            font-size: 10px;
+            color: #444;
+            text-align: left;
+            line-height: 1.55;
             page-break-before: auto;
             page-break-inside: avoid;
         }
@@ -148,6 +148,22 @@
         <tr><td class="muted">Assessor Name</td><td>{{ $attempt->assessorLabel($assignment) }}</td></tr>
         <tr><td class="muted">Published on</td><td>{{ $publishedOn }}</td></tr>
     </table>
+    @php
+        $assessorEmail = null;
+        if (! empty($attempt->graded_by_user_id)) {
+            $assessorEmail = \App\Models\User::query()->where('id', (int) $attempt->graded_by_user_id)->value('email');
+        }
+        if (! $assessorEmail && ! empty($attempt->graded_by_admin_id) && class_exists(\App\Models\Admin::class)) {
+            $assessorEmail = \App\Models\Admin::query()->where('id', (int) $attempt->graded_by_admin_id)->value('email');
+        }
+        if (! $assessorEmail && $assignment) {
+            $assignment->loadMissing('marker');
+            $assessorEmail = $assignment->marker->email ?? null;
+        }
+        $website = function_exists('invoice_footer_settings')
+            ? (invoice_footer_settings()['website'] ?? 'www.eduberkeley.com')
+            : 'www.eduberkeley.com';
+    @endphp
 
     <?php
         $pdfAllow = '<p><br><strong><em><ul><ol><li><b><i><u><table><thead><tbody><tfoot><tr><td><th><caption><colgroup><col><div><span><h1><h2><h3><h4>';
@@ -218,6 +234,10 @@
         }
     ?>
 
-    @include('partials.invoice-document-footer-pdf')
+    <div class="footer">
+        <div><strong>Contact Details:</strong></div>
+        <div>Email: {{ $assessorEmail ?: '—' }}</div>
+        <div>Website: {{ $website }}</div>
+    </div>
 </body>
 </html>
