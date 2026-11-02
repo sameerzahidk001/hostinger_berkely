@@ -5,14 +5,21 @@
 #smViewerBackdrop{position:fixed;inset:0;background:rgba(0,4,53,.55);display:none;align-items:center;justify-content:center;z-index:5000;padding:16px;}
 #smViewerBackdrop.open{display:flex;}
 #smViewerModal{background:#fff;width:min(1100px,100%);max-height:92vh;display:flex;flex-direction:column;border-radius:4px;overflow:hidden;}
+#smViewerBackdrop.fs{padding:0;}
+#smViewerBackdrop.fs #smViewerModal{width:100%;height:100%;max-height:100vh;border-radius:0;}
 #smViewerHeader{background:#000435;color:#fff;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;gap:12px;}
 #smViewerHeader strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 #smViewerActions{display:flex;align-items:center;gap:10px;flex-shrink:0;}
 #smViewerDownload{background:#f8961f;color:#1e1e1e;text-decoration:none;font-weight:700;padding:6px 12px;border-radius:4px;}
+#smViewerMax{background:transparent;border:1px solid #fff;color:#fff;font-weight:700;padding:5px 10px;border-radius:4px;cursor:pointer;}
 #smViewerBody{background:#fff;min-height:420px;flex:1;position:relative;}
 #smViewerBody.video{background:#000;}
 #smViewerBody iframe,#smViewerBody video,#smViewerBody img,#smViewerBody audio{width:100%;height:72vh;border:0;background:#000;}
+#smViewerBackdrop.fs #smViewerBody iframe,
+#smViewerBackdrop.fs #smViewerBody video,
+#smViewerBackdrop.fs #smViewerBody img{height:calc(100vh - 52px);}
 #smViewerBody img{object-fit:contain;background:#111;}
+#smViewerBody video{object-fit:contain;}
 #smViewerClose{background:transparent;border:0;color:#fff;font-size:24px;cursor:pointer;line-height:1;}
 #smViewerLoading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.55);color:#fff;font-weight:600;z-index:2;}
 #smViewerDownload.is-busy{opacity:.7;pointer-events:none;}
@@ -171,6 +178,7 @@
             <strong id="smViewerTitle">File</strong>
             <div id="smViewerActions">
                 <a id="smViewerDownload" href="#">Download</a>
+                <button type="button" id="smViewerMax" aria-label="Maximize">Maximize</button>
                 <button type="button" id="smViewerClose" aria-label="Close">&times;</button>
             </div>
         </div>
@@ -186,13 +194,26 @@
     const body = document.getElementById('smViewerBody');
     const closeBtn = document.getElementById('smViewerClose');
     const downloadBtn = document.getElementById('smViewerDownload');
+    const maxBtn = document.getElementById('smViewerMax');
 
     function closeViewer() {
-        backdrop.classList.remove('open');
+        backdrop.classList.remove('open', 'fs');
         body.classList.remove('video');
         body.innerHTML = '';
+        if (maxBtn) maxBtn.textContent = 'Maximize';
     }
     closeBtn.addEventListener('click', closeViewer);
+    if (maxBtn) {
+        maxBtn.addEventListener('click', function () {
+            const video = body.querySelector('video');
+            if (video && (video.requestFullscreen || video.webkitEnterFullscreen || video.webkitRequestFullscreen)) {
+                const req = video.requestFullscreen || video.webkitRequestFullscreen || video.webkitEnterFullscreen;
+                try { req.call(video); return; } catch (err) {}
+            }
+            backdrop.classList.toggle('fs');
+            maxBtn.textContent = backdrop.classList.contains('fs') ? 'Exit' : 'Maximize';
+        });
+    }
     backdrop.addEventListener('click', function (e) {
         if (e.target === backdrop) closeViewer();
     });
@@ -224,7 +245,7 @@
             const isWorkdrive = /workdrive\.zoho/i.test(url);
             let media = '';
             if (kind === 'video' && !isWorkdrive) {
-                media = '<video controls playsinline preload="metadata" src="' + safeUrl + '"' + (poster ? ' poster="' + poster.replace(/"/g, '&quot;') + '"' : '') + ' title="' + safeName + '"></video>';
+                media = '<video controls controlslist="nodownload" playsinline preload="metadata" src="' + safeUrl + '"' + (poster ? ' poster="' + poster.replace(/"/g, '&quot;') + '"' : '') + ' title="' + safeName + '"></video>';
             } else if (kind === 'video') {
                 media = '<iframe src="' + safeUrl + '" title="' + safeName + '" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen></iframe>';
             } else if (kind === 'image') {

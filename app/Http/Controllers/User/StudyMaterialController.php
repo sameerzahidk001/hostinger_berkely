@@ -128,9 +128,11 @@ class StudyMaterialController extends Controller
         $path = $item->publicPath();
         if ($path && File::exists($path)) {
             if (!$asDownload) {
-                $headers['Content-Type'] = $item->mime && $item->mime !== 'zoho/workdrive'
-                    ? $item->mime
-                    : (File::mimeType($path) ?: 'application/octet-stream');
+                $headers['Content-Type'] = $item->portalKind() === 'video'
+                    ? $item->videoContentType($path)
+                    : ($item->mime && $item->mime !== 'zoho/workdrive'
+                        ? $item->mime
+                        : (File::mimeType($path) ?: 'application/octet-stream'));
             }
 
             return $asDownload
@@ -146,7 +148,9 @@ class StudyMaterialController extends Controller
                     $filename = $info['name'];
                     $headers['Content-Disposition'] = ($asDownload ? 'attachment' : 'inline') . '; filename="' . addslashes($filename) . '"';
                 }
-                if (!empty($info['extn']) && !$asDownload) {
+                if (!$asDownload && $item->portalKind() === 'video') {
+                    $headers['Content-Type'] = $item->videoContentType();
+                } elseif (!empty($info['extn']) && !$asDownload) {
                     $headers['Content-Type'] = $this->zoho->mimeFromExtension($info['extn']) ?: 'application/octet-stream';
                 }
             }
@@ -169,7 +173,11 @@ class StudyMaterialController extends Controller
                 ], 502);
             }
 
-            $headers['Content-Type'] = $asDownload ? 'application/octet-stream' : ($remote['mime'] ?: 'application/octet-stream');
+            $headers['Content-Type'] = $asDownload
+                ? 'application/octet-stream'
+                : ($item->portalKind() === 'video'
+                    ? $item->videoContentType()
+                    : ($remote['mime'] ?: 'application/octet-stream'));
             if (!empty($remote['path']) && is_file($remote['path'])) {
                 $response = $asDownload
                     ? response()->download($remote['path'], $filename, $headers)

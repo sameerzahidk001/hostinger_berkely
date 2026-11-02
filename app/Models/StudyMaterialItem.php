@@ -78,7 +78,7 @@ class StudyMaterialItem extends Model
         $mime = strtolower((string) $mime);
         $name = strtolower(trim((string) $name));
 
-        if (str_starts_with($mime, 'video/') || preg_match('/\.(mp4|webm|ogg|mov|m4v|avi)(\s|$)/', $name)) {
+        if (str_starts_with($mime, 'video/') || preg_match('/\.(mp4|webm|ogg|ogv|mov|m4v|avi|mkv)(\s|$)/', $name)) {
             return 'video';
         }
         if (str_starts_with($mime, 'audio/') || preg_match('/\.(mp3|wav|m4a|aac|flac)(\s|$)/', $name)) {
@@ -232,7 +232,7 @@ class StudyMaterialItem extends Model
         $mime = strtolower((string) $this->mime);
         $name = strtolower(trim($this->name . ' ' . ($this->original_name ?? '')));
 
-        if (str_starts_with($mime, 'video/') || preg_match('/\.(mp4|webm|ogg|mov|m4v|avi)(\s|$)/', $name)) {
+        if (str_starts_with($mime, 'video/') || preg_match('/\.(mp4|webm|ogg|ogv|mov|m4v|avi|mkv)(\s|$)/', $name)) {
             return 'video';
         }
         if (str_contains($mime, 'pdf') || str_ends_with($name, '.pdf')) {
@@ -249,6 +249,30 @@ class StudyMaterialItem extends Model
         }
 
         return 'file';
+    }
+
+    public function videoContentType(?string $path = null): string
+    {
+        $mime = strtolower(trim((string) $this->mime));
+        if (str_starts_with($mime, 'video/') && $mime !== 'video/') {
+            return $mime;
+        }
+
+        $haystack = strtolower(trim($this->original_name . ' ' . $this->name . ' ' . ($path ?? '') . ' ' . ($this->disk_path ?? '')));
+        if (str_contains($haystack, '.webm')) {
+            return 'video/webm';
+        }
+        if (str_contains($haystack, '.ogv') || str_contains($haystack, '.ogg')) {
+            return 'video/ogg';
+        }
+        if (str_contains($haystack, '.mov')) {
+            return 'video/quicktime';
+        }
+        if (str_contains($haystack, '.m4v')) {
+            return 'video/x-m4v';
+        }
+
+        return 'video/mp4';
     }
 
     public function portalPosterUrl(): ?string
