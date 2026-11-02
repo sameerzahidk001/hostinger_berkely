@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.searchable-select-assets')
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
-<!-- lms-assigned-tests-20261102a -->
+<!-- lms-assigned-tests-20261102b -->
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
@@ -13,13 +13,30 @@
     .lms-status-in_progress { color: #f0ad4e; font-weight: 700; }
     .lms-pub-yes { color: #1ab394; font-weight: 700; }
     .lms-pub-no { color: inherit; font-weight: 600; }
-    .wrapper.wrapper-content { padding-left: 10px; padding-right: 10px; }
-    .lms-assigned-wrap { overflow-x: auto; width: 100%; }
+    .wrapper.wrapper-content {
+        width: 100%;
+        max-width: 100%;
+        padding-left: 10px;
+        padding-right: 10px;
+        box-sizing: border-box;
+    }
+    .wrapper.wrapper-content > .ibox {
+        width: 100%;
+        max-width: 100%;
+        margin-left: 0;
+        margin-right: 0;
+    }
+    .lms-assigned-wrap {
+        overflow-x: auto;
+        width: 100% !important;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
     .lms-assigned-table {
         width: 100% !important;
-        min-width: 1480px;
-        max-width: none;
-        table-layout: auto;
+        min-width: 100% !important;
+        max-width: 100% !important;
+        table-layout: fixed;
         margin-bottom: 0;
         font-size: 12px;
     }
@@ -30,17 +47,18 @@
         word-wrap: break-word;
         overflow-wrap: break-word;
         white-space: normal;
+        overflow: visible;
     }
-    .lms-assigned-table .col-appt { min-width: 110px; white-space: nowrap !important; }
-    .lms-assigned-table .col-test { min-width: 180px; }
-    .lms-assigned-table .col-taker { min-width: 150px; }
-    .lms-assigned-table .col-timing { min-width: 280px; }
-    .lms-assigned-table .col-created { min-width: 110px; }
-    .lms-assigned-table .col-assessor { min-width: 140px; }
-    .lms-assigned-table .col-status { min-width: 130px; }
-    .lms-assigned-table .col-pub { min-width: 80px; }
+    .lms-assigned-table .col-appt { width: 8%; white-space: nowrap !important; }
+    .lms-assigned-table .col-test { width: 15%; }
+    .lms-assigned-table .col-taker { width: 13%; }
+    .lms-assigned-table .col-timing { width: 24%; }
+    .lms-assigned-table .col-created { width: 8%; }
+    .lms-assigned-table .col-assessor { width: 9%; }
+    .lms-assigned-table .col-status { width: 9%; }
+    .lms-assigned-table .col-pub { width: 5%; }
     .lms-assigned-table .col-actions {
-        width: 11%;
+        width: 9%;
         overflow-wrap: normal;
         word-break: normal;
         white-space: normal;

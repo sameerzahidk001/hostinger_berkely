@@ -91,13 +91,15 @@
             margin-right: 0;
             white-space: nowrap;
         }
+        #assessments-portal { width: 100%; max-width: 100%; box-sizing: border-box; }
+        #assessments-portal .ibox,
         #assessments-portal .ibox-content.lms-assess-wrap,
-        #assessments-portal .lms-assess-wrap { overflow-x: auto; width: 100%; }
+        #assessments-portal .lms-assess-wrap { overflow-x: auto; width: 100% !important; max-width: 100%; box-sizing: border-box; }
         #assessments-portal .lms-assess-table {
             width: 100% !important;
-            min-width: 1100px;
-            max-width: none;
-            table-layout: auto;
+            min-width: 100% !important;
+            max-width: 100% !important;
+            table-layout: fixed;
             margin-bottom: 0;
         }
         #assessments-portal .lms-assess-table > thead > tr > th,
@@ -109,11 +111,11 @@
             overflow-wrap: break-word;
             white-space: normal;
         }
-        #assessments-portal .lms-assess-table .col-appt { min-width: 110px; white-space: nowrap; }
-        #assessments-portal .lms-assess-table .col-title { min-width: 180px; }
-        #assessments-portal .lms-assess-table .col-timing { min-width: 260px; }
-        #assessments-portal .lms-assess-table .col-assessor { min-width: 140px; }
-        #assessments-portal .lms-assess-table .col-status { min-width: 110px; }
+        #assessments-portal .lms-assess-table .col-appt { width: 12%; white-space: nowrap; }
+        #assessments-portal .lms-assess-table .col-title { width: 22%; }
+        #assessments-portal .lms-assess-table .col-timing { width: 30%; }
+        #assessments-portal .lms-assess-table .col-assessor { width: 12%; }
+        #assessments-portal .lms-assess-table .col-status { width: 12%; }
         #assessments-portal .lms-assess-table th.col-appt,
         #assessments-portal .lms-assess-table td.col-appt {
             white-space: nowrap !important;
