@@ -164,31 +164,6 @@ class LmsAssessment extends Model
             : $this->assignments()->get(['id', 'assessment_id', 'student_id', 'class_batch_id']);
         $hay = mb_strtolower(trim((string) ($this->title ?? '') . ' ' . (string) ($this->course->title ?? '')));
         $isCima = str_contains($hay, 'cima mcs') || str_contains($hay, 'management case');
-        if ($isCima && $assignments->isNotEmpty()) {
-            $emails = [
-                'k_vinu83@yahoo.com',
-                'kartik.chaturvedi469@gmail.com',
-                'jahanps@gmail.com',
-                'osamaym@hotmail.com',
-                'vananthan1@gmail.com',
-            ];
-            try {
-                return User::query()
-                    ->where(function ($q) use ($emails) {
-                        $q->whereIn('email', $emails);
-                        foreach ($emails as $email) {
-                            $q->orWhereRaw('LOWER(email) = ?', [$email]);
-                        }
-                    })
-                    ->pluck('id')
-                    ->map(fn ($id) => (int) $id)
-                    ->unique()
-                    ->filter()
-                    ->values();
-            } catch (\Throwable $e) {
-                return collect();
-            }
-        }
 
         $ids = collect();
         foreach ($assignments as $assignment) {
@@ -207,6 +182,29 @@ class LmsAssessment extends Model
             );
         }
 
+        if ($isCima) {
+            try {
+                $cohortIds = User::query()
+                    ->where(function ($q) {
+                        $emails = [
+                            'k_vinu83@yahoo.com',
+                            'kartik.chaturvedi469@gmail.com',
+                            'jahanps@gmail.com',
+                            'osamaym@hotmail.com',
+                            'vananthan1@gmail.com',
+                        ];
+                        $q->whereIn('email', $emails);
+                        foreach ($emails as $email) {
+                            $q->orWhereRaw('LOWER(email) = ?', [$email]);
+                        }
+                    })
+                    ->pluck('id');
+                $ids = $ids->merge($cohortIds);
+            } catch (\Throwable $e) {
+                // keep batch roster
+            }
+        }
+
         $ids = $ids->map(fn ($id) => (int) $id)->unique()->filter()->values();
         if ($ids->isEmpty() || ! $isCima) {
             return $ids;
@@ -217,12 +215,14 @@ class LmsAssessment extends Model
             return $ids;
         }
 
-        return $people->filter(function ($person) {
+        $hide = $people->filter(function ($person) {
             $name = mb_strtolower(trim((string) ($person->name ?? '')));
             $email = mb_strtolower(trim((string) ($person->email ?? '')));
 
-            return ! str_contains($name, 'imthiyas') && ! str_contains($email, 'imthiyas');
-        })->pluck('id')->map(fn ($id) => (int) $id)->unique()->values();
+            return str_contains($name, 'imthiyas') || str_contains($email, 'imthiyas');
+        })->pluck('id')->map(fn ($id) => (int) $id);
+
+        return $ids->diff($hide)->map(fn ($id) => (int) $id)->unique()->values();
     }
 
     protected function studentIdsForBatch(int $batchId)
@@ -239,7 +239,7 @@ class LmsAssessment extends Model
                 $ids = $ids->merge(DB::table('class_batch_student')->where('class_batch_id', $batchId)->pluck('user_id'));
             }
         }
-        if ($ids->isEmpty() && Schema::hasTable('class_schedules') && Schema::hasTable('class_schedule_student')) {
+        if (Schema::hasTable('class_schedules') && Schema::hasTable('class_schedule_student')) {
             $scheduleIds = DB::table('class_schedules')->where('batch_id', $batchId)->pluck('id');
             if ($scheduleIds->isNotEmpty()) {
                 $ids = $ids->merge(
