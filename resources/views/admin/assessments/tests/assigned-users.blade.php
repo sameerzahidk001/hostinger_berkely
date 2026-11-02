@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.searchable-select-assets')
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
-<!-- lms-assigned-tests-20261031c -->
+<!-- lms-assigned-tests-20261031d -->
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
@@ -108,6 +108,7 @@
 </div>
 <div class="wrapper wrapper-content">
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
+    @if(session('error'))<div class="alert alert-danger">{{ session('error') }}</div>@endif
     <p class="text-muted m-b-sm">
         All assigned test takers (started or not). Status shows <strong>Marking Required</strong> until the assessor marks a submitted sitting.
     </p>
@@ -376,7 +377,7 @@
                             </td>
                             <td class="col-actions">
                                 @php
-                                    $canAdminSitting = app(\App\Services\StudyMaterialService::class)->isAdminActor();
+                                    $canAdminSitting = \Illuminate\Support\Facades\Auth::guard('admin')->check();
                                 @endphp
                                 @if($attempt && in_array($attempt->status, ['submitted', 'graded', 'expired'], true))
                                     <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.mark', $attempt->id) }}">Mark</a>

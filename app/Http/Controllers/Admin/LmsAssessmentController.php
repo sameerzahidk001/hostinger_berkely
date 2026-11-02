@@ -289,7 +289,9 @@ class LmsAssessmentController extends Controller
         $assignment = LmsAssessmentAssignment::with(['assessment', 'student', 'batch', 'marker'])->findOrFail($assignmentId);
         $assessment = $assignment->assessment;
         abort_unless($assessment, 404);
-        abort_unless($this->assessments->canManageSittingsFor($assessment), 403);
+        if ($deny = $this->denyNonAdminSittingChange()) {
+            return $deny;
+        }
         if (! $assessment->isSkill()) {
             $this->assertInstructorOwnsCourse((int) $assessment->course_id);
         }
@@ -308,7 +310,9 @@ class LmsAssessmentController extends Controller
         $assignment = LmsAssessmentAssignment::with('assessment')->findOrFail($assignmentId);
         $a = $assignment->assessment;
         abort_unless($a, 404);
-        abort_unless($this->assessments->canManageSittingsFor($a), 403);
+        if ($deny = $this->denyNonAdminSittingChange()) {
+            return $deny;
+        }
         if (! $a->isSkill()) {
             $this->assertInstructorOwnsCourse((int) $a->course_id);
         }
@@ -361,12 +365,11 @@ class LmsAssessmentController extends Controller
     public function destroyAssignment(Request $request, $assignmentId)
     {
         $this->assessments->ensure();
+        if ($deny = $this->denyNonAdminSittingChange()) {
+            return $deny;
+        }
         $assignment = LmsAssessmentAssignment::with('assessment')->findOrFail($assignmentId);
-        abort_unless(
-            $assignment->assessment
-            && (Auth::guard('admin')->check() || $this->assessments->actorCanRemoveSitting()),
-            403
-        );
+        abort_unless($assignment->assessment, 404);
 
         $attemptId = (int) $request->input('attempt_id', 0);
         if ($attemptId > 0) {
@@ -401,13 +404,12 @@ class LmsAssessmentController extends Controller
     public function destroyAttemptRow($attemptId)
     {
         $this->assessments->ensure();
+        if ($deny = $this->denyNonAdminSittingChange()) {
+            return $deny;
+        }
         $attempt = LmsAssessmentAttempt::query()->findOrFail($attemptId);
         $assessment = LmsAssessment::query()->withTrashed()->find($attempt->assessment_id);
-        abort_unless(
-            $assessment
-            && (Auth::guard('admin')->check() || $this->assessments->actorCanRemoveSitting()),
-            403
-        );
+        abort_unless($assessment, 404);
         $attempt->answers()->delete();
         $attempt->delete();
 
@@ -2315,6 +2317,18 @@ class LmsAssessmentController extends Controller
                 && ! panel_sees_all_dashboards()
                 && ! $assessment->isSkill(),
         ];
+    }
+
+    /** Sitting edit/delete is Admin login only. Instructors get a message, not a Forbidden page. */
+    protected function denyNonAdminSittingChange()
+    {
+        if (Auth::guard('admin')->check()) {
+            return null;
+        }
+
+        return redirect()
+            ->route('admin.assessments.tests.assigned-users')
+            ->with('error', 'Only Admin can edit, delete or re-assign sittings. Use Mark, Publish or Download PDF.');
     }
 
     /** Instructors and Musa: only tests they created or were assigned to mark. Real Admin still sees all. */
