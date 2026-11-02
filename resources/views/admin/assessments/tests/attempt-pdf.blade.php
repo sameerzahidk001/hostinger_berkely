@@ -150,15 +150,15 @@
     </table>
     @php
         $assessorEmail = null;
-        if (! empty($attempt->graded_by_user_id)) {
-            $assessorEmail = \App\Models\User::query()->where('id', (int) $attempt->graded_by_user_id)->value('email');
-        }
-        if (! $assessorEmail && ! empty($attempt->graded_by_admin_id) && class_exists(\App\Models\Admin::class)) {
-            $assessorEmail = \App\Models\Admin::query()->where('id', (int) $attempt->graded_by_admin_id)->value('email');
-        }
-        if (! $assessorEmail && $assignment) {
+        if ($assignment) {
             $assignment->loadMissing('marker');
             $assessorEmail = $assignment->marker->email ?? null;
+        }
+        if (! $assessorEmail) {
+            $markerId = $attempt->assessorUserId($assignment);
+            if ($markerId) {
+                $assessorEmail = \App\Models\User::query()->where('id', (int) $markerId)->value('email');
+            }
         }
         $website = function_exists('invoice_footer_settings')
             ? (invoice_footer_settings()['website'] ?? 'www.eduberkeley.com')

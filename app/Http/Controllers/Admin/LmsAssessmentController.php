@@ -853,6 +853,7 @@ class LmsAssessmentController extends Controller
         })->all();
 
         $rowsByKey = $this->keepFirstCimaCohortAttempt($rowsByKey);
+        $rowsByKey = $this->collapseUnusedRetakeRows($rowsByKey);
 
         foreach ($rowsByKey as $k => $r) {
             $disp = $this->sittingDisplayForRow($r);
@@ -1887,6 +1888,54 @@ class LmsAssessmentController extends Controller
         if ($assessment) {
             $asg->setRelation('assessment', $assessment);
         }
+    }
+
+    /** One assigned sitting per person. Unused retake/self rows are not extra lines. */
+    protected function collapseUnusedRetakeRows(array $rowsByKey): array
+    {
+        $groups = [];
+        foreach ($rowsByKey as $k => $r) {
+            $pair = (int) ($r['assessment']->id ?? 0) . ':' . (int) ($r['student']->id ?? 0);
+            $groups[$pair][$k] = $r;
+        }
+        $out = [];
+        foreach ($groups as $rows) {
+            $used = [];
+            $unusedExam = [];
+            $unusedOther = [];
+            foreach ($rows as $k => $r) {
+                $asg = $r['assignment'] ?? null;
+                $asgId = (int) ($asg->id ?? 0);
+                if (! empty($r['attempt'])) {
+                    $used[$k] = $r;
+                    continue;
+                }
+                $isSelf = $asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting();
+                if ($asgId > 0 && ! $isSelf) {
+                    $unusedExam[$k] = $r;
+                } else {
+                    $unusedOther[$k] = $r;
+                }
+            }
+            if ($used !== []) {
+                foreach ($used as $k => $r) {
+                    $out[$k] = $r;
+                }
+                continue;
+            }
+            if ($unusedExam !== []) {
+                foreach ($unusedExam as $k => $r) {
+                    $out[$k] = $r;
+                }
+                continue;
+            }
+            $first = array_key_first($unusedOther);
+            if ($first !== null) {
+                $out[$first] = $unusedOther[$first];
+            }
+        }
+
+        return $out;
     }
 
     protected function keepFirstCimaCohortAttempt(array $rowsByKey): array

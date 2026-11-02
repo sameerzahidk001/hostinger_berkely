@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.searchable-select-assets')
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
-<!-- lms-assigned-tests-20261031b -->
+<!-- lms-assigned-tests-20261031c -->
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
@@ -376,8 +376,7 @@
                             </td>
                             <td class="col-actions">
                                 @php
-                                    $lmsSvc = app(\App\Services\LmsAssessmentService::class);
-                                    $canManageSitting = $assessment && $lmsSvc->actorCanRemoveSitting();
+                                    $canAdminSitting = app(\App\Services\StudyMaterialService::class)->isAdminActor();
                                 @endphp
                                 @if($attempt && in_array($attempt->status, ['submitted', 'graded', 'expired'], true))
                                     <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.mark', $attempt->id) }}">Mark</a>
@@ -389,7 +388,7 @@
                                         </form>
                                     @endif
                                 @endif
-                                @if($canManageSitting && $assignment)
+                                @if($canAdminSitting && $assignment)
                                     <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.edit-assignment', $assignment->id) }}">Edit</a>
                                     <form action="{{ route('admin.assessments.tests.destroy-assignment', $assignment->id) }}" method="POST" onsubmit="return confirm('Delete this sitting ({{ $assignment->displayCode() }})?');">
                                         @csrf
@@ -399,7 +398,7 @@
                                         <button type="submit" class="btn btn-xs btn-danger">Delete</button>
                                     </form>
                                     <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.assign', ['id' => $assessment->id, 'mode' => $assignment->isSelfSitting() ? 'self' : 'exam']) }}">Assign again</a>
-                                @elseif($canManageSitting && $attempt)
+                                @elseif($canAdminSitting && $attempt)
                                     <form action="{{ route('admin.assessments.tests.destroy-attempt', $attempt->id) }}" method="POST" onsubmit="return confirm('Delete this test taker sitting?');">
                                         @csrf
                                         <button type="submit" class="btn btn-xs btn-danger">Delete</button>
