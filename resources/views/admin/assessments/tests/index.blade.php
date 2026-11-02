@@ -5,13 +5,18 @@
 @section('content')
 <style>
     .wrapper.wrapper-content {
+        width: 100%;
+        max-width: 100%;
         padding-left: 10px;
         padding-right: 10px;
+        box-sizing: border-box;
     }
+    .wrapper.wrapper-content > .ibox,
     .ibox-content.lms-tests-wrap {
         width: 100%;
         max-width: 100%;
         overflow-x: auto;
+        box-sizing: border-box;
     }
     .lms-create-tests-row {
         display: flex;
@@ -38,12 +43,12 @@
     .lms-btn-general:hover, .lms-btn-general:focus { background: #ec971f; color: #fff !important; }
     .lms-btn-skill { background: #5cb85c; }
     .lms-btn-skill:hover, .lms-btn-skill:focus { background: #449d44; color: #fff !important; }
-    .lms-tests-wrap { overflow-x: auto; width: 100%; max-width: 100%; }
+    .lms-tests-wrap { overflow-x: auto; width: 100% !important; max-width: 100%; }
     .lms-tests-table {
         width: 100% !important;
-        min-width: 1360px;
-        max-width: none;
-        table-layout: auto;
+        min-width: 100% !important;
+        max-width: 100% !important;
+        table-layout: fixed;
         margin-bottom: 0;
         font-size: 12px;
         border-collapse: collapse;
@@ -58,19 +63,19 @@
         white-space: normal;
         overflow: visible;
     }
-    .lms-tests-table .col-date { min-width: 110px; }
-    .lms-tests-table .col-appt { min-width: 150px; }
-    .lms-tests-table .col-id { min-width: 70px; }
-    .lms-tests-table .col-title { min-width: 140px; }
-    .lms-tests-table .col-course { min-width: 130px; }
-    .lms-tests-table .col-type { min-width: 90px; }
-    .lms-tests-table .col-num { min-width: 52px; text-align: center; }
-    .lms-tests-table .col-assigned { min-width: 90px; text-align: center; white-space: normal; }
-    .lms-tests-table .col-status { min-width: 90px; }
-    .lms-tests-table .col-assessor { min-width: 140px; }
+    .lms-tests-table .col-date { width: 8%; }
+    .lms-tests-table .col-appt { width: 11%; }
+    .lms-tests-table .col-id { width: 6%; }
+    .lms-tests-table .col-title { width: 12%; }
+    .lms-tests-table .col-course { width: 11%; }
+    .lms-tests-table .col-type { width: 8%; }
+    .lms-tests-table .col-num { width: 5%; text-align: center; }
+    .lms-tests-table .col-assigned { width: 7%; text-align: center; white-space: normal; }
+    .lms-tests-table .col-status { width: 7%; }
+    .lms-tests-table .col-assessor { width: 9%; }
     .lms-tests-table .col-action {
-        width: 28%;
-        overflow: hidden;
+        width: 16%;
+        overflow: visible;
     }
     .lms-tests-table .lms-row-actions {
         display: flex;
