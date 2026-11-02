@@ -1822,10 +1822,14 @@ class LmsAssessmentController extends Controller
         if (! $apptId && ! empty($attempt?->assignment_id)) {
             $apptId = 'BEXT' . (int) $attempt->assignment_id . ($studentId > 0 ? ('-' . $studentId) : '');
         }
-        $start = $asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()
-            ? 'Start anytime'
-            : ($asg?->windowStart()?->format('d/m/Y, H:i') ?: null);
-        $assessor = $asg?->marker?->name ?: null;
+        $start = $asg && method_exists($asg, 'appointmentStartLabel')
+            ? $asg->appointmentStartLabel()
+            : ($asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()
+                ? 'Start anytime'
+                : ($asg?->windowStart()?->format('d/m/Y, H:i') ?: null));
+        $assessor = $asg && method_exists($asg, 'assessorDisplayName')
+            ? $asg->assessorDisplayName()
+            : ($asg?->marker?->name ?: null);
         $created = $asg?->createdByLabel() ?: null;
         $tz = $asg?->timezoneLabel() ?: null;
         $isCohort = $this->isCimaCohortSitting($assessment, $asg, collect([$row['student'] ?? null]));
@@ -1837,7 +1841,12 @@ class LmsAssessmentController extends Controller
             if ($asg && ! ($asg->isSelfSitting() && $attempt)) {
                 $asg->applyMissingExamWindow('2026-10-26 20:30:00', 'Asia/Dubai', 180);
             }
-            $start = $asg?->windowStart()?->format('d/m/Y, H:i') ?: '26/10/2026, 20:30';
+            $start = $asg && method_exists($asg, 'appointmentStartLabel')
+                ? $asg->appointmentStartLabel()
+                : ($asg?->windowStart()?->format('d/m/Y, H:i') ?: '26/10/2026, 20:30');
+            if ($start === 'Open (no appointment set)' || $start === 'Start anytime' || $start === '—') {
+                $start = $asg?->windowStart()?->format('d/m/Y, H:i') ?: '26/10/2026, 20:30';
+            }
             $tz = ($tz && $tz !== '') ? $tz : 'Asia/Dubai · GST';
             $created = ($created && $created !== '') ? $created : 'Admin';
             $assessor = ($assessor && $assessor !== '' && $assessor !== '—') ? $assessor : 'Muhammad Sadiq';
