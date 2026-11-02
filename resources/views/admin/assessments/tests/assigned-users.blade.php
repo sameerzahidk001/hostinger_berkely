@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.searchable-select-assets')
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
-<!-- lms-assigned-tests-20261102g KEEP: Appointment Date & Time + Assessor as early columns; full batch roster; Next pager -->
+<!-- lms-assigned-tests-20261102h KEEP: Appointment Date & Time + Assessor as early columns; full batch roster; Next pager -->
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
@@ -34,9 +34,8 @@
     }
     .lms-assigned-table {
         width: 100% !important;
-        min-width: 100% !important;
-        max-width: 100% !important;
-        table-layout: fixed;
+        min-width: 1280px !important;
+        table-layout: auto;
         margin-bottom: 0;
         font-size: 12px;
     }
@@ -49,9 +48,9 @@
         white-space: normal;
         overflow: visible;
     }
-    .lms-assigned-table .col-appt { width: 8%; white-space: nowrap !important; }
-    .lms-assigned-table .col-when { width: 13%; font-weight: 700; }
-    .lms-assigned-table .col-assessor { width: 10%; font-weight: 700; }
+    .lms-assigned-table .col-appt { width: 8%; min-width: 110px; white-space: nowrap !important; }
+    .lms-assigned-table .col-when { width: 14%; min-width: 160px; font-weight: 700; }
+    .lms-assigned-table .col-assessor { width: 12%; min-width: 140px; font-weight: 700; }
     .lms-assigned-table .col-test { width: 14%; }
     .lms-assigned-table .col-taker { width: 13%; }
     .lms-assigned-table .col-timing { width: 16%; }
@@ -132,7 +131,7 @@
         All assigned test takers (started or not), including people who never opened the test.
         <strong>Missed</strong> = they did not start. For CIMA SCS/MCS that is as soon as the appointment start has passed (no wait for duration). Other tests wait until start + duration.
         Status shows <strong>Marking Required</strong> until the assessor marks a submitted sitting.
-        <span class="text-muted">List 20261102g</span>
+        <span class="text-muted">List 20261102h</span>
     </p>
     <div class="ibox"><div class="ibox-content">
         <form method="GET" class="m-b-md" style="margin-bottom:15px;">
