@@ -110,7 +110,7 @@ class FrontendController extends Controller
 
     function courseDetails(Request $request, $slug = null)
     {
-        $data['course'] = Course::with([
+        $relations = [
             'courseStructures.subHeadings.subHeadingsUnits',
             'courseStructuresFirst.subHeadingsFirst',
             'courseEnrollments',
@@ -123,14 +123,32 @@ class FrontendController extends Controller
                     ->whereDate('from', '>=', now()->toDateString())
                     ->orderBy('from');
             },
-        ])->where('slug', $slug)->first();
+        ];
+
+        $decoded = trim(rawurldecode((string) $slug));
+        $normalized = \Illuminate\Support\Str::slug($decoded);
+        $query = Course::with($relations);
+        $data['course'] = (clone $query)->where('slug', $decoded)->first();
+        if (! $data['course'] && $normalized !== '' && $normalized !== $decoded) {
+            $data['course'] = (clone $query)->where('slug', $normalized)->first();
+        }
+        if (! $data['course'] && $decoded !== '') {
+            $titleGuess = trim(preg_replace('/\s+/', ' ', str_replace('-', ' ', $decoded)) ?? '');
+            if ($titleGuess !== '') {
+                $data['course'] = (clone $query)->whereRaw('LOWER(title) = ?', [mb_strtolower($titleGuess)])->first();
+            }
+        }
 
         if (! $data['course']) {
-            $page = \App\Models\Page::where('url', $slug)->first();
+            $page = \App\Models\Page::where('url', $decoded)->orWhere('url', $normalized)->first();
             if ($page) {
                 return redirect('/' . ltrim((string) $page->full_url, '/'), 301);
             }
             abort(404);
+        }
+
+        if ($decoded !== (string) $data['course']->slug) {
+            return redirect()->route('course.details', ['course' => $data['course']->slug], 301);
         }
 
         $instructorIds = course_instructor_ids($data['course']);

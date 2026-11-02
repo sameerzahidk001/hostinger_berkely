@@ -2008,9 +2008,31 @@ if (! function_exists('seo_sanitize_public_html')) {
             return $m[1] . $body . $m[3];
         }, $html) ?? $html;
 
+        $html = seo_fix_public_anchors($html);
         $html = seo_ensure_image_alts($html);
 
         return seo_add_responsive_srcset($html);
+    }
+}
+
+if (! function_exists('seo_fix_public_anchors')) {
+    function seo_fix_public_anchors(string $html): string
+    {
+        $html = preg_replace('/<a\b[^>]*>\s*<\/a>/iu', '', $html) ?? $html;
+
+        return preg_replace_callback(
+            '/\bhref=(["\'])([^"\']*?\/course\/)([^"\']+)\1/i',
+            static function (array $m) {
+                $slug = html_entity_decode(rawurldecode($m[3]), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+                if (! preg_match('/\s|%20/i', $slug)) {
+                    return $m[0];
+                }
+                $clean = \Illuminate\Support\Str::slug(str_replace('%20', ' ', $slug));
+
+                return $clean !== '' ? 'href=' . $m[1] . $m[2] . $clean . $m[1] : $m[0];
+            },
+            $html
+        ) ?? $html;
     }
 }
 
