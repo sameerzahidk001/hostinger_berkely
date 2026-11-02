@@ -97,7 +97,6 @@ class SitemapController extends Controller
         }
 
         $pageQuery->orderBy('id')->chunkById(40, function ($pages) use (&$urls, $homeId) {
-            $pages->load('sections');
             foreach ($pages as $page) {
                 try {
                     if ($homeId && (int) $page->id === (int) $homeId) {
@@ -113,7 +112,8 @@ class SitemapController extends Controller
                         continue;
                     }
 
-                    if ((int) ($page->sections_count ?? 0) === 0 || seo_page_is_empty($page)) {
+                    // Thin pages are still noindexed at request time in SetSEO.
+                    if ((int) ($page->sections_count ?? 0) === 0) {
                         continue;
                     }
 
