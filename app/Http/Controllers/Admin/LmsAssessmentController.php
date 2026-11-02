@@ -473,7 +473,7 @@ class LmsAssessmentController extends Controller
         $assignments = collect();
         try {
             $assignments = LmsAssessmentAssignment::query()
-                ->with(['batch.students', 'student', 'marker'])
+                ->with(['batch', 'student', 'marker'])
                 ->orderByDesc('id')
                 ->get();
         } catch (\Throwable $e) {
@@ -569,7 +569,8 @@ class LmsAssessmentController extends Controller
                 if ($batchId > 0 && $bid !== $batchId) {
                     continue;
                 }
-            } elseif ($assignment->student_id) {
+            }
+            if ($assignment->student_id && ! $assignment->class_batch_id) {
                 $student = $assignment->student
                     ?: \App\Models\User::query()->find($assignment->student_id);
                 if ($student) {
@@ -577,6 +578,9 @@ class LmsAssessmentController extends Controller
                 }
             }
             $students = $this->expandSittingStudents($students, $assignment, $assessment, $batchStudentCache);
+            if ($students->isEmpty() && $assignment->class_batch_id) {
+                $students = $this->courseRosterFallback($assessment, $assignment);
+            }
             if ($students->isEmpty() && $assignment->class_batch_id) {
                 $batch = $assignment->relationLoaded('batch') ? $assignment->batch : ClassBatch::query()->find((int) $assignment->class_batch_id);
                 $students = collect([(object) [
@@ -1734,8 +1738,40 @@ class LmsAssessmentController extends Controller
                 }
             }
         }
+        if ($assignment && ! empty($assignment->class_batch_id) && $students->unique(fn ($row) => (int) ($row->id ?? 0))->count() < 10) {
+            $students = $students->concat($this->courseRosterFallback($assessment, $assignment));
+        }
 
         return $students->unique(fn ($row) => (int) ($row->id ?? 0))->filter(fn ($row) => (int) ($row->id ?? 0) > 0)->values();
+    }
+
+    /** When the batch pivot is empty, list every student on that course's batches and enrollments. */
+    protected function courseRosterFallback($assessment, $assignment)
+    {
+        $users = collect();
+        $courseId = (int) ($assessment->course_id ?? 0);
+        if ($courseId <= 0 && $assignment && ! empty($assignment->class_batch_id)) {
+            $batch = $assignment->relationLoaded('batch') ? $assignment->batch : ClassBatch::query()->find((int) $assignment->class_batch_id);
+            $courseId = (int) ($batch->course_id ?? 0);
+        }
+        if ($courseId <= 0) {
+            return $users;
+        }
+        try {
+            $batchIds = ClassBatch::query()->where('course_id', $courseId)->pluck('id');
+            foreach ($batchIds as $bid) {
+                $users = $users->concat($this->studentsForBatchId((int) $bid));
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
+        try {
+            $users = $users->concat($this->lms->studentsForCourse($courseId, 500));
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return $users->unique(fn ($row) => (int) ($row->id ?? 0))->filter(fn ($row) => (int) ($row->id ?? 0) > 0)->values();
     }
 
     protected function batchIdsForUser(int $userId): array
@@ -2253,7 +2289,17 @@ class LmsAssessmentController extends Controller
                 $row['sitting_kind'] = $sittingKind;
             }
             if (Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
-                $row['roster_user_ids'] = ClassBatch::studentUserIdsFor($batchId)->values()->all();
+                $roster = ClassBatch::studentUserIdsFor($batchId);
+                if ($roster->count() < 10 && ! empty($a->course_id)) {
+                    try {
+                        $roster = $roster->merge(
+                            $this->lms->studentsForCourse((int) $a->course_id, 500)->pluck('id')
+                        )->map(fn ($id) => (int) $id)->unique()->filter()->values();
+                    } catch (\Throwable $e) {
+                        report($e);
+                    }
+                }
+                $row['roster_user_ids'] = $roster->values()->all();
             }
             if ($this->hasUnusedDuplicateSitting($a, $row, $hasKindCol)) {
                 continue;
