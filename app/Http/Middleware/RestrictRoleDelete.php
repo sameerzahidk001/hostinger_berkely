@@ -10,6 +10,10 @@ class RestrictRoleDelete
 {
     public function handle(Request $request, Closure $next): Response
     {
+        if (str_starts_with(trim($request->path(), '/'), 'admin/assessments')) {
+            return $next($request);
+        }
+
         if (in_array($request->method(), ['DELETE', 'delete'], true) && !admin_can_delete()) {
             if ($this->isLmsSittingDelete($request)) {
                 return $next($request);

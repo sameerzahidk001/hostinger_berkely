@@ -222,7 +222,6 @@
                             @if(!empty($canDelete))
                                 <form action="{{ route('admin.assessments.tests.destroy', $row->id) }}" method="POST" onsubmit="return confirm('Delete this test?');">
                                     @csrf
-                                    @method('DELETE')
                                     <button type="submit" class="btn btn-xs btn-danger">Delete</button>
                                 </form>
                             @endif

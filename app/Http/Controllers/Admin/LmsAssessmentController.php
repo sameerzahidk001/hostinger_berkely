@@ -362,13 +362,7 @@ class LmsAssessmentController extends Controller
     {
         $this->assessments->ensure();
         $assignment = LmsAssessmentAssignment::with('assessment')->findOrFail($assignmentId);
-        abort_unless($assignment->assessment && (
-            $this->lms->isAdminActor()
-            || (function_exists('panel_sees_all_dashboards') && panel_sees_all_dashboards())
-            || $this->assessments->canManageSittingsFor($assignment->assessment)
-            || (int) ($assignment->assigned_by_user_id ?? 0) === (int) (Auth::id() ?? 0)
-            || (int) ($assignment->marker_user_id ?? 0) === (int) (Auth::id() ?? 0)
-        ), 403);
+        abort_unless($assignment->assessment && $this->assessments->actorCanRemoveSitting(), 403);
 
         $attemptId = (int) $request->input('attempt_id', 0);
         if ($attemptId > 0) {
@@ -405,23 +399,7 @@ class LmsAssessmentController extends Controller
         $this->assessments->ensure();
         $attempt = LmsAssessmentAttempt::query()->findOrFail($attemptId);
         $assessment = LmsAssessment::query()->withTrashed()->find($attempt->assessment_id);
-        $uid = (int) (Auth::id() ?? 0);
-        $ownsSitting = $uid > 0 && Schema::hasTable('lms_assessment_assignments')
-            && LmsAssessmentAssignment::query()
-                ->where('assessment_id', (int) $attempt->assessment_id)
-                ->where(function ($q) use ($uid) {
-                    $q->where('assigned_by_user_id', $uid);
-                    if (Schema::hasColumn('lms_assessment_assignments', 'marker_user_id')) {
-                        $q->orWhere('marker_user_id', $uid);
-                    }
-                })
-                ->exists();
-        abort_unless($assessment && (
-            $this->lms->isAdminActor()
-            || (function_exists('panel_sees_all_dashboards') && panel_sees_all_dashboards())
-            || $this->assessments->canManageSittingsFor($assessment)
-            || $ownsSitting
-        ), 403);
+        abort_unless($assessment && $this->assessments->actorCanRemoveSitting(), 403);
         $attempt->answers()->delete();
         $attempt->delete();
 
