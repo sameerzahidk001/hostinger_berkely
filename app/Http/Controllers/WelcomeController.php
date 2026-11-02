@@ -60,6 +60,11 @@ class WelcomeController extends Controller
                 abort(404);
             }
 
+            $preferred = trim((string) $page->full_url, '/');
+            if ($preferred !== '' && strcasecmp($slug, $preferred) !== 0) {
+                return redirect('/' . $preferred, 301);
+            }
+
             $breadcrumb[] = ['title' => $page->page_name, 'url' => url($page->full_url)];
         }
 

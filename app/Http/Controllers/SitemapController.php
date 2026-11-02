@@ -108,7 +108,7 @@ class SitemapController extends Controller
                     }
 
                     $path = trim((string) $page->full_url, '/');
-                    if ($path === '' || seo_is_utility_path($path) || in_array($path, ['home', 'page-not-found'], true)) {
+                    if ($path === '' || seo_is_utility_path($path) || in_array($path, ['home', 'page-not-found', 'courses'], true)) {
                         continue;
                     }
 

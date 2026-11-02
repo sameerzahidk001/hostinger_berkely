@@ -11,8 +11,19 @@ use App\Models\Role;
 if (!function_exists('get_page_faqs')) {
     function get_page_faqs(Request $request)
     {
-        $currentUrl = $request->path();
-        $page = Page::where('url', $currentUrl)->with('faqs')->first();
+        $currentUrl = trim($request->path(), '/');
+        if ($currentUrl === '') {
+            $homeId = \App\Models\SiteSettings::value('home');
+
+            return $homeId ? Page::with('faqs')->find($homeId) : collect();
+        }
+        $pageSlug = basename($currentUrl);
+        $page = Page::query()
+            ->where(function ($q) use ($pageSlug, $currentUrl) {
+                $q->where('url', $pageSlug)->orWhere('url', $currentUrl);
+            })
+            ->with('faqs')
+            ->first();
         return $page ? $page : collect();
     }
 }
@@ -1650,6 +1661,67 @@ if (! function_exists('seo_courses_hub_url')) {
     }
 }
 
+if (! function_exists('seo_organization_name')) {
+    function seo_organization_name(): string
+    {
+        return (string) (config('seotools.meta.defaults.title') ?: config('app.name') ?: 'Berkeley Independent College');
+    }
+}
+
+if (! function_exists('seo_organization_description')) {
+    function seo_organization_description(): string
+    {
+        return (string) (config('seotools.meta.defaults.description') ?: 'Berkeley Independent College (EduBerkeley) offers professional qualifications, school programmes, and higher education taught with UK academic standards.');
+    }
+}
+
+if (! function_exists('seo_is_home_href')) {
+    function seo_is_home_href(?string $href): bool
+    {
+        $href = trim((string) $href);
+        if ($href === '' || $href === '/' || $href === '#') {
+            return true;
+        }
+        $path = parse_url($href, PHP_URL_PATH);
+        $path = trim((string) ($path ?? ''), '/');
+
+        return $path === '' || $path === 'home';
+    }
+}
+
+if (! function_exists('seo_menu_parent_href')) {
+    function seo_menu_parent_href(object $menu): string
+    {
+        $href = public_menu_href($menu->link ?? null);
+        $childCount = 0;
+        try {
+            $childCount = (int) ($menu->children?->count() ?? 0);
+        } catch (\Throwable $e) {
+            $childCount = 0;
+        }
+        if ($childCount === 0 || ! seo_is_home_href($href)) {
+            return $href !== '' ? $href : url('/');
+        }
+
+        $name = strtolower(trim((string) ($menu->name ?? '')));
+        if (str_contains($name, 'degree') || str_contains($name, 'programme') || str_contains($name, 'program') || $name === 'courses') {
+            return seo_courses_hub_url();
+        }
+        if (str_contains($name, 'college')) {
+            return url('/college');
+        }
+
+        foreach (($menu->children ?? []) as $child) {
+            $childHref = public_menu_href($child->link ?? null);
+            if (! seo_is_home_href($childHref)) {
+                return $childHref;
+            }
+        }
+
+        return $href !== '' ? $href : url('/');
+    }
+}
+
 if (! function_exists('public_menu_href')) {
     function public_menu_href(?string $link): string
     {
@@ -1682,6 +1754,12 @@ if (! function_exists('public_menu_href')) {
         if ($path === 'search-courses' || $path === 'search_courses') {
             return url('/search');
         }
+        if ($path === 'courses') {
+            return url('/course-index');
+        }
+        if ($path === 'igcse') {
+            return url('/category/igcse');
+        }
 
         $isAbsolute = str_starts_with($link, '/')
             || str_starts_with($link, '#')
@@ -1703,6 +1781,8 @@ if (! function_exists('rewrite_public_hrefs')) {
         $html = preg_replace('#href=(["\'])(?:\./)?legal\1#i', 'href=$1/legal$1', $html) ?? $html;
         $html = preg_replace('#href=(["\'])(?:\./)?home/?\1#i', 'href=$1/$1', $html) ?? $html;
         $html = preg_replace('#href=(["\'])(?:\./)?search[-_]courses/?\1#i', 'href=$1/search$1', $html) ?? $html;
+        $html = preg_replace('#href=(["\'])(?:https?://(?:www\.)?eduberkeley\.com)?/courses/?\1#i', 'href=$1/course-index$1', $html) ?? $html;
+        $html = preg_replace('#href=(["\'])(?:https?://(?:www\.)?eduberkeley\.com)?/igcse/?\1#i', 'href=$1/category/igcse$1', $html) ?? $html;
 
         return preg_replace(
             '#href=(["\'])(?:\./)?berkeley-girls/sixth-form/?\1#i',
@@ -1740,6 +1820,10 @@ if (! function_exists('seo_preferred_canonical')) {
         $path = '/' . ltrim((string) $request->getPathInfo(), '/');
         if ($path === '/') {
             return $base . '/';
+        }
+        $trimmed = trim($path, '/');
+        if ($trimmed === 'courses') {
+            return $base . '/course-index';
         }
 
         return $base . rtrim($path, '/');
@@ -1924,7 +2008,32 @@ if (! function_exists('seo_sanitize_public_html')) {
             return $m[1] . $body . $m[3];
         }, $html) ?? $html;
 
+        $html = seo_ensure_image_alts($html);
+
         return seo_add_responsive_srcset($html);
+    }
+}
+
+if (! function_exists('seo_ensure_image_alts')) {
+    function seo_ensure_image_alts(string $html): string
+    {
+        return preg_replace_callback('/<img\b([^>]*?)>/i', static function (array $m) {
+            $attrs = $m[1];
+            if (preg_match('/\balt\s*=/i', $attrs)) {
+                return $m[0];
+            }
+            $fallback = '';
+            if (preg_match('/\ssrc=["\']([^"\']+)["\']/i', $attrs, $srcMatch)) {
+                $base = pathinfo((string) parse_url($srcMatch[1], PHP_URL_PATH), PATHINFO_FILENAME);
+                $label = trim((string) preg_replace('/[-_]+/', ' ', (string) $base));
+                $letters = trim((string) preg_replace('/\d+/', '', $label));
+                if (mb_strlen($letters) >= 3) {
+                    $fallback = $label;
+                }
+            }
+
+            return '<img' . rtrim($attrs) . ' alt="' . e($fallback) . '">';
+        }, $html) ?? $html;
     }
 }
 

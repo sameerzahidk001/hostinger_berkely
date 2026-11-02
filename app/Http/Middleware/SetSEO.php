@@ -12,6 +12,9 @@ use Illuminate\Support\Str;
 
 class SetSEO
 {
+    /** @var array<int, array<string, mixed>> */
+    private array $jsonLdGraphs = [];
+
     public function handle($request, Closure $next)
     {
         if (app()->isProduction()) {
@@ -28,6 +31,7 @@ class SetSEO
         $currentUrl = trim($request->path(), '/');
         $canonical = seo_preferred_canonical($request);
         SEOTools::setCanonical($canonical);
+        View::share('seoJsonLdGraphs', []);
 
         if (seo_is_utility_path($currentUrl) || $request->is('login') || $request->is('register') || $request->is('password*')) {
             SEOTools::metatags()->addMeta('robots', 'noindex, follow');
@@ -48,6 +52,16 @@ class SetSEO
                 SEOTools::setDescription('Browse Berkeley Independent College programmes.');
                 SEOTools::metatags()->addMeta('robots', 'index, follow');
                 View::share('seoDocLang', seo_document_language($currentUrl, 'All programmes'));
+                $this->applyOrganizationSchema();
+                $this->applyWebPageSchema(
+                    'All programmes',
+                    'Browse Berkeley Independent College programmes.',
+                    seo_courses_hub_url()
+                );
+                $this->applyBreadcrumbSchema([
+                    ['title' => 'Home', 'url' => route('welcome')],
+                    ['title' => 'All programmes', 'url' => seo_courses_hub_url()],
+                ]);
 
                 return $next($request);
             }
@@ -58,6 +72,14 @@ class SetSEO
         }
 
         $seo = $seoData?->seo;
+
+        if ($seoData instanceof Page) {
+            $preferredPath = trim((string) $seoData->full_url, '/');
+            if ($preferredPath !== '') {
+                $canonical = rtrim((string) config('app.url'), '/') . '/' . $preferredPath;
+                SEOTools::setCanonical($canonical);
+            }
+        }
 
         $robots = seo_robots_content($seo);
         // Thin/empty pages stay out of Google. Menu membership does not control indexing —
@@ -105,7 +127,10 @@ class SetSEO
         }
 
         if ($seoData) {
+            $pageTitle = $titleHint !== '' ? $titleHint : (string) ($seo?->title ?? config('app.name'));
+            $pageDesc = trim(strip_tags((string) ($seo?->meta_description ?? ''))) ?: seo_organization_description();
             $this->applyOrganizationSchema();
+            $this->applyWebPageSchema($pageTitle, $pageDesc, $canonical);
             $this->applyStructuredDataSchemas($seoData, $seo);
             $this->applyBreadcrumbSchema($this->buildBreadcrumbCrumbs($seoData, $currentUrl));
         }
@@ -124,22 +149,25 @@ class SetSEO
         return $response;
     }
 
+    private function pushJsonLd(array $graph): void
+    {
+        $this->jsonLdGraphs[] = $graph;
+        View::share('seoJsonLdGraphs', $this->jsonLdGraphs);
+    }
+
     private function applyOrganizationSchema(): void
     {
         $settings = SiteSettings::first();
-        $name = (string) (config('seotools.meta.defaults.title') ?: config('app.name'));
-        $url = (string) config('app.url');
-        $logo = $settings?->logo ? asset('images/' . $settings->logo) : null;
-
-        SEOTools::jsonLdMulti()->newJsonLd();
-        SEOTools::jsonLdMulti()->setType('Organization');
-        SEOTools::jsonLdMulti()->setTitle($name);
-        SEOTools::jsonLdMulti()->setUrl($url);
-
-        if ($logo) {
-            SEOTools::jsonLdMulti()->addImage($logo);
+        $org = [
+            '@type' => 'Organization',
+            '@id' => rtrim((string) config('app.url'), '/') . '/#organization',
+            'name' => seo_organization_name(),
+            'url' => rtrim((string) config('app.url'), '/'),
+            'description' => seo_organization_description(),
+        ];
+        if ($settings?->logo) {
+            $org['logo'] = asset('images/' . $settings->logo);
         }
-
         $sameAs = array_values(array_filter([
             $settings?->facebook_url ?? null,
             $settings?->twitter_url ?? null,
@@ -147,10 +175,27 @@ class SetSEO
             $settings?->instagram_url ?? null,
             $settings?->youtube_url ?? null,
         ]));
-
         if ($sameAs !== []) {
-            SEOTools::jsonLdMulti()->addValue('sameAs', $sameAs);
+            $org['sameAs'] = $sameAs;
         }
+
+        $this->pushJsonLd($org);
+    }
+
+    private function applyWebPageSchema(string $title, string $description, string $url): void
+    {
+        $graph = [
+            '@type' => 'WebPage',
+            '@id' => $url . '#webpage',
+            'url' => $url,
+            'name' => $title,
+            'isPartOf' => ['@id' => rtrim((string) config('app.url'), '/') . '/#organization'],
+        ];
+        if ($description !== '') {
+            $graph['description'] = $description;
+        }
+
+        $this->pushJsonLd($graph);
     }
 
     private function applyStructuredDataSchemas(Page|Course $seoData, ?PagesSEO $seo): void
@@ -158,7 +203,7 @@ class SetSEO
         if ($seoData instanceof Course) {
             $this->applyCourseSchema($seoData, $seo);
 
-            if ((int) $seoData->faq_section === 1 && $seoData->courseFaq->isNotEmpty()) {
+            if ((int) $seoData->faq_section === 1 && $seoData->relationLoaded('courseFaq') && $seoData->courseFaq->isNotEmpty()) {
                 $this->applyFaqSchema(
                     $seoData->courseFaq->map(fn ($faq) => [
                         'question' => (string) $faq->title,
@@ -184,25 +229,24 @@ class SetSEO
     {
         $description = trim(strip_tags((string) ($course->short_description ?: $seo?->meta_description ?: '')));
         $imageUrl = $seo?->thumbnail ? asset($seo->thumbnail) : ($course->thumbnail ? asset($course->thumbnail) : null);
-
-        SEOTools::jsonLdMulti()->newJsonLd();
-        SEOTools::jsonLdMulti()->setType('Course');
-        SEOTools::jsonLdMulti()->setTitle((string) $course->title);
-        SEOTools::jsonLdMulti()->setUrl(seo_preferred_canonical(request()));
-
+        $graph = [
+            '@type' => 'Course',
+            'name' => (string) $course->title,
+            'url' => seo_preferred_canonical(request()),
+            'provider' => [
+                '@type' => 'Organization',
+                'name' => seo_organization_name(),
+                'url' => rtrim((string) config('app.url'), '/'),
+            ],
+        ];
         if ($description !== '') {
-            SEOTools::jsonLdMulti()->setDescription($description);
+            $graph['description'] = $description;
         }
-
         if ($imageUrl) {
-            SEOTools::jsonLdMulti()->addImage($imageUrl);
+            $graph['image'] = $imageUrl;
         }
 
-        SEOTools::jsonLdMulti()->addValue('provider', [
-            '@type' => 'Organization',
-            'name' => (string) (config('seotools.meta.defaults.title') ?: config('app.name')),
-            'url' => (string) config('app.url'),
-        ]);
+        $this->pushJsonLd($graph);
     }
 
     /**
@@ -214,7 +258,7 @@ class SetSEO
         foreach ($faqs as $faq) {
             $question = trim(strip_tags($faq['question']));
             $answer = trim(strip_tags($faq['answer']));
-            if ($question === '' || $answer === '') {
+            if ($question === '' || $answer === '' || mb_strlen($answer) < 12) {
                 continue;
             }
 
@@ -232,9 +276,10 @@ class SetSEO
             return;
         }
 
-        SEOTools::jsonLdMulti()->newJsonLd();
-        SEOTools::jsonLdMulti()->setType('FAQPage');
-        SEOTools::jsonLdMulti()->addValue('mainEntity', $mainEntity);
+        $this->pushJsonLd([
+            '@type' => 'FAQPage',
+            'mainEntity' => $mainEntity,
+        ]);
     }
 
     private function applyBreadcrumbSchema(array $crumbs): void
@@ -253,9 +298,10 @@ class SetSEO
             ];
         }
 
-        SEOTools::jsonLdMulti()->newJsonLd();
-        SEOTools::jsonLdMulti()->setType('BreadcrumbList');
-        SEOTools::jsonLdMulti()->addValue('itemListElement', $items);
+        $this->pushJsonLd([
+            '@type' => 'BreadcrumbList',
+            'itemListElement' => $items,
+        ]);
     }
 
     /**

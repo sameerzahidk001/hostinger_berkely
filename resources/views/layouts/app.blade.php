@@ -14,7 +14,9 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     {!! SEOTools::generate() !!}
-    <link rel="canonical" href="{{ seo_preferred_canonical() }}">
+    @if(!empty($seoJsonLdGraphs) && is_array($seoJsonLdGraphs))
+    <script type="application/ld+json">{!! json_encode(['@context' => 'https://schema.org', '@graph' => array_values($seoJsonLdGraphs)], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) !!}</script>
+    @endif
     @foreach($hreflangLinks as $hreflang => $href)
         <link rel="alternate" hreflang="{{ $hreflang }}" href="{{ $href }}">
     @endforeach
@@ -200,9 +202,10 @@
                 @foreach($filteredMenus as $menu)
                     <li class="relative group flex items-center justify-center">
                         @php
-                            $cleanLink = Str::replace(['/course', '/diploma'], '', $menu->link);
+                            $parentHref = seo_menu_parent_href($menu);
                         @endphp
-                        <a href="{{ public_menu_href($menu->link) }}"
+                        <a href="{{ $parentHref }}"
+                            @if($menu->children->count() > 0) aria-haspopup="true" aria-label="{{ $menu->name }} menu" @endif
                             class="active:underline decoration-crimson underline-offset-4">{{ $menu->name }}</a>
                         @if ($menu->children->count() > 0)
                             {{-- Classic dropdown panel under the parent item --}}
@@ -243,6 +246,7 @@
 
                     @if(optional($settings)->header_search == '1' && !empty($settings->header_search_url))
                         <a href="{{ url($settings->header_search_url) }}"
+                            aria-label="Search programmes"
                             class="flex cursor-pointer no-underline justify-center items-center py-2 gap-3 text-lg font-medium">
                             @if(!empty($settings->header_search_image))
                                 <img src="{{ asset('images/' . $settings->header_search_image) }}" class="w-6 h-6 md:w-8 md:h-8"
@@ -267,7 +271,7 @@
                 </div>
 
                 <!-- mobile button -->
-                <button id="menuButton"
+                <button id="menuButton" type="button" aria-label="Open menu" aria-controls="mobileMenu"
                     class="no-underline justify-center items-center py-2 gap-3 text-lg font-medium flex lg:hidden">
                     <div class="flex flex-col gap-1 text-lg font-medium">
                         <div class="w-5 h-0.5 bg-primary rounded-full"></div>
@@ -495,7 +499,7 @@
                     <a href="{{ url('/') }}" class=" self-center">
                         <img src="{{ asset('images/' . $settings->$logo) }}"
                             class="max-w-[220px] self-center  object-fill min-h-[48px] sm:min-h-[48px] sm:min-w-[200px] lg:min-w-[240px] lg:min-h-[48px] "
-                            alt="">
+                            width="240" height="48" alt="{{ config('app.name') }}">
                     </a>
                 @endif
             </div>
@@ -519,7 +523,7 @@
         gtag('config', 'G-E7HT3E77XY');
     </script>
 
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/intlTelInput.min.js" defer></script>
     <script>
         // JS for Search bar start
@@ -559,9 +563,7 @@
 
         // For Animation effect of Section
         const hidenElement = document.querySelectorAll(".card-hidden");
-        console.log(hidenElement);
         const obsarver = new IntersectionObserver((entries) => {
-            console.log(entries);
             entries.forEach((entry) => {
                 if (entry.isIntersecting) {
                     entry.target.classList.add("show");
