@@ -1912,9 +1912,14 @@ class LmsAssessmentController extends Controller
             : ($asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()
                 ? 'Start anytime'
                 : ($asg?->windowStart()?->format('d/m/Y, H:i') ?: null));
+        $cimaCase = $assessment && method_exists($this->assessments, 'usesStrictExamWindow')
+            && $this->assessments->usesStrictExamWindow($assessment);
         $assessor = $asg && method_exists($asg, 'assessorDisplayName')
             ? $asg->assessorDisplayName()
             : ($asg?->marker?->name ?: null);
+        if ($cimaCase && ($assessor === null || $assessor === '' || $assessor === '—' || $assessor === 'Admin / course instructors')) {
+            $assessor = 'Muhammad Sadiq';
+        }
         $created = $asg?->createdByLabel() ?: null;
         $tz = $asg?->timezoneLabel() ?: null;
         $isCohort = $this->isCimaCohortSitting($assessment, $asg, collect([$row['student'] ?? null]));
@@ -1996,6 +2001,16 @@ class LmsAssessmentController extends Controller
                     ->whereNotNull('available_from')
                     ->orderBy('id')
                     ->first();
+                if (! $timed && ! empty($assessment->course_id)) {
+                    $timed = LmsAssessmentAssignment::query()
+                        ->whereNotNull('available_from')
+                        ->whereHas('assessment', function ($q) use ($assessment) {
+                            $q->where('course_id', (int) $assessment->course_id)
+                                ->where('kind', $assessment->kind ?? 'mock');
+                        })
+                        ->orderBy('id')
+                        ->first();
+                }
                 if ($timed && $timed->available_from) {
                     $asg->available_from = $timed->available_from;
                     if (! empty($timed->available_until)) {
@@ -2007,6 +2022,23 @@ class LmsAssessmentController extends Controller
                 }
             } catch (\Throwable $e) {
                 // keep empty window
+            }
+        }
+        if (empty($asg->marker_user_id) && $assessment && ! empty($assessment->id)) {
+            try {
+                $marked = LmsAssessmentAssignment::query()
+                    ->where('assessment_id', (int) $assessment->id)
+                    ->whereNotNull('marker_user_id')
+                    ->orderBy('id')
+                    ->first();
+                if ($marked && ! empty($marked->marker_user_id)) {
+                    $asg->marker_user_id = $marked->marker_user_id;
+                    if ($marked->relationLoaded('marker') && $marked->marker) {
+                        $asg->setRelation('marker', $marked->marker);
+                    }
+                }
+            } catch (\Throwable $e) {
+                // keep empty assessor
             }
         }
     }

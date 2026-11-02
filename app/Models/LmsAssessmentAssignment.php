@@ -278,12 +278,12 @@ class LmsAssessmentAssignment extends Model
     /** Single start timestamp for list columns (never blank when a window exists). */
     public function appointmentStartLabel(string $fmt = 'd/m/Y, H:i'): string
     {
-        if ($this->isSelfSitting()) {
-            return 'Start anytime';
-        }
         $start = $this->windowStart();
         if ($start) {
             return $start->format($fmt);
+        }
+        if ($this->isSelfSitting()) {
+            return 'Start anytime';
         }
         if ($this->available_from) {
             try {
