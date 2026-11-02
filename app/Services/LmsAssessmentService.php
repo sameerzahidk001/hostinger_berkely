@@ -1802,14 +1802,7 @@ class LmsAssessmentService
                         $submitted->push($rowBase);
                     }
                 }
-                if ($remainingAttempts) {
-                    $available->push($base + [
-                        'attempt' => null,
-                        'can_retake' => true,
-                        'attempt_number' => $usedOnSitting + 1,
-                        'attempt_total' => $finishTotal,
-                    ]);
-                }
+                // Retake stays on Results. Do not add a second Available line.
                 continue;
             }
 
