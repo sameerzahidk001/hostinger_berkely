@@ -47,13 +47,27 @@
                             <span class="sm-file-name">{{ $item->name }}</span>
                         </a>
                         @if($kind === 'video')
-                            <div class="sm-file-player">
-                                @if($item->isExternal() && str_contains($item->portalPreviewUrl(), 'workdrive'))
-                                    <iframe src="{{ $item->portalPreviewUrl() }}" title="{{ $item->name }}" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+                            @php
+                                $previewUrl = $item->portalPreviewUrl();
+                                $posterUrl = $item->portalPosterUrl();
+                                $isWorkdrive = $item->isExternal() && str_contains($previewUrl, 'workdrive');
+                            @endphp
+                            <a href="{{ $previewUrl }}"
+                               class="sm-video-thumb"
+                               data-sm-file
+                               data-sm-kind="video"
+                               data-sm-name="{{ $item->name }}"
+                               @if($item->allowsDownload()) data-sm-download="{{ $item->portalDownloadUrl() }}" @endif
+                               @if($posterUrl) data-sm-poster="{{ $posterUrl }}" @endif>
+                                @if($posterUrl)
+                                    <img src="{{ $posterUrl }}" alt="{{ $item->name }}">
+                                @elseif($isWorkdrive)
+                                    <iframe src="{{ $previewUrl }}" title="{{ $item->name }}" allow="autoplay; fullscreen; encrypted-media; picture-in-picture" allowfullscreen></iframe>
                                 @else
-                                    <video controls playsinline preload="metadata" controlslist="nodownload" src="{{ $item->portalPreviewUrl() }}" @if($item->portalPosterUrl()) poster="{{ $item->portalPosterUrl() }}" @endif></video>
+                                    <video muted playsinline preload="metadata" src="{{ $previewUrl }}#t=0.8"></video>
                                 @endif
-                            </div>
+                                <div class="sm-video-play"><span><i class="fa fa-play"></i></span></div>
+                            </a>
                         @endif
                     </div>
                 @endforeach
