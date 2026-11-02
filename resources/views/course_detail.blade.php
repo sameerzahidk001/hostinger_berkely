@@ -201,6 +201,14 @@
                 border-bottom: none;
             }
         }
+        .course-banner-copy,
+        .course-banner-copy p,
+        .course-banner-copy span,
+        .course-banner-copy li,
+        .course-banner-copy strong,
+        .course-banner-copy a {
+            color: #ffffff !important;
+        }
         @media (min-width: 1200px) {
     .min-\[1200px\]\:px-\[72px\] {
         padding-left: 72px;
@@ -215,8 +223,16 @@
     <div class="h-[72px]"></div>
     @if ($course->banner_section === 1)
         <!-- Add Slider Here start -->
-        <section class="flex flex-col-reverse justify-between relative min-h-[500px] md:max-h-[500px] bg-[#000435]">
-            <div class="flex text-white min-[1200px]:pl-[72px] md:pr-12 py-[30px] px-6 md:w-[50%] m-0  flex-1 flex-col">
+        @php
+            $bannerCopyText = trim(implode(' ', [
+                (string) ($course->dynamicLabel->banner_title ?? ''),
+                (string) ($course->dynamicLabel->banner_sub_title ?? ''),
+                strip_tags((string) ($course->short_description ?? '')),
+            ]));
+            $bannerIsArabic = (bool) preg_match('/\p{Arabic}/u', $bannerCopyText);
+        @endphp
+        <section class="flex flex-col-reverse justify-between relative min-h-[500px] md:max-h-[500px] bg-[#000435] overflow-hidden">
+            <div class="relative z-20 flex text-white min-[1200px]:pl-[72px] md:pr-12 py-[30px] px-6 md:w-[50%] m-0 flex-1 flex-col{{ $bannerIsArabic ? ' arabic-copy' : '' }}">
                 @if ($course->dynamicLabel->banner_breadcrumb === 1)
                     <nav aria-label="Breadcrumb" class="items-center gap-1 flex flex-wrap">
                         <a href="{{ url('/') }}">Home</a>
@@ -232,14 +248,14 @@
                         <h2 class="text-[20px] leading-8 text-primary_orange">{{ $course->dynamicLabel->banner_sub_title }}
                         </h2>
                     @endif
-                    <h1 class="text-[32px] md:text-[36px] leading-[58px] font-canela text-white">
+                    <h1 class="text-[32px] md:text-[36px] leading-tight md:leading-[48px] font-canela text-white break-words">
                         {{ $course->dynamicLabel->banner_title }}</h1>
                     @if ($course->dynamicLabel->banner_sub_title_placement !== 1)
                         <h2 class="text-[20px] leading-8 text-primary_orange">{{ $course->dynamicLabel->banner_sub_title }}
                         </h2>
                     @endif
                 </div>
-                <div clas="text-[18px] text-white editor">
+                <div class="text-[18px] text-white editor course-banner-copy">
                     {!! demote_page_headings($course->short_description) !!}
                 </div>
                 <div class="flex gap-6 mt-4 md:mt-auto">
@@ -258,7 +274,7 @@
                 </div>
 
             </div>
-            <div class=" flex xl:px-0 md:top-0 md:absolute md:right-0 z-40 md:w-[50%] m-0 flex-1 flex-col gap-4 md:h-full">
+            <div class="flex xl:px-0 md:top-0 md:absolute md:right-0 z-10 md:w-[50%] m-0 flex-1 flex-col gap-4 md:h-full pointer-events-none">
                 @php $bannerUrl = displayable_media_url($course->dynamicLabel->banner_image); @endphp
                 @if($bannerUrl)
                 <img src="{{ $bannerUrl }}" alt="{{ course_image_alt($course, 'banner_image', $course->dynamicLabel?->banner_title ?? $course->title) }}"
