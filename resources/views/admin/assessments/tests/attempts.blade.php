@@ -228,7 +228,7 @@
                             </td>
                             <td class="col-actions">
                                 @php
-                                    $canAdminSitting = app(\App\Services\StudyMaterialService::class)->isAdminActor();
+                                    $canAdminSitting = \Illuminate\Support\Facades\Auth::guard('admin')->check();
                                 @endphp
                                 @if($attempt && in_array($attempt->status, ['submitted', 'graded', 'expired'], true))
                                     <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.mark', $attempt->id) }}">Mark</a>
