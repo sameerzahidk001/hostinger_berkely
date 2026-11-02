@@ -48,20 +48,7 @@ class SetSEO
 
         if (! $seoData) {
             if ($currentUrl === 'course-index') {
-                SEOTools::setTitle('All programmes');
-                SEOTools::setDescription('Browse Berkeley Independent College programmes.');
-                SEOTools::metatags()->addMeta('robots', 'index, follow');
-                View::share('seoDocLang', seo_document_language($currentUrl, 'All programmes'));
-                $this->applyOrganizationSchema();
-                $this->applyWebPageSchema(
-                    'All programmes',
-                    'Browse Berkeley Independent College programmes.',
-                    seo_courses_hub_url()
-                );
-                $this->applyBreadcrumbSchema([
-                    ['title' => 'Home', 'url' => route('welcome')],
-                    ['title' => 'All programmes', 'url' => seo_courses_hub_url()],
-                ]);
+                SEOTools::metatags()->addMeta('robots', 'noindex, follow');
 
                 return $next($request);
             }

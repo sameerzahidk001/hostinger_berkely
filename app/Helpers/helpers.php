@@ -1657,7 +1657,7 @@ if (!function_exists('seo_robots_content')) {
 if (! function_exists('seo_courses_hub_url')) {
     function seo_courses_hub_url(): string
     {
-        return url('/course-index');
+        return url('/courses');
     }
 }
 
@@ -1754,8 +1754,8 @@ if (! function_exists('public_menu_href')) {
         if ($path === 'search-courses' || $path === 'search_courses') {
             return url('/search');
         }
-        if ($path === 'courses') {
-            return url('/course-index');
+        if ($path === 'course-index') {
+            return url('/courses');
         }
         if ($path === 'igcse') {
             return url('/category/igcse');
@@ -1781,7 +1781,7 @@ if (! function_exists('rewrite_public_hrefs')) {
         $html = preg_replace('#href=(["\'])(?:\./)?legal\1#i', 'href=$1/legal$1', $html) ?? $html;
         $html = preg_replace('#href=(["\'])(?:\./)?home/?\1#i', 'href=$1/$1', $html) ?? $html;
         $html = preg_replace('#href=(["\'])(?:\./)?search[-_]courses/?\1#i', 'href=$1/search$1', $html) ?? $html;
-        $html = preg_replace('#href=(["\'])(?:https?://(?:www\.)?eduberkeley\.com)?/courses/?\1#i', 'href=$1/course-index$1', $html) ?? $html;
+        $html = preg_replace('#href=(["\'])(?:https?://(?:www\.)?eduberkeley\.com)?/course-index/?\1#i', 'href=$1/courses$1', $html) ?? $html;
         $html = preg_replace('#href=(["\'])(?:https?://(?:www\.)?eduberkeley\.com)?/igcse/?\1#i', 'href=$1/category/igcse$1', $html) ?? $html;
 
         return preg_replace(
@@ -1822,8 +1822,8 @@ if (! function_exists('seo_preferred_canonical')) {
             return $base . '/';
         }
         $trimmed = trim($path, '/');
-        if ($trimmed === 'courses') {
-            return $base . '/course-index';
+        if ($trimmed === 'course-index') {
+            return $base . '/courses';
         }
 
         return $base . rtrim($path, '/');
@@ -1985,7 +1985,7 @@ if (! function_exists('seo_path_is_menu_linked')) {
     function seo_path_is_menu_linked(string $path): bool
     {
         $path = strtolower(trim($path, '/'));
-        if ($path === '' || $path === 'course-index') {
+        if ($path === '' || $path === 'courses' || $path === 'course-index') {
             return true;
         }
         foreach (seo_menu_linked_paths() as $item) {
