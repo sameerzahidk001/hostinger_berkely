@@ -458,14 +458,17 @@ class LmsAssessmentController extends Controller
 
         $assignments = collect();
         try {
-            $raw = Schema::hasTable('lms_assessment_assignments')
-                ? DB::table('lms_assessment_assignments')->orderByDesc('id')->get()
-                : collect();
-            $assignments = LmsAssessmentAssignment::hydrate($raw->map(fn ($row) => (array) $row)->all());
+            $assignments = LmsAssessmentAssignment::query()
+                ->with(['batch', 'student', 'marker'])
+                ->orderByDesc('id')
+                ->get();
         } catch (\Throwable $e) {
             report($e);
             try {
-                $assignments = LmsAssessmentAssignment::query()->orderByDesc('id')->get();
+                $raw = Schema::hasTable('lms_assessment_assignments')
+                    ? DB::table('lms_assessment_assignments')->orderByDesc('id')->get()
+                    : collect();
+                $assignments = LmsAssessmentAssignment::hydrate($raw->map(fn ($row) => (array) $row)->all());
             } catch (\Throwable $e2) {
                 $assignments = collect();
             }
@@ -512,7 +515,10 @@ class LmsAssessmentController extends Controller
                 return false;
             }
             if ($markerOnlyUid) {
-                $ok = (int) ($assignment->marker_user_id ?? 0) === $markerOnlyUid;
+                $uid = $markerOnlyUid;
+                $ok = (int) ($assignment->marker_user_id ?? 0) === $uid
+                    || (int) ($assignment->assigned_by_user_id ?? 0) === $uid
+                    || (int) ($assessment->created_by_user_id ?? 0) === $uid;
                 if (! $ok) {
                     return false;
                 }
@@ -1648,14 +1654,12 @@ class LmsAssessmentController extends Controller
         $users = $ids->isEmpty()
             ? collect()
             : User::query()->whereIn('id', $ids)->get();
-        if ($users->isEmpty()) {
-            try {
-                if ($batch) {
-                    $users = $batch->students()->get();
-                }
-            } catch (\Throwable $e) {
-                report($e);
+        try {
+            if ($batch) {
+                $users = $users->concat($batch->students()->get());
             }
+        } catch (\Throwable $e) {
+            report($e);
         }
         $found = $users->pluck('id')->map(fn ($id) => (int) $id)->all();
         foreach ($ids as $sid) {
@@ -1674,6 +1678,13 @@ class LmsAssessmentController extends Controller
     protected function expandSittingStudents($students, $assignment, $assessment, array &$batchStudentCache)
     {
         $students = collect($students)->filter(fn ($row) => $row && ! empty($row->id))->values();
+        if ($assignment && $assignment->relationLoaded('batch') && $assignment->batch) {
+            try {
+                $students = $students->concat($assignment->batch->students()->get());
+            } catch (\Throwable $e) {
+                report($e);
+            }
+        }
         $batchIds = [];
         if (! empty($assignment?->class_batch_id)) {
             $batchIds[] = (int) $assignment->class_batch_id;
