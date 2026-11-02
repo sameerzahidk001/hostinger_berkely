@@ -16,10 +16,11 @@
     $useFallbackImage = empty($image) && (request()->is('courses') || stripos((string) $fixedTitle, 'executive') !== false);
     $resolvedImage = !empty($image) ? $image : ($useFallbackImage ? $fallbackBannerImage : '');
     $resolvedBannerBg = banner_bg_color($backgroundColor ?? null);
+    $bannerIsArabic = (bool) preg_match('/\p{Arabic}/u', trim(strip_tags((string) ($fixedTitle . ' ' . $fixedSubtitle . ' ' . ($description ?? '')))));
 @endphp
 
-<section class="cms-banner-section flex flex-col-reverse justify-between relative min-h-[491px] md:max-h-[491px] bg-black" style="background-color: {{ $resolvedBannerBg }}" id="section-{{$id}}">
-    <div class="flex text-white min-[1200px]:pl-[72px] md:pr-12 py-[30px] px-6 md:w-[50%] m-0 flex-1 flex-col">
+<section class="cms-banner-section flex flex-col-reverse justify-between relative min-h-[491px] md:max-h-[491px] bg-black overflow-hidden" style="background-color: {{ $resolvedBannerBg }}" id="section-{{$id}}">
+    <div class="relative z-20 flex text-white min-[1200px]:pl-[72px] md:pr-12 py-[30px] px-6 md:w-[50%] m-0 flex-1 flex-col{{ $bannerIsArabic ? ' arabic-copy' : '' }}">
         @if (isset($breadcrumb) && count($breadcrumb) > 0)
             <div class="items-center gap-1 hidden md:flex">
                 @foreach ($breadcrumb as $index => $crumb)
@@ -41,7 +42,7 @@
                     <h2 class="text-[20px] leading-8 text-primary_orange">{{ $fixedSubtitle }}</h2>
                 @endif
                 @if (isset($title))
-                    <h1 class="text-[42px] md:text-[48px] leading-[58px] font-canela" style="color: {{ $color }}">{{ $fixedTitle }}</h1>
+                    <h1 class="text-[42px] md:text-[48px] leading-tight md:leading-[52px] font-canela break-words" style="color: {{ $color ?: '#ffffff' }}">{{ $fixedTitle }}</h1>
                 @endif
             </div>
         @endif
@@ -71,7 +72,7 @@
     </div>
     
     @if (!empty($resolvedImage))
-        <div class="flex xl:px-0 md:top-0 md:absolute md:right-0 z-40 md:w-[50%] m-0 flex-1 flex-col gap-4 md:h-full">
+        <div class="flex xl:px-0 md:top-0 md:absolute md:right-0 z-10 md:w-[50%] m-0 flex-1 flex-col gap-4 md:h-full pointer-events-none">
             <img src="{{ $resolvedImage }}" alt="{{ image_alt($altText ?? null, $fixedTitle ?? 'Banner image') }}" width="1200" height="800" decoding="async" fetchpriority="high" class="object-cover h-full md:max-h-full md:w-full md:h-full">
         </div>
     @endif

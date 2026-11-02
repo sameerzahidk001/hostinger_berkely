@@ -1839,7 +1839,9 @@ if (! function_exists('seo_document_language')) {
         $path = strtolower(trim($path ?? request()->path(), '/'));
         $text = (string) $text;
         if (preg_match('~(^|/|-)arabic(/|-|$)|(^|/)ar(/|$)|in-arabic~', $path) || preg_match('/\p{Arabic}/u', $text)) {
-            return ['lang' => 'ar', 'dir' => 'rtl'];
+            // Keep document layout LTR so course banners (image on the right) stay visible.
+            // RTL is applied on text islands in the view.
+            return ['lang' => 'ar', 'dir' => null];
         }
         if (preg_match('~(^|/|-)chinese(/|-|$)|(^|/|-)zh(-hans|-cn|-tw)?(/|-|$)~', $path) || preg_match('/\p{Han}/u', $text)) {
             return ['lang' => 'zh-Hans', 'dir' => null];

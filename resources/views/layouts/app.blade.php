@@ -71,10 +71,21 @@
             font-display: swap;
         }
         .font-canela {
-            font-family: canela, sans-serif !important;
+            font-family: canela, "Segoe UI", Tahoma, "Noto Naskh Arabic", "Arial Unicode MS", sans-serif !important;
         }
         .font-ghothic {
-            font-family: trade-ghothic, sans-serif !important;
+            font-family: trade-ghothic, "Segoe UI", Tahoma, "Noto Naskh Arabic", sans-serif !important;
+        }
+        .arabic-copy {
+            direction: rtl;
+            unicode-bidi: isolate;
+            text-align: right;
+        }
+        html[lang="ar"] .editor,
+        html[lang="ar"] .section-heading,
+        html[lang="ar"] .section-subheading {
+            direction: rtl;
+            unicode-bidi: isolate;
         }
         .header-quick-icon {
             display: flex;
