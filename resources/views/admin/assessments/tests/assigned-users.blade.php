@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.searchable-select-assets')
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
-<!-- lms-assigned-tests-20261030t -->
+<!-- lms-assigned-tests-20261031a -->
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
@@ -398,7 +398,6 @@
                                     <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.edit-assignment', $assignment->id) }}">Edit</a>
                                     <form action="{{ route('admin.assessments.tests.destroy-assignment', $assignment->id) }}" method="POST" onsubmit="return confirm('Delete this sitting ({{ $assignment->displayCode() }})?');">
                                         @csrf
-                                        @method('DELETE')
                                         @if($attempt)
                                             <input type="hidden" name="attempt_id" value="{{ $attempt->id }}">
                                         @endif
@@ -408,7 +407,6 @@
                                 @elseif($canManageSitting && $attempt)
                                     <form action="{{ route('admin.assessments.tests.destroy-attempt', $attempt->id) }}" method="POST" onsubmit="return confirm('Delete this test taker sitting?');">
                                         @csrf
-                                        @method('DELETE')
                                         <button type="submit" class="btn btn-xs btn-danger">Delete</button>
                                     </form>
                                 @endif

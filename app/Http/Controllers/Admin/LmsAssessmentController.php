@@ -364,6 +364,7 @@ class LmsAssessmentController extends Controller
         $assignment = LmsAssessmentAssignment::with('assessment')->findOrFail($assignmentId);
         abort_unless($assignment->assessment && (
             $this->lms->isAdminActor()
+            || (function_exists('panel_sees_all_dashboards') && panel_sees_all_dashboards())
             || $this->assessments->canManageSittingsFor($assignment->assessment)
             || (int) ($assignment->assigned_by_user_id ?? 0) === (int) (Auth::id() ?? 0)
             || (int) ($assignment->marker_user_id ?? 0) === (int) (Auth::id() ?? 0)
@@ -417,6 +418,7 @@ class LmsAssessmentController extends Controller
                 ->exists();
         abort_unless($assessment && (
             $this->lms->isAdminActor()
+            || (function_exists('panel_sees_all_dashboards') && panel_sees_all_dashboards())
             || $this->assessments->canManageSittingsFor($assessment)
             || $ownsSitting
         ), 403);

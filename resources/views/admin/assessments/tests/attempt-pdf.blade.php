@@ -20,6 +20,19 @@
         .q-title { font-weight: bold; margin-bottom: 8px; color: #000; }
         .q-stem { margin: 0 0 16px; padding-bottom: 12px; border-bottom: 1px solid #f0f0f0; color: #000; }
         .q-stem * { color: #000; }
+        .instructions { margin: 10px 0 12px; padding: 10px 12px; border: 1px solid #e5e5e5; background: #fafafa; }
+        .q-stem table, .instructions table, .feedback table, .q-answer table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 8px 0;
+            font-size: 11px;
+        }
+        .q-stem td, .q-stem th, .instructions td, .instructions th, .feedback td, .feedback th, .q-answer td, .q-answer th {
+            border: 1px solid #888;
+            padding: 4px 6px;
+            vertical-align: top;
+        }
+        .q-stem th, .instructions th { background: #eee; font-weight: bold; }
         .q-answer { margin-top: 16px; }
         .q-answer .label { font-weight: bold; margin-bottom: 8px; display: block; color: #000; }
         .q-answer .body { margin: 0 0 10px; padding: 10px 12px; background: #fafafa; border: 1px solid #eee; color: #0056b3; }
@@ -137,18 +150,21 @@
     </table>
 
     <?php
-        $pdfAllow = '<p><br><strong><em><ul><ol><li><b><i>';
+        $pdfAllow = '<p><br><strong><em><ul><ol><li><b><i><u><table><thead><tbody><tfoot><tr><td><th><caption><colgroup><col><div><span><h1><h2><h3><h4>';
+        $pdfHtml = static function ($html) use ($pdfAllow) {
+            return strip_tags((string) $html, $pdfAllow);
+        };
+        $instructions = trim((string) ($attempt->assessment->description ?? ''));
+        if (trim(strip_tags($instructions)) !== '') {
+            echo '<h2>Test instructions</h2><div class="instructions">' . $pdfHtml($instructions) . '</div>';
+        }
         if ($attempt->grader_feedback) {
-            echo '<h2>Overall feedback</h2><div class="feedback">' . strip_tags((string) $attempt->grader_feedback, $pdfAllow) . '</div>';
+            echo '<h2>Overall feedback</h2><div class="feedback">' . $pdfHtml($attempt->grader_feedback) . '</div>';
         }
     ?>
 
     <h2 style="page-break-after:avoid;">Questions &amp; answers</h2>
     <?php
-        $pdfAllow = '<p><br><strong><em><ul><ol><li><b><i>';
-        $pdfHtml = static function ($html) use ($pdfAllow) {
-            return strip_tags((string) $html, $pdfAllow);
-        };
         foreach ($attempt->assessment->questions as $i => $question) {
             $answer = $attempt->answers->firstWhere('question_id', $question->id);
             $showMarks = $isPublished && ($question->isMcq() || ! $attempt->assessment->hidesOverallMarks());

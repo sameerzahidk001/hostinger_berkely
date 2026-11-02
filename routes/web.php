@@ -331,8 +331,8 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
             Route::get('/users/{userId}/preview', [LmsAssessmentController::class, 'userPreview'])->name('users.preview');
             Route::get('/assignments/{assignmentId}/edit', [LmsAssessmentController::class, 'editAssignment'])->name('tests.edit-assignment');
             Route::put('/assignments/{assignmentId}', [LmsAssessmentController::class, 'updateAssignment'])->name('tests.update-assignment');
-            Route::delete('/assignments/{assignmentId}', [LmsAssessmentController::class, 'destroyAssignment'])->name('tests.destroy-assignment');
-            Route::delete('/attempts/{attemptId}', [LmsAssessmentController::class, 'destroyAttemptRow'])->name('tests.destroy-attempt');
+            Route::post('/assignments/{assignmentId}/remove', [LmsAssessmentController::class, 'destroyAssignment'])->name('tests.destroy-assignment');
+            Route::post('/attempts/{attemptId}/remove', [LmsAssessmentController::class, 'destroyAttemptRow'])->name('tests.destroy-attempt');
             Route::get('/attempts/{attemptId}/mark', [LmsAssessmentController::class, 'mark'])->name('tests.mark');
             Route::get('/attempts/{attemptId}/pdf', [LmsAssessmentController::class, 'attemptPdf'])->name('tests.attempt-pdf');
             Route::post('/attempts/{attemptId}/marks', [LmsAssessmentController::class, 'saveMarks'])->name('tests.save-marks');
