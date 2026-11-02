@@ -498,7 +498,7 @@
             @endforeach
         </div>
         <p class="w-full text-left mt-6">
-            <a href="{{ route('course.index') }}" class="underline font-bold" style="color: {{ $footerText }}">All programmes</a>
+            <a href="{{ seo_courses_hub_url() }}" class="underline font-bold" style="color: {{ $footerText }}">All programmes</a>
         </p>
         <div class="flex flex-col md:flex-row  w-full justify-between gap-4 items-center my-8">
             <div

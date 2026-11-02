@@ -76,7 +76,7 @@ class SitemapController extends Controller
             'priority' => '1.0',
         ];
         $urls[] = [
-            'loc' => $this->siteUrl('course-index'),
+            'loc' => $this->siteUrl('courses'),
             'lastmod' => now()->toAtomString(),
             'changefreq' => 'weekly',
             'priority' => '0.6',
@@ -108,7 +108,7 @@ class SitemapController extends Controller
                     }
 
                     $path = trim((string) $page->full_url, '/');
-                    if ($path === '' || seo_is_utility_path($path) || in_array($path, ['home', 'page-not-found', 'courses'], true)) {
+                    if ($path === '' || seo_is_utility_path($path) || in_array($path, ['home', 'page-not-found', 'course-index', 'courses'], true)) {
                         continue;
                     }
 
