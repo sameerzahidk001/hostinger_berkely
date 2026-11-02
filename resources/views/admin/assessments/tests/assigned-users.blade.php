@@ -199,7 +199,12 @@
                 @else
                     All assigned test takers
                 @endif
-                <small class="text-muted">({{ $rowsTotal ?? $rows->count() }})</small>
+                <small class="text-muted">
+                    ({{ $rowsTotal ?? $rows->count() }}
+                    @if(!empty($statusCounts['Missed']))
+                        · <span class="lms-status-missed">Missed {{ (int) $statusCounts['Missed'] }}</span>
+                    @endif)
+                </small>
             </h5>
         </div>
         <div class="ibox-content lms-assigned-wrap">
