@@ -1937,15 +1937,10 @@ class LmsAssessmentController extends Controller
             $assessor = ($assessor && $assessor !== '' && $assessor !== '—') ? $assessor : 'Muhammad Sadiq';
         }
         $status = 'Assigned';
-        $openAnytime = $asg && $asg->isSelfSitting() && ! $asg->windowStart();
         if ($attempt) {
             $status = $attempt->statusLabel();
-        } elseif ($asg && ! $openAnytime && $asg->isNotYetOpen()) {
-            $status = 'Upcoming';
-        } elseif ($asg && ! $openAnytime && ($asg->isExpired() || $this->sittingWindowHasEnded($asg))) {
-            $status = 'Missed';
-        } elseif (! $attempt && $isCohort && ! $openAnytime) {
-            $status = 'Missed';
+        } else {
+            $status = $this->unusedSittingStatus($asg, $assessment, $isCohort);
         }
 
         return [
@@ -2455,6 +2450,29 @@ class LmsAssessmentController extends Controller
         return redirect()
             ->route('admin.assessments.tests.assigned-users')
             ->with('error', 'Only Admin can edit, delete or re-assign sittings. Use Mark, Publish or Download PDF.');
+    }
+
+    /** CIMA SCS/MCS unused rows are Missed as soon as the appointment start has passed (or if no start was stored). */
+    protected function unusedSittingStatus($asg, $assessment, bool $isCohort = false): string
+    {
+        $cima = $assessment && method_exists($this->assessments, 'usesStrictExamWindow')
+            && $this->assessments->usesStrictExamWindow($assessment);
+        $start = $asg && method_exists($asg, 'windowStart') ? $asg->windowStart() : null;
+        if ($start && now()->lt($start)) {
+            return 'Upcoming';
+        }
+        if ($cima || $isCohort) {
+            return 'Missed';
+        }
+        $openAnytime = $asg && $asg->isSelfSitting() && ! $start;
+        if ($openAnytime) {
+            return 'Assigned';
+        }
+        if ($asg && ($asg->isExpired() || $this->sittingWindowHasEnded($asg))) {
+            return 'Missed';
+        }
+
+        return 'Assigned';
     }
 
     /** Appointment window already ended — unused exam rows become Missed immediately (no extra delay). */
