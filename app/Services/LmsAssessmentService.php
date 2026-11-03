@@ -450,6 +450,9 @@ class LmsAssessmentService
             return false;
         }
         $userId = (int) $user->id;
+        if ($this->studentIsHiddenOnMcs($user, $assessment)) {
+            return false;
+        }
         if ($assignment && Schema::hasColumn('lms_assessment_assignments', 'excluded_user_ids')) {
             $excluded = collect($assignment->excluded_user_ids ?? [])->map(fn ($id) => (int) $id);
             if ($excluded->contains($userId)) {
@@ -474,6 +477,19 @@ class LmsAssessmentService
         }
 
         return true;
+    }
+
+    /** Imthiyas is hidden on CIMA MCS only — every student My Tests tab. */
+    protected function studentIsHiddenOnMcs(User $user, $assessment): bool
+    {
+        $name = mb_strtolower(trim((string) ($user->name ?? '')));
+        $email = mb_strtolower(trim((string) ($user->email ?? '')));
+        if (! str_contains($name, 'imthiyas') && ! str_contains($email, 'imthiyas')) {
+            return false;
+        }
+        $hay = mb_strtolower(trim((string) ($assessment->title ?? '') . ' ' . (string) ($assessment->course->title ?? '')));
+
+        return str_contains($hay, 'cima mcs') || str_contains($hay, 'management case') || (bool) preg_match('/\bmcs\b/', $hay);
     }
 
     public function isCimaScsAssignedMock($assessment): bool
@@ -2114,6 +2130,9 @@ class LmsAssessmentService
             if (in_array($status, ['disabled', 'draft'], true)) {
                 continue;
             }
+            if ($this->studentIsHiddenOnMcs($user, $assessment)) {
+                continue;
+            }
             if (in_array((int) $assessment->id, $itemAssessmentIds, true)) {
                 continue;
             }
@@ -2152,6 +2171,10 @@ class LmsAssessmentService
             $assessment = $row['assessment'];
             /** @var LmsAssessmentAssignment|null $assignment */
             $assignment = $row['assignment'];
+            if ($this->studentIsHiddenOnMcs($user, $assessment)
+                || ! $this->studentShouldSeeSitting($user, $assessment, $assignment, [])) {
+                continue;
+            }
             if (! $assignment || empty($assignment->id)) {
                 $assignment = $this->resolveAssignmentForUser($user, $assessment);
             }
