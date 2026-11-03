@@ -51,6 +51,9 @@ class LmsAssessmentController extends Controller
     /** @var array<int, array<int>> */
     protected array $courseIdsWhereUserIsAssessorCache = [];
 
+    /** @var array<int, bool> */
+    protected array $assignmentHasSubmittedAttemptCache = [];
+
     public function index(Request $request)
     {
         // Create Test page: create permission (or skill admin). Assign-only users use Assigned Tests.
@@ -790,7 +793,7 @@ class LmsAssessmentController extends Controller
             }
             $asg = $this->assignmentForAttempt($att, $assignments, $assignmentsById);
             if ($markerOnlyUid) {
-                if (! $this->instructorCanSeeSitting($markerOnlyUid, $asg, $assessment)) {
+                if (! $this->instructorCanSeeRow($markerOnlyUid, $asg, $assessment, $att)) {
                     continue;
                 }
             }
@@ -941,7 +944,12 @@ class LmsAssessmentController extends Controller
 
         if ($markerOnlyUid) {
             $rowsByKey = collect($rowsByKey)->filter(function ($r) use ($markerOnlyUid) {
-                return $this->instructorCanSeeSitting($markerOnlyUid, $r['assignment'] ?? null, $r['assessment'] ?? null);
+                return $this->instructorCanSeeRow(
+                    $markerOnlyUid,
+                    $r['assignment'] ?? null,
+                    $r['assessment'] ?? null,
+                    $r['attempt'] ?? null
+                );
             })->all();
         }
 
@@ -3407,6 +3415,25 @@ class LmsAssessmentController extends Controller
         } catch (\Throwable $e) {
             // next
         }
+        try {
+            $emptyMarker = LmsAssessmentAssignment::query();
+            if (Schema::hasColumn('lms_assessment_assignments', 'marker_user_id')) {
+                $emptyMarker->where(function ($w) {
+                    $w->whereNull('marker_user_id')->orWhere('marker_user_id', 0);
+                });
+            }
+            $emptyIds = $emptyMarker->pluck('id');
+            if ($emptyIds->isNotEmpty()) {
+                $ids = $ids->merge(
+                    LmsAssessmentAttempt::query()
+                        ->whereIn('assignment_id', $emptyIds->all())
+                        ->whereIn('status', ['submitted', 'graded', 'expired'])
+                        ->pluck('assessment_id')
+                );
+            }
+        } catch (\Throwable $e) {
+            // next
+        }
         $this->instructorScopeAssessmentIds = $ids->map(fn ($id) => (int) $id)->unique()->filter()->values()->all();
 
         return $this->instructorScopeAssessmentIds;
@@ -3502,22 +3529,83 @@ class LmsAssessmentController extends Controller
 
     protected function instructorCanSeeSitting(int $uid, $assignment, $assessment, ?array $courseIds = null): bool
     {
+        if ($this->instructorCanSeeRow($uid, $assignment, $assessment, null)) {
+            return true;
+        }
         if ($uid <= 0 || ! $assignment) {
             return false;
         }
-        $markerId = (int) ($assignment->marker_user_id ?? 0);
+        if ((int) ($assignment->marker_user_id ?? 0) > 0) {
+            return false;
+        }
+
+        return $this->assignmentHasSubmittedAttempt($assignment);
+    }
+
+    protected function instructorCanSeeRow(int $uid, $assignment, $assessment, $attempt = null): bool
+    {
+        if ($uid <= 0) {
+            return false;
+        }
+        if ($attempt && (int) ($attempt->graded_by_user_id ?? 0) === $uid) {
+            return true;
+        }
+        $markerId = $assignment ? (int) ($assignment->marker_user_id ?? 0) : 0;
         if ($markerId === $uid) {
             return true;
         }
         if ($markerId > 0) {
             return false;
         }
+        if (! $assignment) {
+            return false;
+        }
         if ((int) ($assignment->assigned_by_user_id ?? 0) === $uid) {
             return true;
         }
         $courseId = (int) ($assessment->course_id ?? 0);
+        if ($courseId > 0 && in_array($courseId, $this->courseIdsWhereUserIsAssessor($uid), true)) {
+            return true;
+        }
 
-        return $courseId > 0 && in_array($courseId, $this->courseIdsWhereUserIsAssessor($uid), true);
+        return $this->attemptIsSubmitted($attempt);
+    }
+
+    protected function attemptIsSubmitted($attempt): bool
+    {
+        if (! $attempt) {
+            return false;
+        }
+        if (! empty($attempt->graded_at) || ! empty($attempt->graded_by_user_id)) {
+            return true;
+        }
+
+        return in_array((string) ($attempt->status ?? ''), ['submitted', 'graded', 'expired'], true);
+    }
+
+    protected function assignmentHasSubmittedAttempt($assignment): bool
+    {
+        $id = (int) ($assignment->id ?? 0);
+        if ($id <= 0) {
+            return false;
+        }
+        if (array_key_exists($id, $this->assignmentHasSubmittedAttemptCache)) {
+            return $this->assignmentHasSubmittedAttemptCache[$id];
+        }
+        try {
+            $this->assignmentHasSubmittedAttemptCache[$id] = LmsAssessmentAttempt::query()
+                ->where('assignment_id', $id)
+                ->where(function ($q) {
+                    $q->whereIn('status', ['submitted', 'graded', 'expired'])
+                        ->orWhereNotNull('graded_at')
+                        ->orWhereNotNull('graded_by_user_id');
+                })
+                ->exists();
+        } catch (\Throwable $e) {
+            $this->assignmentHasSubmittedAttemptCache[$id] = false;
+        }
+
+        return $this->assignmentHasSubmittedAttemptCache[$id];
     }
 
     /** Instructors and Musa: only tests they created or were assigned to mark. Real Admin still sees all. */
