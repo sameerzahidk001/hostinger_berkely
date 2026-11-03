@@ -37,6 +37,8 @@ class LmsAssessmentController extends Controller
     /** @var array<int, \Illuminate\Support\Collection<int, int>> */
     protected array $excludedTakersByAssessment = [];
 
+    protected string $scsRosterNote = '';
+
     public function index(Request $request)
     {
         // Create Test page: create permission (or skill admin). Assign-only users use Assigned Tests.
@@ -968,7 +970,9 @@ class LmsAssessmentController extends Controller
             })->all();
         }
 
-        $rows = collect($rowsByKey)->values()->sortBy(function ($row) {
+        $rows = collect($rowsByKey)->values();
+        $rows = $this->appendScsNovemberRoster($rows, $assignments, $selectedAssessment, $assessmentsById);
+        $rows = $rows->sortBy(function ($row) {
             $status = (string) (($row['sitting_display']['status'] ?? ''));
             $rank = match ($status) {
                 'Missed' => 0,
@@ -1153,6 +1157,7 @@ class LmsAssessmentController extends Controller
         return view('admin.assessments.tests.assigned-users', [
             'rows' => $paged,
             'rowsTotal' => $total,
+            'scsRosterNote' => $this->scsRosterNote,
             'statusCounts' => $statusCounts ?? ['Missed' => 0, 'Upcoming' => 0],
             'selectedAssessment' => $selectedAssessment,
             'assessments' => $assessmentQuery->get(['id', 'title', 'kind']),
@@ -1843,54 +1848,248 @@ class LmsAssessmentController extends Controller
         return $real;
     }
 
+    protected function looksLikeCimaScsNovember($assessment): bool
+    {
+        $title = mb_strtolower(trim((string) ($assessment->title ?? '')));
+        if ($title === '' || str_contains($title, 'masterclass')) {
+            return false;
+        }
+
+        return (str_contains($title, 'scs') || str_contains($title, 'strategic case'))
+            && (str_contains($title, 'november 2026') || str_contains($title, 'nov 2026'));
+    }
+
+    protected function loadCimaScsNovemberBatch(): ?ClassBatch
+    {
+        if (! Schema::hasTable('class_batches')) {
+            return null;
+        }
+        try {
+            $batch = ClassBatch::query()
+                ->whereRaw('LOWER(TRIM(code)) = ?', ['bat-0004'])
+                ->first();
+            if ($batch) {
+                return $batch;
+            }
+            $batch = ClassBatch::query()
+                ->where('code', 'like', '%0004%')
+                ->where('name', 'not like', '%Masterclass%')
+                ->orderBy('id')
+                ->first();
+            if ($batch) {
+                return $batch;
+            }
+
+            return ClassBatch::query()
+                ->where(function ($q) {
+                    $q->where('name', 'like', '%November 2026%')
+                        ->orWhere('name', 'like', '%Nov 2026%');
+                })
+                ->where(function ($q) {
+                    $q->where('name', 'like', '%SCS%')
+                        ->orWhere('name', 'like', '%Strategic Case%');
+                })
+                ->where('name', 'not like', '%Masterclass%')
+                ->orderBy('id')
+                ->first();
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    protected function loadCimaScsNovemberStudents()
+    {
+        $batch = $this->loadCimaScsNovemberBatch();
+        if (! $batch) {
+            $this->scsRosterNote = 'no BAT-0004';
+
+            return collect();
+        }
+        $ids = collect();
+        $pivotN = 0;
+        try {
+            if (Schema::hasTable('class_batch_student')) {
+                $pivot = DB::table('class_batch_student')->where('class_batch_id', (int) $batch->id)->get();
+                $pivotN = $pivot->count();
+                foreach ($pivot as $row) {
+                    $arr = (array) $row;
+                    foreach (['student_id', 'user_id', 'learner_id'] as $col) {
+                        if (! empty($arr[$col])) {
+                            $ids->push((int) $arr[$col]);
+                        }
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            $this->scsRosterNote = 'pivot-err';
+        }
+        try {
+            $ids = $ids->merge($batch->students()->pluck('users.id'));
+        } catch (\Throwable $e) {
+            // keep pivot ids
+        }
+        try {
+            $ids = $ids->merge(ClassBatch::studentUserIdsFor((int) $batch->id));
+        } catch (\Throwable $e) {
+            // keep pivot ids
+        }
+        $ids = $ids->map(fn ($id) => (int) $id)->unique()->filter()->values();
+        $users = collect();
+        if ($ids->isNotEmpty()) {
+            try {
+                $users = User::query()->whereIn('id', $ids->all())->get();
+            } catch (\Throwable $e) {
+                $users = collect();
+            }
+        }
+        $found = $users->pluck('id')->map(fn ($id) => (int) $id)->all();
+        foreach ($ids as $sid) {
+            if (! in_array((int) $sid, $found, true)) {
+                $users->push((object) [
+                    'id' => (int) $sid,
+                    'name' => 'User #' . (int) $sid,
+                    'email' => '',
+                ]);
+            }
+        }
+        $users = $users->unique(fn ($row) => (int) ($row->id ?? 0))->filter(fn ($row) => (int) ($row->id ?? 0) > 0)->values();
+        $this->scsRosterNote = trim((string) ($batch->code ?: 'BAT-0004'))
+            . ' n=' . $users->count()
+            . ' pivot=' . $pivotN;
+
+        return $users;
+    }
+
+    /** Last chance: attach BAT-0004 people even if earlier roster helpers found nobody. */
+    protected function appendScsNovemberRoster($rows, $assignments, $selectedAssessment, $assessmentsById)
+    {
+        $targets = collect();
+        if ($selectedAssessment && $this->looksLikeCimaScsNovember($selectedAssessment)) {
+            $targets->push($selectedAssessment);
+        }
+        foreach ($rows as $r) {
+            $assessment = $r['assessment'] ?? null;
+            if ($assessment && $this->looksLikeCimaScsNovember($assessment)) {
+                $targets->push($assessment);
+            }
+        }
+        foreach (collect($assignments) as $asg) {
+            $aid = (int) ($asg->assessment_id ?? 0);
+            $assessment = $asg->assessment
+                ?? ($assessmentsById instanceof \Illuminate\Support\Collection ? $assessmentsById->get($aid) : null)
+                ?? ($aid > 0 ? LmsAssessment::query()->find($aid) : null);
+            if ($assessment && $this->looksLikeCimaScsNovember($assessment)) {
+                $targets->push($assessment);
+            }
+        }
+        $targets = $targets->unique(fn ($a) => (int) ($a->id ?? 0))->filter()->values();
+        if ($targets->isEmpty()) {
+            if ($this->scsRosterNote === '') {
+                $this->scsRosterNote = 'no SCS Nov target';
+            }
+
+            return $rows;
+        }
+        $students = $this->loadCimaScsNovemberStudents();
+        if ($students->isEmpty()) {
+            return $rows;
+        }
+        foreach ($targets as $assessment) {
+            $aid = (int) ($assessment->id ?? 0);
+            $seed = collect($assignments)->filter(fn ($a) => (int) ($a->assessment_id ?? 0) === $aid)
+                ->sortByDesc('id')
+                ->first();
+            if (! $seed) {
+                $fromRow = $rows->first(fn ($r) => (int) ($r['assessment']->id ?? 0) === $aid);
+                $seed = $fromRow['assignment'] ?? null;
+            }
+            if (! $seed || empty($seed->id)) {
+                $this->scsRosterNote .= ' · no-seed';
+                continue;
+            }
+            $excluded = $this->excludedUserIdsForAssessment($assessment);
+            $skipExcluded = $excluded->count() <= 3;
+            $have = $rows->filter(fn ($r) => (int) ($r['assessment']->id ?? 0) === $aid)
+                ->map(fn ($r) => (int) ($r['student']->id ?? 0))
+                ->all();
+            $added = 0;
+            foreach ($students as $student) {
+                $uid = (int) ($student->id ?? 0);
+                if ($uid <= 0 || in_array($uid, $have, true)) {
+                    continue;
+                }
+                if ($skipExcluded && $excluded->contains($uid)) {
+                    continue;
+                }
+                $row = [
+                    'assessment' => $assessment,
+                    'student' => $student,
+                    'assignment' => $seed,
+                    'attempt' => null,
+                    'attempt_number' => 1,
+                    'attempt_total' => max(1, (int) ($assessment->max_attempts ?? 1)),
+                ];
+                $disp = $this->sittingDisplayForRow($row);
+                if (! empty($disp['_assignment'])) {
+                    $row['assignment'] = $disp['_assignment'];
+                }
+                unset($disp['_assignment']);
+                $row['sitting_display'] = $disp;
+                $rows->push($row);
+                $have[] = $uid;
+                $added++;
+            }
+            $this->scsRosterNote .= ' · +' . $added . ' excl=' . $excluded->count();
+        }
+
+        return $rows;
+    }
+
     /** After collapse, put BAT-0004 classmates back on CIMA SCS November mocks. */
     protected function forceCimaScsBatchRoster(array &$rowsByKey, $assignments, $assessmentsById, array &$batchStudentCache): void
     {
+        $students = $this->loadCimaScsNovemberStudents();
+        if ($students->isEmpty()) {
+            return;
+        }
         $byAssessment = collect($rowsByKey)->groupBy(fn ($r) => (int) ($r['assessment']->id ?? 0));
         $aids = $byAssessment->keys()->merge(
             collect($assignments)->pluck('assessment_id')->map(fn ($id) => (int) $id)
         )->unique()->filter();
         foreach ($aids as $aid) {
+            $group = $byAssessment->get((int) $aid) ?? $byAssessment->get((string) $aid);
             $assessment = $assessmentsById->get((int) $aid)
-                ?: (optional($byAssessment->get((int) $aid))->first()['assessment'] ?? null);
-            if (! $assessment) {
-                continue;
-            }
-            $bid = ClassBatch::idForCimaScsNovember((string) ($assessment->title ?? ''));
-            if (! $bid) {
-                $bid = optional(ClassBatch::query()->where('code', 'BAT-0004')->first())->id;
-                $title = mb_strtolower((string) ($assessment->title ?? ''));
-                $looksScs = str_contains($title, 'scs') || str_contains($title, 'strategic case');
-                $looksNov = str_contains($title, 'november 2026') || str_contains($title, 'nov 2026');
-                if (! $looksScs || ! $looksNov || str_contains($title, 'masterclass')) {
-                    $bid = null;
-                }
-            }
-            if (! $bid) {
+                ?: $assessmentsById->get((string) $aid)
+                ?: (is_iterable($group) ? (collect($group)->first()['assessment'] ?? null) : null);
+            if (! $assessment || ! $this->looksLikeCimaScsNovember($assessment)) {
                 continue;
             }
             $seed = collect($assignments)->filter(fn ($a) => (int) ($a->assessment_id ?? 0) === (int) $aid)
                 ->sortByDesc('id')
                 ->first();
             if (! $seed || empty($seed->id)) {
+                $first = is_iterable($group) ? collect($group)->first() : null;
+                $seed = $first['assignment'] ?? null;
+            }
+            if (! $seed || empty($seed->id)) {
                 continue;
             }
-            if (empty($seed->class_batch_id)) {
-                $seed->class_batch_id = (int) $bid;
+            $batch = $this->loadCimaScsNovemberBatch();
+            if ($batch && empty($seed->class_batch_id)) {
+                $seed->class_batch_id = (int) $batch->id;
+                $seed->setRelation('batch', $batch);
             }
-            if (! isset($batchStudentCache[(int) $bid])) {
-                try {
-                    $batchStudentCache[(int) $bid] = $this->studentsForBatchId((int) $bid);
-                } catch (\Throwable $e) {
-                    $batchStudentCache[(int) $bid] = collect();
-                }
-            }
+            $excluded = $this->excludedUserIdsForAssessment($assessment);
+            $skipExcluded = $excluded->count() <= 3;
             $have = collect($rowsByKey)->filter(fn ($r) => (int) ($r['assessment']->id ?? 0) === (int) $aid)
                 ->map(fn ($r) => (int) ($r['student']->id ?? 0))
                 ->all();
-            foreach ($batchStudentCache[(int) $bid] as $student) {
+            foreach ($students as $student) {
                 $uid = (int) ($student->id ?? 0);
-                if ($uid <= 0 || in_array($uid, $have, true) || $this->isRemovedTestTaker($student, $assessment)) {
+                if ($uid <= 0 || in_array($uid, $have, true)) {
+                    continue;
+                }
+                if ($skipExcluded && $excluded->contains($uid)) {
                     continue;
                 }
                 $key = (int) $seed->id . ':' . $uid;
