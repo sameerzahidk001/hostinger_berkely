@@ -615,9 +615,6 @@ class LmsAssessmentController extends Controller
             if ($markerOnlyUid && ! $this->instructorOwnsSitting($markerOnlyUid, $assignment, $assessment)) {
                 return false;
             }
-            if ($markerOnlyUid && $this->looksLikeCimaMcs($assessment) && empty($assignment->student_id)) {
-                return false;
-            }
             if ($assessmentId > 0 && ! in_array((int) $assignment->assessment_id, $assessmentFilterIds, true)) {
                 return false;
             }
@@ -1234,7 +1231,7 @@ class LmsAssessmentController extends Controller
         return view('admin.assessments.tests.assigned-users', [
             'rows' => $paged,
             'rowsTotal' => $total,
-            'scsRosterNote' => $this->scsRosterNote,
+            'scsRosterNote' => '',
             'statusCounts' => $statusCounts ?? ['Missed' => 0, 'Upcoming' => 0],
             'selectedAssessment' => $selectedAssessment,
             'assessments' => $this->assessmentsWithAssignedPeople(
@@ -4277,8 +4274,31 @@ class LmsAssessmentController extends Controller
         if ((int) ($assignment->assigned_by_user_id ?? 0) === $uid) {
             return true;
         }
+        if ($this->assignmentHasInstructorAttempts($uid, $assignment)) {
+            return true;
+        }
 
         return $this->actorIsMusa($uid) && $this->isCimaScsAssignedMock($assessment);
+    }
+
+    /** Live attempts this instructor still has on the sitting (not deleted). */
+    protected function assignmentHasInstructorAttempts(int $uid, $assignment): bool
+    {
+        $id = (int) ($assignment->id ?? 0);
+        if ($uid <= 0 || $id <= 0 || ! Schema::hasTable('lms_assessment_attempts')) {
+            return false;
+        }
+        try {
+            $q = LmsAssessmentAttempt::query()->where('assignment_id', $id);
+            if ((int) ($assignment->marker_user_id ?? 0) === $uid
+                || (int) ($assignment->assigned_by_user_id ?? 0) === $uid) {
+                return $q->exists();
+            }
+
+            return $q->where('graded_by_user_id', $uid)->exists();
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     /** Dropdown: live tests this instructor has assigned people on (Missed included). */
@@ -4394,6 +4414,16 @@ class LmsAssessmentController extends Controller
             } catch (\Throwable $e) {
                 // named only
             }
+        }
+        try {
+            $ids = $ids->merge(
+                LmsAssessmentAttempt::query()
+                    ->whereIn('assessment_id', $aids)
+                    ->where('graded_by_user_id', $uid)
+                    ->pluck('user_id')
+            );
+        } catch (\Throwable $e) {
+            // keep named
         }
 
         return $ids->map(fn ($id) => (int) $id)->unique()->filter()->diff($excluded)->count();

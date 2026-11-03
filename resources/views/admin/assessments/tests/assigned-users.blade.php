@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.searchable-select-assets')
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
-<!-- lms-assigned-tests-20261104d KEEP: no MCS in Musa dropdown; table fits page -->
+<!-- lms-assigned-tests-20261104f KEEP: MCS stays for instructors with remaining attempts -->
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
@@ -133,7 +133,7 @@
         All assigned test takers (started or not), including people who never opened the test.
         <strong>Missed</strong> = they did not start. For CIMA SCS/MCS that is as soon as the appointment start has passed (no wait for duration). Other tests wait until start + duration.
         Status shows <strong>Marking Required</strong> until the assessor marks a submitted sitting.
-        <span class="text-muted">List 20261104d</span>
+        <span class="text-muted">List 20261104f</span>
     </p>
     <div class="ibox"><div class="ibox-content">
         <form method="GET" class="m-b-md" style="margin-bottom:15px;">
