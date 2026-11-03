@@ -48,6 +48,9 @@ class LmsAssessmentController extends Controller
     /** @var array<int>|null */
     protected $instructorScopeAssessmentIds = null;
 
+    /** @var array<int, array<int>> */
+    protected array $courseIdsWhereUserIsAssessorCache = [];
+
     public function index(Request $request)
     {
         // Create Test page: create permission (or skill admin). Assign-only users use Assigned Tests.
@@ -3068,10 +3071,23 @@ class LmsAssessmentController extends Controller
             ->get(['id', 'name', 'email']);
 
         $instructors = User::query()
-            ->whereHas('roles', fn ($q) => $q->where('name', 'instructor'))
+            ->whereHas('roles', fn ($q) => $q->whereIn('name', ['instructor', 'head_of_faculty', 'head-of-faculty']))
             ->orderBy('name')
             ->limit(400)
             ->get(['id', 'name', 'email']);
+        try {
+            $extraIds = collect();
+            foreach (\App\Models\Course::query()->get(['instructor_id']) as $course) {
+                $extraIds = $extraIds->merge(course_instructor_ids($course));
+            }
+            if ($extraIds->isNotEmpty()) {
+                $instructors = $instructors->merge(
+                    User::query()->whereIn('id', $extraIds->map(fn ($id) => (int) $id)->unique()->all())->get(['id', 'name', 'email'])
+                )->unique('id')->sortBy('name')->values();
+            }
+        } catch (\Throwable $e) {
+            // keep role list
+        }
 
         $selectedMarker = old(
             'marker_user_id',
@@ -3333,7 +3349,7 @@ class LmsAssessmentController extends Controller
         return $this->instructorScopeBatchIds;
     }
 
-    /** Tests this person is assigned to mark (per sitting / per person, not by batch). */
+    /** Tests this person is assigned to mark, plus unmarked sittings they assigned or can mark. */
     protected function instructorAssessmentIds(int $uid, ?array $courseIds = null): array
     {
         if ($this->instructorScopeAssessmentIds !== null) {
@@ -3350,6 +3366,22 @@ class LmsAssessmentController extends Controller
             // next
         }
         try {
+            if (Schema::hasColumn('lms_assessment_assignments', 'assigned_by_user_id')) {
+                $ids = $ids->merge(
+                    LmsAssessmentAssignment::query()
+                        ->where('assigned_by_user_id', $uid)
+                        ->where(function ($q) {
+                            if (Schema::hasColumn('lms_assessment_assignments', 'marker_user_id')) {
+                                $q->whereNull('marker_user_id')->orWhere('marker_user_id', 0);
+                            }
+                        })
+                        ->pluck('assessment_id')
+                );
+            }
+        } catch (\Throwable $e) {
+            // next
+        }
+        try {
             if (Schema::hasColumn('lms_assessment_attempts', 'graded_by_user_id')) {
                 $ids = $ids->merge(
                     LmsAssessmentAttempt::query()->where('graded_by_user_id', $uid)->pluck('assessment_id')
@@ -3358,9 +3390,47 @@ class LmsAssessmentController extends Controller
         } catch (\Throwable $e) {
             // next
         }
+        try {
+            $courseIdsForUser = $this->courseIdsWhereUserIsAssessor($uid);
+            if ($courseIdsForUser !== []) {
+                $aids = LmsAssessment::query()->whereIn('course_id', $courseIdsForUser)->pluck('id');
+                if ($aids->isNotEmpty()) {
+                    $q = LmsAssessmentAssignment::query()->whereIn('assessment_id', $aids->all());
+                    if (Schema::hasColumn('lms_assessment_assignments', 'marker_user_id')) {
+                        $q->where(function ($w) {
+                            $w->whereNull('marker_user_id')->orWhere('marker_user_id', 0);
+                        });
+                    }
+                    $ids = $ids->merge($q->pluck('assessment_id'));
+                }
+            }
+        } catch (\Throwable $e) {
+            // next
+        }
         $this->instructorScopeAssessmentIds = $ids->map(fn ($id) => (int) $id)->unique()->filter()->values()->all();
 
         return $this->instructorScopeAssessmentIds;
+    }
+
+    protected function courseIdsWhereUserIsAssessor(int $uid): array
+    {
+        if ($uid <= 0 || ! class_exists(\App\Models\Course::class)) {
+            return [];
+        }
+        if (isset($this->courseIdsWhereUserIsAssessorCache[$uid])) {
+            return $this->courseIdsWhereUserIsAssessorCache[$uid];
+        }
+        try {
+            $this->courseIdsWhereUserIsAssessorCache[$uid] = \App\Models\Course::query()->get(['id', 'instructor_id'])
+                ->filter(fn ($course) => in_array($uid, course_instructor_ids($course), true))
+                ->map(fn ($course) => (int) $course->id)
+                ->values()
+                ->all();
+        } catch (\Throwable $e) {
+            $this->courseIdsWhereUserIsAssessorCache[$uid] = [];
+        }
+
+        return $this->courseIdsWhereUserIsAssessorCache[$uid];
     }
 
     protected function sittingBatchId($assignment): int
@@ -3435,7 +3505,19 @@ class LmsAssessmentController extends Controller
         if ($uid <= 0 || ! $assignment) {
             return false;
         }
-        return (int) ($assignment->marker_user_id ?? 0) === $uid;
+        $markerId = (int) ($assignment->marker_user_id ?? 0);
+        if ($markerId === $uid) {
+            return true;
+        }
+        if ($markerId > 0) {
+            return false;
+        }
+        if ((int) ($assignment->assigned_by_user_id ?? 0) === $uid) {
+            return true;
+        }
+        $courseId = (int) ($assessment->course_id ?? 0);
+
+        return $courseId > 0 && in_array($courseId, $this->courseIdsWhereUserIsAssessor($uid), true);
     }
 
     /** Instructors and Musa: only tests they created or were assigned to mark. Real Admin still sees all. */
