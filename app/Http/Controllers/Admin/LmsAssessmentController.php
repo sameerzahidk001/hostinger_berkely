@@ -611,10 +611,6 @@ class LmsAssessmentController extends Controller
             $assessmentId, $assessmentFilterIds, $batchId, $courseId, $kind, $markerOnlyUid, $courseIdsScope
         ) {
             $assessment = $assignment->assessment ?? null;
-            if (method_exists($this->assessments, 'isMock1CopiedNovemberSitting')
-                && $this->assessments->isMock1CopiedNovemberSitting($assignment, $assessment)) {
-                return false;
-            }
             if ($assessmentId > 0 && ! in_array((int) $assignment->assessment_id, $assessmentFilterIds, true)) {
                 return false;
             }
@@ -1905,6 +1901,15 @@ class LmsAssessmentController extends Controller
             if ($assignment && Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
                 $ids = $ids->merge(collect($assignment->roster_user_ids ?? []));
             }
+            $self = $assignment && method_exists($assignment, 'isSelfSitting') && $assignment->isSelfSitting();
+            $batchId = (int) ($assignment->class_batch_id ?? 0);
+            if (! $self && $batchId > 0 && $ids->filter()->isEmpty()) {
+                try {
+                    $ids = $ids->merge(ClassBatch::membersOnBatchAtAssignment($batchId, $assignment));
+                } catch (\Throwable $e) {
+                    // keep named/roster ids
+                }
+            }
             $ids = $ids->map(fn ($id) => (int) $id)->unique()->filter()->values();
             if ($ids->isNotEmpty()) {
                 $found = User::query()->whereIn('id', $ids->all())->get();
@@ -1996,11 +2001,6 @@ class LmsAssessmentController extends Controller
             $seed = $this->mock1RosterSeed(collect($rows)->pluck('assignment')->filter(), $assessment);
             $seedId = (int) ($seed->id ?? 0);
             foreach ($rows as $k => $r) {
-                if (method_exists($this->assessments, 'isMock1CopiedNovemberSitting')
-                    && $this->assessments->isMock1CopiedNovemberSitting($r['assignment'] ?? null, $assessment)) {
-                    $drop[$k] = true;
-                    continue;
-                }
                 $asgId = (int) ($r['assignment']->id ?? 0);
                 $uid = (int) ($r['student']->id ?? 0);
                 $isYahia = method_exists($this->assessments, 'isYahiaUser')
@@ -2614,10 +2614,6 @@ class LmsAssessmentController extends Controller
             if ((int) ($a->assessment_id ?? 0) !== (int) ($assessment->id ?? 0)) {
                 return false;
             }
-            if (method_exists($this->assessments, 'isMock1FourthNovemberSitting')
-                && $this->assessments->isMock1FourthNovemberSitting($a, $assessment)) {
-                return false;
-            }
 
             return ! (method_exists($a, 'isSelfSitting') && $a->isSelfSitting());
         })->values();
@@ -2701,7 +2697,7 @@ class LmsAssessmentController extends Controller
     {
         $assessments = collect($rowsByKey)->pluck('assessment')->filter()
             ->concat(collect($assessmentsById))
-            ->filter(fn ($row) => $row && method_exists($this->assessments, 'isCimaScsMock1') && $this->assessments->isCimaScsMock1($row))
+            ->filter(fn ($row) => $this->isCimaScsAssignedMock($row))
             ->unique(fn ($row) => mb_strtolower(trim((string) ($row->title ?? ('id:' . (int) ($row->id ?? 0))))));
         foreach ($assessments as $assessment) {
             $aid = (int) ($assessment->id ?? 0);
@@ -2709,14 +2705,11 @@ class LmsAssessmentController extends Controller
             $seed = $this->mock1RosterSeed($cands, $assessment);
             if (! $seed || empty($seed->id)) {
                 $seed = collect($rowsByKey)->first(function ($r) use ($aid) {
-                    return (int) ($r['assessment']->id ?? 0) === $aid && ! empty($r['assignment']->id);
+                    return (int) ($r['assessment']->id ?? 0) === $aid && ! empty($r['assignment']->id)
+                        && ! (method_exists($r['assignment'], 'isSelfSitting') && $r['assignment']->isSelfSitting());
                 })['assignment'] ?? null;
             }
             if (! $seed || empty($seed->id)) {
-                continue;
-            }
-            if (method_exists($this->assessments, 'isMock1FourthNovemberSitting')
-                && $this->assessments->isMock1FourthNovemberSitting($seed, $assessment)) {
                 continue;
             }
             $roster = $this->mock1ExtraRosterStudents($seed, $assessment, $rowsByKey);
@@ -2858,11 +2851,21 @@ class LmsAssessmentController extends Controller
                 continue;
             }
             $snap = ClassBatch::studentUserIdsForSitting($assignment);
-            if ($this->looksLikeCimaScsNovember($assessment) || $this->isMock1PersonSitting($assignment, $assessment)) {
+            if ($this->looksLikeCimaScsNovember($assessment) && ! $this->isCimaScsAssignedMock($assessment)) {
                 continue;
             }
-            if (method_exists($this->assessments, 'isMock1FourthNovemberSitting')
-                && $this->assessments->isMock1FourthNovemberSitting($assignment, $assessment)) {
+            if ($this->isCimaScsAssignedMock($assessment)) {
+                if (method_exists($assignment, 'isSelfSitting') && $assignment->isSelfSitting()) {
+                    continue;
+                }
+                $snap = collect($assignment->roster_user_ids ?? []);
+                if (! empty($assignment->student_id)) {
+                    $snap->push((int) $assignment->student_id);
+                }
+                if ($snap->filter()->isEmpty() && ! empty($assignment->class_batch_id)) {
+                    $snap = ClassBatch::membersOnBatchAtAssignment((int) $assignment->class_batch_id, $assignment);
+                }
+            } elseif ($this->isMock1PersonSitting($assignment, $assessment)) {
                 continue;
             }
             if ($this->isCimaCohortSitting($assessment, $assignment, collect())) {
