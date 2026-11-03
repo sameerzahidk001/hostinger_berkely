@@ -984,10 +984,7 @@ class LmsAssessmentService
                     abort(403, 'The availability window for this test has ended.');
                 }
             } elseif (! $assignment->isSelfSitting() && $assignment->isNotYetOpen() && $usedOnSitting === 0) {
-                if ($this->isYahiaUser($user)) {
-                    abort(403, 'This test is not open yet.');
-                }
-                abort(403, 'The availability window for this test has ended.');
+                abort(403, 'This test is not open yet.');
             } elseif ($usedOnSitting > 0 && $allowAnytimeRetake && ! $assignment->isSelfSitting()) {
                 $assignment = $this->ensureAnytimeRetakeSitting($user, $assessment, $assignment);
             }
@@ -2003,18 +2000,6 @@ class LmsAssessmentService
                     $upcoming->push($base + [
                         'attempt' => null,
                         'can_retake' => false,
-                    ]);
-                } elseif ($this->usesStrictExamWindow($assessment) || ($assignment && ! $assignment->isSelfSitting())) {
-                    $missed->push($base + [
-                        'attempt' => null,
-                        'can_retake' => $max > 1 || $this->canRetake($user, $assessment, $assignment),
-                        'attempt_number' => 1,
-                        'attempt_total' => $max,
-                    ]);
-                } else {
-                    $available->push($base + [
-                        'attempt' => null,
-                        'can_retake' => $isRetakeSitting,
                     ]);
                 }
             } else {
