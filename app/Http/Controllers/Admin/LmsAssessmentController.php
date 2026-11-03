@@ -3401,15 +3401,19 @@ class LmsAssessmentController extends Controller
         try {
             $courseIdsForUser = $this->courseIdsWhereUserIsAssessor($uid);
             if ($courseIdsForUser !== []) {
-                $aids = LmsAssessment::query()->whereIn('course_id', $courseIdsForUser)->pluck('id');
-                if ($aids->isNotEmpty()) {
-                    $q = LmsAssessmentAssignment::query()->whereIn('assessment_id', $aids->all());
-                    if (Schema::hasColumn('lms_assessment_assignments', 'marker_user_id')) {
-                        $q->where(function ($w) {
-                            $w->whereNull('marker_user_id')->orWhere('marker_user_id', 0);
-                        });
+                $ids = $ids->merge(
+                    LmsAssessment::query()->whereIn('course_id', $courseIdsForUser)->pluck('id')
+                );
+            }
+        } catch (\Throwable $e) {
+            // next
+        }
+        try {
+            if (function_exists('is_musa_shaikh_user') && is_musa_shaikh_user()) {
+                foreach (LmsAssessment::query()->get(['id', 'title']) as $row) {
+                    if ($this->looksLikeCimaScsNovember($row)) {
+                        $ids->push((int) $row->id);
                     }
-                    $ids = $ids->merge($q->pluck('assessment_id'));
                 }
             }
         } catch (\Throwable $e) {
@@ -3550,6 +3554,9 @@ class LmsAssessmentController extends Controller
         if ($attempt && (int) ($attempt->graded_by_user_id ?? 0) === $uid) {
             return true;
         }
+        if ($this->actorAssessesAssessment($uid, $assessment)) {
+            return true;
+        }
         $markerId = $assignment ? (int) ($assignment->marker_user_id ?? 0) : 0;
         if ($markerId === $uid) {
             return true;
@@ -3563,12 +3570,24 @@ class LmsAssessmentController extends Controller
         if ((int) ($assignment->assigned_by_user_id ?? 0) === $uid) {
             return true;
         }
+
+        return $this->attemptIsSubmitted($attempt);
+    }
+
+    /** Course assessor (and Musa on SCS) sees every person-attempt on that test, matching admin. */
+    protected function actorAssessesAssessment(int $uid, $assessment): bool
+    {
+        if (! $assessment) {
+            return false;
+        }
         $courseId = (int) ($assessment->course_id ?? 0);
         if ($courseId > 0 && in_array($courseId, $this->courseIdsWhereUserIsAssessor($uid), true)) {
             return true;
         }
 
-        return $this->attemptIsSubmitted($attempt);
+        return function_exists('is_musa_shaikh_user')
+            && is_musa_shaikh_user()
+            && $this->looksLikeCimaScsNovember($assessment);
     }
 
     protected function attemptIsSubmitted($attempt): bool
