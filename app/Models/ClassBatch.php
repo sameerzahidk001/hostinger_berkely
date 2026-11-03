@@ -214,7 +214,8 @@ class ClassBatch extends Model
             return null;
         }
         try {
-            $byCode = static::query()->where('code', 'BAT-0004')->first();
+            $byCode = static::query()->whereRaw('LOWER(TRIM(code)) = ?', ['bat-0004'])->first()
+                ?: static::query()->where('code', 'BAT-0004')->first();
             if ($byCode) {
                 return (int) $byCode->id;
             }
