@@ -727,50 +727,6 @@ $(document).ready(function() {
         url.searchParams.set('activity_tab', tab);
         window.history.replaceState({}, '', url.toString());
     });
-
-    // Client-side column sort for activity tables (current page).
-    $('.js-sortable-table').each(function () {
-        var $table = $(this);
-        var sortCol = 0;
-        var sortDir = 'desc';
-
-        $table.on('click', 'thead th[data-sort-col]', function () {
-            var col = parseInt($(this).data('sort-col'), 10);
-            if (sortCol === col) {
-                sortDir = sortDir === 'asc' ? 'desc' : 'asc';
-            } else {
-                sortCol = col;
-                sortDir = 'asc';
-            }
-
-            var $rows = $table.find('tbody tr').get().filter(function (row) {
-                return $(row).find('td').length > 1;
-            });
-
-            $rows.sort(function (a, b) {
-                var $a = $(a).children('td').eq(sortCol);
-                var $b = $(b).children('td').eq(sortCol);
-                var av = $a.attr('data-sort') || $a.text().trim().toLowerCase();
-                var bv = $b.attr('data-sort') || $b.text().trim().toLowerCase();
-                var an = parseFloat(av);
-                var bn = parseFloat(bv);
-                var cmp;
-                if (!isNaN(an) && !isNaN(bn) && String(av).match(/^\d+(\.\d+)?$/)) {
-                    cmp = an - bn;
-                } else {
-                    cmp = String(av).localeCompare(String(bv), undefined, { numeric: true, sensitivity: 'base' });
-                }
-                return sortDir === 'asc' ? cmp : -cmp;
-            });
-
-            $.each($rows, function (_, row) {
-                $table.children('tbody').append(row);
-            });
-
-            $table.find('thead th .sort-ind').text('');
-            $(this).find('.sort-ind').text(sortDir === 'asc' ? ' ▲' : ' ▼');
-        });
-    });
 });
 </script>
 @endpush
