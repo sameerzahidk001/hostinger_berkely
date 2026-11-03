@@ -24,6 +24,9 @@ use Illuminate\Support\Facades\Schema;
 
 class LmsAssessmentService
 {
+    /** @var array<int, \Illuminate\Support\Collection> */
+    protected array $scsMock1AssignmentsCache = [];
+
     public function __construct(protected StudyMaterialService $lms)
     {
     }
@@ -453,6 +456,57 @@ class LmsAssessmentService
     }
 
     /** CIMA case sittings expire. Mock/practice/general stay startable after the clock. */
+    public function isCimaScsMock1($assessment): bool
+    {
+        $title = mb_strtolower(trim((string) ($assessment->title ?? '')));
+        if ($title === '' || str_contains($title, 'masterclass') || str_contains($title, 'mock 2')) {
+            return false;
+        }
+
+        return str_contains($title, 'scs') && (str_contains($title, 'mock 1') || (bool) preg_match('/\bmock\s*1\b/', $title));
+    }
+
+    /** Mock 1 appointment from the stored sitting: original roster = earliest DB window; Yahia = his own sitting. */
+    public function scsMock1AssignmentFromDatabase($assessment, $student = null, $current = null)
+    {
+        if (! $this->isCimaScsMock1($assessment)) {
+            return $current;
+        }
+        $aid = (int) ($assessment->id ?? 0);
+        if ($aid <= 0) {
+            return $current;
+        }
+        try {
+            if (! isset($this->scsMock1AssignmentsCache[$aid])) {
+                $this->scsMock1AssignmentsCache[$aid] = LmsAssessmentAssignment::query()
+                    ->where('assessment_id', $aid)
+                    ->orderBy('id')
+                    ->get();
+            }
+            $rows = $this->scsMock1AssignmentsCache[$aid];
+        } catch (\Throwable $e) {
+            return $current;
+        }
+        if ($rows->isEmpty()) {
+            return $current;
+        }
+        if ($this->isYahiaUser($student)) {
+            $sid = (int) ($student->id ?? 0);
+            $own = $rows->sortByDesc('id')->first(fn ($row) => $sid > 0 && (int) ($row->student_id ?? 0) === $sid);
+
+            return $own ?: ($rows->sortByDesc('id')->first() ?: $current);
+        }
+        $original = $rows->first(function ($row) {
+            if (method_exists($row, 'isSelfSitting') && $row->isSelfSitting()) {
+                return false;
+            }
+
+            return ! empty($row->available_from);
+        });
+
+        return $original ?: $current;
+    }
+
     public function isYahiaUser($user): bool
     {
         if (! $user) {
@@ -1841,6 +1895,9 @@ class LmsAssessmentService
             $assignment = $row['assignment'];
             if (! $assignment || empty($assignment->id)) {
                 $assignment = $this->resolveAssignmentForUser($user, $assessment);
+            }
+            if ($assignment && $this->isCimaScsMock1($assessment)) {
+                $assignment = $this->scsMock1AssignmentFromDatabase($assessment, $user, $assignment) ?: $assignment;
             }
             $fromFolder = ! empty($row['from_folder']);
             if ($this->isCimaCohortEmail($user->email ?? null) && $assignment && ! $fromFolder) {
