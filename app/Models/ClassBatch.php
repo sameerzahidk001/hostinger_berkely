@@ -198,6 +198,45 @@ class ClassBatch extends Model
         return $bestScore >= 15 ? $bestId : null;
     }
 
+    /** BAT-0004 for CIMA SCS November 2026 mocks (not Masterclass). */
+    public static function idForCimaScsNovember(?string $assessmentTitle = null): ?int
+    {
+        $title = mb_strtolower(trim((string) $assessmentTitle));
+        if ($title === '') {
+            return null;
+        }
+        if (str_contains($title, 'masterclass')) {
+            return null;
+        }
+        $isScs = str_contains($title, 'scs') || str_contains($title, 'strategic case');
+        $isNov = str_contains($title, 'november 2026') || str_contains($title, 'nov 2026');
+        if (! $isScs || ! $isNov) {
+            return null;
+        }
+        try {
+            $byCode = static::query()->where('code', 'BAT-0004')->first();
+            if ($byCode) {
+                return (int) $byCode->id;
+            }
+            $byName = static::query()
+                ->where(function ($q) {
+                    $q->where('name', 'like', '%November 2026%')
+                        ->orWhere('name', 'like', '%Nov 2026%');
+                })
+                ->where(function ($q) {
+                    $q->where('name', 'like', '%SCS%')
+                        ->orWhere('name', 'like', '%Strategic Case%');
+                })
+                ->where('name', 'not like', '%Masterclass%')
+                ->orderBy('id')
+                ->first();
+
+            return $byName ? (int) $byName->id : null;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
     public function schedules(): HasMany
     {
         return $this->hasMany(ClassSchedule::class, 'batch_id');
