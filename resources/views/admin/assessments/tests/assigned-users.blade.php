@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.searchable-select-assets')
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
-<!-- lms-assigned-tests-20261103ag KEEP: Mock 1 original roster + missed on own sitting time -->
+<!-- lms-assigned-tests-20261103ah KEEP: Mock 1 keep completed/marked + missed; own sitting time -->
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
