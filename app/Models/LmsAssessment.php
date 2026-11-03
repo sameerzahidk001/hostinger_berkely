@@ -185,9 +185,7 @@ class LmsAssessment extends Model
             if (! empty($assignment->student_id)) {
                 $ids->push((int) $assignment->student_id);
             }
-            if (Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
-                $ids = $ids->merge(collect($assignment->roster_user_ids ?? []));
-            }
+            $ids = $ids->merge(ClassBatch::studentUserIdsForSitting($assignment));
             if (Schema::hasColumn('lms_assessment_assignments', 'excluded_user_ids')) {
                 $excluded = $excluded->merge(collect($assignment->excluded_user_ids ?? []));
             }

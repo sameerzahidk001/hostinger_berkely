@@ -1732,8 +1732,8 @@ class LmsAssessmentController extends Controller
     protected function expandSittingStudents($students, $assignment, $assessment, array &$batchStudentCache)
     {
         $students = collect($students)->filter(fn ($row) => $row && ! empty($row->id))->values();
-        if ($assignment && Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
-            $snap = collect($assignment->roster_user_ids ?? [])->map(fn ($id) => (int) $id)->filter()->unique()->values();
+        if ($assignment) {
+            $snap = ClassBatch::studentUserIdsForSitting($assignment);
             if ($snap->isNotEmpty()) {
                 $snapUsers = User::query()->whereIn('id', $snap->all())->get();
                 $students = $students->concat($snapUsers);
@@ -2178,7 +2178,7 @@ class LmsAssessmentController extends Controller
     protected function fillMissingBatchMates(array &$rowsByKey, $assignments, $assessmentsById, array &$batchStudentCache): void
     {
         foreach (collect($assignments) as $assignment) {
-            if (empty($assignment->id) || ! Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
+            if (empty($assignment->id)) {
                 continue;
             }
             $assessment = $assignment->assessment
@@ -2186,7 +2186,7 @@ class LmsAssessmentController extends Controller
             if (! $assessment) {
                 continue;
             }
-            $snap = collect($assignment->roster_user_ids ?? [])->map(fn ($id) => (int) $id)->filter()->unique()->values();
+            $snap = ClassBatch::studentUserIdsForSitting($assignment);
             if ($snap->isEmpty()) {
                 continue;
             }

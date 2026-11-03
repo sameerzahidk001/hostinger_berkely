@@ -277,9 +277,20 @@ class LmsAssessmentService
             $attemptAsgIds = [];
         }
 
+        $batchIds = [];
+        if (Schema::hasTable('class_batch_student')) {
+            $studentCol = Schema::hasColumn('class_batch_student', 'student_id') ? 'student_id' : 'user_id';
+            $batchIds = DB::table('class_batch_student')
+                ->where($studentCol, $userId)
+                ->pluck('class_batch_id')
+                ->map(fn ($id) => (int) $id)
+                ->all();
+        }
+        $batchIds = array_values(array_unique(array_filter($batchIds)));
+
         $assignQuery = LmsAssessmentAssignment::query()
             ->with('marker')
-            ->where(function ($q) use ($userId, $attemptAsgIds) {
+            ->where(function ($q) use ($userId, $attemptAsgIds, $batchIds) {
                 $q->where('student_id', $userId);
                 if ($attemptAsgIds !== []) {
                     $q->orWhereIn('id', $attemptAsgIds);
@@ -287,6 +298,9 @@ class LmsAssessmentService
                 if (Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
                     $q->orWhereJsonContains('roster_user_ids', $userId)
                         ->orWhereJsonContains('roster_user_ids', (string) $userId);
+                }
+                if ($batchIds !== []) {
+                    $q->orWhereIn('class_batch_id', $batchIds);
                 }
             })
             ->orderByDesc('id');
@@ -310,6 +324,14 @@ class LmsAssessmentService
                     && (int) ($assignment->student_id ?? 0) !== $userId
                     && ! $roster->contains($userId)
                     && ! in_array((int) ($assignment->id ?? 0), $attemptAsgIds, true)) {
+                    continue;
+                }
+            }
+            if (! empty($assignment->class_batch_id)
+                && (int) ($assignment->student_id ?? 0) !== $userId
+                && ! in_array((int) ($assignment->id ?? 0), $attemptAsgIds, true)) {
+                $allowed = ClassBatch::studentUserIdsForSitting($assignment);
+                if ($allowed->isNotEmpty() && ! $allowed->contains($userId)) {
                     continue;
                 }
             }

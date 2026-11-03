@@ -105,6 +105,69 @@ class ClassBatch extends Model
     }
 
     /**
+     * People on this sitting: saved assign snapshot, else this batch only
+     * (members already on the batch when it was assigned — not class schedule).
+     */
+    public static function studentUserIdsForSitting($assignment)
+    {
+        $ids = collect();
+        if (! $assignment) {
+            return $ids;
+        }
+        try {
+            if (Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
+                $ids = collect($assignment->roster_user_ids ?? [])->map(fn ($id) => (int) $id)->filter()->unique()->values();
+            }
+        } catch (\Throwable $e) {
+            $ids = collect();
+        }
+        if ($ids->isNotEmpty()) {
+            return $ids;
+        }
+        $batchId = (int) ($assignment->class_batch_id ?? 0);
+        if ($batchId <= 0) {
+            return $ids;
+        }
+        $live = static::studentUserIdsFor($batchId);
+        $at = $assignment->created_at ?? null;
+        if (! $at || ! Schema::hasTable('class_batch_student') || ! Schema::hasColumn('class_batch_student', 'created_at')) {
+            return $live;
+        }
+        try {
+            $atStr = $at instanceof \DateTimeInterface ? $at->format('Y-m-d H:i:s') : (string) $at;
+            $rows = DB::table('class_batch_student')->where('class_batch_id', $batchId)->get();
+            $kept = collect();
+            $dated = 0;
+            foreach ($rows as $row) {
+                $arr = (array) $row;
+                $uid = (int) ($arr['student_id'] ?? $arr['user_id'] ?? 0);
+                if ($uid <= 0) {
+                    continue;
+                }
+                $joined = $arr['created_at'] ?? null;
+                if ($joined === null || $joined === '') {
+                    $kept->push($uid);
+                    continue;
+                }
+                $dated++;
+                if ((string) $joined <= $atStr) {
+                    $kept->push($uid);
+                }
+            }
+            if ($kept->isNotEmpty()) {
+                return $kept->unique()->values();
+            }
+            if ($dated > 0) {
+                return collect();
+            }
+        } catch (\Throwable $e) {
+            return $live;
+        }
+
+        return $live;
+    }
+
+    /**
      * Batch that belongs with this test: student overlap first, then title.
      * Does not require the batch course_id to match the test course (SCS mocks sit on Fast-Track).
      * Skips Masterclass unless the test title is a masterclass.
