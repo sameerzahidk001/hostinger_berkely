@@ -571,14 +571,14 @@ class LmsAssessmentController extends Controller
             if ($batchId > 0 && (int) ($assignment->class_batch_id ?? 0) !== $batchId) {
                 return false;
             }
-            if ($courseId > 0 && (int) ($assessment->course_id ?? 0) !== $courseId) {
+            if ($courseId > 0 && ! $this->sittingMatchesCourseFilter($assignment, $assessment, $courseId, $markerOnlyUid)) {
                 return false;
             }
             if ($kind !== '' && $assessment && $assessment->kind !== $kind) {
                 return false;
             }
             if ($markerOnlyUid) {
-                if (! $this->instructorCanSeeSitting($markerOnlyUid, $assignment, $assessment, $courseIdsScope)) {
+                if (! $this->instructorCanSeeSitting($markerOnlyUid, $assignment, $assessment)) {
                     return false;
                 }
             } elseif ($courseIdsScope !== null) {
@@ -771,7 +771,7 @@ class LmsAssessmentController extends Controller
             }
             $asg = $this->assignmentForAttempt($att, $assignments, $assignmentsById);
             if ($markerOnlyUid) {
-                if (! $this->instructorCanSeeSitting($markerOnlyUid, $asg, $assessment, $courseIdsScope)) {
+                if (! $this->instructorCanSeeSitting($markerOnlyUid, $asg, $assessment)) {
                     continue;
                 }
             }
@@ -3316,14 +3316,6 @@ class LmsAssessmentController extends Controller
         } catch (\Throwable $e) {
             // next
         }
-        try {
-            $courseIds = $this->lms->coursesForActor()->pluck('id')->map(fn ($id) => (int) $id)->filter()->values();
-            if ($courseIds->isNotEmpty() && Schema::hasTable('class_batches')) {
-                $ids = $ids->merge(ClassBatch::query()->whereIn('course_id', $courseIds->all())->pluck('id'));
-            }
-        } catch (\Throwable $e) {
-            // next
-        }
         $this->instructorScopeBatchIds = $ids->map(fn ($id) => (int) $id)->unique()->filter()->values()->all();
 
         return $this->instructorScopeBatchIds;
@@ -3379,10 +3371,6 @@ class LmsAssessmentController extends Controller
             $ids = $ids->merge(
                 LmsAssessment::query()->where('created_by_user_id', $uid)->pluck('id')
             );
-            $courses = $courseIds ?? $this->lms->coursesForActor()->pluck('id')->map(fn ($id) => (int) $id)->all();
-            if ($courses !== []) {
-                $ids = $ids->merge(LmsAssessment::query()->whereIn('course_id', $courses)->pluck('id'));
-            }
         } catch (\Throwable $e) {
             // next
         }
@@ -3394,16 +3382,39 @@ class LmsAssessmentController extends Controller
     protected function applyInstructorAssessmentScope($query, int $uid, ?array $courseIds = null)
     {
         $aids = $this->instructorAssessmentIds($uid, $courseIds);
-        $courses = $courseIds ?? $this->lms->coursesForActor()->pluck('id')->map(fn ($id) => (int) $id)->all();
-        $query->where(function ($q) use ($uid, $aids, $courses) {
+        $query->where(function ($q) use ($uid, $aids) {
             $q->where('created_by_user_id', $uid);
             if ($aids !== []) {
                 $q->orWhereIn('id', $aids);
             }
-            if ($courses !== []) {
-                $q->orWhereIn('course_id', $courses);
-            }
         });
+    }
+
+    /** Course filter must not hide a sitting this instructor is assigned to. */
+    protected function sittingMatchesCourseFilter($assignment, $assessment, int $courseId, ?int $instructorUid): bool
+    {
+        if ($courseId <= 0) {
+            return true;
+        }
+        if ((int) ($assessment->course_id ?? 0) === $courseId) {
+            return true;
+        }
+        $batchId = (int) ($assignment->class_batch_id ?? 0);
+        if ($batchId > 0) {
+            try {
+                $batchCourse = (int) (ClassBatch::query()->where('id', $batchId)->value('course_id') ?? 0);
+                if ($batchCourse === $courseId) {
+                    return true;
+                }
+            } catch (\Throwable $e) {
+                // next
+            }
+        }
+        if ($instructorUid) {
+            return $this->instructorCanSeeSitting($instructorUid, $assignment, $assessment);
+        }
+
+        return false;
     }
 
     protected function instructorCanSeeSitting(int $uid, $assignment, $assessment, ?array $courseIds = null): bool
@@ -3416,16 +3427,12 @@ class LmsAssessmentController extends Controller
             || (int) ($assessment->created_by_user_id ?? 0) === $uid) {
             return true;
         }
-        $courseId = (int) ($assessment->course_id ?? 0);
-        if ($courseIds !== null && $courseId > 0 && in_array($courseId, $courseIds ?: [0], true)) {
-            return true;
-        }
         $batchId = (int) ($assignment->class_batch_id ?? 0);
         if ($batchId > 0 && in_array($batchId, $this->instructorBatchIds($uid), true)) {
             return true;
         }
         $aid = (int) ($assessment->id ?? 0);
-        if ($aid > 0 && in_array($aid, $this->instructorAssessmentIds($uid, $courseIds), true)) {
+        if ($aid > 0 && in_array($aid, $this->instructorAssessmentIds($uid), true)) {
             return true;
         }
         try {
