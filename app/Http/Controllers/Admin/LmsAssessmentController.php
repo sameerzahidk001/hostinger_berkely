@@ -570,15 +570,20 @@ class LmsAssessmentController extends Controller
             }
         }
 
+        $assessmentFilterIds = $assessmentId > 0 ? [$assessmentId] : [];
+        if ($assessmentId > 0 && $selectedAssessment) {
+            $assessmentFilterIds = $this->sameTitleAssessmentIds($selectedAssessment);
+        }
+
         $assignments = $assignments->filter(function ($assignment) use (
-            $assessmentId, $batchId, $courseId, $kind, $markerOnlyUid, $courseIdsScope
+            $assessmentId, $assessmentFilterIds, $batchId, $courseId, $kind, $markerOnlyUid, $courseIdsScope
         ) {
             $assessment = $assignment->assessment ?? null;
             if (method_exists($this->assessments, 'isMock1CopiedNovemberSitting')
                 && $this->assessments->isMock1CopiedNovemberSitting($assignment, $assessment)) {
                 return false;
             }
-            if ($assessmentId > 0 && (int) $assignment->assessment_id !== $assessmentId) {
+            if ($assessmentId > 0 && ! in_array((int) $assignment->assessment_id, $assessmentFilterIds, true)) {
                 return false;
             }
             if ($batchId > 0 && (int) ($assignment->class_batch_id ?? 0) !== $batchId) {
@@ -687,8 +692,8 @@ class LmsAssessmentController extends Controller
 
         try {
             $attemptQuery = LmsAssessmentAttempt::query()->orderByDesc('id')->limit(3000);
-            if ($assessmentId > 0) {
-                $attemptQuery->where('assessment_id', $assessmentId);
+            if ($assessmentFilterIds !== []) {
+                $attemptQuery->whereIn('assessment_id', $assessmentFilterIds);
             }
             $allAttempts = $attemptQuery->get();
         } catch (\Throwable $e) {
@@ -1027,7 +1032,7 @@ class LmsAssessmentController extends Controller
             try {
                 $fallbackAttempts = LmsAssessmentAttempt::query()
                     ->with(['user', 'assessment.course'])
-                    ->when($assessmentId > 0, fn ($q) => $q->where('assessment_id', $assessmentId))
+                    ->when($assessmentFilterIds !== [], fn ($q) => $q->whereIn('assessment_id', $assessmentFilterIds))
                     ->orderByDesc('id')
                     ->limit(2000)
                     ->get();
@@ -1183,7 +1188,7 @@ class LmsAssessmentController extends Controller
             'scsRosterNote' => $this->scsRosterNote,
             'statusCounts' => $statusCounts ?? ['Missed' => 0, 'Upcoming' => 0],
             'selectedAssessment' => $selectedAssessment,
-            'assessments' => $assessmentQuery->get(['id', 'title', 'kind']),
+            'assessments' => $this->uniqueAssessmentsByTitle($assessmentQuery->get(['id', 'title', 'kind']), $assignments),
             'batches' => Schema::hasTable('class_batches')
                 ? ClassBatch::query()->orderByDesc('id')->get(['id', 'code', 'name'])
                 : collect(),
@@ -2136,13 +2141,6 @@ class LmsAssessmentController extends Controller
                 // keep pivot ids
             }
         }
-        if ($courseId > 0) {
-            try {
-                $ids = $ids->merge($this->lms->studentsForCourse($courseId, 500)->pluck('id'));
-            } catch (\Throwable $e) {
-                // keep pivot ids
-            }
-        }
         try {
             $yahia = User::query()->where(function ($q) {
                 $q->where('name', 'like', '%yahia%')
@@ -2302,7 +2300,10 @@ class LmsAssessmentController extends Controller
                     continue;
                 }
                 $uid = (int) ($r['student']->id ?? 0);
-                if ($uid > 0) {
+                if ($uid <= 0) {
+                    continue;
+                }
+                if (! isset($existingByUser[$uid]) || $this->cimaScsRowOutranks($r, $existingByUser[$uid], $assessment)) {
                     $existingByUser[$uid] = $r;
                 }
             }
@@ -2367,13 +2368,7 @@ class LmsAssessmentController extends Controller
                 $added++;
             }
             foreach ($existingByUser as $r) {
-                if ($isMock1
-                    && method_exists($this->assessments, 'isYahiaUser')
-                    && $this->assessments->isYahiaUser($r['student'] ?? null)
-                    && empty($r['attempt'])
-                    && method_exists($this->assessments, 'isMock1YahiaNovemberSitting')
-                    && ! $this->assessments->isMock1YahiaNovemberSitting($r['assignment'] ?? null, $assessment, $r['student'] ?? null)
-                    && empty($r['assignment']->student_id)) {
+                if (empty($r['attempt'])) {
                     continue;
                 }
                 $kept->push($r);
@@ -2383,6 +2378,106 @@ class LmsAssessmentController extends Controller
         }
 
         return $rows;
+    }
+
+    /** Keep the class sitting, or Yahia's own upcoming sitting, not extra unused copies. */
+    protected function cimaScsRowOutranks(array $candidate, array $current, $assessment): bool
+    {
+        return $this->cimaScsRowScore($candidate, $assessment) > $this->cimaScsRowScore($current, $assessment);
+    }
+
+    protected function cimaScsRowScore(array $row, $assessment): int
+    {
+        $score = 0;
+        if (! empty($row['attempt'])) {
+            $score += 10000;
+        }
+        $student = $row['student'] ?? null;
+        $asg = $row['assignment'] ?? null;
+        $yahia = method_exists($this->assessments, 'isYahiaUser') && $this->assessments->isYahiaUser($student);
+        $start = null;
+        try {
+            $start = $asg && method_exists($asg, 'windowStart') ? $asg->windowStart() : ($asg->available_from ?? null);
+        } catch (\Throwable $e) {
+            $start = $asg->available_from ?? null;
+        }
+        $future = false;
+        try {
+            $future = $start && now()->lt(\Carbon\Carbon::parse($start));
+        } catch (\Throwable $e) {
+            $future = false;
+        }
+        if ($yahia && $future) {
+            $score += 5000;
+        }
+        if ($yahia && ! empty($asg->student_id) && (int) $asg->student_id === (int) ($student->id ?? 0)) {
+            $score += 2000;
+        }
+        if ($start) {
+            try {
+                $ts = \Carbon\Carbon::parse($start)->timestamp;
+                if ($yahia && $future) {
+                    $score += (int) min(1000, $ts / 1000000);
+                } else {
+                    $score += (int) max(0, 2000000000 - $ts) / 100000;
+                }
+            } catch (\Throwable $e) {
+                // keep base
+            }
+        }
+
+        return $score;
+    }
+
+    /** Duplicate test titles (e.g. two Mock 1 rows) collapse to one dropdown option. */
+    protected function uniqueAssessmentsByTitle($assessments, $assignments = null)
+    {
+        return collect($assessments)
+            ->filter(fn ($a) => ! empty($a->id))
+            ->groupBy(function ($a) {
+                $title = mb_strtolower(trim((string) ($a->title ?? '')));
+
+                return $title !== '' ? $title : ('id:' . (int) $a->id);
+            })
+            ->map(function ($group) use ($assignments) {
+                if ($group->count() === 1) {
+                    return $group->first();
+                }
+
+                return $group->sortByDesc(function ($a) use ($assignments) {
+                    $n = collect($assignments)->where('assessment_id', (int) ($a->id ?? 0))->count();
+
+                    return $n * 100000 + (int) ($a->id ?? 0);
+                })->first();
+            })
+            ->filter()
+            ->values();
+    }
+
+    protected function sameTitleAssessmentIds($assessment): array
+    {
+        $id = (int) ($assessment->id ?? 0);
+        $title = mb_strtolower(trim((string) ($assessment->title ?? '')));
+        if ($id <= 0) {
+            return [];
+        }
+        if ($title === '') {
+            return [$id];
+        }
+        try {
+            $ids = LmsAssessment::query()->get(['id', 'title'])
+                ->filter(fn ($row) => mb_strtolower(trim((string) ($row->title ?? ''))) === $title)
+                ->pluck('id')
+                ->map(fn ($rowId) => (int) $rowId)
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+        } catch (\Throwable $e) {
+            $ids = [$id];
+        }
+
+        return $ids === [] ? [$id] : $ids;
     }
 
     /** Original Mock 1 exam sitting (the one students already sat), not a later person assign. */
