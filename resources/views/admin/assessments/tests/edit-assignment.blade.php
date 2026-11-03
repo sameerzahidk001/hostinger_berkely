@@ -44,12 +44,12 @@
                 @endif
                 — no appointment. The student starts anytime, up to Max attempts on the test.
             @else
-                Update appointment timing for <strong>{{ $assessment->title }}</strong>
+                Update appointment and assessor for <strong>{{ $assessment->title }}</strong>
                 · {{ $takerLabel }}
                 @if($assignment->student?->email)
                     <span class="text-muted">({{ $assignment->student->email }})</span>
                 @endif
-                . Does not create a new sitting — use <strong>Assign again</strong> for a retake.
+                . Assigned Tests shows these saved values after you click Save sitting. Does not create a new sitting — use <strong>Assign again</strong> for a retake.
             @endif
         </p>
         <form method="POST" action="{{ route('admin.assessments.tests.update-assignment', $assignment->id) }}">
@@ -91,8 +91,8 @@
                 </div>
             </div>
             <button type="submit" class="btn btn-primary">Save sitting</button>
-            <a href="{{ route('admin.assessments.tests.attempts', $assessment->id) }}" class="btn btn-default">Back to Results</a>
             <a href="{{ route('admin.assessments.tests.assigned-users', ['assessment_id' => $assessment->id]) }}" class="btn btn-default">Assigned Tests</a>
+            <a href="{{ route('admin.assessments.tests.attempts', $assessment->id) }}" class="btn btn-default">Back to Results</a>
         </form>
     </div></div>
 </div>

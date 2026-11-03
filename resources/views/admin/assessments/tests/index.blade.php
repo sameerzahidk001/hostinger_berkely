@@ -80,7 +80,7 @@
     .lms-tests-table .col-num { width: 5%; text-align: center; }
     .lms-tests-table .col-assigned { width: 8%; text-align: center; white-space: normal; }
     .lms-tests-table .col-status { width: 8%; }
-    .lms-tests-table .col-assessor { width: 11%; }
+    .lms-tests-table .col-assessor { width: 12%; min-width: 120px; font-weight: 700; }
     .lms-tests-table .col-action {
         width: 16%;
         overflow: visible;

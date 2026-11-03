@@ -15,8 +15,8 @@
     .lms-attempts-wrap { overflow-x: auto; width: 100%; }
     .lms-attempts-table {
         width: 100% !important;
-        min-width: 100%;
-        max-width: 100%;
+        min-width: 1200px;
+        max-width: none;
         table-layout: fixed;
         margin-bottom: 0;
         font-size: 12px;
@@ -30,11 +30,11 @@
         white-space: normal;
     }
     .lms-attempts-table .col-appt { width: 10%; white-space: nowrap !important; }
-    .lms-attempts-table .col-test { width: 17%; }
+    .lms-attempts-table .col-test { width: 16%; }
     .lms-attempts-table .col-taker { width: 12%; }
-    .lms-attempts-table .col-timing { width: 28%; }
+    .lms-attempts-table .col-assessor { width: 12%; min-width: 120px; font-weight: 700; }
+    .lms-attempts-table .col-timing { width: 24%; }
     .lms-attempts-table .col-created { width: 8%; }
-    .lms-attempts-table .col-assessor { width: 8%; }
     .lms-attempts-table .col-status { width: 11%; }
     .lms-attempts-table .col-pub { width: 6%; }
     .lms-attempts-table .col-actions {
@@ -109,9 +109,9 @@
                         <th class="col-appt" data-sort-col="0" style="white-space:nowrap;">Appointment ID <span class="sort-ind"></span></th>
                         <th class="col-test" data-sort-col="1">Test Details <span class="sort-ind"></span></th>
                         <th class="col-taker" data-sort-col="2">Test Taker <span class="sort-ind"></span></th>
-                        <th class="col-timing" data-sort-col="3">Test Time Details <span class="sort-ind"></span></th>
-                        <th class="col-created" data-sort-col="4">Created by <span class="sort-ind"></span></th>
-                        <th class="col-assessor" data-sort-col="5">Assessor <span class="sort-ind"></span></th>
+                        <th class="col-assessor" data-sort-col="3">Assessor <span class="sort-ind"></span></th>
+                        <th class="col-timing" data-sort-col="4">Test Time Details <span class="sort-ind"></span></th>
+                        <th class="col-created" data-sort-col="5">Created by <span class="sort-ind"></span></th>
                         <th class="col-status" data-sort-col="6">Status <span class="sort-ind"></span></th>
                         <th class="col-pub" data-sort-col="7">Published <span class="sort-ind"></span></th>
                         <th class="col-actions">Action</th>
@@ -179,6 +179,13 @@
                                     </small>
                                 @endif
                             </td>
+                            <td class="col-assessor" data-sort="{{ $assessorName }}">
+                                @if($assessorUserId)
+                                    <a href="#" class="lms-user-preview" data-user-id="{{ $assessorUserId }}">{{ $assessorName }}</a>
+                                @else
+                                    {{ $assessorName }}
+                                @endif
+                            </td>
                             <td class="col-timing" data-sort="{{ optional($assignment->available_from)->timestamp ?? 0 }}">
                                 <span class="lms-timing-line"><strong>Test Appointment:</strong> {{ ($assignment && $assignment->isSelfSitting()) ? 'Start anytime' : ($assignment?->windowStart()?->format('d/m/Y, H:i') ?? '—') }}</span>
                                 <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $assignment->timezoneLabel() }}</span>
@@ -200,13 +207,6 @@
                                     <a href="#" class="lms-user-preview" data-user-id="{{ $assignment->assigned_by_user_id }}">{{ $createdBy }}</a>
                                 @else
                                     {{ $createdBy }}
-                                @endif
-                            </td>
-                            <td class="col-assessor" data-sort="{{ $assessorName }}">
-                                @if($assessorUserId)
-                                    <a href="#" class="lms-user-preview" data-user-id="{{ $assessorUserId }}">{{ $assessorName }}</a>
-                                @else
-                                    {{ $assessorName }}
                                 @endif
                             </td>
                             <td class="col-status" data-sort="{{ $statusText }}">
