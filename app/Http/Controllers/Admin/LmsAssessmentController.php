@@ -644,13 +644,6 @@ class LmsAssessmentController extends Controller
             }
             $students = $this->expandSittingStudents($students, $assignment, $assessment, $batchStudentCache);
             if ($students->isEmpty() && $assignment->class_batch_id) {
-                try {
-                    $students = $this->studentsForBatchId((int) $assignment->class_batch_id);
-                } catch (\Throwable $e) {
-                    $students = collect();
-                }
-            }
-            if ($students->isEmpty() && $assignment->class_batch_id) {
                 $batch = $assignment->relationLoaded('batch') ? $assignment->batch : ClassBatch::query()->find((int) $assignment->class_batch_id);
                 $students = collect([(object) [
                     'id' => 0,
@@ -930,7 +923,6 @@ class LmsAssessmentController extends Controller
 
         $rowsByKey = $this->keepFirstCimaCohortAttempt($rowsByKey);
         $rowsByKey = $this->collapseUnusedRetakeRows($rowsByKey);
-        $this->forceCimaScsBatchRoster($rowsByKey, $assignments, $assessmentsById, $batchStudentCache);
         foreach ($rowsByKey as $k => $r) {
             $max = max(1, (int) ($r['assessment']->max_attempts ?? 1));
             $rowsByKey[$k]['attempt_number'] = min($max, max(1, (int) ($r['attempt_number'] ?? 1)));
@@ -947,12 +939,6 @@ class LmsAssessmentController extends Controller
         }
 
         $rows = collect($rowsByKey)->values();
-        try {
-            $rows = $this->replaceCimaScsRows($rows, $assignments, $selectedAssessment, $assessmentsById);
-        } catch (\Throwable $e) {
-            report($e);
-            $this->scsRosterNote = 'roster-err ' . $e->getMessage();
-        }
         $rows = $rows->sortBy(function ($row) {
             $status = (string) (($row['sitting_display']['status'] ?? ''));
             $rank = match ($status) {
@@ -1763,46 +1749,6 @@ class LmsAssessmentController extends Controller
                 }
             }
         }
-        if ($assignment && $assignment->relationLoaded('batch') && $assignment->batch) {
-            try {
-                $students = $students->concat($assignment->batch->students()->get());
-            } catch (\Throwable $e) {
-                report($e);
-            }
-        }
-        $batchIds = [];
-        if (! empty($assignment?->class_batch_id)) {
-            $batchIds[] = (int) $assignment->class_batch_id;
-        }
-        $scsBatch = ClassBatch::idForCimaScsNovember((string) ($assessment->title ?? ''));
-        if ($scsBatch) {
-            $batchIds[] = $scsBatch;
-            if ($assignment && empty($assignment->class_batch_id)) {
-                $assignment->class_batch_id = $scsBatch;
-                $bat = ClassBatch::query()->find($scsBatch);
-                if ($bat) {
-                    $assignment->setRelation('batch', $bat);
-                }
-            }
-        }
-        $batchIds = array_values(array_unique(array_filter($batchIds)));
-        foreach ($batchIds as $bid) {
-            if (! isset($batchStudentCache[$bid])) {
-                try {
-                    $batchStudentCache[$bid] = $this->studentsForBatchId((int) $bid);
-                } catch (\Throwable $e) {
-                    report($e);
-                    $batchStudentCache[$bid] = collect();
-                }
-            }
-            $students = $students->concat($batchStudentCache[$bid]);
-            if ($assignment && empty($assignment->class_batch_id)) {
-                $batch = ClassBatch::query()->find($bid);
-                if ($batch) {
-                    $assignment->setRelation('batch', $batch);
-                }
-            }
-        }
         if ($this->isCimaCohortSitting($assessment, $assignment, $students)) {
             $cohort = $this->cimaCohortUsers();
             if ($cohort->isNotEmpty()) {
@@ -2228,85 +2174,42 @@ class LmsAssessmentController extends Controller
         }
     }
 
-    /**
-     * Put every classmate on the list even when only the people who sat have student_id rows.
-     * Unused classmates stay on the newest exam sitting as Missed.
-     */
+    /** Add people saved on each sitting's assign snapshot (not today's batch). */
     protected function fillMissingBatchMates(array &$rowsByKey, $assignments, $assessmentsById, array &$batchStudentCache): void
     {
-        $byAssessment = collect($rowsByKey)->groupBy(fn ($r) => (int) ($r['assessment']->id ?? 0));
-        foreach ($byAssessment as $aid => $existing) {
-            if ((int) $aid <= 0) {
+        foreach (collect($assignments) as $assignment) {
+            if (empty($assignment->id) || ! Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
                 continue;
             }
-            $assessment = $existing->first()['assessment'] ?? $assessmentsById->get((int) $aid);
+            $assessment = $assignment->assessment
+                ?? $assessmentsById->get((int) ($assignment->assessment_id ?? 0));
             if (! $assessment) {
                 continue;
             }
-            $asgs = collect($assignments)->filter(fn ($a) => (int) ($a->assessment_id ?? 0) === (int) $aid)->values();
-            $seed = $asgs->sortByDesc('id')->first(function ($a) {
-                return ! (method_exists($a, 'isSelfSitting') && $a->isSelfSitting())
-                    && (! empty($a->class_batch_id) || $a->windowStart());
-            }) ?: $asgs->sortByDesc('id')->first();
-            if (! $seed || empty($seed->id)) {
+            $snap = collect($assignment->roster_user_ids ?? [])->map(fn ($id) => (int) $id)->filter()->unique()->values();
+            if ($snap->isEmpty()) {
                 continue;
             }
-            $batchIds = $asgs->pluck('class_batch_id')->map(fn ($id) => (int) $id)->filter()->unique()->values()->all();
-            $scsBatch = ClassBatch::idForCimaScsNovember((string) ($assessment->title ?? ''));
-            if ($scsBatch) {
-                $batchIds[] = $scsBatch;
-            }
-            if ($batchIds === []) {
-                $existingIds = $existing->map(fn ($r) => (int) ($r['student']->id ?? 0))->filter()->values()->all();
-                $inferred = ClassBatch::bestIdForStudents(
-                    (int) ($assessment->course_id ?? 0),
-                    $existingIds,
-                    (string) ($assessment->title ?? '')
-                );
-                if ($inferred) {
-                    $batchIds[] = $inferred;
-                }
-            }
-            $inferred = $scsBatch ?: (($batchIds[0] ?? null) ? (int) $batchIds[0] : null);
-            if ($inferred && empty($seed->class_batch_id)) {
-                $seed->class_batch_id = $inferred;
-                $batch = ClassBatch::query()->find($inferred);
-                if ($batch) {
-                    $seed->setRelation('batch', $batch);
-                }
-            }
-            if ($inferred && Schema::hasColumn($seed->getTable(), 'sitting_kind') && $seed->isSelfSitting()) {
-                $seed->sitting_kind = LmsAssessmentAssignment::KIND_EXAM;
-            }
-            $batchIds = array_values(array_unique(array_filter($batchIds)));
-            $roster = collect();
-            foreach ($batchIds as $bid) {
-                if (! isset($batchStudentCache[$bid])) {
-                    try {
-                        $batchStudentCache[$bid] = $this->studentsForBatchId((int) $bid);
-                    } catch (\Throwable $e) {
-                        $batchStudentCache[$bid] = collect();
-                    }
-                }
-                $roster = $roster->concat($batchStudentCache[$bid]);
-            }
-            $have = $existing->map(fn ($r) => (int) ($r['student']->id ?? 0))->all();
-            foreach ($roster as $student) {
-                $uid = (int) ($student->id ?? 0);
-                if ($uid <= 0 || in_array($uid, $have, true) || $this->isRemovedTestTaker($student, $assessment)) {
+            $users = User::query()->whereIn('id', $snap->all())->get()->keyBy('id');
+            foreach ($snap as $uid) {
+                $key = (int) $assignment->id . ':' . $uid;
+                if (isset($rowsByKey[$key])) {
                     continue;
                 }
-                $key = (int) $seed->id . ':' . $uid;
-                if (isset($rowsByKey[$key])) {
+                $student = $users->get($uid) ?: (object) [
+                    'id' => $uid,
+                    'name' => 'User #' . $uid,
+                    'email' => '',
+                ];
+                if ($this->isRemovedTestTaker($student, $assessment)) {
                     continue;
                 }
                 $rowsByKey[$key] = [
                     'assessment' => $assessment,
                     'student' => $student,
-                    'assignment' => $seed,
+                    'assignment' => $assignment,
                     'attempt' => null,
                 ];
-                $have[] = $uid;
             }
         }
     }
@@ -2354,13 +2257,6 @@ class LmsAssessmentController extends Controller
                 $ids = $ids->merge(DB::table('class_batch_student')->where('user_id', $userId)->pluck('class_batch_id'));
             }
         }
-        if (Schema::hasTable('class_schedule_student') && Schema::hasTable('class_schedules')) {
-            $scheduleIds = DB::table('class_schedule_student')->where('student_id', $userId)->pluck('class_schedule_id');
-            if ($scheduleIds->isNotEmpty()) {
-                $ids = $ids->merge(DB::table('class_schedules')->whereIn('id', $scheduleIds)->pluck('batch_id'));
-            }
-        }
-
         return $ids->map(fn ($id) => (int) $id)->unique()->filter()->values()->all();
     }
 
@@ -2984,17 +2880,7 @@ class LmsAssessmentController extends Controller
                 $row['sitting_kind'] = $sittingKind;
             }
             if (Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
-                $roster = ClassBatch::studentUserIdsFor($batchId);
-                if ($roster->count() < 10 && ! empty($a->course_id)) {
-                    try {
-                        $roster = $roster->merge(
-                            $this->lms->studentsForCourse((int) $a->course_id, 500)->pluck('id')
-                        )->map(fn ($id) => (int) $id)->unique()->filter()->values();
-                    } catch (\Throwable $e) {
-                        report($e);
-                    }
-                }
-                $row['roster_user_ids'] = $roster->values()->all();
+                $row['roster_user_ids'] = ClassBatch::studentUserIdsFor($batchId)->values()->all();
             }
             if ($this->hasUnusedDuplicateSitting($a, $row, $hasKindCol)) {
                 continue;

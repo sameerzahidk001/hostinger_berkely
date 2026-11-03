@@ -262,33 +262,31 @@ class LmsAssessmentService
         $userId = (int) $user->id;
         $isStaff = $user->roles()->whereIn('name', $this->staffRoleNames())->exists();
 
-        $batchIds = [];
-        if (Schema::hasTable('class_batch_student')) {
-            $studentCol = Schema::hasColumn('class_batch_student', 'student_id') ? 'student_id' : 'user_id';
-            $batchIds = DB::table('class_batch_student')
-                ->where($studentCol, $userId)
-                ->pluck('class_batch_id')
+        $attemptAsgIds = [];
+        try {
+            $attemptAsgIds = LmsAssessmentAttempt::query()
+                ->where('user_id', $userId)
+                ->whereNotNull('assignment_id')
+                ->pluck('assignment_id')
                 ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->filter()
+                ->values()
                 ->all();
+        } catch (\Throwable $e) {
+            $attemptAsgIds = [];
         }
-        if (Schema::hasTable('class_schedule_student') && Schema::hasTable('class_schedules')) {
-            $scheduleIds = DB::table('class_schedule_student')->where('student_id', $userId)->pluck('class_schedule_id');
-            $fromSchedules = DB::table('class_schedules')
-                ->whereIn('id', $scheduleIds)
-                ->whereNotNull('batch_id')
-                ->pluck('batch_id')
-                ->map(fn ($id) => (int) $id)
-                ->all();
-            $batchIds = array_merge($batchIds, $fromSchedules);
-        }
-        $batchIds = array_values(array_unique(array_filter($batchIds)));
 
         $assignQuery = LmsAssessmentAssignment::query()
             ->with('marker')
-            ->where(function ($q) use ($userId, $batchIds) {
+            ->where(function ($q) use ($userId, $attemptAsgIds) {
                 $q->where('student_id', $userId);
-                if ($batchIds !== []) {
-                    $q->orWhereIn('class_batch_id', $batchIds);
+                if ($attemptAsgIds !== []) {
+                    $q->orWhereIn('id', $attemptAsgIds);
+                }
+                if (Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
+                    $q->orWhereJsonContains('roster_user_ids', $userId)
+                        ->orWhereJsonContains('roster_user_ids', (string) $userId);
                 }
             })
             ->orderByDesc('id');
@@ -303,6 +301,15 @@ class LmsAssessmentService
             if (Schema::hasColumn('lms_assessment_assignments', 'excluded_user_ids')) {
                 $excluded = collect($assignment->excluded_user_ids ?? [])->map(fn ($id) => (int) $id);
                 if ($excluded->contains($userId)) {
+                    continue;
+                }
+            }
+            if (Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
+                $roster = collect($assignment->roster_user_ids ?? [])->map(fn ($id) => (int) $id)->filter()->values();
+                if ($roster->isNotEmpty()
+                    && (int) ($assignment->student_id ?? 0) !== $userId
+                    && ! $roster->contains($userId)
+                    && ! in_array((int) ($assignment->id ?? 0), $attemptAsgIds, true)) {
                     continue;
                 }
             }

@@ -180,14 +180,10 @@ class LmsAssessment extends Model
         $isCimaMcs = str_contains($hay, 'cima mcs') || str_contains($hay, 'management case');
 
         $ids = collect();
-        $batchIds = collect();
         $excluded = collect();
         foreach ($assignments as $assignment) {
             if (! empty($assignment->student_id)) {
                 $ids->push((int) $assignment->student_id);
-            }
-            if (! empty($assignment->class_batch_id)) {
-                $batchIds->push((int) $assignment->class_batch_id);
             }
             if (Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
                 $ids = $ids->merge(collect($assignment->roster_user_ids ?? []));
@@ -206,24 +202,6 @@ class LmsAssessment extends Model
         }
 
         $ids = $ids->map(fn ($id) => (int) $id)->unique()->filter()->values();
-        $scsBatch = ClassBatch::idForCimaScsNovember((string) ($this->title ?? ''));
-        if ($scsBatch) {
-            $batchIds->push((int) $scsBatch);
-        }
-        if ($batchIds->isEmpty() && $ids->isNotEmpty()) {
-            $inferred = ClassBatch::bestIdForStudents(
-                (int) ($this->course_id ?? 0),
-                $ids->all(),
-                (string) ($this->title ?? '')
-            );
-            if ($inferred) {
-                $batchIds->push((int) $inferred);
-            }
-        }
-
-        foreach ($batchIds->map(fn ($id) => (int) $id)->unique()->filter() as $bid) {
-            $ids = $ids->merge($this->studentIdsForBatch((int) $bid));
-        }
 
         if ($isCimaMcs) {
             try {
@@ -288,12 +266,6 @@ class LmsAssessment extends Model
                 }
                 if (Schema::hasColumn('class_batch_student', 'user_id')) {
                     $found = $found->merge(DB::table('class_batch_student')->where('user_id', $userId)->pluck('class_batch_id'));
-                }
-            }
-            if (Schema::hasTable('class_schedule_student') && Schema::hasTable('class_schedules')) {
-                $scheduleIds = DB::table('class_schedule_student')->where('student_id', $userId)->pluck('class_schedule_id');
-                if ($scheduleIds->isNotEmpty()) {
-                    $found = $found->merge(DB::table('class_schedules')->whereIn('id', $scheduleIds)->pluck('batch_id'));
                 }
             }
         } catch (\Throwable $e) {
