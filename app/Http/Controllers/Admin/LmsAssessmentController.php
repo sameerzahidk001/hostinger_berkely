@@ -817,6 +817,7 @@ class LmsAssessmentController extends Controller
         }
 
         $this->fillMissingBatchMates($rowsByKey, $assignments, $assessmentsById, $batchStudentCache);
+        $this->attachCimaCohortSittingsToAssignedRows($rowsByKey, $assignments, $assessmentsById);
         $rowsByKey = $this->dropGhostAssignmentRows($rowsByKey);
 
         $claimedAttemptIds = [];
@@ -837,6 +838,9 @@ class LmsAssessmentController extends Controller
                     continue;
                 }
                 if ((int) ($r['assessment']->id ?? 0) !== (int) $att->assessment_id) {
+                    continue;
+                }
+                if (! $this->assessments->attemptBelongsToAssignment($att, $r['assignment'] ?? null)) {
                     continue;
                 }
                 $rowsByKey[$k]['attempt'] = $att;
@@ -871,11 +875,8 @@ class LmsAssessmentController extends Controller
             $asg = $r['assignment'] ?? null;
             $att = $r['attempt'] ?? null;
             $assessment = $r['assessment'] ?? $asg?->assessment;
-            if ($this->isCimaCohortSitting($assessment, $asg, collect([$r['student'] ?? null]))) {
-                $asg = $this->sittingForCohort($assessment, $assignments) ?: $asg;
-                if (! $asg && $assessment) {
-                    $asg = $this->ensureCimaCohortAssignment($assessment);
-                }
+            if (! $asg && $this->isCimaCohortSitting($assessment, $asg, collect([$r['student'] ?? null])) && $assessment) {
+                $asg = $this->ensureCimaCohortAssignment($assessment);
             }
             if (! $asg && $att) {
                 $asg = $this->assignmentForAttempt($att, $assignments, $assignmentsById);
@@ -1728,6 +1729,54 @@ class LmsAssessmentController extends Controller
         return $users;
     }
 
+    /** Put each MCS exam sitting on the list for the cohort, same as student My Tests. */
+    protected function attachCimaCohortSittingsToAssignedRows(array &$rowsByKey, $assignments, $assessmentsById): void
+    {
+        $cohort = $this->cimaCohortUsers();
+        if ($cohort->isEmpty()) {
+            return;
+        }
+        foreach (collect($assignments) as $assignment) {
+            if (! $assignment || empty($assignment->id)) {
+                continue;
+            }
+            if (method_exists($assignment, 'isSelfSitting') && $assignment->isSelfSitting()) {
+                continue;
+            }
+            $assessment = $assignment->assessment
+                ?? ($assessmentsById instanceof \Illuminate\Support\Collection
+                    ? $assessmentsById->get((int) ($assignment->assessment_id ?? 0))
+                    : null);
+            if (! $this->isCimaCohortSitting($assessment, $assignment, $cohort)) {
+                continue;
+            }
+            $ex = collect();
+            try {
+                if (Schema::hasColumn($assignment->getTable(), 'excluded_user_ids')) {
+                    $ex = collect($assignment->excluded_user_ids ?? [])->map(fn ($id) => (int) $id);
+                }
+            } catch (\Throwable $e) {
+                $ex = collect();
+            }
+            foreach ($cohort as $student) {
+                $uid = (int) ($student->id ?? 0);
+                if ($uid <= 0 || $ex->contains($uid) || $this->isRemovedTestTaker($student, $assessment)) {
+                    continue;
+                }
+                $key = (int) $assignment->id . ':' . $uid;
+                if (isset($rowsByKey[$key])) {
+                    continue;
+                }
+                $rowsByKey[$key] = [
+                    'assessment' => $assessment,
+                    'student' => $student,
+                    'assignment' => $assignment,
+                    'attempt' => null,
+                ];
+            }
+        }
+    }
+
     protected function expandSittingStudents($students, $assignment, $assessment, array &$batchStudentCache)
     {
         $students = collect($students)->filter(fn ($row) => $row && ! empty($row->id))->values();
@@ -1784,6 +1833,9 @@ class LmsAssessmentController extends Controller
                     && (int) ($row['student']->id ?? 0) === $uid;
             });
             if ($hasReal || empty($r['attempt'])) {
+                if ($this->isCimaCohortSitting($r['assessment'] ?? null, $r['assignment'] ?? null, collect([$r['student'] ?? null]))) {
+                    $real[$k] = $r;
+                }
                 continue;
             }
             $real[$k] = $r;
@@ -2186,6 +2238,9 @@ class LmsAssessmentController extends Controller
                 continue;
             }
             $snap = ClassBatch::studentUserIdsForSitting($assignment);
+            if ($this->isCimaCohortSitting($assessment, $assignment, collect())) {
+                $snap = $snap->merge($this->cimaCohortUsers()->pluck('id'))->map(fn ($id) => (int) $id)->unique()->filter()->values();
+            }
             if ($snap->isEmpty()) {
                 continue;
             }
@@ -2586,6 +2641,19 @@ class LmsAssessmentController extends Controller
         }
         $out = [];
         foreach ($groups as $rows) {
+            $cima = false;
+            foreach ($rows as $r) {
+                if ($this->isCimaCohortSitting($r['assessment'] ?? null, $r['assignment'] ?? null, collect([$r['student'] ?? null]))) {
+                    $cima = true;
+                    break;
+                }
+            }
+            if ($cima) {
+                foreach ($rows as $k => $r) {
+                    $out[$k] = $r;
+                }
+                continue;
+            }
             $used = [];
             $unusedExam = [];
             $unusedOther = [];
