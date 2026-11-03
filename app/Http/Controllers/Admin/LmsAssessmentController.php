@@ -413,6 +413,9 @@ class LmsAssessmentController extends Controller
             $studentId = (int) ($assignment->student_id ?? 0);
         }
 
+        $backUrl = route('admin.assessments.tests.assigned-users', array_filter([
+            'assessment_id' => (int) ($assignment->assessment_id ?? 0) ?: null,
+        ]));
         if ($studentId > 0) {
             $this->excludeStudentFromAssessment((int) $assignment->assessment_id, $studentId);
             $attemptQuery = LmsAssessmentAttempt::query()
@@ -430,7 +433,7 @@ class LmsAssessmentController extends Controller
                 $assignment->delete();
             }
 
-            return redirect($assignedUrl)->with('success', 'Removed ' . $code . ' for that student only.');
+            return redirect($backUrl)->with('success', 'Removed ' . $code . ' for that student only.');
         }
 
         $attemptQuery = LmsAssessmentAttempt::query()
@@ -447,11 +450,11 @@ class LmsAssessmentController extends Controller
 
         $code = $assignment->displayCode();
         if (! empty($assignment->class_batch_id) || empty($assignment->student_id)) {
-            return redirect($assignedUrl)->with('error', 'Choose the student row to remove. The batch sitting was not deleted.');
+            return redirect($backUrl)->with('error', 'Choose the student row to remove. The batch sitting was not deleted.');
         }
         $assignment->delete();
 
-        return redirect($assignedUrl)->with('success', 'Sitting ' . $code . ' removed.');
+        return redirect($backUrl)->with('success', 'Sitting ' . $code . ' removed.');
     }
 
     public function destroyAttemptRow($attemptId)
@@ -473,7 +476,9 @@ class LmsAssessmentController extends Controller
             $this->excludeStudentFromAssessment($aid, $uid);
         }
 
-        return redirect($assignedUrl)->with('success', 'Removed that student from the assigned test.');
+        return redirect()->route('admin.assessments.tests.assigned-users', array_filter([
+            'assessment_id' => $aid ?: null,
+        ]))->with('success', 'Removed that student from the assigned test.');
     }
 
     /** Keep the batch sitting; never put this student back on this test. */
@@ -485,7 +490,9 @@ class LmsAssessmentController extends Controller
         if (! Schema::hasColumn('lms_assessment_assignments', 'excluded_user_ids')) {
             return;
         }
-        $rows = LmsAssessmentAssignment::query()->where('assessment_id', $assessmentId)->get();
+        $assessment = LmsAssessment::withTrashed()->find($assessmentId);
+        $aids = $assessment ? $this->sameTitleAssessmentIds($assessment) : [$assessmentId];
+        $rows = LmsAssessmentAssignment::query()->whereIn('assessment_id', $aids)->get();
         foreach ($rows as $row) {
             $ex = collect($row->excluded_user_ids ?? [])->map(fn ($id) => (int) $id)->push($userId)->unique()->filter()->values()->all();
             $row->excluded_user_ids = $ex;
@@ -495,6 +502,7 @@ class LmsAssessmentController extends Controller
             }
             $row->save();
         }
+        $this->excludedTakersByAssessment = [];
     }
 
     /**
@@ -2264,7 +2272,17 @@ class LmsAssessmentController extends Controller
                 $targets->push($assessment);
             }
         }
-        $targets = $targets->unique(fn ($a) => (int) ($a->id ?? 0))->filter()->values();
+        $targets = $targets
+            ->filter()
+            ->groupBy(fn ($a) => mb_strtolower(trim((string) ($a->title ?? ('id:' . (int) ($a->id ?? 0))))))
+            ->map(function ($group) {
+                if ($group->count() === 1) {
+                    return $group->first();
+                }
+
+                return $group->sortByDesc(fn ($a) => (int) ($a->id ?? 0))->first();
+            })
+            ->values();
         if ($targets->isEmpty()) {
             if ($this->scsRosterNote === '') {
                 $this->scsRosterNote = 'no SCS target';
@@ -2290,8 +2308,7 @@ class LmsAssessmentController extends Controller
                 continue;
             }
             $excluded = $this->excludedUserIdsForAssessment($assessment);
-            $honorExcluded = ! ($assessment && method_exists($this->assessments, 'isCimaScsMock1') && $this->assessments->isCimaScsMock1($assessment))
-                && $excluded->count() <= 3;
+            $honorExcluded = true;
             $existingByUser = [];
             $kept = collect();
             foreach ($rows as $r) {
@@ -2316,6 +2333,7 @@ class LmsAssessmentController extends Controller
                     continue;
                 }
                 if ($honorExcluded && $excluded->contains($uid)) {
+                    unset($existingByUser[$uid]);
                     continue;
                 }
                 $isYahia = method_exists($this->assessments, 'isYahiaUser')
@@ -2377,7 +2395,35 @@ class LmsAssessmentController extends Controller
             $rows = $kept->values();
         }
 
-        return $rows;
+        return $this->collapseDuplicateCimaScsRows($rows);
+    }
+
+    /** One row per student per SCS test title (two Mock 1 records must not list the class twice). */
+    protected function collapseDuplicateCimaScsRows($rows)
+    {
+        $other = collect();
+        $best = [];
+        foreach (collect($rows) as $r) {
+            $assessment = $r['assessment'] ?? null;
+            if (! $this->looksLikeCimaScsNovember($assessment)) {
+                $other->push($r);
+                continue;
+            }
+            $uid = (int) ($r['student']->id ?? 0);
+            if ($uid <= 0) {
+                $other->push($r);
+                continue;
+            }
+            if ($this->excludedUserIdsForAssessment($assessment)->contains($uid)) {
+                continue;
+            }
+            $key = mb_strtolower(trim((string) ($assessment->title ?? ''))) . ':' . $uid;
+            if (! isset($best[$key]) || $this->cimaScsRowOutranks($r, $best[$key], $assessment)) {
+                $best[$key] = $r;
+            }
+        }
+
+        return $other->concat(collect($best)->values())->values();
     }
 
     /** Keep the class sitting, or Yahia's own upcoming sitting, not extra unused copies. */
@@ -2575,7 +2621,7 @@ class LmsAssessmentController extends Controller
         $assessments = collect($rowsByKey)->pluck('assessment')->filter()
             ->concat(collect($assessmentsById))
             ->filter(fn ($row) => $row && method_exists($this->assessments, 'isCimaScsMock1') && $this->assessments->isCimaScsMock1($row))
-            ->unique(fn ($row) => (int) ($row->id ?? 0));
+            ->unique(fn ($row) => mb_strtolower(trim((string) ($row->title ?? ('id:' . (int) ($row->id ?? 0))))));
         foreach ($assessments as $assessment) {
             $aid = (int) ($assessment->id ?? 0);
             $cands = collect($assignments)->filter(fn ($a) => (int) ($a->assessment_id ?? 0) === $aid);
@@ -2597,9 +2643,25 @@ class LmsAssessmentController extends Controller
             $roster = $roster->unique(fn ($row) => (int) ($row->id ?? 0))
                 ->filter(fn ($row) => (int) ($row->id ?? 0) > 0)
                 ->values();
+            $excluded = $this->excludedUserIdsForAssessment($assessment);
+            $titleKey = mb_strtolower(trim((string) ($assessment->title ?? '')));
             foreach ($roster as $student) {
                 $uid = (int) ($student->id ?? 0);
                 if (method_exists($this->assessments, 'isYahiaUser') && $this->assessments->isYahiaUser($student)) {
+                    continue;
+                }
+                if ($excluded->contains($uid)) {
+                    continue;
+                }
+                $alreadyListed = collect($rowsByKey)->contains(function ($r) use ($uid, $titleKey) {
+                    if ((int) ($r['student']->id ?? 0) !== $uid) {
+                        return false;
+                    }
+                    $t = mb_strtolower(trim((string) ($r['assessment']->title ?? '')));
+
+                    return $titleKey !== '' && $t === $titleKey;
+                });
+                if ($alreadyListed) {
                     continue;
                 }
                 $key = (int) $seed->id . ':' . $uid;
@@ -2668,7 +2730,6 @@ class LmsAssessmentController extends Controller
                 continue;
             }
             $excluded = $this->excludedUserIdsForAssessment($assessment);
-            $skipExcluded = ! $isMock1 && $excluded->count() <= 3;
             foreach ($roster as $student) {
                 $uid = (int) ($student->id ?? 0);
                 if ($uid <= 0) {
@@ -2677,7 +2738,7 @@ class LmsAssessmentController extends Controller
                 if ($isMock1 && method_exists($this->assessments, 'isYahiaUser') && $this->assessments->isYahiaUser($student)) {
                     continue;
                 }
-                if ($skipExcluded && $excluded->contains($uid)) {
+                if ($excluded->contains($uid)) {
                     continue;
                 }
                 $key = (int) $seed->id . ':' . $uid;
@@ -3314,11 +3375,13 @@ class LmsAssessmentController extends Controller
         if ($aid <= 0 || ! Schema::hasColumn('lms_assessment_assignments', 'excluded_user_ids')) {
             return collect();
         }
-        if (! isset($this->excludedTakersByAssessment[$aid])) {
+        $cacheKey = mb_strtolower(trim((string) ($assessment->title ?? ''))) ?: ('id:' . $aid);
+        if (! isset($this->excludedTakersByAssessment[$cacheKey])) {
             $ids = collect();
+            $aids = $this->sameTitleAssessmentIds($assessment);
             try {
                 $rows = LmsAssessmentAssignment::query()
-                    ->where('assessment_id', $aid)
+                    ->whereIn('assessment_id', $aids)
                     ->get(['id', 'excluded_user_ids']);
                 foreach ($rows as $row) {
                     $ids = $ids->merge(collect($row->excluded_user_ids ?? []));
@@ -3326,10 +3389,10 @@ class LmsAssessmentController extends Controller
             } catch (\Throwable $e) {
                 $ids = collect();
             }
-            $this->excludedTakersByAssessment[$aid] = $ids->map(fn ($id) => (int) $id)->unique()->filter()->values();
+            $this->excludedTakersByAssessment[$cacheKey] = $ids->map(fn ($id) => (int) $id)->unique()->filter()->values();
         }
 
-        return $this->excludedTakersByAssessment[$aid];
+        return $this->excludedTakersByAssessment[$cacheKey];
     }
 
     protected function assignmentForAttempt($att, $assignments, $assignmentsById): ?LmsAssessmentAssignment
