@@ -74,8 +74,6 @@ class LmsAssessmentService
         $ok = LmsAssessmentSchema::ensure();
         StudyMaterialFolder::ensureFolderAssessmentsTable();
         $this->restorePublishedAssignedTests();
-        $this->purgeMock1FourthNovemberSittings();
-        $this->restoreYahiaMock1NovemberSittings();
 
         return $ok;
     }

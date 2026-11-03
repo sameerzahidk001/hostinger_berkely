@@ -2957,29 +2957,16 @@ class LmsAssessmentController extends Controller
         }
         $status = 'Assigned';
         if ($isMock1) {
-            $mins = (int) ($assessment?->durationMinutes() ?? 180);
-            if ($mins <= 0) {
-                $mins = 180;
-            }
-            $copiedNov = method_exists($this->assessments, 'isMock1CopiedNovemberSitting')
-                && $this->assessments->isMock1CopiedNovemberSitting($asg, $assessment);
-            if ($copiedNov) {
-                $start = '30/10/2026, 20:15';
-            } else {
-                if ($asg && method_exists($asg, 'applyMissingExamWindow') && ! $asg->windowStart()) {
-                    if (trim((string) ($asg->timezone ?? '')) === '') {
-                        $asg->timezone = 'Asia/Dubai';
-                    }
-                    $asg->applyMissingExamWindow('2026-10-30 20:15:00', 'Asia/Dubai', $mins);
-                }
+            $yahiaNov = method_exists($this->assessments, 'isMock1YahiaNovemberSitting')
+                && $this->assessments->isMock1YahiaNovemberSitting($asg, $assessment, $row['student'] ?? null);
+            if ($yahiaNov) {
                 $start = $asg && method_exists($asg, 'appointmentStartLabel')
                     ? $asg->appointmentStartLabel('d/m/Y, H:i')
                     : ($asg?->windowStart()?->format('d/m/Y, H:i') ?: $start);
-                if ($this->appointmentLooksBlank($start)) {
-                    $start = '30/10/2026, 20:15';
-                }
+            } else {
+                $start = '30/10/2026, 20:15';
             }
-            $tz = ($tz && $tz !== '') ? $tz : 'Asia/Dubai · GST';
+            $tz = 'Asia/Dubai · GST';
             $created = ($created && $created !== '') ? $created : 'Admin';
         } elseif ($this->appointmentLooksBlank($start) && $assessment && ! empty($assessment->id) && ! $isMock1) {
             try {

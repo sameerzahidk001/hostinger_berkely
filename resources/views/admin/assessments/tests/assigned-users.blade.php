@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.searchable-select-assets')
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
-<!-- lms-assigned-tests-20261103q KEEP: Assessor col 3; Mock 1 details from saved sitting -->
+<!-- lms-assigned-tests-20261103r KEEP: Mock 1 missed/class date 30/10; no DB add/remove -->
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
@@ -133,7 +133,7 @@
         All assigned test takers (started or not), including people who never opened the test.
         <strong>Missed</strong> = they did not start. For CIMA SCS/MCS that is as soon as the appointment start has passed (no wait for duration). Other tests wait until start + duration.
         Status shows <strong>Marking Required</strong> until the assessor marks a submitted sitting.
-        <span class="text-muted">List 20261103q @if(!empty($scsRosterNote)) · {{ $scsRosterNote }}@endif</span>
+        <span class="text-muted">List 20261103r @if(!empty($scsRosterNote)) · {{ $scsRosterNote }}@endif</span>
     </p>
     @if(!empty($scsRosterNote))
         <div class="alert alert-info" style="font-weight:600;">Assigned roster: {{ $scsRosterNote }}</div>
@@ -264,14 +264,15 @@
                             $spend = $attempt?->spendMinutes();
                             $appointment = $disp['appointment'] ?? null;
                             $isMock1Row = $assessment && (str_contains(mb_strtolower((string) $assessment->title), 'mock 1') && str_contains(mb_strtolower((string) $assessment->title), 'scs'));
+                            $yahiaHay = mb_strtolower(trim((string) ($row['student']->name ?? '') . ' ' . (string) ($row['student']->email ?? '')));
+                            $isYahiaRow = str_contains($yahiaHay, 'yahia') || str_contains($yahiaHay, 'yahya');
                             if ($appointment === null || $appointment === '' || $appointment === '—'
                                 || $appointment === 'Open (no appointment set)' || $appointment === 'Open') {
                                 $appointment = $assignment && method_exists($assignment, 'appointmentStartLabel')
                                     ? $assignment->appointmentStartLabel()
                                     : ($assignment?->appointmentWindowLabel() ?: '—');
                             }
-                            if ($isMock1Row && ($appointment === null || $appointment === '' || $appointment === '—'
-                                || $appointment === 'Open (no appointment set)' || $appointment === 'Open')) {
+                            if ($isMock1Row && ! ($isYahiaRow && $statusText === 'Upcoming')) {
                                 $appointment = '30/10/2026, 20:15';
                             }
                             $assessorName = $disp['assessor'] ?? '';
