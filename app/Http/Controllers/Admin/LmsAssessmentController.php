@@ -971,7 +971,12 @@ class LmsAssessmentController extends Controller
         }
 
         $rows = collect($rowsByKey)->values();
-        $rows = $this->appendScsNovemberRoster($rows, $assignments, $selectedAssessment, $assessmentsById);
+        try {
+            $rows = $this->replaceCimaScsRows($rows, $assignments, $selectedAssessment, $assessmentsById);
+        } catch (\Throwable $e) {
+            report($e);
+            $this->scsRosterNote = 'roster-err ' . $e->getMessage();
+        }
         $rows = $rows->sortBy(function ($row) {
             $status = (string) (($row['sitting_display']['status'] ?? ''));
             $rank = match ($status) {
@@ -1854,47 +1859,77 @@ class LmsAssessmentController extends Controller
         if ($title === '' || str_contains($title, 'masterclass')) {
             return false;
         }
+        if (str_contains($title, 'management case') || preg_match('/\bmcs\b/', $title)) {
+            return false;
+        }
+        if (str_contains($title, 'scs') || str_contains($title, 'strategic')) {
+            return true;
+        }
 
-        return (str_contains($title, 'scs') || str_contains($title, 'strategic case'))
-            && (str_contains($title, 'november 2026') || str_contains($title, 'nov 2026'));
+        return str_contains($title, 'cima') && str_contains($title, 'mock');
     }
 
     protected function loadCimaScsNovemberBatch(): ?ClassBatch
     {
-        if (! Schema::hasTable('class_batches')) {
-            return null;
-        }
+        $raw = collect();
         try {
-            $batch = ClassBatch::query()
-                ->whereRaw('LOWER(TRIM(code)) = ?', ['bat-0004'])
-                ->first();
-            if ($batch) {
-                return $batch;
+            if (Schema::hasTable('class_batches')) {
+                $raw = collect(DB::table('class_batches')->get());
             }
-            $batch = ClassBatch::query()
-                ->where('code', 'like', '%0004%')
-                ->where('name', 'not like', '%Masterclass%')
-                ->orderBy('id')
-                ->first();
-            if ($batch) {
-                return $batch;
-            }
-
-            return ClassBatch::query()
-                ->where(function ($q) {
-                    $q->where('name', 'like', '%November 2026%')
-                        ->orWhere('name', 'like', '%Nov 2026%');
-                })
-                ->where(function ($q) {
-                    $q->where('name', 'like', '%SCS%')
-                        ->orWhere('name', 'like', '%Strategic Case%');
-                })
-                ->where('name', 'not like', '%Masterclass%')
-                ->orderBy('id')
-                ->first();
         } catch (\Throwable $e) {
+            try {
+                $raw = ClassBatch::query()->get();
+            } catch (\Throwable $e2) {
+                return null;
+            }
+        }
+        $best = null;
+        $bestScore = -1;
+        foreach ($raw as $row) {
+            $code = mb_strtolower(trim((string) ($row->code ?? '')));
+            $name = mb_strtolower(trim((string) ($row->name ?? '')));
+            if (str_contains($name, 'masterclass') || str_contains($code, 'masterclass')) {
+                continue;
+            }
+            $score = 0;
+            if ($code === 'bat-0004' || $code === 'bat0004' || $code === '0004') {
+                $score += 1000;
+            }
+            if (str_contains($code, '0004')) {
+                $score += 400;
+            }
+            if (str_contains($name, 'scs') || str_contains($name, 'strategic')) {
+                $score += 80;
+            }
+            if (str_contains($name, 'november 2026') || str_contains($name, 'nov 2026')) {
+                $score += 40;
+            }
+            if ($score > $bestScore) {
+                $bestScore = $score;
+                $best = $row;
+            }
+        }
+        if (! $best || $bestScore < 80) {
             return null;
         }
+        $id = (int) ($best->id ?? 0);
+        if ($id <= 0) {
+            return null;
+        }
+        $model = ClassBatch::query()->find($id);
+        if ($model) {
+            return $model;
+        }
+        $model = new ClassBatch();
+        $model->forceFill([
+            'code' => $best->code ?? 'BAT-0004',
+            'name' => $best->name ?? '',
+            'course_id' => $best->course_id ?? null,
+        ]);
+        $model->id = $id;
+        $model->exists = true;
+
+        return $model;
     }
 
     protected function loadCimaScsNovemberStudents()
@@ -1907,21 +1942,31 @@ class LmsAssessmentController extends Controller
         }
         $ids = collect();
         $pivotN = 0;
-        try {
-            if (Schema::hasTable('class_batch_student')) {
-                $pivot = DB::table('class_batch_student')->where('class_batch_id', (int) $batch->id)->get();
-                $pivotN = $pivot->count();
+        $pivotTables = ['class_batch_student', 'class_batch_students', 'batch_student', 'batch_students'];
+        foreach ($pivotTables as $table) {
+            try {
+                if (! Schema::hasTable($table)) {
+                    continue;
+                }
+                $cols = Schema::getColumnListing($table);
+                $batchCol = collect(['class_batch_id', 'batch_id', 'class_id'])->first(fn ($c) => in_array($c, $cols, true));
+                $userCols = collect(['student_id', 'user_id', 'learner_id'])->filter(fn ($c) => in_array($c, $cols, true))->values()->all();
+                if (! $batchCol || $userCols === []) {
+                    continue;
+                }
+                $pivot = DB::table($table)->where($batchCol, (int) $batch->id)->get();
+                $pivotN = max($pivotN, $pivot->count());
                 foreach ($pivot as $row) {
                     $arr = (array) $row;
-                    foreach (['student_id', 'user_id', 'learner_id'] as $col) {
+                    foreach ($userCols as $col) {
                         if (! empty($arr[$col])) {
                             $ids->push((int) $arr[$col]);
                         }
                     }
                 }
+            } catch (\Throwable $e) {
+                $this->scsRosterNote = 'pivot-err';
             }
-        } catch (\Throwable $e) {
-            $this->scsRosterNote = 'pivot-err';
         }
         try {
             $ids = $ids->merge($batch->students()->pluck('users.id'));
@@ -1960,8 +2005,69 @@ class LmsAssessmentController extends Controller
         return $users;
     }
 
-    /** Last chance: attach BAT-0004 people even if earlier roster helpers found nobody. */
-    protected function appendScsNovemberRoster($rows, $assignments, $selectedAssessment, $assessmentsById)
+    protected function seedAssignmentForScs($assessment, $assignments, $rows): ?LmsAssessmentAssignment
+    {
+        $aid = (int) ($assessment->id ?? 0);
+        $seed = collect($assignments)->filter(fn ($a) => (int) ($a->assessment_id ?? 0) === $aid)
+            ->sortByDesc('id')
+            ->first();
+        if ($seed && ! empty($seed->id)) {
+            return $seed;
+        }
+        foreach ($rows as $r) {
+            if ((int) ($r['assessment']->id ?? 0) !== $aid) {
+                continue;
+            }
+            $asg = $r['assignment'] ?? null;
+            if ($asg && ! empty($asg->id)) {
+                return $asg;
+            }
+            $attId = (int) ($r['attempt']->assignment_id ?? 0);
+            if ($attId > 0) {
+                try {
+                    $found = LmsAssessmentAssignment::query()->find($attId);
+                    if ($found) {
+                        return $found;
+                    }
+                } catch (\Throwable $e) {
+                    // try table
+                }
+            }
+        }
+        try {
+            $found = LmsAssessmentAssignment::query()->where('assessment_id', $aid)->orderByDesc('id')->first();
+            if ($found) {
+                return $found;
+            }
+        } catch (\Throwable $e) {
+            // next
+        }
+        try {
+            $attId = (int) DB::table('lms_assessment_attempts')
+                ->where('assessment_id', $aid)
+                ->whereNotNull('assignment_id')
+                ->max('assignment_id');
+            if ($attId > 0) {
+                $found = LmsAssessmentAssignment::query()->find($attId);
+                if ($found) {
+                    return $found;
+                }
+                $seed = new LmsAssessmentAssignment();
+                $seed->forceFill(['assessment_id' => $aid]);
+                $seed->id = $attId;
+                $seed->exists = true;
+
+                return $seed;
+            }
+        } catch (\Throwable $e) {
+            // none
+        }
+
+        return null;
+    }
+
+    /** Replace the Mock 1/2 list with the BAT-0004 roster; keep existing attempts. */
+    protected function replaceCimaScsRows($rows, $assignments, $selectedAssessment, $assessmentsById)
     {
         $targets = collect();
         if ($selectedAssessment && $this->looksLikeCimaScsNovember($selectedAssessment)) {
@@ -1985,7 +2091,7 @@ class LmsAssessmentController extends Controller
         $targets = $targets->unique(fn ($a) => (int) ($a->id ?? 0))->filter()->values();
         if ($targets->isEmpty()) {
             if ($this->scsRosterNote === '') {
-                $this->scsRosterNote = 'no SCS Nov target';
+                $this->scsRosterNote = 'no SCS target';
             }
 
             return $rows;
@@ -1996,29 +2102,41 @@ class LmsAssessmentController extends Controller
         }
         foreach ($targets as $assessment) {
             $aid = (int) ($assessment->id ?? 0);
-            $seed = collect($assignments)->filter(fn ($a) => (int) ($a->assessment_id ?? 0) === $aid)
-                ->sortByDesc('id')
-                ->first();
-            if (! $seed) {
-                $fromRow = $rows->first(fn ($r) => (int) ($r['assessment']->id ?? 0) === $aid);
-                $seed = $fromRow['assignment'] ?? null;
-            }
+            $seed = $this->seedAssignmentForScs($assessment, $assignments, $rows);
             if (! $seed || empty($seed->id)) {
-                $this->scsRosterNote .= ' · no-seed';
-                continue;
+                $fromRow = (int) collect($rows)->map(fn ($r) => (int) ($r['assignment']->id ?? $r['attempt']->assignment_id ?? 0))->filter()->first();
+                $seed = new LmsAssessmentAssignment();
+                $seed->forceFill(['assessment_id' => $aid]);
+                $seed->id = $fromRow > 0 ? $fromRow : 1;
+                $seed->exists = false;
+                $this->scsRosterNote .= ' · synthetic-seed';
             }
             $excluded = $this->excludedUserIdsForAssessment($assessment);
-            $skipExcluded = $excluded->count() <= 3;
-            $have = $rows->filter(fn ($r) => (int) ($r['assessment']->id ?? 0) === $aid)
-                ->map(fn ($r) => (int) ($r['student']->id ?? 0))
-                ->all();
+            $honorExcluded = $excluded->count() <= 3;
+            $existingByUser = [];
+            $kept = collect();
+            foreach ($rows as $r) {
+                if ((int) ($r['assessment']->id ?? 0) !== $aid) {
+                    $kept->push($r);
+                    continue;
+                }
+                $uid = (int) ($r['student']->id ?? 0);
+                if ($uid > 0) {
+                    $existingByUser[$uid] = $r;
+                }
+            }
             $added = 0;
             foreach ($students as $student) {
                 $uid = (int) ($student->id ?? 0);
-                if ($uid <= 0 || in_array($uid, $have, true)) {
+                if ($uid <= 0) {
                     continue;
                 }
-                if ($skipExcluded && $excluded->contains($uid)) {
+                if ($honorExcluded && $excluded->contains($uid)) {
+                    continue;
+                }
+                if (isset($existingByUser[$uid])) {
+                    $kept->push($existingByUser[$uid]);
+                    unset($existingByUser[$uid]);
                     continue;
                 }
                 $row = [
@@ -2029,17 +2147,29 @@ class LmsAssessmentController extends Controller
                     'attempt_number' => 1,
                     'attempt_total' => max(1, (int) ($assessment->max_attempts ?? 1)),
                 ];
-                $disp = $this->sittingDisplayForRow($row);
-                if (! empty($disp['_assignment'])) {
-                    $row['assignment'] = $disp['_assignment'];
+                try {
+                    $disp = $this->sittingDisplayForRow($row);
+                    if (! empty($disp['_assignment'])) {
+                        $row['assignment'] = $disp['_assignment'];
+                    }
+                    unset($disp['_assignment']);
+                    $row['sitting_display'] = $disp;
+                } catch (\Throwable $e) {
+                    $row['sitting_display'] = [
+                        'status' => 'Missed',
+                        'appt_id' => $seed->displayCodeForStudent($uid),
+                        'appointment' => '',
+                        'assessor' => 'Admin / course instructors',
+                    ];
                 }
-                unset($disp['_assignment']);
-                $row['sitting_display'] = $disp;
-                $rows->push($row);
-                $have[] = $uid;
+                $kept->push($row);
                 $added++;
             }
-            $this->scsRosterNote .= ' · +' . $added . ' excl=' . $excluded->count();
+            foreach ($existingByUser as $r) {
+                $kept->push($r);
+            }
+            $this->scsRosterNote .= ' · +' . $added . ' excl=' . $excluded->count() . ' total=' . $kept->filter(fn ($r) => (int) ($r['assessment']->id ?? 0) === $aid)->count();
+            $rows = $kept->values();
         }
 
         return $rows;
