@@ -374,7 +374,53 @@ class LmsAssessmentService
             $this->appendFolderSelfTests($user, $out, $kind);
         }
 
-        return $out;
+        return $this->collapseStudentScsSittings($user, $out);
+    }
+
+    /** Student My Tests: one SCS Mock 1 and one Mock 2, matching Assigned Tests. */
+    protected function collapseStudentScsSittings(User $user, Collection $out): Collection
+    {
+        $best = [];
+        $other = collect();
+        foreach ($out as $row) {
+            $assessment = $row['assessment'] ?? null;
+            $title = mb_strtolower(trim((string) ($assessment->title ?? '')));
+            $isScs = str_contains($title, 'scs')
+                && str_contains($title, 'mock')
+                && ! str_contains($title, 'mcs')
+                && ! str_contains($title, 'masterclass');
+            if (! $isScs) {
+                $other->push($row);
+                continue;
+            }
+            if (! $this->isCimaScsAssignedMock($assessment)) {
+                continue;
+            }
+            preg_match('/mock\s*(\d+)/', $title, $m);
+            $key = 'scs:mock' . ($m[1] ?? (int) ($assessment->id ?? 0));
+            $asg = $row['assignment'] ?? null;
+            $score = 0;
+            if ($asg && (int) ($asg->student_id ?? 0) === (int) $user->id) {
+                $score += 5000;
+            }
+            if ($this->isYahiaUser($user) && $this->isMock1YahiaNovemberSitting($asg, $assessment, $user)) {
+                $score += 8000;
+            }
+            if ($asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()) {
+                $score -= 2000;
+            }
+            $score += (int) ($asg->id ?? 0);
+            if (! isset($best[$key]) || $score > (int) ($best[$key]['_score'] ?? 0)) {
+                $row['_score'] = $score;
+                $best[$key] = $row;
+            }
+        }
+
+        return $other->concat(collect($best)->map(function ($row) {
+            unset($row['_score']);
+
+            return $row;
+        }))->values();
     }
 
     /** Sitting this student is on (direct or batch), so Missed/Available can show BEXT. */
