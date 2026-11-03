@@ -121,39 +121,63 @@ class ClassBatch extends Model
         } catch (\Throwable $e) {
             $ids = collect();
         }
+        $batchId = (int) ($assignment->class_batch_id ?? 0);
+        if ($batchId > 0) {
+            $ids = $ids->merge(static::membersOnBatchAtAssignment($batchId, $assignment))
+                ->map(fn ($id) => (int) $id)->unique()->filter()->values();
+            if ($ids->isNotEmpty()) {
+                return $ids;
+            }
+        }
         if ($ids->isNotEmpty()) {
             return $ids;
         }
-        $batchId = (int) ($assignment->class_batch_id ?? 0);
+        $title = (string) (optional($assignment->assessment)->title ?? '');
+        $sitterIds = collect();
+        if (! empty($assignment->student_id)) {
+            $sitterIds->push((int) $assignment->student_id);
+        }
         if ($batchId <= 0) {
-            $sitterIds = collect();
-            if (! empty($assignment->student_id)) {
-                $sitterIds->push((int) $assignment->student_id);
-            }
             try {
-                if (Schema::hasTable('lms_assessment_attempts') && ! empty($assignment->assessment_id)) {
-                    $q = \App\Models\LmsAssessmentAttempt::query()
-                        ->where('assessment_id', (int) $assignment->assessment_id)
-                        ->whereNotNull('user_id');
-                    if (! empty($assignment->id)) {
-                        $q->where(function ($w) use ($assignment) {
-                            $w->where('assignment_id', (int) $assignment->id)
-                                ->orWhereNull('assignment_id');
-                        });
-                    }
-                    $sitterIds = $sitterIds->merge($q->pluck('user_id'));
+                if (Schema::hasTable('lms_assessment_attempts') && ! empty($assignment->id) && ! empty($assignment->assessment_id)) {
+                    $sitterIds = $sitterIds->merge(
+                        \App\Models\LmsAssessmentAttempt::query()
+                            ->where('assessment_id', (int) $assignment->assessment_id)
+                            ->where('assignment_id', (int) $assignment->id)
+                            ->whereNotNull('user_id')
+                            ->pluck('user_id')
+                    );
                 }
             } catch (\Throwable $e) {
                 // keep student_id
             }
-            $batchId = (int) (static::idFromSittersSkipMasterclass(
-                $sitterIds->all(),
-                (string) (optional($assignment->assessment)->title ?? '')
-            ) ?? 0);
+            $batchId = (int) (static::idFromSittersSkipMasterclass($sitterIds->all(), $title) ?? 0);
+            $hay = mb_strtolower(trim($title));
+            $isMcs = str_contains($hay, 'mcs') || str_contains($hay, 'management case');
+            if ($isMcs && $sitterIds->isNotEmpty()) {
+                try {
+                    $b3 = static::query()->where('code', 'BAT-0003')->first();
+                    $on0003 = $b3
+                        ? static::studentUserIdsFor((int) $b3->id)->intersect($sitterIds->map(fn ($id) => (int) $id))->isNotEmpty()
+                        : false;
+                    if ($b3 && $on0003) {
+                        $batchId = (int) $b3->id;
+                    }
+                } catch (\Throwable $e) {
+                    // keep inferred batch
+                }
+            }
         }
         if ($batchId <= 0) {
             return $ids;
         }
+
+        return static::membersOnBatchAtAssignment($batchId, $assignment);
+    }
+
+    /** Batch members already on the roster when this sitting was assigned. Late joiners stay out. */
+    public static function membersOnBatchAtAssignment(int $batchId, $assignment)
+    {
         $live = static::studentUserIdsFor($batchId);
         $at = $assignment->created_at ?? null;
         if (! $at || ! Schema::hasTable('class_batch_student') || ! Schema::hasColumn('class_batch_student', 'created_at')) {
@@ -180,7 +204,7 @@ class ClassBatch extends Model
                     $kept->push($uid);
                 }
             }
-            if ($kept->isNotEmpty()) {
+            if ($dated > 0) {
                 return $kept->unique()->values();
             }
         } catch (\Throwable $e) {
