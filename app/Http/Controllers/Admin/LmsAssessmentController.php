@@ -574,8 +574,8 @@ class LmsAssessmentController extends Controller
             $assessmentId, $batchId, $courseId, $kind, $markerOnlyUid, $courseIdsScope
         ) {
             $assessment = $assignment->assessment ?? null;
-            if (method_exists($this->assessments, 'isMock1FourthNovemberSitting')
-                && $this->assessments->isMock1FourthNovemberSitting($assignment, $assessment)) {
+            if (method_exists($this->assessments, 'isMock1CopiedNovemberSitting')
+                && $this->assessments->isMock1CopiedNovemberSitting($assignment, $assessment)) {
                 return false;
             }
             if ($assessmentId > 0 && (int) $assignment->assessment_id !== $assessmentId) {
@@ -1914,13 +1914,19 @@ class LmsAssessmentController extends Controller
             $seed = $this->mock1RosterSeed(collect($rows)->pluck('assignment')->filter(), $assessment);
             $seedId = (int) ($seed->id ?? 0);
             foreach ($rows as $k => $r) {
-                if (method_exists($this->assessments, 'isMock1FourthNovemberSitting')
-                    && $this->assessments->isMock1FourthNovemberSitting($r['assignment'] ?? null, $assessment)) {
+                if (method_exists($this->assessments, 'isMock1CopiedNovemberSitting')
+                    && $this->assessments->isMock1CopiedNovemberSitting($r['assignment'] ?? null, $assessment)) {
                     $drop[$k] = true;
                     continue;
                 }
                 $asgId = (int) ($r['assignment']->id ?? 0);
                 $uid = (int) ($r['student']->id ?? 0);
+                $isYahia = method_exists($this->assessments, 'isYahiaUser')
+                    && $this->assessments->isYahiaUser($r['student'] ?? null);
+                if ($isYahia && empty($r['attempt']) && $asgId === $seedId) {
+                    $drop[$k] = true;
+                    continue;
+                }
                 if ($asgId <= 0 || $asgId === $seedId) {
                     continue;
                 }
@@ -1931,7 +1937,7 @@ class LmsAssessmentController extends Controller
                 if ($named === $uid) {
                     continue;
                 }
-                if (method_exists($this->assessments, 'isYahiaUser') && $this->assessments->isYahiaUser($r['student'] ?? null)) {
+                if ($isYahia) {
                     continue;
                 }
                 $drop[$k] = true;
@@ -2301,12 +2307,29 @@ class LmsAssessmentController extends Controller
                 }
             }
             $added = 0;
+            $isMock1 = $assessment && method_exists($this->assessments, 'isCimaScsMock1')
+                && $this->assessments->isCimaScsMock1($assessment);
             foreach ($students as $student) {
                 $uid = (int) ($student->id ?? 0);
                 if ($uid <= 0) {
                     continue;
                 }
                 if ($honorExcluded && $excluded->contains($uid)) {
+                    continue;
+                }
+                $isYahia = method_exists($this->assessments, 'isYahiaUser')
+                    && $this->assessments->isYahiaUser($student);
+                if ($isMock1 && $isYahia) {
+                    if (isset($existingByUser[$uid])) {
+                        $ex = $existingByUser[$uid];
+                        $ownNov = method_exists($this->assessments, 'isMock1YahiaNovemberSitting')
+                            && $this->assessments->isMock1YahiaNovemberSitting($ex['assignment'] ?? null, $assessment, $student);
+                        $named = (int) (($ex['assignment']->student_id ?? 0));
+                        if ($ownNov || $named === $uid || ! empty($ex['attempt'])) {
+                            $kept->push($ex);
+                        }
+                        unset($existingByUser[$uid]);
+                    }
                     continue;
                 }
                 if (isset($existingByUser[$uid])) {
@@ -2344,6 +2367,15 @@ class LmsAssessmentController extends Controller
                 $added++;
             }
             foreach ($existingByUser as $r) {
+                if ($isMock1
+                    && method_exists($this->assessments, 'isYahiaUser')
+                    && $this->assessments->isYahiaUser($r['student'] ?? null)
+                    && empty($r['attempt'])
+                    && method_exists($this->assessments, 'isMock1YahiaNovemberSitting')
+                    && ! $this->assessments->isMock1YahiaNovemberSitting($r['assignment'] ?? null, $assessment, $r['student'] ?? null)
+                    && empty($r['assignment']->student_id)) {
+                    continue;
+                }
                 $kept->push($r);
             }
             $this->scsRosterNote .= ' · +' . $added . ' excl=' . $excluded->count() . ' total=' . $kept->filter(fn ($r) => (int) ($r['assessment']->id ?? 0) === $aid)->count();
@@ -2467,24 +2499,14 @@ class LmsAssessmentController extends Controller
             }
             $roster = $this->loadCimaScsNovemberStudents()
                 ->concat($this->mock1ExtraRosterStudents($seed, $assessment, $rowsByKey));
-            try {
-                $roster = $roster->concat(
-                    User::query()->where(function ($q) {
-                        $q->where('name', 'like', '%yahia%')
-                            ->orWhere('name', 'like', '%yahya%')
-                            ->orWhere('email', 'like', '%yahia%')
-                            ->orWhere('email', 'like', '%yahya%')
-                            ->orWhere('email', 'like', '%kafi%');
-                    })->get()
-                );
-            } catch (\Throwable $e) {
-                // keep batch roster
-            }
             $roster = $roster->unique(fn ($row) => (int) ($row->id ?? 0))
                 ->filter(fn ($row) => (int) ($row->id ?? 0) > 0)
                 ->values();
             foreach ($roster as $student) {
                 $uid = (int) ($student->id ?? 0);
+                if (method_exists($this->assessments, 'isYahiaUser') && $this->assessments->isYahiaUser($student)) {
+                    continue;
+                }
                 $key = (int) $seed->id . ':' . $uid;
                 if (isset($rowsByKey[$key])) {
                     continue;
@@ -2555,6 +2577,9 @@ class LmsAssessmentController extends Controller
             foreach ($roster as $student) {
                 $uid = (int) ($student->id ?? 0);
                 if ($uid <= 0) {
+                    continue;
+                }
+                if ($isMock1 && method_exists($this->assessments, 'isYahiaUser') && $this->assessments->isYahiaUser($student)) {
                     continue;
                 }
                 if ($skipExcluded && $excluded->contains($uid)) {
@@ -2936,15 +2961,28 @@ class LmsAssessmentController extends Controller
             if ($mins <= 0) {
                 $mins = 180;
             }
-            if ($asg && method_exists($asg, 'applyMissingExamWindow') && ! $asg->windowStart()) {
-                if (trim((string) ($asg->timezone ?? '')) === '') {
-                    $asg->timezone = 'Asia/Dubai';
+            $yahiaNov = method_exists($this->assessments, 'isMock1YahiaNovemberSitting')
+                && $this->assessments->isMock1YahiaNovemberSitting($asg, $assessment, $row['student'] ?? null);
+            if ($yahiaNov) {
+                $start = $asg && method_exists($asg, 'appointmentStartLabel')
+                    ? $asg->appointmentStartLabel('d/m/Y, H:i')
+                    : ($asg?->windowStart()?->timezone('Asia/Dubai')->format('d/m/Y, H:i') ?: $start);
+                if ($this->appointmentLooksBlank($start)) {
+                    $start = $asg?->windowStart()?->timezone('Asia/Dubai')->format('d/m/Y, H:i') ?: '04/11/2026, 20:00';
                 }
-                $asg->applyMissingExamWindow('2026-10-30 20:15:00', 'Asia/Dubai', $mins);
+                $tz = 'Asia/Dubai · GST';
+                $created = ($created && $created !== '') ? $created : 'Admin';
+            } else {
+                if ($asg && method_exists($asg, 'applyMissingExamWindow') && ! $asg->windowStart()) {
+                    if (trim((string) ($asg->timezone ?? '')) === '') {
+                        $asg->timezone = 'Asia/Dubai';
+                    }
+                    $asg->applyMissingExamWindow('2026-10-30 20:15:00', 'Asia/Dubai', $mins);
+                }
+                $start = '30/10/2026, 20:15';
+                $tz = 'Asia/Dubai · GST';
+                $created = ($created && $created !== '') ? $created : 'Admin';
             }
-            $start = '30/10/2026, 20:15';
-            $tz = 'Asia/Dubai · GST';
-            $created = ($created && $created !== '') ? $created : 'Admin';
         } elseif ($this->appointmentLooksBlank($start) && $assessment && ! empty($assessment->id) && ! $isMock1) {
             try {
                 $started = LmsAssessmentAttempt::query()
@@ -3554,6 +3592,15 @@ class LmsAssessmentController extends Controller
         $cima = $assessment && method_exists($this->assessments, 'usesStrictExamWindow')
             && $this->assessments->usesStrictExamWindow($assessment);
         $start = $asg && method_exists($asg, 'windowStart') ? $asg->windowStart() : null;
+        if ($this->assessments->isYahiaUser($student)
+            && method_exists($this->assessments, 'isMock1YahiaNovemberSitting')
+            && $this->assessments->isMock1YahiaNovemberSitting($asg, $assessment, $student)) {
+            if ($start && now()->gte($start) && $this->sittingWindowHasEnded($asg)) {
+                return 'Missed';
+            }
+
+            return 'Upcoming';
+        }
         if ($start && now()->lt($start) && $this->assessments->isYahiaUser($student)) {
             return 'Upcoming';
         }
