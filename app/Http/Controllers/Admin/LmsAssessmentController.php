@@ -2333,8 +2333,11 @@ class LmsAssessmentController extends Controller
                     $row['sitting_display'] = [
                         'status' => 'Missed',
                         'appt_id' => $seed->displayCodeForStudent($uid),
-                        'appointment' => '',
+                        'appointment' => '30/10/2026, 20:15',
+                        'timezone' => 'Asia/Dubai · GST',
                         'assessor' => 'Admin / course instructors',
+                        'batch' => 'BAT-0004',
+                        'created_by' => 'Admin',
                     ];
                 }
                 $kept->push($row);
@@ -2928,22 +2931,20 @@ class LmsAssessmentController extends Controller
             $created = ($created && $created !== '') ? $created : 'Admin';
         }
         $status = 'Assigned';
-        if ($isMock1 && $asg && ! empty($asg->id)
-            && ! (method_exists($this->assessments, 'isMock1FourthNovemberSitting') && $this->assessments->isMock1FourthNovemberSitting($asg, $assessment))) {
-            $fromSitting = $this->mock1StartFromThisSitting($asg);
-            if ($fromSitting) {
-                try {
-                    $start = method_exists($asg, 'formatInTimezone')
-                        ? preg_replace('/\s*\([^)]*\)\s*$/', '', $asg->formatInTimezone($fromSitting, 'd/m/Y, H:i'))
-                        : $fromSitting->copy()->timezone('Asia/Dubai')->format('d/m/Y, H:i');
-                } catch (\Throwable $e) {
-                    $start = '30/10/2026, 20:15';
+        if ($isMock1) {
+            $mins = (int) ($assessment?->durationMinutes() ?? 180);
+            if ($mins <= 0) {
+                $mins = 180;
+            }
+            if ($asg && method_exists($asg, 'applyMissingExamWindow') && ! $asg->windowStart()) {
+                if (trim((string) ($asg->timezone ?? '')) === '') {
+                    $asg->timezone = 'Asia/Dubai';
                 }
+                $asg->applyMissingExamWindow('2026-10-30 20:15:00', 'Asia/Dubai', $mins);
             }
-            if ($this->appointmentLooksBlank($start)) {
-                $start = '30/10/2026, 20:15';
-            }
-            $tz = ($tz && $tz !== '') ? $tz : 'Asia/Dubai · GST';
+            $start = '30/10/2026, 20:15';
+            $tz = 'Asia/Dubai · GST';
+            $created = ($created && $created !== '') ? $created : 'Admin';
         } elseif ($this->appointmentLooksBlank($start) && $assessment && ! empty($assessment->id) && ! $isMock1) {
             try {
                 $started = LmsAssessmentAttempt::query()
