@@ -516,7 +516,7 @@ class LmsAssessmentController extends Controller
         $markerOnlyUid = null;
         if ($this->shouldScopeTestsToOwnAssignments()) {
             $courseIdsScope = $this->lms->coursesForActor()->pluck('id')->map(fn ($id) => (int) $id)->all();
-            $markerOnlyUid = (int) (Auth::id() ?? 0);
+            $markerOnlyUid = (int) (Auth::id() ?: Auth::guard('web')->id() ?: 0);
         }
 
         $assignments = collect();
@@ -916,6 +916,20 @@ class LmsAssessmentController extends Controller
             }
             unset($disp['_assignment']);
             $rowsByKey[$k]['sitting_display'] = $disp;
+        }
+
+        if ($markerOnlyUid) {
+            $rowsByKey = collect($rowsByKey)->filter(function ($r) use ($markerOnlyUid) {
+                if (! $this->instructorCanSeeSitting($markerOnlyUid, $r['assignment'] ?? null, $r['assessment'] ?? null)) {
+                    return false;
+                }
+                $shown = (int) (($r['sitting_display']['assessor_id'] ?? 0));
+                if ($shown > 0 && $shown !== $markerOnlyUid) {
+                    return false;
+                }
+
+                return true;
+            })->all();
         }
 
         $rows = collect($rowsByKey)->values();
@@ -3407,25 +3421,11 @@ class LmsAssessmentController extends Controller
 
     protected function instructorCanSeeSitting(int $uid, $assignment, $assessment, ?array $courseIds = null): bool
     {
-        if ($uid <= 0) {
+        if ($uid <= 0 || ! $assignment) {
             return false;
-        }
-        if (! $assignment) {
-            return (int) ($assessment->created_by_user_id ?? 0) === $uid;
-        }
-        $markerId = (int) ($assignment->marker_user_id ?? 0);
-        if ($markerId === $uid) {
-            return true;
-        }
-        if ($markerId > 0) {
-            return false;
-        }
-        if ((int) ($assignment->assigned_by_user_id ?? 0) === $uid
-            || (int) ($assessment->created_by_user_id ?? 0) === $uid) {
-            return true;
         }
 
-        return false;
+        return (int) ($assignment->marker_user_id ?? 0) === $uid;
     }
 
     /** Instructors and Musa: only tests they created or were assigned to mark. Real Admin still sees all. */
