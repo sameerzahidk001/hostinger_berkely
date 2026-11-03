@@ -227,16 +227,6 @@ class LmsAssessment extends Model
                 $excluded = $excluded->merge(collect($assignment->excluded_user_ids ?? []));
             }
         }
-        if ($isCimaScs) {
-            try {
-                $batch = ClassBatch::query()->where('code', 'BAT-0004')->first();
-                if ($batch) {
-                    $ids = $ids->merge(ClassBatch::studentUserIdsFor((int) $batch->id));
-                }
-            } catch (\Throwable $e) {
-                // keep sitting student_ids
-            }
-        }
         $excluded = $excluded->map(fn ($id) => (int) $id)->unique()->filter();
         if (Schema::hasTable('lms_assessment_attempts')) {
             $ids = $ids->merge(
