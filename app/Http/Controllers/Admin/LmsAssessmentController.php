@@ -615,6 +615,9 @@ class LmsAssessmentController extends Controller
             if ($markerOnlyUid && ! $this->instructorOwnsSitting($markerOnlyUid, $assignment, $assessment)) {
                 return false;
             }
+            if ($markerOnlyUid && $this->looksLikeCimaMcs($assessment) && empty($assignment->student_id)) {
+                return false;
+            }
             if ($assessmentId > 0 && ! in_array((int) $assignment->assessment_id, $assessmentFilterIds, true)) {
                 return false;
             }
@@ -4288,6 +4291,9 @@ class LmsAssessmentController extends Controller
             if ($this->looksLikeCimaScsNovember($a) && ! $this->isCimaScsAssignedMock($a)) {
                 return false;
             }
+            if ($markerOnlyUid && $this->looksLikeCimaMcs($a)) {
+                return $this->instructorNamedPeopleCount($markerOnlyUid, $a, $assignments) > 0;
+            }
             try {
                 if ($markerOnlyUid) {
                     return $this->instructorAssignedPeopleCount($markerOnlyUid, $a, $assignments) > 0;
@@ -4324,7 +4330,8 @@ class LmsAssessmentController extends Controller
                 $ids = $ids->merge(collect($asg->roster_user_ids ?? []));
             }
             $self = method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting();
-            if (! $self && empty($asg->student_id) && ! empty($asg->class_batch_id)
+            if ($this->isCimaScsAssignedMock($rowAssessment)
+                && ! $self && empty($asg->student_id) && ! empty($asg->class_batch_id)
                 && collect($asg->roster_user_ids ?? [])->filter()->isEmpty()) {
                 try {
                     $ids = $ids->merge(ClassBatch::membersOnBatchAtAssignment((int) $asg->class_batch_id, $asg));
@@ -4356,6 +4363,49 @@ class LmsAssessmentController extends Controller
         return $ids->filter(function ($id) use ($assessment) {
             return ! $this->isRemovedTestTaker((object) ['id' => (int) $id], $assessment);
         })->count();
+    }
+
+    /** Person rows still on this sitting: named student / roster / attempt, not an inferred batch. */
+    protected function instructorNamedPeopleCount(int $uid, $assessment, $assignments): int
+    {
+        $aids = $this->sameTitleAssessmentIds($assessment);
+        if ($aids === []) {
+            $aids = [(int) ($assessment->id ?? 0)];
+        }
+        $ids = collect();
+        $excluded = $this->excludedUserIdsForAssessment($assessment);
+        foreach (collect($assignments) as $asg) {
+            if (! in_array((int) ($asg->assessment_id ?? 0), $aids, true)) {
+                continue;
+            }
+            $rowAssessment = $asg->assessment ?? $assessment;
+            if (! $this->instructorOwnsSitting($uid, $asg, $rowAssessment)) {
+                continue;
+            }
+            if (! empty($asg->student_id)) {
+                $ids->push((int) $asg->student_id);
+            }
+            try {
+                if (! empty($asg->id) && Schema::hasTable('lms_assessment_attempts')) {
+                    $ids = $ids->merge(
+                        LmsAssessmentAttempt::query()->where('assignment_id', (int) $asg->id)->pluck('user_id')
+                    );
+                }
+            } catch (\Throwable $e) {
+                // named only
+            }
+        }
+
+        return $ids->map(fn ($id) => (int) $id)->unique()->filter()->diff($excluded)->count();
+    }
+
+    protected function looksLikeCimaMcs($assessment): bool
+    {
+        $hay = mb_strtolower(trim((string) ($assessment->title ?? '') . ' ' . (string) ($assessment->course->title ?? '')));
+
+        return str_contains($hay, 'cima mcs')
+            || str_contains($hay, 'management case')
+            || (bool) preg_match('/\bmcs\b/', $hay);
     }
 
     /** Course assessor (and Musa on SCS) sees every person-attempt on that test, matching admin. */

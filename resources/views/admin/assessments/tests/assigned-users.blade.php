@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.searchable-select-assets')
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
-<!-- lms-assigned-tests-20261104c KEEP: instructor dropdown only tests with remaining students -->
+<!-- lms-assigned-tests-20261104d KEEP: no MCS in Musa dropdown; table fits page -->
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
@@ -27,15 +27,15 @@
         margin-right: 0;
     }
     .lms-assigned-wrap {
-        overflow-x: auto;
+        overflow-x: hidden;
         width: 100% !important;
         max-width: 100%;
         box-sizing: border-box;
     }
     .lms-assigned-table {
         width: 100% !important;
-        min-width: 1280px;
-        max-width: none !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
         table-layout: fixed;
         margin-bottom: 0;
         font-size: 11px;
@@ -49,10 +49,10 @@
         white-space: normal;
         overflow: visible;
     }
-    .lms-assigned-table .col-appt { width: 9%; }
-    .lms-assigned-table .col-when { width: 14%; min-width: 150px; font-weight: 700; }
+    .lms-assigned-table .col-appt { width: 8%; }
+    .lms-assigned-table .col-when { width: 13%; font-weight: 700; }
     .lms-assigned-table .col-when .lms-timing-line { display: block; line-height: 1.35; }
-    .lms-assigned-table .col-assessor { width: 12%; min-width: 130px; font-weight: 700; }
+    .lms-assigned-table .col-assessor { width: 11%; font-weight: 700; }
     .lms-assigned-table .col-test { width: 14%; }
     .lms-assigned-table .col-taker { width: 13%; }
     .lms-assigned-table .col-timing { width: 15%; }
@@ -133,11 +133,8 @@
         All assigned test takers (started or not), including people who never opened the test.
         <strong>Missed</strong> = they did not start. For CIMA SCS/MCS that is as soon as the appointment start has passed (no wait for duration). Other tests wait until start + duration.
         Status shows <strong>Marking Required</strong> until the assessor marks a submitted sitting.
-        <span class="text-muted">List 20261104c @if(!empty($scsRosterNote)) · {{ $scsRosterNote }}@endif</span>
+        <span class="text-muted">List 20261104d</span>
     </p>
-    @if(!empty($scsRosterNote))
-        <div class="alert alert-info" style="font-weight:600;">Assigned roster: {{ $scsRosterNote }}</div>
-    @endif
     <div class="ibox"><div class="ibox-content">
         <form method="GET" class="m-b-md" style="margin-bottom:15px;">
             <div class="row">
