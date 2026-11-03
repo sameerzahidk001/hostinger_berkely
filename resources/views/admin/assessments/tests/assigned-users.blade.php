@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.searchable-select-assets')
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
-<!-- lms-assigned-tests-20261104f KEEP: MCS stays for instructors with remaining attempts -->
+<!-- lms-assigned-tests-20261104h KEEP: filter buttons on search line; Yahia Mock 1/2 only -->
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
@@ -96,6 +96,14 @@
         flex-wrap: wrap;
     }
     .lms-assigned-pager .lms-page-label { font-weight: 600; color: #333; }
+    .lms-filter-search-line {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: nowrap;
+    }
+    .lms-filter-search-line .form-control { flex: 1 1 auto; min-width: 0; }
+    .lms-filter-search-line .btn { flex: 0 0 auto; }
 </style>
 @php
     $fmtDuration = function ($minutes) {
@@ -133,7 +141,7 @@
         All assigned test takers (started or not), including people who never opened the test.
         <strong>Missed</strong> = they did not start. For CIMA SCS/MCS that is as soon as the appointment start has passed (no wait for duration). Other tests wait until start + duration.
         Status shows <strong>Marking Required</strong> until the assessor marks a submitted sitting.
-        <span class="text-muted">List 20261104f</span>
+        <span class="text-muted">List 20261104h</span>
     </p>
     <div class="ibox"><div class="ibox-content">
         <form method="GET" class="m-b-md" style="margin-bottom:15px;">
@@ -183,13 +191,13 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-sm-2 form-group">
+                <div class="col-sm-12 form-group">
                     <label>Search</label>
-                    <input type="text" name="search" class="form-control" value="{{ $filters['search'] ?? '' }}" placeholder="Name, email, test, course…">
-                </div>
-                <div class="col-sm-12 form-group" style="padding-top:8px;">
-                    <button class="btn btn-primary" type="submit">Filter</button>
-                    <a href="{{ route('admin.assessments.tests.assigned-users') }}" class="btn btn-default">Clear</a>
+                    <div class="lms-filter-search-line">
+                        <input type="text" name="search" class="form-control" value="{{ $filters['search'] ?? '' }}" placeholder="Name, email, test, course…">
+                        <button class="btn btn-primary" type="submit">Filter</button>
+                        <a href="{{ route('admin.assessments.tests.assigned-users') }}" class="btn btn-default">Clear</a>
+                    </div>
                 </div>
             </div>
         </form>

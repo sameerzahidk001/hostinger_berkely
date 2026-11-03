@@ -1127,6 +1127,7 @@ class LmsAssessmentController extends Controller
 
         try {
             $rows = $this->replaceCimaScsRows($rows, $assignments, $selectedAssessment, $assessmentsById);
+            $rows = $this->renumberCollapsedAttempts($rows);
             $rows = $rows->sortBy(function ($row) {
                 $status = (string) (($row['sitting_display']['status'] ?? ''));
                 $rank = match ($status) {
@@ -2507,13 +2508,52 @@ class LmsAssessmentController extends Controller
             if ($this->excludedUserIdsForAssessment($assessment)->contains($uid)) {
                 continue;
             }
-            $key = mb_strtolower(trim((string) ($assessment->title ?? ''))) . ':' . $uid;
+            $key = $this->cimaScsCollapseKey($assessment) . ':' . $uid;
             if (! isset($best[$key]) || $this->cimaScsRowOutranks($r, $best[$key], $assessment)) {
                 $best[$key] = $r;
             }
         }
 
         return $other->concat(collect($best)->values())->values();
+    }
+
+    /** Mock 1 duplicate records (and Mock 2) collapse as one test, not separate titles. */
+    protected function cimaScsCollapseKey($assessment): string
+    {
+        $title = mb_strtolower(trim((string) ($assessment->title ?? '')));
+        if ($title === '') {
+            return 'id:' . (int) ($assessment->id ?? 0);
+        }
+        if (preg_match('/mock\s*(\d+)/', $title, $m)) {
+            $kind = (str_contains($title, 'mcs') || str_contains($title, 'management case')) ? 'mcs' : 'scs';
+
+            return $kind . ':mock' . $m[1];
+        }
+
+        return $title !== '' ? $title : ('id:' . (int) ($assessment->id ?? 0));
+    }
+
+    /** After collapse, Attempt N of max — not leftover deleted sittings. */
+    protected function renumberCollapsedAttempts($rows)
+    {
+        $grouped = collect($rows)->groupBy(function ($r) {
+            $assessment = $r['assessment'] ?? null;
+            $uid = (int) ($r['student']->id ?? 0);
+
+            return $this->cimaScsCollapseKey($assessment) . ':' . $uid;
+        });
+        $out = collect();
+        foreach ($grouped as $group) {
+            $ordered = $group->sortBy(fn ($r) => (int) ($r['assignment']->id ?? 0))->values();
+            $max = max(1, (int) ($ordered->first()['assessment']->max_attempts ?? 1));
+            foreach ($ordered as $i => $r) {
+                $r['attempt_number'] = min($max, $i + 1);
+                $r['attempt_total'] = $max;
+                $out->push($r);
+            }
+        }
+
+        return $out->values();
     }
 
     /** Keep the class sitting, or Yahia's own upcoming sitting, not extra unused copies. */
