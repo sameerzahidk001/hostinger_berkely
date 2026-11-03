@@ -801,7 +801,7 @@ class LmsAssessmentController extends Controller
                     continue;
                 }
             }
-            if ($asg) {
+            if ($asg && $this->assessments->attemptBelongsToAssignment($att, $asg)) {
                 $sitKey = (int) $asg->id . ':' . (int) $student->id;
                 if (isset($rowsByKey[$sitKey]) && empty($rowsByKey[$sitKey]['attempt'])) {
                     $rowsByKey[$sitKey]['attempt'] = $att;
@@ -816,8 +816,12 @@ class LmsAssessmentController extends Controller
             ];
         }
 
-        $this->fillMissingBatchMates($rowsByKey, $assignments, $assessmentsById, $batchStudentCache);
-        $this->attachCimaCohortSittingsToAssignedRows($rowsByKey, $assignments, $assessmentsById);
+        try {
+            $this->fillMissingBatchMates($rowsByKey, $assignments, $assessmentsById, $batchStudentCache);
+            $this->attachCimaCohortSittingsToAssignedRows($rowsByKey, $assignments, $assessmentsById);
+        } catch (\Throwable $e) {
+            report($e);
+        }
         $rowsByKey = $this->dropGhostAssignmentRows($rowsByKey);
 
         $claimedAttemptIds = [];
@@ -848,6 +852,8 @@ class LmsAssessmentController extends Controller
                 break;
             }
         }
+
+        $this->splitAttemptsThatDoNotBelongToSitting($rowsByKey);
 
         // Attempt N of T per student+assessment (oldest sitting = 1).
         $sittingsByPair = collect($rowsByKey)->groupBy(
@@ -1727,6 +1733,32 @@ class LmsAssessmentController extends Controller
         }
 
         return $users;
+    }
+
+    /** Keep a missed exam sitting and a late/other attempt as two rows. */
+    protected function splitAttemptsThatDoNotBelongToSitting(array &$rowsByKey): void
+    {
+        foreach ($rowsByKey as $k => $r) {
+            $att = $r['attempt'] ?? null;
+            $asg = $r['assignment'] ?? null;
+            if (! $att || ! $asg) {
+                continue;
+            }
+            try {
+                if ($this->assessments->attemptBelongsToAssignment($att, $asg)) {
+                    continue;
+                }
+            } catch (\Throwable $e) {
+                continue;
+            }
+            $attemptKey = 'attempt:' . (int) $att->id;
+            if (! isset($rowsByKey[$attemptKey])) {
+                $copy = $r;
+                $rowsByKey[$attemptKey] = $copy;
+            }
+            $rowsByKey[$k]['attempt'] = null;
+            unset($rowsByKey[$k]['sitting_display']);
+        }
     }
 
     /** Put each MCS exam sitting on the list for the cohort, same as student My Tests. */
@@ -2750,7 +2782,12 @@ class LmsAssessmentController extends Controller
             return false;
         }
         $title = mb_strtolower(trim((string) ($assessment->title ?? '')));
-        $course = mb_strtolower(trim((string) ($assessment->course->title ?? '')));
+        $course = '';
+        try {
+            $course = mb_strtolower(trim((string) ($assessment->course->title ?? '')));
+        } catch (\Throwable $e) {
+            $course = '';
+        }
         $batchCode = mb_strtolower(trim((string) ($assignment?->batch?->code ?? '')));
         $hay = $title . ' ' . $course . ' ' . $batchCode;
         return str_contains($hay, 'bat-0003')
