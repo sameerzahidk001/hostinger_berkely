@@ -859,7 +859,7 @@ class LmsAssessmentController extends Controller
         try {
             $this->fillMissingBatchMates($rowsByKey, $assignments, $assessmentsById, $batchStudentCache);
             $this->attachCimaCohortSittingsToAssignedRows($rowsByKey, $assignments, $assessmentsById);
-            $this->forceCimaScsBatchRoster($rowsByKey, $assignments, $assessmentsById, $batchStudentCache);
+            // SCS Mock 1/2 are person assignments — do not paint BAT-0004 onto Mock 3–7.
             $rowsByKey = $this->keepMock1AppointmentOnOwnSitting($rowsByKey);
         } catch (\Throwable $e) {
             report($e);
@@ -1877,6 +1877,12 @@ class LmsAssessmentController extends Controller
     protected function expandSittingStudents($students, $assignment, $assessment, array &$batchStudentCache)
     {
         $students = collect($students)->filter(fn ($row) => $row && ! empty($row->id))->values();
+        if ($this->looksLikeCimaScsNovember($assessment)) {
+            return $students
+                ->unique(fn ($row) => (int) ($row->id ?? 0))
+                ->filter(fn ($row) => (int) ($row->id ?? 0) > 0 && ! $this->isRemovedTestTaker($row, $assessment))
+                ->values();
+        }
         if ($this->isMock1PersonSitting($assignment, $assessment)
             || (method_exists($this->assessments, 'isMock1FourthNovemberSitting')
                 && $this->assessments->isMock1FourthNovemberSitting($assignment, $assessment))) {
@@ -2028,6 +2034,26 @@ class LmsAssessmentController extends Controller
         }
 
         return str_contains($title, 'cima') && str_contains($title, 'mock');
+    }
+
+    /** Only Mock 1 and Mock 2 were assigned to people. Mock 3–7 have no sitters. */
+    protected function isCimaScsAssignedMock($assessment): bool
+    {
+        if (! $assessment) {
+            return false;
+        }
+        if (method_exists($this->assessments, 'isCimaScsMock1') && $this->assessments->isCimaScsMock1($assessment)) {
+            return true;
+        }
+        $title = mb_strtolower(trim((string) ($assessment->title ?? '')));
+        if ($title === '' || str_contains($title, 'masterclass') || str_contains($title, 'mcs')) {
+            return false;
+        }
+        if (! str_contains($title, 'scs')) {
+            return false;
+        }
+
+        return (bool) preg_match('/\bmock\s*2\b/', $title);
     }
 
     protected function loadCimaScsNovemberBatch(): ?ClassBatch
@@ -2274,12 +2300,12 @@ class LmsAssessmentController extends Controller
     protected function replaceCimaScsRows($rows, $assignments, $selectedAssessment, $assessmentsById)
     {
         $targets = collect();
-        if ($selectedAssessment && $this->looksLikeCimaScsNovember($selectedAssessment)) {
+        if ($selectedAssessment && $this->isCimaScsAssignedMock($selectedAssessment)) {
             $targets->push($selectedAssessment);
         }
         foreach ($rows as $r) {
             $assessment = $r['assessment'] ?? null;
-            if ($assessment && $this->looksLikeCimaScsNovember($assessment)) {
+            if ($assessment && $this->isCimaScsAssignedMock($assessment)) {
                 $targets->push($assessment);
             }
         }
@@ -2288,7 +2314,7 @@ class LmsAssessmentController extends Controller
             $assessment = $asg->assessment
                 ?? ($assessmentsById instanceof \Illuminate\Support\Collection ? $assessmentsById->get($aid) : null)
                 ?? ($aid > 0 ? LmsAssessment::query()->find($aid) : null);
-            if ($assessment && $this->looksLikeCimaScsNovember($assessment)) {
+            if ($assessment && $this->isCimaScsAssignedMock($assessment)) {
                 $targets->push($assessment);
             }
         }
@@ -2321,12 +2347,7 @@ class LmsAssessmentController extends Controller
                 $seed->exists = false;
                 $this->scsRosterNote .= ' · synthetic-seed';
             }
-            $students = $this->loadCimaScsNovemberStudents($seed, $assessment);
-            if ($students->isEmpty()) {
-                $this->scsRosterNote = trim($this->scsRosterNote . ' · empty-roster');
-
-                continue;
-            }
+            $students = collect();
             $excluded = $this->excludedUserIdsForAssessment($assessment);
             $honorExcluded = true;
             $existingByUser = [];
@@ -2406,9 +2427,6 @@ class LmsAssessmentController extends Controller
                 $added++;
             }
             foreach ($existingByUser as $r) {
-                if (empty($r['attempt'])) {
-                    continue;
-                }
                 $kept->push($r);
             }
             $this->scsRosterNote .= ' · +' . $added . ' excl=' . $excluded->count() . ' total=' . $kept->filter(fn ($r) => (int) ($r['assessment']->id ?? 0) === $aid)->count();
@@ -2658,8 +2676,7 @@ class LmsAssessmentController extends Controller
                 && $this->assessments->isMock1FourthNovemberSitting($seed, $assessment)) {
                 continue;
             }
-            $roster = $this->loadCimaScsNovemberStudents()
-                ->concat($this->mock1ExtraRosterStudents($seed, $assessment, $rowsByKey));
+            $roster = $this->mock1ExtraRosterStudents($seed, $assessment, $rowsByKey);
             $roster = $roster->unique(fn ($row) => (int) ($row->id ?? 0))
                 ->filter(fn ($row) => (int) ($row->id ?? 0) > 0)
                 ->values();
@@ -2798,7 +2815,7 @@ class LmsAssessmentController extends Controller
                 continue;
             }
             $snap = ClassBatch::studentUserIdsForSitting($assignment);
-            if ($this->isMock1PersonSitting($assignment, $assessment)) {
+            if ($this->looksLikeCimaScsNovember($assessment) || $this->isMock1PersonSitting($assignment, $assessment)) {
                 continue;
             }
             if (method_exists($this->assessments, 'isMock1FourthNovemberSitting')
@@ -4209,7 +4226,7 @@ class LmsAssessmentController extends Controller
             return true;
         }
 
-        if ($this->actorIsMusa($uid) && $this->looksLikeCimaScsNovember($assessment)) {
+        if ($this->actorIsMusa($uid) && $this->isCimaScsAssignedMock($assessment)) {
             return true;
         }
         $title = mb_strtolower(trim((string) ($assessment->title ?? '')));
@@ -4246,7 +4263,7 @@ class LmsAssessmentController extends Controller
                 : LmsAssessment::query();
 
             return $q->get(['id', 'title'])
-                ->filter(fn ($row) => $this->looksLikeCimaScsNovember($row))
+                ->filter(fn ($row) => $this->isCimaScsAssignedMock($row))
                 ->pluck('id')
                 ->map(fn ($id) => (int) $id)
                 ->unique()

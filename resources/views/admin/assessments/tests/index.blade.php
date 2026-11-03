@@ -133,7 +133,7 @@
 <div class="wrapper wrapper-content">
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if(session('error'))<div class="alert alert-danger">{{ session('error') }}</div>@endif
-    <p class="text-muted m-b-sm">This list is for creating and editing tests only. Assign users/batches on the Assign page; marking instructor is optional there. <span class="text-muted">Tests 20261103u</span></p>
+    <p class="text-muted m-b-sm">This list is for creating and editing tests only. Assign users/batches on the Assign page; marking instructor is optional there. <span class="text-muted">Tests 20261103x</span></p>
     <div class="ibox"><div class="ibox-content lms-tests-wrap">
         <form method="GET" class="m-b-md" style="margin-bottom:15px;">
             <div class="row">
