@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.searchable-select-assets')
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
-<!-- lms-assigned-tests-20261103j KEEP: SCS Mock 1/2 missed from the assigned sitting's sitters' batch; not Masterclass; not unassigned mocks -->
+<!-- lms-assigned-tests-20261103k KEEP: one row per sitting/attempt, not per person; missed sittings stay -->
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
@@ -133,7 +133,7 @@
         All assigned test takers (started or not), including people who never opened the test.
         <strong>Missed</strong> = they did not start. For CIMA SCS/MCS that is as soon as the appointment start has passed (no wait for duration). Other tests wait until start + duration.
         Status shows <strong>Marking Required</strong> until the assessor marks a submitted sitting.
-        <span class="text-muted">List 20261103j @if(!empty($scsRosterNote)) · {{ $scsRosterNote }}@endif</span>
+        <span class="text-muted">List 20261103k @if(!empty($scsRosterNote)) · {{ $scsRosterNote }}@endif</span>
     </p>
     @if(!empty($scsRosterNote))
         <div class="alert alert-info" style="font-weight:600;">Assigned roster: {{ $scsRosterNote }}</div>
