@@ -126,6 +126,32 @@ class ClassBatch extends Model
         }
         $batchId = (int) ($assignment->class_batch_id ?? 0);
         if ($batchId <= 0) {
+            $sitterIds = collect();
+            if (! empty($assignment->student_id)) {
+                $sitterIds->push((int) $assignment->student_id);
+            }
+            try {
+                if (Schema::hasTable('lms_assessment_attempts') && ! empty($assignment->assessment_id)) {
+                    $q = \App\Models\LmsAssessmentAttempt::query()
+                        ->where('assessment_id', (int) $assignment->assessment_id)
+                        ->whereNotNull('user_id');
+                    if (! empty($assignment->id)) {
+                        $q->where(function ($w) use ($assignment) {
+                            $w->where('assignment_id', (int) $assignment->id)
+                                ->orWhereNull('assignment_id');
+                        });
+                    }
+                    $sitterIds = $sitterIds->merge($q->pluck('user_id'));
+                }
+            } catch (\Throwable $e) {
+                // keep student_id
+            }
+            $batchId = (int) (static::idFromSittersSkipMasterclass(
+                $sitterIds->all(),
+                (string) (optional($assignment->assessment)->title ?? '')
+            ) ?? 0);
+        }
+        if ($batchId <= 0) {
             return $ids;
         }
         $live = static::studentUserIdsFor($batchId);
@@ -157,14 +183,46 @@ class ClassBatch extends Model
             if ($kept->isNotEmpty()) {
                 return $kept->unique()->values();
             }
-            if ($dated > 0) {
-                return collect();
-            }
         } catch (\Throwable $e) {
             return $live;
         }
 
         return $live;
+    }
+
+    /** Batch with the most of these sitters. Never Masterclass unless the test is a masterclass. No course match. */
+    public static function idFromSittersSkipMasterclass(array $userIds, ?string $assessmentTitle = null): ?int
+    {
+        if (! Schema::hasTable('class_batches')) {
+            return null;
+        }
+        $userIds = collect($userIds)->map(fn ($id) => (int) $id)->unique()->filter()->values();
+        if ($userIds->isEmpty()) {
+            return null;
+        }
+        $title = mb_strtolower(trim((string) $assessmentTitle));
+        $wantMaster = str_contains($title, 'masterclass');
+        $bestId = null;
+        $bestN = 0;
+        $prefer0004 = false;
+        foreach (static::query()->get(['id', 'name', 'code']) as $batch) {
+            $hay = mb_strtolower(trim((string) ($batch->code ?? '') . ' ' . (string) ($batch->name ?? '')));
+            if (str_contains($hay, 'masterclass') && ! $wantMaster) {
+                continue;
+            }
+            $n = static::studentUserIdsFor((int) $batch->id)->intersect($userIds)->count();
+            if ($n <= 0) {
+                continue;
+            }
+            $is0004 = str_contains(mb_strtolower(trim((string) ($batch->code ?? ''))), '0004');
+            if ($n > $bestN || ($n === $bestN && $is0004 && ! $prefer0004)) {
+                $bestN = $n;
+                $bestId = (int) $batch->id;
+                $prefer0004 = $is0004;
+            }
+        }
+
+        return $bestN > 0 ? $bestId : null;
     }
 
     /**
