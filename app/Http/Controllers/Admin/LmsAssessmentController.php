@@ -656,6 +656,9 @@ class LmsAssessmentController extends Controller
             if (! $assessment) {
                 continue;
             }
+            if ($this->looksLikeCimaScsNovember($assessment) && ! $this->isCimaScsAssignedMock($assessment)) {
+                continue;
+            }
 
             $students = collect();
             if ($assignment->class_batch_id) {
@@ -830,6 +833,9 @@ class LmsAssessmentController extends Controller
                 ?: $assessmentsById->get((int) $att->assessment_id)
                 ?: LmsAssessment::query()->find($att->assessment_id);
             if (! $assessment || (method_exists($assessment, 'trashed') && $assessment->trashed())) {
+                continue;
+            }
+            if ($this->looksLikeCimaScsNovember($assessment) && ! $this->isCimaScsAssignedMock($assessment)) {
                 continue;
             }
             if ($this->isRemovedTestTaker($student, $assessment)) {
@@ -4226,15 +4232,7 @@ class LmsAssessmentController extends Controller
             return true;
         }
 
-        if ($this->actorIsMusa($uid) && $this->isCimaScsAssignedMock($assessment)) {
-            return true;
-        }
-        $title = mb_strtolower(trim((string) ($assessment->title ?? '')));
-
-        return $this->actorIsMusa($uid)
-            && str_contains($title, 'scs')
-            && str_contains($title, 'mock')
-            && ! str_contains($title, 'masterclass');
+        return $this->actorIsMusa($uid) && $this->isCimaScsAssignedMock($assessment);
     }
 
     protected function actorIsMusa(int $uid): bool

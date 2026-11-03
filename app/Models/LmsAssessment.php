@@ -128,8 +128,22 @@ class LmsAssessment extends Model
         return str_contains($title, 'scs') && str_contains($title, 'mock');
     }
 
+    /** Only SCS Mock 1 and Mock 2 were assigned to people. Mock 3–7 stay unassigned. */
+    public function isCimaScsAssignedMockTitle(): bool
+    {
+        if (! $this->isCimaScsNovemberTitle()) {
+            return false;
+        }
+        $title = mb_strtolower(trim((string) ($this->title ?? '')));
+
+        return (bool) preg_match('/\bmock\s*[12]\b/', $title);
+    }
+
     public function markerUsers()
     {
+        if ($this->isCimaScsNovemberTitle() && ! $this->isCimaScsAssignedMockTitle()) {
+            return collect();
+        }
         $asgs = $this->relationLoaded('assignments')
             ? $this->assignments
             : $this->assignments()->with('marker')->get();
@@ -144,7 +158,7 @@ class LmsAssessment extends Model
 
             return null;
         })->filter()->unique('id')->values();
-        if ($markers->isNotEmpty() || ! $this->isCimaScsNovemberTitle()) {
+        if ($markers->isNotEmpty() || ! $this->isCimaScsAssignedMockTitle()) {
             return $markers;
         }
         try {
@@ -213,6 +227,11 @@ class LmsAssessment extends Model
         $ids = collect();
         $excluded = collect();
         $isCimaScs = $this->isCimaScsNovemberTitle();
+        if ($isCimaScs && ! $this->isCimaScsAssignedMockTitle()) {
+            $this->assignedRosterCache = [];
+
+            return collect();
+        }
         foreach ($assignments as $assignment) {
             if (! empty($assignment->student_id)) {
                 $ids->push((int) $assignment->student_id);
