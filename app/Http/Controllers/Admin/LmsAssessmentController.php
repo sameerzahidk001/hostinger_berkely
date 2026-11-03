@@ -758,29 +758,8 @@ class LmsAssessmentController extends Controller
             ];
         }
 
-        $expandedRows = [];
-        foreach ($rowsByKey as $r) {
-            $asg = $r['assignment'] ?? null;
-            $assessment = $r['assessment'] ?? null;
-            $seed = collect([$r['student'] ?? null]);
-            foreach ($this->expandSittingStudents($seed, $asg, $assessment, $batchStudentCache) as $mate) {
-                if ($this->isRemovedTestTaker($mate, $assessment)) {
-                    continue;
-                }
-                $key = ((int) ($asg->id ?? 0)) . ':' . (int) ($mate->id ?? 0);
-                if ($key === '0:0' || isset($rowsByKey[$key]) || isset($expandedRows[$key])) {
-                    continue;
-                }
-                $expandedRows[$key] = [
-                    'assessment' => $assessment,
-                    'student' => $mate,
-                    'assignment' => $asg,
-                    'attempt' => null,
-                ];
-            }
-        }
-        $rowsByKey = $rowsByKey + $expandedRows;
         $this->fillMissingBatchMates($rowsByKey, $assignments, $assessmentsById, $batchStudentCache);
+        $rowsByKey = $this->dropGhostAssignmentRows($rowsByKey);
 
         $claimedAttemptIds = [];
         foreach ($rowsByKey as $r) {
@@ -1746,6 +1725,34 @@ class LmsAssessmentController extends Controller
         return $students->unique(fn ($row) => (int) ($row->id ?? 0))->filter(fn ($row) => (int) ($row->id ?? 0) > 0)->values();
     }
 
+    /** Drop duplicate lines with no sitting (blank Appointment ID). */
+    protected function dropGhostAssignmentRows(array $rowsByKey): array
+    {
+        $real = [];
+        $ghosts = [];
+        foreach ($rowsByKey as $k => $r) {
+            if ((int) ($r['assignment']->id ?? 0) > 0) {
+                $real[$k] = $r;
+            } else {
+                $ghosts[$k] = $r;
+            }
+        }
+        foreach ($ghosts as $k => $r) {
+            $aid = (int) ($r['assessment']->id ?? 0);
+            $uid = (int) ($r['student']->id ?? 0);
+            $hasReal = collect($real)->contains(function ($row) use ($aid, $uid) {
+                return (int) ($row['assessment']->id ?? 0) === $aid
+                    && (int) ($row['student']->id ?? 0) === $uid;
+            });
+            if ($hasReal || empty($r['attempt'])) {
+                continue;
+            }
+            $real[$k] = $r;
+        }
+
+        return $real;
+    }
+
     /**
      * Put every classmate on the list even when only the people who sat have student_id rows.
      * Unused classmates stay on the newest exam sitting as Missed.
@@ -1766,7 +1773,7 @@ class LmsAssessmentController extends Controller
                 return ! (method_exists($a, 'isSelfSitting') && $a->isSelfSitting())
                     && (! empty($a->class_batch_id) || $a->windowStart());
             }) ?: $asgs->sortByDesc('id')->first();
-            if (! $seed) {
+            if (! $seed || empty($seed->id)) {
                 continue;
             }
             $overlap = [];
