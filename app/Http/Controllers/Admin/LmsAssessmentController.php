@@ -2273,6 +2273,9 @@ class LmsAssessmentController extends Controller
             if ($this->isCimaCohortSitting($assessment, $assignment, collect())) {
                 $snap = $snap->merge($this->cimaCohortUsers()->pluck('id'))->map(fn ($id) => (int) $id)->unique()->filter()->values();
             }
+            if ($snap->isEmpty() && ! empty($assignment->class_batch_id)) {
+                $snap = ClassBatch::membersOnBatchAtAssignment((int) $assignment->class_batch_id, $assignment);
+            }
             if ($snap->isEmpty()) {
                 continue;
             }
