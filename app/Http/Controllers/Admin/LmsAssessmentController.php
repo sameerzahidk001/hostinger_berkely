@@ -815,6 +815,7 @@ class LmsAssessmentController extends Controller
         try {
             $this->fillMissingBatchMates($rowsByKey, $assignments, $assessmentsById, $batchStudentCache);
             $this->attachCimaCohortSittingsToAssignedRows($rowsByKey, $assignments, $assessmentsById);
+            $rowsByKey = $this->keepMock1AppointmentOnOwnSitting($rowsByKey);
         } catch (\Throwable $e) {
             report($e);
         }
@@ -1806,6 +1807,12 @@ class LmsAssessmentController extends Controller
     protected function expandSittingStudents($students, $assignment, $assessment, array &$batchStudentCache)
     {
         $students = collect($students)->filter(fn ($row) => $row && ! empty($row->id))->values();
+        if ($this->isMock1PersonSitting($assignment, $assessment)) {
+            return $students
+                ->unique(fn ($row) => (int) ($row->id ?? 0))
+                ->filter(fn ($row) => (int) ($row->id ?? 0) > 0 && ! $this->isRemovedTestTaker($row, $assessment))
+                ->values();
+        }
         if ($assignment) {
             $snap = ClassBatch::studentUserIdsForSitting($assignment);
             if ($snap->isNotEmpty()) {
@@ -1837,6 +1844,65 @@ class LmsAssessmentController extends Controller
             ->unique(fn ($row) => (int) ($row->id ?? 0))
             ->filter(fn ($row) => (int) ($row->id ?? 0) > 0 && ! $this->isRemovedTestTaker($row, $assessment))
             ->values();
+    }
+
+    protected function isMock1PersonSitting($assignment, $assessment): bool
+    {
+        if (! $assignment || ! $assessment) {
+            return false;
+        }
+        if (! method_exists($this->assessments, 'isCimaScsMock1') || ! $this->assessments->isCimaScsMock1($assessment)) {
+            return false;
+        }
+
+        return ! empty($assignment->student_id) && empty($assignment->class_batch_id);
+    }
+
+    /** Later Mock 1 sitting must not reuse the original roster's appointment. Keep that sitting only for its named student (Yahia). */
+    protected function keepMock1AppointmentOnOwnSitting(array $rowsByKey): array
+    {
+        $byStudent = [];
+        foreach ($rowsByKey as $k => $r) {
+            $assessment = $r['assessment'] ?? null;
+            if (! $assessment || ! method_exists($this->assessments, 'isCimaScsMock1') || ! $this->assessments->isCimaScsMock1($assessment)) {
+                continue;
+            }
+            $uid = (int) ($r['student']->id ?? 0);
+            if ($uid <= 0) {
+                continue;
+            }
+            $byStudent[$uid][$k] = (int) ($r['assignment']->id ?? 0);
+        }
+        $drop = [];
+        foreach ($byStudent as $uid => $keys) {
+            $ids = array_filter(array_values($keys));
+            if (count($ids) < 2) {
+                continue;
+            }
+            $earliest = min($ids);
+            foreach ($keys as $k => $asgId) {
+                if ($asgId <= 0 || $asgId === $earliest) {
+                    continue;
+                }
+                $r = $rowsByKey[$k] ?? null;
+                if (! $r || ! empty($r['attempt'])) {
+                    continue;
+                }
+                $named = (int) ($r['assignment']->student_id ?? 0);
+                if ($named === $uid) {
+                    continue;
+                }
+                if (method_exists($this->assessments, 'isYahiaUser') && $this->assessments->isYahiaUser($r['student'] ?? null)) {
+                    continue;
+                }
+                $drop[$k] = true;
+            }
+        }
+        if ($drop === []) {
+            return $rowsByKey;
+        }
+
+        return array_filter($rowsByKey, fn ($row, $k) => empty($drop[$k]), ARRAY_FILTER_USE_BOTH);
     }
 
     /** Drop duplicate lines with no sitting (blank Appointment ID). */
@@ -2264,6 +2330,9 @@ class LmsAssessmentController extends Controller
                 continue;
             }
             $snap = ClassBatch::studentUserIdsForSitting($assignment);
+            if ($this->isMock1PersonSitting($assignment, $assessment)) {
+                continue;
+            }
             if ($this->isCimaCohortSitting($assessment, $assignment, collect())) {
                 $snap = $snap->merge($this->cimaCohortUsers()->pluck('id'))->map(fn ($id) => (int) $id)->unique()->filter()->values();
             }
@@ -2571,7 +2640,9 @@ class LmsAssessmentController extends Controller
         $created = $asg?->createdByLabel() ?: null;
         $tz = $asg?->timezoneLabel() ?: null;
         $isCohort = $this->isCimaCohortSitting($assessment, $asg, collect([$row['student'] ?? null]));
-        if ($isCohort) {
+        $isMock1 = $assessment && method_exists($this->assessments, 'isCimaScsMock1')
+            && $this->assessments->isCimaScsMock1($assessment);
+        if ($isCohort && ! $isMock1) {
             $apptId = ($apptId && $apptId !== '—' && $apptId !== 'BEXT0') ? $apptId : (($asg && ! empty($asg->id)) ? $asg->displayCodeForStudent($studentId) : $apptId);
             if ($asg && ! $attempt && $asg->isSelfSitting() && Schema::hasColumn($asg->getTable(), 'sitting_kind')) {
                 $asg->sitting_kind = LmsAssessmentAssignment::KIND_EXAM;

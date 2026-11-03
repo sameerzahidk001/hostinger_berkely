@@ -466,7 +466,7 @@ class LmsAssessmentService
         return str_contains($title, 'scs') && (str_contains($title, 'mock 1') || (bool) preg_match('/\bmock\s*1\b/', $title));
     }
 
-    /** Mock 1 appointment from the stored sitting: original roster = earliest DB window; Yahia = his own sitting. */
+    /** Mock 1 appointment from this sitting's own DB row — never copy another sitting's window. */
     public function scsMock1AssignmentFromDatabase($assessment, $student = null, $current = null)
     {
         if (! $this->isCimaScsMock1($assessment)) {
@@ -487,24 +487,21 @@ class LmsAssessmentService
         } catch (\Throwable $e) {
             return $current;
         }
-        if ($rows->isEmpty()) {
-            return $current;
-        }
-        if ($this->isYahiaUser($student)) {
-            $sid = (int) ($student->id ?? 0);
-            $own = $rows->sortByDesc('id')->first(fn ($row) => $sid > 0 && (int) ($row->student_id ?? 0) === $sid);
+        $cid = (int) ($current->id ?? 0);
+        if ($cid > 0) {
+            $same = $rows->first(fn ($row) => (int) ($row->id ?? 0) === $cid);
 
-            return $own ?: ($rows->sortByDesc('id')->first() ?: $current);
+            return $same ?: $current;
         }
-        $original = $rows->first(function ($row) {
-            if (method_exists($row, 'isSelfSitting') && $row->isSelfSitting()) {
-                return false;
+        $sid = (int) ($student->id ?? 0);
+        if ($sid > 0) {
+            $own = $rows->first(fn ($row) => (int) ($row->student_id ?? 0) === $sid);
+            if ($own) {
+                return $own;
             }
+        }
 
-            return ! empty($row->available_from);
-        });
-
-        return $original ?: $current;
+        return $current;
     }
 
     public function isYahiaUser($user): bool
@@ -663,7 +660,7 @@ class LmsAssessmentService
                 continue;
             }
             $assignment->setRelation('assessment', $assessment);
-            if (method_exists($assignment, 'applyMissingExamWindow')) {
+            if (! $this->isCimaScsMock1($assessment) && method_exists($assignment, 'applyMissingExamWindow')) {
                 $assignment->applyMissingExamWindow('2026-10-26 20:30:00', 'Asia/Dubai', 180);
             }
             $out->push(['assessment' => $assessment, 'assignment' => $assignment]);
@@ -1900,7 +1897,7 @@ class LmsAssessmentService
                 $assignment = $this->scsMock1AssignmentFromDatabase($assessment, $user, $assignment) ?: $assignment;
             }
             $fromFolder = ! empty($row['from_folder']);
-            if ($this->isCimaCohortEmail($user->email ?? null) && $assignment && ! $fromFolder) {
+            if ($this->isCimaCohortEmail($user->email ?? null) && $assignment && ! $fromFolder && ! $this->isCimaScsMock1($assessment)) {
                 if ($assignment->isSelfSitting() && Schema::hasColumn($assignment->getTable(), 'sitting_kind')) {
                     $assignment->sitting_kind = LmsAssessmentAssignment::KIND_EXAM;
                 }
