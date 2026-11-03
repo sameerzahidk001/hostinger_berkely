@@ -579,7 +579,11 @@ class LmsAssessmentController extends Controller
             }
             $students = $this->expandSittingStudents($students, $assignment, $assessment, $batchStudentCache);
             if ($students->isEmpty() && $assignment->class_batch_id) {
-                $students = $this->courseRosterFallback($assessment, $assignment);
+                try {
+                    $students = $this->studentsForBatchId((int) $assignment->class_batch_id);
+                } catch (\Throwable $e) {
+                    $students = collect();
+                }
             }
             if ($students->isEmpty() && $assignment->class_batch_id) {
                 $batch = $assignment->relationLoaded('batch') ? $assignment->batch : ClassBatch::query()->find((int) $assignment->class_batch_id);
@@ -1739,14 +1743,6 @@ class LmsAssessmentController extends Controller
                 }
             }
         }
-        if ($students->unique(fn ($row) => (int) ($row->id ?? 0))->count() < 25
-            && $assessment
-            && ( ! empty($assignment?->class_batch_id)
-                || ($this->assessments->usesStrictExamWindow($assessment))
-            )) {
-            $students = $students->concat($this->courseRosterFallback($assessment, $assignment));
-        }
-
         return $students->unique(fn ($row) => (int) ($row->id ?? 0))->filter(fn ($row) => (int) ($row->id ?? 0) > 0)->values();
     }
 
@@ -1773,24 +1769,30 @@ class LmsAssessmentController extends Controller
             if (! $seed) {
                 continue;
             }
-            $roster = collect();
-            foreach ($asgs as $asg) {
-                $roster = $roster->concat($this->expandSittingStudents(collect(), $asg, $assessment, $batchStudentCache));
-            }
+            $overlap = [];
             foreach ($existing as $row) {
                 $sid = (int) ($row['student']->id ?? 0);
                 foreach ($this->batchIdsForUser($sid) as $bid) {
-                    if (! isset($batchStudentCache[$bid])) {
-                        try {
-                            $batchStudentCache[$bid] = $this->studentsForBatchId((int) $bid);
-                        } catch (\Throwable $e) {
-                            $batchStudentCache[$bid] = collect();
-                        }
-                    }
-                    $roster = $roster->concat($batchStudentCache[$bid]);
+                    $overlap[$bid] = ($overlap[$bid] ?? 0) + 1;
                 }
             }
-            $roster = $roster->concat($this->courseRosterFallback($assessment, $seed));
+            $batchIds = $asgs->pluck('class_batch_id')->map(fn ($id) => (int) $id)->filter()->unique()->values()->all();
+            if ($batchIds === [] && $overlap !== []) {
+                arsort($overlap);
+                $batchIds[] = (int) array_key_first($overlap);
+            }
+            $batchIds = array_values(array_unique(array_filter($batchIds)));
+            $roster = collect();
+            foreach ($batchIds as $bid) {
+                if (! isset($batchStudentCache[$bid])) {
+                    try {
+                        $batchStudentCache[$bid] = $this->studentsForBatchId((int) $bid);
+                    } catch (\Throwable $e) {
+                        $batchStudentCache[$bid] = collect();
+                    }
+                }
+                $roster = $roster->concat($batchStudentCache[$bid]);
+            }
             $have = $existing->map(fn ($r) => (int) ($r['student']->id ?? 0))->all();
             foreach ($roster as $student) {
                 $uid = (int) ($student->id ?? 0);
