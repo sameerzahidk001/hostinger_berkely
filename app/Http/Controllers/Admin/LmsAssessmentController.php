@@ -1170,10 +1170,6 @@ class LmsAssessmentController extends Controller
         $assessmentQuery = LmsAssessment::query()->orderBy('title');
         if ($markerOnlyUid) {
             $this->applyInstructorAssessmentScope($assessmentQuery, $markerOnlyUid, $courseIdsScope);
-            $scsIds = $this->cimaScsMockAssessmentIds();
-            if ($this->actorIsMusa($markerOnlyUid) && $scsIds !== []) {
-                $assessmentQuery->orWhereIn('id', $scsIds);
-            }
         } elseif ($courseIdsScope !== null) {
             $assessmentQuery->where(function ($q) use ($courseIdsScope) {
                 $q->whereIn('course_id', $courseIdsScope ?: [0]);
@@ -4220,18 +4216,22 @@ class LmsAssessmentController extends Controller
         }
     }
 
-    /** Live CIMA SCS Mock 1 / Mock 2 ids — these rows exist on admin Assigned Tests. */
+    /** CIMA SCS November mock test ids (Mock 1, Mock 2, …) — same set Admin lists for Musa. */
     protected function cimaScsMockAssessmentIds(): array
     {
         try {
             $q = Schema::hasColumn('lms_assessments', 'deleted_at')
-                ? LmsAssessment::withTrashed()
+                ? LmsAssessment::query()
                 : LmsAssessment::query();
 
-            return $q->where(function ($w) {
-                $w->where('title', 'like', '%SCS Mock%')
-                    ->orWhere('title', 'like', '%SCS mock%');
-            })->pluck('id')->map(fn ($id) => (int) $id)->unique()->filter()->values()->all();
+            return $q->get(['id', 'title'])
+                ->filter(fn ($row) => $this->looksLikeCimaScsNovember($row))
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->filter()
+                ->values()
+                ->all();
         } catch (\Throwable $e) {
             return [];
         }
