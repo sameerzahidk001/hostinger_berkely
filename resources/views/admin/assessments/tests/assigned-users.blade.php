@@ -465,11 +465,4 @@
     </div>
 </div>
 @include('admin.assessments.partials.user-preview-modal')
-<script>
-$(function () {
-    if (window.LmsSortableTable) {
-        window.LmsSortableTable.init(document);
-    }
-});
-</script>
 @endsection

@@ -655,6 +655,7 @@
       @include('partials.idle_session_timeout', ['logoutUrl' => route('admin.logout')])
       @include('partials.session_expired_refresh')
       @include('partials.viewer-tz-sync')
+      @include('partials.table-sort')
       @stack('script')
       <script>
          $(function () {

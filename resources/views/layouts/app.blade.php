@@ -678,6 +678,7 @@
         });
     </script>
     @include('partials.session_expired_refresh')
+    @include('partials.table-sort')
     @stack('script')
 </body>
 
