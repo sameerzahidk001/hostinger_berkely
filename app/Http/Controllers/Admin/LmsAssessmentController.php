@@ -1052,16 +1052,6 @@ class LmsAssessmentController extends Controller
             $r['sitting_display'] = $disp;
 
             return $r;
-        })->filter(function ($r) {
-            $status = (string) ($r['sitting_display']['status'] ?? '');
-            if ($status !== 'Upcoming') {
-                return true;
-            }
-            if (! empty($r['attempt'])) {
-                return true;
-            }
-
-            return $this->assessments->isYahiaUser($r['student'] ?? null);
         })->values();
 
         if ($search !== '') {
@@ -3170,7 +3160,7 @@ class LmsAssessmentController extends Controller
         $cima = $assessment && method_exists($this->assessments, 'usesStrictExamWindow')
             && $this->assessments->usesStrictExamWindow($assessment);
         $start = $asg && method_exists($asg, 'windowStart') ? $asg->windowStart() : null;
-        if ($start && now()->lt($start)) {
+        if ($start && now()->lt($start) && $this->assessments->isYahiaUser($student)) {
             return 'Upcoming';
         }
         if ($cima || $isCohort) {
