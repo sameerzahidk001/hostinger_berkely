@@ -300,6 +300,12 @@ class LmsAssessmentService
 
         $out = collect();
         foreach ($direct as $assignment) {
+            if (Schema::hasColumn('lms_assessment_assignments', 'excluded_user_ids')) {
+                $excluded = collect($assignment->excluded_user_ids ?? [])->map(fn ($id) => (int) $id);
+                if ($excluded->contains($userId)) {
+                    continue;
+                }
+            }
             $assessment = $assessmentsById->get((int) $assignment->assessment_id);
             if (! $assessment || (method_exists($assessment, 'trashed') && $assessment->trashed())) {
                 continue;
