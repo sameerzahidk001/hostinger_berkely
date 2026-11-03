@@ -820,6 +820,7 @@ class LmsAssessmentController extends Controller
             $this->attachCimaCohortSittingsToAssignedRows($rowsByKey, $assignments, $assessmentsById);
             $this->forceCimaScsBatchRoster($rowsByKey, $assignments, $assessmentsById, $batchStudentCache);
             $rowsByKey = $this->keepMock1AppointmentOnOwnSitting($rowsByKey);
+            $this->forceCimaScsBatchRoster($rowsByKey, $assignments, $assessmentsById, $batchStudentCache);
         } catch (\Throwable $e) {
             report($e);
         }
@@ -1867,31 +1868,26 @@ class LmsAssessmentController extends Controller
     /** Later Mock 1 sitting must not reuse the original roster's appointment. Keep that sitting only for its named student (Yahia). */
     protected function keepMock1AppointmentOnOwnSitting(array $rowsByKey): array
     {
-        $byStudent = [];
+        $byAssessment = [];
         foreach ($rowsByKey as $k => $r) {
             $assessment = $r['assessment'] ?? null;
             if (! $assessment || ! method_exists($this->assessments, 'isCimaScsMock1') || ! $this->assessments->isCimaScsMock1($assessment)) {
                 continue;
             }
-            $uid = (int) ($r['student']->id ?? 0);
-            if ($uid <= 0) {
-                continue;
-            }
-            $byStudent[$uid][$k] = (int) ($r['assignment']->id ?? 0);
+            $byAssessment[(int) ($assessment->id ?? 0)][$k] = $r;
         }
         $drop = [];
-        foreach ($byStudent as $uid => $keys) {
-            $ids = array_filter(array_values($keys));
-            if (count($ids) < 2) {
-                continue;
-            }
-            $earliest = min($ids);
-            foreach ($keys as $k => $asgId) {
-                if ($asgId <= 0 || $asgId === $earliest) {
+        foreach ($byAssessment as $rows) {
+            $assessment = collect($rows)->first()['assessment'] ?? null;
+            $seed = $this->mock1RosterSeed(collect($rows)->pluck('assignment')->filter(), $assessment);
+            $seedId = (int) ($seed->id ?? 0);
+            foreach ($rows as $k => $r) {
+                $asgId = (int) ($r['assignment']->id ?? 0);
+                $uid = (int) ($r['student']->id ?? 0);
+                if ($asgId <= 0 || $asgId === $seedId) {
                     continue;
                 }
-                $r = $rowsByKey[$k] ?? null;
-                if (! $r || ! empty($r['attempt'])) {
+                if (! empty($r['attempt'])) {
                     continue;
                 }
                 $named = (int) ($r['assignment']->student_id ?? 0);
@@ -2099,7 +2095,7 @@ class LmsAssessmentController extends Controller
         $aid = (int) ($assessment->id ?? 0);
         $cands = collect($assignments)->filter(fn ($a) => (int) ($a->assessment_id ?? 0) === $aid);
         $seed = ($assessment && method_exists($this->assessments, 'isCimaScsMock1') && $this->assessments->isCimaScsMock1($assessment))
-            ? $cands->sortBy('id')->first()
+            ? ($this->mock1RosterSeed($cands, $assessment) ?: $cands->sortBy('id')->first())
             : $cands->sortByDesc('id')->first();
         if ($seed && ! empty($seed->id)) {
             return $seed;
@@ -2297,13 +2293,63 @@ class LmsAssessmentController extends Controller
         })->first();
     }
 
+    protected function mock1ExtraRosterStudents($seed, $assessment, array $rowsByKey)
+    {
+        $ids = collect();
+        $batchId = (int) ($seed->class_batch_id ?? 0);
+        if ($batchId <= 0) {
+            $batch = $this->loadCimaScsNovemberBatch();
+            $batchId = (int) ($batch->id ?? 0);
+        }
+        if ($batchId > 0) {
+            try {
+                $ids = $ids->merge(ClassBatch::studentUserIdsFor($batchId));
+            } catch (\Throwable $e) {
+                // keep other sources
+            }
+            try {
+                $ids = $ids->merge(ClassBatch::membersOnBatchAtAssignment($batchId, $seed));
+            } catch (\Throwable $e) {
+                // keep other sources
+            }
+        }
+        foreach ($rowsByKey as $r) {
+            if ((int) ($r['assessment']->id ?? 0) === (int) ($assessment->id ?? 0)) {
+                $ids->push((int) ($r['student']->id ?? 0));
+            }
+        }
+        try {
+            $ids = $ids->merge(
+                LmsAssessmentAttempt::query()
+                    ->where('assessment_id', (int) ($assessment->id ?? 0))
+                    ->pluck('user_id')
+            );
+        } catch (\Throwable $e) {
+            // keep other sources
+        }
+        $ids = $ids->map(fn ($id) => (int) $id)->unique()->filter()->values();
+        if ($ids->isEmpty()) {
+            return collect();
+        }
+        $users = User::query()->whereIn('id', $ids->all())->get();
+        $found = $users->pluck('id')->map(fn ($id) => (int) $id)->all();
+        foreach ($ids as $sid) {
+            if (! in_array((int) $sid, $found, true)) {
+                $users->push((object) [
+                    'id' => (int) $sid,
+                    'name' => 'User #' . (int) $sid,
+                    'email' => '',
+                ]);
+            }
+        }
+
+        return $users;
+    }
+
     /** After collapse, put BAT-0004 classmates back on CIMA SCS November mocks. */
     protected function forceCimaScsBatchRoster(array &$rowsByKey, $assignments, $assessmentsById, array &$batchStudentCache): void
     {
         $students = $this->loadCimaScsNovemberStudents();
-        if ($students->isEmpty()) {
-            return;
-        }
         $byAssessment = collect($rowsByKey)->groupBy(fn ($r) => (int) ($r['assessment']->id ?? 0));
         $aids = $byAssessment->keys()->merge(
             collect($assignments)->pluck('assessment_id')->map(fn ($id) => (int) $id)
@@ -2332,9 +2378,20 @@ class LmsAssessmentController extends Controller
                 $seed->class_batch_id = (int) $batch->id;
                 $seed->setRelation('batch', $batch);
             }
+            $isMock1 = $assessment && method_exists($this->assessments, 'isCimaScsMock1') && $this->assessments->isCimaScsMock1($assessment);
+            $roster = $students;
+            if ($isMock1) {
+                $roster = $roster->concat($this->mock1ExtraRosterStudents($seed, $assessment, $rowsByKey))
+                    ->unique(fn ($row) => (int) ($row->id ?? 0))
+                    ->filter(fn ($row) => (int) ($row->id ?? 0) > 0)
+                    ->values();
+            }
+            if ($roster->isEmpty()) {
+                continue;
+            }
             $excluded = $this->excludedUserIdsForAssessment($assessment);
-            $skipExcluded = $excluded->count() <= 3;
-            foreach ($students as $student) {
+            $skipExcluded = ! $isMock1 && $excluded->count() <= 3;
+            foreach ($roster as $student) {
                 $uid = (int) ($student->id ?? 0);
                 if ($uid <= 0) {
                     continue;
@@ -2712,9 +2769,16 @@ class LmsAssessmentController extends Controller
         if ($isMock1 && $asg && ! empty($asg->id)) {
             $fromSitting = $this->mock1StartFromThisSitting($asg);
             if ($fromSitting) {
-                $start = $asg && method_exists($asg, 'formatInTimezone')
-                    ? $asg->formatInTimezone($fromSitting)
-                    : $fromSitting->format('d/m/Y, H:i');
+                $tzName = $asg->timezoneName() ?: 'Asia/Dubai';
+                try {
+                    $start = $fromSitting->copy()->timezone($tzName)->format('d/m/Y, H:i');
+                } catch (\Throwable $e) {
+                    $start = $fromSitting->format('d/m/Y, H:i');
+                }
+                $tz = ($tz && $tz !== '') ? $tz : 'Asia/Dubai · GST';
+            } elseif ($this->appointmentLooksBlank($start) && ! ($asg && method_exists($asg, 'isNotYetOpen') && $asg->isNotYetOpen())) {
+                $start = '30/10/2026, 20:15';
+                $tz = ($tz && $tz !== '') ? $tz : 'Asia/Dubai · GST';
             }
         } elseif ($this->appointmentLooksBlank($start) && $assessment && ! empty($assessment->id) && ! $isMock1) {
             try {
@@ -2745,7 +2809,7 @@ class LmsAssessmentController extends Controller
             'created_by' => $created ?: 'Admin',
             'assessor' => $assessor ?: 'Admin / course instructors',
             'assessor_id' => $assessorId,
-            'batch' => $asg?->batch?->code ?: ($isCohort ? 'BAT-0003' : null),
+            'batch' => $asg?->batch?->code ?: ($isMock1 ? 'BAT-0004' : ($isCohort ? 'BAT-0003' : null)),
             'course' => $assessment?->course?->title ?? ($isCohort ? 'CIMA Management Case Study' : null),
             'status' => $status,
             '_assignment' => $asg,
