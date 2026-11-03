@@ -80,9 +80,8 @@
     .lms-tests-table .col-num { width: 5%; text-align: center; }
     .lms-tests-table .col-assigned { width: 8%; text-align: center; white-space: normal; }
     .lms-tests-table .col-status { width: 8%; }
-    .lms-tests-table .col-assessor { width: 12%; min-width: 120px; font-weight: 700; }
     .lms-tests-table .col-action {
-        width: 16%;
+        width: 28%;
         overflow: visible;
     }
     .lms-tests-table .lms-row-actions {
@@ -133,7 +132,7 @@
 <div class="wrapper wrapper-content">
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if(session('error'))<div class="alert alert-danger">{{ session('error') }}</div>@endif
-    <p class="text-muted m-b-sm">This list is for creating and editing tests only. Assign users/batches on the Assign page; marking instructor is optional there. <span class="text-muted">Tests 20261103y</span></p>
+    <p class="text-muted m-b-sm">This list is for creating and editing tests only. Assign users/batches on the Assign page; marking instructor is optional there. <span class="text-muted">Tests 20261103z</span></p>
     <div class="ibox"><div class="ibox-content lms-tests-wrap">
         <form method="GET" class="m-b-md" style="margin-bottom:15px;">
             <div class="row">
@@ -166,17 +165,11 @@
                     <th class="col-num col-assigned" data-sort-col="6" title="Everyone assigned on every sitting/batch, including people who never started.">Assigned students <span class="sort-ind"></span></th>
                     <th class="col-num" data-sort-col="7" title="How many of those people started or submitted">Taken <span class="sort-ind"></span></th>
                     <th class="col-status" data-sort-col="8">Status <span class="sort-ind"></span></th>
-                    <th class="col-assessor" data-sort-col="9">Assessor <span class="sort-ind"></span></th>
                     <th class="col-action">Action</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($rows as $row)
-                    @php
-                        $markers = method_exists($row, 'markerUsers')
-                            ? $row->markerUsers()
-                            : $row->assignments->pluck('marker')->filter()->unique('id');
-                    @endphp
                     <tr>
                         <td class="col-date" data-sort="{{ optional($row->created_at)->timestamp ?? 0 }}">{{ optional($row->created_at)->format('d/m/y H:i') ?? '—' }}</td>
                         <td class="col-id" data-sort="{{ $row->id }}">{{ $row->displayCode() }}</td>
@@ -216,16 +209,6 @@
                                 };
                             @endphp
                             <span class="{{ $stClass }}" style="font-weight:700;">{{ $stLabel }}</span>
-                        </td>
-                        <td class="col-assessor" data-sort="{{ $markers->isNotEmpty() ? $markers->pluck('name')->implode(', ') : 'Admin' }}">
-                            @if($markers->isNotEmpty())
-                                @foreach($markers as $marker)
-                                    @if(!$loop->first), @endif
-                                    <a href="#" class="lms-user-preview" data-user-id="{{ $marker->id }}">{{ $marker->name }}</a>
-                                @endforeach
-                            @else
-                                <span class="text-muted">Admin / course instructors</span>
-                            @endif
                         </td>
                         <td class="col-action">
                             @php
