@@ -4,21 +4,45 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
-use App\Models\Page;
+use App\Models\PageSection;
 use App\Models\SiteSettings;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 
 class MediaController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $search = trim((string) $request->input('search', ''));
+        $perPage = 15;
+        $page = max(1, (int) $request->input('page', 1));
+
         $files = $this->imageFiles();
-        $usages = $this->usageIndex();
+        if ($search !== '') {
+            $needle = mb_strtolower($search);
+            $files = array_values(array_filter($files, function ($file) use ($needle) {
+                $hay = mb_strtolower(($file['rel'] ?? '') . ' ' . ($file['name'] ?? ''));
+
+                return str_contains($hay, $needle);
+            }));
+        }
+
+        usort($files, function ($a, $b) {
+            return ($b['mtime'] ?? 0) <=> ($a['mtime'] ?? 0);
+        });
+
+        $total = count($files);
+        $lastPage = max(1, (int) ceil(($total ?: 1) / $perPage));
+        if ($page > $lastPage) {
+            $page = $lastPage;
+        }
+        $slice = array_slice($files, ($page - 1) * $perPage, $perPage);
+        $usages = $this->usageIndex($slice);
 
         $rows = [];
-        foreach ($files as $file) {
+        foreach ($slice as $file) {
             $rel = str_replace('\\', '/', $file['rel']);
             $key = strtolower($rel);
             $base = strtolower($file['name']);
@@ -32,15 +56,27 @@ class MediaController extends Controller
                 'url' => asset($rel),
                 'name' => $file['name'],
                 'mtime' => $file['mtime'],
+                'size' => (int) ($file['size'] ?? 0),
                 'links' => $links,
             ];
         }
 
-        usort($rows, function ($a, $b) {
-            return $b['mtime'] <=> $a['mtime'];
-        });
+        $pager = new LengthAwarePaginator(
+            $rows,
+            $total,
+            $perPage,
+            $page,
+            [
+                'path' => $request->url(),
+                'query' => collect($request->query())->except('page')->all(),
+            ]
+        );
 
-        return view('admin.media.index', ['rows' => $rows]);
+        return view('admin.media.index', [
+            'rows' => $pager,
+            'search' => $search,
+            'rowsTotal' => $total,
+        ]);
     }
 
     public function destroy(Request $request)
@@ -80,6 +116,7 @@ class MediaController extends Controller
                         'rel' => $rel,
                         'name' => $file->getFilename(),
                         'mtime' => $file->getMTime(),
+                        'size' => $file->getSize(),
                     ];
                 }
             }
@@ -88,45 +125,77 @@ class MediaController extends Controller
         return $out;
     }
 
-    /** @return array{by_path: array<string, array<int, string>>, by_name: array<string, array<int, string>>} */
-    private function usageIndex(): array
+    /** @param array<int, array{rel:string,name:string}> $files */
+    private function usageIndex(array $files): array
     {
         $byPath = [];
         $byName = [];
+        if ($files === []) {
+            return ['by_path' => [], 'by_name' => []];
+        }
 
-        $add = function (string $blob, string $label, string $url) use (&$byPath, &$byName) {
+        $add = function (string $blob, string $label, string $url) use (&$byPath, &$byName, $files) {
             if ($blob === '') {
                 return;
             }
-            if (preg_match_all('#(?:images|uploads)/[a-zA-Z0-9_\-./]+\.(?:jpe?g|png|gif|webp|svg)#i', $blob, $m)) {
-                foreach ($m[0] as $path) {
-                    $key = strtolower(str_replace('\\', '/', $path));
-                    $byPath[$key][$url] = $label;
-                    $byName[strtolower(basename($path))][$url] = $label;
+            foreach ($files as $file) {
+                $rel = str_replace('\\', '/', (string) ($file['rel'] ?? ''));
+                if ($rel === '') {
+                    continue;
                 }
+                if (stripos($blob, $rel) === false && stripos($blob, $file['name']) === false) {
+                    continue;
+                }
+                $key = strtolower($rel);
+                $byPath[$key][$url] = $label;
+                $byName[strtolower($file['name'])][$url] = $label;
             }
         };
 
-        if (class_exists(Page::class) && Schema::hasTable('pages') && Schema::hasTable('page_sections')) {
-            $pages = Page::query()->with('sections')->orderBy('page_name')->get();
-            foreach ($pages as $page) {
-                $label = $page->page_name ?: ('Page #' . $page->id);
-                $edit = route('pages.edit', $page->id);
-                foreach ($page->sections as $section) {
-                    $data = $section->data;
-                    $blob = is_string($data) ? $data : json_encode($data);
-                    $add((string) $blob, $label, $edit);
+        $needles = array_values(array_filter(array_map(function ($file) {
+            return str_replace('\\', '/', (string) ($file['rel'] ?? ''));
+        }, $files)));
+
+        if (class_exists(PageSection::class) && Schema::hasTable('page_sections')) {
+            $q = PageSection::query()->with('page:id,page_name');
+            $q->where(function ($outer) use ($needles) {
+                foreach ($needles as $rel) {
+                    $outer->orWhere('data', 'like', '%' . addcslashes($rel, '%_\\') . '%');
                 }
+            });
+            foreach ($q->limit(200)->get() as $section) {
+                $page = $section->page;
+                if (! $page) {
+                    continue;
+                }
+                $label = $page->page_name ?: ('Page #' . $page->id);
+                $data = $section->data;
+                $blob = is_string($data) ? $data : json_encode($data);
+                $add((string) $blob, $label, route('pages.edit', $page->id));
             }
         }
 
         if (class_exists(Course::class) && Schema::hasTable('courses')) {
-            $courses = Course::query()->orderBy('title')->get();
-            foreach ($courses as $course) {
-                $label = 'Course: ' . ($course->title ?: ('#' . $course->id));
-                $edit = route('course.edit', $course->id);
-                $blob = json_encode($course->getAttributes());
-                $add((string) $blob, $label, $edit);
+            $imgCols = [];
+            foreach (['thumbnail', 'post_image', 'overview_img', 'banner_section', 'image_text_2col_card'] as $col) {
+                if (Schema::hasColumn('courses', $col)) {
+                    $imgCols[] = $col;
+                }
+            }
+            if ($imgCols !== []) {
+                $q = Course::query()->select(array_merge(['id', 'title'], $imgCols));
+                $q->where(function ($outer) use ($needles, $imgCols) {
+                    foreach ($needles as $rel) {
+                        $like = '%' . addcslashes($rel, '%_\\') . '%';
+                        foreach ($imgCols as $col) {
+                            $outer->orWhere($col, 'like', $like);
+                        }
+                    }
+                });
+                foreach ($q->limit(200)->get() as $course) {
+                    $label = 'Course: ' . ($course->title ?: ('#' . $course->id));
+                    $add(json_encode($course->getAttributes()), $label, route('course.edit', $course->id));
+                }
             }
         }
 
