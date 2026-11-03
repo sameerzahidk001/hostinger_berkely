@@ -2001,6 +2001,13 @@ class LmsAssessmentService
                         'attempt' => null,
                         'can_retake' => false,
                     ]);
+                } elseif ($this->usesStrictExamWindow($assessment)) {
+                    $missed->push($base + [
+                        'attempt' => null,
+                        'can_retake' => $max > 1 || $this->canRetake($user, $assessment, $assignment),
+                        'attempt_number' => 1,
+                        'attempt_total' => $max,
+                    ]);
                 }
             } else {
                 // Each unused assigned sitting is its own start, even if Max attempts is 1.
