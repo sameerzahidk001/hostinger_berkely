@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.searchable-select-assets')
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
-<!-- lms-assigned-tests-20261103a KEEP: Appointment Date & Time + timezone on next line; Assessor early; Attempt n of Max attempts; full batch roster; Next pager -->
+<!-- lms-assigned-tests-20261103b KEEP: Appointment Date & Time + timezone on next line; Assessor early; table fits page width; Attempt n of Max attempts; full batch roster; Next pager -->
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
@@ -27,39 +27,40 @@
         margin-right: 0;
     }
     .lms-assigned-wrap {
-        overflow-x: auto;
+        overflow-x: hidden;
         width: 100% !important;
         max-width: 100%;
         box-sizing: border-box;
     }
     .lms-assigned-table {
         width: 100% !important;
-        min-width: 1280px !important;
-        table-layout: auto;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        table-layout: fixed;
         margin-bottom: 0;
-        font-size: 12px;
+        font-size: 11px;
     }
     .lms-assigned-table > thead > tr > th,
     .lms-assigned-table > tbody > tr > td {
         vertical-align: top;
-        padding: 6px 5px;
+        padding: 6px 4px;
         word-wrap: break-word;
-        overflow-wrap: break-word;
+        overflow-wrap: anywhere;
         white-space: normal;
-        overflow: visible;
+        overflow: hidden;
     }
-    .lms-assigned-table .col-appt { width: 8%; min-width: 110px; white-space: nowrap !important; }
-    .lms-assigned-table .col-when { width: 14%; min-width: 160px; font-weight: 700; white-space: normal !important; }
+    .lms-assigned-table .col-appt { width: 9%; }
+    .lms-assigned-table .col-when { width: 13%; font-weight: 700; }
     .lms-assigned-table .col-when .lms-timing-line { display: block; line-height: 1.35; }
-    .lms-assigned-table .col-assessor { width: 12%; min-width: 140px; font-weight: 700; }
+    .lms-assigned-table .col-assessor { width: 11%; font-weight: 700; }
     .lms-assigned-table .col-test { width: 14%; }
     .lms-assigned-table .col-taker { width: 13%; }
-    .lms-assigned-table .col-timing { width: 16%; }
-    .lms-assigned-table .col-created { width: 8%; }
-    .lms-assigned-table .col-status { width: 8%; }
-    .lms-assigned-table .col-pub { width: 4%; }
+    .lms-assigned-table .col-timing { width: 15%; }
+    .lms-assigned-table .col-created { width: 7%; }
+    .lms-assigned-table .col-status { width: 7%; }
+    .lms-assigned-table .col-pub { width: 3%; }
     .lms-assigned-table .col-actions {
-        width: 6%;
+        width: 8%;
         overflow-wrap: normal;
         word-break: normal;
         white-space: normal;
@@ -132,7 +133,7 @@
         All assigned test takers (started or not), including people who never opened the test.
         <strong>Missed</strong> = they did not start. For CIMA SCS/MCS that is as soon as the appointment start has passed (no wait for duration). Other tests wait until start + duration.
         Status shows <strong>Marking Required</strong> until the assessor marks a submitted sitting.
-        <span class="text-muted">List 20261103a</span>
+        <span class="text-muted">List 20261103b</span>
     </p>
     <div class="ibox"><div class="ibox-content">
         <form method="GET" class="m-b-md" style="margin-bottom:15px;">
@@ -214,7 +215,7 @@
             <table class="table table-striped table-bordered lms-assigned-table js-sortable-table">
                 <thead>
                     <tr>
-                        <th class="col-appt" data-sort-col="0" style="white-space:nowrap;">Appointment ID <span class="sort-ind"></span></th>
+                        <th class="col-appt" data-sort-col="0">Appointment ID <span class="sort-ind"></span></th>
                         <th class="col-when" data-sort-col="1">Appointment Date &amp; Time <span class="sort-ind"></span></th>
                         <th class="col-assessor" data-sort-col="2">Assessor <span class="sort-ind"></span></th>
                         <th class="col-test" data-sort-col="3">Test Details <span class="sort-ind"></span></th>
