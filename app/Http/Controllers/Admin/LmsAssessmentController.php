@@ -925,6 +925,7 @@ class LmsAssessmentController extends Controller
 
         $rowsByKey = $this->keepFirstCimaCohortAttempt($rowsByKey);
         $rowsByKey = $this->collapseUnusedRetakeRows($rowsByKey);
+        $this->forceCimaScsBatchRoster($rowsByKey, $assignments, $assessmentsById, $batchStudentCache);
         foreach ($rowsByKey as $k => $r) {
             $max = max(1, (int) ($r['assessment']->max_attempts ?? 1));
             $rowsByKey[$k]['attempt_number'] = min($max, max(1, (int) ($r['attempt_number'] ?? 1)));
@@ -1840,6 +1841,68 @@ class LmsAssessmentController extends Controller
         }
 
         return $real;
+    }
+
+    /** After collapse, put BAT-0004 classmates back on CIMA SCS November mocks. */
+    protected function forceCimaScsBatchRoster(array &$rowsByKey, $assignments, $assessmentsById, array &$batchStudentCache): void
+    {
+        $byAssessment = collect($rowsByKey)->groupBy(fn ($r) => (int) ($r['assessment']->id ?? 0));
+        $aids = $byAssessment->keys()->merge(
+            collect($assignments)->pluck('assessment_id')->map(fn ($id) => (int) $id)
+        )->unique()->filter();
+        foreach ($aids as $aid) {
+            $assessment = $assessmentsById->get((int) $aid)
+                ?: (optional($byAssessment->get((int) $aid))->first()['assessment'] ?? null);
+            if (! $assessment) {
+                continue;
+            }
+            $bid = ClassBatch::idForCimaScsNovember((string) ($assessment->title ?? ''));
+            if (! $bid) {
+                $bid = optional(ClassBatch::query()->where('code', 'BAT-0004')->first())->id;
+                $title = mb_strtolower((string) ($assessment->title ?? ''));
+                $looksScs = str_contains($title, 'scs') || str_contains($title, 'strategic case');
+                $looksNov = str_contains($title, 'november 2026') || str_contains($title, 'nov 2026');
+                if (! $looksScs || ! $looksNov || str_contains($title, 'masterclass')) {
+                    $bid = null;
+                }
+            }
+            if (! $bid) {
+                continue;
+            }
+            $seed = collect($assignments)->filter(fn ($a) => (int) ($a->assessment_id ?? 0) === (int) $aid)
+                ->sortByDesc('id')
+                ->first();
+            if (! $seed || empty($seed->id)) {
+                continue;
+            }
+            if (empty($seed->class_batch_id)) {
+                $seed->class_batch_id = (int) $bid;
+            }
+            if (! isset($batchStudentCache[(int) $bid])) {
+                try {
+                    $batchStudentCache[(int) $bid] = $this->studentsForBatchId((int) $bid);
+                } catch (\Throwable $e) {
+                    $batchStudentCache[(int) $bid] = collect();
+                }
+            }
+            $have = collect($rowsByKey)->filter(fn ($r) => (int) ($r['assessment']->id ?? 0) === (int) $aid)
+                ->map(fn ($r) => (int) ($r['student']->id ?? 0))
+                ->all();
+            foreach ($batchStudentCache[(int) $bid] as $student) {
+                $uid = (int) ($student->id ?? 0);
+                if ($uid <= 0 || in_array($uid, $have, true) || $this->isRemovedTestTaker($student, $assessment)) {
+                    continue;
+                }
+                $key = (int) $seed->id . ':' . $uid;
+                $rowsByKey[$key] = [
+                    'assessment' => $assessment,
+                    'student' => $student,
+                    'assignment' => $seed,
+                    'attempt' => null,
+                ];
+                $have[] = $uid;
+            }
+        }
     }
 
     /**
