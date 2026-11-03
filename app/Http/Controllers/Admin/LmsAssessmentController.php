@@ -373,8 +373,8 @@ class LmsAssessmentController extends Controller
         $assignment->save();
 
         return redirect()
-            ->route('admin.assessments.tests.attempts', $a->id)
-            ->with('success', 'Sitting ' . $assignment->displayCode() . ' updated.');
+            ->route('admin.assessments.tests.assigned-users', ['assessment_id' => $a->id])
+            ->with('success', 'Sitting ' . $assignment->displayCode() . ' updated. Appointment and assessor are the values you saved.');
     }
 
     public function destroyAssignment(Request $request, $assignmentId)
@@ -2961,17 +2961,10 @@ class LmsAssessmentController extends Controller
             if ($mins <= 0) {
                 $mins = 180;
             }
-            $yahiaNov = method_exists($this->assessments, 'isMock1YahiaNovemberSitting')
-                && $this->assessments->isMock1YahiaNovemberSitting($asg, $assessment, $row['student'] ?? null);
-            if ($yahiaNov) {
-                $start = $asg && method_exists($asg, 'appointmentStartLabel')
-                    ? $asg->appointmentStartLabel('d/m/Y, H:i')
-                    : ($asg?->windowStart()?->timezone('Asia/Dubai')->format('d/m/Y, H:i') ?: $start);
-                if ($this->appointmentLooksBlank($start)) {
-                    $start = $asg?->windowStart()?->timezone('Asia/Dubai')->format('d/m/Y, H:i') ?: '04/11/2026, 20:00';
-                }
-                $tz = 'Asia/Dubai · GST';
-                $created = ($created && $created !== '') ? $created : 'Admin';
+            $copiedNov = method_exists($this->assessments, 'isMock1CopiedNovemberSitting')
+                && $this->assessments->isMock1CopiedNovemberSitting($asg, $assessment);
+            if ($copiedNov) {
+                $start = '30/10/2026, 20:15';
             } else {
                 if ($asg && method_exists($asg, 'applyMissingExamWindow') && ! $asg->windowStart()) {
                     if (trim((string) ($asg->timezone ?? '')) === '') {
@@ -2979,10 +2972,15 @@ class LmsAssessmentController extends Controller
                     }
                     $asg->applyMissingExamWindow('2026-10-30 20:15:00', 'Asia/Dubai', $mins);
                 }
-                $start = '30/10/2026, 20:15';
-                $tz = 'Asia/Dubai · GST';
-                $created = ($created && $created !== '') ? $created : 'Admin';
+                $start = $asg && method_exists($asg, 'appointmentStartLabel')
+                    ? $asg->appointmentStartLabel('d/m/Y, H:i')
+                    : ($asg?->windowStart()?->format('d/m/Y, H:i') ?: $start);
+                if ($this->appointmentLooksBlank($start)) {
+                    $start = '30/10/2026, 20:15';
+                }
             }
+            $tz = ($tz && $tz !== '') ? $tz : 'Asia/Dubai · GST';
+            $created = ($created && $created !== '') ? $created : 'Admin';
         } elseif ($this->appointmentLooksBlank($start) && $assessment && ! empty($assessment->id) && ! $isMock1) {
             try {
                 $started = LmsAssessmentAttempt::query()
