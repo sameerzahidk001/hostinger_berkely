@@ -92,11 +92,31 @@ class LmsAssessmentController extends Controller
             });
         }
 
+        $all = $query->with([
+            'course',
+            'assignments.marker',
+        ])->get();
+        $all = $this->uniqueAssessmentsByTitle($all, $all->flatMap(fn ($row) => $row->assignments ?? collect()));
+        $page = max(1, (int) $request->get('page', 1));
+        $perPage = 20;
+        $total = $all->count();
+        $lastPage = max(1, (int) ceil(($total ?: 1) / $perPage));
+        if ($page > $lastPage) {
+            $page = $lastPage;
+        }
+        $rows = new LengthAwarePaginator(
+            $all->forPage($page, $perPage)->values(),
+            $total,
+            $perPage,
+            $page,
+            [
+                'path' => $request->url(),
+                'query' => collect($request->query())->except('page')->all(),
+            ]
+        );
+
         return view('admin.assessments.tests.index', [
-            'rows' => $query->with([
-                'course',
-                'assignments.marker',
-            ])->paginate(20)->withQueryString(),
+            'rows' => $rows,
             'kinds' => LmsAssessment::kinds(),
             'kind' => $kind,
             'search' => $search,
@@ -211,6 +231,10 @@ class LmsAssessmentController extends Controller
         abort_unless($this->lms->isAdminActor() || panel_sees_all_dashboards(), 403);
         $this->assessments->ensure();
         $a = LmsAssessment::findOrFail($id);
+        if (Schema::hasColumn($a->getTable(), 'status')) {
+            $a->status = 'disabled';
+            $a->save();
+        }
         $a->delete();
 
         return redirect()->route('admin.assessments.tests.index')->with('success', 'Test removed.');

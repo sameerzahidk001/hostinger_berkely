@@ -133,7 +133,7 @@
 <div class="wrapper wrapper-content">
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if(session('error'))<div class="alert alert-danger">{{ session('error') }}</div>@endif
-    <p class="text-muted m-b-sm">This list is for creating and editing tests only. Assign users/batches on the Assign page; marking instructor is optional there.</p>
+    <p class="text-muted m-b-sm">This list is for creating and editing tests only. Assign users/batches on the Assign page; marking instructor is optional there. <span class="text-muted">Tests 20261103u</span></p>
     <div class="ibox"><div class="ibox-content lms-tests-wrap">
         <form method="GET" class="m-b-md" style="margin-bottom:15px;">
             <div class="row">
@@ -237,7 +237,7 @@
                                 <a class="btn btn-xs btn-default" href="{{ route('admin.assessments.tests.edit', $row->id) }}">Edit</a>
                             @endif
                             @if(!empty($canDelete))
-                                <form action="{{ route('admin.assessments.tests.destroy', $row->id) }}" method="POST" onsubmit="return confirm('Delete this test?');">
+                                <form action="{{ route('admin.assessments.tests.destroy', $row->id) }}" method="POST" onsubmit="return confirm('Delete this test? It will be removed from ALL TESTS.');">
                                     @csrf
                                     <button type="submit" class="btn btn-xs btn-danger">Delete</button>
                                 </form>

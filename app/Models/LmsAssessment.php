@@ -118,13 +118,23 @@ class LmsAssessment extends Model
         return $asg ? $asg->appointmentStartLabel() : '—';
     }
 
+    public function isCimaScsNovemberTitle(): bool
+    {
+        $title = mb_strtolower(trim((string) ($this->title ?? '')));
+        if ($title === '' || str_contains($title, 'masterclass') || str_contains($title, 'mcs') || str_contains($title, 'management case')) {
+            return false;
+        }
+
+        return str_contains($title, 'scs') && str_contains($title, 'mock');
+    }
+
     public function markerUsers()
     {
         $asgs = $this->relationLoaded('assignments')
             ? $this->assignments
             : $this->assignments()->with('marker')->get();
 
-        return $asgs->map(function ($a) {
+        $markers = $asgs->map(function ($a) {
             if ($a->relationLoaded('marker') && $a->marker) {
                 return $a->marker;
             }
@@ -134,6 +144,27 @@ class LmsAssessment extends Model
 
             return null;
         })->filter()->unique('id')->values();
+        if ($markers->isNotEmpty() || ! $this->isCimaScsNovemberTitle()) {
+            return $markers;
+        }
+        try {
+            $batch = ClassBatch::query()->where('code', 'BAT-0004')->first()
+                ?: ClassBatch::query()->where('code', 'like', '%0004%')->first();
+            if (! $batch) {
+                return $markers;
+            }
+            $batch->loadMissing(['instructors', 'headOfFaculty']);
+            $trainer = method_exists($batch, 'trainerInstructors')
+                ? $batch->trainerInstructors()->first()
+                : $batch->instructors->first();
+            if ($trainer && trim((string) ($trainer->name ?? '')) !== '') {
+                return collect([$trainer]);
+            }
+        } catch (\Throwable $e) {
+            return $markers;
+        }
+
+        return $markers;
     }
 
     /** Unique people assigned to this test: every sitting/batch, including classmates who never started. */
@@ -181,13 +212,29 @@ class LmsAssessment extends Model
 
         $ids = collect();
         $excluded = collect();
+        $isCimaScs = $this->isCimaScsNovemberTitle();
         foreach ($assignments as $assignment) {
             if (! empty($assignment->student_id)) {
                 $ids->push((int) $assignment->student_id);
             }
-            $ids = $ids->merge(ClassBatch::studentUserIdsForSitting($assignment));
+            if (Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
+                $ids = $ids->merge(collect($assignment->roster_user_ids ?? []));
+            }
+            if (! $isCimaScs) {
+                $ids = $ids->merge(ClassBatch::studentUserIdsForSitting($assignment));
+            }
             if (Schema::hasColumn('lms_assessment_assignments', 'excluded_user_ids')) {
                 $excluded = $excluded->merge(collect($assignment->excluded_user_ids ?? []));
+            }
+        }
+        if ($isCimaScs) {
+            try {
+                $batch = ClassBatch::query()->where('code', 'BAT-0004')->first();
+                if ($batch) {
+                    $ids = $ids->merge(ClassBatch::studentUserIdsFor((int) $batch->id));
+                }
+            } catch (\Throwable $e) {
+                // keep sitting student_ids
             }
         }
         $excluded = $excluded->map(fn ($id) => (int) $id)->unique()->filter();
