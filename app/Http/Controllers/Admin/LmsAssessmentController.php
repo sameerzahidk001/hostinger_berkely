@@ -1095,6 +1095,10 @@ class LmsAssessmentController extends Controller
         $assessmentQuery = LmsAssessment::query()->orderBy('title');
         if ($markerOnlyUid) {
             $this->applyInstructorAssessmentScope($assessmentQuery, $markerOnlyUid, $courseIdsScope);
+            $scsIds = $this->cimaScsMockAssessmentIds();
+            if ($this->actorIsMusa($markerOnlyUid) && $scsIds !== []) {
+                $assessmentQuery->orWhereIn('id', $scsIds);
+            }
         } elseif ($courseIdsScope !== null) {
             $assessmentQuery->where(function ($q) use ($courseIdsScope) {
                 $q->whereIn('course_id', $courseIdsScope ?: [0]);
@@ -3409,12 +3413,8 @@ class LmsAssessmentController extends Controller
             // next
         }
         try {
-            if (function_exists('is_musa_shaikh_user') && is_musa_shaikh_user()) {
-                foreach (LmsAssessment::query()->get(['id', 'title']) as $row) {
-                    if ($this->looksLikeCimaScsNovember($row)) {
-                        $ids->push((int) $row->id);
-                    }
-                }
+            if ($this->actorIsMusa($uid)) {
+                $ids = $ids->merge($this->cimaScsMockAssessmentIds());
             }
         } catch (\Throwable $e) {
             // next
@@ -3585,9 +3585,49 @@ class LmsAssessmentController extends Controller
             return true;
         }
 
-        return function_exists('is_musa_shaikh_user')
-            && is_musa_shaikh_user()
-            && $this->looksLikeCimaScsNovember($assessment);
+        if ($this->actorIsMusa($uid) && $this->looksLikeCimaScsNovember($assessment)) {
+            return true;
+        }
+        $title = mb_strtolower(trim((string) ($assessment->title ?? '')));
+
+        return $this->actorIsMusa($uid)
+            && str_contains($title, 'scs')
+            && str_contains($title, 'mock')
+            && ! str_contains($title, 'masterclass');
+    }
+
+    protected function actorIsMusa(int $uid): bool
+    {
+        if (function_exists('is_musa_shaikh_user') && is_musa_shaikh_user()) {
+            return true;
+        }
+        if ($uid <= 0) {
+            return false;
+        }
+        try {
+            $user = User::query()->find($uid);
+
+            return $user && function_exists('is_musa_shaikh_user') && is_musa_shaikh_user($user);
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    /** Live CIMA SCS Mock 1 / Mock 2 ids — these rows exist on admin Assigned Tests. */
+    protected function cimaScsMockAssessmentIds(): array
+    {
+        try {
+            $q = Schema::hasColumn('lms_assessments', 'deleted_at')
+                ? LmsAssessment::withTrashed()
+                : LmsAssessment::query();
+
+            return $q->where(function ($w) {
+                $w->where('title', 'like', '%SCS Mock%')
+                    ->orWhere('title', 'like', '%SCS mock%');
+            })->pluck('id')->map(fn ($id) => (int) $id)->unique()->filter()->values()->all();
+        } catch (\Throwable $e) {
+            return [];
+        }
     }
 
     protected function attemptIsSubmitted($attempt): bool
