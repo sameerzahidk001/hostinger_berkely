@@ -147,6 +147,39 @@ class ClassBatch extends Model
         return $ids->map(fn ($id) => (int) $id)->unique()->filter()->values();
     }
 
+    /**
+     * Batch on this course that contains the most of these people.
+     * Skips Masterclass batches unless the test title is a masterclass.
+     */
+    public static function bestIdForStudents(int $courseId, array $userIds, ?string $assessmentTitle = null): ?int
+    {
+        $userIds = collect($userIds)->map(fn ($id) => (int) $id)->unique()->filter()->values();
+        if ($userIds->isEmpty()) {
+            return null;
+        }
+        $q = static::query();
+        if ($courseId > 0 && Schema::hasColumn((new static)->getTable(), 'course_id')) {
+            $q->where('course_id', $courseId);
+        }
+        $title = mb_strtolower(trim((string) $assessmentTitle));
+        $wantMaster = str_contains($title, 'masterclass');
+        $bestId = null;
+        $bestN = 0;
+        foreach ($q->get(['id', 'name', 'code', 'course_id']) as $batch) {
+            $hay = mb_strtolower(trim((string) ($batch->code ?? '') . ' ' . (string) ($batch->name ?? '')));
+            if (str_contains($hay, 'masterclass') && ! $wantMaster) {
+                continue;
+            }
+            $n = static::studentUserIdsFor((int) $batch->id)->intersect($userIds)->count();
+            if ($n > $bestN) {
+                $bestN = $n;
+                $bestId = (int) $batch->id;
+            }
+        }
+
+        return $bestN > 0 ? $bestId : null;
+    }
+
     public function schedules(): HasMany
     {
         return $this->hasMany(ClassSchedule::class, 'batch_id');

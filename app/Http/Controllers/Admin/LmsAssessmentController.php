@@ -1841,30 +1841,16 @@ class LmsAssessmentController extends Controller
             if (! $seed || empty($seed->id)) {
                 continue;
             }
-            $overlap = [];
-            foreach ($existing as $row) {
-                $sid = (int) ($row['student']->id ?? 0);
-                foreach ($this->batchIdsForUser($sid) as $bid) {
-                    $overlap[$bid] = ($overlap[$bid] ?? 0) + 1;
-                }
-            }
             $batchIds = $asgs->pluck('class_batch_id')->map(fn ($id) => (int) $id)->filter()->unique()->values()->all();
-            if ($batchIds === [] && $overlap !== []) {
-                arsort($overlap);
-                $courseId = (int) ($assessment->course_id ?? 0);
-                foreach ($overlap as $bid => $n) {
-                    $bid = (int) $bid;
-                    if ($n < 1) {
-                        continue;
-                    }
-                    if ($courseId > 0) {
-                        $batch = ClassBatch::query()->find($bid);
-                        if ($batch && (int) ($batch->course_id ?? 0) > 0 && (int) $batch->course_id !== $courseId) {
-                            continue;
-                        }
-                    }
-                    $batchIds[] = $bid;
-                    break;
+            if ($batchIds === []) {
+                $existingIds = $existing->map(fn ($r) => (int) ($r['student']->id ?? 0))->filter()->values()->all();
+                $inferred = ClassBatch::bestIdForStudents(
+                    (int) ($assessment->course_id ?? 0),
+                    $existingIds,
+                    (string) ($assessment->title ?? '')
+                );
+                if ($inferred) {
+                    $batchIds[] = $inferred;
                 }
             }
             $batchIds = array_values(array_unique(array_filter($batchIds)));
@@ -2217,7 +2203,8 @@ class LmsAssessmentController extends Controller
                     continue;
                 }
                 $isSelf = $asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting();
-                if ($asgId > 0 && ! $isSelf) {
+                $examWindow = $asg && (! empty($asg->class_batch_id) || (method_exists($asg, 'windowStart') && $asg->windowStart()));
+                if ($asgId > 0 && (! $isSelf || $examWindow)) {
                     $unusedExam[$k] = $r;
                 } else {
                     $unusedOther[$k] = $r;
