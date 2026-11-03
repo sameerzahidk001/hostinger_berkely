@@ -921,7 +921,6 @@ class LmsAssessmentController extends Controller
             return true;
         })->all();
 
-        $rowsByKey = $this->keepFirstCimaCohortAttempt($rowsByKey);
         $rowsByKey = $this->collapseUnusedRetakeRows($rowsByKey);
         foreach ($rowsByKey as $k => $r) {
             $max = max(1, (int) ($r['assessment']->max_attempts ?? 1));
@@ -2577,7 +2576,7 @@ class LmsAssessmentController extends Controller
         }
     }
 
-    /** One assigned sitting per person. Unused retake/self rows are not extra lines. */
+    /** Keep every exam sitting and every attempt. Only drop extra unused self-test duplicates. */
     protected function collapseUnusedRetakeRows(array $rowsByKey): array
     {
         $groups = [];
@@ -2599,8 +2598,12 @@ class LmsAssessmentController extends Controller
                 }
                 $isSelf = $asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting();
                 $examWindow = $asg && (! empty($asg->class_batch_id) || (method_exists($asg, 'windowStart') && $asg->windowStart()));
-                $scsMock = ClassBatch::idForCimaScsNovember((string) (($r['assessment']->title ?? '')));
-                if ($asgId > 0 && (! $isSelf || $examWindow || $scsMock)) {
+                $title = mb_strtolower(trim((string) ($r['assessment']->title ?? '')));
+                $cimaCase = str_contains($title, 'mcs')
+                    || str_contains($title, 'scs')
+                    || str_contains($title, 'management case')
+                    || str_contains($title, 'strategic case');
+                if ($asgId > 0 && (! $isSelf || $examWindow || $cimaCase)) {
                     $unusedExam[$k] = $r;
                 } else {
                     $unusedOther[$k] = $r;
@@ -2609,15 +2612,14 @@ class LmsAssessmentController extends Controller
             foreach ($unusedExam as $k => $r) {
                 $out[$k] = $r;
             }
-            if ($used !== []) {
-                foreach ($used as $k => $r) {
-                    $out[$k] = $r;
-                }
-                continue;
+            foreach ($used as $k => $r) {
+                $out[$k] = $r;
             }
-            $first = array_key_first($unusedOther);
-            if ($first !== null) {
-                $out[$first] = $unusedOther[$first];
+            if ($used === [] && $unusedExam === []) {
+                $first = array_key_first($unusedOther);
+                if ($first !== null) {
+                    $out[$first] = $unusedOther[$first];
+                }
             }
         }
 
