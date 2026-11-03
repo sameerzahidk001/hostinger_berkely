@@ -78,29 +78,10 @@ class LmsAssessmentService
         return $ok;
     }
 
-    /** Published tests that still have sittings must stay on Assigned Tests / My Tests. */
+    /** Deleted tests stay deleted. Do not put them back on My Tests. */
     private function restorePublishedAssignedTests(): void
     {
-        static $done = false;
-        if ($done) {
-            return;
-        }
-        $done = true;
-        if (! Schema::hasColumn('lms_assessments', 'deleted_at')) {
-            return;
-        }
-        try {
-            $ids = LmsAssessmentAssignment::query()->pluck('assessment_id')->unique()->filter()->values()->all();
-            if ($ids === []) {
-                return;
-            }
-            LmsAssessment::onlyTrashed()
-                ->where('status', 'published')
-                ->whereIn('id', $ids)
-                ->restore();
-        } catch (\Throwable $e) {
-            report($e);
-        }
+        return;
     }
 
     public function canManageAssessments(): bool
@@ -339,7 +320,7 @@ class LmsAssessmentService
                 }
             }
             $assessment = $assessmentsById->get((int) $assignment->assessment_id);
-            if (! $assessment || (method_exists($assessment, 'trashed') && $assessment->trashed())) {
+            if (! $this->studentShouldSeeSitting($user, $assessment, $assignment, $attemptAsgIds)) {
                 continue;
             }
             if ($kind && $assessment->kind !== $kind) {
@@ -453,6 +434,65 @@ class LmsAssessmentService
         $email = mb_strtolower(trim((string) $email));
 
         return $email !== '' && in_array($email, $this->cimaCohortEmails(), true);
+    }
+
+    /** Student My Tests: hide deleted/disabled tests and SCS mocks nobody assigned to this person. */
+    protected function studentShouldSeeSitting(User $user, $assessment, $assignment, array $attemptAsgIds = []): bool
+    {
+        if (! $assessment) {
+            return false;
+        }
+        if (method_exists($assessment, 'trashed') && $assessment->trashed()) {
+            return false;
+        }
+        $status = mb_strtolower(trim((string) ($assessment->status ?? '')));
+        if (in_array($status, ['disabled', 'draft'], true)) {
+            return false;
+        }
+        $userId = (int) $user->id;
+        if ($assignment && Schema::hasColumn('lms_assessment_assignments', 'excluded_user_ids')) {
+            $excluded = collect($assignment->excluded_user_ids ?? [])->map(fn ($id) => (int) $id);
+            if ($excluded->contains($userId)) {
+                return false;
+            }
+        }
+        $title = mb_strtolower(trim((string) ($assessment->title ?? '')));
+        $isScs = str_contains($title, 'scs')
+            && str_contains($title, 'mock')
+            && ! str_contains($title, 'masterclass')
+            && ! str_contains($title, 'mcs');
+        if ($isScs && ! $this->isCimaScsAssignedMock($assessment)) {
+            $named = $assignment && (int) ($assignment->student_id ?? 0) === $userId;
+            $onRoster = false;
+            if ($assignment && Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
+                $onRoster = collect($assignment->roster_user_ids ?? [])->map(fn ($id) => (int) $id)->contains($userId);
+            }
+            $onAttempt = $assignment && in_array((int) ($assignment->id ?? 0), $attemptAsgIds, true);
+            if (! $named && ! $onRoster && ! $onAttempt) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public function isCimaScsAssignedMock($assessment): bool
+    {
+        if (! $assessment) {
+            return false;
+        }
+        if ($this->isCimaScsMock1($assessment)) {
+            return true;
+        }
+        $title = mb_strtolower(trim((string) ($assessment->title ?? '')));
+        if ($title === '' || str_contains($title, 'masterclass') || str_contains($title, 'mcs')) {
+            return false;
+        }
+        if (! str_contains($title, 'scs')) {
+            return false;
+        }
+
+        return (bool) preg_match('/\bmock\s*2\b/', $title);
     }
 
     /** CIMA case sittings expire. Mock/practice/general stay startable after the clock. */
@@ -867,7 +907,7 @@ class LmsAssessmentService
                 }
             }
             $assessment = $assignment->assessment ?: LmsAssessment::query()->with('course')->find($assignment->assessment_id);
-            if (! $assessment || (method_exists($assessment, 'trashed') && $assessment->trashed())) {
+            if (! $this->studentShouldSeeSitting($user, $assessment, $assignment, [])) {
                 continue;
             }
             if ($kind && $assessment->kind !== $kind) {
@@ -2068,6 +2108,10 @@ class LmsAssessmentService
         foreach ($userAttempts as $att) {
             $assessment = $att->assessment ?: LmsAssessment::query()->find($att->assessment_id);
             if (! $assessment || (method_exists($assessment, 'trashed') && $assessment->trashed())) {
+                continue;
+            }
+            $status = mb_strtolower(trim((string) ($assessment->status ?? '')));
+            if (in_array($status, ['disabled', 'draft'], true)) {
                 continue;
             }
             if (in_array((int) $assessment->id, $itemAssessmentIds, true)) {
