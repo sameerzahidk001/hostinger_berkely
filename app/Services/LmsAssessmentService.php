@@ -831,7 +831,8 @@ class LmsAssessmentService
             if ((int) $att->assignment_id !== (int) $asg->id) {
                 return false;
             }
-            if ($asg->isSelfSitting() || ! $att->started_at) {
+            $assessment = $asg->relationLoaded('assessment') ? $asg->assessment : $asg->assessment;
+            if ($this->isCimaScsMock1($assessment) || $asg->isSelfSitting() || ! $att->started_at) {
                 return true;
             }
             $start = $asg->windowStart() ?: $asg->available_from;

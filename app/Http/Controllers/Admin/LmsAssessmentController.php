@@ -962,11 +962,13 @@ class LmsAssessmentController extends Controller
         $rows = $rows->sortBy(function ($row) {
             $status = (string) (($row['sitting_display']['status'] ?? ''));
             $rank = match ($status) {
-                'Missed' => 0,
-                'Upcoming' => 1,
-                'Assigned', 'Available' => 2,
-                'In progress' => 3,
-                default => 4,
+                'In progress' => 0,
+                'Marking Required' => 1,
+                'Completed and Marked', 'Completed' => 2,
+                'Upcoming' => 3,
+                'Missed' => 4,
+                'Assigned', 'Available' => 5,
+                default => 6,
             };
             $title = mb_strtolower((string) ($row['assessment']->title ?? ''));
             $name = mb_strtolower((string) ($row['student']->name ?? ''));
@@ -1127,7 +1129,7 @@ class LmsAssessmentController extends Controller
         }
 
         $page = max(1, (int) $request->get('page', 1));
-        $perPage = 15;
+        $perPage = $assessmentId > 0 ? 50 : 15;
         $total = $rows->count();
         $lastPage = max(1, (int) ceil(($total ?: 1) / $perPage));
         if ($page > $lastPage) {
@@ -2263,6 +2265,38 @@ class LmsAssessmentController extends Controller
         return $rows;
     }
 
+    /** Original Mock 1 exam sitting (the one students already sat), not a later person assign. */
+    protected function mock1RosterSeed($assignments, $assessment): ?LmsAssessmentAssignment
+    {
+        $cands = collect($assignments)->filter(function ($a) use ($assessment) {
+            if ((int) ($a->assessment_id ?? 0) !== (int) ($assessment->id ?? 0)) {
+                return false;
+            }
+
+            return ! (method_exists($a, 'isSelfSitting') && $a->isSelfSitting());
+        })->values();
+        if ($cands->isEmpty()) {
+            return null;
+        }
+        $counts = collect();
+        try {
+            $counts = LmsAssessmentAttempt::query()
+                ->whereIn('assignment_id', $cands->pluck('id')->all())
+                ->selectRaw('assignment_id, COUNT(*) as n')
+                ->groupBy('assignment_id')
+                ->pluck('n', 'assignment_id');
+        } catch (\Throwable $e) {
+            $counts = collect();
+        }
+
+        return $cands->sortBy(function ($a) use ($counts) {
+            $n = (int) ($counts[(int) $a->id] ?? $counts[(string) $a->id] ?? 0);
+            $batch = ! empty($a->class_batch_id) ? 1 : 0;
+
+            return sprintf('%04d-%d-%010d', 9999 - $n, 1 - $batch, (int) $a->id);
+        })->first();
+    }
+
     /** After collapse, put BAT-0004 classmates back on CIMA SCS November mocks. */
     protected function forceCimaScsBatchRoster(array &$rowsByKey, $assignments, $assessmentsById, array &$batchStudentCache): void
     {
@@ -2284,7 +2318,7 @@ class LmsAssessmentController extends Controller
             }
             $cands = collect($assignments)->filter(fn ($a) => (int) ($a->assessment_id ?? 0) === (int) $aid);
             $seed = ($assessment && method_exists($this->assessments, 'isCimaScsMock1') && $this->assessments->isCimaScsMock1($assessment))
-                ? $cands->sortBy('id')->first()
+                ? $this->mock1RosterSeed($cands, $assessment)
                 : $cands->sortByDesc('id')->first();
             if (! $seed || empty($seed->id)) {
                 $first = is_iterable($group) ? collect($group)->first() : null;
@@ -2311,6 +2345,16 @@ class LmsAssessmentController extends Controller
                 $key = (int) $seed->id . ':' . $uid;
                 if (isset($rowsByKey[$key])) {
                     continue;
+                }
+                if ($assessment && method_exists($this->assessments, 'isCimaScsMock1') && $this->assessments->isCimaScsMock1($assessment)) {
+                    $alreadyAttempted = collect($rowsByKey)->contains(function ($r) use ($aid, $uid) {
+                        return (int) ($r['assessment']->id ?? 0) === (int) $aid
+                            && (int) ($r['student']->id ?? 0) === $uid
+                            && ! empty($r['attempt']);
+                    });
+                    if ($alreadyAttempted) {
+                        continue;
+                    }
                 }
                 $rowsByKey[$key] = [
                     'assessment' => $assessment,
@@ -2665,17 +2709,11 @@ class LmsAssessmentController extends Controller
             $created = ($created && $created !== '') ? $created : 'Admin';
         }
         $status = 'Assigned';
-        if ($this->appointmentLooksBlank($start) && $isMock1 && $asg && ! empty($asg->id)) {
+        if ($isMock1 && $asg && ! empty($asg->id)) {
             $fromSitting = $this->mock1StartFromThisSitting($asg);
             if ($fromSitting) {
-                if (method_exists($asg, 'applyMissingExamWindow')) {
-                    $wall = method_exists($asg, 'formatInTimezone')
-                        ? $asg->formatInTimezone($fromSitting, 'Y-m-d H:i:s')
-                        : $fromSitting->format('Y-m-d H:i:s');
-                    $asg->applyMissingExamWindow($wall, $asg->timezoneName() ?: 'Asia/Dubai', (int) ($assessment->durationMinutes() ?? 180));
-                }
-                $start = $asg && method_exists($asg, 'appointmentStartLabel')
-                    ? $asg->appointmentStartLabel()
+                $start = $asg && method_exists($asg, 'formatInTimezone')
+                    ? $asg->formatInTimezone($fromSitting)
                     : $fromSitting->format('d/m/Y, H:i');
             }
         } elseif ($this->appointmentLooksBlank($start) && $assessment && ! empty($assessment->id) && ! $isMock1) {
@@ -3260,10 +3298,6 @@ class LmsAssessmentController extends Controller
         if (array_key_exists($id, $this->mock1SittingStartCache)) {
             return $this->mock1SittingStartCache[$id];
         }
-        $start = $asg && method_exists($asg, 'windowStart') ? $asg->windowStart() : null;
-        if ($start) {
-            return $this->mock1SittingStartCache[$id] = $start;
-        }
         try {
             $started = LmsAssessmentAttempt::query()
                 ->where('assignment_id', $id)
@@ -3276,10 +3310,11 @@ class LmsAssessmentController extends Controller
                 return $this->mock1SittingStartCache[$id] = $at;
             }
         } catch (\Throwable $e) {
-            // keep null
+            // fall through to stored window
         }
+        $start = $asg && method_exists($asg, 'windowStart') ? $asg->windowStart() : null;
 
-        return $this->mock1SittingStartCache[$id] = null;
+        return $this->mock1SittingStartCache[$id] = $start;
     }
 
     /** CIMA SCS/MCS unused rows are Missed as soon as the appointment start has passed (or if no start was stored). */
