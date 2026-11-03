@@ -74,6 +74,7 @@ class LmsAssessmentService
         $ok = LmsAssessmentSchema::ensure();
         StudyMaterialFolder::ensureFolderAssessmentsTable();
         $this->restorePublishedAssignedTests();
+        $this->purgeMock1FourthNovemberSittings();
 
         return $ok;
     }
@@ -466,6 +467,74 @@ class LmsAssessmentService
         return str_contains($title, 'scs') && (str_contains($title, 'mock 1') || (bool) preg_match('/\bmock\s*1\b/', $title));
     }
 
+    public function isMock1FourthNovemberSitting($asg, $assessment = null): bool
+    {
+        if (! $asg) {
+            return false;
+        }
+        $assessment = $assessment ?: ($asg->assessment ?? null);
+        if (! $this->isCimaScsMock1($assessment)) {
+            return false;
+        }
+        $start = null;
+        try {
+            $start = method_exists($asg, 'windowStart') ? $asg->windowStart() : ($asg->available_from ?? null);
+        } catch (\Throwable $e) {
+            $start = $asg->available_from ?? null;
+        }
+        if (! $start) {
+            return false;
+        }
+        try {
+            $day = \Carbon\Carbon::parse($start)->timezone('Asia/Dubai');
+
+            return $day->year === 2026 && $day->month === 11 && $day->day === 4;
+        } catch (\Throwable $e) {
+            return str_contains((string) ($asg->available_from ?? ''), '2026-11-04');
+        }
+    }
+
+    /** Hard-delete unused CIMA SCS Mock 1 sittings dated 4 Nov 2026 so they cannot be listed again. */
+    public function purgeMock1FourthNovemberSittings(): void
+    {
+        static $done = false;
+        if ($done) {
+            return;
+        }
+        $done = true;
+        try {
+            if (! Schema::hasTable('lms_assessment_assignments')) {
+                return;
+            }
+            $assessments = LmsAssessment::withTrashed()->get(['id', 'title']);
+            $aids = $assessments->filter(fn ($row) => $this->isCimaScsMock1($row))->pluck('id')->map(fn ($id) => (int) $id)->filter()->values();
+            if ($aids->isEmpty()) {
+                return;
+            }
+            $rows = LmsAssessmentAssignment::query()->whereIn('assessment_id', $aids->all())->get();
+            foreach ($rows as $row) {
+                $assessment = $assessments->firstWhere('id', (int) $row->assessment_id);
+                if (! $this->isMock1FourthNovemberSitting($row, $assessment)) {
+                    continue;
+                }
+                $used = false;
+                try {
+                    $used = Schema::hasTable('lms_assessment_attempts')
+                        && LmsAssessmentAttempt::query()->where('assignment_id', (int) $row->id)->exists();
+                } catch (\Throwable $e) {
+                    $used = false;
+                }
+                if ($used) {
+                    continue;
+                }
+                DB::table('lms_assessment_assignments')->where('id', (int) $row->id)->delete();
+            }
+            $this->scsMock1AssignmentsCache = [];
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
+
     /** Mock 1 appointment from this sitting's own DB row — never copy another sitting's window. */
     public function scsMock1AssignmentFromDatabase($assessment, $student = null, $current = null)
     {
@@ -487,11 +556,12 @@ class LmsAssessmentService
         } catch (\Throwable $e) {
             return $current;
         }
+        $rows = $rows->filter(fn ($row) => ! $this->isMock1FourthNovemberSitting($row, $assessment))->values();
         $cid = (int) ($current->id ?? 0);
         if ($cid > 0) {
             $same = $rows->first(fn ($row) => (int) ($row->id ?? 0) === $cid);
 
-            return $same ?: $current;
+            return $same ?: ($this->isMock1FourthNovemberSitting($current, $assessment) ? null : $current);
         }
         $sid = (int) ($student->id ?? 0);
         if ($sid > 0) {
@@ -660,6 +730,9 @@ class LmsAssessmentService
                 continue;
             }
             $assignment->setRelation('assessment', $assessment);
+            if ($this->isMock1FourthNovemberSitting($assignment, $assessment)) {
+                continue;
+            }
             if (! $this->isCimaScsMock1($assessment) && method_exists($assignment, 'applyMissingExamWindow')) {
                 $assignment->applyMissingExamWindow('2026-10-26 20:30:00', 'Asia/Dubai', 180);
             }
@@ -1896,6 +1969,9 @@ class LmsAssessmentService
             }
             if ($assignment && $this->isCimaScsMock1($assessment)) {
                 $assignment = $this->scsMock1AssignmentFromDatabase($assessment, $user, $assignment) ?: $assignment;
+            }
+            if ($assignment && $this->isMock1FourthNovemberSitting($assignment, $assessment)) {
+                continue;
             }
             $fromFolder = ! empty($row['from_folder']);
             if ($this->isCimaCohortEmail($user->email ?? null) && $assignment && ! $fromFolder && ! $this->isCimaScsMock1($assessment)) {

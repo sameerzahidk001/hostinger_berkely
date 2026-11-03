@@ -574,6 +574,10 @@ class LmsAssessmentController extends Controller
             $assessmentId, $batchId, $courseId, $kind, $markerOnlyUid, $courseIdsScope
         ) {
             $assessment = $assignment->assessment ?? null;
+            if (method_exists($this->assessments, 'isMock1FourthNovemberSitting')
+                && $this->assessments->isMock1FourthNovemberSitting($assignment, $assessment)) {
+                return false;
+            }
             if ($assessmentId > 0 && (int) $assignment->assessment_id !== $assessmentId) {
                 return false;
             }
@@ -820,7 +824,6 @@ class LmsAssessmentController extends Controller
             $this->attachCimaCohortSittingsToAssignedRows($rowsByKey, $assignments, $assessmentsById);
             $this->forceCimaScsBatchRoster($rowsByKey, $assignments, $assessmentsById, $batchStudentCache);
             $rowsByKey = $this->keepMock1AppointmentOnOwnSitting($rowsByKey);
-            $this->forceCimaScsBatchRoster($rowsByKey, $assignments, $assessmentsById, $batchStudentCache);
         } catch (\Throwable $e) {
             report($e);
         }
@@ -1814,7 +1817,9 @@ class LmsAssessmentController extends Controller
     protected function expandSittingStudents($students, $assignment, $assessment, array &$batchStudentCache)
     {
         $students = collect($students)->filter(fn ($row) => $row && ! empty($row->id))->values();
-        if ($this->isMock1PersonSitting($assignment, $assessment)) {
+        if ($this->isMock1PersonSitting($assignment, $assessment)
+            || (method_exists($this->assessments, 'isMock1FourthNovemberSitting')
+                && $this->assessments->isMock1FourthNovemberSitting($assignment, $assessment))) {
             return $students
                 ->unique(fn ($row) => (int) ($row->id ?? 0))
                 ->filter(fn ($row) => (int) ($row->id ?? 0) > 0 && ! $this->isRemovedTestTaker($row, $assessment))
@@ -1882,6 +1887,11 @@ class LmsAssessmentController extends Controller
             $seed = $this->mock1RosterSeed(collect($rows)->pluck('assignment')->filter(), $assessment);
             $seedId = (int) ($seed->id ?? 0);
             foreach ($rows as $k => $r) {
+                if (method_exists($this->assessments, 'isMock1FourthNovemberSitting')
+                    && $this->assessments->isMock1FourthNovemberSitting($r['assignment'] ?? null, $assessment)) {
+                    $drop[$k] = true;
+                    continue;
+                }
                 $asgId = (int) ($r['assignment']->id ?? 0);
                 $uid = (int) ($r['student']->id ?? 0);
                 if ($asgId <= 0 || $asgId === $seedId) {
@@ -2268,6 +2278,10 @@ class LmsAssessmentController extends Controller
             if ((int) ($a->assessment_id ?? 0) !== (int) ($assessment->id ?? 0)) {
                 return false;
             }
+            if (method_exists($this->assessments, 'isMock1FourthNovemberSitting')
+                && $this->assessments->isMock1FourthNovemberSitting($a, $assessment)) {
+                return false;
+            }
 
             return ! (method_exists($a, 'isSelfSitting') && $a->isSelfSitting());
         })->values();
@@ -2437,6 +2451,10 @@ class LmsAssessmentController extends Controller
             }
             $snap = ClassBatch::studentUserIdsForSitting($assignment);
             if ($this->isMock1PersonSitting($assignment, $assessment)) {
+                continue;
+            }
+            if (method_exists($this->assessments, 'isMock1FourthNovemberSitting')
+                && $this->assessments->isMock1FourthNovemberSitting($assignment, $assessment)) {
                 continue;
             }
             if ($this->isCimaCohortSitting($assessment, $assignment, collect())) {
@@ -3153,7 +3171,9 @@ class LmsAssessmentController extends Controller
         $created = 0;
         $batchIds = collect($request->input('batch_ids', []))->map(fn ($id) => (int) $id)->filter()->unique()->values();
         $studentIds = collect($request->input('student_ids', []))->map(fn ($id) => (int) $id)->filter()->unique()->values();
-        $fromPeople = $this->batchIdsForStudents($studentIds->all(), $a);
+        $fromPeople = $this->assessments->isCimaScsMock1($a)
+            ? []
+            : $this->batchIdsForStudents($studentIds->all(), $a);
         if ($fromPeople !== []) {
             $batchIds = $batchIds->merge($fromPeople)->unique()->values();
             $studentIds = collect();
