@@ -42,6 +42,12 @@ class LmsAssessmentController extends Controller
     /** @var array<int, \App\Models\User|false> */
     protected array $namedAssessorByAssessment = [];
 
+    /** @var array<int>|null */
+    protected $instructorScopeBatchIds = null;
+
+    /** @var array<int>|null */
+    protected $instructorScopeAssessmentIds = null;
+
     public function index(Request $request)
     {
         // Create Test page: create permission (or skill admin). Assign-only users use Assigned Tests.
@@ -61,32 +67,10 @@ class LmsAssessmentController extends Controller
         }
         if ($this->shouldScopeTestsToOwnAssignments()) {
             $uid = (int) (Auth::id() ?? 0);
-            $courseIds = $this->lms->coursesForActor()->pluck('id')->map(fn ($id) => (int) $id)->all();
-            $sittingIds = $uid > 0
-                ? LmsAssessmentAssignment::query()
-                    ->where(function ($q) use ($uid) {
-                        if (Schema::hasColumn('lms_assessment_assignments', 'marker_user_id')) {
-                            $q->orWhere('marker_user_id', $uid);
-                        }
-                        if (Schema::hasColumn('lms_assessment_assignments', 'assigned_by_user_id')) {
-                            $q->orWhere('assigned_by_user_id', $uid);
-                        }
-                    })
-                    ->pluck('assessment_id')
-                    ->all()
-                : [];
             if ($uid <= 0) {
                 $query->whereRaw('1 = 0');
             } else {
-                $query->where(function ($q) use ($uid, $sittingIds, $courseIds) {
-                    $q->where('created_by_user_id', $uid);
-                    if ($sittingIds !== []) {
-                        $q->orWhereIn('id', $sittingIds);
-                    }
-                    if ($courseIds !== []) {
-                        $q->orWhereIn('course_id', $courseIds);
-                    }
-                });
+                $this->applyInstructorAssessmentScope($query, $uid);
             }
         }
         if ($search !== '') {
@@ -594,12 +578,7 @@ class LmsAssessmentController extends Controller
                 return false;
             }
             if ($markerOnlyUid) {
-                $uid = $markerOnlyUid;
-                $ok = (int) ($assignment->marker_user_id ?? 0) === $uid
-                    || (int) ($assignment->assigned_by_user_id ?? 0) === $uid
-                    || (int) ($assessment->created_by_user_id ?? 0) === $uid
-                    || ($courseIdsScope !== null && in_array((int) ($assessment->course_id ?? 0), $courseIdsScope ?: [0], true));
-                if (! $ok) {
+                if (! $this->instructorCanSeeSitting($markerOnlyUid, $assignment, $assessment, $courseIdsScope)) {
                     return false;
                 }
             } elseif ($courseIdsScope !== null) {
@@ -792,12 +771,7 @@ class LmsAssessmentController extends Controller
             }
             $asg = $this->assignmentForAttempt($att, $assignments, $assignmentsById);
             if ($markerOnlyUid) {
-                $uid = $markerOnlyUid;
-                $ok = (int) ($asg->marker_user_id ?? 0) === $uid
-                    || (int) ($asg->assigned_by_user_id ?? 0) === $uid
-                    || (int) ($assessment->created_by_user_id ?? 0) === $uid
-                    || ($courseIdsScope !== null && in_array((int) ($assessment->course_id ?? 0), $courseIdsScope ?: [0], true));
-                if (! $ok) {
+                if (! $this->instructorCanSeeSitting($markerOnlyUid, $asg, $assessment, $courseIdsScope)) {
                     continue;
                 }
             }
@@ -1085,26 +1059,7 @@ class LmsAssessmentController extends Controller
 
         $assessmentQuery = LmsAssessment::query()->orderBy('title');
         if ($markerOnlyUid) {
-            $sittingIds = LmsAssessmentAssignment::query()
-                ->where(function ($q) use ($markerOnlyUid) {
-                    if (Schema::hasColumn('lms_assessment_assignments', 'marker_user_id')) {
-                        $q->orWhere('marker_user_id', $markerOnlyUid);
-                    }
-                    if (Schema::hasColumn('lms_assessment_assignments', 'assigned_by_user_id')) {
-                        $q->orWhere('assigned_by_user_id', $markerOnlyUid);
-                    }
-                })
-                ->pluck('assessment_id')
-                ->all();
-            $assessmentQuery->where(function ($q) use ($markerOnlyUid, $sittingIds, $courseIdsScope) {
-                $q->where('created_by_user_id', $markerOnlyUid);
-                if ($sittingIds !== []) {
-                    $q->orWhereIn('id', $sittingIds);
-                }
-                if ($courseIdsScope) {
-                    $q->orWhereIn('course_id', $courseIdsScope);
-                }
-            });
+            $this->applyInstructorAssessmentScope($assessmentQuery, $markerOnlyUid, $courseIdsScope);
         } elseif ($courseIdsScope !== null) {
             $assessmentQuery->where(function ($q) use ($courseIdsScope) {
                 $q->whereIn('course_id', $courseIdsScope ?: [0]);
@@ -3336,6 +3291,153 @@ class LmsAssessmentController extends Controller
         $end = $asg->appointmentEnd() ?: $start->copy()->addMinutes($mins);
 
         return now()->gt($end);
+    }
+
+    /** Batches this instructor teaches (pivot, HoF, or course they are assigned). */
+    protected function instructorBatchIds(int $uid): array
+    {
+        if ($this->instructorScopeBatchIds !== null) {
+            return $this->instructorScopeBatchIds;
+        }
+        $ids = collect();
+        try {
+            if ($uid > 0 && Schema::hasTable('class_batch_instructor')) {
+                $ids = $ids->merge(
+                    DB::table('class_batch_instructor')->where('instructor_id', $uid)->pluck('class_batch_id')
+                );
+            }
+        } catch (\Throwable $e) {
+            // next
+        }
+        try {
+            if ($uid > 0 && Schema::hasTable('class_batches') && Schema::hasColumn('class_batches', 'head_of_faculty_id')) {
+                $ids = $ids->merge(ClassBatch::query()->where('head_of_faculty_id', $uid)->pluck('id'));
+            }
+        } catch (\Throwable $e) {
+            // next
+        }
+        try {
+            $courseIds = $this->lms->coursesForActor()->pluck('id')->map(fn ($id) => (int) $id)->filter()->values();
+            if ($courseIds->isNotEmpty() && Schema::hasTable('class_batches')) {
+                $ids = $ids->merge(ClassBatch::query()->whereIn('course_id', $courseIds->all())->pluck('id'));
+            }
+        } catch (\Throwable $e) {
+            // next
+        }
+        $this->instructorScopeBatchIds = $ids->map(fn ($id) => (int) $id)->unique()->filter()->values()->all();
+
+        return $this->instructorScopeBatchIds;
+    }
+
+    /** Tests on this instructor's courses, batches, or sittings they mark/created. */
+    protected function instructorAssessmentIds(int $uid, ?array $courseIds = null): array
+    {
+        if ($this->instructorScopeAssessmentIds !== null) {
+            return $this->instructorScopeAssessmentIds;
+        }
+        $ids = collect();
+        $batchIds = $this->instructorBatchIds($uid);
+        try {
+            if ($batchIds !== []) {
+                $ids = $ids->merge(
+                    LmsAssessmentAssignment::query()->whereIn('class_batch_id', $batchIds)->pluck('assessment_id')
+                );
+            }
+        } catch (\Throwable $e) {
+            // next
+        }
+        try {
+            $hasMarker = Schema::hasColumn('lms_assessment_assignments', 'marker_user_id');
+            $hasAssignedBy = Schema::hasColumn('lms_assessment_assignments', 'assigned_by_user_id');
+            if ($hasMarker || $hasAssignedBy) {
+                $ids = $ids->merge(
+                    LmsAssessmentAssignment::query()
+                        ->where(function ($q) use ($uid, $hasMarker, $hasAssignedBy) {
+                            if ($hasMarker) {
+                                $q->orWhere('marker_user_id', $uid);
+                            }
+                            if ($hasAssignedBy) {
+                                $q->orWhere('assigned_by_user_id', $uid);
+                            }
+                        })
+                        ->pluck('assessment_id')
+                );
+            }
+        } catch (\Throwable $e) {
+            // next
+        }
+        try {
+            if (Schema::hasColumn('lms_assessment_attempts', 'graded_by_user_id')) {
+                $ids = $ids->merge(
+                    LmsAssessmentAttempt::query()->where('graded_by_user_id', $uid)->pluck('assessment_id')
+                );
+            }
+        } catch (\Throwable $e) {
+            // next
+        }
+        try {
+            $ids = $ids->merge(
+                LmsAssessment::query()->where('created_by_user_id', $uid)->pluck('id')
+            );
+            $courses = $courseIds ?? $this->lms->coursesForActor()->pluck('id')->map(fn ($id) => (int) $id)->all();
+            if ($courses !== []) {
+                $ids = $ids->merge(LmsAssessment::query()->whereIn('course_id', $courses)->pluck('id'));
+            }
+        } catch (\Throwable $e) {
+            // next
+        }
+        $this->instructorScopeAssessmentIds = $ids->map(fn ($id) => (int) $id)->unique()->filter()->values()->all();
+
+        return $this->instructorScopeAssessmentIds;
+    }
+
+    protected function applyInstructorAssessmentScope($query, int $uid, ?array $courseIds = null)
+    {
+        $aids = $this->instructorAssessmentIds($uid, $courseIds);
+        $courses = $courseIds ?? $this->lms->coursesForActor()->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $query->where(function ($q) use ($uid, $aids, $courses) {
+            $q->where('created_by_user_id', $uid);
+            if ($aids !== []) {
+                $q->orWhereIn('id', $aids);
+            }
+            if ($courses !== []) {
+                $q->orWhereIn('course_id', $courses);
+            }
+        });
+    }
+
+    protected function instructorCanSeeSitting(int $uid, $assignment, $assessment, ?array $courseIds = null): bool
+    {
+        if ($uid <= 0) {
+            return false;
+        }
+        if ((int) ($assignment->marker_user_id ?? 0) === $uid
+            || (int) ($assignment->assigned_by_user_id ?? 0) === $uid
+            || (int) ($assessment->created_by_user_id ?? 0) === $uid) {
+            return true;
+        }
+        $courseId = (int) ($assessment->course_id ?? 0);
+        if ($courseIds !== null && $courseId > 0 && in_array($courseId, $courseIds ?: [0], true)) {
+            return true;
+        }
+        $batchId = (int) ($assignment->class_batch_id ?? 0);
+        if ($batchId > 0 && in_array($batchId, $this->instructorBatchIds($uid), true)) {
+            return true;
+        }
+        $aid = (int) ($assessment->id ?? 0);
+        if ($aid > 0 && in_array($aid, $this->instructorAssessmentIds($uid, $courseIds), true)) {
+            return true;
+        }
+        try {
+            $named = $this->namedAssessorForAssessment($assessment, $assignment, null);
+            if ($named && (int) $named->id === $uid) {
+                return true;
+            }
+        } catch (\Throwable $e) {
+            // keep false
+        }
+
+        return false;
     }
 
     /** Instructors and Musa: only tests they created or were assigned to mark. Real Admin still sees all. */
