@@ -39,6 +39,9 @@ class LmsAssessmentController extends Controller
 
     protected string $scsRosterNote = '';
 
+    /** @var array<int, \App\Models\User|false> */
+    protected array $namedAssessorByAssessment = [];
+
     public function index(Request $request)
     {
         // Create Test page: create permission (or skill admin). Assign-only users use Assigned Tests.
@@ -2484,10 +2487,12 @@ class LmsAssessmentController extends Controller
             ? $asg->assessorDisplayName()
             : ($asg?->marker?->name ?: null);
         $assessorId = $asg?->marker_user_id ?? ($asg?->marker?->id ?? null);
-        $namedMarker = $this->sameTestNamedMarker($assessment);
-        if ($namedMarker && ($assessor === null || $assessor === '' || $assessor === '—' || $assessor === 'Admin / course instructors')) {
-            $assessor = $namedMarker->name;
-            $assessorId = (int) $namedMarker->id;
+        if ($this->assessorLooksBlank($assessor)) {
+            $namedMarker = $this->namedAssessorForAssessment($assessment, $asg, $attempt);
+            if ($namedMarker) {
+                $assessor = $namedMarker->name;
+                $assessorId = (int) $namedMarker->id;
+            }
         }
         $created = $asg?->createdByLabel() ?: null;
         $tz = $asg?->timezoneLabel() ?: null;
@@ -3133,6 +3138,105 @@ class LmsAssessmentController extends Controller
             || $label === 'Open (no appointment set)'
             || $label === 'Start anytime'
             || $label === 'Self test — start anytime';
+    }
+
+    protected function assessorLooksBlank(?string $label): bool
+    {
+        $label = trim((string) $label);
+
+        return $label === ''
+            || $label === '—'
+            || strcasecmp($label, 'Admin / course instructors') === 0
+            || strcasecmp($label, 'Admin') === 0;
+    }
+
+    /** Display only: sitting marker, then same-test marker, then batch trainer. */
+    protected function namedAssessorForAssessment($assessment, $asg = null, $attempt = null): ?User
+    {
+        if ($attempt && ! empty($attempt->graded_by_user_id)) {
+            $grader = User::query()->find((int) $attempt->graded_by_user_id);
+            if ($grader && trim((string) $grader->name) !== '') {
+                return $grader;
+            }
+        }
+        if ($asg instanceof LmsAssessmentAssignment && ! empty($asg->marker_user_id)) {
+            $marker = ($asg->relationLoaded('marker') ? $asg->marker : null)
+                ?: User::query()->find((int) $asg->marker_user_id);
+            if ($marker && trim((string) $marker->name) !== '') {
+                return $marker;
+            }
+        }
+        $aid = (int) ($assessment->id ?? 0);
+        if ($aid > 0 && array_key_exists($aid, $this->namedAssessorByAssessment)) {
+            $cached = $this->namedAssessorByAssessment[$aid];
+
+            return $cached instanceof User ? $cached : null;
+        }
+        $found = $this->sameTestNamedMarker($assessment)
+            ?: $this->batchTrainerForSitting($asg, $assessment)
+            ?: $this->graderOnThisTest($assessment);
+        if ($aid > 0) {
+            $this->namedAssessorByAssessment[$aid] = $found ?: false;
+        }
+
+        return $found;
+    }
+
+    protected function batchTrainerForSitting($asg, $assessment): ?User
+    {
+        $batch = null;
+        try {
+            if ($asg instanceof LmsAssessmentAssignment) {
+                $batch = $asg->relationLoaded('batch') ? $asg->batch : null;
+                if (! $batch && ! empty($asg->class_batch_id)) {
+                    $batch = ClassBatch::query()->with(['instructors', 'headOfFaculty'])->find((int) $asg->class_batch_id);
+                }
+            }
+            if (! $batch && $this->looksLikeCimaScsNovember($assessment)) {
+                $batch = $this->loadCimaScsNovemberBatch();
+            }
+            if (! $batch) {
+                return null;
+            }
+            $batch->loadMissing(['instructors', 'headOfFaculty']);
+            $trainer = method_exists($batch, 'trainerInstructors')
+                ? $batch->trainerInstructors()->first()
+                : $batch->instructors->first();
+            if ($trainer && trim((string) ($trainer->name ?? '')) !== '') {
+                return $trainer;
+            }
+            $hof = $batch->headOfFaculty;
+            if ($hof && trim((string) ($hof->name ?? '')) !== '') {
+                return $hof;
+            }
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        return null;
+    }
+
+    protected function graderOnThisTest($assessment): ?User
+    {
+        $aid = (int) ($assessment->id ?? 0);
+        if ($aid <= 0 || ! Schema::hasTable('lms_assessment_attempts')) {
+            return null;
+        }
+        try {
+            $uid = LmsAssessmentAttempt::query()
+                ->where('assessment_id', $aid)
+                ->whereNotNull('graded_by_user_id')
+                ->orderByDesc('id')
+                ->value('graded_by_user_id');
+            if (! $uid) {
+                return null;
+            }
+            $user = User::query()->find((int) $uid);
+
+            return ($user && trim((string) $user->name) !== '') ? $user : null;
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     /** Named assessor saved on any sitting of this same test (newest first). Display only. */

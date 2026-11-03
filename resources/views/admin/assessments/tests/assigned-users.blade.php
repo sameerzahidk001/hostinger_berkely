@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.searchable-select-assets')
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
-<!-- lms-assigned-tests-20261103e KEEP: Appointment Date & Time + timezone on next line; Assessor early; BAT-0004 SCS roster; table fits page width; Attempt n of Max attempts; Next pager -->
+<!-- lms-assigned-tests-20261103f KEEP: Appointment Date & Time + timezone on next line; Assessor name from sitting/batch trainer; table fits page width; Attempt n of Max attempts; Next pager -->
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
@@ -133,7 +133,7 @@
         All assigned test takers (started or not), including people who never opened the test.
         <strong>Missed</strong> = they did not start. For CIMA SCS/MCS that is as soon as the appointment start has passed (no wait for duration). Other tests wait until start + duration.
         Status shows <strong>Marking Required</strong> until the assessor marks a submitted sitting.
-        <span class="text-muted">List 20261103e @if(!empty($scsRosterNote)) · {{ $scsRosterNote }}@endif</span>
+        <span class="text-muted">List 20261103f @if(!empty($scsRosterNote)) · {{ $scsRosterNote }}@endif</span>
     </p>
     @if(!empty($scsRosterNote))
         <div class="alert alert-info" style="font-weight:600;">Assigned roster: {{ $scsRosterNote }}</div>
@@ -269,17 +269,19 @@
                                     : ($assignment?->appointmentWindowLabel() ?: '—');
                             }
                             $assessorName = $disp['assessor'] ?? '';
-                            if ($assessorName === '' || $assessorName === '—') {
+                            $assessorBlank = $assessorName === ''
+                                || $assessorName === '—'
+                                || strcasecmp((string) $assessorName, 'Admin / course instructors') === 0
+                                || strcasecmp((string) $assessorName, 'Admin') === 0;
+                            if ($assessorBlank) {
                                 $assessorName = $attempt
                                     ? $attempt->assessorLabel($assignment)
                                     : ($assignment && method_exists($assignment, 'assessorDisplayName')
                                         ? $assignment->assessorDisplayName()
-                                        : ($assignment?->marker?->name ?? 'Admin / course instructors'));
+                                        : ($assignment?->marker?->name ?? ''));
                             }
-                            if ($assessorName === '' || $assessorName === '—') {
-                                $assessorName = $assignment && method_exists($assignment, 'assessorDisplayName')
-                                    ? $assignment->assessorDisplayName()
-                                    : 'Admin / course instructors';
+                            if ($assessorName === '' || $assessorName === '—' || strcasecmp((string) $assessorName, 'Admin / course instructors') === 0) {
+                                $assessorName = $disp['assessor'] ?? 'Admin / course instructors';
                             }
                             $assessorUserId = $disp['assessor_id'] ?? ($attempt
                                 ? $attempt->assessorUserId($assignment)
