@@ -34,6 +34,9 @@ class LmsAssessmentController extends Controller
     ) {
     }
 
+    /** @var array<int, \Illuminate\Support\Collection<int, int>> */
+    protected array $excludedTakersByAssessment = [];
+
     public function index(Request $request)
     {
         // Create Test page: create permission (or skill admin). Assign-only users use Assigned Tests.
@@ -385,6 +388,7 @@ class LmsAssessmentController extends Controller
         $assignedUrl = route('admin.assessments.tests.assigned-users');
         $assignment = LmsAssessmentAssignment::with('assessment')->find($assignmentId);
         $attemptId = (int) $request->input('attempt_id', 0);
+        $studentId = (int) $request->input('student_id', 0);
         if (! $assignment) {
             if ($attemptId > 0) {
                 return $this->destroyAttemptRow($attemptId);
@@ -399,24 +403,54 @@ class LmsAssessmentController extends Controller
                 ->where('assessment_id', $assignment->assessment_id)
                 ->first();
             if ($attempt) {
+                if ($studentId <= 0) {
+                    $studentId = (int) $attempt->user_id;
+                }
                 $attempt->answers()->delete();
                 $attempt->delete();
             }
-        } else {
+        }
+
+        if ($studentId <= 0) {
+            $studentId = (int) ($assignment->student_id ?? 0);
+        }
+
+        if ($studentId > 0) {
+            $this->excludeStudentFromAssessment((int) $assignment->assessment_id, $studentId);
             $attemptQuery = LmsAssessmentAttempt::query()
-                ->where('assessment_id', $assignment->assessment_id);
-            if ($assignment->student_id) {
-                $attemptQuery->where('user_id', (int) $assignment->student_id);
-            }
+                ->where('assessment_id', $assignment->assessment_id)
+                ->where('user_id', $studentId);
             foreach ($attemptQuery->get() as $att) {
-                if ($this->assessments->attemptBelongsToAssignment($att, $assignment)) {
+                if ($this->assessments->attemptBelongsToAssignment($att, $assignment) || (int) ($att->assignment_id ?? 0) === (int) $assignment->id) {
                     $att->answers()->delete();
                     $att->delete();
                 }
             }
+            $shared = ! empty($assignment->class_batch_id) || empty($assignment->student_id);
+            $code = $assignment->displayCodeForStudent($studentId);
+            if (! $shared && (int) $assignment->student_id === $studentId) {
+                $assignment->delete();
+            }
+
+            return redirect($assignedUrl)->with('success', 'Removed ' . $code . ' for that student only.');
+        }
+
+        $attemptQuery = LmsAssessmentAttempt::query()
+            ->where('assessment_id', $assignment->assessment_id);
+        if ($assignment->student_id) {
+            $attemptQuery->where('user_id', (int) $assignment->student_id);
+        }
+        foreach ($attemptQuery->get() as $att) {
+            if ($this->assessments->attemptBelongsToAssignment($att, $assignment)) {
+                $att->answers()->delete();
+                $att->delete();
+            }
         }
 
         $code = $assignment->displayCode();
+        if (! empty($assignment->class_batch_id) || empty($assignment->student_id)) {
+            return redirect($assignedUrl)->with('error', 'Choose the student row to remove. The batch sitting was not deleted.');
+        }
         $assignment->delete();
 
         return redirect($assignedUrl)->with('success', 'Sitting ' . $code . ' removed.');
@@ -433,10 +467,36 @@ class LmsAssessmentController extends Controller
         if (! $attempt) {
             return redirect($assignedUrl)->with('error', 'That sitting was already removed.');
         }
+        $uid = (int) ($attempt->user_id ?? 0);
+        $aid = (int) ($attempt->assessment_id ?? 0);
         $attempt->answers()->delete();
         $attempt->delete();
+        if ($aid > 0 && $uid > 0) {
+            $this->excludeStudentFromAssessment($aid, $uid);
+        }
 
-        return redirect($assignedUrl)->with('success', 'Test taker sitting removed.');
+        return redirect($assignedUrl)->with('success', 'Removed that student from the assigned test.');
+    }
+
+    /** Keep the batch sitting; never put this student back on this test. */
+    protected function excludeStudentFromAssessment(int $assessmentId, int $userId): void
+    {
+        if ($assessmentId <= 0 || $userId <= 0) {
+            return;
+        }
+        if (! Schema::hasColumn('lms_assessment_assignments', 'excluded_user_ids')) {
+            return;
+        }
+        $rows = LmsAssessmentAssignment::query()->where('assessment_id', $assessmentId)->get();
+        foreach ($rows as $row) {
+            $ex = collect($row->excluded_user_ids ?? [])->map(fn ($id) => (int) $id)->push($userId)->unique()->filter()->values()->all();
+            $row->excluded_user_ids = $ex;
+            if (Schema::hasColumn($row->getTable(), 'roster_user_ids')) {
+                $roster = collect($row->roster_user_ids ?? [])->map(fn ($id) => (int) $id)->reject(fn ($id) => $id === $userId)->values()->all();
+                $row->roster_user_ids = $roster;
+            }
+            $row->save();
+        }
     }
 
     /**
@@ -1724,7 +1784,10 @@ class LmsAssessmentController extends Controller
                 }
             }
         }
-        return $students->unique(fn ($row) => (int) ($row->id ?? 0))->filter(fn ($row) => (int) ($row->id ?? 0) > 0)->values();
+        return $students
+            ->unique(fn ($row) => (int) ($row->id ?? 0))
+            ->filter(fn ($row) => (int) ($row->id ?? 0) > 0 && ! $this->isRemovedTestTaker($row, $assessment))
+            ->values();
     }
 
     /** Drop duplicate lines with no sitting (blank Appointment ID). */
@@ -1786,12 +1849,12 @@ class LmsAssessmentController extends Controller
                 }
             }
             $batchIds = $asgs->pluck('class_batch_id')->map(fn ($id) => (int) $id)->filter()->unique()->values()->all();
-            if ($overlap !== []) {
+            if ($batchIds === [] && $overlap !== []) {
                 arsort($overlap);
                 $courseId = (int) ($assessment->course_id ?? 0);
                 foreach ($overlap as $bid => $n) {
                     $bid = (int) $bid;
-                    if ($n < 1 || in_array($bid, $batchIds, true)) {
+                    if ($n < 1) {
                         continue;
                     }
                     if ($courseId > 0) {
@@ -1801,9 +1864,6 @@ class LmsAssessmentController extends Controller
                         }
                     }
                     $batchIds[] = $bid;
-                    if ($batchIds !== [] && $asgs->pluck('class_batch_id')->filter()->isNotEmpty()) {
-                        continue;
-                    }
                     break;
                 }
             }
@@ -2274,6 +2334,10 @@ class LmsAssessmentController extends Controller
         if (! $student) {
             return false;
         }
+        $uid = (int) ($student->id ?? 0);
+        if ($uid > 0 && $assessment && $this->excludedUserIdsForAssessment($assessment)->contains($uid)) {
+            return true;
+        }
         $name = mb_strtolower(trim((string) ($student->name ?? '')));
         $email = mb_strtolower(trim((string) ($student->email ?? '')));
         if (! str_contains($name, 'imthiyas') && ! str_contains($email, 'imthiyas')) {
@@ -2282,6 +2346,30 @@ class LmsAssessmentController extends Controller
         $hay = mb_strtolower(trim((string) ($assessment->title ?? '') . ' ' . (string) ($assessment->course->title ?? '')));
 
         return str_contains($hay, 'cima mcs') || str_contains($hay, 'management case');
+    }
+
+    protected function excludedUserIdsForAssessment($assessment)
+    {
+        $aid = (int) ($assessment->id ?? 0);
+        if ($aid <= 0 || ! Schema::hasColumn('lms_assessment_assignments', 'excluded_user_ids')) {
+            return collect();
+        }
+        if (! isset($this->excludedTakersByAssessment[$aid])) {
+            $ids = collect();
+            try {
+                $rows = LmsAssessmentAssignment::query()
+                    ->where('assessment_id', $aid)
+                    ->get(['id', 'excluded_user_ids']);
+                foreach ($rows as $row) {
+                    $ids = $ids->merge(collect($row->excluded_user_ids ?? []));
+                }
+            } catch (\Throwable $e) {
+                $ids = collect();
+            }
+            $this->excludedTakersByAssessment[$aid] = $ids->map(fn ($id) => (int) $id)->unique()->filter()->values();
+        }
+
+        return $this->excludedTakersByAssessment[$aid];
     }
 
     protected function assignmentForAttempt($att, $assignments, $assignmentsById): ?LmsAssessmentAssignment

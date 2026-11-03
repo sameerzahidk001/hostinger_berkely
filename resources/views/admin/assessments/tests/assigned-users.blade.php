@@ -433,8 +433,11 @@
                                 @endif
                                 @if($canAdminSitting && $assignment)
                                     <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.edit-assignment', $assignment->id) }}">Edit</a>
-                                    <form action="{{ route('admin.assessments.tests.destroy-assignment', $assignment->id) }}" method="POST" onsubmit="return confirm('Delete this sitting ({{ $assignment->displayCode() }})?');">
+                                    <form action="{{ route('admin.assessments.tests.destroy-assignment', $assignment->id) }}" method="POST" onsubmit="return confirm('Remove this student from the assigned test?');">
                                         @csrf
+                                        @if($studentId)
+                                            <input type="hidden" name="student_id" value="{{ $studentId }}">
+                                        @endif
                                         @if($attempt)
                                             <input type="hidden" name="attempt_id" value="{{ $attempt->id }}">
                                         @endif

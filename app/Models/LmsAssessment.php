@@ -170,6 +170,9 @@ class LmsAssessment extends Model
         if (Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
             $cols[] = 'roster_user_ids';
         }
+        if (Schema::hasColumn('lms_assessment_assignments', 'excluded_user_ids')) {
+            $cols[] = 'excluded_user_ids';
+        }
         $assignments = $this->relationLoaded('assignments')
             ? $this->assignments
             : $this->assignments()->get($cols);
@@ -178,6 +181,7 @@ class LmsAssessment extends Model
 
         $ids = collect();
         $batchIds = collect();
+        $excluded = collect();
         foreach ($assignments as $assignment) {
             if (! empty($assignment->student_id)) {
                 $ids->push((int) $assignment->student_id);
@@ -188,7 +192,11 @@ class LmsAssessment extends Model
             if (Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
                 $ids = $ids->merge(collect($assignment->roster_user_ids ?? []));
             }
+            if (Schema::hasColumn('lms_assessment_assignments', 'excluded_user_ids')) {
+                $excluded = $excluded->merge(collect($assignment->excluded_user_ids ?? []));
+            }
         }
+        $excluded = $excluded->map(fn ($id) => (int) $id)->unique()->filter();
         if (Schema::hasTable('lms_assessment_attempts')) {
             $ids = $ids->merge(
                 LmsAssessmentAttempt::query()
@@ -198,7 +206,7 @@ class LmsAssessment extends Model
         }
 
         $ids = $ids->map(fn ($id) => (int) $id)->unique()->filter()->values();
-        if ($ids->isNotEmpty()) {
+        if ($batchIds->isEmpty() && $ids->isNotEmpty()) {
             $overlap = [];
             foreach ($ids as $uid) {
                 foreach ($this->batchIdsForUser((int) $uid) as $bid) {
@@ -206,12 +214,11 @@ class LmsAssessment extends Model
                 }
             }
             $courseId = (int) ($this->course_id ?? 0);
-            $explicit = $batchIds->map(fn ($id) => (int) $id)->filter()->unique();
             if ($overlap !== []) {
                 arsort($overlap);
                 foreach ($overlap as $bid => $n) {
                     $bid = (int) $bid;
-                    if ($n < 1 || $explicit->contains($bid)) {
+                    if ($n < 1) {
                         continue;
                     }
                     if ($courseId > 0) {
@@ -221,9 +228,6 @@ class LmsAssessment extends Model
                         }
                     }
                     $batchIds->push($bid);
-                    if ($explicit->isNotEmpty()) {
-                        continue;
-                    }
                     break;
                 }
             }
@@ -256,7 +260,7 @@ class LmsAssessment extends Model
             }
         }
 
-        $ids = $ids->map(fn ($id) => (int) $id)->unique()->filter()->values();
+        $ids = $ids->map(fn ($id) => (int) $id)->unique()->filter()->diff($excluded)->values();
         if ($ids->isEmpty() || ! $isCimaMcs) {
             $this->assignedRosterCache = $ids->all();
 
@@ -277,7 +281,7 @@ class LmsAssessment extends Model
             return str_contains($name, 'imthiyas') || str_contains($email, 'imthiyas');
         })->pluck('id')->map(fn ($id) => (int) $id);
 
-        $ids = $ids->diff($hide)->map(fn ($id) => (int) $id)->unique()->values();
+        $ids = $ids->diff($hide)->diff($excluded)->map(fn ($id) => (int) $id)->unique()->values();
         $this->assignedRosterCache = $ids->all();
 
         return $ids;
