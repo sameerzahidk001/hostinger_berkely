@@ -3972,6 +3972,18 @@ class LmsAssessmentController extends Controller
         }
         $ids = collect();
         try {
+            $batchIds = $this->instructorBatchIds($uid);
+            if ($batchIds !== []) {
+                $ids = $ids->merge(
+                    LmsAssessmentAssignment::query()
+                        ->whereIn('class_batch_id', $batchIds)
+                        ->pluck('assessment_id')
+                );
+            }
+        } catch (\Throwable $e) {
+            // next
+        }
+        try {
             if (Schema::hasColumn('lms_assessment_assignments', 'marker_user_id')) {
                 $ids = $ids->merge(
                     LmsAssessmentAssignment::query()->where('marker_user_id', $uid)->pluck('assessment_id')
@@ -4136,11 +4148,20 @@ class LmsAssessmentController extends Controller
 
     protected function instructorCanSeeSitting(int $uid, $assignment, $assessment, ?array $courseIds = null): bool
     {
+        if ($this->actorAssessesAssessment($uid, $assessment)) {
+            return true;
+        }
         if ($this->instructorCanSeeRow($uid, $assignment, $assessment, null)) {
             return true;
         }
         if ($uid <= 0 || ! $assignment) {
             return false;
+        }
+        $batchId = (int) ($assignment->class_batch_id ?? 0);
+        if ($batchId > 0 && in_array($batchId, $this->instructorBatchIds($uid), true)) {
+            $markerId = (int) ($assignment->marker_user_id ?? 0);
+
+            return $markerId === 0 || $markerId === $uid;
         }
         if ((int) ($assignment->marker_user_id ?? 0) > 0) {
             return false;
