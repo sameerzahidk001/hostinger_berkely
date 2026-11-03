@@ -946,33 +946,6 @@ class LmsAssessmentController extends Controller
             $rowsByKey[$k]['sitting_display'] = $disp;
         }
 
-        if ($search !== '') {
-            $needle = mb_strtolower($search);
-            $rowsByKey = collect($rowsByKey)->filter(function ($r) use ($needle, $search) {
-                $disp = $r['sitting_display'] ?? [];
-                $assessment = $r['assessment'] ?? null;
-                $assignment = $r['assignment'] ?? null;
-                $hay = mb_strtolower(trim(
-                    ($r['student']->name ?? '') . ' ' . ($r['student']->email ?? '') . ' '
-                    . ($assessment->title ?? '') . ' ' . (optional(optional($assessment)->course)->title ?? '') . ' '
-                    . (($assessment && method_exists($assessment, 'displayCode')) ? $assessment->displayCode() : '') . ' '
-                    . ($disp['appt_id'] ?? '') . ' ' . ($disp['appointment'] ?? '') . ' '
-                    . ($disp['assessor'] ?? '') . ' ' . ($disp['batch'] ?? '') . ' ' . ($disp['status'] ?? '') . ' '
-                    . (optional(optional($assignment)->batch)->code ?? '') . ' ' . (optional(optional($assignment)->batch)->name ?? '') . ' '
-                    . ($assignment->id ?? '') . ' ' . ($assessment->id ?? '')
-                ));
-                if ($needle !== '' && str_contains($hay, $needle)) {
-                    return true;
-                }
-
-                return ctype_digit($search) && (
-                    (int) $search === (int) ($assessment->id ?? 0)
-                    || (int) $search === (int) ($r['student']->id ?? 0)
-                    || (int) $search === (int) ($assignment->id ?? 0)
-                );
-            })->all();
-        }
-
         $rows = collect($rowsByKey)->values();
         try {
             $rows = $this->replaceCimaScsRows($rows, $assignments, $selectedAssessment, $assessmentsById);
@@ -1064,6 +1037,24 @@ class LmsAssessmentController extends Controller
                     'attempt_total' => max(1, (int) ($assessment->max_attempts ?? 1)),
                 ]);
             }
+        }
+
+        $rows = $rows->map(function ($r) {
+            if (! empty($r['sitting_display'])) {
+                return $r;
+            }
+            $disp = $this->sittingDisplayForRow($r);
+            if (! empty($disp['_assignment'])) {
+                $r['assignment'] = $disp['_assignment'];
+            }
+            unset($disp['_assignment']);
+            $r['sitting_display'] = $disp;
+
+            return $r;
+        })->values();
+
+        if ($search !== '') {
+            $rows = $rows->filter(fn ($r) => $this->assignedRowMatchesSearch($r, $search))->values();
         }
 
         $statusOptions = [
@@ -2459,6 +2450,62 @@ class LmsAssessmentController extends Controller
 
             return null;
         }
+    }
+
+    protected function assignedRowMatchesSearch(array $r, string $search): bool
+    {
+        $needle = mb_strtolower(trim($search));
+        if ($needle === '') {
+            return true;
+        }
+        $disp = $r['sitting_display'] ?? [];
+        $student = $r['student'] ?? null;
+        $assessment = $r['assessment'] ?? null;
+        $assignment = $r['assignment'] ?? null;
+        $attempt = $r['attempt'] ?? null;
+        $hay = mb_strtolower(trim(implode(' ', [
+            (string) ($student->name ?? ''),
+            (string) ($student->email ?? ''),
+            (string) ($student->id ?? ''),
+            (string) ($assessment->title ?? ''),
+            (string) (optional(optional($assessment)->course)->title ?? ''),
+            ($assessment && method_exists($assessment, 'displayCode')) ? (string) $assessment->displayCode() : '',
+            (string) ($disp['appt_id'] ?? ''),
+            (string) ($disp['appointment'] ?? ''),
+            (string) ($disp['assessor'] ?? ''),
+            (string) ($disp['batch'] ?? ''),
+            (string) ($disp['status'] ?? ''),
+            (string) (optional(optional($assignment)->batch)->code ?? ''),
+            (string) (optional(optional($assignment)->batch)->name ?? ''),
+            (string) ($assignment->id ?? ''),
+            $assignment ? ('bext' . (int) $assignment->id) : '',
+            (string) ($assessment->id ?? ''),
+            (string) ($attempt->id ?? ''),
+        ])));
+        $hay = preg_replace('/\s+/', ' ', $hay) ?: '';
+        if (str_contains($hay, $needle)) {
+            return true;
+        }
+        $tokens = preg_split('/\s+/', $needle) ?: [];
+        if (count($tokens) > 1) {
+            foreach ($tokens as $token) {
+                if ($token === '' || ! str_contains($hay, $token)) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        if (ctype_digit($search)) {
+            $n = (int) $search;
+
+            return $n === (int) ($assessment->id ?? 0)
+                || $n === (int) ($student->id ?? 0)
+                || $n === (int) ($assignment->id ?? 0)
+                || $n === (int) ($attempt->id ?? 0);
+        }
+
+        return false;
     }
 
     protected function sittingDisplayForRow(array $row): array
