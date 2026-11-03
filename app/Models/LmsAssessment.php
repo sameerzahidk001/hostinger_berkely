@@ -207,29 +207,13 @@ class LmsAssessment extends Model
 
         $ids = $ids->map(fn ($id) => (int) $id)->unique()->filter()->values();
         if ($batchIds->isEmpty() && $ids->isNotEmpty()) {
-            $overlap = [];
-            foreach ($ids as $uid) {
-                foreach ($this->batchIdsForUser((int) $uid) as $bid) {
-                    $overlap[$bid] = ($overlap[$bid] ?? 0) + 1;
-                }
-            }
-            $courseId = (int) ($this->course_id ?? 0);
-            if ($overlap !== []) {
-                arsort($overlap);
-                foreach ($overlap as $bid => $n) {
-                    $bid = (int) $bid;
-                    if ($n < 1) {
-                        continue;
-                    }
-                    if ($courseId > 0) {
-                        $batch = ClassBatch::query()->find($bid);
-                        if ($batch && (int) ($batch->course_id ?? 0) > 0 && (int) $batch->course_id !== $courseId) {
-                            continue;
-                        }
-                    }
-                    $batchIds->push($bid);
-                    break;
-                }
+            $inferred = ClassBatch::bestIdForStudents(
+                (int) ($this->course_id ?? 0),
+                $ids->all(),
+                (string) ($this->title ?? '')
+            );
+            if ($inferred) {
+                $batchIds->push((int) $inferred);
             }
         }
 
