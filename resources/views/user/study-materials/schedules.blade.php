@@ -37,17 +37,17 @@
                         </div>
                     </form>
                     <div class="table-responsive">
-                        <table class="table table-striped table-bordered">
+                        <table class="table table-striped table-bordered js-sortable-table">
                             <thead>
                                 <tr>
-                                    <th>Batch</th>
-                                    <th>Course</th>
-                                    <th>Instructor</th>
-                                    <th>Head of Faculty</th>
-                                    <th>Students</th>
-                                    <th>Sessions</th>
-                                    <th>Next class</th>
-                                    <th></th>
+                                    <th data-sort-col="0">Batch <span class="sort-ind"></span></th>
+                                    <th data-sort-col="1">Course <span class="sort-ind"></span></th>
+                                    <th data-sort-col="2">Instructor <span class="sort-ind"></span></th>
+                                    <th data-sort-col="3">Head of Faculty <span class="sort-ind"></span></th>
+                                    <th data-sort-col="4">Students <span class="sort-ind"></span></th>
+                                    <th data-sort-col="5">Sessions <span class="sort-ind"></span></th>
+                                    <th data-sort-col="6">Next class <span class="sort-ind"></span></th>
+                                    <th class="col-actions"></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -82,9 +82,9 @@
                                                 —
                                             @endif
                                         </td>
-                                        <td>{{ $batch['student_count'] ?? 0 }}</td>
-                                        <td>{{ $batch['session_count'] }}</td>
-                                        <td>
+                                        <td data-sort="{{ (int) ($batch['student_count'] ?? 0) }}">{{ $batch['student_count'] ?? 0 }}</td>
+                                        <td data-sort="{{ (int) ($batch['session_count'] ?? 0) }}">{{ $batch['session_count'] }}</td>
+                                        <td data-sort="{{ !empty($batch['next_at']) ? $batch['next_at']->timestamp : 0 }}">
                                             @if(!empty($batch['next_at']))
                                                 {{ $batch['next_at']->format('d M Y H:i') }}
                                                 @if(!empty($batch['next_timezone']))

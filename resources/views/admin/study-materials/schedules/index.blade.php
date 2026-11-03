@@ -45,17 +45,17 @@
                 </div>
             </form>
             <div class="table-responsive">
-                <table class="table table-striped table-bordered">
+                <table class="table table-striped table-bordered js-sortable-table">
                     <thead>
                         <tr>
-                            <th>Batch code</th>
-                            <th>Batch name</th>
-                            <th>Course</th>
-                            <th>Instructor</th>
-                            <th>Head of Faculty</th>
-                            <th>Students</th>
-                            <th>Sessions</th>
-                            <th></th>
+                            <th data-sort-col="0">Batch code <span class="sort-ind"></span></th>
+                            <th data-sort-col="1">Batch name <span class="sort-ind"></span></th>
+                            <th data-sort-col="2">Course <span class="sort-ind"></span></th>
+                            <th data-sort-col="3">Instructor <span class="sort-ind"></span></th>
+                            <th data-sort-col="4">Head of Faculty <span class="sort-ind"></span></th>
+                            <th data-sort-col="5">Students <span class="sort-ind"></span></th>
+                            <th data-sort-col="6">Sessions <span class="sort-ind"></span></th>
+                            <th class="col-actions"></th>
                         </tr>
                     </thead>
                     <tbody>

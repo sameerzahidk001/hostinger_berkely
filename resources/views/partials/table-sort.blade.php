@@ -9,6 +9,9 @@
 <script>
 (function () {
     if (window.__lmsTableSortBound) {
+        if (typeof window.__lmsMarkSortableTables === 'function') {
+            window.__lmsMarkSortableTables();
+        }
         return;
     }
     window.__lmsTableSortBound = true;
@@ -32,10 +35,10 @@
         if (th.classList.contains('col-actions') || th.classList.contains('col-action')) {
             return true;
         }
-        if (t === 'action' || t === 'actions') {
+        if (t === 'action' || t === 'actions' || t === 'join' || t === '') {
             return true;
         }
-        if (th.querySelector('input, select, button, a')) {
+        if (th.querySelector('input, select, button')) {
             return true;
         }
         return false;
@@ -55,6 +58,28 @@
             el = el.previousElementSibling;
         }
         return i;
+    }
+
+    function sortValue(cell) {
+        if (!cell) {
+            return '';
+        }
+        var raw = cell.getAttribute('data-sort');
+        if (raw !== null && raw !== '') {
+            return String(raw).replace(/\s+/g, ' ').trim();
+        }
+        return (cell.textContent || '').replace(/\s+/g, ' ').trim();
+    }
+
+    function compareValues(av, bv) {
+        var al = av.toLowerCase();
+        var bl = bv.toLowerCase();
+        var an = parseFloat(av);
+        var bn = parseFloat(bv);
+        if (!isNaN(an) && !isNaN(bn) && /^-?\d+(\.\d+)?$/.test(av) && /^-?\d+(\.\d+)?$/.test(bv)) {
+            return an - bn;
+        }
+        return String(al).localeCompare(String(bl), undefined, { numeric: true, sensitivity: 'base' });
     }
 
     document.addEventListener('click', function (e) {
@@ -81,21 +106,10 @@
             return;
         }
         var rows = Array.prototype.filter.call(tbody.rows, function (row) {
-            return row.cells.length > 1;
+            return row.cells.length > 1 && !row.querySelector('td[colspan]');
         });
         rows.sort(function (a, b) {
-            var ca = a.cells[col];
-            var cb = b.cells[col];
-            var av = ((ca && (ca.getAttribute('data-sort') || ca.textContent)) || '').replace(/\s+/g, ' ').trim().toLowerCase();
-            var bv = ((cb && (cb.getAttribute('data-sort') || cb.textContent)) || '').replace(/\s+/g, ' ').trim().toLowerCase();
-            var an = parseFloat(av);
-            var bn = parseFloat(bv);
-            var cmp;
-            if (!isNaN(an) && !isNaN(bn) && /^-?\d+(\.\d+)?$/.test(av) && /^-?\d+(\.\d+)?$/.test(bv)) {
-                cmp = an - bn;
-            } else {
-                cmp = String(av).localeCompare(String(bv), undefined, { numeric: true, sensitivity: 'base' });
-            }
+            var cmp = compareValues(sortValue(a.cells[col]), sortValue(b.cells[col]));
             return st.dir === 'asc' ? cmp : -cmp;
         });
         rows.forEach(function (row) {
@@ -113,12 +127,23 @@
         ind.textContent = st.dir === 'asc' ? ' ▲' : ' ▼';
     }, true);
 
-    document.addEventListener('DOMContentLoaded', function () {
+    function markSortable() {
         document.querySelectorAll('table:not(.dataTables-example):not(.dataTable) thead th').forEach(function (th) {
-            if (!skipTh(th)) {
+            if (!skipTh(th) && !skipTable(th.closest('table'))) {
                 th.classList.add('lms-sort-th');
+                if (!th.querySelector('.sort-ind')) {
+                    var ind = document.createElement('span');
+                    ind.className = 'sort-ind';
+                    th.appendChild(ind);
+                }
             }
         });
-    });
+    }
+    window.__lmsMarkSortableTables = markSortable;
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', markSortable);
+    } else {
+        markSortable();
+    }
 })();
 </script>

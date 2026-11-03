@@ -24,21 +24,21 @@
     @endif
 </div>
 <div class="table-responsive">
-    <table id="{{ $lecturePlanId }}" class="table table-striped table-bordered" style="margin-bottom:0;">
+    <table id="{{ $lecturePlanId }}" class="table table-striped table-bordered js-sortable-table" style="margin-bottom:0;">
         <thead>
             <tr>
-                <th>#</th>
-                <th>Date</th>
-                <th>Day</th>
-                <th>Time</th>
-                <th>Timezone</th>
-                <th>Duration</th>
-                <th>Title</th>
-                <th>Description</th>
-                <th>Status</th>
-                <th style="min-width:140px;">Join</th>
+                <th data-sort-col="0"># <span class="sort-ind"></span></th>
+                <th data-sort-col="1">Date <span class="sort-ind"></span></th>
+                <th data-sort-col="2">Day <span class="sort-ind"></span></th>
+                <th data-sort-col="3">Time <span class="sort-ind"></span></th>
+                <th data-sort-col="4">Timezone <span class="sort-ind"></span></th>
+                <th data-sort-col="5">Duration <span class="sort-ind"></span></th>
+                <th data-sort-col="6">Title <span class="sort-ind"></span></th>
+                <th data-sort-col="7">Description <span class="sort-ind"></span></th>
+                <th data-sort-col="8">Status <span class="sort-ind"></span></th>
+                <th class="col-actions" style="min-width:140px;">Join</th>
                 @if($isAdminView)
-                    <th style="min-width:140px;">Actions</th>
+                    <th class="col-actions" style="min-width:140px;">Actions</th>
                 @endif
             </tr>
         </thead>
@@ -75,15 +75,15 @@
                         : route('user.class-schedules.item-ics', $row->id);
                 @endphp
                 <tr>
-                    <td>{{ $loop->iteration }}</td>
-                    <td><strong>{{ $row->scheduled_at?->format('d M Y') ?? '—' }}</strong></td>
-                    <td>{{ $row->scheduled_at?->format('l') ?? '—' }}</td>
-                    <td>{{ $row->scheduled_at?->format('H:i') ?? '—' }}</td>
-                    <td><small>{{ $tzLabel }}</small></td>
-                    <td>{{ $duration }} min</td>
-                    <td>{{ $title !== '' ? $title : '—' }}</td>
-                    <td>{{ $notes !== '' ? $notes : '—' }}</td>
-                    <td><span class="label {{ $statusClass }}">{{ $statusLabel }}</span></td>
+                    <td data-sort="{{ $loop->iteration }}">{{ $loop->iteration }}</td>
+                    <td data-sort="{{ optional($row->scheduled_at)->timestamp ?? 0 }}"><strong>{{ $row->scheduled_at?->format('d M Y') ?? '—' }}</strong></td>
+                    <td data-sort="{{ optional($row->scheduled_at)->format('N') ?? '' }}">{{ $row->scheduled_at?->format('l') ?? '—' }}</td>
+                    <td data-sort="{{ optional($row->scheduled_at)->format('Hi') ?? '' }}">{{ $row->scheduled_at?->format('H:i') ?? '—' }}</td>
+                    <td data-sort="{{ $tzLabel }}"><small>{{ $tzLabel }}</small></td>
+                    <td data-sort="{{ (int) $duration }}">{{ $duration }} min</td>
+                    <td data-sort="{{ $title }}">{{ $title !== '' ? $title : '—' }}</td>
+                    <td data-sort="{{ $notes }}">{{ $notes !== '' ? $notes : '—' }}</td>
+                    <td data-sort="{{ $statusLabel }}"><span class="label {{ $statusClass }}">{{ $statusLabel }}</span></td>
                     <td>
                         @if($row->zoho_link && ! $joinDisabled)
                             <a class="btn btn-primary btn-sm" href="{{ $row->zoho_link }}" target="_blank" rel="noopener" style="background:#f8961f;border-color:#f8961f;color:#1e1e1e;font-weight:700;">Join Now</a>
