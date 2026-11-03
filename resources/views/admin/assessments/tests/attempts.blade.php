@@ -125,7 +125,8 @@
                             $assessmentRow = $row['assessment'];
                             $student = $row['student'];
                             $attemptNo = (int) ($row['attempt_number'] ?? 1);
-                            $attemptTotal = (int) ($row['attempt_total'] ?? 1);
+                            $attemptTotal = max((int) ($row['attempt_total'] ?? 1), max(1, (int) ($assessmentRow->max_attempts ?? 1)));
+                            $attemptNo = min($attemptTotal, max(1, $attemptNo));
                             if ($attempt) {
                                 $statusClass = $attempt->statusColorClass();
                                 $statusText = $attempt->statusLabel();

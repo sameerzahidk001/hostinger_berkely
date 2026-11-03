@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.searchable-select-assets')
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
-<!-- lms-assigned-tests-20261102m KEEP: Appointment Date & Time + Assessor as early columns; full batch roster; Next pager -->
+<!-- lms-assigned-tests-20261103a KEEP: Appointment Date & Time + timezone on next line; Assessor early; Attempt n of Max attempts; full batch roster; Next pager -->
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
@@ -49,7 +49,8 @@
         overflow: visible;
     }
     .lms-assigned-table .col-appt { width: 8%; min-width: 110px; white-space: nowrap !important; }
-    .lms-assigned-table .col-when { width: 14%; min-width: 160px; font-weight: 700; }
+    .lms-assigned-table .col-when { width: 14%; min-width: 160px; font-weight: 700; white-space: normal !important; }
+    .lms-assigned-table .col-when .lms-timing-line { display: block; line-height: 1.35; }
     .lms-assigned-table .col-assessor { width: 12%; min-width: 140px; font-weight: 700; }
     .lms-assigned-table .col-test { width: 14%; }
     .lms-assigned-table .col-taker { width: 13%; }
@@ -131,7 +132,7 @@
         All assigned test takers (started or not), including people who never opened the test.
         <strong>Missed</strong> = they did not start. For CIMA SCS/MCS that is as soon as the appointment start has passed (no wait for duration). Other tests wait until start + duration.
         Status shows <strong>Marking Required</strong> until the assessor marks a submitted sitting.
-        <span class="text-muted">List 20261102m</span>
+        <span class="text-muted">List 20261103a</span>
     </p>
     <div class="ibox"><div class="ibox-content">
         <form method="GET" class="m-b-md" style="margin-bottom:15px;">
@@ -309,7 +310,8 @@
                             }
                             $batchCode = $disp['batch'] ?? ($assignment?->batch?->code ?? $assignment?->batch?->name);
                             $attemptNo = (int) ($row['attempt_number'] ?? 1);
-                            $attemptTotal = (int) ($row['attempt_total'] ?? 1);
+                            $attemptTotal = max((int) ($row['attempt_total'] ?? 1), max(1, (int) ($assessment->max_attempts ?? 1)));
+                            $attemptNo = min($attemptTotal, max(1, $attemptNo));
                             if (! $attempt && $statusText === 'Assigned' && ! ($assignment && $assignment->isSelfSitting())) {
                                 $startCheck = $assignment && method_exists($assignment, 'windowStart') ? $assignment->windowStart() : null;
                                 if (! $startCheck && ! empty($appointment) && $appointment !== '—' && stripos((string) $appointment, 'anytime') === false) {
@@ -335,7 +337,7 @@
                         <tr>
                             <td class="col-appt" data-sort="{{ $assignment->id ?? 0 }}"><strong>{{ $apptId }}</strong></td>
                             <td class="col-when" data-sort="{{ $appointment }}">
-                                <span class="lms-timing-line">{{ $appointment }}</span>
+                                <span class="lms-timing-line">{{ $appointment }}</span><br>
                                 <span class="lms-timing-line text-muted">{{ $timezoneLabel }}</span>
                             </td>
                             <td class="col-assessor" data-sort="{{ $assessorName }}">
