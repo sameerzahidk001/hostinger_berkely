@@ -1851,6 +1851,16 @@ class LmsAssessmentController extends Controller
                 );
                 if ($inferred) {
                     $batchIds[] = $inferred;
+                    if (empty($seed->class_batch_id)) {
+                        $seed->class_batch_id = $inferred;
+                        $batch = ClassBatch::query()->find($inferred);
+                        if ($batch) {
+                            $seed->setRelation('batch', $batch);
+                        }
+                    }
+                    if (Schema::hasColumn($seed->getTable(), 'sitting_kind') && $seed->isSelfSitting()) {
+                        $seed->sitting_kind = LmsAssessmentAssignment::KIND_EXAM;
+                    }
                 }
             }
             $batchIds = array_values(array_unique(array_filter($batchIds)));
@@ -2096,6 +2106,22 @@ class LmsAssessmentController extends Controller
                 }
             } catch (\Throwable $e) {
                 // keep this sitting's label
+            }
+        }
+        if ($this->appointmentLooksBlank($start) && $assessment && ! empty($assessment->id)) {
+            try {
+                $started = LmsAssessmentAttempt::query()
+                    ->where('assessment_id', (int) $assessment->id)
+                    ->whereNotNull('started_at')
+                    ->orderBy('started_at')
+                    ->first();
+                if ($started && $started->started_at) {
+                    $start = $asg && method_exists($asg, 'formatInTimezone')
+                        ? $asg->formatInTimezone($started->started_at)
+                        : $started->started_at->format('d/m/Y, H:i');
+                }
+            } catch (\Throwable $e) {
+                // keep blank
             }
         }
         if ($attempt) {

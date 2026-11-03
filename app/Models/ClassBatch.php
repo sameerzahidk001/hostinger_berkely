@@ -148,36 +148,54 @@ class ClassBatch extends Model
     }
 
     /**
-     * Batch on this course that contains the most of these people.
-     * Skips Masterclass batches unless the test title is a masterclass.
+     * Batch that belongs with this test: student overlap first, then title.
+     * Does not require the batch course_id to match the test course (SCS mocks sit on Fast-Track).
+     * Skips Masterclass unless the test title is a masterclass.
      */
     public static function bestIdForStudents(int $courseId, array $userIds, ?string $assessmentTitle = null): ?int
     {
-        $userIds = collect($userIds)->map(fn ($id) => (int) $id)->unique()->filter()->values();
-        if ($userIds->isEmpty()) {
+        if (! Schema::hasTable('class_batches')) {
             return null;
         }
-        $q = static::query();
-        if ($courseId > 0 && Schema::hasColumn((new static)->getTable(), 'course_id')) {
-            $q->where('course_id', $courseId);
-        }
+        $userIds = collect($userIds)->map(fn ($id) => (int) $id)->unique()->filter()->values();
         $title = mb_strtolower(trim((string) $assessmentTitle));
         $wantMaster = str_contains($title, 'masterclass');
         $bestId = null;
-        $bestN = 0;
-        foreach ($q->get(['id', 'name', 'code', 'course_id']) as $batch) {
+        $bestScore = -1;
+        $bestOverlap = 0;
+        foreach (static::query()->get(['id', 'name', 'code', 'course_id']) as $batch) {
             $hay = mb_strtolower(trim((string) ($batch->code ?? '') . ' ' . (string) ($batch->name ?? '')));
             if (str_contains($hay, 'masterclass') && ! $wantMaster) {
                 continue;
             }
-            $n = static::studentUserIdsFor((int) $batch->id)->intersect($userIds)->count();
-            if ($n > $bestN) {
-                $bestN = $n;
+            $n = $userIds->isEmpty() ? 0 : static::studentUserIdsFor((int) $batch->id)->intersect($userIds)->count();
+            $score = $n * 100;
+            if ($courseId > 0 && (int) ($batch->course_id ?? 0) === $courseId) {
+                $score += 8;
+            }
+            foreach (['strategic case', 'cima scs', ' scs ', 'november 2026', 'nov 2026'] as $tok) {
+                $look = $tok === ' scs ' ? 'scs' : $tok;
+                $inTitle = $tok === ' scs '
+                    ? (str_contains($title, 'scs') || str_contains($title, 'strategic case'))
+                    : str_contains($title, $look);
+                $inBatch = $tok === ' scs '
+                    ? (str_contains($hay, 'scs') || str_contains($hay, 'strategic case'))
+                    : (str_contains($hay, $look) || ($look === 'november 2026' && str_contains($hay, 'nov 2026')));
+                if ($inTitle && $inBatch) {
+                    $score += 15;
+                }
+            }
+            if ($score > $bestScore) {
+                $bestScore = $score;
                 $bestId = (int) $batch->id;
+                $bestOverlap = $n;
             }
         }
+        if ($bestOverlap > 0) {
+            return $bestId;
+        }
 
-        return $bestN > 0 ? $bestId : null;
+        return $bestScore >= 15 ? $bestId : null;
     }
 
     public function schedules(): HasMany
