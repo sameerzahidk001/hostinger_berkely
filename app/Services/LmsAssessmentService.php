@@ -384,6 +384,7 @@ class LmsAssessmentService
         }
 
         $this->attachCimaCohortSittingsForUser($user, $out, $kind);
+        $this->attachScsMockSittingsForUser($user, $out, $kind);
 
         if (method_exists(StudyMaterialFolder::class, 'ensureFolderAssessmentsTable')) {
             $this->appendFolderSelfTests($user, $out, $kind);
@@ -482,6 +483,68 @@ class LmsAssessmentService
             || $assessment->isPractice()
             || $assessment->kind === LmsAssessment::KIND_GENERAL
             || $assessment->isSkill();
+    }
+
+    /** Person SCS Mock sittings this student was assigned (Mock 1 and Mock 2). */
+    protected function attachScsMockSittingsForUser(User $user, Collection $out, ?string $kind = null): void
+    {
+        $userId = (int) $user->id;
+        if ($userId <= 0) {
+            return;
+        }
+        try {
+            $aids = LmsAssessment::query()
+                ->where(function ($q) {
+                    $q->where('title', 'like', '%SCS Mock%')
+                        ->orWhere('title', 'like', '%SCS mock%');
+                })
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->filter()
+                ->values();
+            if ($aids->isEmpty()) {
+                return;
+            }
+            $assignments = LmsAssessmentAssignment::query()
+                ->with(['marker', 'assessment.course'])
+                ->whereIn('assessment_id', $aids->all())
+                ->where(function ($q) use ($userId) {
+                    $q->where('student_id', $userId);
+                    if (Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
+                        $q->orWhereJsonContains('roster_user_ids', $userId)
+                            ->orWhereJsonContains('roster_user_ids', (string) $userId);
+                    }
+                })
+                ->orderBy('id')
+                ->get();
+        } catch (\Throwable $e) {
+            return;
+        }
+        $seenAsg = $out->map(fn ($row) => (int) ($row['assignment']->id ?? 0))->filter()->all();
+        foreach ($assignments as $assignment) {
+            if (! $assignment || empty($assignment->id) || in_array((int) $assignment->id, $seenAsg, true)) {
+                continue;
+            }
+            $assessment = $assignment->assessment ?: LmsAssessment::query()->with('course')->find($assignment->assessment_id);
+            if (! $assessment || (method_exists($assessment, 'trashed') && $assessment->trashed())) {
+                continue;
+            }
+            if ($kind && $assessment->kind !== $kind) {
+                continue;
+            }
+            if (! $assessment->isPublished()) {
+                $hasAttempt = LmsAssessmentAttempt::query()
+                    ->where('assessment_id', $assessment->id)
+                    ->where('user_id', $userId)
+                    ->exists();
+                if (! $hasAttempt) {
+                    continue;
+                }
+            }
+            $assignment->setRelation('assessment', $assessment);
+            $out->push(['assessment' => $assessment, 'assignment' => $assignment]);
+            $seenAsg[] = (int) $assignment->id;
+        }
     }
 
     /** The five BAT-0003 CIMA people see that sitting even if they are not on the batch pivot. */

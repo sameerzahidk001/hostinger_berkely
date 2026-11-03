@@ -2543,25 +2543,6 @@ class LmsAssessmentController extends Controller
         $status = 'Assigned';
         if ($this->appointmentLooksBlank($start) && $assessment && ! empty($assessment->id)) {
             try {
-                $timed = LmsAssessmentAssignment::query()
-                    ->where('assessment_id', (int) $assessment->id)
-                    ->whereNotNull('available_from')
-                    ->orderByDesc('id')
-                    ->first();
-                if ($timed) {
-                    $this->hydrateSittingDisplay($timed, $assessment);
-                    $copied = $timed->appointmentStartLabel();
-                    if (! $this->appointmentLooksBlank($copied)) {
-                        $start = $copied;
-                        $tz = $timed->timezoneLabel() ?: $tz;
-                    }
-                }
-            } catch (\Throwable $e) {
-                // keep this sitting's label
-            }
-        }
-        if ($this->appointmentLooksBlank($start) && $assessment && ! empty($assessment->id)) {
-            try {
                 $started = LmsAssessmentAttempt::query()
                     ->where('assessment_id', (int) $assessment->id)
                     ->whereNotNull('started_at')
@@ -2627,36 +2608,6 @@ class LmsAssessmentController extends Controller
         }
         if ($assessment) {
             $asg->setRelation('assessment', $assessment);
-        }
-        if (! $asg->windowStart() && $assessment && ! empty($assessment->id)) {
-            try {
-                $timed = LmsAssessmentAssignment::query()
-                    ->where('assessment_id', (int) $assessment->id)
-                    ->whereNotNull('available_from')
-                    ->orderByDesc('id')
-                    ->first();
-                if (! $timed && ! empty($assessment->course_id)) {
-                    $timed = LmsAssessmentAssignment::query()
-                        ->whereNotNull('available_from')
-                        ->whereHas('assessment', function ($q) use ($assessment) {
-                            $q->where('course_id', (int) $assessment->course_id)
-                                ->where('kind', $assessment->kind ?? 'mock');
-                        })
-                        ->orderByDesc('id')
-                        ->first();
-                }
-                if ($timed && $timed->available_from) {
-                    $asg->available_from = $timed->available_from;
-                    if (! empty($timed->available_until)) {
-                        $asg->available_until = $timed->available_until;
-                    }
-                    if (trim((string) ($asg->timezone ?? '')) === '') {
-                        $asg->timezone = $timed->timezone ?: 'Asia/Dubai';
-                    }
-                }
-            } catch (\Throwable $e) {
-                // keep empty window
-            }
         }
     }
 
