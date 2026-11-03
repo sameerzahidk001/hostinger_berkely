@@ -607,10 +607,14 @@ class LmsAssessmentController extends Controller
             $assessmentFilterIds = $this->sameTitleAssessmentIds($selectedAssessment);
         }
 
+        $loadedAssignments = $assignments;
         $assignments = $assignments->filter(function ($assignment) use (
             $assessmentId, $assessmentFilterIds, $batchId, $courseId, $kind, $markerOnlyUid, $courseIdsScope
         ) {
             $assessment = $assignment->assessment ?? null;
+            if ($markerOnlyUid && ! $this->instructorOwnsSitting($markerOnlyUid, $assignment, $assessment)) {
+                return false;
+            }
             if ($assessmentId > 0 && ! in_array((int) $assignment->assessment_id, $assessmentFilterIds, true)) {
                 return false;
             }
@@ -848,6 +852,9 @@ class LmsAssessmentController extends Controller
             }
             $asg = $this->assignmentForAttempt($att, $assignments, $assignmentsById);
             if ($markerOnlyUid) {
+                if ($asg && ! $this->instructorOwnsSitting($markerOnlyUid, $asg, $assessment)) {
+                    continue;
+                }
                 if (! $this->instructorCanSeeRow($markerOnlyUid, $asg, $assessment, $att)) {
                     continue;
                 }
@@ -1228,7 +1235,9 @@ class LmsAssessmentController extends Controller
             'statusCounts' => $statusCounts ?? ['Missed' => 0, 'Upcoming' => 0],
             'selectedAssessment' => $selectedAssessment,
             'assessments' => $this->assessmentsWithAssignedPeople(
-                $this->uniqueAssessmentsByTitle($assessmentQuery->get(['id', 'title', 'kind']), $assignments)
+                $this->uniqueAssessmentsByTitle($assessmentQuery->get(['id', 'title', 'kind']), $loadedAssignments),
+                $loadedAssignments,
+                $markerOnlyUid
             ),
             'batches' => Schema::hasTable('class_batches')
                 ? ClassBatch::query()->orderByDesc('id')->get(['id', 'code', 'name'])
@@ -4236,20 +4245,43 @@ class LmsAssessmentController extends Controller
         if ($attempt && (int) ($attempt->graded_by_user_id ?? 0) === $uid) {
             return true;
         }
-        if ($this->instructorCanSeeSitting($uid, $assignment, $assessment)) {
+        if ($assignment && $this->instructorOwnsSitting($uid, $assignment, $assessment)) {
             return true;
         }
-        if ($attempt) {
-            return $this->attemptIsSubmitted($attempt);
+        if (! $assignment && $this->actorIsMusa($uid) && $this->isCimaScsAssignedMock($assessment)) {
+            return true;
         }
 
         return false;
     }
 
-    /** Dropdown: live tests this instructor has assigned people on (Missed included). */
-    protected function assessmentsWithAssignedPeople($assessments)
+    /** This instructor is the assessor on the sitting (not merely a course trainer). */
+    protected function instructorOwnsSitting(int $uid, $assignment, $assessment): bool
     {
-        return collect($assessments)->filter(function ($a) {
+        if ($uid <= 0 || ! $assignment) {
+            return false;
+        }
+        if (method_exists($assessment, 'trashed') && $assessment && $assessment->trashed()) {
+            return false;
+        }
+        $markerId = (int) ($assignment->marker_user_id ?? 0);
+        if ($markerId === $uid) {
+            return true;
+        }
+        if ($markerId > 0) {
+            return false;
+        }
+        if ((int) ($assignment->assigned_by_user_id ?? 0) === $uid) {
+            return true;
+        }
+
+        return $this->actorIsMusa($uid) && $this->isCimaScsAssignedMock($assessment);
+    }
+
+    /** Dropdown: live tests this instructor has assigned people on (Missed included). */
+    protected function assessmentsWithAssignedPeople($assessments, $assignments = null, ?int $markerOnlyUid = null)
+    {
+        return collect($assessments)->filter(function ($a) use ($assignments, $markerOnlyUid) {
             if (! $a || (method_exists($a, 'trashed') && $a->trashed())) {
                 return false;
             }
@@ -4257,11 +4289,73 @@ class LmsAssessmentController extends Controller
                 return false;
             }
             try {
+                if ($markerOnlyUid) {
+                    return $this->instructorAssignedPeopleCount($markerOnlyUid, $a, $assignments) > 0;
+                }
+
                 return method_exists($a, 'assignedPeopleCount') && $a->assignedPeopleCount() > 0;
             } catch (\Throwable $e) {
-                return true;
+                return false;
             }
         })->values();
+    }
+
+    /** Unique non-deleted people this instructor still has on the test. */
+    protected function instructorAssignedPeopleCount(int $uid, $assessment, $assignments): int
+    {
+        $aids = $this->sameTitleAssessmentIds($assessment);
+        if ($aids === []) {
+            $aids = [(int) ($assessment->id ?? 0)];
+        }
+        $ids = collect();
+        $excluded = $this->excludedUserIdsForAssessment($assessment);
+        foreach (collect($assignments) as $asg) {
+            if (! in_array((int) ($asg->assessment_id ?? 0), $aids, true)) {
+                continue;
+            }
+            $rowAssessment = $asg->assessment ?? $assessment;
+            if (! $this->instructorOwnsSitting($uid, $asg, $rowAssessment)) {
+                continue;
+            }
+            if (! empty($asg->student_id)) {
+                $ids->push((int) $asg->student_id);
+            }
+            if (Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
+                $ids = $ids->merge(collect($asg->roster_user_ids ?? []));
+            }
+            $self = method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting();
+            if (! $self && empty($asg->student_id) && ! empty($asg->class_batch_id)
+                && collect($asg->roster_user_ids ?? [])->filter()->isEmpty()) {
+                try {
+                    $ids = $ids->merge(ClassBatch::membersOnBatchAtAssignment((int) $asg->class_batch_id, $asg));
+                } catch (\Throwable $e) {
+                    // named/roster only
+                }
+            }
+            try {
+                if (! empty($asg->id) && Schema::hasTable('lms_assessment_attempts')) {
+                    $ids = $ids->merge(
+                        LmsAssessmentAttempt::query()->where('assignment_id', (int) $asg->id)->pluck('user_id')
+                    );
+                }
+            } catch (\Throwable $e) {
+                // keep assignment ids
+            }
+        }
+        $ids = $ids->map(fn ($id) => (int) $id)->unique()->filter()->diff($excluded)->values();
+        if ($ids->isEmpty()) {
+            return 0;
+        }
+        try {
+            $alive = User::query()->whereIn('id', $ids->all())->pluck('id')->map(fn ($id) => (int) $id);
+            $ids = $ids->intersect($alive)->values();
+        } catch (\Throwable $e) {
+            // keep ids
+        }
+
+        return $ids->filter(function ($id) use ($assessment) {
+            return ! $this->isRemovedTestTaker((object) ['id' => (int) $id], $assessment);
+        })->count();
     }
 
     /** Course assessor (and Musa on SCS) sees every person-attempt on that test, matching admin. */
