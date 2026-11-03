@@ -511,14 +511,22 @@ class LmsAssessmentService
         } catch (\Throwable $e) {
             return;
         }
-        $seenAids = $out->map(fn ($row) => (int) ($row['assessment']->id ?? 0))->all();
-        foreach ($assignments->groupBy(fn ($row) => (int) $row->assessment_id) as $aid => $group) {
-            $assignment = $group->first(fn ($row) => ! $row->isSelfSitting() && ! empty($row->available_from))
-                ?: $group->first(fn ($row) => ! $row->isSelfSitting() && ! empty($row->class_batch_id))
-                ?: $group->first(fn ($row) => ! $row->isSelfSitting())
-                ?: $group->sortBy('id')->first();
-            if (! $assignment) {
+        $seenAsg = $out->map(fn ($row) => (int) ($row['assignment']->id ?? 0))->filter()->all();
+        foreach ($assignments as $assignment) {
+            if (! $assignment || empty($assignment->id)) {
                 continue;
+            }
+            if (in_array((int) $assignment->id, $seenAsg, true)) {
+                continue;
+            }
+            if (method_exists($assignment, 'isSelfSitting') && $assignment->isSelfSitting()) {
+                continue;
+            }
+            if (Schema::hasColumn('lms_assessment_assignments', 'excluded_user_ids')) {
+                $ex = collect($assignment->excluded_user_ids ?? [])->map(fn ($id) => (int) $id);
+                if ($ex->contains((int) $user->id)) {
+                    continue;
+                }
             }
             $assessment = $assignment->assessment ?: LmsAssessment::query()->with('course')->find($assignment->assessment_id);
             if (! $assessment || (method_exists($assessment, 'trashed') && $assessment->trashed())) {
@@ -527,18 +535,12 @@ class LmsAssessmentService
             if ($kind && $assessment->kind !== $kind) {
                 continue;
             }
-            if (in_array((int) $assessment->id, $seenAids, true)) {
-                continue;
-            }
-            if ($assignment->isSelfSitting() && Schema::hasColumn($assignment->getTable(), 'sitting_kind')) {
-                $assignment->sitting_kind = LmsAssessmentAssignment::KIND_EXAM;
-            }
             $assignment->setRelation('assessment', $assessment);
             if (method_exists($assignment, 'applyMissingExamWindow')) {
                 $assignment->applyMissingExamWindow('2026-10-26 20:30:00', 'Asia/Dubai', 180);
             }
             $out->push(['assessment' => $assessment, 'assignment' => $assignment]);
-            $seenAids[] = (int) $assessment->id;
+            $seenAsg[] = (int) $assignment->id;
         }
     }
 
@@ -2002,8 +2004,8 @@ class LmsAssessmentService
         };
         $available = $collapseOpen($available);
         $upcoming = $collapseOpen($upcoming);
-        $missed = $missed->groupBy(fn ($r) => (int) $r['assessment']->id)->map(function ($group) {
-            return $group->sortBy(fn ($r) => (int) ($r['assignment']->id ?? 0))->first();
+        $missed = $missed->unique(function ($r) {
+            return (int) $r['assessment']->id . ':' . (int) ($r['assignment']->id ?? 0);
         })->values();
 
         $hasAppointment = fn ($r) => ! empty($r['assignment']->id) || ! empty($r['from_folder']);
