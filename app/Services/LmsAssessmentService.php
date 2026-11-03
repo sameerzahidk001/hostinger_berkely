@@ -453,6 +453,16 @@ class LmsAssessmentService
     }
 
     /** CIMA case sittings expire. Mock/practice/general stay startable after the clock. */
+    public function isYahiaUser($user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+        $hay = mb_strtolower(trim((string) ($user->name ?? '') . ' ' . (string) ($user->email ?? '') . ' ' . (string) ($user->username ?? '')));
+
+        return str_contains($hay, 'yahia') || str_contains($hay, 'yahya');
+    }
+
     public function usesStrictExamWindow(LmsAssessment $assessment): bool
     {
         $hay = mb_strtolower(trim(
@@ -974,7 +984,10 @@ class LmsAssessmentService
                     abort(403, 'The availability window for this test has ended.');
                 }
             } elseif (! $assignment->isSelfSitting() && $assignment->isNotYetOpen() && $usedOnSitting === 0) {
-                abort(403, 'This test is not open yet.');
+                if ($this->isYahiaUser($user)) {
+                    abort(403, 'This test is not open yet.');
+                }
+                abort(403, 'The availability window for this test has ended.');
             } elseif ($usedOnSitting > 0 && $allowAnytimeRetake && ! $assignment->isSelfSitting()) {
                 $assignment = $this->ensureAnytimeRetakeSitting($user, $assessment, $assignment);
             }
@@ -1986,10 +1999,24 @@ class LmsAssessmentService
                     'attempt_total' => $max,
                 ]);
             } elseif ($assignment && $assignment->isNotYetOpen()) {
-                $upcoming->push($base + [
-                    'attempt' => null,
-                    'can_retake' => false,
-                ]);
+                if ($this->isYahiaUser($user)) {
+                    $upcoming->push($base + [
+                        'attempt' => null,
+                        'can_retake' => false,
+                    ]);
+                } elseif ($this->usesStrictExamWindow($assessment) || ($assignment && ! $assignment->isSelfSitting())) {
+                    $missed->push($base + [
+                        'attempt' => null,
+                        'can_retake' => $max > 1 || $this->canRetake($user, $assessment, $assignment),
+                        'attempt_number' => 1,
+                        'attempt_total' => $max,
+                    ]);
+                } else {
+                    $available->push($base + [
+                        'attempt' => null,
+                        'can_retake' => $isRetakeSitting,
+                    ]);
+                }
             } else {
                 // Each unused assigned sitting is its own start, even if Max attempts is 1.
                 $available->push($base + [

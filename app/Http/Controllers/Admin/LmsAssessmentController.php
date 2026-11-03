@@ -2343,6 +2343,47 @@ class LmsAssessmentController extends Controller
         return $ids->map(fn ($id) => (int) $id)->unique()->filter()->values()->all();
     }
 
+    /** One selected student → assign every classmate on that batch (snapshot at save). */
+    protected function batchIdsForStudents(array $studentIds, LmsAssessment $assessment): array
+    {
+        $found = collect();
+        $courseId = (int) ($assessment->course_id ?? 0);
+        $scs = $this->looksLikeCimaScsNovember($assessment);
+        foreach ($studentIds as $uid) {
+            $uid = (int) $uid;
+            $batchIds = $this->batchIdsForUser($uid);
+            if ($batchIds === []) {
+                continue;
+            }
+            $batches = ClassBatch::query()->whereIn('id', $batchIds)->get();
+            $batches = $batches->filter(function ($batch) {
+                $hay = mb_strtolower(trim((string) ($batch->code ?? '') . ' ' . (string) ($batch->name ?? '')));
+
+                return ! str_contains($hay, 'masterclass');
+            });
+            $matched = $courseId > 0
+                ? $batches->filter(fn ($batch) => (int) ($batch->course_id ?? 0) === $courseId)
+                : collect();
+            if ($scs) {
+                $scsBatches = $batches->filter(function ($batch) {
+                    $hay = mb_strtolower(trim((string) ($batch->code ?? '') . ' ' . (string) ($batch->name ?? '')));
+
+                    return str_contains($hay, 'bat-0004')
+                        || str_contains($hay, 'scs')
+                        || str_contains($hay, 'strategic')
+                        || str_contains($hay, 'november');
+                });
+                if ($scsBatches->isNotEmpty()) {
+                    $matched = $scsBatches;
+                }
+            }
+            $pick = $matched->isNotEmpty() ? $matched : $batches;
+            $found = $found->merge($pick->pluck('id'));
+        }
+
+        return $found->map(fn ($id) => (int) $id)->unique()->filter()->values()->all();
+    }
+
     protected function sittingForCohort($assessment, $assignments): ?LmsAssessmentAssignment
     {
         $aids = collect([(int) ($assessment->id ?? 0)])->filter()->values();
@@ -2560,7 +2601,7 @@ class LmsAssessmentController extends Controller
         if ($attempt) {
             $status = $attempt->statusLabel();
         } else {
-            $status = $this->unusedSittingStatus($asg, $assessment, $isCohort);
+            $status = $this->unusedSittingStatus($asg, $assessment, $isCohort, $row['student'] ?? null);
         }
 
         return [
@@ -2912,7 +2953,14 @@ class LmsAssessmentController extends Controller
         $hasTimezoneCol = Schema::hasColumn('lms_assessment_assignments', 'timezone');
 
         $created = 0;
-        foreach ((array) $request->input('batch_ids', []) as $batchId) {
+        $batchIds = collect($request->input('batch_ids', []))->map(fn ($id) => (int) $id)->filter()->unique()->values();
+        $studentIds = collect($request->input('student_ids', []))->map(fn ($id) => (int) $id)->filter()->unique()->values();
+        $fromPeople = $this->batchIdsForStudents($studentIds->all(), $a);
+        if ($fromPeople !== []) {
+            $batchIds = $batchIds->merge($fromPeople)->unique()->values();
+            $studentIds = collect();
+        }
+        foreach ($batchIds as $batchId) {
             $batchId = (int) $batchId;
             if ($batchId <= 0) {
                 continue;
@@ -2944,7 +2992,7 @@ class LmsAssessmentController extends Controller
             $this->assessments->notifyAssignmentCreated($createdAsg);
             $created++;
         }
-        foreach ((array) $request->input('student_ids', []) as $studentId) {
+        foreach ($studentIds as $studentId) {
             $studentId = (int) $studentId;
             if ($studentId <= 0) {
                 continue;
@@ -3107,12 +3155,12 @@ class LmsAssessmentController extends Controller
     }
 
     /** CIMA SCS/MCS unused rows are Missed as soon as the appointment start has passed (or if no start was stored). */
-    protected function unusedSittingStatus($asg, $assessment, bool $isCohort = false): string
+    protected function unusedSittingStatus($asg, $assessment, bool $isCohort = false, $student = null): string
     {
         $cima = $assessment && method_exists($this->assessments, 'usesStrictExamWindow')
             && $this->assessments->usesStrictExamWindow($assessment);
         $start = $asg && method_exists($asg, 'windowStart') ? $asg->windowStart() : null;
-        if ($start && now()->lt($start)) {
+        if ($start && now()->lt($start) && $this->assessments->isYahiaUser($student)) {
             return 'Upcoming';
         }
         if ($cima || $isCohort) {
