@@ -614,12 +614,28 @@ class LmsAssessmentController extends Controller
                     continue;
                 }
             }
-            if ($assignment->student_id && ! $assignment->class_batch_id) {
+            if ($assignment->student_id) {
                 $student = $assignment->student
                     ?: \App\Models\User::query()->find($assignment->student_id);
                 if ($student) {
                     $students->push($student);
                 }
+            }
+            try {
+                if (! empty($assignment->id) && Schema::hasTable('lms_assessment_attempts')) {
+                    $attemptUids = LmsAssessmentAttempt::query()
+                        ->where('assignment_id', (int) $assignment->id)
+                        ->pluck('user_id')
+                        ->map(fn ($id) => (int) $id)
+                        ->filter()
+                        ->unique()
+                        ->values();
+                    if ($attemptUids->isNotEmpty()) {
+                        $students = $students->concat(User::query()->whereIn('id', $attemptUids->all())->get());
+                    }
+                }
+            } catch (\Throwable $e) {
+                // keep named student
             }
             $students = $this->expandSittingStudents($students, $assignment, $assessment, $batchStudentCache);
             if ($students->isEmpty() && $assignment->class_batch_id) {
@@ -902,7 +918,9 @@ class LmsAssessmentController extends Controller
             return true;
         })->all();
 
-        $rowsByKey = $this->collapseUnusedRetakeRows($rowsByKey);
+        if (! $markerOnlyUid) {
+            $rowsByKey = $this->collapseUnusedRetakeRows($rowsByKey);
+        }
         foreach ($rowsByKey as $k => $r) {
             $max = max(1, (int) ($r['assessment']->max_attempts ?? 1));
             $rowsByKey[$k]['attempt_number'] = min($max, max(1, (int) ($r['attempt_number'] ?? 1)));
@@ -3315,14 +3333,13 @@ class LmsAssessmentController extends Controller
         return $this->instructorScopeBatchIds;
     }
 
-    /** Tests this person is assigned to mark, or unmarked sittings on batches they teach. */
+    /** Tests this person is assigned to mark (per sitting / per person, not by batch). */
     protected function instructorAssessmentIds(int $uid, ?array $courseIds = null): array
     {
         if ($this->instructorScopeAssessmentIds !== null) {
             return $this->instructorScopeAssessmentIds;
         }
         $ids = collect();
-        $batchIds = $this->instructorBatchIds($uid);
         try {
             if (Schema::hasColumn('lms_assessment_assignments', 'marker_user_id')) {
                 $ids = $ids->merge(
@@ -3333,33 +3350,10 @@ class LmsAssessmentController extends Controller
             // next
         }
         try {
-            if ($batchIds !== [] && Schema::hasColumn('lms_assessment_assignments', 'marker_user_id')) {
+            if (Schema::hasColumn('lms_assessment_attempts', 'graded_by_user_id')) {
                 $ids = $ids->merge(
-                    LmsAssessmentAssignment::query()
-                        ->whereIn('class_batch_id', $batchIds)
-                        ->where(function ($q) {
-                            $q->whereNull('marker_user_id')->orWhere('marker_user_id', 0);
-                        })
-                        ->pluck('assessment_id')
+                    LmsAssessmentAttempt::query()->where('graded_by_user_id', $uid)->pluck('assessment_id')
                 );
-            } elseif ($batchIds !== []) {
-                $ids = $ids->merge(
-                    LmsAssessmentAssignment::query()->whereIn('class_batch_id', $batchIds)->pluck('assessment_id')
-                );
-            }
-        } catch (\Throwable $e) {
-            // next
-        }
-        try {
-            foreach (LmsAssessmentAssignment::query()->where(function ($q) {
-                $q->whereNull('class_batch_id')->orWhere('class_batch_id', 0);
-            })->where(function ($q) {
-                $q->whereNull('marker_user_id')->orWhere('marker_user_id', 0);
-            })->get() as $asg) {
-                $bid = $this->sittingBatchId($asg);
-                if ($bid > 0 && in_array($bid, $batchIds, true)) {
-                    $ids->push((int) $asg->assessment_id);
-                }
             }
         } catch (\Throwable $e) {
             // next
@@ -3441,16 +3435,7 @@ class LmsAssessmentController extends Controller
         if ($uid <= 0 || ! $assignment) {
             return false;
         }
-        $markerId = (int) ($assignment->marker_user_id ?? 0);
-        if ($markerId === $uid) {
-            return true;
-        }
-        if ($markerId > 0) {
-            return false;
-        }
-        $batchId = $this->sittingBatchId($assignment);
-
-        return $batchId > 0 && in_array($batchId, $this->instructorBatchIds($uid), true);
+        return (int) ($assignment->marker_user_id ?? 0) === $uid;
     }
 
     /** Instructors and Musa: only tests they created or were assigned to mark. Real Admin still sees all. */
