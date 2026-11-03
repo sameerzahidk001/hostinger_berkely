@@ -659,6 +659,9 @@ class LmsAssessmentController extends Controller
             if ($this->looksLikeCimaScsNovember($assessment) && ! $this->isCimaScsAssignedMock($assessment)) {
                 continue;
             }
+            if ($markerOnlyUid && method_exists($assessment, 'trashed') && $assessment->trashed()) {
+                continue;
+            }
 
             $students = collect();
             if ($assignment->class_batch_id) {
@@ -692,6 +695,9 @@ class LmsAssessmentController extends Controller
             }
             $students = $this->expandSittingStudents($students, $assignment, $assessment, $batchStudentCache);
             if ($students->isEmpty() && $assignment->class_batch_id) {
+                if ($this->looksLikeCimaScsNovember($assessment)) {
+                    continue;
+                }
                 $batch = $assignment->relationLoaded('batch') ? $assignment->batch : ClassBatch::query()->find((int) $assignment->class_batch_id);
                 $students = collect([(object) [
                     'id' => 0,
@@ -836,6 +842,9 @@ class LmsAssessmentController extends Controller
                 continue;
             }
             if ($this->looksLikeCimaScsNovember($assessment) && ! $this->isCimaScsAssignedMock($assessment)) {
+                continue;
+            }
+            if ($markerOnlyUid && method_exists($assessment, 'trashed') && $assessment->trashed()) {
                 continue;
             }
             if ($this->isRemovedTestTaker($student, $assessment)) {
@@ -1222,7 +1231,9 @@ class LmsAssessmentController extends Controller
             'scsRosterNote' => $this->scsRosterNote,
             'statusCounts' => $statusCounts ?? ['Missed' => 0, 'Upcoming' => 0],
             'selectedAssessment' => $selectedAssessment,
-            'assessments' => $this->uniqueAssessmentsByTitle($assessmentQuery->get(['id', 'title', 'kind']), $assignments),
+            'assessments' => $this->assessmentsWithAssignedPeople(
+                $this->uniqueAssessmentsByTitle($assessmentQuery->get(['id', 'title', 'kind']), $assignments)
+            ),
             'batches' => Schema::hasTable('class_batches')
                 ? ClassBatch::query()->orderByDesc('id')->get(['id', 'code', 'name'])
                 : collect(),
@@ -1883,7 +1894,33 @@ class LmsAssessmentController extends Controller
     protected function expandSittingStudents($students, $assignment, $assessment, array &$batchStudentCache)
     {
         $students = collect($students)->filter(fn ($row) => $row && ! empty($row->id))->values();
-        if ($this->looksLikeCimaScsNovember($assessment)) {
+        if ($this->looksLikeCimaScsNovember($assessment) && ! $this->isCimaScsAssignedMock($assessment)) {
+            return collect();
+        }
+        if ($this->isCimaScsAssignedMock($assessment)) {
+            $ids = $students->pluck('id');
+            if ($assignment && ! empty($assignment->student_id)) {
+                $ids->push((int) $assignment->student_id);
+            }
+            if ($assignment && Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
+                $ids = $ids->merge(collect($assignment->roster_user_ids ?? []));
+            }
+            $ids = $ids->map(fn ($id) => (int) $id)->unique()->filter()->values();
+            if ($ids->isNotEmpty()) {
+                $found = User::query()->whereIn('id', $ids->all())->get();
+                $have = $found->pluck('id')->map(fn ($id) => (int) $id)->all();
+                $students = $found->concat($students);
+                foreach ($ids as $sid) {
+                    if (! in_array((int) $sid, $have, true)) {
+                        $students->push((object) [
+                            'id' => (int) $sid,
+                            'name' => 'User #' . (int) $sid,
+                            'email' => '',
+                        ]);
+                    }
+                }
+            }
+
             return $students
                 ->unique(fn ($row) => (int) ($row->id ?? 0))
                 ->filter(fn ($row) => (int) ($row->id ?? 0) > 0 && ! $this->isRemovedTestTaker($row, $assessment))
@@ -4041,16 +4078,6 @@ class LmsAssessmentController extends Controller
             // next
         }
         try {
-            $courseIdsForUser = $this->courseIdsWhereUserIsAssessor($uid);
-            if ($courseIdsForUser !== []) {
-                $ids = $ids->merge(
-                    LmsAssessment::query()->whereIn('course_id', $courseIdsForUser)->pluck('id')
-                );
-            }
-        } catch (\Throwable $e) {
-            // next
-        }
-        try {
             if ($this->actorIsMusa($uid)) {
                 $ids = $ids->merge($this->cimaScsMockAssessmentIds());
             }
@@ -4174,20 +4201,25 @@ class LmsAssessmentController extends Controller
         if ($this->actorAssessesAssessment($uid, $assessment)) {
             return true;
         }
-        if ($this->instructorCanSeeRow($uid, $assignment, $assessment, null)) {
-            return true;
-        }
         if ($uid <= 0 || ! $assignment) {
             return false;
         }
+        $markerId = (int) ($assignment->marker_user_id ?? 0);
+        if ($markerId === $uid) {
+            return true;
+        }
+        if ($markerId > 0) {
+            return false;
+        }
+        if ((int) ($assignment->assigned_by_user_id ?? 0) === $uid) {
+            return true;
+        }
         $batchId = (int) ($assignment->class_batch_id ?? 0);
         if ($batchId > 0 && in_array($batchId, $this->instructorBatchIds($uid), true)) {
-            $markerId = (int) ($assignment->marker_user_id ?? 0);
-
-            return $markerId === 0 || $markerId === $uid;
+            return true;
         }
-        if ((int) ($assignment->marker_user_id ?? 0) > 0) {
-            return false;
+        if (in_array((int) ($assignment->assessment_id ?? $assessment->id ?? 0), $this->instructorAssessmentIds($uid), true)) {
+            return true;
         }
 
         return $this->assignmentHasSubmittedAttempt($assignment);
@@ -4201,24 +4233,32 @@ class LmsAssessmentController extends Controller
         if ($attempt && (int) ($attempt->graded_by_user_id ?? 0) === $uid) {
             return true;
         }
-        if ($this->actorAssessesAssessment($uid, $assessment)) {
+        if ($this->instructorCanSeeSitting($uid, $assignment, $assessment)) {
             return true;
         }
-        $markerId = $assignment ? (int) ($assignment->marker_user_id ?? 0) : 0;
-        if ($markerId === $uid) {
-            return true;
-        }
-        if ($markerId > 0) {
-            return false;
-        }
-        if (! $assignment) {
-            return false;
-        }
-        if ((int) ($assignment->assigned_by_user_id ?? 0) === $uid) {
-            return true;
+        if ($attempt) {
+            return $this->attemptIsSubmitted($attempt);
         }
 
-        return $this->attemptIsSubmitted($attempt);
+        return false;
+    }
+
+    /** Dropdown: live tests this instructor has assigned people on (Missed included). */
+    protected function assessmentsWithAssignedPeople($assessments)
+    {
+        return collect($assessments)->filter(function ($a) {
+            if (! $a || (method_exists($a, 'trashed') && $a->trashed())) {
+                return false;
+            }
+            if ($this->looksLikeCimaScsNovember($a) && ! $this->isCimaScsAssignedMock($a)) {
+                return false;
+            }
+            try {
+                return method_exists($a, 'assignedPeopleCount') && $a->assignedPeopleCount() > 0;
+            } catch (\Throwable $e) {
+                return true;
+            }
+        })->values();
     }
 
     /** Course assessor (and Musa on SCS) sees every person-attempt on that test, matching admin. */
