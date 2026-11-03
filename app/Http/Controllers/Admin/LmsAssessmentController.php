@@ -1786,9 +1786,26 @@ class LmsAssessmentController extends Controller
                 }
             }
             $batchIds = $asgs->pluck('class_batch_id')->map(fn ($id) => (int) $id)->filter()->unique()->values()->all();
-            if ($batchIds === [] && $overlap !== []) {
+            if ($overlap !== []) {
                 arsort($overlap);
-                $batchIds[] = (int) array_key_first($overlap);
+                $courseId = (int) ($assessment->course_id ?? 0);
+                foreach ($overlap as $bid => $n) {
+                    $bid = (int) $bid;
+                    if ($n < 1 || in_array($bid, $batchIds, true)) {
+                        continue;
+                    }
+                    if ($courseId > 0) {
+                        $batch = ClassBatch::query()->find($bid);
+                        if ($batch && (int) ($batch->course_id ?? 0) > 0 && (int) $batch->course_id !== $courseId) {
+                            continue;
+                        }
+                    }
+                    $batchIds[] = $bid;
+                    if ($batchIds !== [] && $asgs->pluck('class_batch_id')->filter()->isNotEmpty()) {
+                        continue;
+                    }
+                    break;
+                }
             }
             $batchIds = array_values(array_unique(array_filter($batchIds)));
             $roster = collect();

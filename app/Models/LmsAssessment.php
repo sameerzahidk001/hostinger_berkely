@@ -25,6 +25,9 @@ class LmsAssessment extends Model
 
     protected $table = 'lms_assessments';
 
+    /** @var array<int, int>|null */
+    protected $assignedRosterCache = null;
+
     protected $fillable = [
         'title', 'description', 'kind', 'audience', 'target_role', 'course_id', 'duration_minutes',
         'pass_percent', 'max_attempts', 'shuffle_questions', 'results_mode', 'allow_pause', 'status',
@@ -133,7 +136,7 @@ class LmsAssessment extends Model
         })->filter()->unique('id')->values();
     }
 
-    /** Unique people on Assigned Tests for this test (first sitting only; matches that list). */
+    /** Unique people assigned to this test: every sitting/batch, including classmates who never started. */
     public function assignedPeopleCount(): int
     {
         return $this->assignedRosterUserIds()->count();
@@ -159,19 +162,31 @@ class LmsAssessment extends Model
 
     protected function assignedRosterUserIds()
     {
+        if (is_array($this->assignedRosterCache ?? null)) {
+            return collect($this->assignedRosterCache);
+        }
+
+        $cols = ['id', 'assessment_id', 'student_id', 'class_batch_id'];
+        if (Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
+            $cols[] = 'roster_user_ids';
+        }
         $assignments = $this->relationLoaded('assignments')
             ? $this->assignments
-            : $this->assignments()->get(['id', 'assessment_id', 'student_id', 'class_batch_id']);
+            : $this->assignments()->get($cols);
         $hay = mb_strtolower(trim((string) ($this->title ?? '') . ' ' . (string) ($this->course->title ?? '')));
-        $isCima = str_contains($hay, 'cima mcs') || str_contains($hay, 'management case');
+        $isCimaMcs = str_contains($hay, 'cima mcs') || str_contains($hay, 'management case');
 
         $ids = collect();
+        $batchIds = collect();
         foreach ($assignments as $assignment) {
             if (! empty($assignment->student_id)) {
                 $ids->push((int) $assignment->student_id);
             }
             if (! empty($assignment->class_batch_id)) {
-                $ids = $ids->merge($this->studentIdsForBatch((int) $assignment->class_batch_id));
+                $batchIds->push((int) $assignment->class_batch_id);
+            }
+            if (Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
+                $ids = $ids->merge(collect($assignment->roster_user_ids ?? []));
             }
         }
         if (Schema::hasTable('lms_assessment_attempts')) {
@@ -182,7 +197,43 @@ class LmsAssessment extends Model
             );
         }
 
-        if ($isCima) {
+        $ids = $ids->map(fn ($id) => (int) $id)->unique()->filter()->values();
+        if ($ids->isNotEmpty()) {
+            $overlap = [];
+            foreach ($ids as $uid) {
+                foreach ($this->batchIdsForUser((int) $uid) as $bid) {
+                    $overlap[$bid] = ($overlap[$bid] ?? 0) + 1;
+                }
+            }
+            $courseId = (int) ($this->course_id ?? 0);
+            $explicit = $batchIds->map(fn ($id) => (int) $id)->filter()->unique();
+            if ($overlap !== []) {
+                arsort($overlap);
+                foreach ($overlap as $bid => $n) {
+                    $bid = (int) $bid;
+                    if ($n < 1 || $explicit->contains($bid)) {
+                        continue;
+                    }
+                    if ($courseId > 0) {
+                        $batch = ClassBatch::query()->find($bid);
+                        if ($batch && (int) ($batch->course_id ?? 0) > 0 && (int) $batch->course_id !== $courseId) {
+                            continue;
+                        }
+                    }
+                    $batchIds->push($bid);
+                    if ($explicit->isNotEmpty()) {
+                        continue;
+                    }
+                    break;
+                }
+            }
+        }
+
+        foreach ($batchIds->map(fn ($id) => (int) $id)->unique()->filter() as $bid) {
+            $ids = $ids->merge($this->studentIdsForBatch((int) $bid));
+        }
+
+        if ($isCimaMcs) {
             try {
                 $cohortIds = User::query()
                     ->where(function ($q) {
@@ -206,12 +257,16 @@ class LmsAssessment extends Model
         }
 
         $ids = $ids->map(fn ($id) => (int) $id)->unique()->filter()->values();
-        if ($ids->isEmpty() || ! $isCima) {
+        if ($ids->isEmpty() || ! $isCimaMcs) {
+            $this->assignedRosterCache = $ids->all();
+
             return $ids;
         }
         try {
             $people = User::query()->whereIn('id', $ids->all())->get(['id', 'name', 'email']);
         } catch (\Throwable $e) {
+            $this->assignedRosterCache = $ids->all();
+
             return $ids;
         }
 
@@ -222,7 +277,38 @@ class LmsAssessment extends Model
             return str_contains($name, 'imthiyas') || str_contains($email, 'imthiyas');
         })->pluck('id')->map(fn ($id) => (int) $id);
 
-        return $ids->diff($hide)->map(fn ($id) => (int) $id)->unique()->values();
+        $ids = $ids->diff($hide)->map(fn ($id) => (int) $id)->unique()->values();
+        $this->assignedRosterCache = $ids->all();
+
+        return $ids;
+    }
+
+    protected function batchIdsForUser(int $userId): array
+    {
+        if ($userId <= 0) {
+            return [];
+        }
+        $found = collect();
+        try {
+            if (Schema::hasTable('class_batch_student')) {
+                if (Schema::hasColumn('class_batch_student', 'student_id')) {
+                    $found = $found->merge(DB::table('class_batch_student')->where('student_id', $userId)->pluck('class_batch_id'));
+                }
+                if (Schema::hasColumn('class_batch_student', 'user_id')) {
+                    $found = $found->merge(DB::table('class_batch_student')->where('user_id', $userId)->pluck('class_batch_id'));
+                }
+            }
+            if (Schema::hasTable('class_schedule_student') && Schema::hasTable('class_schedules')) {
+                $scheduleIds = DB::table('class_schedule_student')->where('student_id', $userId)->pluck('class_schedule_id');
+                if ($scheduleIds->isNotEmpty()) {
+                    $found = $found->merge(DB::table('class_schedules')->whereIn('id', $scheduleIds)->pluck('batch_id'));
+                }
+            }
+        } catch (\Throwable $e) {
+            return [];
+        }
+
+        return $found->map(fn ($id) => (int) $id)->unique()->filter()->values()->all();
     }
 
     protected function studentIdsForBatch(int $batchId)
