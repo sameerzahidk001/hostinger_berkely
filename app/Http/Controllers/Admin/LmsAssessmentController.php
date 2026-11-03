@@ -776,6 +776,7 @@ class LmsAssessmentController extends Controller
             }
         }
         $rowsByKey = $rowsByKey + $expandedRows;
+        $this->fillMissingBatchMates($rowsByKey, $assignments, $assessmentsById, $batchStudentCache);
 
         $claimedAttemptIds = [];
         foreach ($rowsByKey as $r) {
@@ -1738,11 +1739,77 @@ class LmsAssessmentController extends Controller
                 }
             }
         }
-        if ($assignment && ! empty($assignment->class_batch_id) && $students->unique(fn ($row) => (int) ($row->id ?? 0))->count() < 10) {
+        if ($students->unique(fn ($row) => (int) ($row->id ?? 0))->count() < 25
+            && $assessment
+            && ( ! empty($assignment?->class_batch_id)
+                || ($this->assessments->usesStrictExamWindow($assessment))
+            )) {
             $students = $students->concat($this->courseRosterFallback($assessment, $assignment));
         }
 
         return $students->unique(fn ($row) => (int) ($row->id ?? 0))->filter(fn ($row) => (int) ($row->id ?? 0) > 0)->values();
+    }
+
+    /**
+     * Put every classmate on the list even when only the people who sat have student_id rows.
+     * Unused classmates stay on the newest exam sitting as Missed.
+     */
+    protected function fillMissingBatchMates(array &$rowsByKey, $assignments, $assessmentsById, array &$batchStudentCache): void
+    {
+        $byAssessment = collect($rowsByKey)->groupBy(fn ($r) => (int) ($r['assessment']->id ?? 0));
+        foreach ($byAssessment as $aid => $existing) {
+            if ((int) $aid <= 0) {
+                continue;
+            }
+            $assessment = $existing->first()['assessment'] ?? $assessmentsById->get((int) $aid);
+            if (! $assessment) {
+                continue;
+            }
+            $asgs = collect($assignments)->filter(fn ($a) => (int) ($a->assessment_id ?? 0) === (int) $aid)->values();
+            $seed = $asgs->sortByDesc('id')->first(function ($a) {
+                return ! (method_exists($a, 'isSelfSitting') && $a->isSelfSitting())
+                    && (! empty($a->class_batch_id) || $a->windowStart());
+            }) ?: $asgs->sortByDesc('id')->first();
+            if (! $seed) {
+                continue;
+            }
+            $roster = collect();
+            foreach ($asgs as $asg) {
+                $roster = $roster->concat($this->expandSittingStudents(collect(), $asg, $assessment, $batchStudentCache));
+            }
+            foreach ($existing as $row) {
+                $sid = (int) ($row['student']->id ?? 0);
+                foreach ($this->batchIdsForUser($sid) as $bid) {
+                    if (! isset($batchStudentCache[$bid])) {
+                        try {
+                            $batchStudentCache[$bid] = $this->studentsForBatchId((int) $bid);
+                        } catch (\Throwable $e) {
+                            $batchStudentCache[$bid] = collect();
+                        }
+                    }
+                    $roster = $roster->concat($batchStudentCache[$bid]);
+                }
+            }
+            $roster = $roster->concat($this->courseRosterFallback($assessment, $seed));
+            $have = $existing->map(fn ($r) => (int) ($r['student']->id ?? 0))->all();
+            foreach ($roster as $student) {
+                $uid = (int) ($student->id ?? 0);
+                if ($uid <= 0 || in_array($uid, $have, true) || $this->isRemovedTestTaker($student, $assessment)) {
+                    continue;
+                }
+                $key = (int) $seed->id . ':' . $uid;
+                if (isset($rowsByKey[$key])) {
+                    continue;
+                }
+                $rowsByKey[$key] = [
+                    'assessment' => $assessment,
+                    'student' => $student,
+                    'assignment' => $seed,
+                    'attempt' => null,
+                ];
+                $have[] = $uid;
+            }
+        }
     }
 
     /** When the batch pivot is empty, list every student on that course's batches and enrollments. */
