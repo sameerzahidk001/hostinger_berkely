@@ -3148,7 +3148,7 @@ class LmsAssessmentController extends Controller
             || strcasecmp($label, 'Admin') === 0;
     }
 
-    /** Display only: sitting marker, then same-test marker, then batch trainer. */
+    /** This sitting's assessor only — never copy another sitting's marker onto the same test. */
     protected function namedAssessorForAssessment($assessment, $asg = null, $attempt = null): ?User
     {
         if ($attempt && ! empty($attempt->graded_by_user_id)) {
@@ -3164,20 +3164,8 @@ class LmsAssessmentController extends Controller
                 return $marker;
             }
         }
-        $aid = (int) ($assessment->id ?? 0);
-        if ($aid > 0 && array_key_exists($aid, $this->namedAssessorByAssessment)) {
-            $cached = $this->namedAssessorByAssessment[$aid];
 
-            return $cached instanceof User ? $cached : null;
-        }
-        $found = $this->sameTestNamedMarker($assessment)
-            ?: $this->batchTrainerForSitting($asg, $assessment)
-            ?: $this->graderOnThisTest($assessment);
-        if ($aid > 0) {
-            $this->namedAssessorByAssessment[$aid] = $found ?: false;
-        }
-
-        return $found;
+        return $this->batchTrainerForSitting($asg, $assessment);
     }
 
     protected function batchTrainerForSitting($asg, $assessment): ?User
@@ -3422,26 +3410,19 @@ class LmsAssessmentController extends Controller
         if ($uid <= 0) {
             return false;
         }
-        if ((int) ($assignment->marker_user_id ?? 0) === $uid
-            || (int) ($assignment->assigned_by_user_id ?? 0) === $uid
+        if (! $assignment) {
+            return (int) ($assessment->created_by_user_id ?? 0) === $uid;
+        }
+        $markerId = (int) ($assignment->marker_user_id ?? 0);
+        if ($markerId === $uid) {
+            return true;
+        }
+        if ($markerId > 0) {
+            return false;
+        }
+        if ((int) ($assignment->assigned_by_user_id ?? 0) === $uid
             || (int) ($assessment->created_by_user_id ?? 0) === $uid) {
             return true;
-        }
-        $batchId = (int) ($assignment->class_batch_id ?? 0);
-        if ($batchId > 0 && in_array($batchId, $this->instructorBatchIds($uid), true)) {
-            return true;
-        }
-        $aid = (int) ($assessment->id ?? 0);
-        if ($aid > 0 && in_array($aid, $this->instructorAssessmentIds($uid), true)) {
-            return true;
-        }
-        try {
-            $named = $this->namedAssessorForAssessment($assessment, $assignment, null);
-            if ($named && (int) $named->id === $uid) {
-                return true;
-            }
-        } catch (\Throwable $e) {
-            // keep false
         }
 
         return false;
