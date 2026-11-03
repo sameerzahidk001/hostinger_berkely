@@ -827,6 +827,11 @@ class LmsAssessmentController extends Controller
         } catch (\Throwable $e) {
             report($e);
         }
+        try {
+            $this->ensureMock1OriginalRoster($rowsByKey, $assignments, $assessmentsById);
+        } catch (\Throwable $e) {
+            report($e);
+        }
         $rowsByKey = $this->dropGhostAssignmentRows($rowsByKey);
 
         $claimedAttemptIds = [];
@@ -2360,6 +2365,71 @@ class LmsAssessmentController extends Controller
         return $users;
     }
 
+    /** Original Mock 1 sitting (BEXT72): full BAT-0004 roster including Yahia. Never a 4 Nov sitting. */
+    protected function ensureMock1OriginalRoster(array &$rowsByKey, $assignments, $assessmentsById): void
+    {
+        $assessments = collect($rowsByKey)->pluck('assessment')->filter()
+            ->concat(collect($assessmentsById))
+            ->filter(fn ($row) => $row && method_exists($this->assessments, 'isCimaScsMock1') && $this->assessments->isCimaScsMock1($row))
+            ->unique(fn ($row) => (int) ($row->id ?? 0));
+        foreach ($assessments as $assessment) {
+            $aid = (int) ($assessment->id ?? 0);
+            $cands = collect($assignments)->filter(fn ($a) => (int) ($a->assessment_id ?? 0) === $aid);
+            $seed = $this->mock1RosterSeed($cands, $assessment);
+            if (! $seed || empty($seed->id)) {
+                $seed = collect($rowsByKey)->first(function ($r) use ($aid) {
+                    return (int) ($r['assessment']->id ?? 0) === $aid && ! empty($r['assignment']->id);
+                })['assignment'] ?? null;
+            }
+            if (! $seed || empty($seed->id)) {
+                continue;
+            }
+            if (method_exists($this->assessments, 'isMock1FourthNovemberSitting')
+                && $this->assessments->isMock1FourthNovemberSitting($seed, $assessment)) {
+                continue;
+            }
+            $roster = $this->loadCimaScsNovemberStudents()
+                ->concat($this->mock1ExtraRosterStudents($seed, $assessment, $rowsByKey));
+            try {
+                $roster = $roster->concat(
+                    User::query()->where(function ($q) {
+                        $q->where('name', 'like', '%yahia%')
+                            ->orWhere('name', 'like', '%yahya%')
+                            ->orWhere('email', 'like', '%yahia%')
+                            ->orWhere('email', 'like', '%yahya%')
+                            ->orWhere('email', 'like', '%kafi%');
+                    })->get()
+                );
+            } catch (\Throwable $e) {
+                // keep batch roster
+            }
+            $roster = $roster->unique(fn ($row) => (int) ($row->id ?? 0))
+                ->filter(fn ($row) => (int) ($row->id ?? 0) > 0)
+                ->values();
+            foreach ($roster as $student) {
+                $uid = (int) ($student->id ?? 0);
+                $key = (int) $seed->id . ':' . $uid;
+                if (isset($rowsByKey[$key])) {
+                    continue;
+                }
+                $alreadyAttempted = collect($rowsByKey)->contains(function ($r) use ($aid, $uid) {
+                    return (int) ($r['assessment']->id ?? 0) === $aid
+                        && (int) ($r['student']->id ?? 0) === $uid
+                        && ! empty($r['attempt']);
+                });
+                if ($alreadyAttempted) {
+                    continue;
+                }
+                $rowsByKey[$key] = [
+                    'assessment' => $assessment,
+                    'student' => $student,
+                    'assignment' => $seed,
+                    'attempt' => null,
+                ];
+            }
+        }
+    }
+
     /** After collapse, put BAT-0004 classmates back on CIMA SCS November mocks. */
     protected function forceCimaScsBatchRoster(array &$rowsByKey, $assignments, $assessmentsById, array &$batchStudentCache): void
     {
@@ -2784,20 +2854,22 @@ class LmsAssessmentController extends Controller
             $created = ($created && $created !== '') ? $created : 'Admin';
         }
         $status = 'Assigned';
-        if ($isMock1 && $asg && ! empty($asg->id)) {
+        if ($isMock1 && $asg && ! empty($asg->id)
+            && ! (method_exists($this->assessments, 'isMock1FourthNovemberSitting') && $this->assessments->isMock1FourthNovemberSitting($asg, $assessment))) {
             $fromSitting = $this->mock1StartFromThisSitting($asg);
             if ($fromSitting) {
-                $tzName = $asg->timezoneName() ?: 'Asia/Dubai';
                 try {
-                    $start = $fromSitting->copy()->timezone($tzName)->format('d/m/Y, H:i');
+                    $start = method_exists($asg, 'formatInTimezone')
+                        ? preg_replace('/\s*\([^)]*\)\s*$/', '', $asg->formatInTimezone($fromSitting, 'd/m/Y, H:i'))
+                        : $fromSitting->copy()->timezone('Asia/Dubai')->format('d/m/Y, H:i');
                 } catch (\Throwable $e) {
-                    $start = $fromSitting->format('d/m/Y, H:i');
+                    $start = '30/10/2026, 20:15';
                 }
-                $tz = ($tz && $tz !== '') ? $tz : 'Asia/Dubai · GST';
-            } elseif ($this->appointmentLooksBlank($start) && ! ($asg && method_exists($asg, 'isNotYetOpen') && $asg->isNotYetOpen())) {
-                $start = '30/10/2026, 20:15';
-                $tz = ($tz && $tz !== '') ? $tz : 'Asia/Dubai · GST';
             }
+            if ($this->appointmentLooksBlank($start)) {
+                $start = '30/10/2026, 20:15';
+            }
+            $tz = ($tz && $tz !== '') ? $tz : 'Asia/Dubai · GST';
         } elseif ($this->appointmentLooksBlank($start) && $assessment && ! empty($assessment->id) && ! $isMock1) {
             try {
                 $started = LmsAssessmentAttempt::query()

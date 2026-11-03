@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.searchable-select-assets')
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
-<!-- lms-assigned-tests-20261103aj KEEP: Mock 1 drop 4 Nov sitting; original 30/10 details -->
+<!-- lms-assigned-tests-20261103ak KEEP: Mock 1 original roster + Yahia on 30/10, no 4 Nov -->
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
