@@ -798,21 +798,17 @@ class LmsAssessmentController extends Controller
                 $k = (int) ($r['assignment']->id ?? 0) . ':' . (int) ($r['student']->id ?? 0);
                 if (isset($rowsByKey[$k])) {
                     $asg = $r['assignment'] ?? null;
-                    if ($asg && $asg->isSelfSitting()) {
-                        $max = max(1, (int) ($r['assessment']->max_attempts ?? 1));
-                        $rowsByKey[$k]['attempt_number'] = $rowsByKey[$k]['attempt'] ? min($max, max(1, $i + 1)) : 1;
-                        $rowsByKey[$k]['attempt_total'] = $max;
-                    } else {
-                        $rowsByKey[$k]['attempt_number'] = $i + 1;
-                        $rowsByKey[$k]['attempt_total'] = $total;
-                    }
+                    $max = max(1, (int) ($r['assessment']->max_attempts ?? 1), $total);
+                    $rowsByKey[$k]['attempt_number'] = min($max, max(1, $i + 1));
+                    $rowsByKey[$k]['attempt_total'] = $max;
                 }
             }
         }
         foreach ($rowsByKey as $k => $r) {
             if (! isset($r['attempt_number'])) {
+                $max = max(1, (int) ($r['assessment']->max_attempts ?? 1));
                 $rowsByKey[$k]['attempt_number'] = 1;
-                $rowsByKey[$k]['attempt_total'] = 1;
+                $rowsByKey[$k]['attempt_total'] = $max;
             }
             $asg = $r['assignment'] ?? null;
             $att = $r['attempt'] ?? null;
@@ -869,6 +865,11 @@ class LmsAssessmentController extends Controller
 
         $rowsByKey = $this->keepFirstCimaCohortAttempt($rowsByKey);
         $rowsByKey = $this->collapseUnusedRetakeRows($rowsByKey);
+        foreach ($rowsByKey as $k => $r) {
+            $max = max(1, (int) ($r['assessment']->max_attempts ?? 1));
+            $rowsByKey[$k]['attempt_number'] = min($max, max(1, (int) ($r['attempt_number'] ?? 1)));
+            $rowsByKey[$k]['attempt_total'] = $max;
+        }
 
         foreach ($rowsByKey as $k => $r) {
             $disp = $this->sittingDisplayForRow($r);
@@ -940,7 +941,7 @@ class LmsAssessmentController extends Controller
                             'assignment' => $assignment,
                             'attempt' => null,
                             'attempt_number' => 1,
-                            'attempt_total' => 1,
+                            'attempt_total' => max(1, (int) ($assessment->max_attempts ?? 1)),
                         ]);
                     }
                     continue;
@@ -954,7 +955,7 @@ class LmsAssessmentController extends Controller
                     'assignment' => $assignment,
                     'attempt' => null,
                     'attempt_number' => 1,
-                    'attempt_total' => 1,
+                    'attempt_total' => max(1, (int) ($assessment->max_attempts ?? 1)),
                 ]);
             }
         }
@@ -987,7 +988,7 @@ class LmsAssessmentController extends Controller
                     'assignment' => $asg,
                     'attempt' => $att,
                     'attempt_number' => 1,
-                    'attempt_total' => 1,
+                    'attempt_total' => max(1, (int) ($assessment->max_attempts ?? 1)),
                 ]);
             }
         }
@@ -1197,15 +1198,16 @@ class LmsAssessmentController extends Controller
             $attemptsByUser = $allAttempts->groupBy(fn ($a) => (int) $a->user_id);
             $claimedAttemptIds = [];
 
-            // Attempt N of T per student (oldest assignment = attempt 1).
+            // Attempt N of T per student (oldest assignment = attempt 1 of Max attempts).
             $sittingsByUser = collect($rowsByKey)->groupBy(fn ($r) => (int) ($r['student']->id ?? 0));
             $attemptMeta = [];
+            $maxAttempts = max(1, (int) ($assessment->max_attempts ?? 1));
             foreach ($sittingsByUser as $uid => $sittings) {
                 $ordered = $sittings->sortBy(fn ($r) => (int) $r['assignment']->id)->values();
-                $total = $ordered->count();
+                $total = max($maxAttempts, $ordered->count());
                 foreach ($ordered as $i => $r) {
                     $attemptMeta[(int) $r['assignment']->id . ':' . $uid] = [
-                        'number' => $i + 1,
+                        'number' => min($total, $i + 1),
                         'total' => $total,
                     ];
                 }
@@ -1218,7 +1220,7 @@ class LmsAssessmentController extends Controller
                     $key = (int) $asg->id . ':' . (int) $uid;
                     $matched = $this->matchSittingAttempt($candidates, $asg, $claimedAttemptIds);
                     $rowsByKey[$key]['attempt'] = $matched;
-                    $meta = $attemptMeta[$key] ?? ['number' => 1, 'total' => max(1, $assignments->count())];
+                    $meta = $attemptMeta[$key] ?? ['number' => 1, 'total' => max(1, (int) ($assessment->max_attempts ?? 1))];
                     $rowsByKey[$key]['attempt_number'] = $meta['number'];
                     $rowsByKey[$key]['attempt_total'] = $meta['total'];
                 }
@@ -1240,7 +1242,7 @@ class LmsAssessmentController extends Controller
                     'assignment' => $assignments->first(),
                     'attempt' => $att,
                     'attempt_number' => 1,
-                    'attempt_total' => max(1, $assignments->count()),
+                    'attempt_total' => max(1, (int) ($assessment->max_attempts ?? 1)),
                 ];
             }
 
