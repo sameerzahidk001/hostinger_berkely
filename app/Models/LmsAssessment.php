@@ -206,6 +206,10 @@ class LmsAssessment extends Model
         }
 
         $ids = $ids->map(fn ($id) => (int) $id)->unique()->filter()->values();
+        $scsBatch = ClassBatch::idForCimaScsNovember((string) ($this->title ?? ''));
+        if ($scsBatch) {
+            $batchIds->push((int) $scsBatch);
+        }
         if ($batchIds->isEmpty() && $ids->isNotEmpty()) {
             $inferred = ClassBatch::bestIdForStudents(
                 (int) ($this->course_id ?? 0),

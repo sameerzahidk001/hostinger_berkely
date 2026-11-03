@@ -1708,9 +1708,22 @@ class LmsAssessmentController extends Controller
     protected function studentsForBatchId(int $bid)
     {
         $ids = ClassBatch::studentUserIdsFor($bid);
-        $users = $ids->isEmpty()
-            ? collect()
-            : User::query()->whereIn('id', $ids->all())->get();
+        $users = collect();
+        try {
+            $batch = ClassBatch::query()->with('students')->find($bid);
+            if ($batch && $batch->students) {
+                $users = $users->concat($batch->students);
+                $ids = $ids->merge($batch->students->pluck('id'));
+            }
+        } catch (\Throwable $e) {
+            // keep id list
+        }
+        $ids = $ids->map(fn ($id) => (int) $id)->unique()->filter()->values();
+        if ($ids->isNotEmpty()) {
+            $foundUsers = User::query()->whereIn('id', $ids->all())->get();
+            $users = $users->concat($foundUsers);
+        }
+        $users = $users->unique(fn ($row) => (int) ($row->id ?? 0))->values();
         $found = $users->pluck('id')->map(fn ($id) => (int) $id)->all();
         foreach ($ids as $sid) {
             if (! in_array((int) $sid, $found, true)) {
@@ -1755,6 +1768,17 @@ class LmsAssessmentController extends Controller
         $batchIds = [];
         if (! empty($assignment?->class_batch_id)) {
             $batchIds[] = (int) $assignment->class_batch_id;
+        }
+        $scsBatch = ClassBatch::idForCimaScsNovember((string) ($assessment->title ?? ''));
+        if ($scsBatch) {
+            $batchIds[] = $scsBatch;
+            if ($assignment && empty($assignment->class_batch_id)) {
+                $assignment->class_batch_id = $scsBatch;
+                $bat = ClassBatch::query()->find($scsBatch);
+                if ($bat) {
+                    $assignment->setRelation('batch', $bat);
+                }
+            }
         }
         $batchIds = array_values(array_unique(array_filter($batchIds)));
         foreach ($batchIds as $bid) {
@@ -1842,6 +1866,10 @@ class LmsAssessmentController extends Controller
                 continue;
             }
             $batchIds = $asgs->pluck('class_batch_id')->map(fn ($id) => (int) $id)->filter()->unique()->values()->all();
+            $scsBatch = ClassBatch::idForCimaScsNovember((string) ($assessment->title ?? ''));
+            if ($scsBatch) {
+                $batchIds[] = $scsBatch;
+            }
             if ($batchIds === []) {
                 $existingIds = $existing->map(fn ($r) => (int) ($r['student']->id ?? 0))->filter()->values()->all();
                 $inferred = ClassBatch::bestIdForStudents(
@@ -1851,17 +1879,18 @@ class LmsAssessmentController extends Controller
                 );
                 if ($inferred) {
                     $batchIds[] = $inferred;
-                    if (empty($seed->class_batch_id)) {
-                        $seed->class_batch_id = $inferred;
-                        $batch = ClassBatch::query()->find($inferred);
-                        if ($batch) {
-                            $seed->setRelation('batch', $batch);
-                        }
-                    }
-                    if (Schema::hasColumn($seed->getTable(), 'sitting_kind') && $seed->isSelfSitting()) {
-                        $seed->sitting_kind = LmsAssessmentAssignment::KIND_EXAM;
-                    }
                 }
+            }
+            $inferred = $scsBatch ?: (($batchIds[0] ?? null) ? (int) $batchIds[0] : null);
+            if ($inferred && empty($seed->class_batch_id)) {
+                $seed->class_batch_id = $inferred;
+                $batch = ClassBatch::query()->find($inferred);
+                if ($batch) {
+                    $seed->setRelation('batch', $batch);
+                }
+            }
+            if ($inferred && Schema::hasColumn($seed->getTable(), 'sitting_kind') && $seed->isSelfSitting()) {
+                $seed->sitting_kind = LmsAssessmentAssignment::KIND_EXAM;
             }
             $batchIds = array_values(array_unique(array_filter($batchIds)));
             $roster = collect();
@@ -2230,7 +2259,8 @@ class LmsAssessmentController extends Controller
                 }
                 $isSelf = $asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting();
                 $examWindow = $asg && (! empty($asg->class_batch_id) || (method_exists($asg, 'windowStart') && $asg->windowStart()));
-                if ($asgId > 0 && (! $isSelf || $examWindow)) {
+                $scsMock = ClassBatch::idForCimaScsNovember((string) (($r['assessment']->title ?? '')));
+                if ($asgId > 0 && (! $isSelf || $examWindow || $scsMock)) {
                     $unusedExam[$k] = $r;
                 } else {
                     $unusedOther[$k] = $r;
