@@ -3300,7 +3300,10 @@ class LmsAssessmentController extends Controller
             $created = ($created && $created !== '') ? $created : 'Admin';
         }
         $status = 'Assigned';
-        if ($isMock1) {
+        $isSelf = $asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting();
+        if ($isSelf) {
+            $start = 'Start anytime';
+        } elseif ($isMock1) {
             $start = $asg && method_exists($asg, 'appointmentStartLabel')
                 ? $asg->appointmentStartLabel('d/m/Y, H:i')
                 : ($asg?->windowStart()?->format('d/m/Y, H:i') ?: $start);
@@ -3942,15 +3945,14 @@ class LmsAssessmentController extends Controller
     protected function unusedSittingStatus($asg, $assessment, bool $isCohort = false, $student = null): string
     {
         $start = $asg && method_exists($asg, 'windowStart') ? $asg->windowStart() : null;
+        if ($asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()) {
+            return 'Assigned';
+        }
         if ($asg && method_exists($asg, 'isNotYetOpen') && $asg->isNotYetOpen()) {
             return 'Upcoming';
         }
         if ($start && now()->lt($start)) {
             return 'Upcoming';
-        }
-        $openAnytime = $asg && $asg->isSelfSitting() && ! $start;
-        if ($openAnytime) {
-            return 'Assigned';
         }
         if ($asg && method_exists($asg, 'isMissedByStartGrace') && $asg->isMissedByStartGrace()) {
             return 'Missed';
