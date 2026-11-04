@@ -532,7 +532,9 @@
                                         @endif
                                         <button type="submit" class="btn btn-xs btn-danger">Delete</button>
                                     </form>
-                                    <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.assign', ['id' => $assessment->id, 'mode' => $assignment->isSelfSitting() ? 'self' : 'exam']) }}">Assign again</a>
+                                    @if(! ($assessment && method_exists($assessment, 'isDisabled') && $assessment->isDisabled()))
+                                        <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.assign', ['id' => $assessment->id, 'mode' => $assignment->isSelfSitting() ? 'self' : 'exam']) }}">Assign again</a>
+                                    @endif
                                 @elseif($canAdminSitting && $attempt)
                                     <form action="{{ route('admin.assessments.tests.destroy-attempt', $attempt->id) }}" method="POST" onsubmit="return confirm('Delete this test taker sitting?');">
                                         @csrf

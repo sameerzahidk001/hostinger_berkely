@@ -283,7 +283,9 @@
                                         @endif
                                         <button type="submit" class="btn btn-xs btn-danger">Delete</button>
                                     </form>
-                                    <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.assign', ['id' => $assessmentRow->id, 'mode' => ($assignment && $assignment->isSelfSitting()) ? 'self' : 'exam']) }}">Assign again</a>
+                                    @if(! ($assessmentRow && method_exists($assessmentRow, 'isDisabled') && $assessmentRow->isDisabled()))
+                                        <a class="btn btn-xs btn-info" href="{{ route('admin.assessments.tests.assign', ['id' => $assessmentRow->id, 'mode' => ($assignment && $assignment->isSelfSitting()) ? 'self' : 'exam']) }}">Assign again</a>
+                                    @endif
                                 @endif
                             </td>
                         </tr>

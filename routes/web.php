@@ -324,6 +324,7 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
             Route::get('/tests/{id}/edit', [LmsAssessmentController::class, 'edit'])->name('tests.edit');
             Route::put('/tests/{id}', [LmsAssessmentController::class, 'update'])->name('tests.update');
             Route::post('/tests/{id}/remove', [LmsAssessmentController::class, 'destroy'])->name('tests.destroy');
+            Route::post('/tests/{id}/disable', [LmsAssessmentController::class, 'disable'])->name('tests.disable');
             Route::get('/tests/{id}/assign', [LmsAssessmentController::class, 'assignForm'])->name('tests.assign');
             Route::post('/tests/{id}/assign', [LmsAssessmentController::class, 'saveAssign'])->name('tests.assign.save');
             Route::get('/tests/{id}/attempts', [LmsAssessmentController::class, 'attempts'])->name('tests.attempts');

@@ -265,10 +265,20 @@
                             @endphp
                             <div class="table-action-stack">
                             <div class="table-action-stack-col">
+                            @php
+                                $rowDisabled = method_exists($row, 'isDisabled') && $row->isDisabled();
+                                $rowHasSittings = method_exists($row, 'hasAssignedSittings') && $row->hasAssignedSittings();
+                            @endphp
                             @if($canManageRow)
                                 <a class="btn btn-xs lms-btn-edit" href="{{ route('admin.assessments.tests.edit', $row->id) }}">Edit</a>
                             @endif
-                            @if(!empty($canDelete))
+                            @if(!empty($canDelete) && $rowHasSittings && ! $rowDisabled)
+                                <form action="{{ route('admin.assessments.tests.disable', $row->id) }}" method="POST" onsubmit="return confirm('Disable this test? Existing sittings stay. It cannot be assigned until it is published again.');">
+                                    @csrf
+                                    <button type="submit" class="btn btn-xs btn-warning">Disable</button>
+                                </form>
+                            @endif
+                            @if(!empty($canDelete) && ! $rowHasSittings)
                                 <form action="{{ route('admin.assessments.tests.destroy', $row->id) }}" method="POST" onsubmit="return confirm('Delete this test? It will be removed from ALL TESTS.');">
                                     @csrf
                                     <button type="submit" class="btn btn-xs btn-danger">Delete</button>
@@ -276,7 +286,7 @@
                             @endif
                             </div>
                             <div class="table-action-stack-col">
-                            @if($canManageRow)
+                            @if($canManageRow && ! $rowDisabled)
                                 <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.assign', $row->id) }}">Assign Test</a>
                                 <a class="btn btn-xs lms-btn-self" href="{{ route('admin.assessments.tests.assign', ['id' => $row->id, 'mode' => 'self']) }}">Self test</a>
                             @endif
