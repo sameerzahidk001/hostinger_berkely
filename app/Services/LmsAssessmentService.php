@@ -383,7 +383,14 @@ class LmsAssessmentService
         $best = [];
         $other = collect();
         foreach ($out as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
             $assessment = $row['assessment'] ?? null;
+            if (! $assessment) {
+                $other->push($row);
+                continue;
+            }
             $title = mb_strtolower(trim((string) ($assessment->title ?? '')));
             $isScs = str_contains($title, 'scs')
                 && str_contains($title, 'mock')
@@ -396,27 +403,34 @@ class LmsAssessmentService
             if (! $this->isCimaScsAssignedMock($assessment)) {
                 continue;
             }
-            preg_match('/mock\s*(\d+)/', $title, $m);
-            $key = 'scs:mock' . ($m[1] ?? (int) ($assessment->id ?? 0));
+            $mockNo = 'x';
+            if (preg_match('/mock\s*(\d+)/', $title, $m)) {
+                $mockNo = (string) $m[1];
+            }
+            $key = 'scs:mock' . $mockNo;
             $asg = $row['assignment'] ?? null;
             $score = 0;
             if ($asg && (int) ($asg->student_id ?? 0) === (int) $user->id) {
                 $score += 5000;
             }
-            if ($this->isYahiaUser($user) && $this->isMock1YahiaNovemberSitting($asg, $assessment, $user)) {
+            if ($this->isYahiaUser($user) && $asg && $this->isMock1YahiaNovemberSitting($asg, $assessment, $user)) {
                 $score += 8000;
             }
             if ($asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()) {
                 $score -= 2000;
             }
-            $score += (int) ($asg->id ?? 0);
-            if (! isset($best[$key]) || $score > (int) ($best[$key]['_score'] ?? 0)) {
+            $score += $asg ? (int) ($asg->id ?? 0) : 0;
+            $prevScore = 0;
+            if (isset($best[$key]) && is_array($best[$key])) {
+                $prevScore = (int) ($best[$key]['_score'] ?? 0);
+            }
+            if (! isset($best[$key]) || $score > $prevScore) {
                 $row['_score'] = $score;
                 $best[$key] = $row;
             }
         }
 
-        return $other->concat(collect($best)->map(function ($row) {
+        return $other->concat(collect($best)->filter(fn ($row) => is_array($row))->map(function ($row) {
             unset($row['_score']);
 
             return $row;
