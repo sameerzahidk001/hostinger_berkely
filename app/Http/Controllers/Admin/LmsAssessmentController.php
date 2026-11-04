@@ -1166,6 +1166,7 @@ class LmsAssessmentController extends Controller
             'Missed' => $rows->filter(fn ($r) => ($r['sitting_display']['status'] ?? '') === 'Missed')->count(),
             'Upcoming' => $rows->filter(fn ($r) => ($r['sitting_display']['status'] ?? '') === 'Upcoming')->count(),
         ];
+        $dropdownFromTable = $rows->map(fn ($r) => $r['assessment'] ?? null)->filter()->values();
         if ($statusFilter !== '' && array_key_exists($statusFilter, $statusOptions)) {
             $rows = $rows->filter(function ($row) use ($statusFilter) {
                 $statusText = $row['sitting_display']['status'] ?? '';
@@ -1236,10 +1237,13 @@ class LmsAssessmentController extends Controller
             'scsRosterNote' => '',
             'statusCounts' => $statusCounts ?? ['Missed' => 0, 'Upcoming' => 0],
             'selectedAssessment' => $selectedAssessment,
-            'assessments' => $this->assessmentsWithAssignedPeople(
-                $this->uniqueAssessmentsByTitle($assessmentQuery->get(['id', 'title', 'kind']), $loadedAssignments),
-                $loadedAssignments,
-                $markerOnlyUid
+            'assessments' => $this->uniqueAssessmentsByTitle(
+                $this->assessmentsWithAssignedPeople(
+                    $this->uniqueAssessmentsByTitle($assessmentQuery->get(['id', 'title', 'kind']), $loadedAssignments),
+                    $loadedAssignments,
+                    $markerOnlyUid
+                )->concat($dropdownFromTable),
+                $loadedAssignments
             ),
             'batches' => Schema::hasTable('class_batches')
                 ? ClassBatch::query()->orderByDesc('id')->get(['id', 'code', 'name'])
@@ -4418,7 +4422,8 @@ class LmsAssessmentController extends Controller
                 return false;
             }
             if ($markerOnlyUid && $this->looksLikeCimaMcs($a)) {
-                return $this->instructorNamedPeopleCount($markerOnlyUid, $a, $assignments) > 0;
+                return $this->instructorAssignedPeopleCount($markerOnlyUid, $a, $assignments) > 0
+                    || $this->instructorNamedPeopleCount($markerOnlyUid, $a, $assignments) > 0;
             }
             try {
                 if ($markerOnlyUid) {
