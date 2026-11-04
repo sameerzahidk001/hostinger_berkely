@@ -2673,6 +2673,20 @@ class LmsAssessmentService
         $upcoming = $upcoming->filter($hasAppointment)->values();
         $missed = $missed->filter($hasAppointment)->values();
 
+        // Same Appointment ID already in Results/Submitted/In progress must not also appear as Missed.
+        $takenSittingIds = $results->concat($submitted)->concat($inProgress)
+            ->map(fn ($r) => (int) ($r['assignment']->id ?? 0))
+            ->filter()
+            ->unique()
+            ->all();
+        if ($takenSittingIds !== []) {
+            $missed = $missed->filter(function ($r) use ($takenSittingIds) {
+                $asgId = (int) ($r['assignment']->id ?? 0);
+
+                return $asgId <= 0 || ! in_array($asgId, $takenSittingIds, true);
+            })->values();
+        }
+
         return compact('available', 'upcoming', 'inProgress', 'submitted', 'results', 'missed');
     }
 }
