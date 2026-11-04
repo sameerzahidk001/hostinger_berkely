@@ -1627,15 +1627,21 @@ class LmsAssessmentService
         if (Schema::hasColumn('lms_assessment_attempts', 'assignment_id') && $att->assignment_id) {
             return (int) $att->assignment_id === (int) $asg->id;
         }
+        if (method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()) {
+            if (! $att->started_at) {
+                return false;
+            }
+            return $asg->created_at
+                ? $att->started_at->copy()->gte($asg->created_at->copy()->subMinutes(2))
+                : false;
+        }
+        if ((int) ($att->assessment_id ?? 0) === (int) ($asg->assessment_id ?? 0)) {
+            return true;
+        }
         if (! $att->started_at) {
             return false;
         }
         $started = $att->started_at->copy();
-        if (method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()) {
-            return $asg->created_at
-                ? $started->gte($asg->created_at->copy()->subMinutes(2))
-                : false;
-        }
         $start = $asg->windowStart() ?: $asg->available_from;
         if (! $start) {
             return false;
