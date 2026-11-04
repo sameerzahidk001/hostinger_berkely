@@ -156,7 +156,7 @@
                             <td class="col-appt" data-sort="{{ $assignment->id ?? 0 }}"><strong>{{ $apptId }}</strong></td>
                             <td class="col-test" data-sort="{{ $assessmentRow->title ?? '' }}">
                                 <strong>{{ $assessmentRow->title ?: ('Test #'.$assessmentRow->id) }}</strong>
-                                <br><small class="text-muted">{{ $assessmentRow->displayCode() }} · {{ $assessmentRow->kindLabel() }} · {{ ($assignment && $assignment->isSelfSitting()) ? 'Self test' : 'Test' }}</small>
+                                <br><small class="text-muted">{{ $assessmentRow->displayCode() }} · {{ $assessmentRow->kindLabel() }} · {{ ($assignment && $assignment->isSelfSitting()) ? 'Self Test' : 'Test' }}</small>
                                 <br><small><strong>Attempt {{ $attemptNo }} of {{ $attemptTotal }}</strong></small>
                             </td>
                             <td class="col-taker" data-sort="{{ $student->name ?? '' }}">

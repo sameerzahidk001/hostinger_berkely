@@ -2414,8 +2414,9 @@ class LmsAssessmentController extends Controller
                 if ($uid <= 0) {
                     continue;
                 }
-                if (! isset($existingByUser[$uid]) || $this->cimaScsRowOutranks($r, $existingByUser[$uid], $assessment)) {
-                    $existingByUser[$uid] = $r;
+                $slot = $uid . ':' . $this->sittingKindKey($r['assignment'] ?? null);
+                if (! isset($existingByUser[$slot]) || $this->cimaScsRowOutranks($r, $existingByUser[$slot], $assessment)) {
+                    $existingByUser[$slot] = $r;
                 }
             }
             $added = 0;
@@ -2427,27 +2428,39 @@ class LmsAssessmentController extends Controller
                     continue;
                 }
                 if ($honorExcluded && $excluded->contains($uid)) {
-                    unset($existingByUser[$uid]);
+                    foreach (array_keys($existingByUser) as $slot) {
+                        if (str_starts_with((string) $slot, $uid . ':')) {
+                            unset($existingByUser[$slot]);
+                        }
+                    }
                     continue;
                 }
                 $isYahia = method_exists($this->assessments, 'isYahiaUser')
                     && $this->assessments->isYahiaUser($student);
                 if ($isMock1 && $isYahia) {
-                    if (isset($existingByUser[$uid])) {
-                        $ex = $existingByUser[$uid];
+                    foreach (array_keys($existingByUser) as $slot) {
+                        if (! str_starts_with((string) $slot, $uid . ':')) {
+                            continue;
+                        }
+                        $ex = $existingByUser[$slot];
                         $ownNov = method_exists($this->assessments, 'isMock1YahiaNovemberSitting')
                             && $this->assessments->isMock1YahiaNovemberSitting($ex['assignment'] ?? null, $assessment, $student);
                         $named = (int) (($ex['assignment']->student_id ?? 0));
-                        if ($ownNov || $named === $uid || ! empty($ex['attempt'])) {
+                        if ($ownNov || $named === $uid || ! empty($ex['attempt']) || $this->sittingKindKey($ex['assignment'] ?? null) === 'self') {
                             $kept->push($ex);
                         }
-                        unset($existingByUser[$uid]);
+                        unset($existingByUser[$slot]);
                     }
                     continue;
                 }
-                if (isset($existingByUser[$uid])) {
-                    $kept->push($existingByUser[$uid]);
-                    unset($existingByUser[$uid]);
+                foreach (array_keys($existingByUser) as $slot) {
+                    if (! str_starts_with((string) $slot, $uid . ':')) {
+                        continue;
+                    }
+                    $kept->push($existingByUser[$slot]);
+                    unset($existingByUser[$slot]);
+                }
+                if (collect($kept)->contains(fn ($r) => (int) ($r['student']->id ?? 0) === $uid && (int) ($r['assessment']->id ?? 0) === $aid)) {
                     continue;
                 }
                 $row = [
@@ -2508,7 +2521,7 @@ class LmsAssessmentController extends Controller
             if ($this->excludedUserIdsForAssessment($assessment)->contains($uid)) {
                 continue;
             }
-            $key = $this->cimaScsCollapseKey($assessment) . ':' . $uid;
+            $key = $this->cimaScsCollapseKey($assessment) . ':' . $uid . ':' . $this->sittingKindKey($r['assignment'] ?? null);
             if (! isset($best[$key]) || $this->cimaScsRowOutranks($r, $best[$key], $assessment)) {
                 $best[$key] = $r;
             }
@@ -2525,7 +2538,8 @@ class LmsAssessmentController extends Controller
         foreach (collect($rows) as $r) {
             $student = $r['student'] ?? null;
             $assessment = $r['assessment'] ?? null;
-            if ($student && $assessment && method_exists($this->assessments, 'canonicalSittingForStudent')) {
+            $isSelfRow = ! empty($r['assignment']) && method_exists($r['assignment'], 'isSelfSitting') && $r['assignment']->isSelfSitting();
+            if (! $isSelfRow && $student && $assessment && method_exists($this->assessments, 'canonicalSittingForStudent')) {
                 $canonical = $this->assessments->canonicalSittingForStudent($student, $assessment);
                 if ($canonical) {
                     $r['assignment'] = $canonical;
@@ -2562,6 +2576,15 @@ class LmsAssessmentController extends Controller
         return $out->values();
     }
 
+    protected function sittingKindKey($asg): string
+    {
+        if ($asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()) {
+            return 'self';
+        }
+
+        return 'exam';
+    }
+
     /** Mock 1 duplicate records (and Mock 2) collapse as one test, not separate titles. */
     protected function cimaScsCollapseKey($assessment): string
     {
@@ -2585,7 +2608,7 @@ class LmsAssessmentController extends Controller
             $assessment = $r['assessment'] ?? null;
             $uid = (int) ($r['student']->id ?? 0);
 
-            return $this->cimaScsCollapseKey($assessment) . ':' . $uid;
+            return $this->cimaScsCollapseKey($assessment) . ':' . $uid . ':' . $this->sittingKindKey($r['assignment'] ?? null);
         });
         $out = collect();
         foreach ($grouped as $group) {
