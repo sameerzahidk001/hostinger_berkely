@@ -878,7 +878,7 @@ class LmsAssessmentController extends Controller
             $this->fillMissingBatchMates($rowsByKey, $assignments, $assessmentsById, $batchStudentCache);
             $this->attachCimaCohortSittingsToAssignedRows($rowsByKey, $assignments, $assessmentsById);
             // SCS Mock 1/2 are person assignments — do not paint BAT-0004 onto Mock 3–7.
-            $rowsByKey = $this->keepMock1AppointmentOnOwnSitting($rowsByKey);
+            $rowsByKey = $this->keepOriginalUnusedClassSitting($rowsByKey);
         } catch (\Throwable $e) {
             report($e);
         }
@@ -1999,54 +1999,45 @@ class LmsAssessmentController extends Controller
         return ! empty($assignment->student_id) && empty($assignment->class_batch_id);
     }
 
-    /** Later Mock 1 sitting must not reuse the original roster's appointment. Keep that sitting only for its named student (Yahia). */
-    protected function keepMock1AppointmentOnOwnSitting(array $rowsByKey): array
+    /** Same for every test: one unused class sitting per person. Keep the original (lowest id). Taken and self-test rows stay. */
+    protected function keepOriginalUnusedClassSitting(array $rowsByKey): array
     {
-        $byAssessment = [];
+        $byPair = [];
         foreach ($rowsByKey as $k => $r) {
-            $assessment = $r['assessment'] ?? null;
-            if (! $assessment || ! method_exists($this->assessments, 'isCimaScsMock1') || ! $this->assessments->isCimaScsMock1($assessment)) {
+            $aid = (int) ($r['assessment']->id ?? 0);
+            $uid = (int) ($r['student']->id ?? 0);
+            if ($aid <= 0 || $uid <= 0) {
                 continue;
             }
-            $byAssessment[(int) ($assessment->id ?? 0)][$k] = $r;
+            $byPair[$aid . ':' . $uid][$k] = $r;
         }
         $drop = [];
-        foreach ($byAssessment as $rows) {
-            $assessment = collect($rows)->first()['assessment'] ?? null;
-            $seed = $this->mock1RosterSeed(collect($rows)->pluck('assignment')->filter(), $assessment);
-            $seedId = (int) ($seed->id ?? 0);
+        foreach ($byPair as $rows) {
+            $unusedClass = [];
             foreach ($rows as $k => $r) {
-                $asgId = (int) ($r['assignment']->id ?? 0);
-                $uid = (int) ($r['student']->id ?? 0);
                 $asg = $r['assignment'] ?? null;
-                $isSelf = $asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting();
-                $novClassCopy = ! $isSelf && empty($r['attempt'])
-                    && method_exists($this->assessments, 'isMock1CopiedNovemberSitting')
-                    && $this->assessments->isMock1CopiedNovemberSitting($asg, $assessment);
-                if ($novClassCopy) {
+                if (! $asg || ! empty($r['attempt'])) {
+                    continue;
+                }
+                if (method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()) {
+                    continue;
+                }
+                $uid = (int) ($r['student']->id ?? 0);
+                $named = (int) ($asg->student_id ?? 0) === $uid && empty($asg->class_batch_id);
+                if ($named) {
+                    continue;
+                }
+                $unusedClass[$k] = (int) ($asg->id ?? 0);
+            }
+            if (count($unusedClass) < 2) {
+                continue;
+            }
+            asort($unusedClass);
+            $keepKey = array_key_first($unusedClass);
+            foreach ($unusedClass as $k => $id) {
+                if ($k !== $keepKey) {
                     $drop[$k] = true;
-                    continue;
                 }
-                $isYahia = method_exists($this->assessments, 'isYahiaUser')
-                    && $this->assessments->isYahiaUser($r['student'] ?? null);
-                if ($isYahia && empty($r['attempt']) && $asgId === $seedId) {
-                    $drop[$k] = true;
-                    continue;
-                }
-                if ($asgId <= 0 || $asgId === $seedId) {
-                    continue;
-                }
-                if (! empty($r['attempt'])) {
-                    continue;
-                }
-                $named = (int) ($r['assignment']->student_id ?? 0);
-                if ($named === $uid) {
-                    continue;
-                }
-                if ($isYahia) {
-                    continue;
-                }
-                $drop[$k] = true;
             }
         }
         if ($drop === []) {
