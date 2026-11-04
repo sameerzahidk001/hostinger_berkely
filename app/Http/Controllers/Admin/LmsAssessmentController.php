@@ -1127,6 +1127,7 @@ class LmsAssessmentController extends Controller
 
         try {
             $rows = $this->replaceCimaScsRows($rows, $assignments, $selectedAssessment, $assessmentsById);
+            $rows = $this->pinAssignedRowsToCanonicalSitting($rows);
             $rows = $this->renumberCollapsedAttempts($rows);
             $rows = $rows->sortBy(function ($row) {
                 $status = (string) (($row['sitting_display']['status'] ?? ''));
@@ -2517,6 +2518,51 @@ class LmsAssessmentController extends Controller
         return $other->concat(collect($best)->values())->values();
     }
 
+    /** Admin and instructor lists: same sitting id as student My Tests. */
+    protected function pinAssignedRowsToCanonicalSitting($rows)
+    {
+        $out = collect();
+        $seen = [];
+        foreach (collect($rows) as $r) {
+            $student = $r['student'] ?? null;
+            $assessment = $r['assessment'] ?? null;
+            if ($student && $assessment && method_exists($this->assessments, 'canonicalSittingForStudent')) {
+                $canonical = $this->assessments->canonicalSittingForStudent($student, $assessment);
+                if ($canonical) {
+                    $r['assignment'] = $canonical;
+                    $aid = (int) ($canonical->assessment_id ?? 0);
+                    if ($aid > 0 && (int) ($assessment->id ?? 0) !== $aid) {
+                        $found = LmsAssessment::with('course')->find($aid);
+                        if ($found) {
+                            $r['assessment'] = $found;
+                            $assessment = $found;
+                        }
+                    }
+                }
+            }
+            try {
+                $disp = $this->sittingDisplayForRow($r);
+                if (! empty($disp['_assignment'])) {
+                    $r['assignment'] = $disp['_assignment'];
+                }
+                unset($disp['_assignment']);
+                $r['sitting_display'] = $disp;
+            } catch (\Throwable $e) {
+                // keep existing display
+            }
+            $uid = (int) ($r['student']->id ?? 0);
+            $asgId = (int) ($r['assignment']->id ?? 0);
+            $key = $this->cimaScsCollapseKey($r['assessment'] ?? $assessment) . ':' . $uid . ':' . $asgId;
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $out->push($r);
+        }
+
+        return $out->values();
+    }
+
     /** Mock 1 duplicate records (and Mock 2) collapse as one test, not separate titles. */
     protected function cimaScsCollapseKey($assessment): string
     {
@@ -3192,6 +3238,12 @@ class LmsAssessmentController extends Controller
                 $asg = $fromDb;
                 $row['assignment'] = $asg;
             }
+        } elseif ($assessment && method_exists($this->assessments, 'canonicalSittingForStudent')) {
+            $fromDb = $this->assessments->canonicalSittingForStudent($row['student'] ?? null, $assessment);
+            if ($fromDb) {
+                $asg = $fromDb;
+                $row['assignment'] = $asg;
+            }
         }
         if ($this->isCimaCohortSitting($assessment, $asg, collect([$row['student'] ?? null])) && ! $asg && $assessment) {
             $asg = $this->ensureCimaCohortAssignment($assessment);
@@ -3245,16 +3297,10 @@ class LmsAssessmentController extends Controller
         }
         $status = 'Assigned';
         if ($isMock1) {
-            $yahiaNov = method_exists($this->assessments, 'isMock1YahiaNovemberSitting')
-                && $this->assessments->isMock1YahiaNovemberSitting($asg, $assessment, $row['student'] ?? null);
-            if ($yahiaNov) {
-                $start = $asg && method_exists($asg, 'appointmentStartLabel')
-                    ? $asg->appointmentStartLabel('d/m/Y, H:i')
-                    : ($asg?->windowStart()?->format('d/m/Y, H:i') ?: $start);
-            } else {
-                $start = '30/10/2026, 20:15';
-            }
-            $tz = 'Asia/Dubai · GST';
+            $start = $asg && method_exists($asg, 'appointmentStartLabel')
+                ? $asg->appointmentStartLabel('d/m/Y, H:i')
+                : ($asg?->windowStart()?->format('d/m/Y, H:i') ?: $start);
+            $tz = ($tz && $tz !== '') ? $tz : 'Asia/Dubai · GST';
             $created = ($created && $created !== '') ? $created : 'Admin';
         } elseif ($this->appointmentLooksBlank($start) && $assessment && ! empty($assessment->id) && ! $isMock1) {
             try {
