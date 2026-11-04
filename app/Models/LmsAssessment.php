@@ -194,9 +194,10 @@ class LmsAssessment extends Model
         if ($ids->isEmpty() || ! Schema::hasTable('lms_assessment_attempts')) {
             return 0;
         }
+        $aids = $this->sameTitleAssessmentIds();
 
         return (int) LmsAssessmentAttempt::query()
-            ->where('assessment_id', $this->id)
+            ->whereIn('assessment_id', $aids)
             ->whereIn('user_id', $ids->all())
             ->where(function ($q) {
                 $q->whereNotNull('started_at')->orWhereNotNull('submitted_at');
@@ -205,24 +206,56 @@ class LmsAssessment extends Model
             ->count('user_id');
     }
 
+    /** All test records that share this title (ALL TESTS collapses them to one row). */
+    protected function sameTitleAssessmentIds(): array
+    {
+        $id = (int) ($this->id ?? 0);
+        $title = mb_strtolower(trim((string) ($this->title ?? '')));
+        if ($id <= 0) {
+            return [];
+        }
+        if ($title === '') {
+            return [$id];
+        }
+        try {
+            $ids = static::query()->get(['id', 'title'])
+                ->filter(fn ($row) => mb_strtolower(trim((string) ($row->title ?? ''))) === $title)
+                ->pluck('id')
+                ->map(fn ($rowId) => (int) $rowId)
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+        } catch (\Throwable $e) {
+            $ids = [$id];
+        }
+
+        return $ids === [] ? [$id] : $ids;
+    }
+
     protected function assignedRosterUserIds()
     {
         if (is_array($this->assignedRosterCache ?? null)) {
             return collect($this->assignedRosterCache);
         }
 
-        $cols = ['id', 'assessment_id', 'student_id', 'class_batch_id'];
+        $cols = ['id', 'assessment_id', 'student_id', 'class_batch_id', 'created_at'];
         if (Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
             $cols[] = 'roster_user_ids';
         }
         if (Schema::hasColumn('lms_assessment_assignments', 'excluded_user_ids')) {
             $cols[] = 'excluded_user_ids';
         }
-        $assignments = $this->relationLoaded('assignments')
-            ? $this->assignments
-            : $this->assignments()->get($cols);
+        $aids = $this->sameTitleAssessmentIds();
+        try {
+            $assignments = LmsAssessmentAssignment::query()->whereIn('assessment_id', $aids)->get($cols);
+        } catch (\Throwable $e) {
+            $assignments = $this->relationLoaded('assignments')
+                ? $this->assignments
+                : $this->assignments()->get($cols);
+        }
         $hay = mb_strtolower(trim((string) ($this->title ?? '') . ' ' . (string) ($this->course->title ?? '')));
-        $isCimaMcs = str_contains($hay, 'cima mcs') || str_contains($hay, 'management case');
+        $isCimaMcs = str_contains($hay, 'cima mcs') || str_contains($hay, 'management case') || (bool) preg_match('/\bmcs\b/', $hay);
 
         $ids = collect();
         $excluded = collect();
@@ -233,15 +266,27 @@ class LmsAssessment extends Model
             return collect();
         }
         foreach ($assignments as $assignment) {
+            $local = collect();
             if (! empty($assignment->student_id)) {
-                $ids->push((int) $assignment->student_id);
+                $local->push((int) $assignment->student_id);
             }
             if (Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
-                $ids = $ids->merge(collect($assignment->roster_user_ids ?? []));
+                $local = $local->merge(collect($assignment->roster_user_ids ?? []));
             }
-            if (! $isCimaScs) {
-                $ids = $ids->merge(ClassBatch::studentUserIdsForSitting($assignment));
+            $self = method_exists($assignment, 'isSelfSitting') && $assignment->isSelfSitting();
+            $batchId = (int) ($assignment->class_batch_id ?? 0);
+            if ($isCimaScs && $this->isCimaScsAssignedMockTitle()) {
+                if (! $self && $batchId > 0 && $local->filter()->isEmpty()) {
+                    try {
+                        $local = $local->merge(ClassBatch::membersOnBatchAtAssignment($batchId, $assignment));
+                    } catch (\Throwable $e) {
+                        // named/roster only
+                    }
+                }
+            } elseif (! $isCimaScs) {
+                $local = $local->merge(ClassBatch::studentUserIdsForSitting($assignment));
             }
+            $ids = $ids->merge($local);
             if (Schema::hasColumn('lms_assessment_assignments', 'excluded_user_ids')) {
                 $excluded = $excluded->merge(collect($assignment->excluded_user_ids ?? []));
             }
@@ -250,7 +295,7 @@ class LmsAssessment extends Model
         if (Schema::hasTable('lms_assessment_attempts')) {
             $ids = $ids->merge(
                 LmsAssessmentAttempt::query()
-                    ->where('assessment_id', $this->id)
+                    ->whereIn('assessment_id', $aids)
                     ->pluck('user_id')
             );
         }
