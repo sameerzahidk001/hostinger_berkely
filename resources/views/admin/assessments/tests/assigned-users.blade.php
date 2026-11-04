@@ -294,7 +294,10 @@
                                     ? $assignment->appointmentStartLabel()
                                     : ($assignment?->appointmentWindowLabel() ?: '—');
                             }
-                            if ($isMock1Row && ! ($isYahiaRow && $statusText === 'Upcoming')) {
+                            $lmsAssessments = app(\App\Services\LmsAssessmentService::class);
+                            $yahiaOwnNov = $isYahiaRow && $assignment && method_exists($lmsAssessments, 'isMock1YahiaNovemberSitting')
+                                && $lmsAssessments->isMock1YahiaNovemberSitting($assignment, $assessment, $row['student'] ?? null);
+                            if ($isMock1Row && ! $yahiaOwnNov) {
                                 $appointment = '30/10/2026, 20:15';
                             }
                             $assessorName = $disp['assessor'] ?? '';
