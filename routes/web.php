@@ -50,6 +50,8 @@ use App\Http\Controllers\Admin\ClassBatchController;
 use App\Http\Controllers\Admin\LmsInstallController;
 use App\Http\Controllers\Admin\ZohoSettingsController;
 use App\Http\Controllers\Admin\ZohoCrmSettingsController;
+use App\Http\Controllers\Admin\ContentEditorSettingsController;
+use App\Http\Controllers\Admin\AiContentController;
 use App\Http\Controllers\Admin\MeetingAccountController;
 use App\Http\Controllers\Admin\InstructorReviewController as AdminInstructorReviewController;
 use App\Http\Controllers\User\InstructorReviewController as UserInstructorReviewController;
@@ -236,6 +238,9 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
         Route::post('/zoho-settings', [ZohoSettingsController::class, 'save'])->name('admin.zoho.settings.save');
         Route::get('/zoho-crm-settings', [ZohoCrmSettingsController::class, 'show'])->name('admin.zoho-crm.settings');
         Route::post('/zoho-crm-settings', [ZohoCrmSettingsController::class, 'save'])->name('admin.zoho-crm.settings.save');
+        Route::get('/content-editor-settings', [ContentEditorSettingsController::class, 'edit'])->name('admin.content-editor.edit');
+        Route::post('/content-editor-settings', [ContentEditorSettingsController::class, 'update'])->name('admin.content-editor.update');
+        Route::post('/ai-content/generate', [AiContentController::class, 'generate'])->name('admin.ai-content.generate');
         Route::post('/zoho-crm-settings/retry', [ZohoCrmSettingsController::class, 'retry'])->name('admin.zoho-crm.retry');
         Route::post('/zoho-crm-settings/backfill', [ZohoCrmSettingsController::class, 'backfill'])->name('admin.zoho-crm.backfill');
 
