@@ -1177,7 +1177,7 @@ class LmsAssessmentController extends Controller
                         $statusText = $attempt->statusLabel();
                     } elseif ($assignment && $assignment->isNotYetOpen()) {
                         $statusText = 'Upcoming';
-                    } elseif ($assignment && ! $assignment->isSelfSitting() && $assignment->isExpired()) {
+                    } elseif ($assignment && method_exists($assignment, 'isMissedByStartGrace') && $assignment->isMissedByStartGrace()) {
                         $statusText = 'Missed';
                     } else {
                         $statusText = 'Assigned';
@@ -1579,7 +1579,7 @@ class LmsAssessmentController extends Controller
                     $statusText = $attempt->statusLabel();
                 } elseif ($assignment && $assignment->isNotYetOpen()) {
                     $statusText = 'Upcoming';
-                } elseif ($assignment && $assignment->isExpired()) {
+                } elseif ($assignment && method_exists($assignment, 'isMissedByStartGrace') && $assignment->isMissedByStartGrace()) {
                     $statusText = 'Missed';
                 } else {
                     $statusText = 'Assigned';
