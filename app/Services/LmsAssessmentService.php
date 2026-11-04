@@ -824,10 +824,6 @@ class LmsAssessmentService
             return '—';
         }
         $this->alignSittingWithExistingExamRule($asg, $assessment);
-        if (method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()) {
-            return '—';
-        }
-
         return method_exists($asg, 'appointmentStartLabel')
             ? $asg->appointmentStartLabel()
             : '—';

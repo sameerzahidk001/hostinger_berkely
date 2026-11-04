@@ -146,8 +146,12 @@
                                 $durationMins = 180;
                             }
                             $isSelfRow = $assignment && method_exists($assignment, 'isSelfSitting') && $assignment->isSelfSitting();
-                            $appointment = $isSelfRow ? '—' : ($assignment?->windowStart()?->format('d/m/Y, H:i') ?? '—');
-                            $timezoneLabel = $isSelfRow ? '—' : ($assignment?->timezoneLabel() ?: (string) config('app.timezone', 'Asia/Dubai'));
+                            $appointment = $isSelfRow
+                                ? ($assignment && method_exists($assignment, 'appointmentStartLabel')
+                                    ? $assignment->appointmentStartLabel()
+                                    : 'Open to start the test')
+                                : ($assignment?->windowStart()?->format('d/m/Y, H:i') ?? '—');
+                            $timezoneLabel = $isSelfRow ? '' : ($assignment?->timezoneLabel() ?: (string) config('app.timezone', 'Asia/Dubai'));
                             $assessorName = $attempt
                                 ? $attempt->assessorLabel($assignment)
                                 : ($assignment?->marker->name ?? 'Admin / course instructors');
@@ -179,8 +183,11 @@
                                 @endif
                             </td>
                             <td class="col-when" data-sort="{{ $appointment }}">
-                                <span class="lms-timing-line">{{ $appointment }}</span><br>
-                                <span class="lms-timing-line text-muted">{{ $timezoneLabel }}</span>
+                                <span class="lms-timing-line">{{ $appointment }}</span>
+                                @if($timezoneLabel !== '')
+                                    <br>
+                                    <span class="lms-timing-line text-muted">{{ $timezoneLabel }}</span>
+                                @endif
                             </td>
                             <td class="col-test" data-sort="{{ $assessmentRow->title ?? '' }}">
                                 <strong>{{ $assessmentRow->title ?: ('Test #'.$assessmentRow->id) }}</strong>

@@ -364,7 +364,7 @@
                         $apptFrom = $assignment?->windowStart();
                         $apptUntil = $assignment?->appointmentEnd();
                         if ($assignment && $assignment->isSelfSitting()) {
-                            $apptTiming = 'Self test — start anytime';
+                            $apptTiming = 'Open to start the test';
                         } elseif ($apptFrom && $apptUntil) {
                             $apptTiming = $apptFrom->format('d/m/Y H:i') . ' → ' . $apptUntil->format('d/m/Y H:i');
                         } elseif ($apptFrom) {

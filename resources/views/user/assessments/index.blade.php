@@ -311,14 +311,14 @@
                         </td>
                         @php $assessorUserId = $assessorUser?->id ?? ($att ? $att->assessorUserId($asg) : ($asg->marker_user_id ?? null)); @endphp
                         <td class="col-timing" data-sort="{{ optional($asg?->available_from)->timestamp ?? 0 }}">
-                            @if($fromFolder)
-                                <span class="lms-timing-line"><strong>Test Appointment:</strong> Start anytime</span>
+                            @if($fromFolder || ($asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()))
+                                <span class="lms-timing-line"><strong>Test Appointment:</strong> Open to start the test</span>
                             @elseif($asg)
                                 @php
                                     $svc = app(\App\Services\LmsAssessmentService::class);
                                     $apptLabel = method_exists($svc, 'sittingAppointmentLabel')
                                         ? $svc->sittingAppointmentLabel($asg, $a, auth()->user())
-                                        : ($asg->isSelfSitting() ? '—' : ($asg->appointmentStartLabel() ?? '—'));
+                                        : ($asg->appointmentStartLabel() ?? '—');
                                 @endphp
                                 <span class="lms-timing-line"><strong>Test Appointment:</strong> {{ $apptLabel }}</span>
                                 <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $asg->timezoneLabel() }}</span>

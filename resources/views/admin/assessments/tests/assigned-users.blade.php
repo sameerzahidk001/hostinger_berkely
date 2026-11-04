@@ -312,7 +312,9 @@
                             $appointment = $disp['appointment'] ?? null;
                             $isSelfRow = $assignment && method_exists($assignment, 'isSelfSitting') && $assignment->isSelfSitting();
                             if ($isSelfRow) {
-                                $appointment = '—';
+                                $appointment = $assignment && method_exists($assignment, 'appointmentStartLabel')
+                                    ? $assignment->appointmentStartLabel()
+                                    : 'Open to start the test';
                             } elseif ($appointment === null || $appointment === '' || $appointment === '—'
                                 || $appointment === 'Open (no appointment set)' || $appointment === 'Open'
                                 || $appointment === 'Start anytime' || $appointment === 'Self test — start anytime') {
@@ -365,7 +367,7 @@
                             }
                             $timezoneLabel = $disp['timezone'] ?? $assignment?->timezoneLabel();
                             if (! empty($isSelfRow)) {
-                                $timezoneLabel = '—';
+                                $timezoneLabel = '';
                             } elseif ($timezoneLabel === null || $timezoneLabel === '' || ! empty($isMock1Row)) {
                                 $timezoneLabel = ! empty($isMock1Row)
                                     ? 'Asia/Dubai · GST'
@@ -433,8 +435,11 @@
                                 @endif
                             </td>
                             <td class="col-when" data-sort="{{ $appointment }}">
-                                <span class="lms-timing-line">{{ $appointment }}</span><br>
-                                <span class="lms-timing-line text-muted">{{ $timezoneLabel }}</span>
+                                <span class="lms-timing-line">{{ $appointment }}</span>
+                                @if($timezoneLabel !== null && $timezoneLabel !== '')
+                                    <br>
+                                    <span class="lms-timing-line text-muted">{{ $timezoneLabel }}</span>
+                                @endif
                             </td>
                             <td class="col-test" data-sort="{{ $assessment->title ?? ('Test #'.($assignment->assessment_id ?? '')) }}">
                                 <strong>{{ $assessment->title ?: ('Test #'.$assessment->id) }}</strong>
