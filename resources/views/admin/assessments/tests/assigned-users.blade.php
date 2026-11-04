@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.searchable-select-assets')
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
-<!-- lms-assigned-tests-20261104k same columns admin+instructor -->
+<!-- lms-assigned-tests-20261104m appt cols 1-2 + Test Time Details -->
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
@@ -45,20 +45,20 @@
         vertical-align: top;
         padding: 6px 4px;
         word-wrap: break-word;
-        overflow-wrap: anywhere;
+        overflow-wrap: break-word;
         white-space: normal;
         overflow: visible;
     }
-    .lms-assigned-table .col-appt { width: 9%; }
-    .lms-assigned-table .col-when { width: 12%; font-weight: 700; }
+    .lms-assigned-table .col-appt { width: 8%; }
+    .lms-assigned-table .col-when { width: 13%; font-weight: 700; }
     .lms-assigned-table .col-when .lms-timing-line { display: block; line-height: 1.35; }
-    .lms-assigned-table .col-taker { width: 14%; }
-    .lms-assigned-table .col-test { width: 14%; }
-    .lms-assigned-table .col-timing { width: 7%; }
-    .lms-assigned-table .col-assessor { width: 11%; font-weight: 700; }
-    .lms-assigned-table .col-created { width: 7%; }
+    .lms-assigned-table .col-taker { width: 12%; }
+    .lms-assigned-table .col-test { width: 12%; }
+    .lms-assigned-table .col-timing { width: 14%; }
+    .lms-assigned-table .col-assessor { width: 10%; font-weight: 700; }
+    .lms-assigned-table .col-created { width: 6%; }
     .lms-assigned-table .col-status { width: 8%; }
-    .lms-assigned-table .col-pub { width: 5%; }
+    .lms-assigned-table .col-pub { width: 4%; }
     .lms-assigned-table .col-actions {
         width: 13%;
         overflow-wrap: normal;
@@ -266,7 +266,7 @@
                         <th class="col-when" data-sort-col="1">Appointment Date &amp; Time <span class="sort-ind"></span></th>
                         <th class="col-taker" data-sort-col="2">Test Taker <span class="sort-ind"></span></th>
                         <th class="col-test" data-sort-col="3">Test Name <span class="sort-ind"></span></th>
-                        <th class="col-timing" data-sort-col="4">Test Duration <span class="sort-ind"></span></th>
+                        <th class="col-timing" data-sort-col="4">Test Time Details <span class="sort-ind"></span></th>
                         <th class="col-assessor" data-sort-col="5">Assessor <span class="sort-ind"></span></th>
                         <th class="col-created" data-sort-col="6">Created by <span class="sort-ind"></span></th>
                         <th class="col-status" data-sort-col="7">Status <span class="sort-ind"></span></th>
@@ -450,7 +450,28 @@
                                 <br><small><strong>Attempt {{ $attemptNo }} of {{ $attemptTotal }}</strong></small>
                             </td>
                             <td class="col-timing" data-sort="{{ (int) $durationMins }}">
-                                {{ $fmtDuration($durationMins) }}
+                                <span class="lms-timing-line"><strong>Test Duration:</strong> {{ $fmtDuration($durationMins) }}</span>
+                                @if($attempt)
+                                    @php
+                                        $startedDisp = $attempt->startedAtForDisplay();
+                                        $endedDisp = $attempt->endedAtForDisplay();
+                                        $startedTxt = ($assignment && $startedDisp && method_exists($assignment, 'formatInTimezone'))
+                                            ? $assignment->formatInTimezone($startedDisp)
+                                            : (optional($startedDisp)->format('d/m/Y, H:i') ?? '—');
+                                        $endedTxt = ($assignment && $endedDisp && method_exists($assignment, 'formatInTimezone'))
+                                            ? $assignment->formatInTimezone($endedDisp)
+                                            : (optional($endedDisp)->format('d/m/Y, H:i') ?? '—');
+                                    @endphp
+                                    <span class="lms-timing-line"><strong>Started:</strong> {{ $startedTxt }}</span>
+                                    <span class="lms-timing-line"><strong>Ended:</strong> {{ $endedTxt }}</span>
+                                    <span class="lms-timing-line"><strong>Time spent:</strong> {{ $spend !== null ? $fmtDuration($spend) : '—' }}</span>
+                                    <span class="lms-timing-line"><strong>Pause duration:</strong> {{ $attempt->pauseDurationLabel() }}</span>
+                                @else
+                                    <span class="lms-timing-line"><strong>Started:</strong> —</span>
+                                    <span class="lms-timing-line"><strong>Ended:</strong> —</span>
+                                    <span class="lms-timing-line"><strong>Time spent:</strong> —</span>
+                                    <span class="lms-timing-line"><strong>Pause duration:</strong> —</span>
+                                @endif
                             </td>
                             <td class="col-assessor" data-sort="{{ $assessorName }}">
                                 @if($assessorUserId)
