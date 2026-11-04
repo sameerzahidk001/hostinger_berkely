@@ -3387,8 +3387,10 @@ class LmsAssessmentController extends Controller
         }
         $status = 'Assigned';
         if ($isSelf) {
-            $start = '—';
-            $tz = '—';
+            $start = $asg && method_exists($asg, 'appointmentStartLabel')
+                ? $asg->appointmentStartLabel()
+                : 'Open to start the test';
+            $tz = '';
         } elseif ($this->appointmentLooksBlank($start) && $assessment && ! empty($assessment->id) && ! $isMock1 && ! $isSelf) {
             try {
                 $started = LmsAssessmentAttempt::query()

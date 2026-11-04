@@ -283,7 +283,7 @@ class LmsAssessmentAssignment extends Model
     public function appointmentStartLabel(string $fmt = 'd/m/Y, H:i'): string
     {
         if ($this->isSelfSitting()) {
-            return '—';
+            return 'Open to start the test';
         }
         $start = $this->windowStart();
         if ($start) {
@@ -332,7 +332,7 @@ class LmsAssessmentAssignment extends Model
     public function appointmentWindowLabel(string $fmt = 'd/m/y H:i'): string
     {
         if ($this->isSelfSitting()) {
-            return '—';
+            return 'Open to start the test';
         }
         $from = $this->windowStart();
         $until = $this->appointmentEnd();
