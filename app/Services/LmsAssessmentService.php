@@ -27,6 +27,9 @@ class LmsAssessmentService
     /** @var array<int, \Illuminate\Support\Collection> */
     protected array $scsMock1AssignmentsCache = [];
 
+    /** @var array<string, ?LmsAssessmentAssignment> */
+    protected array $canonicalSittingCache = [];
+
     public function __construct(protected StudyMaterialService $lms)
     {
     }
@@ -378,26 +381,12 @@ class LmsAssessmentService
     }
 
     /**
-     * Student My Tests: one SCS Mock 1 and one Mock 2.
-     * Use the named person assignment (same BEXT id as Assigned Tests), never a later copy.
+     * Student My Tests: one SCS Mock 1 and one Mock 2, using the same sitting as Admin/instructor.
      */
     protected function collapseStudentScsSittings(User $user, Collection $out, array $attemptAsgIds = []): Collection
     {
         $best = [];
         $other = collect();
-        $uid = (int) $user->id;
-        $namedKeys = [];
-        foreach ($out as $row) {
-            if (! is_array($row)) {
-                continue;
-            }
-            $assessment = $row['assessment'] ?? null;
-            $asg = $row['assignment'] ?? null;
-            $key = $this->scsAssignedMockKey($assessment);
-            if ($key && $asg && (int) ($asg->student_id ?? 0) === $uid) {
-                $namedKeys[$key] = true;
-            }
-        }
         foreach ($out as $row) {
             if (! is_array($row)) {
                 continue;
@@ -412,40 +401,31 @@ class LmsAssessmentService
                 $other->push($row);
                 continue;
             }
-            $asg = $row['assignment'] ?? null;
-            $asgId = (int) ($asg->id ?? 0);
-            $named = $asg && (int) ($asg->student_id ?? 0) === $uid;
-            if (! empty($namedKeys[$key]) && ! $named) {
-                continue;
-            }
-            if ($this->isMock1CopiedNovemberSitting($asg, $assessment)) {
-                continue;
-            }
-            $score = $this->studentScsSittingScore($user, $row, $attemptAsgIds);
-            $prev = $best[$key] ?? null;
-            $prevScore = is_array($prev) ? (int) ($prev['_score'] ?? 0) : 0;
-            $prevId = is_array($prev) ? (int) ($prev['assignment']->id ?? 0) : 0;
-            $better = ! isset($best[$key])
-                || $score > $prevScore
-                || ($score === $prevScore && $asgId > $prevId);
-            if ($better) {
-                $row['_score'] = $score;
+            if (! isset($best[$key])) {
                 $best[$key] = $row;
             }
         }
 
         return $other->concat(collect($best)->filter(fn ($row) => is_array($row))->map(function ($row) use ($user, $attemptAsgIds) {
-            unset($row['_score']);
-            $pinned = $this->adminMatchingPersonSitting($user, $row['assessment'] ?? null, $attemptAsgIds);
-            if ($pinned) {
-                $row['assignment'] = $pinned;
+            $assessment = $row['assessment'] ?? null;
+            $pinned = $this->canonicalSittingForStudent($user, $assessment, $attemptAsgIds);
+            if (! $pinned) {
+                return null;
+            }
+            $row['assignment'] = $pinned;
+            $aid = (int) ($pinned->assessment_id ?? 0);
+            if ($aid > 0 && (int) ($assessment->id ?? 0) !== $aid) {
+                $found = LmsAssessment::query()->with('course')->find($aid);
+                if ($found) {
+                    $row['assessment'] = $found;
+                }
             }
 
             return $row;
-        }))->values();
+        })->filter())->values();
     }
 
-    protected function scsAssignedMockKey($assessment): ?string
+    public function scsAssignedMockKey($assessment): ?string
     {
         if (! $this->isCimaScsAssignedMock($assessment)) {
             return null;
@@ -458,14 +438,23 @@ class LmsAssessmentService
         return 'scs:mock' . $m[1];
     }
 
-    /** Named sitting this student was assigned — same appointment id Admin Assigned Tests uses. */
-    public function adminMatchingPersonSitting(User $user, $assessment, array $attemptAsgIds = []): ?LmsAssessmentAssignment
+    /**
+     * One sitting per student per SCS Mock 1/2 — Admin, instructor, and My Tests all use this.
+     * Named person assignment wins; if several exist, the one with an attempt, else the original (lowest id).
+     * If they were only on a class sitting, that class assignment is used.
+     */
+    public function canonicalSittingForStudent($student, $assessment, array $attemptAsgIds = []): ?LmsAssessmentAssignment
     {
-        $uid = (int) $user->id;
+        $uid = (int) ($student->id ?? 0);
         $want = $this->scsAssignedMockKey($assessment);
         if ($uid <= 0 || ! $want) {
             return null;
         }
+        $cacheKey = $uid . ':' . $want;
+        if (array_key_exists($cacheKey, $this->canonicalSittingCache ?? [])) {
+            return $this->canonicalSittingCache[$cacheKey];
+        }
+        $picked = null;
         try {
             $aids = LmsAssessment::query()->get(['id', 'title'])
                 ->filter(fn ($row) => $this->scsAssignedMockKey($row) === $want)
@@ -474,82 +463,53 @@ class LmsAssessmentService
                 ->filter()
                 ->values()
                 ->all();
-            if ($aids === []) {
-                return null;
-            }
-            $rows = LmsAssessmentAssignment::query()
-                ->with('marker')
-                ->whereIn('assessment_id', $aids)
-                ->where('student_id', $uid)
-                ->orderByDesc('id')
-                ->get();
-        } catch (\Throwable $e) {
-            return null;
-        }
-        $best = null;
-        $bestScore = null;
-        foreach ($rows as $asg) {
-            if ($this->isMock1CopiedNovemberSitting($asg, $assessment)) {
-                continue;
-            }
-            $score = $this->studentScsSittingScore($user, ['assignment' => $asg, 'assessment' => $assessment], $attemptAsgIds);
-            $asgId = (int) ($asg->id ?? 0);
-            if ($best === null
-                || $score > $bestScore
-                || ($score === $bestScore && $asgId > (int) ($best->id ?? 0))) {
-                $best = $asg;
-                $bestScore = $score;
-            }
-        }
+            if ($aids !== []) {
+                $rows = LmsAssessmentAssignment::query()
+                    ->with('marker')
+                    ->whereIn('assessment_id', $aids)
+                    ->orderBy('id')
+                    ->get()
+                    ->filter(fn ($asg) => ! $this->isMock1CopiedNovemberSitting($asg, $assessment))
+                    ->values();
+                $named = $rows->filter(fn ($asg) => (int) ($asg->student_id ?? 0) === $uid);
+                $pool = $named->isNotEmpty() ? $named : $rows->filter(function ($asg) use ($uid) {
+                    if ((int) ($asg->student_id ?? 0) === $uid) {
+                        return true;
+                    }
+                    if (! Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
+                        return false;
+                    }
 
-        return $best;
+                    return collect($asg->roster_user_ids ?? [])->map(fn ($id) => (int) $id)->contains($uid);
+                });
+                if ($pool->isNotEmpty()) {
+                    if ($attemptAsgIds === []) {
+                        try {
+                            $attemptAsgIds = LmsAssessmentAttempt::query()
+                                ->where('user_id', $uid)
+                                ->whereIn('assignment_id', $pool->pluck('id')->all())
+                                ->pluck('assignment_id')
+                                ->map(fn ($id) => (int) $id)
+                                ->all();
+                        } catch (\Throwable $e) {
+                            $attemptAsgIds = [];
+                        }
+                    }
+                    $withAttempt = $pool->filter(fn ($asg) => in_array((int) ($asg->id ?? 0), $attemptAsgIds, true));
+                    $picked = ($withAttempt->isNotEmpty() ? $withAttempt : $pool)->sortBy(fn ($asg) => (int) ($asg->id ?? 0))->first();
+                }
+            }
+        } catch (\Throwable $e) {
+            $picked = null;
+        }
+        $this->canonicalSittingCache[$cacheKey] = $picked;
+
+        return $picked;
     }
 
-    protected function studentScsSittingScore(User $user, array $row, array $attemptAsgIds = []): int
+    public function adminMatchingPersonSitting($user, $assessment, array $attemptAsgIds = []): ?LmsAssessmentAssignment
     {
-        $score = 0;
-        $asg = $row['assignment'] ?? null;
-        $asgId = (int) ($asg->id ?? 0);
-        if ($asgId > 0 && in_array($asgId, $attemptAsgIds, true)) {
-            $score += 10000;
-        }
-        $student = $user;
-        $yahia = $this->isYahiaUser($student);
-        $start = null;
-        try {
-            $start = $asg && method_exists($asg, 'windowStart') ? $asg->windowStart() : ($asg->available_from ?? null);
-        } catch (\Throwable $e) {
-            $start = $asg ? ($asg->available_from ?? null) : null;
-        }
-        $future = false;
-        try {
-            $future = $start && now()->lt(\Carbon\Carbon::parse($start));
-        } catch (\Throwable $e) {
-            $future = false;
-        }
-        if ($yahia && $future) {
-            $score += 5000;
-        }
-        if ($asg && ! empty($asg->student_id) && (int) $asg->student_id === (int) ($student->id ?? 0)) {
-            $score += 2000;
-        }
-        if ($start) {
-            try {
-                $ts = \Carbon\Carbon::parse($start)->timestamp;
-                if ($yahia && $future) {
-                    $score += (int) min(1000, $ts / 1000000);
-                } else {
-                    $score += (int) (max(0, 2000000000 - $ts) / 100000);
-                }
-            } catch (\Throwable $e) {
-                // keep base
-            }
-        }
-        if ($asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()) {
-            $score -= 2000;
-        }
-
-        return $score;
+        return $this->canonicalSittingForStudent($user, $assessment, $attemptAsgIds);
     }
 
     /** Class Mock 1 window (30/10) — not Yahia's own Nov 4/5 sitting. */
@@ -917,9 +877,15 @@ class LmsAssessmentService
         }
     }
 
-    /** Mock 1 appointment from this sitting's own DB row — never copy another sitting's window. */
+    /** Mock 1/2 appointment from the canonical sitting for this student. */
     public function scsMock1AssignmentFromDatabase($assessment, $student = null, $current = null)
     {
+        if ($student && $this->isCimaScsAssignedMock($assessment)) {
+            $canonical = $this->canonicalSittingForStudent($student, $assessment);
+            if ($canonical) {
+                return $canonical;
+            }
+        }
         if (! $this->isCimaScsMock1($assessment)) {
             return $current;
         }
@@ -2363,8 +2329,8 @@ class LmsAssessmentService
             if (! $assignment || empty($assignment->id)) {
                 $assignment = $this->resolveAssignmentForUser($user, $assessment);
             }
-            if ($assignment && $this->isCimaScsMock1($assessment)) {
-                $assignment = $this->scsMock1AssignmentFromDatabase($assessment, $user, $assignment) ?: $assignment;
+            if ($assignment && $this->isCimaScsAssignedMock($assessment)) {
+                $assignment = $this->canonicalSittingForStudent($user, $assessment) ?: $assignment;
             }
             if ($assignment && $this->isMock1CopiedNovemberSitting($assignment, $assessment)) {
                 continue;

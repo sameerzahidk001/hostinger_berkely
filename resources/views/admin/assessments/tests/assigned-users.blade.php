@@ -286,19 +286,11 @@
                             $spend = $attempt?->spendMinutes();
                             $appointment = $disp['appointment'] ?? null;
                             $isMock1Row = $assessment && (str_contains(mb_strtolower((string) $assessment->title), 'mock 1') && str_contains(mb_strtolower((string) $assessment->title), 'scs'));
-                            $yahiaHay = mb_strtolower(trim((string) ($row['student']->name ?? '') . ' ' . (string) ($row['student']->email ?? '')));
-                            $isYahiaRow = str_contains($yahiaHay, 'yahia') || str_contains($yahiaHay, 'yahya');
                             if ($appointment === null || $appointment === '' || $appointment === '—'
                                 || $appointment === 'Open (no appointment set)' || $appointment === 'Open') {
                                 $appointment = $assignment && method_exists($assignment, 'appointmentStartLabel')
                                     ? $assignment->appointmentStartLabel()
                                     : ($assignment?->appointmentWindowLabel() ?: '—');
-                            }
-                            $lmsAssessments = app(\App\Services\LmsAssessmentService::class);
-                            $yahiaOwnNov = $isYahiaRow && $assignment && method_exists($lmsAssessments, 'isMock1YahiaNovemberSitting')
-                                && $lmsAssessments->isMock1YahiaNovemberSitting($assignment, $assessment, $row['student'] ?? null);
-                            if ($isMock1Row && ! $yahiaOwnNov) {
-                                $appointment = '30/10/2026, 20:15';
                             }
                             $assessorName = $disp['assessor'] ?? '';
                             $assessorBlank = $assessorName === ''
