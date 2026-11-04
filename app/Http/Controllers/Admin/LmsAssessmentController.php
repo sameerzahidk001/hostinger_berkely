@@ -877,13 +877,8 @@ class LmsAssessmentController extends Controller
         try {
             $this->fillMissingBatchMates($rowsByKey, $assignments, $assessmentsById, $batchStudentCache);
             $this->attachCimaCohortSittingsToAssignedRows($rowsByKey, $assignments, $assessmentsById);
-            // SCS Mock 1/2 are person assignments — do not paint BAT-0004 onto Mock 3–7.
-            $rowsByKey = $this->keepOriginalUnusedClassSitting($rowsByKey);
-        } catch (\Throwable $e) {
-            report($e);
-        }
-        try {
             $this->ensureMock1OriginalRoster($rowsByKey, $assignments, $assessmentsById);
+            $rowsByKey = $this->keepOriginalUnusedClassSitting($rowsByKey);
         } catch (\Throwable $e) {
             report($e);
         }
@@ -2830,17 +2825,6 @@ class LmsAssessmentController extends Controller
                     continue;
                 }
                 if ($excluded->contains($uid)) {
-                    continue;
-                }
-                $alreadyListed = collect($rowsByKey)->contains(function ($r) use ($uid, $titleKey) {
-                    if ((int) ($r['student']->id ?? 0) !== $uid) {
-                        return false;
-                    }
-                    $t = mb_strtolower(trim((string) ($r['assessment']->title ?? '')));
-
-                    return $titleKey !== '' && $t === $titleKey;
-                });
-                if ($alreadyListed) {
                     continue;
                 }
                 $key = (int) $seed->id . ':' . $uid;

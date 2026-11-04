@@ -889,8 +889,7 @@ class LmsAssessmentService
             return null;
         }
         $exam = $rows->filter(fn ($a) => ! (method_exists($a, 'isSelfSitting') && $a->isSelfSitting()))->values();
-        $original = $exam->filter(fn ($a) => ! $this->isMock1FourthNovemberSitting($a, $assessment))->values();
-        $pool = $original->isNotEmpty() ? $original : $exam;
+        $pool = $exam;
 
         return $pool->sortBy(fn ($a) => (int) ($a->id ?? 0))->first();
     }
@@ -1333,10 +1332,13 @@ class LmsAssessmentService
                 continue;
             }
             $assignment->setRelation('assessment', $assessment);
-            if ($this->isMock1CopiedNovemberSitting($assignment, $assessment)) {
-                continue;
+            $orig = $this->originalExamSittingFor($assessment);
+            if ($orig && (int) $orig->id !== (int) $assignment->id
+                && empty($assignment->student_id)
+                && ! empty($assignment->class_batch_id)) {
+                $assignment = $orig;
             }
-            if (! $this->isCimaScsMock1($assessment) && method_exists($assignment, 'applyMissingExamWindow')) {
+            if (method_exists($assignment, 'applyMissingExamWindow') && ! $assignment->available_from) {
                 $assignment->applyMissingExamWindow('2026-10-26 20:30:00', 'Asia/Dubai', 180);
             }
             $out->push(['assessment' => $assessment, 'assignment' => $assignment]);
@@ -2598,10 +2600,10 @@ class LmsAssessmentService
                 $assignment = $this->resolveAssignmentForUser($user, $assessment);
             }
             if ($assignment && empty($row['from_folder'])
-                && method_exists($this, 'isMock1CopiedNovemberSitting')
-                && $this->isMock1CopiedNovemberSitting($assignment, $assessment)) {
+                && empty($assignment->student_id)
+                && ! empty($assignment->class_batch_id)) {
                 $orig = $this->originalExamSittingFor($assessment);
-                if ($orig) {
+                if ($orig && (int) $orig->id !== (int) $assignment->id) {
                     $assignment = $orig;
                 }
             }
