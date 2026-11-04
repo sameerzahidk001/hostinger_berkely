@@ -202,10 +202,18 @@ class LmsAssessment extends Model
             ->where(function ($q) {
                 $q->whereNotNull('started_at')->orWhereNotNull('submitted_at');
             });
-        if ($sittingKind && $asgIds !== []) {
+        if ($sittingKind === LmsAssessmentAssignment::KIND_SELF) {
+            if ($asgIds === []) {
+                return 0;
+            }
             $q->whereIn('assignment_id', $asgIds);
-        } elseif ($sittingKind) {
-            return 0;
+        } elseif ($sittingKind === LmsAssessmentAssignment::KIND_EXAM) {
+            $selfAsgIds = $this->assignmentIdsForSittingKind(LmsAssessmentAssignment::KIND_SELF);
+            if ($selfAsgIds !== []) {
+                $q->where(function ($qq) use ($selfAsgIds) {
+                    $qq->whereNull('assignment_id')->orWhereNotIn('assignment_id', $selfAsgIds);
+                });
+            }
         }
 
         return (int) $q->distinct()->count('user_id');
@@ -310,15 +318,31 @@ class LmsAssessment extends Model
             }
             $self = method_exists($assignment, 'isSelfSitting') && $assignment->isSelfSitting();
             $batchId = (int) ($assignment->class_batch_id ?? 0);
-            if ($isCimaScs && $this->isCimaScsAssignedMockTitle()) {
-                if (! $self && $batchId > 0 && $local->filter()->isEmpty()) {
+            if ($self) {
+                // Self Test: named / roster people only. Do not copy the exam batch onto it.
+            } elseif ($isCimaScs && $this->isCimaScsAssignedMockTitle()) {
+                try {
+                    $local = $local->merge(ClassBatch::studentUserIdsForSitting($assignment));
+                } catch (\Throwable $e) {
+                    // keep named/roster
+                }
+                if ($batchId <= 0) {
+                    try {
+                        $batch = ClassBatch::query()->where('code', 'BAT-0004')->first()
+                            ?: ClassBatch::query()->where('code', 'like', '%0004%')->first();
+                        $batchId = (int) ($batch->id ?? 0);
+                    } catch (\Throwable $e) {
+                        $batchId = 0;
+                    }
+                }
+                if ($batchId > 0) {
                     try {
                         $local = $local->merge(ClassBatch::membersOnBatchAtAssignment($batchId, $assignment));
                     } catch (\Throwable $e) {
                         // named/roster only
                     }
                 }
-            } elseif (! $isCimaScs) {
+            } else {
                 $local = $local->merge(ClassBatch::studentUserIdsForSitting($assignment));
             }
             $ids = $ids->merge($local);

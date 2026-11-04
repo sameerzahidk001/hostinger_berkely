@@ -1288,33 +1288,30 @@ class LmsAssessmentController extends Controller
             $rowsByKey = [];
 
             foreach ($assignments as $assignment) {
+                if (method_exists($this->assessments, 'alignSittingWithExistingExamRule')) {
+                    $this->assessments->alignSittingWithExistingExamRule($assignment, $assessment);
+                }
                 $students = collect();
                 if ($assignment->student_id) {
                     $student = $assignment->student ?: User::query()->find($assignment->student_id);
-                    // Always keep the sitting visible even if the user row is missing.
                     $students->push($student ?: (object) [
                         'id' => (int) $assignment->student_id,
                         'name' => 'User #' . $assignment->student_id,
                         'email' => '',
                     ]);
-                } elseif ($assignment->class_batch_id && Schema::hasTable('class_batches')) {
+                }
+                $students = $this->expandSittingStudents($students, $assignment, $assessment, $batchStudentCache);
+                if ($students->isEmpty() && $assignment->class_batch_id && Schema::hasTable('class_batches')) {
                     $bid = (int) $assignment->class_batch_id;
                     if (! isset($batchStudentCache[$bid])) {
                         $batchStudentCache[$bid] = $this->studentsForBatchId($bid);
                     }
                     $students = $batchStudentCache[$bid];
-                    if ($students->isEmpty()) {
-                        $students = collect([(object) [
-                            'id' => 0,
-                            'name' => 'Batch #' . $bid . ' (no students)',
-                            'email' => '',
-                        ]]);
-                    }
-                } else {
-                    // Orphan assignment row — still list it.
+                }
+                if ($students->isEmpty()) {
                     $students = collect([(object) [
-                        'id' => 0,
-                        'name' => '—',
+                        'id' => (int) ($assignment->student_id ?? 0),
+                        'name' => $assignment->student_id ? ('User #' . $assignment->student_id) : '—',
                         'email' => '',
                     ]]);
                 }
@@ -1915,11 +1912,22 @@ class LmsAssessmentController extends Controller
             }
             $self = $assignment && method_exists($assignment, 'isSelfSitting') && $assignment->isSelfSitting();
             $batchId = (int) ($assignment->class_batch_id ?? 0);
-            if (! $self && $batchId > 0 && $ids->filter()->isEmpty()) {
+            if (! $self) {
                 try {
-                    $ids = $ids->merge(ClassBatch::membersOnBatchAtAssignment($batchId, $assignment));
+                    $ids = $ids->merge(ClassBatch::studentUserIdsForSitting($assignment));
                 } catch (\Throwable $e) {
                     // keep named/roster ids
+                }
+                if ($batchId <= 0) {
+                    $batch = $this->loadCimaScsNovemberBatch();
+                    $batchId = (int) ($batch->id ?? 0);
+                }
+                if ($batchId > 0) {
+                    try {
+                        $ids = $ids->merge(ClassBatch::membersOnBatchAtAssignment($batchId, $assignment));
+                    } catch (\Throwable $e) {
+                        // keep named/roster ids
+                    }
                 }
             }
             $ids = $ids->map(fn ($id) => (int) $id)->unique()->filter()->values();
