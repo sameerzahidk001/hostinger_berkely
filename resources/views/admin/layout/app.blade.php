@@ -403,7 +403,9 @@
                      <ul class="nav nav-second-level">
                         <li><a href="{{ route('menu.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Menu</span></a></li>
                         <li><a href="{{ route('site-settings.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Site Settings</span></a></li>
+                        @if(\Illuminate\Support\Facades\Route::has('admin.content-editor.edit'))
                         <li class="{{ request()->is('admin/content-editor-settings*') ? 'active' : '' }}"><a href="{{ route('admin.content-editor.edit') }}"><i class="fa fa-pencil"></i> <span class="nav-label">Content Editor</span></a></li>
+                        @endif
                         <li><a href="{{ route('widget.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Widgets</span></a></li>
                         <li><a href="{{ route('header.setting.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Header Settings</span></a></li>
                         <li><a href="{{ route('footer.setting.index') }}"><i class="fa fa-cog"></i> <span class="nav-label">Footer Settings</span></a></li>
