@@ -616,30 +616,17 @@ class LmsAssessmentService
         return ! $this->isMock1YahiaNovemberSitting($asg, $assessment, $student);
     }
 
-    /** SCS Mock 1 Test sittings use 30/10/2026 20:15 unless this is Yahia's own Nov sitting. Self tests have no exam start. */
-    public function scsMock1ExamWindowStart($asg, $assessment, $student = null): ?\Carbon\Carbon
+    /** This sitting's own start. Self tests have no appointment. Never copy another sitting's time. */
+    public function scsMock1ExamWindowStart($asg, $assessment = null, $student = null): ?\Carbon\Carbon
     {
-        if (! $asg || ! $this->isCimaScsMock1($assessment)) {
-            return $asg && method_exists($asg, 'windowStart') ? $asg->windowStart() : null;
-        }
-        if (method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()) {
+        if (! $asg || (method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting())) {
             return null;
-        }
-        if ($this->isMock1YahiaNovemberSitting($asg, $assessment, $student)) {
-            return method_exists($asg, 'windowStart') ? $asg->windowStart() : null;
-        }
-        if ($this->usesMock1ClassWindow($asg, $assessment, $student)) {
-            try {
-                return \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', '2026-10-30 20:15:00', 'Asia/Dubai');
-            } catch (\Throwable $e) {
-                return \Carbon\Carbon::parse('2026-10-30 20:15:00', 'Asia/Dubai');
-            }
         }
 
         return method_exists($asg, 'windowStart') ? $asg->windowStart() : null;
     }
 
-    public function sittingAppointmentLabel($asg, $assessment, $student = null): string
+    public function sittingAppointmentLabel($asg, $assessment = null, $student = null): string
     {
         if (! $asg) {
             return '—';
@@ -647,24 +634,19 @@ class LmsAssessmentService
         if (method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()) {
             return '—';
         }
-        $start = $this->scsMock1ExamWindowStart($asg, $assessment, $student);
-        if ($start) {
-            return $start->format('d/m/Y, H:i');
-        }
 
         return method_exists($asg, 'appointmentStartLabel')
             ? $asg->appointmentStartLabel()
             : '—';
     }
 
-    /** Upcoming / Missed / Assigned for an unused exam sitting. Self test stays Assigned. */
-    public function unusedExamBucket($asg, $assessment, $student = null): string
+    /** Upcoming / Missed / Assigned from this sitting's start + 30 minutes. Self test stays Assigned. */
+    public function unusedExamBucket($asg, $assessment = null, $student = null): string
     {
         if (! $asg || (method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting())) {
             return 'assigned';
         }
-        $start = $this->scsMock1ExamWindowStart($asg, $assessment, $student)
-            ?: (method_exists($asg, 'windowStart') ? $asg->windowStart() : null);
+        $start = method_exists($asg, 'windowStart') ? $asg->windowStart() : null;
         if ($start && now()->lt($start)) {
             return 'upcoming';
         }

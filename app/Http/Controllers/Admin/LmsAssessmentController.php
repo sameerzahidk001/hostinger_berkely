@@ -3236,19 +3236,6 @@ class LmsAssessmentController extends Controller
         $asg = $row['assignment'] ?? null;
         $assessment = $row['assessment'] ?? null;
         $attempt = $row['attempt'] ?? null;
-        if ($assessment && method_exists($this->assessments, 'scsMock1AssignmentFromDatabase')) {
-            $fromDb = $this->assessments->scsMock1AssignmentFromDatabase($assessment, $row['student'] ?? null, $asg);
-            if ($fromDb) {
-                $asg = $fromDb;
-                $row['assignment'] = $asg;
-            }
-        } elseif ($assessment && method_exists($this->assessments, 'canonicalSittingForStudent')) {
-            $fromDb = $this->assessments->canonicalSittingForStudent($row['student'] ?? null, $assessment);
-            if ($fromDb) {
-                $asg = $fromDb;
-                $row['assignment'] = $asg;
-            }
-        }
         if ($this->isCimaCohortSitting($assessment, $asg, collect([$row['student'] ?? null])) && ! $asg && $assessment) {
             $asg = $this->ensureCimaCohortAssignment($assessment);
             $row['assignment'] = $asg;
@@ -3301,11 +3288,7 @@ class LmsAssessmentController extends Controller
         if ($isSelf) {
             $start = '—';
             $tz = '—';
-        } elseif ($isMock1 && method_exists($this->assessments, 'sittingAppointmentLabel')) {
-            $start = $this->assessments->sittingAppointmentLabel($asg, $assessment, $row['student'] ?? null);
-            $tz = ($tz && $tz !== '') ? $tz : 'Asia/Dubai · GST';
-            $created = ($created && $created !== '') ? $created : 'Admin';
-        } elseif ($this->appointmentLooksBlank($start) && $assessment && ! empty($assessment->id) && ! $isMock1) {
+        } elseif ($this->appointmentLooksBlank($start) && $assessment && ! empty($assessment->id) && ! $isMock1 && ! $isSelf) {
             try {
                 $started = LmsAssessmentAttempt::query()
                     ->where('assessment_id', (int) $assessment->id)
