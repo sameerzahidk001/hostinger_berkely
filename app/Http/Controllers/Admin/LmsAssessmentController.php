@@ -3905,7 +3905,10 @@ class LmsAssessmentController extends Controller
                 $row['sitting_kind'] = $sittingKind;
             }
             if (Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
-                $row['roster_user_ids'] = ClassBatch::studentUserIdsFor($batchId)->values()->all();
+                $row['roster_user_ids'] = $this->snapshotBatchStudentIds($batchId)->all();
+                if ($row['roster_user_ids'] === []) {
+                    continue;
+                }
             }
             if ($this->hasUnusedDuplicateSitting($a, $row, $hasKindCol)) {
                 continue;
@@ -3936,6 +3939,9 @@ class LmsAssessmentController extends Controller
             if ($hasKindCol) {
                 $row['sitting_kind'] = $sittingKind;
             }
+            if (Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
+                $row['roster_user_ids'] = [$studentId];
+            }
             if ($this->hasUnusedDuplicateSitting($a, $row, $hasKindCol)) {
                 continue;
             }
@@ -3946,6 +3952,24 @@ class LmsAssessmentController extends Controller
 
         // Stash count for flash message.
         $request->attributes->set('lms_assignments_created', $created);
+    }
+
+    /** People on the batch at save time (pivot + students relation). Empty batches are not assigned. */
+    protected function snapshotBatchStudentIds(int $batchId)
+    {
+        $ids = ClassBatch::studentUserIdsFor($batchId);
+        if ($ids->isEmpty()) {
+            try {
+                $batch = ClassBatch::query()->with('students')->find($batchId);
+                if ($batch && $batch->students) {
+                    $ids = $ids->merge($batch->students->pluck('id'));
+                }
+            } catch (\Throwable $e) {
+                // keep pivot ids
+            }
+        }
+
+        return $ids->map(fn ($id) => (int) $id)->unique()->filter()->values();
     }
 
     /** Same test + same people + same start, still unused → do not create another sitting. */

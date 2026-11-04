@@ -267,6 +267,17 @@ class LmsAssessment extends Model
         return $ids === [] ? [$id] : $ids;
     }
 
+    protected function rosterIdsFromAssignment($assignment)
+    {
+        $raw = $assignment->roster_user_ids ?? null;
+        if (is_string($raw) && $raw !== '') {
+            $decoded = json_decode($raw, true);
+            $raw = is_array($decoded) ? $decoded : [];
+        }
+
+        return collect(is_array($raw) ? $raw : [])->map(fn ($id) => (int) $id)->filter()->values();
+    }
+
     protected function assignedRosterUserIds(?string $sittingKind = null)
     {
         $cacheKey = $sittingKind ?: 'all';
@@ -274,23 +285,14 @@ class LmsAssessment extends Model
             return collect($this->assignedRosterByKindCache[$cacheKey]);
         }
 
-        $cols = ['id', 'assessment_id', 'student_id', 'class_batch_id', 'created_at'];
-        if (Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
-            $cols[] = 'roster_user_ids';
-        }
-        if (Schema::hasColumn('lms_assessment_assignments', 'excluded_user_ids')) {
-            $cols[] = 'excluded_user_ids';
-        }
-        if (Schema::hasColumn('lms_assessment_assignments', 'sitting_kind')) {
-            $cols[] = 'sitting_kind';
-        }
         $aids = $this->sameTitleAssessmentIds();
         try {
-            $assignments = LmsAssessmentAssignment::query()->whereIn('assessment_id', $aids)->get($cols);
+            $assignments = LmsAssessmentAssignment::query()->whereIn('assessment_id', $aids)->get();
         } catch (\Throwable $e) {
-            $assignments = $this->relationLoaded('assignments')
-                ? $this->assignments
-                : $this->assignments()->get($cols);
+            $assignments = collect();
+        }
+        if ($this->relationLoaded('assignments') && $this->assignments) {
+            $assignments = $assignments->concat($this->assignments)->unique(fn ($row) => (int) ($row->id ?? 0))->values();
         }
         if ($sittingKind === LmsAssessmentAssignment::KIND_SELF) {
             $assignments = $assignments->filter(fn ($a) => method_exists($a, 'isSelfSitting') && $a->isSelfSitting())->values();
@@ -313,13 +315,17 @@ class LmsAssessment extends Model
             if (! empty($assignment->student_id)) {
                 $local->push((int) $assignment->student_id);
             }
-            if (Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
-                $local = $local->merge(collect($assignment->roster_user_ids ?? []));
-            }
+            $local = $local->merge($this->rosterIdsFromAssignment($assignment));
             $self = method_exists($assignment, 'isSelfSitting') && $assignment->isSelfSitting();
             $batchId = (int) ($assignment->class_batch_id ?? 0);
             if ($self) {
-                // Self Test: named / roster people only. Do not copy the exam batch onto it.
+                if ($local->filter()->isEmpty() && $batchId > 0) {
+                    try {
+                        $local = $local->merge(ClassBatch::studentUserIdsFor($batchId));
+                    } catch (\Throwable $e) {
+                        // named/roster only
+                    }
+                }
             } elseif ($isCimaScs && $this->isCimaScsAssignedMockTitle()) {
                 try {
                     $local = $local->merge(ClassBatch::studentUserIdsForSitting($assignment));

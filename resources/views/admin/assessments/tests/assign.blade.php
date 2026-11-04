@@ -31,7 +31,7 @@
                 Duration still applies after they start. Optional assessor: if set, that instructor (or Admin) can mark.
             @else
                 Each save creates a <strong>new exam sitting</strong> with an appointment window for the people you select now.
-                Picking <strong>one student</strong> assigns <strong>every classmate on that student’s batch</strong> (the roster at save time). Pick a batch to assign that batch directly.
+                Picking <strong>students</strong> assigns <strong>those students only</strong>. Pick a <strong>batch</strong> to assign everyone on that batch (the roster at save time). A batch with no linked students is not assigned.
                 Existing sittings keep their own appointment, assessor, and times. The student may start anytime inside that window. For another exam sitting, assign again (retake window).
                 <strong>No specific start time?</strong> Use <strong>2. Assigning Self test</strong> — that sitting has no Test Appointment Start; the student clicks Start anytime.
                 Older sittings stay on Assigned Tests. Optional assessor: if set, that instructor (or Admin) can mark; otherwise Admin / course instructors can mark.
