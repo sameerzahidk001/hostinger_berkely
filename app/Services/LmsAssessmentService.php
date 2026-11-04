@@ -728,13 +728,48 @@ class LmsAssessmentService
                 $named = ! empty($row->student_id)
                     && (int) $row->student_id === $studentId
                     && empty($row->class_batch_id);
-                if ($named) {
+                if ($named || $this->sittingHasNoPeople($row)) {
                     $row->delete();
                 }
             }
         }
 
         return $code;
+    }
+
+    public function sittingHasNoPeople($asg): bool
+    {
+        if (! $asg) {
+            return true;
+        }
+        if ((int) ($asg->student_id ?? 0) > 0) {
+            return false;
+        }
+        $roster = collect($asg->roster_user_ids ?? [])->map(fn ($id) => (int) $id)->filter();
+        if ($roster->isNotEmpty()) {
+            return false;
+        }
+        $batchId = (int) ($asg->class_batch_id ?? 0);
+        if ($batchId > 0 && ! (method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting())) {
+            try {
+                if (ClassBatch::studentUserIdsFor($batchId)->isNotEmpty()) {
+                    return false;
+                }
+            } catch (\Throwable $e) {
+                return false;
+            }
+        }
+        try {
+            if (! empty($asg->id) && Schema::hasTable('lms_assessment_attempts')) {
+                if (LmsAssessmentAttempt::query()->where('assignment_id', (int) $asg->id)->exists()) {
+                    return false;
+                }
+            }
+        } catch (\Throwable $e) {
+            // treat as empty
+        }
+
+        return true;
     }
 
     public function excludeStudentFromAssignment(LmsAssessmentAssignment $row, int $userId): void
@@ -746,9 +781,7 @@ class LmsAssessmentService
             if (Schema::hasColumn($row->getTable(), 'excluded_user_ids')) {
                 $ex = collect($row->excluded_user_ids ?? [])
                     ->map(fn ($id) => (int) $id)
-                    ->push($userId)
-                    ->unique()
-                    ->filter()
+                    ->reject(fn ($id) => $id === $userId)
                     ->values()
                     ->all();
                 $row->excluded_user_ids = $ex;
@@ -1069,9 +1102,6 @@ class LmsAssessmentService
         }
         $userId = (int) $user->id;
         if ($this->studentIsHiddenOnMcs($user, $assessment)) {
-            return false;
-        }
-        if ($this->studentExcludedFromAssessment($userId, (int) ($assessment->id ?? 0))) {
             return false;
         }
         if ($assignment && Schema::hasColumn('lms_assessment_assignments', 'excluded_user_ids')) {
@@ -2859,9 +2889,6 @@ class LmsAssessmentService
             if ($this->studentIsHiddenOnMcs($user, $assessment)) {
                 continue;
             }
-            if ($this->studentExcludedFromAssessment((int) $user->id, (int) $assessment->id)) {
-                continue;
-            }
             if (in_array((int) $assessment->id, $itemAssessmentIds, true)) {
                 continue;
             }
@@ -3235,9 +3262,6 @@ class LmsAssessmentService
                 return false;
             }
             if ($this->studentIsHiddenOnMcs($user, $assessment)) {
-                return false;
-            }
-            if ($this->studentExcludedFromAssessment((int) $user->id, (int) $assessment->id)) {
                 return false;
             }
             if ($assignment && ! $this->assignmentIncludesStudent($assignment, (int) $user->id)) {
