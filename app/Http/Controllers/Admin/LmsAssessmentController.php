@@ -3254,6 +3254,9 @@ class LmsAssessmentController extends Controller
             $row['assignment'] = $asg;
         }
         $this->hydrateSittingDisplay($asg, $assessment);
+        if ($asg && method_exists($this->assessments, 'alignSittingWithExistingExamRule')) {
+            $this->assessments->alignSittingWithExistingExamRule($asg, $assessment);
+        }
         $studentId = (int) ($row['student']->id ?? 0);
         $apptId = ($asg && ! empty($asg->id))
             ? $asg->displayCodeForStudent($studentId)
