@@ -1020,6 +1020,23 @@ class LmsAssessmentService
         return str_contains($hay, 'yahia') || str_contains($hay, 'yahya');
     }
 
+    /** CIMA MCS Mock 1 only (not SCS, not Mock 2). */
+    public function isCimaMcsMock1($assessment): bool
+    {
+        if (! $assessment) {
+            return false;
+        }
+        $title = mb_strtolower(trim(
+            (string) ($assessment->title ?? '') . ' ' . (string) ($assessment->course->title ?? '')
+        ));
+        if ($title === '' || str_contains($title, 'scs') || str_contains($title, 'masterclass')) {
+            return false;
+        }
+
+        return (str_contains($title, 'mcs') || str_contains($title, 'management case'))
+            && (bool) preg_match('/\bmock\s*1\b/', $title);
+    }
+
     public function usesStrictExamWindow(LmsAssessment $assessment): bool
     {
         $hay = mb_strtolower(trim(
@@ -2431,6 +2448,21 @@ class LmsAssessmentService
             }
             $aid = (int) $assessment->id;
             $asgId = (int) ($assignment->id ?? 0);
+            $mcs1AlreadyTaken = $this->isCimaMcsMock1($assessment)
+                && $asgId > 0
+                && $attemptsByAssessment->get($aid)
+                && $attemptsByAssessment->get($aid)->contains(function ($att) use ($asgId) {
+                    return (int) ($att->assignment_id ?? 0) === $asgId
+                        && in_array($att->status, ['submitted', 'graded', 'expired'], true);
+                });
+            if ($mcs1AlreadyTaken) {
+                $alreadyInTakenBucket = $results->concat($submitted)->concat($inProgress)->contains(
+                    fn ($r) => (int) ($r['assignment']->id ?? 0) === $asgId
+                );
+                if ($alreadyInTakenBucket) {
+                    continue;
+                }
+            }
             $meta = $sittingMeta[$aid . ':' . $asgId] ?? ['number' => 1, 'total' => 1];
             $max = $this->maxAttemptsFor($assessment);
             $attempts = $attemptsByAssessment->get($aid) ?? collect();
@@ -2542,7 +2574,7 @@ class LmsAssessmentService
                 $cimaUnused = $this->isCimaCohortEmail($user->email ?? null)
                     && $assignment
                     && ! $assignment->isSelfSitting();
-                if ($assignment && ($assignment->isExpired() || $cimaUnused)) {
+                if ($assignment && ($assignment->isExpired() || $cimaUnused) && empty($mcs1AlreadyTaken)) {
                     $missed->push($base + [
                         'attempt' => null,
                         'can_retake' => $max > 1 || $this->canRetake($user, $assessment, $assignment),
@@ -2566,7 +2598,7 @@ class LmsAssessmentService
             if ($examWindowPassed && $this->sittingCanStartAfterWindow($assessment, $assignment)) {
                 $examWindowPassed = false;
             }
-            if ($examWindowPassed) {
+            if ($examWindowPassed && empty($mcs1AlreadyTaken)) {
                 $missed->push($base + [
                     'attempt' => null,
                     'can_retake' => $max > 1 || $this->canRetake($user, $assessment, $assignment),
@@ -2579,7 +2611,7 @@ class LmsAssessmentService
                         'attempt' => null,
                         'can_retake' => false,
                     ]);
-                } elseif ($this->usesStrictExamWindow($assessment)) {
+                } elseif ($this->usesStrictExamWindow($assessment) && empty($mcs1AlreadyTaken)) {
                     $missed->push($base + [
                         'attempt' => null,
                         'can_retake' => $max > 1 || $this->canRetake($user, $assessment, $assignment),
@@ -2679,13 +2711,24 @@ class LmsAssessmentService
             ->filter()
             ->unique()
             ->all();
-        if ($takenSittingIds !== []) {
-            $missed = $missed->filter(function ($r) use ($takenSittingIds) {
-                $asgId = (int) ($r['assignment']->id ?? 0);
+        $mcs1TakenAssessmentIds = $results->concat($submitted)->concat($inProgress)
+            ->filter(fn ($r) => $this->isCimaMcsMock1($r['assessment'] ?? null))
+            ->map(fn ($r) => (int) ($r['assessment']->id ?? 0))
+            ->filter()
+            ->unique()
+            ->all();
+        $missed = $missed->filter(function ($r) use ($takenSittingIds, $mcs1TakenAssessmentIds) {
+            $asgId = (int) ($r['assignment']->id ?? 0);
+            if ($asgId > 0 && in_array($asgId, $takenSittingIds, true)) {
+                return false;
+            }
+            if ($this->isCimaMcsMock1($r['assessment'] ?? null)
+                && in_array((int) ($r['assessment']->id ?? 0), $mcs1TakenAssessmentIds, true)) {
+                return false;
+            }
 
-                return $asgId <= 0 || ! in_array($asgId, $takenSittingIds, true);
-            })->values();
-        }
+            return true;
+        })->values();
 
         return compact('available', 'upcoming', 'inProgress', 'submitted', 'results', 'missed');
     }
