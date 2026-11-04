@@ -323,7 +323,7 @@ class LmsAssessmentService
                 }
             }
             $assessment = $assessmentsById->get((int) $assignment->assessment_id);
-            if (! $this->studentShouldSeeSitting($user, $assessment, $assignment, $attemptAsgIds)) {
+            if (! $assessment || ! $this->studentShouldSeeSitting($user, $assessment, $assignment, $attemptAsgIds)) {
                 continue;
             }
             if ($kind && $assessment->kind !== $kind) {
@@ -2378,7 +2378,11 @@ class LmsAssessmentService
                 ->get();
         }
 
-        $itemAssessmentIds = $items->pluck('assessment.id')->map(fn ($id) => (int) $id)->all();
+        $itemAssessmentIds = $items
+            ->filter(fn ($r) => is_array($r) && ! empty($r['assessment']))
+            ->pluck('assessment.id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
         foreach ($userAttempts as $att) {
             $assessment = $att->assessment ?: LmsAssessment::query()->find($att->assessment_id);
             if (! $assessment || (method_exists($assessment, 'trashed') && $assessment->trashed())) {
@@ -2406,10 +2410,10 @@ class LmsAssessmentService
 
         // Attempt N of T per assessment (oldest assigned sitting = attempt 1).
         $sittingMeta = [];
-        foreach ($items->groupBy(fn ($r) => (int) $r['assessment']->id) as $aid => $group) {
+        foreach ($items->filter(fn ($r) => is_array($r) && ! empty($r['assessment']))->groupBy(fn ($r) => (int) $r['assessment']->id) as $aid => $group) {
             $ordered = $group
-                ->filter(fn ($r) => ! empty($r['assignment']?->id))
-                ->sortBy(fn ($r) => (int) $r['assignment']->id)
+                ->filter(fn ($r) => is_array($r) && ! empty($r['assignment']?->id))
+                ->sortBy(fn ($r) => (int) ($r['assignment']->id ?? 0))
                 ->values();
             $total = max(1, $ordered->count());
             foreach ($ordered as $i => $r) {
@@ -2425,10 +2429,17 @@ class LmsAssessmentService
         $inProgressShown = [];
 
         foreach ($items as $row) {
-            /** @var LmsAssessment $assessment */
-            $assessment = $row['assessment'];
+            if (! is_array($row)) {
+                continue;
+            }
+            /** @var LmsAssessment|null $assessment */
+            $assessment = $row['assessment'] ?? null;
             /** @var LmsAssessmentAssignment|null $assignment */
-            $assignment = $row['assignment'];
+            $assignment = $row['assignment'] ?? null;
+            if (! $assessment) {
+                continue;
+            }
+            try {
             if ($this->studentIsHiddenOnMcs($user, $assessment)
                 || ! $this->studentShouldSeeSitting($user, $assessment, $assignment, [])) {
                 continue;
@@ -2452,7 +2463,7 @@ class LmsAssessmentService
                 }
             }
             $aid = (int) $assessment->id;
-            $asgId = (int) ($assignment->id ?? 0);
+            $asgId = (int) ($assignment?->id ?? 0);
             $mcs1AlreadyTaken = $this->isCimaMcsMock1($assessment)
                 && $asgId > 0
                 && $attemptsByAssessment->get($aid)
@@ -2462,13 +2473,16 @@ class LmsAssessmentService
                 });
             if ($mcs1AlreadyTaken) {
                 $alreadyInTakenBucket = $results->concat($submitted)->concat($inProgress)->contains(
-                    fn ($r) => (int) ($r['assignment']->id ?? 0) === $asgId
+                    fn ($r) => is_array($r) && (int) data_get($r, 'assignment.id', 0) === $asgId
                 );
                 if ($alreadyInTakenBucket) {
                     continue;
                 }
             }
-            $meta = $sittingMeta[$aid . ':' . $asgId] ?? ['number' => 1, 'total' => 1];
+            $metaKey = $aid . ':' . $asgId;
+            $meta = (is_array($sittingMeta) && isset($sittingMeta[$metaKey]) && is_array($sittingMeta[$metaKey]))
+                ? $sittingMeta[$metaKey]
+                : ['number' => 1, 'total' => 1];
             $max = $this->maxAttemptsFor($assessment);
             $attempts = $attemptsByAssessment->get($aid) ?? collect();
             $used = $attempts->count();
@@ -2611,11 +2625,16 @@ class LmsAssessmentService
                     'can_retake' => $isRetakeSitting,
                 ]);
             }
+            } catch (\Throwable $e) {
+                report($e);
+                continue;
+            }
         }
 
         foreach ($attemptsByAssessment as $aid => $atts) {
-            $sample = $items->first(fn ($r) => (int) $r['assessment']->id === (int) $aid);
-            $assessment = $sample['assessment'] ?? $atts->first()?->assessment;
+            $sample = $items->first(fn ($r) => is_array($r) && (int) data_get($r, 'assessment.id') === (int) $aid);
+            $assessment = is_array($sample) ? ($sample['assessment'] ?? null) : null;
+            $assessment = $assessment ?: $atts->first()?->assessment;
             if (! $assessment || (method_exists($assessment, 'trashed') && $assessment->trashed())) {
                 continue;
             }
@@ -2627,8 +2646,11 @@ class LmsAssessmentService
                     continue;
                 }
                 $claimedAttemptIds[(int) $att->id] = true;
-                $matchRow = $items->first(fn ($r) => $this->attemptBelongsToAssignment($att, $r['assignment'] ?? null));
-                $asg = $matchRow['assignment'] ?? $sample['assignment'];
+                $matchRow = $items->first(fn ($r) => is_array($r) && $this->attemptBelongsToAssignment($att, $r['assignment'] ?? null));
+                $asg = is_array($matchRow) ? ($matchRow['assignment'] ?? null) : null;
+                if (! $asg && is_array($sample)) {
+                    $asg = $sample['assignment'] ?? null;
+                }
                 $rowBase = [
                     'assessment' => $assessment,
                     'assignment' => $asg,
