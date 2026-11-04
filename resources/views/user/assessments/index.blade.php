@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.sortable-table-assets')
 @php $lmsUserPreviewUrlTpl = route('user.assessments.user-preview', ['userId' => '__ID__']); @endphp
 @section('content')
-<!-- lms-my-tests-20261104n KEEP: Admin/instructor/student same canonical sitting -->
+<!-- lms-my-tests-20261104p KEEP: same sitting + same assessor rule on My Tests -->
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
         <h2>{{ $section === 'mocks' ? 'Mock Test' : ($section === 'skill' ? 'Skill Test' : 'My Tests') }}</h2>
@@ -267,17 +267,12 @@
                         if ($asg) {
                             $asg->loadMissing('marker');
                         }
-                        $assessorName = $att
-                            ? $att->assessorLabel($asg)
-                            : ($asg && method_exists($asg, 'assessorDisplayName')
+                        $assessorUser = app(\App\Services\LmsAssessmentService::class)->canonicalAssessorForSitting($asg, $a, $att);
+                        $assessorName = $assessorUser?->name
+                            ?? ($att ? $att->assessorLabel($asg) : ($asg && method_exists($asg, 'assessorDisplayName')
                                 ? $asg->assessorDisplayName()
-                                : ($asg?->marker?->name ?? ''));
-                        if ($assessorName === '' || $assessorName === '—') {
-                            $assessorName = $asg && method_exists($asg, 'assessorDisplayName')
-                                ? $asg->assessorDisplayName()
-                                : ($asg?->marker?->name ?? 'Admin / course instructors');
-                        }
-                        $assessorEmail = $asg?->marker?->email ?? null;
+                                : ($asg?->marker?->name ?? 'Admin / course instructors')));
+                        $assessorEmail = $assessorUser?->email ?? $asg?->marker?->email ?? null;
                         $canDownloadPdf = $att && (
                             $att->results_published
                             || $a->isInstantResults()
@@ -308,7 +303,7 @@
                                 </small>
                             @endif
                         </td>
-                        @php $assessorUserId = $att ? $att->assessorUserId($asg) : ($asg->marker_user_id ?? null); @endphp
+                        @php $assessorUserId = $assessorUser?->id ?? ($att ? $att->assessorUserId($asg) : ($asg->marker_user_id ?? null)); @endphp
                         <td class="col-timing" data-sort="{{ optional($asg?->available_from)->timestamp ?? 0 }}">
                             @if($fromFolder)
                                 <span class="lms-timing-line"><strong>Test Appointment:</strong> Start anytime</span>

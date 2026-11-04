@@ -3672,6 +3672,12 @@ class LmsAssessmentController extends Controller
         $byUser = ! $byAdmin ? Auth::id() : null;
         $markerId = $request->filled('marker_user_id') ? (int) $request->input('marker_user_id') : null;
         $hasMarkerCol = Schema::hasColumn('lms_assessment_assignments', 'marker_user_id');
+        if ($hasMarkerCol && empty($markerId) && method_exists($this->assessments, 'canonicalAssessorForSitting')) {
+            $defaultMarker = $this->assessments->canonicalAssessorForSitting(null, $a, null);
+            if ($defaultMarker) {
+                $markerId = (int) $defaultMarker->id;
+            }
+        }
         $hasTimezoneCol = Schema::hasColumn('lms_assessment_assignments', 'timezone');
 
         $created = 0;
@@ -3961,20 +3967,13 @@ class LmsAssessmentController extends Controller
             || strcasecmp($label, 'Admin') === 0;
     }
 
-    /** This sitting's assessor only — never copy another sitting's marker onto the same test. */
+    /** Same assessor rule as student My Tests (canonicalAssessorForSitting). */
     protected function namedAssessorForAssessment($assessment, $asg = null, $attempt = null): ?User
     {
-        if ($attempt && ! empty($attempt->graded_by_user_id)) {
-            $grader = User::query()->find((int) $attempt->graded_by_user_id);
-            if ($grader && trim((string) $grader->name) !== '') {
-                return $grader;
-            }
-        }
-        if ($asg instanceof LmsAssessmentAssignment && ! empty($asg->marker_user_id)) {
-            $marker = ($asg->relationLoaded('marker') ? $asg->marker : null)
-                ?: User::query()->find((int) $asg->marker_user_id);
-            if ($marker && trim((string) $marker->name) !== '') {
-                return $marker;
+        if (method_exists($this->assessments, 'canonicalAssessorForSitting')) {
+            $named = $this->assessments->canonicalAssessorForSitting($asg, $assessment, $attempt);
+            if ($named) {
+                return $named;
             }
         }
 

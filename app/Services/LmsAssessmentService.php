@@ -512,6 +512,91 @@ class LmsAssessmentService
         return $this->canonicalSittingForStudent($user, $assessment, $attemptAsgIds);
     }
 
+    /**
+     * Assessor for this sitting — same on Admin, instructor, and My Tests.
+     * This sitting's marker, else a marker saved on the same Mock 1/2 test, else BAT-0004 trainer.
+     */
+    public function canonicalAssessorForSitting($asg, $assessment = null, $attempt = null): ?User
+    {
+        $assessment = $assessment ?: (($asg && method_exists($asg, 'assessment')) ? ($asg->assessment ?? null) : null);
+        if ($attempt && ! empty($attempt->graded_by_user_id)) {
+            $grader = User::query()->find((int) $attempt->graded_by_user_id);
+            if ($grader && trim((string) ($grader->name ?? '')) !== '' && trim((string) $grader->name) !== '—') {
+                return $grader;
+            }
+        }
+        if ($asg instanceof LmsAssessmentAssignment) {
+            try {
+                $asg->loadMissing('marker');
+            } catch (\Throwable $e) {
+                // keep going
+            }
+            $marker = $asg->marker ?? null;
+            if ($marker && trim((string) ($marker->name ?? '')) !== '' && trim((string) $marker->name) !== '—') {
+                return $marker;
+            }
+            if (! empty($asg->marker_user_id)) {
+                $loaded = User::query()->find((int) $asg->marker_user_id);
+                if ($loaded && trim((string) ($loaded->name ?? '')) !== '') {
+                    return $loaded;
+                }
+            }
+        }
+        $aids = [];
+        $want = $this->scsAssignedMockKey($assessment);
+        try {
+            if ($want) {
+                $aids = LmsAssessment::query()->get(['id', 'title'])
+                    ->filter(fn ($row) => $this->scsAssignedMockKey($row) === $want)
+                    ->pluck('id')
+                    ->map(fn ($id) => (int) $id)
+                    ->filter()
+                    ->values()
+                    ->all();
+            } elseif ($assessment && ! empty($assessment->id)) {
+                $aids = [(int) $assessment->id];
+            }
+            if ($aids !== []) {
+                $row = LmsAssessmentAssignment::query()
+                    ->with('marker')
+                    ->whereIn('assessment_id', $aids)
+                    ->whereNotNull('marker_user_id')
+                    ->where('marker_user_id', '>', 0)
+                    ->orderByDesc('id')
+                    ->first();
+                if ($row) {
+                    $named = $row->marker ?: User::query()->find((int) $row->marker_user_id);
+                    if ($named && trim((string) ($named->name ?? '')) !== '' && trim((string) $named->name) !== '—') {
+                        return $named;
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // fall through to class trainer
+        }
+        if (! $this->isCimaScsAssignedMock($assessment)) {
+            return null;
+        }
+        try {
+            $batch = ClassBatch::query()->where('code', 'BAT-0004')->first()
+                ?: ClassBatch::query()->where('code', 'like', '%0004%')->first();
+            if (! $batch) {
+                return null;
+            }
+            $batch->loadMissing(['instructors', 'headOfFaculty']);
+            $trainer = method_exists($batch, 'trainerInstructors')
+                ? $batch->trainerInstructors()->first()
+                : $batch->instructors->first();
+            if ($trainer && trim((string) ($trainer->name ?? '')) !== '') {
+                return $trainer;
+            }
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        return null;
+    }
+
     /** Class Mock 1 window (30/10) — not Yahia's own Nov 4/5 sitting. */
     public function usesMock1ClassWindow($asg, $assessment, $student = null): bool
     {
