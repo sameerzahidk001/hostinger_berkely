@@ -132,7 +132,7 @@
 <div class="wrapper wrapper-content">
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if(session('error'))<div class="alert alert-danger">{{ session('error') }}</div>@endif
-    <p class="text-muted m-b-sm">This list is for creating and editing tests only. Assign users/batches on the Assign page; marking instructor is optional there. <span class="text-muted">Tests 20261103z</span></p>
+    <p class="text-muted m-b-sm">This list is for creating and editing tests only. Assign users/batches on the Assign page; marking instructor is optional there. <span class="text-muted">Tests 20261104a</span></p>
     <div class="ibox"><div class="ibox-content lms-tests-wrap">
         <form method="GET" class="m-b-md" style="margin-bottom:15px;">
             <div class="row">
@@ -162,8 +162,8 @@
                     <th class="col-course" data-sort-col="3">Course / Test for <span class="sort-ind"></span></th>
                     <th class="col-type" data-sort-col="4">Test Type <span class="sort-ind"></span></th>
                     <th class="col-num" data-sort-col="5">Qs <span class="sort-ind"></span></th>
-                    <th class="col-num col-assigned" data-sort-col="6" title="Everyone assigned on every sitting/batch, including people who never started.">Assigned students <span class="sort-ind"></span></th>
-                    <th class="col-num" data-sort-col="7" title="How many of those people started or submitted">Taken <span class="sort-ind"></span></th>
+                    <th class="col-num col-assigned" data-sort-col="6" title="People assigned on Test sittings and on Self Test sittings, counted separately.">Assigned students <span class="sort-ind"></span></th>
+                    <th class="col-num" data-sort-col="7" title="People who started that Test sitting or that Self Test sitting">Taken <span class="sort-ind"></span></th>
                     <th class="col-status" data-sort-col="8">Status <span class="sort-ind"></span></th>
                     <th class="col-action">Action</th>
                 </tr>
@@ -188,11 +188,19 @@
                         <td class="col-type" data-sort="{{ $row->kindLabel() }}">{{ $row->kindLabel() }}</td>
                         <td class="col-num" data-sort="{{ $row->questions_count }}">{{ $row->questions_count }}</td>
                         @php
-                            $assignedPeople = $row->assignedPeopleCount();
-                            $takenPeople = $row->takenPeopleCount();
+                            $examAssigned = $row->assignedPeopleCount(\App\Models\LmsAssessmentAssignment::KIND_EXAM);
+                            $selfAssigned = $row->assignedPeopleCount(\App\Models\LmsAssessmentAssignment::KIND_SELF);
+                            $examTaken = $row->takenPeopleCount(\App\Models\LmsAssessmentAssignment::KIND_EXAM);
+                            $selfTaken = $row->takenPeopleCount(\App\Models\LmsAssessmentAssignment::KIND_SELF);
                         @endphp
-                        <td class="col-num col-assigned" data-sort="{{ $assignedPeople }}">{{ $assignedPeople }}</td>
-                        <td class="col-num" data-sort="{{ $takenPeople }}">{{ $takenPeople }}</td>
+                        <td class="col-num col-assigned" data-sort="{{ $examAssigned + $selfAssigned }}">
+                            <span style="display:block;">Test {{ $examAssigned }}</span>
+                            <span style="display:block;">Self Test {{ $selfAssigned }}</span>
+                        </td>
+                        <td class="col-num" data-sort="{{ $examTaken + $selfTaken }}">
+                            <span style="display:block;">Test {{ $examTaken }}</span>
+                            <span style="display:block;">Self Test {{ $selfTaken }}</span>
+                        </td>
                         <td class="col-status" data-sort="{{ $row->status }}">
                             @php
                                 $st = (string) ($row->status ?? '');

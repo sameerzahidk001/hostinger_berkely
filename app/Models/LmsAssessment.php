@@ -25,8 +25,8 @@ class LmsAssessment extends Model
 
     protected $table = 'lms_assessments';
 
-    /** @var array<int, int>|null */
-    protected $assignedRosterCache = null;
+    /** @var array<string, array<int, int>> */
+    protected $assignedRosterByKindCache = [];
 
     protected $fillable = [
         'title', 'description', 'kind', 'audience', 'target_role', 'course_id', 'duration_minutes',
@@ -182,28 +182,54 @@ class LmsAssessment extends Model
     }
 
     /** Unique people assigned to this test: every sitting/batch, including classmates who never started. */
-    public function assignedPeopleCount(): int
+    public function assignedPeopleCount(?string $sittingKind = null): int
     {
-        return $this->assignedRosterUserIds()->count();
+        return $this->assignedRosterUserIds($sittingKind)->count();
     }
 
     /** Unique people from that same roster who started or submitted. */
-    public function takenPeopleCount(): int
+    public function takenPeopleCount(?string $sittingKind = null): int
     {
-        $ids = $this->assignedRosterUserIds();
+        $ids = $this->assignedRosterUserIds($sittingKind);
         if ($ids->isEmpty() || ! Schema::hasTable('lms_assessment_attempts')) {
             return 0;
         }
         $aids = $this->sameTitleAssessmentIds();
-
-        return (int) LmsAssessmentAttempt::query()
+        $asgIds = $this->assignmentIdsForSittingKind($sittingKind);
+        $q = LmsAssessmentAttempt::query()
             ->whereIn('assessment_id', $aids)
             ->whereIn('user_id', $ids->all())
             ->where(function ($q) {
                 $q->whereNotNull('started_at')->orWhereNotNull('submitted_at');
-            })
-            ->distinct()
-            ->count('user_id');
+            });
+        if ($sittingKind && $asgIds !== []) {
+            $q->whereIn('assignment_id', $asgIds);
+        } elseif ($sittingKind) {
+            return 0;
+        }
+
+        return (int) $q->distinct()->count('user_id');
+    }
+
+    /** @return array<int, int> */
+    protected function assignmentIdsForSittingKind(?string $sittingKind): array
+    {
+        if (! $sittingKind) {
+            return [];
+        }
+        $aids = $this->sameTitleAssessmentIds();
+        try {
+            $rows = LmsAssessmentAssignment::query()->whereIn('assessment_id', $aids)->get();
+        } catch (\Throwable $e) {
+            return [];
+        }
+        $wantSelf = $sittingKind === LmsAssessmentAssignment::KIND_SELF;
+
+        return $rows->filter(function ($asg) use ($wantSelf) {
+            $isSelf = method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting();
+
+            return $wantSelf ? $isSelf : ! $isSelf;
+        })->pluck('id')->map(fn ($id) => (int) $id)->filter()->values()->all();
     }
 
     /** All test records that share this title (ALL TESTS collapses them to one row). */
@@ -233,10 +259,11 @@ class LmsAssessment extends Model
         return $ids === [] ? [$id] : $ids;
     }
 
-    protected function assignedRosterUserIds()
+    protected function assignedRosterUserIds(?string $sittingKind = null)
     {
-        if (is_array($this->assignedRosterCache ?? null)) {
-            return collect($this->assignedRosterCache);
+        $cacheKey = $sittingKind ?: 'all';
+        if (isset($this->assignedRosterByKindCache[$cacheKey]) && is_array($this->assignedRosterByKindCache[$cacheKey])) {
+            return collect($this->assignedRosterByKindCache[$cacheKey]);
         }
 
         $cols = ['id', 'assessment_id', 'student_id', 'class_batch_id', 'created_at'];
@@ -246,6 +273,9 @@ class LmsAssessment extends Model
         if (Schema::hasColumn('lms_assessment_assignments', 'excluded_user_ids')) {
             $cols[] = 'excluded_user_ids';
         }
+        if (Schema::hasColumn('lms_assessment_assignments', 'sitting_kind')) {
+            $cols[] = 'sitting_kind';
+        }
         $aids = $this->sameTitleAssessmentIds();
         try {
             $assignments = LmsAssessmentAssignment::query()->whereIn('assessment_id', $aids)->get($cols);
@@ -254,6 +284,11 @@ class LmsAssessment extends Model
                 ? $this->assignments
                 : $this->assignments()->get($cols);
         }
+        if ($sittingKind === LmsAssessmentAssignment::KIND_SELF) {
+            $assignments = $assignments->filter(fn ($a) => method_exists($a, 'isSelfSitting') && $a->isSelfSitting())->values();
+        } elseif ($sittingKind === LmsAssessmentAssignment::KIND_EXAM) {
+            $assignments = $assignments->filter(fn ($a) => ! (method_exists($a, 'isSelfSitting') && $a->isSelfSitting()))->values();
+        }
         $hay = mb_strtolower(trim((string) ($this->title ?? '') . ' ' . (string) ($this->course->title ?? '')));
         $isCimaMcs = str_contains($hay, 'cima mcs') || str_contains($hay, 'management case') || (bool) preg_match('/\bmcs\b/', $hay);
 
@@ -261,7 +296,7 @@ class LmsAssessment extends Model
         $excluded = collect();
         $isCimaScs = $this->isCimaScsNovemberTitle();
         if ($isCimaScs && ! $this->isCimaScsAssignedMockTitle()) {
-            $this->assignedRosterCache = [];
+            $this->assignedRosterByKindCache[$cacheKey] = [];
 
             return collect();
         }
@@ -293,16 +328,23 @@ class LmsAssessment extends Model
         }
         $excluded = $excluded->map(fn ($id) => (int) $id)->unique()->filter();
         if (Schema::hasTable('lms_assessment_attempts')) {
-            $ids = $ids->merge(
-                LmsAssessmentAttempt::query()
-                    ->whereIn('assessment_id', $aids)
-                    ->pluck('user_id')
-            );
+            $attemptQuery = LmsAssessmentAttempt::query()->whereIn('assessment_id', $aids);
+            if ($sittingKind) {
+                $kindAsgIds = $this->assignmentIdsForSittingKind($sittingKind);
+                if ($kindAsgIds === []) {
+                    $attemptQuery = null;
+                } else {
+                    $attemptQuery->whereIn('assignment_id', $kindAsgIds);
+                }
+            }
+            if ($attemptQuery) {
+                $ids = $ids->merge($attemptQuery->pluck('user_id'));
+            }
         }
 
         $ids = $ids->map(fn ($id) => (int) $id)->unique()->filter()->values();
 
-        if ($isCimaMcs) {
+        if ($isCimaMcs && $sittingKind !== LmsAssessmentAssignment::KIND_SELF) {
             try {
                 $cohortIds = User::query()
                     ->where(function ($q) {
@@ -327,14 +369,14 @@ class LmsAssessment extends Model
 
         $ids = $ids->map(fn ($id) => (int) $id)->unique()->filter()->diff($excluded)->values();
         if ($ids->isEmpty() || ! $isCimaMcs) {
-            $this->assignedRosterCache = $ids->all();
+            $this->assignedRosterByKindCache[$cacheKey] = $ids->all();
 
             return $ids;
         }
         try {
             $people = User::query()->whereIn('id', $ids->all())->get(['id', 'name', 'email']);
         } catch (\Throwable $e) {
-            $this->assignedRosterCache = $ids->all();
+            $this->assignedRosterByKindCache[$cacheKey] = $ids->all();
 
             return $ids;
         }
@@ -347,7 +389,7 @@ class LmsAssessment extends Model
         })->pluck('id')->map(fn ($id) => (int) $id);
 
         $ids = $ids->diff($hide)->diff($excluded)->map(fn ($id) => (int) $id)->unique()->values();
-        $this->assignedRosterCache = $ids->all();
+        $this->assignedRosterByKindCache[$cacheKey] = $ids->all();
 
         return $ids;
     }
