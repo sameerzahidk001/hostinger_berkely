@@ -291,7 +291,7 @@
                         <td class="col-appt" data-sort="{{ $asg->id ?? 0 }}" style="white-space:nowrap;"><strong>{{ $apptId }}</strong></td>
                         <td class="col-title" data-sort="{{ $a->title }}">
                             {{ $a->title }}
-                            <br><small class="text-muted">{{ $a->displayCode() }} · {{ $a->kindLabel() }}@if($fromFolder) · Folder test@elseif($asg) · {{ $asg->sittingKindLabel() }}@endif</small>
+                            <br><small class="text-muted">{{ $a->displayCode() }} · {{ $a->kindLabel() }}@if($fromFolder) · Folder test@else · {{ ($asg && $asg->isSelfSitting()) ? 'Self test' : 'Test' }}@endif</small>
                             <br><small><strong>Attempt {{ $attemptNo }} of {{ $attemptTotal }}</strong></small>
                             @if($course)
                                 <br><small>

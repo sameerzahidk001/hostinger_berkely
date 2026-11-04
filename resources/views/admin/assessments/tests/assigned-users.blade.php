@@ -305,16 +305,6 @@
                                     $appointment = $assignment->windowStart()->format('d/m/Y, H:i');
                                     $looksBlank = false;
                                 }
-                                if ($looksBlank && $attempt && ! empty($attempt->started_at)) {
-                                    try {
-                                        $appointment = $assignment && method_exists($assignment, 'formatInTimezone')
-                                            ? $assignment->formatInTimezone($attempt->started_at)
-                                            : \Carbon\Carbon::parse($attempt->started_at)->timezone('Asia/Dubai')->format('d/m/Y, H:i');
-                                        $looksBlank = false;
-                                    } catch (\Throwable $e) {
-                                        $looksBlank = true;
-                                    }
-                                }
                                 if ($looksBlank) {
                                     $appointment = '—';
                                 }
@@ -413,7 +403,7 @@
                             </td>
                             <td class="col-test" data-sort="{{ $assessment->title ?? ('Test #'.($assignment->assessment_id ?? '')) }}">
                                 <strong>{{ $assessment->title ?: ('Test #'.$assessment->id) }}</strong>
-                                <br><small class="text-muted">{{ $assessment->displayCode() }} · {{ $assessment->kindLabel() }}@if($assignment) · {{ $assignment->sittingKindLabel() }}@endif</small>
+                                <br><small class="text-muted">{{ $assessment->displayCode() }} · {{ $assessment->kindLabel() }} · {{ ($assignment && $assignment->isSelfSitting()) ? 'Self test' : 'Test' }}</small>
                                 <br><small><strong>Attempt {{ $attemptNo }} of {{ $attemptTotal }}</strong></small>
                             </td>
                             <td class="col-taker" data-sort="{{ $row['student']->name ?? '' }}">
