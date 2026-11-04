@@ -291,7 +291,7 @@
                             $isSelfRow = $assignment && method_exists($assignment, 'isSelfSitting') && $assignment->isSelfSitting();
                             $isMock1Row = $assessment && (str_contains(mb_strtolower((string) $assessment->title), 'mock 1') && str_contains(mb_strtolower((string) $assessment->title), 'scs'));
                             if ($isSelfRow) {
-                                $appointment = 'Start anytime';
+                                $appointment = '—';
                             } elseif ($appointment === null || $appointment === '' || $appointment === '—'
                                 || $appointment === 'Open (no appointment set)' || $appointment === 'Open'
                                 || $appointment === 'Start anytime' || $appointment === 'Self test — start anytime') {
@@ -355,7 +355,9 @@
                                     : (! empty($attempt?->id) ? ('Sit' . (int) $attempt->id) : '—');
                             }
                             $timezoneLabel = $disp['timezone'] ?? $assignment?->timezoneLabel();
-                            if ($timezoneLabel === null || $timezoneLabel === '' || ! empty($isMock1Row)) {
+                            if (! empty($isSelfRow)) {
+                                $timezoneLabel = '—';
+                            } elseif ($timezoneLabel === null || $timezoneLabel === '' || ! empty($isMock1Row)) {
                                 $timezoneLabel = ! empty($isMock1Row)
                                     ? 'Asia/Dubai · GST'
                                     : (string) ($timezoneLabel ?: config('app.timezone', 'Asia/Dubai'));
