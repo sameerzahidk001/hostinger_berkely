@@ -914,6 +914,7 @@ class LmsAssessmentController extends Controller
         }
 
         $this->splitAttemptsThatDoNotBelongToSitting($rowsByKey);
+        $rowsByKey = $this->attachTakenAttemptsToExamRows($rowsByKey, $allAttempts, $assignments);
 
         // Attempt N of T per student+assessment (oldest sitting = 1).
         $sittingsByPair = collect($rowsByKey)->groupBy(
@@ -1121,7 +1122,7 @@ class LmsAssessmentController extends Controller
         })->values();
 
         try {
-            $rows = $this->replaceCimaScsRows($rows, $assignments, $selectedAssessment, $assessmentsById);
+            $rows = $this->replaceCimaScsRows($rows, $assignments, $selectedAssessment, $assessmentsById, $allAttempts);
             $rows = $this->renumberCollapsedAttempts($rows);
             $rows = $rows->sortBy(function ($row) {
                 $status = (string) (($row['sitting_display']['status'] ?? ''));
@@ -1928,6 +1929,22 @@ class LmsAssessmentController extends Controller
                     && (int) ($row['student']->id ?? 0) === $uid;
             });
             if ($hasReal || empty($r['attempt'])) {
+                if (! empty($r['attempt'])) {
+                    foreach ($real as $rk => $row) {
+                        if ((int) ($row['assessment']->id ?? 0) !== $aid || (int) ($row['student']->id ?? 0) !== $uid) {
+                            continue;
+                        }
+                        if (! empty($row['attempt'])) {
+                            continue;
+                        }
+                        $ownAsg = $row['assignment'] ?? null;
+                        if ($ownAsg && method_exists($ownAsg, 'isSelfSitting') && $ownAsg->isSelfSitting()) {
+                            continue;
+                        }
+                        $real[$rk]['attempt'] = $r['attempt'];
+                        break;
+                    }
+                }
                 if ($this->isCimaCohortSitting($r['assessment'] ?? null, $r['assignment'] ?? null, collect([$r['student'] ?? null]))) {
                     $real[$k] = $r;
                 }
@@ -2215,8 +2232,84 @@ class LmsAssessmentController extends Controller
         return null;
     }
 
+    /**
+     * People who already sat this Test must keep that attempt on the exam sitting.
+     * Do not paint them Missed because the attempt has no assignment_id or a dropped sitting.
+     */
+    protected function attachTakenAttemptsToExamRows($rows, $attempts, $assignments)
+    {
+        $list = collect($rows);
+        $attempts = collect($attempts);
+        if ($list->isEmpty() || $attempts->isEmpty()) {
+            return is_array($rows) ? $list->all() : $list->values();
+        }
+        $asgById = collect($assignments)->filter()->keyBy(fn ($a) => (int) ($a->id ?? 0));
+        $claimed = [];
+        foreach ($list as $r) {
+            if (! empty($r['attempt']->id)) {
+                $claimed[(int) $r['attempt']->id] = true;
+            }
+        }
+        $titleIds = [];
+        foreach ($list as $k => $r) {
+            if (! empty($r['attempt'])) {
+                continue;
+            }
+            $asg = $r['assignment'] ?? null;
+            $assessment = $r['assessment'] ?? null;
+            $uid = (int) ($r['student']->id ?? 0);
+            if (! $asg || $uid <= 0) {
+                continue;
+            }
+            if (method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()) {
+                continue;
+            }
+            $aid = (int) ($assessment->id ?? $asg->assessment_id ?? 0);
+            if ($aid > 0 && ! isset($titleIds[$aid])) {
+                $titleIds[$aid] = $assessment ? $this->sameTitleAssessmentIds($assessment) : [$aid];
+            }
+            $aids = $titleIds[$aid] ?? [$aid];
+            $match = $attempts->first(function ($att) use ($uid, $aids, $asg, $asgById, $claimed, $list) {
+                if (! $att || isset($claimed[(int) ($att->id ?? 0)])) {
+                    return false;
+                }
+                if ((int) ($att->user_id ?? 0) !== $uid) {
+                    return false;
+                }
+                if (! in_array((int) ($att->assessment_id ?? 0), $aids, true)) {
+                    return false;
+                }
+                $attAsgId = (int) ($att->assignment_id ?? 0);
+                $attAsg = $attAsgId > 0 ? $asgById->get($attAsgId) : null;
+                if ($attAsg && method_exists($attAsg, 'isSelfSitting') && $attAsg->isSelfSitting()) {
+                    return false;
+                }
+                if ($attAsgId === (int) ($asg->id ?? 0)) {
+                    return true;
+                }
+                if ($attAsgId <= 0 || ! $attAsg) {
+                    return true;
+                }
+                $onOwnSitting = $list->contains(function ($row) use ($attAsgId, $uid) {
+                    return (int) ($row['assignment']->id ?? 0) === $attAsgId
+                        && (int) ($row['student']->id ?? 0) === $uid
+                        && ! empty($row['attempt']);
+                });
+
+                return ! $onOwnSitting;
+            });
+            if ($match) {
+                $r['attempt'] = $match;
+                $claimed[(int) $match->id] = true;
+                $list[$k] = $r;
+            }
+        }
+
+        return is_array($rows) ? $list->all() : $list->values();
+    }
+
     /** Replace the Mock 1/2 list with the BAT-0004 roster; keep existing attempts. */
-    protected function replaceCimaScsRows($rows, $assignments, $selectedAssessment, $assessmentsById)
+    protected function replaceCimaScsRows($rows, $assignments, $selectedAssessment, $assessmentsById, $allAttempts = null)
     {
         $targets = collect();
         if ($selectedAssessment && $this->isCimaScsAssignedMock($selectedAssessment)) {
@@ -2367,7 +2460,24 @@ class LmsAssessmentController extends Controller
             $rows = $kept->values();
         }
 
-        return $this->collapseDuplicateCimaScsRows($rows);
+        $rows = $this->collapseDuplicateCimaScsRows($rows);
+        $rows = $this->attachTakenAttemptsToExamRows($rows, $allAttempts ?? collect(), $assignments);
+        $rows = collect($rows)->map(function ($r) {
+            try {
+                $disp = $this->sittingDisplayForRow($r);
+                if (! empty($disp['_assignment'])) {
+                    $r['assignment'] = $disp['_assignment'];
+                }
+                unset($disp['_assignment']);
+                $r['sitting_display'] = $disp;
+            } catch (\Throwable $e) {
+                // keep existing display
+            }
+
+            return $r;
+        })->values();
+
+        return $rows;
     }
 
     /** One row per student per SCS test title (two Mock 1 records must not list the class twice). */
@@ -2390,8 +2500,16 @@ class LmsAssessmentController extends Controller
                 continue;
             }
             $key = $this->cimaScsCollapseKey($assessment) . ':' . $uid . ':' . $this->sittingKindKey($r['assignment'] ?? null);
-            if (! isset($best[$key]) || $this->cimaScsRowOutranks($r, $best[$key], $assessment)) {
+            if (! isset($best[$key])) {
                 $best[$key] = $r;
+            } elseif ($this->cimaScsRowOutranks($r, $best[$key], $assessment)) {
+                $keptAttempt = $best[$key]['attempt'] ?? null;
+                $best[$key] = $r;
+                if (empty($best[$key]['attempt']) && $keptAttempt) {
+                    $best[$key]['attempt'] = $keptAttempt;
+                }
+            } elseif (empty($best[$key]['attempt']) && ! empty($r['attempt'])) {
+                $best[$key]['attempt'] = $r['attempt'];
             }
         }
 
