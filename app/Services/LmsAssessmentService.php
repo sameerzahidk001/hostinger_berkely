@@ -602,6 +602,17 @@ class LmsAssessmentService
         if ((int) ($asg->student_id ?? 0) === $userId) {
             return true;
         }
+        if (method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()) {
+            try {
+                if (Schema::hasColumn($asg->getTable(), 'roster_user_ids')) {
+                    return collect($asg->roster_user_ids ?? [])->map(fn ($id) => (int) $id)->contains($userId);
+                }
+            } catch (\Throwable $e) {
+                return false;
+            }
+
+            return false;
+        }
         try {
             return ClassBatch::studentUserIdsForSitting($asg)->contains($userId);
         } catch (\Throwable $e) {
@@ -3140,9 +3151,7 @@ class LmsAssessmentService
         };
         $available = $collapseOpen($available);
         $upcoming = $collapseOpen($upcoming);
-        $missed = $missed->unique(function ($r) {
-            return (int) $r['assessment']->id . ':' . (int) ($r['assignment']->id ?? 0);
-        })->values();
+        $missed = $collapseOpen($missed);
 
         $hasAppointment = fn ($r) => ! empty($r['assignment']->id) || ! empty($r['from_folder']);
         $available = $available->filter($hasAppointment)->values();

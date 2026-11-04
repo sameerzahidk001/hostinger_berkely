@@ -17,52 +17,94 @@
     <style>
         /* Student theme sets .nav > li > a { color: white } for the sidebar —
            that makes content tabs invisible on a light background. */
-        #assessments-portal .nav-tabs > li > a,
-        #assessments-portal .nav-pills > li > a {
-            color: #2f4050 !important;
+        #assessments-portal .nav-tabs {
+            display: inline-flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            padding: 4px;
+            margin: 0 0 16px;
+            border: 1px solid #d8dee6;
+            border-radius: 10px;
+            background: #eef1f4;
+        }
+        #assessments-portal .nav-tabs > li {
+            float: none;
+            margin: 0;
+        }
+        #assessments-portal .nav-tabs > li > a {
+            color: #5b6773 !important;
             font-weight: 600;
-            background: #f5f5f5;
-            border: 1px solid #e7eaec;
-            margin-right: 4px;
-            padding: 8px 14px;
+            background: transparent;
+            border: 0 !important;
+            border-radius: 8px !important;
+            margin: 0;
+            padding: 8px 16px;
+            line-height: 1.2;
         }
         #assessments-portal .nav-tabs > li > a:hover,
         #assessments-portal .nav-tabs > li > a:focus {
-            color: #1ab394 !important;
+            color: #1b3a4b !important;
             background: #fff;
         }
         #assessments-portal .nav-tabs > li.active > a,
         #assessments-portal .nav-tabs > li.active > a:hover,
         #assessments-portal .nav-tabs > li.active > a:focus {
-            color: #fff !important;
-            background: #1ab394;
-            border-color: #1ab394;
+            color: #163447 !important;
+            background: #fff;
+            box-shadow: 0 1px 3px rgba(16, 24, 40, 0.12);
         }
-        /* Distinct status-tab colors (Available / Upcoming / …) */
-        #assessments-portal .nav-pills > li > a.tab-available { background: #e8f8f5; border-color: #1ab394; color: #0f7a66 !important; }
-        #assessments-portal .nav-pills > li > a.tab-upcoming { background: #eaf2ff; border-color: #3b82f6; color: #1d4ed8 !important; }
-        #assessments-portal .nav-pills > li > a.tab-in-progress { background: #fff4e5; border-color: #f59e0b; color: #b45309 !important; }
-        #assessments-portal .nav-pills > li > a.tab-submitted { background: #f3e8ff; border-color: #8b5cf6; color: #6d28d9 !important; }
-        #assessments-portal .nav-pills > li > a.tab-results { background: #ecfeff; border-color: #06b6d4; color: #0e7490 !important; }
-        #assessments-portal .nav-pills > li > a.tab-missed { background: #fef2f2; border-color: #ef4444; color: #b91c1c !important; }
+        #assessments-portal .nav-pills > li > a {
+            color: #4b5563 !important;
+            font-weight: 600;
+            background: #fff;
+            border: 1px solid #d9dee6;
+            border-radius: 8px;
+            margin-right: 0;
+            padding: 9px 12px;
+            box-shadow: 0 1px 1px rgba(16, 24, 40, 0.04);
+        }
+        #assessments-portal .nav-pills > li > a:hover,
+        #assessments-portal .nav-pills > li > a:focus {
+            background: #f8fafc;
+            color: #1f2937 !important;
+        }
+        /* Idle = white + tinted text. Selected = solid fill. */
+        #assessments-portal .nav-pills > li > a.tab-available { color: #0f7a66 !important; }
+        #assessments-portal .nav-pills > li > a.tab-upcoming { color: #1d4ed8 !important; }
+        #assessments-portal .nav-pills > li > a.tab-in-progress { color: #b45309 !important; }
+        #assessments-portal .nav-pills > li > a.tab-submitted { color: #6d28d9 !important; }
+        #assessments-portal .nav-pills > li > a.tab-results { color: #0e7490 !important; }
+        #assessments-portal .nav-pills > li > a.tab-missed { color: #b91c1c !important; }
+        #assessments-portal .nav-pills > li > a.tab-available:hover,
+        #assessments-portal .nav-pills > li > a.tab-available:focus { background: #f0faf7; border-color: #9ad9cc; }
+        #assessments-portal .nav-pills > li > a.tab-upcoming:hover,
+        #assessments-portal .nav-pills > li > a.tab-upcoming:focus { background: #f4f8ff; border-color: #93c5fd; }
+        #assessments-portal .nav-pills > li > a.tab-in-progress:hover,
+        #assessments-portal .nav-pills > li > a.tab-in-progress:focus { background: #fff8ee; border-color: #fcd34d; }
+        #assessments-portal .nav-pills > li > a.tab-submitted:hover,
+        #assessments-portal .nav-pills > li > a.tab-submitted:focus { background: #faf5ff; border-color: #d8b4fe; }
+        #assessments-portal .nav-pills > li > a.tab-results:hover,
+        #assessments-portal .nav-pills > li > a.tab-results:focus { background: #f0fdff; border-color: #67e8f9; }
+        #assessments-portal .nav-pills > li > a.tab-missed:hover,
+        #assessments-portal .nav-pills > li > a.tab-missed:focus { background: #fff5f5; border-color: #fca5a5; }
         #assessments-portal .nav-pills > li.active > a.tab-available,
         #assessments-portal .nav-pills > li.active > a.tab-available:hover,
-        #assessments-portal .nav-pills > li.active > a.tab-available:focus { background: #1ab394; border-color: #1ab394; color: #fff !important; }
+        #assessments-portal .nav-pills > li.active > a.tab-available:focus { background: #1ab394; border-color: #1ab394; color: #fff !important; box-shadow: 0 1px 4px rgba(26, 179, 148, 0.35); }
         #assessments-portal .nav-pills > li.active > a.tab-upcoming,
         #assessments-portal .nav-pills > li.active > a.tab-upcoming:hover,
-        #assessments-portal .nav-pills > li.active > a.tab-upcoming:focus { background: #3b82f6; border-color: #3b82f6; color: #fff !important; }
+        #assessments-portal .nav-pills > li.active > a.tab-upcoming:focus { background: #3b82f6; border-color: #3b82f6; color: #fff !important; box-shadow: 0 1px 4px rgba(59, 130, 246, 0.35); }
         #assessments-portal .nav-pills > li.active > a.tab-in-progress,
         #assessments-portal .nav-pills > li.active > a.tab-in-progress:hover,
-        #assessments-portal .nav-pills > li.active > a.tab-in-progress:focus { background: #f59e0b; border-color: #f59e0b; color: #fff !important; }
+        #assessments-portal .nav-pills > li.active > a.tab-in-progress:focus { background: #f59e0b; border-color: #f59e0b; color: #fff !important; box-shadow: 0 1px 4px rgba(245, 158, 11, 0.35); }
         #assessments-portal .nav-pills > li.active > a.tab-submitted,
         #assessments-portal .nav-pills > li.active > a.tab-submitted:hover,
-        #assessments-portal .nav-pills > li.active > a.tab-submitted:focus { background: #8b5cf6; border-color: #8b5cf6; color: #fff !important; }
+        #assessments-portal .nav-pills > li.active > a.tab-submitted:focus { background: #8b5cf6; border-color: #8b5cf6; color: #fff !important; box-shadow: 0 1px 4px rgba(139, 92, 246, 0.35); }
         #assessments-portal .nav-pills > li.active > a.tab-results,
         #assessments-portal .nav-pills > li.active > a.tab-results:hover,
-        #assessments-portal .nav-pills > li.active > a.tab-results:focus { background: #06b6d4; border-color: #06b6d4; color: #fff !important; }
+        #assessments-portal .nav-pills > li.active > a.tab-results:focus { background: #06b6d4; border-color: #06b6d4; color: #fff !important; box-shadow: 0 1px 4px rgba(6, 182, 212, 0.35); }
         #assessments-portal .nav-pills > li.active > a.tab-missed,
         #assessments-portal .nav-pills > li.active > a.tab-missed:hover,
-        #assessments-portal .nav-pills > li.active > a.tab-missed:focus { background: #ef4444; border-color: #ef4444; color: #fff !important; }
+        #assessments-portal .nav-pills > li.active > a.tab-missed:focus { background: #ef4444; border-color: #ef4444; color: #fff !important; box-shadow: 0 1px 4px rgba(239, 68, 68, 0.35); }
         /* Status colours inside the same table row */
         #assessments-portal .lms-row-status { font-weight: 700; }
         #assessments-portal .lms-row-available { color: #0f7a66; }
@@ -180,7 +222,7 @@
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if(session('fail'))<div class="alert alert-danger">{{ session('fail') }}</div>@endif
 
-    <ul class="nav nav-tabs" style="margin-bottom:15px;">
+    <ul class="nav nav-tabs">
         <li class="{{ $section === 'all' ? 'active' : '' }}"><a href="{{ route('user.assessments.index', ['section' => 'all', 'tab' => $tab]) }}">All</a></li>
         <li class="{{ $section === 'mocks' ? 'active' : '' }}"><a href="{{ route('user.assessments.mocks', ['tab' => $tab]) }}">Mock Test</a></li>
         <li class="{{ $section === 'practice' ? 'active' : '' }}"><a href="{{ route('user.assessments.index', ['section' => 'practice', 'tab' => $tab]) }}">Practice Test / General Test</a></li>

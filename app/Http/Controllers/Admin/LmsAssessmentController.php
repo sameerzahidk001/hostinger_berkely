@@ -460,6 +460,28 @@ class LmsAssessmentController extends Controller
             'assessment_id' => (int) ($assignment->assessment_id ?? 0) ?: null,
         ]));
         if ($studentId <= 0 && (! empty($assignment->class_batch_id) || empty($assignment->student_id))) {
+            $linked = collect();
+            try {
+                $linked = \App\Models\ClassBatch::studentUserIdsForSitting($assignment);
+            } catch (\Throwable $e) {
+                $linked = collect();
+            }
+            if (method_exists($assignment, 'isSelfSitting') && $assignment->isSelfSitting()) {
+                $linked = collect($assignment->roster_user_ids ?? [])
+                    ->map(fn ($id) => (int) $id)
+                    ->filter()
+                    ->values();
+                if (! empty($assignment->student_id)) {
+                    $linked->push((int) $assignment->student_id);
+                }
+            }
+            if ($linked->isEmpty()) {
+                $code = method_exists($assignment, 'displayCode') ? $assignment->displayCode() : ('BEXT' . (int) $assignment->id);
+                $assignment->delete();
+
+                return redirect($backUrl)->with('success', 'Removed empty sitting ' . $code . '.');
+            }
+
             return redirect($backUrl)->with('error', 'Choose the student row to remove. The batch sitting was not deleted.');
         }
 
@@ -685,16 +707,8 @@ class LmsAssessmentController extends Controller
                 // keep named student
             }
             $students = $this->expandSittingStudents($students, $assignment, $assessment, $batchStudentCache);
-            if ($students->isEmpty() && $assignment->class_batch_id) {
-                if ($this->looksLikeCimaScsNovember($assessment)) {
-                    continue;
-                }
-                $batch = $assignment->relationLoaded('batch') ? $assignment->batch : ClassBatch::query()->find((int) $assignment->class_batch_id);
-                $students = collect([(object) [
-                    'id' => 0,
-                    'name' => $batch ? ($batch->code . ' — ' . $batch->name) : ('Batch #' . (int) $assignment->class_batch_id),
-                    'email' => 'Batch assignment (no students linked yet)',
-                ]]);
+            if ($students->isEmpty()) {
+                continue;
             }
 
             if ($batchId > 0 && $assignment->student_id) {
@@ -1787,6 +1801,36 @@ class LmsAssessmentController extends Controller
     protected function expandSittingStudents($students, $assignment, $assessment, array &$batchStudentCache)
     {
         $students = collect($students)->filter(fn ($row) => $row && ! empty($row->id))->values();
+        if ($assignment && method_exists($assignment, 'isSelfSitting') && $assignment->isSelfSitting()) {
+            $ids = $students->pluck('id');
+            if (! empty($assignment->student_id)) {
+                $ids->push((int) $assignment->student_id);
+            }
+            if (Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
+                $ids = $ids->merge(collect($assignment->roster_user_ids ?? []));
+            }
+            $ids = $ids->map(fn ($id) => (int) $id)->unique()->filter()->values();
+            if ($ids->isEmpty()) {
+                return collect();
+            }
+            $found = User::query()->whereIn('id', $ids->all())->get();
+            $have = $found->pluck('id')->map(fn ($id) => (int) $id)->all();
+            $students = $found->concat($students);
+            foreach ($ids as $sid) {
+                if (! in_array((int) $sid, $have, true)) {
+                    $students->push((object) [
+                        'id' => (int) $sid,
+                        'name' => 'User #' . (int) $sid,
+                        'email' => '',
+                    ]);
+                }
+            }
+
+            return $students
+                ->unique(fn ($row) => (int) ($row->id ?? 0))
+                ->filter(fn ($row) => (int) ($row->id ?? 0) > 0 && ! $this->isRemovedTestTaker($row, $assessment))
+                ->values();
+        }
         if ($this->looksLikeCimaScsNovember($assessment) && ! $this->isCimaScsAssignedMock($assessment)) {
             return collect();
         }
@@ -2957,6 +3001,9 @@ class LmsAssessmentController extends Controller
             if (! $assessment) {
                 continue;
             }
+            if (method_exists($assignment, 'isSelfSitting') && $assignment->isSelfSitting()) {
+                continue;
+            }
             $snap = ClassBatch::studentUserIdsForSitting($assignment);
             if ($this->looksLikeCimaScsNovember($assessment) && ! $this->isCimaScsAssignedMock($assessment)) {
                 continue;
@@ -3835,13 +3882,6 @@ class LmsAssessmentController extends Controller
         $created = 0;
         $batchIds = collect($request->input('batch_ids', []))->map(fn ($id) => (int) $id)->filter()->unique()->values();
         $studentIds = collect($request->input('student_ids', []))->map(fn ($id) => (int) $id)->filter()->unique()->values();
-        $fromPeople = $this->assessments->isCimaScsMock1($a)
-            ? []
-            : $this->batchIdsForStudents($studentIds->all(), $a);
-        if ($fromPeople !== []) {
-            $batchIds = $batchIds->merge($fromPeople)->unique()->values();
-            $studentIds = collect();
-        }
         foreach ($batchIds as $batchId) {
             $batchId = (int) $batchId;
             if ($batchId <= 0) {
