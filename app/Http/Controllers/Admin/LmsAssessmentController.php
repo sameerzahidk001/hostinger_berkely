@@ -65,7 +65,7 @@ class LmsAssessmentController extends Controller
 
         $kind = trim((string) $request->get('kind', ''));
         $search = trim((string) $request->get('search', ''));
-        $query = LmsAssessment::query()->withCount(['questions', 'attempts', 'assignments'])->orderByDesc('id');
+        $query = LmsAssessment::query()->withCount(['questions', 'attempts'])->orderByDesc('id');
 
         if ($kind !== '' && array_key_exists($kind, LmsAssessment::kinds())) {
             $query->where('kind', $kind);
@@ -3984,7 +3984,9 @@ class LmsAssessmentController extends Controller
 
         $selectedMarker = old(
             'marker_user_id',
-            $assessment->assignments->firstWhere('marker_user_id', '!=', null)?->marker_user_id
+            $assessment->exists
+                ? $assessment->assignments->firstWhere('marker_user_id', '!=', null)?->marker_user_id
+                : null
         );
 
         return [
@@ -3999,14 +4001,16 @@ class LmsAssessmentController extends Controller
             'batches' => $batches,
             'students' => $assignableUsers,
             'instructors' => $instructors,
-            'selectedQuestionIds' => old('question_ids', $assessment->questions->pluck('id')->all()),
+            'selectedQuestionIds' => old('question_ids', $assessment->exists ? $assessment->questions->pluck('id')->all() : []),
             'selectedBatchIds' => old('batch_ids', []),
             'selectedStudentIds' => old('student_ids', []),
             'selectedMarkerId' => $selectedMarker,
             'timezoneOptions' => LmsAssessmentAssignment::timezoneOptions(),
             'selectedTimezone' => old(
                 'timezone',
-                $assessment->assignments->firstWhere('timezone', '!=', null)?->timezone
+                ($assessment->exists
+                    ? $assessment->assignments->firstWhere('timezone', '!=', null)?->timezone
+                    : null)
                     ?: config('app.timezone', 'Asia/Dubai')
             ),
             'canSkill' => $this->assessments->canManageSkillTests(),
