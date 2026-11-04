@@ -577,6 +577,18 @@ class LmsAssessmentController extends Controller
                 $assignments = collect();
             }
         }
+        $assignments = $assignments->filter(function ($assignment) {
+            if (! method_exists($this->assessments, 'sittingHasNoPeople') || ! $this->assessments->sittingHasNoPeople($assignment)) {
+                return true;
+            }
+            try {
+                $assignment->delete();
+            } catch (\Throwable $e) {
+                return false;
+            }
+
+            return false;
+        })->values();
 
         $assessmentIds = $assignments->pluck('assessment_id')->map(fn ($id) => (int) $id)->unique()->filter()->values()->all();
         if ($assessmentId > 0) {
@@ -698,12 +710,7 @@ class LmsAssessmentController extends Controller
             }
             $students = $this->expandSittingStudents($students, $assignment, $assessment, $batchStudentCache);
             if ($students->isEmpty()) {
-                $batch = $assignment->relationLoaded('batch') ? $assignment->batch : ClassBatch::query()->find((int) ($assignment->class_batch_id ?? 0));
-                $students = collect([(object) [
-                    'id' => 0,
-                    'name' => $batch ? ($batch->code . ' — ' . $batch->name) : 'No students on this sitting',
-                    'email' => 'Empty sitting — Delete to remove it',
-                ]]);
+                continue;
             }
 
             if ($batchId > 0 && $assignment->student_id) {
@@ -3877,6 +3884,9 @@ class LmsAssessmentController extends Controller
         $created = 0;
         $batchIds = collect($request->input('batch_ids', []))->map(fn ($id) => (int) $id)->filter()->unique()->values();
         $studentIds = collect($request->input('student_ids', []))->map(fn ($id) => (int) $id)->filter()->unique()->values();
+        $this->pruneEmptyUnusedSittings($a, $sittingKind);
+        $this->clearExclusionsForUsers($a, $studentIds, $sittingKind);
+        $covered = collect();
         foreach ($batchIds as $batchId) {
             $batchId = (int) $batchId;
             if ($batchId <= 0) {
@@ -3900,10 +3910,13 @@ class LmsAssessmentController extends Controller
                 $row['sitting_kind'] = $sittingKind;
             }
             if (Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
-                $row['roster_user_ids'] = $this->snapshotBatchStudentIds($batchId)->all();
+                $roster = $this->snapshotBatchStudentIds($batchId)->merge($studentIds)->unique()->filter()->values();
+                $row['roster_user_ids'] = $roster->all();
                 if ($row['roster_user_ids'] === []) {
                     continue;
                 }
+                $this->clearExclusionsForUsers($a, $roster, $sittingKind);
+                $covered = $covered->merge($roster);
             }
             if ($this->hasUnusedDuplicateSitting($a, $row, $hasKindCol)) {
                 continue;
@@ -3915,6 +3928,9 @@ class LmsAssessmentController extends Controller
         foreach ($studentIds as $studentId) {
             $studentId = (int) $studentId;
             if ($studentId <= 0) {
+                continue;
+            }
+            if ($covered->contains($studentId)) {
                 continue;
             }
             $row = [
@@ -3984,20 +4000,81 @@ class LmsAssessmentController extends Controller
         } else {
             $q->whereNull('available_from');
         }
-        $ids = $q->pluck('id');
-        if ($ids->isEmpty()) {
+        $cands = $q->get();
+        if ($cands->isEmpty()) {
             return false;
         }
-        if (! Schema::hasColumn('lms_assessment_attempts', 'assignment_id')) {
-            return true;
+        foreach ($cands as $asg) {
+            if (method_exists($this->assessments, 'sittingHasNoPeople') && $this->assessments->sittingHasNoPeople($asg)) {
+                try {
+                    $asg->delete();
+                } catch (\Throwable $e) {
+                    // keep looking
+                }
+                continue;
+            }
+            if (! Schema::hasColumn('lms_assessment_attempts', 'assignment_id')) {
+                return true;
+            }
+            $used = LmsAssessmentAttempt::query()->where('assignment_id', (int) $asg->id)->exists();
+            if (! $used) {
+                return true;
+            }
         }
-        $used = LmsAssessmentAttempt::query()
-            ->whereIn('assignment_id', $ids->all())
-            ->pluck('assignment_id')
-            ->map(fn ($id) => (int) $id)
-            ->unique();
 
-        return $ids->contains(fn ($id) => ! $used->contains((int) $id));
+        return false;
+    }
+
+    protected function pruneEmptyUnusedSittings(LmsAssessment $a, string $sittingKind): void
+    {
+        try {
+            $rows = LmsAssessmentAssignment::query()->where('assessment_id', (int) $a->id)->get();
+        } catch (\Throwable $e) {
+            return;
+        }
+        foreach ($rows as $asg) {
+            $kind = method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting() ? 'self' : 'exam';
+            if ($kind !== $sittingKind) {
+                continue;
+            }
+            if (! $this->assessments->sittingHasNoPeople($asg)) {
+                continue;
+            }
+            try {
+                $asg->delete();
+            } catch (\Throwable $e) {
+                // keep going
+            }
+        }
+    }
+
+    protected function clearExclusionsForUsers(LmsAssessment $a, $userIds, string $sittingKind): void
+    {
+        $ids = collect($userIds)->map(fn ($id) => (int) $id)->filter()->unique()->values();
+        if ($ids->isEmpty() || ! Schema::hasColumn('lms_assessment_assignments', 'excluded_user_ids')) {
+            return;
+        }
+        try {
+            $rows = LmsAssessmentAssignment::query()->where('assessment_id', (int) $a->id)->get();
+        } catch (\Throwable $e) {
+            return;
+        }
+        foreach ($rows as $asg) {
+            $kind = method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting() ? 'self' : 'exam';
+            if ($kind !== $sittingKind) {
+                continue;
+            }
+            $ex = collect($asg->excluded_user_ids ?? [])->map(fn ($id) => (int) $id)->reject(fn ($id) => $ids->contains($id))->values()->all();
+            if ($ex === collect($asg->excluded_user_ids ?? [])->map(fn ($id) => (int) $id)->values()->all()) {
+                continue;
+            }
+            $asg->excluded_user_ids = $ex;
+            try {
+                $asg->save();
+            } catch (\Throwable $e) {
+                // next row
+            }
+        }
     }
 
     protected function formData(LmsAssessment $assessment): array
