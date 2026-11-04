@@ -2018,6 +2018,15 @@ class LmsAssessmentController extends Controller
             foreach ($rows as $k => $r) {
                 $asgId = (int) ($r['assignment']->id ?? 0);
                 $uid = (int) ($r['student']->id ?? 0);
+                $asg = $r['assignment'] ?? null;
+                $isSelf = $asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting();
+                $novClassCopy = ! $isSelf && empty($r['attempt'])
+                    && method_exists($this->assessments, 'isMock1CopiedNovemberSitting')
+                    && $this->assessments->isMock1CopiedNovemberSitting($asg, $assessment);
+                if ($novClassCopy) {
+                    $drop[$k] = true;
+                    continue;
+                }
                 $isYahia = method_exists($this->assessments, 'isYahiaUser')
                     && $this->assessments->isYahiaUser($r['student'] ?? null);
                 if ($isYahia && empty($r['attempt']) && $asgId === $seedId) {
@@ -2716,6 +2725,13 @@ class LmsAssessmentController extends Controller
 
             return ! (method_exists($a, 'isSelfSitting') && $a->isSelfSitting());
         })->values();
+        $original = $cands->filter(function ($a) use ($assessment) {
+            return ! (method_exists($this->assessments, 'isMock1FourthNovemberSitting')
+                && $this->assessments->isMock1FourthNovemberSitting($a, $assessment));
+        })->values();
+        if ($original->isNotEmpty()) {
+            $cands = $original;
+        }
         if ($cands->isEmpty()) {
             return null;
         }

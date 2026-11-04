@@ -778,6 +778,25 @@ class LmsAssessmentService
         return str_contains($title, 'scs') && (str_contains($title, 'mock 1') || (bool) preg_match('/\bmock\s*1\b/', $title));
     }
 
+    /** First real exam sitting for this test (not a later class copy, not a self test). */
+    public function originalExamSittingFor($assessment): ?LmsAssessmentAssignment
+    {
+        $aid = (int) ($assessment->id ?? 0);
+        if ($aid <= 0) {
+            return null;
+        }
+        try {
+            $rows = LmsAssessmentAssignment::query()->where('assessment_id', $aid)->orderBy('id')->get();
+        } catch (\Throwable $e) {
+            return null;
+        }
+        $exam = $rows->filter(fn ($a) => ! (method_exists($a, 'isSelfSitting') && $a->isSelfSitting()))->values();
+        $original = $exam->filter(fn ($a) => ! $this->isMock1FourthNovemberSitting($a, $assessment))->values();
+        $pool = $original->isNotEmpty() ? $original : $exam;
+
+        return $pool->sortBy(fn ($a) => (int) ($a->id ?? 0))->first();
+    }
+
     public function isMock1FourthNovemberSitting($asg, $assessment = null): bool
     {
         return $this->mock1NovemberSittingOnDays($asg, $assessment, [4, 5]);
@@ -2479,6 +2498,14 @@ class LmsAssessmentService
             }
             if (! $assignment || empty($assignment->id)) {
                 $assignment = $this->resolveAssignmentForUser($user, $assessment);
+            }
+            if ($assignment && empty($row['from_folder'])
+                && method_exists($this, 'isMock1CopiedNovemberSitting')
+                && $this->isMock1CopiedNovemberSitting($assignment, $assessment)) {
+                $orig = $this->originalExamSittingFor($assessment);
+                if ($orig) {
+                    $assignment = $orig;
+                }
             }
             $fromFolder = ! empty($row['from_folder']);
             if ($this->isCimaCohortEmail($user->email ?? null) && $assignment && ! $fromFolder && ! $this->isCimaScsMock1($assessment)) {
