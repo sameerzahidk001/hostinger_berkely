@@ -501,23 +501,25 @@ class LmsAssessment extends Model
     /** True when anyone has a sitting or an attempt, so the test may only be disabled, not deleted. */
     public function hasAssignedSittings(): bool
     {
-        if (array_key_exists('assignments_count', $this->attributes)) {
-            if ((int) $this->assignments_count > 0) {
-                return true;
-            }
-        } else {
-            try {
-                if ($this->assignments()->exists()) {
+        try {
+            if ($this->relationLoaded('assignments')) {
+                if ($this->assignments->isNotEmpty()) {
                     return true;
                 }
-            } catch (\Throwable $e) {
-                // fall through to attempts
+            } elseif ($this->assignments()->exists()) {
+                return true;
             }
-        }
-        if (array_key_exists('attempts_count', $this->attributes)) {
-            return (int) $this->attempts_count > 0;
+        } catch (\Throwable $e) {
+            // fall through to attempts
         }
         try {
+            if (array_key_exists('attempts_count', $this->attributes)) {
+                return (int) $this->attempts_count > 0;
+            }
+            if ($this->relationLoaded('attempts')) {
+                return $this->attempts->isNotEmpty();
+            }
+
             return Schema::hasTable('lms_assessment_attempts') && $this->attempts()->exists();
         } catch (\Throwable $e) {
             return false;
