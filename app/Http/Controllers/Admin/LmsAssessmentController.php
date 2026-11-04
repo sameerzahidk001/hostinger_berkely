@@ -1122,7 +1122,6 @@ class LmsAssessmentController extends Controller
 
         try {
             $rows = $this->replaceCimaScsRows($rows, $assignments, $selectedAssessment, $assessmentsById);
-            $rows = $this->pinAssignedRowsToCanonicalSitting($rows);
             $rows = $this->renumberCollapsedAttempts($rows);
             $rows = $rows->sortBy(function ($row) {
                 $status = (string) (($row['sitting_display']['status'] ?? ''));

@@ -1533,50 +1533,37 @@ class LmsAssessmentService
         }
     }
 
-    /** Whether an attempt belongs to this assignment sitting (window, or created_at if open-ended). */
+    /** Attempt belongs to this sitting only. Test attempts stay on Test; Self Test attempts stay on Self Test. */
     public function attemptBelongsToAssignment(LmsAssessmentAttempt $att, ?LmsAssessmentAssignment $asg): bool
     {
-        if (! $asg || ! $att->started_at) {
+        if (! $asg) {
             return false;
         }
         if (Schema::hasColumn('lms_assessment_attempts', 'assignment_id') && $att->assignment_id) {
-            if ((int) $att->assignment_id !== (int) $asg->id) {
-                return false;
-            }
-            $assessment = $asg->relationLoaded('assessment') ? $asg->assessment : $asg->assessment;
-            if ($this->isCimaScsMock1($assessment) || $asg->isSelfSitting() || ! $att->started_at) {
-                return true;
-            }
-            $start = $asg->windowStart() ?: $asg->available_from;
-            if ($start && $att->started_at->lt($start->copy()->subMinutes(2))) {
-                return false;
-            }
-            $end = $asg->appointmentEnd();
-            if ($end && $att->started_at->gt($end->copy()->addMinutes(2))) {
-                return false;
-            }
-
-            return true;
+            return (int) $att->assignment_id === (int) $asg->id;
+        }
+        if (! $att->started_at) {
+            return false;
         }
         $started = $att->started_at->copy();
+        if (method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()) {
+            return $asg->created_at
+                ? $started->gte($asg->created_at->copy()->subMinutes(2))
+                : false;
+        }
         $start = $asg->windowStart() ?: $asg->available_from;
-        if ($start) {
-            $end = $asg->appointmentEnd();
-            // Must start on/after this sitting — a later Assign must not inherit an older attempt.
-            if ($started->lt($start->copy()->subMinutes(2))) {
-                return false;
-            }
-            if ($end && $started->gt($end->copy()->addMinutes(2))) {
-                return false;
-            }
-
-            return true;
+        if (! $start) {
+            return false;
         }
-        if ($asg->created_at) {
-            return $started->gte($asg->created_at->copy()->subMinutes(2));
+        $end = $asg->appointmentEnd();
+        if ($started->lt($start->copy()->subMinutes(2))) {
+            return false;
+        }
+        if ($end && $started->gt($end->copy()->addMinutes(2))) {
+            return false;
         }
 
-        return false;
+        return true;
     }
 
     /**
@@ -1599,6 +1586,7 @@ class LmsAssessmentService
                 ->all();
         }
 
+        $wantSelf = method_exists($assignment, 'isSelfSitting') && $assignment->isSelfSitting();
         $sittings = LmsAssessmentAssignment::query()
             ->where('assessment_id', $assessment->id)
             ->where(function ($q) use ($userId, $batchIds) {
@@ -1608,7 +1596,13 @@ class LmsAssessmentService
                 }
             })
             ->orderBy('id')
-            ->get(['id']);
+            ->get()
+            ->filter(function ($asg) use ($wantSelf) {
+                $isSelf = method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting();
+
+                return $wantSelf ? $isSelf : ! $isSelf;
+            })
+            ->values();
 
         $sitCount = max(1, $sittings->count());
         $number = 1;
@@ -2596,13 +2590,19 @@ class LmsAssessmentService
 
         // Attempt N of T per assessment (oldest assigned sitting = attempt 1).
         $sittingMeta = [];
-        foreach ($items->filter(fn ($r) => is_array($r) && ! empty($r['assessment']))->groupBy(fn ($r) => (int) $r['assessment']->id) as $aid => $group) {
+        foreach ($items->filter(fn ($r) => is_array($r) && ! empty($r['assessment']))->groupBy(function ($r) {
+            $asg = $r['assignment'] ?? null;
+            $kind = ($asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()) ? 'self' : 'exam';
+
+            return (int) $r['assessment']->id . ':' . $kind;
+        }) as $group) {
             $ordered = $group
                 ->filter(fn ($r) => is_array($r) && ! empty($r['assignment']?->id))
                 ->sortBy(fn ($r) => (int) ($r['assignment']->id ?? 0))
                 ->values();
             $total = max(1, $ordered->count());
             foreach ($ordered as $i => $r) {
+                $aid = (int) $r['assessment']->id;
                 $asgId = (int) $r['assignment']->id;
                 $sittingMeta[$aid . ':' . $asgId] = [
                     'number' => $i + 1,
