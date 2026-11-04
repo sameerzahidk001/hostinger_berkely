@@ -164,11 +164,11 @@
 @endphp
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">
-        <h2>@if(!empty($selectedAssessment)) Results: {{ $selectedAssessment->title }} @else Assigned Tests @endif</h2>
+        <h2>@if(!empty($resultsView) && !empty($selectedAssessment)) Results: {{ $selectedAssessment->title }} @else Assigned Tests @endif</h2>
         <ol class="breadcrumb">
             <li><a href="{{ lms_portal_home() }}">Home</a></li>
             <li><a href="{{ route('admin.assessments.tests.index') }}">ALL TESTS</a></li>
-            <li class="active"><strong>@if(!empty($selectedAssessment)) Results @else Assigned Tests @endif</strong></li>
+            <li class="active"><strong>@if(!empty($resultsView)) Results @else Assigned Tests @endif</strong></li>
         </ol>
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
@@ -181,6 +181,9 @@
     @if(session('error'))<div class="alert alert-danger">{{ session('error') }}</div>@endif
     <div class="ibox"><div class="ibox-content">
         <form method="GET" class="m-b-md" style="margin-bottom:15px;">
+            @if(!empty($resultsView))
+                <input type="hidden" name="view" value="results">
+            @endif
             <div class="lms-filter-bar">
                 <div class="lms-filter-field">
                     <label>Assessment</label>
@@ -488,7 +491,7 @@
                                 @if($statusText === 'Missed' && (int) ($assessment->max_attempts ?? 1) > 1)
                                     <br><small class="text-muted">Student can Retake</small>
                                 @endif
-                                @if($attempt && $attempt->results_published && $attempt->score_raw !== null && ! $assessment->hidesOverallMarks())
+                                @if($attempt && $attempt->score_raw !== null && ! $assessment->hidesOverallMarks() && ($attempt->results_published || $attempt->status === 'graded' || !empty($resultsView)))
                                     <span class="lms-score-line">
                                         {{ lms_format_number($attempt->score_raw) }} / {{ lms_format_number($attempt->score_max) }}
                                         @if($attempt->percent() !== null) ({{ lms_format_number($attempt->percent()) }}%) @endif
@@ -539,7 +542,7 @@
                         </tr>
                         @endif
                     @empty
-                        <tr><td colspan="10" class="text-center text-muted">No assigned test takers found.</td></tr>
+                        <tr><td colspan="10" class="text-center text-muted">@if(!empty($resultsView)) No attempts yet for this test. @else No assigned test takers found. @endif</td></tr>
                     @endforelse
                 </tbody>
             </table>
