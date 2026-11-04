@@ -225,6 +225,9 @@ class LmsAssessmentAssignment extends Model
      */
     public function windowStart(): ?Carbon
     {
+        if ($this->isSelfSitting()) {
+            return null;
+        }
         if (! $this->available_from) {
             return null;
         }
@@ -279,12 +282,12 @@ class LmsAssessmentAssignment extends Model
     /** Single start timestamp for list columns (never blank when a window exists). */
     public function appointmentStartLabel(string $fmt = 'd/m/Y, H:i'): string
     {
+        if ($this->isSelfSitting()) {
+            return '—';
+        }
         $start = $this->windowStart();
         if ($start) {
             return $start->format($fmt);
-        }
-        if ($this->isSelfSitting()) {
-            return 'Start anytime';
         }
         if ($this->available_from) {
             try {
@@ -329,7 +332,7 @@ class LmsAssessmentAssignment extends Model
     public function appointmentWindowLabel(string $fmt = 'd/m/y H:i'): string
     {
         if ($this->isSelfSitting()) {
-            return 'Self test — start anytime';
+            return '—';
         }
         $from = $this->windowStart();
         $until = $this->appointmentEnd();

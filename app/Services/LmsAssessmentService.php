@@ -645,7 +645,7 @@ class LmsAssessmentService
             return '—';
         }
         if (method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()) {
-            return 'Start anytime';
+            return '—';
         }
         $start = $this->scsMock1ExamWindowStart($asg, $assessment, $student);
         if ($start) {

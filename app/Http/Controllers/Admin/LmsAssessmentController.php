@@ -3284,10 +3284,7 @@ class LmsAssessmentController extends Controller
             && $this->assessments->isCimaScsMock1($assessment);
         if ($isCohort && ! $isMock1) {
             $apptId = ($apptId && $apptId !== '—' && $apptId !== 'BEXT0') ? $apptId : (($asg && ! empty($asg->id)) ? $asg->displayCodeForStudent($studentId) : $apptId);
-            if ($asg && ! $attempt && $asg->isSelfSitting() && Schema::hasColumn($asg->getTable(), 'sitting_kind')) {
-                $asg->sitting_kind = LmsAssessmentAssignment::KIND_EXAM;
-            }
-            if ($asg && ! ($asg->isSelfSitting() && $attempt)) {
+            if ($asg && ! $asg->isSelfSitting()) {
                 $asg->applyMissingExamWindow('2026-10-26 20:30:00', 'Asia/Dubai', 180);
             }
             $start = $asg && method_exists($asg, 'appointmentStartLabel')
@@ -3302,7 +3299,8 @@ class LmsAssessmentController extends Controller
         $status = 'Assigned';
         $isSelf = $asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting();
         if ($isSelf) {
-            $start = 'Start anytime';
+            $start = '—';
+            $tz = '—';
         } elseif ($isMock1 && method_exists($this->assessments, 'sittingAppointmentLabel')) {
             $start = $this->assessments->sittingAppointmentLabel($asg, $assessment, $row['student'] ?? null);
             $tz = ($tz && $tz !== '') ? $tz : 'Asia/Dubai · GST';

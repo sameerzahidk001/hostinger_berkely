@@ -312,7 +312,7 @@
                                     $svc = app(\App\Services\LmsAssessmentService::class);
                                     $apptLabel = method_exists($svc, 'sittingAppointmentLabel')
                                         ? $svc->sittingAppointmentLabel($asg, $a, auth()->user())
-                                        : ($asg->isSelfSitting() ? 'Start anytime' : ($asg->appointmentStartLabel() ?? '—'));
+                                        : ($asg->isSelfSitting() ? '—' : ($asg->appointmentStartLabel() ?? '—'));
                                 @endphp
                                 <span class="lms-timing-line"><strong>Test Appointment:</strong> {{ $apptLabel }}</span>
                                 <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $asg->timezoneLabel() }}</span>
