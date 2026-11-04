@@ -289,7 +289,9 @@
                                 $statusClass = match ($statusText) {
                                     'Missed' => 'lms-status-missed',
                                     'Upcoming' => 'lms-status-upcoming',
+                                    'In progress' => 'lms-status-in_progress',
                                     'Marking Required' => 'lms-status-completed',
+                                    'Completed and Marked', 'Completed' => 'lms-status-marked',
                                     default => 'lms-status-available',
                                 };
                             } elseif ($assignment && $assignment->isNotYetOpen()) {

@@ -2785,6 +2785,12 @@ class LmsAssessmentService
                         && $this->attemptBelongsToAssignment($att, $assignment);
                 });
             }
+            if (! $matched && ! $isSelf) {
+                $matched = $attempts->first(function ($att) use ($claimedAttemptIds) {
+                    return ! isset($claimedAttemptIds[(int) $att->id])
+                        && in_array($att->status, ['in_progress', 'submitted', 'graded', 'expired'], true);
+                });
+            }
             $attemptNumber = $matched
                 ? max(1, $usedOnSitting)
                 : max(1, $usedOnSitting + 1);
@@ -2817,8 +2823,9 @@ class LmsAssessmentService
                     } catch (\Throwable $e) {
                         Log::warning('LMS timeout submit skipped: ' . $e->getMessage());
                     }
-                    $matched = $matched->fresh();
-                } else {
+                    $matched = $matched->fresh() ?: $matched;
+                }
+                if ($matched && $matched->status === 'in_progress') {
                     if ($asgId > 0 && ! empty($inProgressShown[$asgId])) {
                         continue;
                     }
