@@ -3288,7 +3288,18 @@ class LmsAssessmentController extends Controller
         $isCohort = $this->isCimaCohortSitting($assessment, $asg, collect([$row['student'] ?? null]));
         $isMock1 = $assessment && method_exists($this->assessments, 'isCimaScsMock1')
             && $this->assessments->isCimaScsMock1($assessment);
+        $isMcs1 = $assessment && method_exists($this->assessments, 'isCimaMcsMock1')
+            && $this->assessments->isCimaMcsMock1($assessment);
         $isSelf = $asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting();
+        if ($isMcs1 && $asg) {
+            if (Schema::hasColumn($asg->getTable(), 'sitting_kind')) {
+                $asg->sitting_kind = \App\Models\LmsAssessmentAssignment::KIND_EXAM;
+            }
+            $asg->applyMissingExamWindow('2026-10-26 20:30:00', 'Asia/Dubai', 180);
+            $isSelf = false;
+            $start = '26/10/2026, 20:30';
+            $tz = 'Asia/Dubai · GST';
+        }
         if ($isMock1 && ! $isSelf && $asg) {
             $asg->applyMissingExamWindow('2026-10-30 20:15:00', 'Asia/Dubai', 180);
             $start = '30/10/2026, 20:15';

@@ -280,6 +280,9 @@
                         );
                         $statusSort = $att ? $att->statusLabel() : ($tab === 'missed' ? 'Missed' : ($tab === 'upcoming' ? 'Upcoming' : 'Available'));
                         $fromFolder = ! empty($row['from_folder']);
+                        if ($asg && ! $fromFolder) {
+                            app(\App\Services\LmsAssessmentService::class)->alignSittingWithExistingExamRule($asg, $a);
+                        }
                         $sittingKind = $fromFolder
                             ? 'Folder test'
                             : (($asg && method_exists($asg, 'sittingKindLabel')) ? $asg->sittingKindLabel() : 'Test');

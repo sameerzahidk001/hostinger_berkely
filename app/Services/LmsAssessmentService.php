@@ -206,10 +206,6 @@ class LmsAssessmentService
             $until = \Carbon\Carbon::parse('2026-10-26 20:30:00', $tz)->addMinutes(180)->timezone(config('app.timezone', $tz));
             $rows = LmsAssessmentAssignment::query()->whereIn('assessment_id', $aids->all())->get();
             foreach ($rows as $row) {
-                $namedSelf = $row->isSelfSitting() && ! empty($row->student_id) && empty($row->class_batch_id);
-                if ($namedSelf) {
-                    continue;
-                }
                 if (Schema::hasColumn($row->getTable(), 'sitting_kind')) {
                     $row->sitting_kind = LmsAssessmentAssignment::KIND_EXAM;
                 }
@@ -235,9 +231,6 @@ class LmsAssessmentService
         if (! $assessment) {
             return;
         }
-        if ($asg->isSelfSitting() && ! empty($asg->student_id) && empty($asg->class_batch_id)) {
-            return;
-        }
         if ($this->isCimaMcsMock1($assessment)) {
             if (Schema::hasColumn($asg->getTable(), 'sitting_kind')) {
                 $asg->sitting_kind = LmsAssessmentAssignment::KIND_EXAM;
@@ -245,7 +238,17 @@ class LmsAssessmentService
             if (method_exists($asg, 'applyMissingExamWindow')) {
                 $asg->applyMissingExamWindow('2026-10-26 20:30:00', 'Asia/Dubai', 180);
             }
+            if ($asg->exists) {
+                try {
+                    $asg->save();
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+            }
 
+            return;
+        }
+        if ($asg->isSelfSitting() && ! empty($asg->student_id) && empty($asg->class_batch_id)) {
             return;
         }
         if ($this->isCimaScsMock1($assessment) && ! $asg->isSelfSitting() && method_exists($asg, 'applyMissingExamWindow')) {
@@ -805,6 +808,7 @@ class LmsAssessmentService
         if (! $asg) {
             return '—';
         }
+        $this->alignSittingWithExistingExamRule($asg, $assessment);
         if (method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()) {
             return '—';
         }
