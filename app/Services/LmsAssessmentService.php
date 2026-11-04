@@ -374,14 +374,18 @@ class LmsAssessmentService
             $this->appendFolderSelfTests($user, $out, $kind);
         }
 
-        return $this->collapseStudentScsSittings($user, $out);
+        return $this->collapseStudentScsSittings($user, $out, $attemptAsgIds);
     }
 
-    /** Student My Tests: one SCS Mock 1 and one Mock 2, matching Assigned Tests. */
-    protected function collapseStudentScsSittings(User $user, Collection $out): Collection
+    /**
+     * Student My Tests: one SCS Mock 1 and one Mock 2, same assignment IDs as Assigned Tests.
+     * Named person sittings win; class seed is not used for Yahia Mock 1; original id wins ties.
+     */
+    protected function collapseStudentScsSittings(User $user, Collection $out, array $attemptAsgIds = []): Collection
     {
         $best = [];
         $other = collect();
+        $uid = (int) $user->id;
         foreach ($out as $row) {
             if (! is_array($row)) {
                 continue;
@@ -403,38 +407,102 @@ class LmsAssessmentService
             if (! $this->isCimaScsAssignedMock($assessment)) {
                 continue;
             }
+            $asg = $row['assignment'] ?? null;
+            $asgId = (int) ($asg->id ?? 0);
+            $named = $asg && (int) ($asg->student_id ?? 0) === $uid;
+            $onAttempt = $asgId > 0 && in_array($asgId, $attemptAsgIds, true);
+            if ($this->isYahiaUser($user) && $this->isCimaScsMock1($assessment) && ! $named && ! $onAttempt) {
+                continue;
+            }
+            if ($this->isMock1CopiedNovemberSitting($asg, $assessment)) {
+                continue;
+            }
             $mockNo = 'x';
             if (preg_match('/mock\s*(\d+)/', $title, $m)) {
                 $mockNo = (string) $m[1];
             }
             $key = 'scs:mock' . $mockNo;
-            $asg = $row['assignment'] ?? null;
-            $score = 0;
-            if ($asg && (int) ($asg->student_id ?? 0) === (int) $user->id) {
-                $score += 5000;
-            }
-            if ($this->isYahiaUser($user) && $asg && $this->isMock1YahiaNovemberSitting($asg, $assessment, $user)) {
-                $score += 8000;
-            }
-            if ($asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()) {
-                $score -= 2000;
-            }
-            $score += $asg ? (int) ($asg->id ?? 0) : 0;
-            $prevScore = 0;
-            if (isset($best[$key]) && is_array($best[$key])) {
-                $prevScore = (int) ($best[$key]['_score'] ?? 0);
-            }
-            if (! isset($best[$key]) || $score > $prevScore) {
+            $score = $this->studentScsSittingScore($user, $row, $attemptAsgIds);
+            $prev = $best[$key] ?? null;
+            $prevScore = is_array($prev) ? (int) ($prev['_score'] ?? 0) : 0;
+            $prevId = is_array($prev) ? (int) ($prev['assignment']->id ?? 0) : PHP_INT_MAX;
+            $better = ! isset($best[$key])
+                || $score > $prevScore
+                || ($score === $prevScore && $asgId > 0 && $asgId < $prevId);
+            if ($better) {
                 $row['_score'] = $score;
                 $best[$key] = $row;
             }
         }
 
-        return $other->concat(collect($best)->filter(fn ($row) => is_array($row))->map(function ($row) {
+        return $other->concat(collect($best)->filter(fn ($row) => is_array($row))->map(function ($row) use ($user) {
             unset($row['_score']);
+            $assessment = $row['assessment'] ?? null;
+            $asg = $row['assignment'] ?? null;
+            $fromDb = $this->scsMock1AssignmentFromDatabase($assessment, $user, $asg);
+            if ($fromDb) {
+                $row['assignment'] = $fromDb;
+            }
 
             return $row;
         }))->values();
+    }
+
+    protected function studentScsSittingScore(User $user, array $row, array $attemptAsgIds = []): int
+    {
+        $score = 0;
+        $asg = $row['assignment'] ?? null;
+        $asgId = (int) ($asg->id ?? 0);
+        if ($asgId > 0 && in_array($asgId, $attemptAsgIds, true)) {
+            $score += 10000;
+        }
+        $student = $user;
+        $yahia = $this->isYahiaUser($student);
+        $start = null;
+        try {
+            $start = $asg && method_exists($asg, 'windowStart') ? $asg->windowStart() : ($asg->available_from ?? null);
+        } catch (\Throwable $e) {
+            $start = $asg ? ($asg->available_from ?? null) : null;
+        }
+        $future = false;
+        try {
+            $future = $start && now()->lt(\Carbon\Carbon::parse($start));
+        } catch (\Throwable $e) {
+            $future = false;
+        }
+        if ($yahia && $future) {
+            $score += 5000;
+        }
+        if ($asg && ! empty($asg->student_id) && (int) $asg->student_id === (int) ($student->id ?? 0)) {
+            $score += 2000;
+        }
+        if ($start) {
+            try {
+                $ts = \Carbon\Carbon::parse($start)->timestamp;
+                if ($yahia && $future) {
+                    $score += (int) min(1000, $ts / 1000000);
+                } else {
+                    $score += (int) (max(0, 2000000000 - $ts) / 100000);
+                }
+            } catch (\Throwable $e) {
+                // keep base
+            }
+        }
+        if ($asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()) {
+            $score -= 2000;
+        }
+
+        return $score;
+    }
+
+    /** Class Mock 1 window (30/10) — not Yahia's own Nov 4/5 sitting. */
+    public function usesMock1ClassWindow($asg, $assessment, $student = null): bool
+    {
+        if (! $this->isCimaScsMock1($assessment)) {
+            return false;
+        }
+
+        return ! $this->isMock1YahiaNovemberSitting($asg, $assessment, $student);
     }
 
     /** Sitting this student is on (direct or batch), so Missed/Available can show BEXT. */
