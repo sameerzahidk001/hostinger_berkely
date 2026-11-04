@@ -493,8 +493,7 @@ class LmsAssessmentService
 
         $out = collect();
         foreach ($direct as $assignment) {
-            if (! $this->assignmentIncludesStudent($assignment, $userId)
-                && ! in_array((int) ($assignment->id ?? 0), $attemptAsgIds, true)) {
+            if (! $this->assignmentIncludesStudent($assignment, $userId)) {
                 continue;
             }
             $assessment = $assessmentsById->get((int) $assignment->assessment_id);
@@ -659,39 +658,37 @@ class LmsAssessmentService
                 ->where('assessment_id', $assessmentId)
                 ->where('user_id', $studentId)
                 ->get();
+            $kind = ($assignment && method_exists($assignment, 'isSelfSitting') && $assignment->isSelfSitting())
+                ? 'self'
+                : 'exam';
             foreach ($rows as $att) {
                 $attAsg = (int) ($att->assignment_id ?? 0);
-                $belongs = false;
-                if ($assignmentId > 0 && ($attAsg === $assignmentId || $attAsg === 0)) {
-                    $belongs = $attAsg === $assignmentId
-                        || ($assignment && $this->attemptBelongsToAssignment($att, $assignment));
-                } elseif ($assignment && $this->attemptBelongsToAssignment($att, $assignment)) {
+                $belongs = $assignmentId > 0 && $attAsg === $assignmentId;
+                if (! $belongs && $assignment && $this->attemptBelongsToAssignment($att, $assignment)) {
                     $belongs = true;
-                } elseif ($assignmentId <= 0) {
+                }
+                if (! $belongs && $assignmentId <= 0) {
                     $belongs = true;
                 }
                 if ($belongs) {
                     $deleteAttempt($att);
                 }
             }
-        }
-
-        if ($assignment && $studentId > 0) {
-            $this->excludeStudentFromAssignment($assignment, $studentId);
-            $named = ! empty($assignment->student_id)
-                && (int) $assignment->student_id === $studentId
-                && empty($assignment->class_batch_id);
-            if ($named && $assignment->exists) {
-                $assignment->delete();
-            }
-        } elseif ($assessmentId > 0 && $studentId > 0) {
-            $named = LmsAssessmentAssignment::query()
+            $siblings = LmsAssessmentAssignment::query()
                 ->where('assessment_id', $assessmentId)
-                ->where('student_id', $studentId)
                 ->get();
-            foreach ($named as $row) {
+            foreach ($siblings as $row) {
+                if (Schema::hasColumn($row->getTable(), 'sitting_kind')) {
+                    $rowKind = method_exists($row, 'isSelfSitting') && $row->isSelfSitting() ? 'self' : 'exam';
+                    if ($rowKind !== $kind) {
+                        continue;
+                    }
+                }
                 $this->excludeStudentFromAssignment($row, $studentId);
-                if (empty($row->class_batch_id)) {
+                $named = ! empty($row->student_id)
+                    && (int) $row->student_id === $studentId
+                    && empty($row->class_batch_id);
+                if ($named) {
                     $row->delete();
                 }
             }
@@ -967,7 +964,7 @@ class LmsAssessmentService
                 ->where('student_id', $userId)
                 ->orderByDesc('id')
                 ->first();
-            if ($own) {
+            if ($own && $this->assignmentIncludesStudent($own, $userId)) {
                 return $own;
             }
             $batchIds = [];
@@ -981,11 +978,16 @@ class LmsAssessmentService
             }
             $batchIds = array_values(array_unique(array_filter($batchIds)));
             if ($batchIds !== []) {
-                return LmsAssessmentAssignment::query()
+                $batchAsg = LmsAssessmentAssignment::query()
                     ->where('assessment_id', $aid)
                     ->whereIn('class_batch_id', $batchIds)
                     ->orderByDesc('id')
-                    ->first();
+                    ->get();
+                foreach ($batchAsg as $row) {
+                    if ($this->assignmentIncludesStudent($row, $userId)) {
+                        return $row;
+                    }
+                }
             }
         } catch (\Throwable $e) {
             return null;
@@ -2775,9 +2777,9 @@ class LmsAssessmentService
             $asg = null;
             if (! empty($att->assignment_id)) {
                 $asg = LmsAssessmentAssignment::query()->find($att->assignment_id);
-            }
-            if ($asg && ! $this->assignmentIncludesStudent($asg, (int) $user->id)) {
-                continue;
+                if (! $asg || ! $this->assignmentIncludesStudent($asg, (int) $user->id)) {
+                    continue;
+                }
             }
             $items->push(['assessment' => $assessment, 'assignment' => $asg]);
             $itemAssessmentIds[] = (int) $assessment->id;
@@ -2830,6 +2832,12 @@ class LmsAssessmentService
             if (! $assignment || empty($assignment->id)) {
                 $assignment = $this->resolveAssignmentForUser($user, $assessment);
             }
+            if ($assignment && ! $this->assignmentIncludesStudent($assignment, (int) $user->id)) {
+                continue;
+            }
+            if ($assignment && ! $this->studentShouldSeeSitting($user, $assessment, $assignment, [])) {
+                continue;
+            }
             if ($assignment && empty($row['from_folder'])
                 && empty($assignment->student_id)
                 && ! empty($assignment->class_batch_id)
@@ -2838,6 +2846,9 @@ class LmsAssessmentService
                 if ($orig && (int) $orig->id !== (int) $assignment->id) {
                     $assignment = $orig;
                 }
+            }
+            if ($assignment && ! $this->assignmentIncludesStudent($assignment, (int) $user->id)) {
+                continue;
             }
             $fromFolder = ! empty($row['from_folder']);
             if ($assignment && ! $fromFolder) {
