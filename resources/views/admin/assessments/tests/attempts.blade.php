@@ -29,14 +29,15 @@
         overflow-wrap: break-word;
         white-space: normal;
     }
-    .lms-attempts-table .col-taker { width: 16%; }
-    .lms-attempts-table .col-when { width: 13%; font-weight: 700; }
+    .lms-attempts-table .col-appt { width: 9%; }
+    .lms-attempts-table .col-when { width: 12%; font-weight: 700; }
     .lms-attempts-table .col-when .lms-timing-line { display: block; line-height: 1.35; }
-    .lms-attempts-table .col-test { width: 16%; }
-    .lms-attempts-table .col-timing { width: 8%; }
-    .lms-attempts-table .col-assessor { width: 12%; min-width: 120px; font-weight: 700; }
-    .lms-attempts-table .col-created { width: 8%; }
-    .lms-attempts-table .col-status { width: 11%; }
+    .lms-attempts-table .col-taker { width: 14%; }
+    .lms-attempts-table .col-test { width: 14%; }
+    .lms-attempts-table .col-timing { width: 7%; }
+    .lms-attempts-table .col-assessor { width: 11%; min-width: 120px; font-weight: 700; }
+    .lms-attempts-table .col-created { width: 7%; }
+    .lms-attempts-table .col-status { width: 10%; }
     .lms-attempts-table .col-pub { width: 5%; }
     .lms-attempts-table .col-actions {
         width: 11%;
@@ -107,14 +108,15 @@
             <table class="table table-striped table-bordered lms-attempts-table js-sortable-table">
                 <thead>
                     <tr>
-                        <th class="col-taker" data-sort-col="0">Test Taker <span class="sort-ind"></span></th>
+                        <th class="col-appt" data-sort-col="0">Appointment ID <span class="sort-ind"></span></th>
                         <th class="col-when" data-sort-col="1">Appointment Date &amp; Time <span class="sort-ind"></span></th>
-                        <th class="col-test" data-sort-col="2">Test Name <span class="sort-ind"></span></th>
-                        <th class="col-timing" data-sort-col="3">Test Duration <span class="sort-ind"></span></th>
-                        <th class="col-assessor" data-sort-col="4">Assessor <span class="sort-ind"></span></th>
-                        <th class="col-created" data-sort-col="5">Created by <span class="sort-ind"></span></th>
-                        <th class="col-status" data-sort-col="6">Status <span class="sort-ind"></span></th>
-                        <th class="col-pub" data-sort-col="7">Published <span class="sort-ind"></span></th>
+                        <th class="col-taker" data-sort-col="2">Test Taker <span class="sort-ind"></span></th>
+                        <th class="col-test" data-sort-col="3">Test Name <span class="sort-ind"></span></th>
+                        <th class="col-timing" data-sort-col="4">Test Duration <span class="sort-ind"></span></th>
+                        <th class="col-assessor" data-sort-col="5">Assessor <span class="sort-ind"></span></th>
+                        <th class="col-created" data-sort-col="6">Created by <span class="sort-ind"></span></th>
+                        <th class="col-status" data-sort-col="7">Status <span class="sort-ind"></span></th>
+                        <th class="col-pub" data-sort-col="8">Published <span class="sort-ind"></span></th>
                         <th class="col-actions">Action</th>
                     </tr>
                 </thead>
@@ -160,8 +162,19 @@
                                 : ($assignment && $assignment->marker_user_id ? (int) $assignment->marker_user_id : null);
                             $course = $assessmentRow->course ?? null;
                             $createdBy = $assignment ? $assignment->createdByLabel() : '—';
+                            $apptId = ($assignment && ! empty($student->id) && method_exists($assignment, 'displayCodeForStudent'))
+                                ? $assignment->displayCodeForStudent((int) $student->id)
+                                : ($assignment ? $assignment->displayCode() : '—');
                         @endphp
                         <tr>
+                            <td class="col-appt" data-sort="{{ $assignment->id ?? 0 }}"><strong>{{ $apptId }}</strong></td>
+                            <td class="col-when" data-sort="{{ $appointment }}">
+                                <span class="lms-timing-line">{{ $appointment }}</span>
+                                @if($timezoneLabel !== '')
+                                    <br>
+                                    <span class="lms-timing-line text-muted">{{ $timezoneLabel }}</span>
+                                @endif
+                            </td>
                             <td class="col-taker" data-sort="{{ $student->name ?? '' }}">
                                 @if(!empty($student->id))
                                     <a href="#" class="lms-user-preview" data-user-id="{{ $student->id }}">{{ $student->name ?? '—' }}</a>
@@ -180,13 +193,6 @@
                                             <a href="{{ route('course.show', $course->id) }}" target="_blank" rel="noopener noreferrer">{{ $course->title }}</a>
                                         @endif
                                     </small>
-                                @endif
-                            </td>
-                            <td class="col-when" data-sort="{{ $appointment }}">
-                                <span class="lms-timing-line">{{ $appointment }}</span>
-                                @if($timezoneLabel !== '')
-                                    <br>
-                                    <span class="lms-timing-line text-muted">{{ $timezoneLabel }}</span>
                                 @endif
                             </td>
                             <td class="col-test" data-sort="{{ $assessmentRow->title ?? '' }}">
@@ -260,7 +266,7 @@
                             </td>
                         </tr>
                     @empty
-                        <tr><td colspan="9" class="text-center text-muted">No assignments yet for this test. Use Assign to create sittings.</td></tr>
+                        <tr><td colspan="10" class="text-center text-muted">No assignments yet for this test. Use Assign to create sittings.</td></tr>
                     @endforelse
                 </tbody>
             </table>
