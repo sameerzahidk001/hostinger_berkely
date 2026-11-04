@@ -473,6 +473,7 @@ class LmsAssessmentService
             })
             ->orderByDesc('id');
         $direct = $assignQuery->get();
+        $direct = $this->mergeRosterSittingsForUser($direct, $userId);
         $assessmentIds = $direct->pluck('assessment_id')->map(fn ($id) => (int) $id)->unique()->filter()->values()->all();
         $assessmentsById = $assessmentIds === []
             ? collect()
@@ -583,6 +584,52 @@ class LmsAssessmentService
         return $rows->values()->filter(fn ($row, $i) => empty($drop[$i]))->values();
     }
 
+    /** Saved assign snapshot, including JSON stored as ints or strings. */
+    public function rosterHasUser($asg, int $userId): bool
+    {
+        if (! $asg || $userId <= 0) {
+            return false;
+        }
+        try {
+            if (! Schema::hasColumn($asg->getTable(), 'roster_user_ids')) {
+                return false;
+            }
+        } catch (\Throwable $e) {
+            return false;
+        }
+
+        return collect($asg->roster_user_ids ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->contains($userId);
+    }
+
+    /** JSON_CONTAINS often misses roster ids on MariaDB; load those sittings in PHP. */
+    protected function mergeRosterSittingsForUser(Collection $direct, int $userId): Collection
+    {
+        if ($userId <= 0) {
+            return $direct;
+        }
+        try {
+            if (! Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
+                return $direct;
+            }
+            $have = $direct->pluck('id')->map(fn ($id) => (int) $id)->filter()->all();
+            $more = LmsAssessmentAssignment::query()
+                ->with('marker')
+                ->whereNotNull('roster_user_ids')
+                ->when($have !== [], fn ($q) => $q->whereNotIn('id', $have))
+                ->get()
+                ->filter(fn ($asg) => $this->rosterHasUser($asg, $userId));
+            if ($more->isEmpty()) {
+                return $direct;
+            }
+
+            return $direct->concat($more)->unique(fn ($row) => (int) ($row->id ?? 0))->values();
+        } catch (\Throwable $e) {
+            return $direct;
+        }
+    }
+
     /** Same people Admin lists on a sitting: named student, roster snapshot, or batch members at assign time. */
     public function assignmentIncludesStudent($asg, int $userId): bool
     {
@@ -602,15 +649,10 @@ class LmsAssessmentService
         if ((int) ($asg->student_id ?? 0) === $userId) {
             return true;
         }
+        if ($this->rosterHasUser($asg, $userId)) {
+            return true;
+        }
         if (method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()) {
-            try {
-                if (Schema::hasColumn($asg->getTable(), 'roster_user_ids')) {
-                    return collect($asg->roster_user_ids ?? [])->map(fn ($id) => (int) $id)->contains($userId);
-                }
-            } catch (\Throwable $e) {
-                return false;
-            }
-
             return false;
         }
         try {
