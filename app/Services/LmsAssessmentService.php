@@ -437,14 +437,46 @@ class LmsAssessmentService
         return $this->collapseStudentScsSittings($user, $out, $attemptAsgIds);
     }
 
-    /** Keep every sitting the student was assigned. Do not drop Mock 1 just because a later copy exists. */
+    /** Same list rule as Admin: unique sitting, and one unused class exam per test. */
     protected function collapseStudentScsSittings(User $user, Collection $out, array $attemptAsgIds = []): Collection
     {
-        return $out->filter(fn ($row) => is_array($row) && ! empty($row['assessment']))
+        $uid = (int) ($user->id ?? 0);
+        $rows = $out->filter(fn ($row) => is_array($row) && ! empty($row['assessment']))
             ->unique(function ($row) {
                 return (int) data_get($row, 'assessment.id') . ':' . (int) data_get($row, 'assignment.id');
             })
             ->values();
+        $unused = [];
+        foreach ($rows as $i => $row) {
+            $asg = $row['assignment'] ?? null;
+            if (! $asg || (method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting())) {
+                continue;
+            }
+            $named = (int) ($asg->student_id ?? 0) === $uid && empty($asg->class_batch_id);
+            if ($named) {
+                continue;
+            }
+            $aid = (int) data_get($row, 'assessment.id');
+            $unused[$aid][$i] = (int) $asg->id;
+        }
+        $drop = [];
+        foreach ($unused as $indexes) {
+            if (count($indexes) < 2) {
+                continue;
+            }
+            asort($indexes);
+            $keep = array_key_first($indexes);
+            foreach ($indexes as $i => $id) {
+                if ($i !== $keep) {
+                    $drop[$i] = true;
+                }
+            }
+        }
+        if ($drop === []) {
+            return $rows;
+        }
+
+        return $rows->values()->filter(fn ($row, $i) => empty($drop[$i]))->values();
     }
 
     /** Same people Admin lists on a sitting: named student, roster snapshot, or batch members at assign time. */
