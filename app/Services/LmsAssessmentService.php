@@ -380,54 +380,14 @@ class LmsAssessmentService
         return $this->collapseStudentScsSittings($user, $out, $attemptAsgIds);
     }
 
-    /**
-     * Student My Tests: one SCS Mock 1 and one Mock 2, using the same sitting as Admin/instructor.
-     */
+    /** Keep every sitting the student was assigned. Do not drop Mock 1 just because a later copy exists. */
     protected function collapseStudentScsSittings(User $user, Collection $out, array $attemptAsgIds = []): Collection
     {
-        $best = [];
-        $other = collect();
-        foreach ($out as $row) {
-            if (! is_array($row)) {
-                continue;
-            }
-            $assessment = $row['assessment'] ?? null;
-            if (! $assessment) {
-                $other->push($row);
-                continue;
-            }
-            $asg = $row['assignment'] ?? null;
-            if ($asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()) {
-                $other->push($row);
-                continue;
-            }
-            $key = $this->scsAssignedMockKey($assessment);
-            if (! $key) {
-                $other->push($row);
-                continue;
-            }
-            if (! isset($best[$key])) {
-                $best[$key] = $row;
-            }
-        }
-
-        return $other->concat(collect($best)->filter(fn ($row) => is_array($row))->map(function ($row) use ($user, $attemptAsgIds) {
-            $assessment = $row['assessment'] ?? null;
-            $pinned = $this->canonicalSittingForStudent($user, $assessment, $attemptAsgIds);
-            if (! $pinned) {
-                return null;
-            }
-            $row['assignment'] = $pinned;
-            $aid = (int) ($pinned->assessment_id ?? 0);
-            if ($aid > 0 && (int) ($assessment->id ?? 0) !== $aid) {
-                $found = LmsAssessment::query()->with('course')->find($aid);
-                if ($found) {
-                    $row['assessment'] = $found;
-                }
-            }
-
-            return $row;
-        })->filter())->values();
+        return $out->filter(fn ($row) => is_array($row) && ! empty($row['assessment']))
+            ->unique(function ($row) {
+                return (int) data_get($row, 'assessment.id') . ':' . (int) data_get($row, 'assignment.id');
+            })
+            ->values();
     }
 
     public function scsAssignedMockKey($assessment): ?string
@@ -474,8 +434,7 @@ class LmsAssessmentService
                     ->whereIn('assessment_id', $aids)
                     ->orderBy('id')
                     ->get()
-                    ->filter(fn ($asg) => ! $this->isMock1CopiedNovemberSitting($asg, $assessment)
-                        && ! (method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()))
+                    ->filter(fn ($asg) => ! (method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()))
                     ->values();
                 $named = $rows->filter(fn ($asg) => (int) ($asg->student_id ?? 0) === $uid);
                 $pool = $named->isNotEmpty() ? $named : $rows->filter(function ($asg) use ($uid) {
@@ -1151,6 +1110,7 @@ class LmsAssessmentService
                         $q->orWhereJsonContains('roster_user_ids', $userId)
                             ->orWhereJsonContains('roster_user_ids', (string) $userId);
                     }
+                    $q->orWhereNotNull('class_batch_id');
                 })
                 ->orderBy('id')
                 ->get();
@@ -1160,6 +1120,20 @@ class LmsAssessmentService
         $seenAsg = $out->map(fn ($row) => (int) ($row['assignment']->id ?? 0))->filter()->all();
         foreach ($assignments as $assignment) {
             if (! $assignment || empty($assignment->id) || in_array((int) $assignment->id, $seenAsg, true)) {
+                continue;
+            }
+            $named = (int) ($assignment->student_id ?? 0) === $userId;
+            $onRoster = Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')
+                && collect($assignment->roster_user_ids ?? [])->map(fn ($id) => (int) $id)->contains($userId);
+            $onBatch = false;
+            if (! $named && ! $onRoster && ! empty($assignment->class_batch_id)) {
+                try {
+                    $onBatch = ClassBatch::studentUserIdsForSitting($assignment)->contains($userId);
+                } catch (\Throwable $e) {
+                    $onBatch = false;
+                }
+            }
+            if (! $named && ! $onRoster && ! $onBatch) {
                 continue;
             }
             $assessment = $assignment->assessment ?: LmsAssessment::query()->with('course')->find($assignment->assessment_id);
@@ -2499,10 +2473,6 @@ class LmsAssessmentService
             }
             if (! $assignment || empty($assignment->id)) {
                 $assignment = $this->resolveAssignmentForUser($user, $assessment);
-            }
-            $keepSelf = $assignment && method_exists($assignment, 'isSelfSitting') && $assignment->isSelfSitting();
-            if (! $keepSelf && $assignment && $this->isCimaScsAssignedMock($assessment)) {
-                $assignment = $this->canonicalSittingForStudent($user, $assessment) ?: $assignment;
             }
             $fromFolder = ! empty($row['from_folder']);
             if ($this->isCimaCohortEmail($user->email ?? null) && $assignment && ! $fromFolder && ! $this->isCimaScsMock1($assessment)) {
