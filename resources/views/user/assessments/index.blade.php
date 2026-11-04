@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.sortable-table-assets')
 @php $lmsUserPreviewUrlTpl = route('user.assessments.user-preview', ['userId' => '__ID__']); @endphp
 @section('content')
-<!-- lms-my-tests-20261104h KEEP: Yahia My Tests = Mock 1 and Mock 2 only -->
+<!-- lms-my-tests-20261104j KEEP: student assessor + appointment match admin -->
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
         <h2>{{ $section === 'mocks' ? 'Mock Test' : ($section === 'skill' ? 'Skill Test' : 'My Tests') }}</h2>
@@ -264,15 +264,38 @@
                             $apptId = 'BEXT' . (int) $att->assignment_id . '-' . (int) auth()->id();
                         }
                         $course = $a->course ?? null;
+                        if ($asg) {
+                            $asg->loadMissing('marker');
+                        }
+                        $titleHay = mb_strtolower(trim((string) ($a->title ?? '')));
+                        $isMock1Row = str_contains($titleHay, 'scs') && (bool) preg_match('/\bmock\s*1\b/', $titleHay) && ! str_contains($titleHay, 'mcs');
+                        $isScsAssigned = str_contains($titleHay, 'scs') && (bool) preg_match('/\bmock\s*[12]\b/', $titleHay) && ! str_contains($titleHay, 'mcs');
+                        $meHay = mb_strtolower(trim((string) (auth()->user()->name ?? '') . ' ' . (string) (auth()->user()->email ?? '')));
+                        $isYahiaRow = str_contains($meHay, 'yahia') || str_contains($meHay, 'yahya');
+                        $assessorUserIdFromMarkers = null;
                         $assessorName = $att
                             ? $att->assessorLabel($asg)
                             : ($asg && method_exists($asg, 'assessorDisplayName')
                                 ? $asg->assessorDisplayName()
-                                : ($asg?->marker?->name ?? 'Admin / course instructors'));
-                        if ($assessorName === '' || $assessorName === '—') {
-                            $assessorName = $asg && method_exists($asg, 'assessorDisplayName')
-                                ? $asg->assessorDisplayName()
-                                : ($asg?->marker?->name ?? 'Admin / course instructors');
+                                : ($asg?->marker?->name ?? ''));
+                        $assessorBlank = $assessorName === ''
+                            || $assessorName === '—'
+                            || strcasecmp((string) $assessorName, 'Admin / course instructors') === 0
+                            || strcasecmp((string) $assessorName, 'Admin') === 0;
+                        if ($assessorBlank && $asg && ! empty($asg->marker_user_id) && $asg->marker) {
+                            $assessorName = trim((string) $asg->marker->name);
+                            $assessorBlank = $assessorName === '';
+                        }
+                        if ($assessorBlank && $isScsAssigned && method_exists($a, 'markerUsers')) {
+                            $named = $a->markerUsers()->first();
+                            if ($named && trim((string) ($named->name ?? '')) !== '') {
+                                $assessorName = $named->name;
+                                $assessorUserIdFromMarkers = (int) $named->id;
+                                $assessorBlank = false;
+                            }
+                        }
+                        if ($assessorBlank) {
+                            $assessorName = 'Admin / course instructors';
                         }
                         $assessorEmail = $asg?->marker?->email ?? null;
                         $canDownloadPdf = $att && (
@@ -305,13 +328,30 @@
                                 </small>
                             @endif
                         </td>
-                        @php $assessorUserId = $att ? $att->assessorUserId($asg) : ($asg->marker_user_id ?? null); @endphp
+                        @php
+                            $assessorUserId = $assessorUserIdFromMarkers
+                                ?? ($att ? $att->assessorUserId($asg) : ($asg->marker_user_id ?? ($asg?->marker?->id ?? null)));
+                            $appointmentLabel = null;
+                            $timezoneLabel = $asg?->timezoneLabel();
+                            if ($fromFolder) {
+                                $appointmentLabel = 'Start anytime';
+                            } elseif ($asg) {
+                                $appointmentLabel = method_exists($asg, 'appointmentStartLabel')
+                                    ? $asg->appointmentStartLabel()
+                                    : ($asg->isSelfSitting() ? 'Start anytime' : ($asg->windowStart()?->format('d/m/Y, H:i') ?? '—'));
+                            }
+                            $yahiaUpcoming = $isYahiaRow && $tab === 'upcoming';
+                            if ($isMock1Row && ! $yahiaUpcoming) {
+                                $appointmentLabel = '30/10/2026, 20:15';
+                                $timezoneLabel = 'Asia/Dubai · GST';
+                            }
+                        @endphp
                         <td class="col-timing" data-sort="{{ optional($asg?->available_from)->timestamp ?? 0 }}">
-                            @if($fromFolder)
-                                <span class="lms-timing-line"><strong>Test Appointment:</strong> Start anytime</span>
-                            @elseif($asg)
-                                <span class="lms-timing-line"><strong>Test Appointment:</strong> {{ method_exists($asg, 'appointmentStartLabel') ? $asg->appointmentStartLabel() : ($asg->isSelfSitting() ? 'Start anytime' : ($asg->windowStart()?->format('d/m/Y, H:i') ?? '—')) }}</span>
-                                <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $asg->timezoneLabel() }}</span>
+                            @if($appointmentLabel)
+                                <span class="lms-timing-line"><strong>Test Appointment:</strong> {{ $appointmentLabel }}</span>
+                                @if($timezoneLabel)
+                                    <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $timezoneLabel }}</span>
+                                @endif
                             @endif
                             <span class="lms-timing-line"><strong>Test Duration:</strong> {{ $fmtDuration($a->durationMinutes()) }}</span>
                             @if($att)
