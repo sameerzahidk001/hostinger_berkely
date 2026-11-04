@@ -237,6 +237,7 @@
                                                             class="btn btn-warning btn-xs" title="Fee Update in Page">
                                                             <i class="fa fa-money"></i> Fee
                                                         </a>
+                                                        @if(Route::has('pages.duplicate'))
                                                         <form action="{{ route('pages.duplicate', $page->id) }}" method="POST">
                                                             @csrf
                                                             <button type="submit" class="btn btn-primary btn-xs"
@@ -245,6 +246,7 @@
                                                                 <i class="fa fa-copy"></i> Duplicate
                                                             </button>
                                                         </form>
+                                                        @endif
                                                     </div>
                                                 </div>
                                             </td>
