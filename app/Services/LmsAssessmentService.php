@@ -378,14 +378,26 @@ class LmsAssessmentService
     }
 
     /**
-     * Student My Tests: one SCS Mock 1 and one Mock 2, same assignment IDs as Assigned Tests.
-     * Named person sittings win; class seed is not used for Yahia Mock 1; original id wins ties.
+     * Student My Tests: one SCS Mock 1 and one Mock 2.
+     * Use the named person assignment (same BEXT id as Assigned Tests), never a later copy.
      */
     protected function collapseStudentScsSittings(User $user, Collection $out, array $attemptAsgIds = []): Collection
     {
         $best = [];
         $other = collect();
         $uid = (int) $user->id;
+        $namedKeys = [];
+        foreach ($out as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+            $assessment = $row['assessment'] ?? null;
+            $asg = $row['assignment'] ?? null;
+            $key = $this->scsAssignedMockKey($assessment);
+            if ($key && $asg && (int) ($asg->student_id ?? 0) === $uid) {
+                $namedKeys[$key] = true;
+            }
+        }
         foreach ($out as $row) {
             if (! is_array($row)) {
                 continue;
@@ -395,57 +407,102 @@ class LmsAssessmentService
                 $other->push($row);
                 continue;
             }
-            $title = mb_strtolower(trim((string) ($assessment->title ?? '')));
-            $isScs = str_contains($title, 'scs')
-                && str_contains($title, 'mock')
-                && ! str_contains($title, 'mcs')
-                && ! str_contains($title, 'masterclass');
-            if (! $isScs) {
+            $key = $this->scsAssignedMockKey($assessment);
+            if (! $key) {
                 $other->push($row);
-                continue;
-            }
-            if (! $this->isCimaScsAssignedMock($assessment)) {
                 continue;
             }
             $asg = $row['assignment'] ?? null;
             $asgId = (int) ($asg->id ?? 0);
             $named = $asg && (int) ($asg->student_id ?? 0) === $uid;
-            $onAttempt = $asgId > 0 && in_array($asgId, $attemptAsgIds, true);
-            if ($this->isYahiaUser($user) && $this->isCimaScsMock1($assessment) && ! $named && ! $onAttempt) {
+            if (! empty($namedKeys[$key]) && ! $named) {
                 continue;
             }
             if ($this->isMock1CopiedNovemberSitting($asg, $assessment)) {
                 continue;
             }
-            $mockNo = 'x';
-            if (preg_match('/mock\s*(\d+)/', $title, $m)) {
-                $mockNo = (string) $m[1];
-            }
-            $key = 'scs:mock' . $mockNo;
             $score = $this->studentScsSittingScore($user, $row, $attemptAsgIds);
             $prev = $best[$key] ?? null;
             $prevScore = is_array($prev) ? (int) ($prev['_score'] ?? 0) : 0;
-            $prevId = is_array($prev) ? (int) ($prev['assignment']->id ?? 0) : PHP_INT_MAX;
+            $prevId = is_array($prev) ? (int) ($prev['assignment']->id ?? 0) : 0;
             $better = ! isset($best[$key])
                 || $score > $prevScore
-                || ($score === $prevScore && $asgId > 0 && $asgId < $prevId);
+                || ($score === $prevScore && $asgId > $prevId);
             if ($better) {
                 $row['_score'] = $score;
                 $best[$key] = $row;
             }
         }
 
-        return $other->concat(collect($best)->filter(fn ($row) => is_array($row))->map(function ($row) use ($user) {
+        return $other->concat(collect($best)->filter(fn ($row) => is_array($row))->map(function ($row) use ($user, $attemptAsgIds) {
             unset($row['_score']);
-            $assessment = $row['assessment'] ?? null;
-            $asg = $row['assignment'] ?? null;
-            $fromDb = $this->scsMock1AssignmentFromDatabase($assessment, $user, $asg);
-            if ($fromDb) {
-                $row['assignment'] = $fromDb;
+            $pinned = $this->adminMatchingPersonSitting($user, $row['assessment'] ?? null, $attemptAsgIds);
+            if ($pinned) {
+                $row['assignment'] = $pinned;
             }
 
             return $row;
         }))->values();
+    }
+
+    protected function scsAssignedMockKey($assessment): ?string
+    {
+        if (! $this->isCimaScsAssignedMock($assessment)) {
+            return null;
+        }
+        $title = mb_strtolower(trim((string) ($assessment->title ?? '')));
+        if (! preg_match('/mock\s*(\d+)/', $title, $m)) {
+            return null;
+        }
+
+        return 'scs:mock' . $m[1];
+    }
+
+    /** Named sitting this student was assigned — same appointment id Admin Assigned Tests uses. */
+    public function adminMatchingPersonSitting(User $user, $assessment, array $attemptAsgIds = []): ?LmsAssessmentAssignment
+    {
+        $uid = (int) $user->id;
+        $want = $this->scsAssignedMockKey($assessment);
+        if ($uid <= 0 || ! $want) {
+            return null;
+        }
+        try {
+            $aids = LmsAssessment::query()->get(['id', 'title'])
+                ->filter(fn ($row) => $this->scsAssignedMockKey($row) === $want)
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->filter()
+                ->values()
+                ->all();
+            if ($aids === []) {
+                return null;
+            }
+            $rows = LmsAssessmentAssignment::query()
+                ->with('marker')
+                ->whereIn('assessment_id', $aids)
+                ->where('student_id', $uid)
+                ->orderByDesc('id')
+                ->get();
+        } catch (\Throwable $e) {
+            return null;
+        }
+        $best = null;
+        $bestScore = null;
+        foreach ($rows as $asg) {
+            if ($this->isMock1CopiedNovemberSitting($asg, $assessment)) {
+                continue;
+            }
+            $score = $this->studentScsSittingScore($user, ['assignment' => $asg, 'assessment' => $assessment], $attemptAsgIds);
+            $asgId = (int) ($asg->id ?? 0);
+            if ($best === null
+                || $score > $bestScore
+                || ($score === $bestScore && $asgId > (int) ($best->id ?? 0))) {
+                $best = $asg;
+                $bestScore = $score;
+            }
+        }
+
+        return $best;
     }
 
     protected function studentScsSittingScore(User $user, array $row, array $attemptAsgIds = []): int
