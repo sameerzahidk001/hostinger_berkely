@@ -49,18 +49,17 @@
         white-space: normal;
         overflow: visible;
     }
-    .lms-assigned-table .col-appt { width: 8%; }
+    .lms-assigned-table .col-taker { width: 16%; }
     .lms-assigned-table .col-when { width: 13%; font-weight: 700; }
     .lms-assigned-table .col-when .lms-timing-line { display: block; line-height: 1.35; }
-    .lms-assigned-table .col-assessor { width: 11%; font-weight: 700; }
-    .lms-assigned-table .col-test { width: 14%; }
-    .lms-assigned-table .col-taker { width: 13%; }
-    .lms-assigned-table .col-timing { width: 15%; }
-    .lms-assigned-table .col-created { width: 7%; }
-    .lms-assigned-table .col-status { width: 7%; }
-    .lms-assigned-table .col-pub { width: 3%; }
+    .lms-assigned-table .col-test { width: 16%; }
+    .lms-assigned-table .col-timing { width: 8%; }
+    .lms-assigned-table .col-assessor { width: 12%; font-weight: 700; }
+    .lms-assigned-table .col-created { width: 8%; }
+    .lms-assigned-table .col-status { width: 9%; }
+    .lms-assigned-table .col-pub { width: 5%; }
     .lms-assigned-table .col-actions {
-        width: 8%;
+        width: 13%;
         overflow-wrap: normal;
         word-break: normal;
         white-space: normal;
@@ -262,15 +261,14 @@
             <table class="table table-striped table-bordered lms-assigned-table js-sortable-table">
                 <thead>
                     <tr>
-                        <th class="col-appt" data-sort-col="0">Appointment ID <span class="sort-ind"></span></th>
+                        <th class="col-taker" data-sort-col="0">Test Taker <span class="sort-ind"></span></th>
                         <th class="col-when" data-sort-col="1">Appointment Date &amp; Time <span class="sort-ind"></span></th>
-                        <th class="col-assessor" data-sort-col="2">Assessor <span class="sort-ind"></span></th>
-                        <th class="col-test" data-sort-col="3">Test Details <span class="sort-ind"></span></th>
-                        <th class="col-taker" data-sort-col="4">Test Taker <span class="sort-ind"></span></th>
-                        <th class="col-timing" data-sort-col="5">Test Time Details <span class="sort-ind"></span></th>
-                        <th class="col-created" data-sort-col="6">Created by <span class="sort-ind"></span></th>
-                        <th class="col-status" data-sort-col="7">Status <span class="sort-ind"></span></th>
-                        <th class="col-pub" data-sort-col="8">Published <span class="sort-ind"></span></th>
+                        <th class="col-test" data-sort-col="2">Test Name <span class="sort-ind"></span></th>
+                        <th class="col-timing" data-sort-col="3">Test Duration <span class="sort-ind"></span></th>
+                        <th class="col-assessor" data-sort-col="4">Assessor <span class="sort-ind"></span></th>
+                        <th class="col-created" data-sort-col="5">Created by <span class="sort-ind"></span></th>
+                        <th class="col-status" data-sort-col="6">Status <span class="sort-ind"></span></th>
+                        <th class="col-pub" data-sort-col="7">Published <span class="sort-ind"></span></th>
                         <th class="col-actions">Action</th>
                     </tr>
                 </thead>
@@ -412,23 +410,6 @@
                         @endphp
                         @if($assessment)
                         <tr>
-                            <td class="col-appt" data-sort="{{ $assignment->id ?? 0 }}"><strong>{{ $apptId }}</strong></td>
-                            <td class="col-when" data-sort="{{ $appointment }}">
-                                <span class="lms-timing-line">{{ $appointment }}</span><br>
-                                <span class="lms-timing-line text-muted">{{ $timezoneLabel }}</span>
-                            </td>
-                            <td class="col-assessor" data-sort="{{ $assessorName }}">
-                                @if($assessorUserId)
-                                    <a href="#" class="lms-user-preview" data-user-id="{{ $assessorUserId }}">{{ $assessorName }}</a>
-                                @else
-                                    {{ $assessorName }}
-                                @endif
-                            </td>
-                            <td class="col-test" data-sort="{{ $assessment->title ?? ('Test #'.($assignment->assessment_id ?? '')) }}">
-                                <strong>{{ $assessment->title ?: ('Test #'.$assessment->id) }}</strong>
-                                <br><small class="text-muted"><strong>{{ $assessment->displayCode() }} · {{ $assessment->kindLabel() }} · {{ ($assignment && method_exists($assignment, 'sittingKindLabel')) ? $assignment->sittingKindLabel() : 'Test' }}</strong></small>
-                                <br><small><strong>Attempt {{ $attemptNo }} of {{ $attemptTotal }}</strong></small>
-                            </td>
                             <td class="col-taker" data-sort="{{ $row['student']->name ?? '' }}">
                                 @if(!empty($row['student']->id))
                                     <a href="#" class="lms-user-preview" data-user-id="{{ $row['student']->id }}">{{ $row['student']->name ?? '—' }}</a>
@@ -451,32 +432,23 @@
                                     <br><small>{{ $courseTitle }}</small>
                                 @endif
                             </td>
-                            <td class="col-timing" data-sort="{{ optional($assignment?->available_from)->timestamp ?? 0 }}">
-                                <span class="lms-timing-line"><strong>Test Duration:</strong> {{ $fmtDuration($durationMins) }}</span>
-                                @if($attempt)
-                                    @php
-                                        $startedDisp = $attempt->startedAtForDisplay();
-                                        $endedDisp = $attempt->endedAtForDisplay();
-                                        try {
-                                            $startedTxt = $startedDisp ? $startedDisp->copy()->timezone('Asia/Dubai')->format('d/m/Y, H:i') : '—';
-                                        } catch (\Throwable $e) {
-                                            $startedTxt = optional($startedDisp)->format('d/m/Y, H:i') ?? '—';
-                                        }
-                                        try {
-                                            $endedTxt = $endedDisp ? $endedDisp->copy()->timezone('Asia/Dubai')->format('d/m/Y, H:i') : '—';
-                                        } catch (\Throwable $e) {
-                                            $endedTxt = optional($endedDisp)->format('d/m/Y, H:i') ?? '—';
-                                        }
-                                    @endphp
-                                    <span class="lms-timing-line"><strong>Started:</strong> {{ $startedTxt }}</span>
-                                    <span class="lms-timing-line"><strong>Ended:</strong> {{ $endedTxt }}</span>
-                                    <span class="lms-timing-line"><strong>Time spent:</strong> {{ $spend !== null ? $fmtDuration($spend) : '—' }}</span>
-                                    <span class="lms-timing-line"><strong>Pause duration:</strong> {{ $attempt->pauseDurationLabel() }}</span>
+                            <td class="col-when" data-sort="{{ $appointment }}">
+                                <span class="lms-timing-line">{{ $appointment }}</span><br>
+                                <span class="lms-timing-line text-muted">{{ $timezoneLabel }}</span>
+                            </td>
+                            <td class="col-test" data-sort="{{ $assessment->title ?? ('Test #'.($assignment->assessment_id ?? '')) }}">
+                                <strong>{{ $assessment->title ?: ('Test #'.$assessment->id) }}</strong>
+                                <br><small class="text-muted"><strong>{{ $assessment->displayCode() }} · {{ $assessment->kindLabel() }} · {{ ($assignment && method_exists($assignment, 'sittingKindLabel')) ? $assignment->sittingKindLabel() : 'Test' }}</strong></small>
+                                <br><small><strong>Attempt {{ $attemptNo }} of {{ $attemptTotal }}</strong></small>
+                            </td>
+                            <td class="col-timing" data-sort="{{ (int) $durationMins }}">
+                                {{ $fmtDuration($durationMins) }}
+                            </td>
+                            <td class="col-assessor" data-sort="{{ $assessorName }}">
+                                @if($assessorUserId)
+                                    <a href="#" class="lms-user-preview" data-user-id="{{ $assessorUserId }}">{{ $assessorName }}</a>
                                 @else
-                                    <span class="lms-timing-line"><strong>Started:</strong> —</span>
-                                    <span class="lms-timing-line"><strong>Ended:</strong> —</span>
-                                    <span class="lms-timing-line"><strong>Time spent:</strong> —</span>
-                                    <span class="lms-timing-line"><strong>Pause duration:</strong> —</span>
+                                    {{ $assessorName }}
                                 @endif
                             </td>
                             <td class="col-created" data-sort="{{ $createdBy }}">
@@ -542,7 +514,7 @@
                         </tr>
                         @endif
                     @empty
-                        <tr><td colspan="10" class="text-center text-muted">@if(!empty($resultsView)) No attempts yet for this test. @else No assigned test takers found. @endif</td></tr>
+                        <tr><td colspan="9" class="text-center text-muted">@if(!empty($resultsView)) No attempts yet for this test. @else No assigned test takers found. @endif</td></tr>
                     @endforelse
                 </tbody>
             </table>
