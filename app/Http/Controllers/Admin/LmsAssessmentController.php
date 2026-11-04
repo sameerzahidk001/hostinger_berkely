@@ -235,6 +235,11 @@ class LmsAssessmentController extends Controller
             return redirect()->route('admin.assessments.tests.index')
                 ->with('error', 'This test has assigned sittings. Disable it instead of deleting.');
         }
+        try {
+            LmsAssessmentAssignment::query()->where('assessment_id', (int) $a->id)->delete();
+        } catch (\Throwable $e) {
+            // test row still goes
+        }
         $a->delete();
 
         return redirect()->route('admin.assessments.tests.index')->with('success', 'Test removed.');
@@ -460,29 +465,14 @@ class LmsAssessmentController extends Controller
             'assessment_id' => (int) ($assignment->assessment_id ?? 0) ?: null,
         ]));
         if ($studentId <= 0 && (! empty($assignment->class_batch_id) || empty($assignment->student_id))) {
-            $linked = collect();
-            try {
-                $linked = \App\Models\ClassBatch::studentUserIdsForSitting($assignment);
-            } catch (\Throwable $e) {
-                $linked = collect();
+            $linked = collect($assignment->roster_user_ids ?? [])->map(fn ($id) => (int) $id)->filter()->values();
+            if (! empty($assignment->student_id)) {
+                $linked->push((int) $assignment->student_id);
             }
-            if (method_exists($assignment, 'isSelfSitting') && $assignment->isSelfSitting()) {
-                $linked = collect($assignment->roster_user_ids ?? [])
-                    ->map(fn ($id) => (int) $id)
-                    ->filter()
-                    ->values();
-                if (! empty($assignment->student_id)) {
-                    $linked->push((int) $assignment->student_id);
-                }
-            }
-            if ($linked->isEmpty()) {
-                $code = method_exists($assignment, 'displayCode') ? $assignment->displayCode() : ('BEXT' . (int) $assignment->id);
-                $assignment->delete();
+            $code = method_exists($assignment, 'displayCode') ? $assignment->displayCode() : ('BEXT' . (int) $assignment->id);
+            $assignment->delete();
 
-                return redirect($backUrl)->with('success', 'Removed empty sitting ' . $code . '.');
-            }
-
-            return redirect($backUrl)->with('error', 'Choose the student row to remove. The batch sitting was not deleted.');
+            return redirect($backUrl)->with('success', 'Removed empty sitting ' . $code . '.');
         }
 
         $code = $this->assessments->forgetStudentSitting($assignment, $attempt, $studentId);
@@ -708,7 +698,12 @@ class LmsAssessmentController extends Controller
             }
             $students = $this->expandSittingStudents($students, $assignment, $assessment, $batchStudentCache);
             if ($students->isEmpty()) {
-                continue;
+                $batch = $assignment->relationLoaded('batch') ? $assignment->batch : ClassBatch::query()->find((int) ($assignment->class_batch_id ?? 0));
+                $students = collect([(object) [
+                    'id' => 0,
+                    'name' => $batch ? ($batch->code . ' — ' . $batch->name) : 'No students on this sitting',
+                    'email' => 'Empty sitting — Delete to remove it',
+                ]]);
             }
 
             if ($batchId > 0 && $assignment->student_id) {

@@ -524,7 +524,7 @@
                                 @endif
                                 @if($canAdminSitting && $assignment)
                                     <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.edit-assignment', $assignment->id) }}">Edit</a>
-                                    <form action="{{ route('admin.assessments.tests.destroy-assignment', $assignment->id) }}" method="POST" onsubmit="return confirm('Remove this student from the assigned test?');">
+                                    <form action="{{ route('admin.assessments.tests.destroy-assignment', $assignment->id) }}" method="POST" onsubmit="return confirm({{ $studentId > 0 ? json_encode('Remove this student from the assigned test?') : json_encode('Delete this empty sitting?') }});">
                                         @csrf
                                         <input type="hidden" name="student_id" value="{{ (int) $studentId }}">
                                         @if($attempt)

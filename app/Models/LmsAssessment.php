@@ -508,11 +508,7 @@ class LmsAssessment extends Model
     public function hasAssignedSittings(): bool
     {
         try {
-            if ($this->relationLoaded('assignments')) {
-                if ($this->assignments->isNotEmpty()) {
-                    return true;
-                }
-            } elseif ($this->assignments()->exists()) {
+            if ($this->assignedPeopleCount() > 0) {
                 return true;
             }
         } catch (\Throwable $e) {
