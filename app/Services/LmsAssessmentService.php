@@ -108,6 +108,7 @@ class LmsAssessmentService
                     ->whereNull('sitting_kind')
                     ->update(['sitting_kind' => LmsAssessmentAssignment::KIND_EXAM]);
             }
+            $this->backfillScsMock1ExamAppointment();
             $rows = LmsAssessmentAssignment::query()
                 ->whereNotNull('class_batch_id')
                 ->where('class_batch_id', '>', 0)
@@ -147,6 +148,39 @@ class LmsAssessmentService
                     }
                     $later->save();
                 }
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
+
+    /** SCS Mock 1 exam sittings: 30/10/2026, 20:15 Asia/Dubai. Self tests stay without an appointment. */
+    private function backfillScsMock1ExamAppointment(): void
+    {
+        try {
+            $aids = LmsAssessment::withTrashed()->get(['id', 'title'])
+                ->filter(fn ($row) => $this->isCimaScsMock1($row))
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->filter()
+                ->values();
+            if ($aids->isEmpty()) {
+                return;
+            }
+            $tz = 'Asia/Dubai';
+            $from = \Carbon\Carbon::parse('2026-10-30 20:15:00', $tz)->timezone(config('app.timezone', $tz));
+            $until = \Carbon\Carbon::parse('2026-10-30 20:15:00', $tz)->addMinutes(180)->timezone(config('app.timezone', $tz));
+            $rows = LmsAssessmentAssignment::query()->whereIn('assessment_id', $aids->all())->get();
+            foreach ($rows as $row) {
+                if (method_exists($row, 'isSelfSitting') && $row->isSelfSitting()) {
+                    continue;
+                }
+                $row->available_from = $from;
+                $row->available_until = $until;
+                if (Schema::hasColumn($row->getTable(), 'timezone')) {
+                    $row->timezone = $tz;
+                }
+                $row->save();
             }
         } catch (\Throwable $e) {
             report($e);

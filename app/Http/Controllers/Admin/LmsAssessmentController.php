@@ -3260,6 +3260,12 @@ class LmsAssessmentController extends Controller
         $isCohort = $this->isCimaCohortSitting($assessment, $asg, collect([$row['student'] ?? null]));
         $isMock1 = $assessment && method_exists($this->assessments, 'isCimaScsMock1')
             && $this->assessments->isCimaScsMock1($assessment);
+        $isSelf = $asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting();
+        if ($isMock1 && ! $isSelf && $asg) {
+            $asg->applyMissingExamWindow('2026-10-30 20:15:00', 'Asia/Dubai', 180);
+            $start = '30/10/2026, 20:15';
+            $tz = 'Asia/Dubai · GST';
+        }
         if ($isCohort && ! $isMock1) {
             $apptId = ($apptId && $apptId !== '—' && $apptId !== 'BEXT0') ? $apptId : (($asg && ! empty($asg->id)) ? $asg->displayCodeForStudent($studentId) : $apptId);
             if ($asg && ! $asg->isSelfSitting()) {
@@ -3275,7 +3281,6 @@ class LmsAssessmentController extends Controller
             $created = ($created && $created !== '') ? $created : 'Admin';
         }
         $status = 'Assigned';
-        $isSelf = $asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting();
         if ($isSelf) {
             $start = '—';
             $tz = '—';
