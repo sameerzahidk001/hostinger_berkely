@@ -3938,26 +3938,15 @@ class LmsAssessmentController extends Controller
         return $this->mock1SittingStartCache[$id] = $start;
     }
 
-    /** CIMA SCS/MCS unused rows are Missed as soon as the appointment start has passed (or if no start was stored). */
+    /** Unused sitting: Upcoming until the appointment starts; Missed only after the window ends. Same for every student. */
     protected function unusedSittingStatus($asg, $assessment, bool $isCohort = false, $student = null): string
     {
-        $cima = $assessment && method_exists($this->assessments, 'usesStrictExamWindow')
-            && $this->assessments->usesStrictExamWindow($assessment);
         $start = $asg && method_exists($asg, 'windowStart') ? $asg->windowStart() : null;
-        if ($this->assessments->isYahiaUser($student)
-            && method_exists($this->assessments, 'isMock1YahiaNovemberSitting')
-            && $this->assessments->isMock1YahiaNovemberSitting($asg, $assessment, $student)) {
-            if ($start && now()->gte($start) && $this->sittingWindowHasEnded($asg)) {
-                return 'Missed';
-            }
-
+        if ($asg && method_exists($asg, 'isNotYetOpen') && $asg->isNotYetOpen()) {
             return 'Upcoming';
         }
-        if ($start && now()->lt($start) && $this->assessments->isYahiaUser($student)) {
+        if ($start && now()->lt($start)) {
             return 'Upcoming';
-        }
-        if ($cima || $isCohort) {
-            return 'Missed';
         }
         $openAnytime = $asg && $asg->isSelfSitting() && ! $start;
         if ($openAnytime) {

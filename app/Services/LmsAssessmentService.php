@@ -2589,8 +2589,10 @@ class LmsAssessmentService
                 $strict = $this->usesStrictExamWindow($assessment);
                 if ($start && now()->lt($start)) {
                     $examWindowPassed = false;
+                } elseif ($assignment->isNotYetOpen()) {
+                    $examWindowPassed = false;
                 } elseif ($strict) {
-                    $examWindowPassed = true;
+                    $examWindowPassed = $assignment->isExpired();
                 } elseif (! $assignment->isSelfSitting() && $assignment->isExpired()) {
                     $examWindowPassed = true;
                 }
@@ -2606,19 +2608,10 @@ class LmsAssessmentService
                     'attempt_total' => $max,
                 ]);
             } elseif ($assignment && $assignment->isNotYetOpen()) {
-                if ($this->isYahiaUser($user)) {
-                    $upcoming->push($base + [
-                        'attempt' => null,
-                        'can_retake' => false,
-                    ]);
-                } elseif ($this->usesStrictExamWindow($assessment) && empty($mcs1AlreadyTaken)) {
-                    $missed->push($base + [
-                        'attempt' => null,
-                        'can_retake' => $max > 1 || $this->canRetake($user, $assessment, $assignment),
-                        'attempt_number' => 1,
-                        'attempt_total' => $max,
-                    ]);
-                }
+                $upcoming->push($base + [
+                    'attempt' => null,
+                    'can_retake' => false,
+                ]);
             } else {
                 // Each unused assigned sitting is its own start, even if Max attempts is 1.
                 $available->push($base + [
