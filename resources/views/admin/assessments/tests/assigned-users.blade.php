@@ -405,7 +405,7 @@
                             </td>
                             <td class="col-test" data-sort="{{ $assessment->title ?? ('Test #'.($assignment->assessment_id ?? '')) }}">
                                 <strong>{{ $assessment->title ?: ('Test #'.$assessment->id) }}</strong>
-                                <br><small class="text-muted">{{ $assessment->displayCode() }} · {{ $assessment->kindLabel() }} · {{ ($assignment && $assignment->isSelfSitting()) ? 'Self test' : 'Test' }}</small>
+                                <br><small class="text-muted">{{ $assessment->displayCode() }} · {{ $assessment->kindLabel() }} · {{ ($assignment && $assignment->isSelfSitting()) ? 'Self Test' : 'Test' }}</small>
                                 <br><small><strong>Attempt {{ $attemptNo }} of {{ $attemptTotal }}</strong></small>
                             </td>
                             <td class="col-taker" data-sort="{{ $row['student']->name ?? '' }}">

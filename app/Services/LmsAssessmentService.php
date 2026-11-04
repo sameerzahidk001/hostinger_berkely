@@ -2635,7 +2635,8 @@ class LmsAssessmentService
             }
             if ($assignment && empty($row['from_folder'])
                 && empty($assignment->student_id)
-                && ! empty($assignment->class_batch_id)) {
+                && ! empty($assignment->class_batch_id)
+                && ! ($assignment->isSelfSitting())) {
                 $orig = $this->originalExamSittingFor($assessment);
                 if ($orig && (int) $orig->id !== (int) $assignment->id) {
                     $assignment = $orig;
@@ -2732,10 +2733,12 @@ class LmsAssessmentService
                     }
                     $matched = $matched->fresh();
                 } else {
-                    if (! empty($inProgressShown[$aid])) {
+                    if ($asgId > 0 && ! empty($inProgressShown[$asgId])) {
                         continue;
                     }
-                    $inProgressShown[$aid] = true;
+                    if ($asgId > 0) {
+                        $inProgressShown[$asgId] = true;
+                    }
                     $inProgress->push($base + [
                         'attempt' => $matched,
                         'can_retake' => false,
@@ -2875,8 +2878,11 @@ class LmsAssessmentService
         $collapseOpen = function (Collection $rows) {
             return $rows->groupBy(function ($r) {
                 $from = optional($r['assignment']?->available_from)->timestamp ?? 0;
+                $kind = ($r['assignment'] && method_exists($r['assignment'], 'isSelfSitting') && $r['assignment']->isSelfSitting())
+                    ? 'self'
+                    : 'exam';
 
-                return (int) $r['assessment']->id . ':' . $from;
+                return (int) $r['assessment']->id . ':' . $kind . ':' . $from;
             })->map(function ($group) {
                 $picked = $group->sortBy(fn ($r) => (int) ($r['assignment']->id ?? 0))->first();
                 $picked['attempt_total'] = max(
