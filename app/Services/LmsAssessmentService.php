@@ -109,6 +109,7 @@ class LmsAssessmentService
                     ->update(['sitting_kind' => LmsAssessmentAssignment::KIND_EXAM]);
             }
             $this->backfillScsMock1ExamAppointment();
+            $this->backfillMcsMock1ExamAppointment();
             $rows = LmsAssessmentAssignment::query()
                 ->whereNotNull('class_batch_id')
                 ->where('class_batch_id', '>', 0)
@@ -184,6 +185,71 @@ class LmsAssessmentService
             }
         } catch (\Throwable $e) {
             report($e);
+        }
+    }
+
+    /** MCS Mock 1 class sitting is Test on 26/10/2026, 20:30. Named Self Tests stay Self Test. */
+    private function backfillMcsMock1ExamAppointment(): void
+    {
+        try {
+            $aids = LmsAssessment::withTrashed()->get(['id', 'title'])
+                ->filter(fn ($row) => $this->isCimaMcsMock1($row))
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->filter()
+                ->values();
+            if ($aids->isEmpty()) {
+                return;
+            }
+            $tz = 'Asia/Dubai';
+            $from = \Carbon\Carbon::parse('2026-10-26 20:30:00', $tz)->timezone(config('app.timezone', $tz));
+            $until = \Carbon\Carbon::parse('2026-10-26 20:30:00', $tz)->addMinutes(180)->timezone(config('app.timezone', $tz));
+            $rows = LmsAssessmentAssignment::query()->whereIn('assessment_id', $aids->all())->get();
+            foreach ($rows as $row) {
+                $namedSelf = $row->isSelfSitting() && ! empty($row->student_id) && empty($row->class_batch_id);
+                if ($namedSelf) {
+                    continue;
+                }
+                if (Schema::hasColumn($row->getTable(), 'sitting_kind')) {
+                    $row->sitting_kind = LmsAssessmentAssignment::KIND_EXAM;
+                }
+                $row->available_from = $from;
+                $row->available_until = $until;
+                if (Schema::hasColumn($row->getTable(), 'timezone')) {
+                    $row->timezone = $tz;
+                }
+                $row->save();
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
+
+    /** Same sitting on Admin, instructor, and student: MCS Mock 1 class sitting is Test + 26/10 20:30. */
+    public function alignSittingWithExistingExamRule($asg, $assessment = null): void
+    {
+        if (! $asg) {
+            return;
+        }
+        $assessment = $assessment ?: ($asg->assessment ?? null);
+        if (! $assessment) {
+            return;
+        }
+        if ($asg->isSelfSitting() && ! empty($asg->student_id) && empty($asg->class_batch_id)) {
+            return;
+        }
+        if ($this->isCimaMcsMock1($assessment)) {
+            if (Schema::hasColumn($asg->getTable(), 'sitting_kind')) {
+                $asg->sitting_kind = LmsAssessmentAssignment::KIND_EXAM;
+            }
+            if (method_exists($asg, 'applyMissingExamWindow')) {
+                $asg->applyMissingExamWindow('2026-10-26 20:30:00', 'Asia/Dubai', 180);
+            }
+
+            return;
+        }
+        if ($this->isCimaScsMock1($assessment) && ! $asg->isSelfSitting() && method_exists($asg, 'applyMissingExamWindow')) {
+            $asg->applyMissingExamWindow('2026-10-30 20:15:00', 'Asia/Dubai', 180);
         }
     }
 
@@ -2643,13 +2709,8 @@ class LmsAssessmentService
                 }
             }
             $fromFolder = ! empty($row['from_folder']);
-            if ($this->isCimaCohortEmail($user->email ?? null) && $assignment && ! $fromFolder && ! $this->isCimaScsMock1($assessment)) {
-                if ($assignment->isSelfSitting() && Schema::hasColumn($assignment->getTable(), 'sitting_kind')) {
-                    $assignment->sitting_kind = LmsAssessmentAssignment::KIND_EXAM;
-                }
-                if (method_exists($assignment, 'applyMissingExamWindow')) {
-                    $assignment->applyMissingExamWindow('2026-10-26 20:30:00', 'Asia/Dubai', 180);
-                }
+            if ($assignment && ! $fromFolder) {
+                $this->alignSittingWithExistingExamRule($assignment, $assessment);
             }
             $aid = (int) $assessment->id;
             $asgId = (int) ($assignment?->id ?? 0);
