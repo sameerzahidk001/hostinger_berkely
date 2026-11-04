@@ -315,9 +315,7 @@
                                         $looksBlank = true;
                                     }
                                 }
-                                if ($looksBlank && ! empty($isMock1Row)) {
-                                    $appointment = '30/10/2026, 20:15';
-                                } elseif ($looksBlank) {
+                                if ($looksBlank) {
                                     $appointment = '—';
                                 }
                             }
