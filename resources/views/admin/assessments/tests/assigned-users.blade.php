@@ -73,6 +73,25 @@
         margin: 0 0 4px 0;
         box-sizing: border-box;
     }
+    .page-heading .btn,
+    .lms-filter-actions .btn,
+    .lms-assigned-table .col-actions .btn {
+        font-weight: 700 !important;
+    }
+    .page-heading .btn-default,
+    .lms-filter-actions .btn-default {
+        background: #5bc0de;
+        border-color: #46b8da;
+        color: #fff !important;
+    }
+    .page-heading .btn-default:hover,
+    .page-heading .btn-default:focus,
+    .lms-filter-actions .btn-default:hover,
+    .lms-filter-actions .btn-default:focus {
+        background: #31b0d5;
+        border-color: #269abc;
+        color: #fff !important;
+    }
     .lms-assigned-table .col-actions .btn {
         padding: 4px 10px;
         font-size: 11px;
