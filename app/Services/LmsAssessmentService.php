@@ -142,6 +142,10 @@ class LmsAssessmentService
                     if (isset($attempted[(int) $later->id])) {
                         continue;
                     }
+                    // Keep an edited unused sitting (reschedule) instead of copying the first window back.
+                    if ($later->available_from && (string) $later->available_from !== (string) $first->available_from) {
+                        continue;
+                    }
                     $later->available_from = $first->available_from;
                     $later->available_until = $first->available_until;
                     if (Schema::hasColumn($later->getTable(), 'timezone') && filled($first->timezone)) {
@@ -155,7 +159,7 @@ class LmsAssessmentService
         }
     }
 
-    /** SCS Mock 1 exam sittings: 30/10/2026, 20:15 Asia/Dubai. Self tests stay without an appointment. */
+    /** Fill empty SCS Mock 1 exam windows only. Never overwrite a sitting an admin already saved. */
     private function backfillScsMock1ExamAppointment(): void
     {
         try {
@@ -174,6 +178,9 @@ class LmsAssessmentService
             $rows = LmsAssessmentAssignment::query()->whereIn('assessment_id', $aids->all())->get();
             foreach ($rows as $row) {
                 if (method_exists($row, 'isSelfSitting') && $row->isSelfSitting()) {
+                    continue;
+                }
+                if (method_exists($row, 'windowStart') && $row->windowStart()) {
                     continue;
                 }
                 $row->available_from = $from;
@@ -206,15 +213,23 @@ class LmsAssessmentService
             $until = \Carbon\Carbon::parse('2026-10-26 20:30:00', $tz)->addMinutes(180)->timezone(config('app.timezone', $tz));
             $rows = LmsAssessmentAssignment::query()->whereIn('assessment_id', $aids->all())->get();
             foreach ($rows as $row) {
-                if (Schema::hasColumn($row->getTable(), 'sitting_kind')) {
+                $dirty = false;
+                if (Schema::hasColumn($row->getTable(), 'sitting_kind')
+                    && $row->sitting_kind !== LmsAssessmentAssignment::KIND_EXAM) {
                     $row->sitting_kind = LmsAssessmentAssignment::KIND_EXAM;
+                    $dirty = true;
                 }
-                $row->available_from = $from;
-                $row->available_until = $until;
-                if (Schema::hasColumn($row->getTable(), 'timezone')) {
-                    $row->timezone = $tz;
+                if (! (method_exists($row, 'windowStart') && $row->windowStart())) {
+                    $row->available_from = $from;
+                    $row->available_until = $until;
+                    if (Schema::hasColumn($row->getTable(), 'timezone')) {
+                        $row->timezone = $tz;
+                    }
+                    $dirty = true;
                 }
-                $row->save();
+                if ($dirty) {
+                    $row->save();
+                }
             }
         } catch (\Throwable $e) {
             report($e);
