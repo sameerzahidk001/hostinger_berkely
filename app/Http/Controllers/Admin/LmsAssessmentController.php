@@ -2348,8 +2348,10 @@ class LmsAssessmentController extends Controller
                     $row['sitting_display'] = [
                         'status' => 'Missed',
                         'appt_id' => $seed->displayCodeForStudent($uid),
-                        'appointment' => '30/10/2026, 20:15',
-                        'timezone' => 'Asia/Dubai · GST',
+                        'appointment' => method_exists($seed, 'appointmentStartLabel')
+                            ? $seed->appointmentStartLabel()
+                            : ($seed->windowStart()?->format('d/m/Y, H:i') ?: '—'),
+                        'timezone' => $seed->timezoneLabel() ?: 'Asia/Dubai · GST',
                         'assessor' => 'Admin / course instructors',
                         'batch' => 'BAT-0004',
                         'created_by' => 'Admin',
@@ -3161,13 +3163,15 @@ class LmsAssessmentController extends Controller
             }
             $asg->applyMissingExamWindow('2026-10-26 20:30:00', 'Asia/Dubai', 180);
             $isSelf = false;
-            $start = '26/10/2026, 20:30';
-            $tz = 'Asia/Dubai · GST';
         }
         if ($isMock1 && ! $isSelf && $asg) {
             $asg->applyMissingExamWindow('2026-10-30 20:15:00', 'Asia/Dubai', 180);
-            $start = '30/10/2026, 20:15';
-            $tz = 'Asia/Dubai · GST';
+        }
+        if ($asg && ! $isSelf) {
+            $start = method_exists($asg, 'appointmentStartLabel')
+                ? $asg->appointmentStartLabel()
+                : ($asg->windowStart()?->format('d/m/Y, H:i') ?: $start);
+            $tz = method_exists($asg, 'timezoneLabel') ? ($asg->timezoneLabel() ?: $tz) : $tz;
         }
         if ($isCohort && ! $isMock1) {
             $apptId = ($apptId && $apptId !== '—' && $apptId !== 'BEXT0') ? $apptId : (($asg && ! empty($asg->id)) ? $asg->displayCodeForStudent($studentId) : $apptId);

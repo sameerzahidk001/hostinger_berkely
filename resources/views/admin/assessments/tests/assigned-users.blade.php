@@ -308,11 +308,8 @@
                             $spend = $attempt?->spendMinutes();
                             $appointment = $disp['appointment'] ?? null;
                             $isSelfRow = $assignment && method_exists($assignment, 'isSelfSitting') && $assignment->isSelfSitting();
-                            $isMock1Row = $assessment && (str_contains(mb_strtolower((string) $assessment->title), 'mock 1') && str_contains(mb_strtolower((string) $assessment->title), 'scs'));
                             if ($isSelfRow) {
                                 $appointment = '—';
-                            } elseif (! empty($isMock1Row)) {
-                                $appointment = '30/10/2026, 20:15';
                             } elseif ($appointment === null || $appointment === '' || $appointment === '—'
                                 || $appointment === 'Open (no appointment set)' || $appointment === 'Open'
                                 || $appointment === 'Start anytime' || $appointment === 'Self test — start anytime') {
