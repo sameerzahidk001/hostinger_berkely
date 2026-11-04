@@ -993,6 +993,7 @@ class LmsAssessmentController extends Controller
         if (! $markerOnlyUid) {
             $rowsByKey = $this->collapseUnusedRetakeRows($rowsByKey);
         }
+        $rowsByKey = $this->dedupeAssignedSittingRows($rowsByKey);
         foreach ($rowsByKey as $k => $r) {
             $max = max(1, (int) ($r['assessment']->max_attempts ?? 1));
             $rowsByKey[$k]['attempt_number'] = min($max, max(1, (int) ($r['attempt_number'] ?? 1)));
@@ -1144,7 +1145,11 @@ class LmsAssessmentController extends Controller
                 if (empty($att->id)) {
                     return false;
                 }
-                $haveAttemptIds[(int) $att->id] = true;
+                $id = (int) $att->id;
+                if (isset($haveAttemptIds[$id])) {
+                    return false;
+                }
+                $haveAttemptIds[$id] = true;
 
                 return true;
             })->values();
@@ -1176,6 +1181,8 @@ class LmsAssessmentController extends Controller
             }
             $rows = $rows->values();
         }
+        $rows = $this->dedupeAssignedSittingRows($rows);
+        $rows = $this->renumberCollapsedAttempts($rows);
 
         $statusOptions = [
             'Upcoming' => 'Upcoming',
@@ -3451,6 +3458,78 @@ class LmsAssessmentController extends Controller
         if ($assessment) {
             $asg->setRelation('assessment', $assessment);
         }
+    }
+
+    /**
+     * One line per sitting (assignment + student). The same attempt must not appear twice.
+     * A later Assign again sitting (different BEXT) is kept.
+     */
+    protected function dedupeAssignedSittingRows($rows)
+    {
+        $wasKeyedArray = is_array($rows);
+        $bestBySitting = [];
+        $sittingOfAttempt = [];
+        foreach (collect($rows) as $r) {
+            if (! is_array($r)) {
+                continue;
+            }
+            $uid = (int) ($r['student']->id ?? 0);
+            $asgId = (int) ($r['assignment']->id ?? 0);
+            $attId = (int) ($r['attempt']->id ?? 0);
+            $kind = $this->sittingKindKey($r['assignment'] ?? null);
+            $testKey = $this->cimaScsCollapseKey($r['assessment'] ?? null);
+            $sittingKey = $testKey . ':' . $uid . ':' . $kind . ':' . $asgId;
+            if ($asgId <= 0) {
+                $sittingKey = $testKey . ':' . $uid . ':' . $kind . ':att:' . max(0, $attId);
+            }
+            if (! isset($bestBySitting[$sittingKey]) || $this->sittingRowBeats($r, $bestBySitting[$sittingKey])) {
+                $bestBySitting[$sittingKey] = $r;
+            }
+            if ($attId > 0) {
+                if (! isset($sittingOfAttempt[$attId]) || $this->sittingRowBeats($r, $bestBySitting[$sittingOfAttempt[$attId]] ?? [])) {
+                    $sittingOfAttempt[$attId] = $sittingKey;
+                }
+            }
+        }
+        $usedAttempts = [];
+        $out = [];
+        foreach ($bestBySitting as $sittingKey => $r) {
+            $attId = (int) ($r['attempt']->id ?? 0);
+            if ($attId > 0) {
+                if (isset($usedAttempts[$attId])) {
+                    continue;
+                }
+                if (($sittingOfAttempt[$attId] ?? $sittingKey) !== $sittingKey) {
+                    continue;
+                }
+                $usedAttempts[$attId] = true;
+            }
+            $asgId = (int) ($r['assignment']->id ?? 0);
+            $uid = (int) ($r['student']->id ?? 0);
+            $key = $asgId > 0 ? ($asgId . ':' . $uid) : ('attempt:' . $attId);
+            $out[$key] = $r;
+        }
+        if ($wasKeyedArray) {
+            return $out;
+        }
+
+        return collect(array_values($out));
+    }
+
+    protected function sittingRowBeats(array $candidate, array $current): bool
+    {
+        $cAtt = ! empty($candidate['attempt']);
+        $kAtt = ! empty($current['attempt']);
+        if ($cAtt !== $kAtt) {
+            return $cAtt;
+        }
+        $cId = (int) ($candidate['attempt']->id ?? 0);
+        $kId = (int) ($current['attempt']->id ?? 0);
+        if ($cId !== $kId) {
+            return $cId > $kId;
+        }
+
+        return (int) ($candidate['assignment']->id ?? 0) <= (int) ($current['assignment']->id ?? 0);
     }
 
     /** Keep every exam sitting and every attempt. Only drop extra unused self-test duplicates. */
