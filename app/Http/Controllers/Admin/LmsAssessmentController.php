@@ -544,6 +544,7 @@ class LmsAssessmentController extends Controller
         $kind = trim((string) $request->get('kind', ''));
         $statusFilter = trim((string) $request->get('status', ''));
         $search = trim((string) $request->get('search', ''));
+        $resultsView = $request->query('view') === 'results';
 
         $selectedAssessment = $assessmentId > 0
             ? LmsAssessment::query()->find($assessmentId)
@@ -1136,6 +1137,46 @@ class LmsAssessmentController extends Controller
             $rows = $rows->filter(fn ($r) => $this->assignedRowMatchesSearch($r, $search))->values();
         }
 
+        if ($resultsView) {
+            $haveAttemptIds = [];
+            $rows = $rows->filter(function ($r) use (&$haveAttemptIds) {
+                $att = $r['attempt'] ?? null;
+                if (empty($att->id)) {
+                    return false;
+                }
+                $haveAttemptIds[(int) $att->id] = true;
+
+                return true;
+            })->values();
+            foreach ($allAttempts as $att) {
+                if (isset($haveAttemptIds[(int) ($att->id ?? 0)])) {
+                    continue;
+                }
+                $student = $att->user
+                    ?: ($peopleById->get((int) $att->user_id) ?? User::query()->find($att->user_id));
+                if (! $student) {
+                    continue;
+                }
+                $assessment = $att->assessment
+                    ?: ($assessmentsById->get((int) $att->assessment_id) ?? LmsAssessment::withTrashed()->find($att->assessment_id));
+                if (! $assessment) {
+                    continue;
+                }
+                $asg = $this->assignmentForAttempt($att, $assignments, $assignmentsById);
+                $row = $this->applySittingDisplayToRow([
+                    'assessment' => $assessment,
+                    'student' => $student,
+                    'assignment' => $asg,
+                    'attempt' => $att,
+                    'attempt_number' => 1,
+                    'attempt_total' => max(1, (int) ($assessment->max_attempts ?? 1)),
+                ]);
+                $rows->push($row);
+                $haveAttemptIds[(int) $att->id] = true;
+            }
+            $rows = $rows->values();
+        }
+
         $statusOptions = [
             'Upcoming' => 'Upcoming',
             'Assigned' => 'Assigned',
@@ -1220,6 +1261,7 @@ class LmsAssessmentController extends Controller
             'scsRosterNote' => '',
             'statusCounts' => $statusCounts ?? ['Missed' => 0, 'Upcoming' => 0],
             'selectedAssessment' => $selectedAssessment,
+            'resultsView' => $resultsView,
             'assessments' => $this->uniqueAssessmentsByTitle(
                 $this->assessmentsWithAssignedPeople(
                     $this->uniqueAssessmentsByTitle($assessmentQuery->get(['id', 'title', 'kind']), $loadedAssignments),
@@ -1244,6 +1286,7 @@ class LmsAssessmentController extends Controller
                 'kind' => $kind,
                 'status' => $statusFilter,
                 'search' => $search,
+                'view' => $resultsView ? 'results' : '',
             ],
         ]);
     }
@@ -1252,6 +1295,7 @@ class LmsAssessmentController extends Controller
     {
         $query = array_filter([
             'assessment_id' => (int) $id,
+            'view' => 'results',
             'export' => $request->query('export'),
             'page' => $request->query('page'),
             'status' => $request->query('status'),
@@ -1369,8 +1413,10 @@ class LmsAssessmentController extends Controller
 
         if ($request->boolean('publish')) {
             $this->assessments->publishResults($attempt->fresh(), $request->input('grader_feedback'));
-            return redirect()->route('admin.assessments.tests.assigned-users', ['assessment_id' => $attempt->assessment_id])
-                ->with('success', 'Marks saved and results published to the student.');
+            return redirect()->route('admin.assessments.tests.assigned-users', [
+                'assessment_id' => $attempt->assessment_id,
+                'view' => 'results',
+            ])->with('success', 'Marks saved and results published to the student.');
         }
 
         return back()->with('success', 'Marks saved.');
