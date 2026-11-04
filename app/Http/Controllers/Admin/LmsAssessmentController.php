@@ -3938,7 +3938,7 @@ class LmsAssessmentController extends Controller
         return $this->mock1SittingStartCache[$id] = $start;
     }
 
-    /** Unused sitting: Upcoming until the appointment starts; Missed only after the window ends. Same for every student. */
+    /** Upcoming until start; Missed after start + 30 minutes with no attempt. Same in Admin, instructor, student. */
     protected function unusedSittingStatus($asg, $assessment, bool $isCohort = false, $student = null): string
     {
         $start = $asg && method_exists($asg, 'windowStart') ? $asg->windowStart() : null;
@@ -3952,7 +3952,7 @@ class LmsAssessmentController extends Controller
         if ($openAnytime) {
             return 'Assigned';
         }
-        if ($asg && ($asg->isExpired() || $this->sittingWindowHasEnded($asg))) {
+        if ($asg && method_exists($asg, 'isMissedByStartGrace') && $asg->isMissedByStartGrace()) {
             return 'Missed';
         }
 
