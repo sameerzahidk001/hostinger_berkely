@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.searchable-select-assets')
 @include('admin.assessments.partials.sortable-table-assets')
 @section('content')
-<!-- lms-assigned-tests-20261104h KEEP: filter buttons on search line; Yahia Mock 1/2 only -->
+<!-- lms-assigned-tests-20261104i KEEP: one-line filters; no help text -->
 <style>
     .lms-status-upcoming { color: #3b82f6; font-weight: 700; }
     .lms-status-available { color: #1ab394; font-weight: 700; }
@@ -96,14 +96,37 @@
         flex-wrap: wrap;
     }
     .lms-assigned-pager .lms-page-label { font-weight: 600; color: #333; }
-    .lms-filter-search-line {
+    .lms-filter-bar {
         display: flex;
-        gap: 8px;
-        align-items: center;
         flex-wrap: nowrap;
+        align-items: flex-end;
+        gap: 8px;
+        width: 100%;
     }
-    .lms-filter-search-line .form-control { flex: 1 1 auto; min-width: 0; }
-    .lms-filter-search-line .btn { flex: 0 0 auto; }
+    .lms-filter-bar .lms-filter-field {
+        flex: 1 1 0;
+        min-width: 0;
+        margin-bottom: 0;
+    }
+    .lms-filter-bar .lms-filter-field label {
+        display: block;
+        margin-bottom: 4px;
+        font-weight: 600;
+    }
+    .lms-filter-bar .lms-filter-search {
+        flex: 1.4 1 0;
+    }
+    .lms-filter-bar .lms-filter-actions {
+        flex: 0 0 auto;
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        padding-bottom: 1px;
+    }
+    .lms-filter-bar .form-control {
+        width: 100%;
+        min-width: 0;
+    }
 </style>
 @php
     $fmtDuration = function ($minutes) {
@@ -137,16 +160,10 @@
 <div class="wrapper wrapper-content">
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if(session('error'))<div class="alert alert-danger">{{ session('error') }}</div>@endif
-    <p class="text-muted m-b-sm">
-        All assigned test takers (started or not), including people who never opened the test.
-        <strong>Missed</strong> = they did not start. For CIMA SCS/MCS that is as soon as the appointment start has passed (no wait for duration). Other tests wait until start + duration.
-        Status shows <strong>Marking Required</strong> until the assessor marks a submitted sitting.
-        <span class="text-muted">List 20261104h</span>
-    </p>
     <div class="ibox"><div class="ibox-content">
         <form method="GET" class="m-b-md" style="margin-bottom:15px;">
-            <div class="row">
-                <div class="col-sm-2 form-group">
+            <div class="lms-filter-bar">
+                <div class="lms-filter-field">
                     <label>Assessment</label>
                     <select name="assessment_id" class="form-control lms-searchable" data-placeholder="Type to find assessment">
                         <option value="0">All</option>
@@ -155,7 +172,7 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-sm-2 form-group">
+                <div class="lms-filter-field">
                     <label>Batch</label>
                     <select name="batch_id" class="form-control lms-searchable" data-placeholder="Type to find batch">
                         <option value="0">All</option>
@@ -164,7 +181,7 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-sm-2 form-group">
+                <div class="lms-filter-field">
                     <label>Course</label>
                     <select name="course_id" class="form-control lms-searchable" data-placeholder="Type to find course">
                         <option value="0">All</option>
@@ -173,7 +190,7 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-sm-2 form-group">
+                <div class="lms-filter-field">
                     <label>Type</label>
                     <select name="kind" class="form-control lms-searchable" data-placeholder="Type to find type">
                         <option value="">All</option>
@@ -182,7 +199,7 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-sm-2 form-group">
+                <div class="lms-filter-field">
                     <label>Status</label>
                     <select name="status" class="form-control lms-searchable" data-placeholder="Type to find status">
                         <option value="">All</option>
@@ -191,13 +208,13 @@
                         @endforeach
                     </select>
                 </div>
-                <div class="col-sm-12 form-group">
+                <div class="lms-filter-field lms-filter-search">
                     <label>Search</label>
-                    <div class="lms-filter-search-line">
-                        <input type="text" name="search" class="form-control" value="{{ $filters['search'] ?? '' }}" placeholder="Name, email, test, course…">
-                        <button class="btn btn-primary" type="submit">Filter</button>
-                        <a href="{{ route('admin.assessments.tests.assigned-users') }}" class="btn btn-default">Clear</a>
-                    </div>
+                    <input type="text" name="search" class="form-control" value="{{ $filters['search'] ?? '' }}" placeholder="Name, email, test, course…">
+                </div>
+                <div class="lms-filter-actions">
+                    <button class="btn btn-primary" type="submit">Filter</button>
+                    <a href="{{ route('admin.assessments.tests.assigned-users') }}" class="btn btn-default">Clear</a>
                 </div>
             </div>
         </form>
