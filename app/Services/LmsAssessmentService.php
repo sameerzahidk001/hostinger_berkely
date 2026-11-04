@@ -396,6 +396,11 @@ class LmsAssessmentService
                 $other->push($row);
                 continue;
             }
+            $asg = $row['assignment'] ?? null;
+            if ($asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()) {
+                $other->push($row);
+                continue;
+            }
             $key = $this->scsAssignedMockKey($assessment);
             if (! $key) {
                 $other->push($row);
@@ -469,7 +474,8 @@ class LmsAssessmentService
                     ->whereIn('assessment_id', $aids)
                     ->orderBy('id')
                     ->get()
-                    ->filter(fn ($asg) => ! $this->isMock1CopiedNovemberSitting($asg, $assessment))
+                    ->filter(fn ($asg) => ! $this->isMock1CopiedNovemberSitting($asg, $assessment)
+                        && ! (method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()))
                     ->values();
                 $named = $rows->filter(fn ($asg) => (int) ($asg->student_id ?? 0) === $uid);
                 $pool = $named->isNotEmpty() ? $named : $rows->filter(function ($asg) use ($uid) {
@@ -603,8 +609,70 @@ class LmsAssessmentService
         if (! $this->isCimaScsMock1($assessment)) {
             return false;
         }
+        if ($asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()) {
+            return false;
+        }
 
         return ! $this->isMock1YahiaNovemberSitting($asg, $assessment, $student);
+    }
+
+    /** SCS Mock 1 Test sittings use 30/10/2026 20:15 unless this is Yahia's own Nov sitting. Self tests have no exam start. */
+    public function scsMock1ExamWindowStart($asg, $assessment, $student = null): ?\Carbon\Carbon
+    {
+        if (! $asg || ! $this->isCimaScsMock1($assessment)) {
+            return $asg && method_exists($asg, 'windowStart') ? $asg->windowStart() : null;
+        }
+        if (method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()) {
+            return null;
+        }
+        if ($this->isMock1YahiaNovemberSitting($asg, $assessment, $student)) {
+            return method_exists($asg, 'windowStart') ? $asg->windowStart() : null;
+        }
+        if ($this->usesMock1ClassWindow($asg, $assessment, $student)) {
+            try {
+                return \Carbon\Carbon::createFromFormat('Y-m-d H:i:s', '2026-10-30 20:15:00', 'Asia/Dubai');
+            } catch (\Throwable $e) {
+                return \Carbon\Carbon::parse('2026-10-30 20:15:00', 'Asia/Dubai');
+            }
+        }
+
+        return method_exists($asg, 'windowStart') ? $asg->windowStart() : null;
+    }
+
+    public function sittingAppointmentLabel($asg, $assessment, $student = null): string
+    {
+        if (! $asg) {
+            return '—';
+        }
+        if (method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()) {
+            return 'Start anytime';
+        }
+        $start = $this->scsMock1ExamWindowStart($asg, $assessment, $student);
+        if ($start) {
+            return $start->format('d/m/Y, H:i');
+        }
+
+        return method_exists($asg, 'appointmentStartLabel')
+            ? $asg->appointmentStartLabel()
+            : '—';
+    }
+
+    /** Upcoming / Missed / Assigned for an unused exam sitting. Self test stays Assigned. */
+    public function unusedExamBucket($asg, $assessment, $student = null): string
+    {
+        if (! $asg || (method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting())) {
+            return 'assigned';
+        }
+        $start = $this->scsMock1ExamWindowStart($asg, $assessment, $student)
+            ?: (method_exists($asg, 'windowStart') ? $asg->windowStart() : null);
+        if ($start && now()->lt($start)) {
+            return 'upcoming';
+        }
+        if ($start && now()->gte($start->copy()->addMinutes(30))) {
+            return 'missed';
+        }
+
+        return 'assigned';
     }
 
     /** Sitting this student is on (direct or batch), so Missed/Available can show BEXT. */
@@ -965,6 +1033,9 @@ class LmsAssessmentService
     /** Mock 1/2 appointment from the canonical sitting for this student. */
     public function scsMock1AssignmentFromDatabase($assessment, $student = null, $current = null)
     {
+        if ($current && method_exists($current, 'isSelfSitting') && $current->isSelfSitting()) {
+            return $current;
+        }
         if ($student && $this->isCimaScsAssignedMock($assessment)) {
             $canonical = $this->canonicalSittingForStudent($student, $assessment);
             if ($canonical) {
@@ -2447,11 +2518,9 @@ class LmsAssessmentService
             if (! $assignment || empty($assignment->id)) {
                 $assignment = $this->resolveAssignmentForUser($user, $assessment);
             }
-            if ($assignment && $this->isCimaScsAssignedMock($assessment)) {
+            $keepSelf = $assignment && method_exists($assignment, 'isSelfSitting') && $assignment->isSelfSitting();
+            if (! $keepSelf && $assignment && $this->isCimaScsAssignedMock($assessment)) {
                 $assignment = $this->canonicalSittingForStudent($user, $assessment) ?: $assignment;
-            }
-            if ($assignment && $this->isMock1CopiedNovemberSitting($assignment, $assessment)) {
-                continue;
             }
             $fromFolder = ! empty($row['from_folder']);
             if ($this->isCimaCohortEmail($user->email ?? null) && $assignment && ! $fromFolder && ! $this->isCimaScsMock1($assessment)) {
@@ -2588,14 +2657,15 @@ class LmsAssessmentService
                 continue;
             }
 
+            $unusedBucket = $this->unusedExamBucket($assignment, $assessment, $user);
             // Disabled tests: keep taken/missed history, but never offer a new start.
             if (! $assessment->isPublished()) {
-                if ($assignment && $assignment->isNotYetOpen()) {
+                if ($unusedBucket === 'upcoming') {
                     $upcoming->push($base + [
                         'attempt' => null,
                         'can_retake' => false,
                     ]);
-                } elseif ($assignment && method_exists($assignment, 'isMissedByStartGrace') && $assignment->isMissedByStartGrace() && empty($mcs1AlreadyTaken)) {
+                } elseif ($unusedBucket === 'missed' && empty($mcs1AlreadyTaken)) {
                     $missed->push($base + [
                         'attempt' => null,
                         'can_retake' => $max > 1 || $this->canRetake($user, $assessment, $assignment),
@@ -2604,14 +2674,12 @@ class LmsAssessmentService
                 continue;
             }
 
-            $examWindowPassed = $assignment && method_exists($assignment, 'isMissedByStartGrace')
-                && $assignment->isMissedByStartGrace();
-            if ($assignment && $assignment->isNotYetOpen()) {
+            if ($unusedBucket === 'upcoming') {
                 $upcoming->push($base + [
                     'attempt' => null,
                     'can_retake' => false,
                 ]);
-            } elseif ($examWindowPassed && empty($mcs1AlreadyTaken)) {
+            } elseif ($unusedBucket === 'missed' && empty($mcs1AlreadyTaken)) {
                 $missed->push($base + [
                     'attempt' => null,
                     'can_retake' => $max > 1 || $this->canRetake($user, $assessment, $assignment),

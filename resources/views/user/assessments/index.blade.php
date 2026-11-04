@@ -308,7 +308,13 @@
                             @if($fromFolder)
                                 <span class="lms-timing-line"><strong>Test Appointment:</strong> Start anytime</span>
                             @elseif($asg)
-                                <span class="lms-timing-line"><strong>Test Appointment:</strong> {{ method_exists($asg, 'appointmentStartLabel') ? $asg->appointmentStartLabel() : ($asg->isSelfSitting() ? 'Start anytime' : ($asg->windowStart()?->format('d/m/Y, H:i') ?? '—')) }}</span>
+                                @php
+                                    $svc = app(\App\Services\LmsAssessmentService::class);
+                                    $apptLabel = method_exists($svc, 'sittingAppointmentLabel')
+                                        ? $svc->sittingAppointmentLabel($asg, $a, auth()->user())
+                                        : ($asg->isSelfSitting() ? 'Start anytime' : ($asg->appointmentStartLabel() ?? '—'));
+                                @endphp
+                                <span class="lms-timing-line"><strong>Test Appointment:</strong> {{ $apptLabel }}</span>
                                 <span class="lms-timing-line text-muted"><strong>Timezone:</strong> {{ $asg->timezoneLabel() }}</span>
                             @endif
                             <span class="lms-timing-line"><strong>Test Duration:</strong> {{ $fmtDuration($a->durationMinutes()) }}</span>
