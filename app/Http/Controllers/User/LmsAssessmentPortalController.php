@@ -49,7 +49,7 @@ class LmsAssessmentPortalController extends Controller
             $general = $this->assessments->bucketForUser($user, LmsAssessment::KIND_GENERAL);
             foreach (['available', 'upcoming', 'inProgress', 'submitted', 'results', 'missed'] as $key) {
                 $buckets[$key] = $buckets[$key]->merge($general[$key])->unique(
-                    fn ($row) => (int) $row['assessment']->id . ':' . (int) ($row['assignment']->id ?? 0)
+                    fn ($row) => (int) data_get($row, 'assessment.id') . ':' . (int) data_get($row, 'assignment.id')
                 );
             }
         }
