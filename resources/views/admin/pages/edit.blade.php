@@ -111,6 +111,11 @@
             </div>
         </div>
     </div>
+    @if(Route::has('pages.duplicate'))
+    <form id="page-duplicate-form" action="{{ route('pages.duplicate', $page->id) }}" method="POST" style="display:none;">
+        @csrf
+    </form>
+    @endif
     <form action="{{ route('pages.update.post', $page->id) }}" method="POST" enctype="multipart/form-data">
         @csrf
         <input type="hidden" name="sections_submitted" value="1">
@@ -128,6 +133,12 @@
                                     <a href="{{ route('admin.pages.fees.edit', $page->id) }}" class="btn btn-warning btn-sm">
                                         <i class="fa fa-money"></i> Fee Update in Page
                                     </a>
+                                    @if(Route::has('pages.duplicate'))
+                                    <button type="button" class="btn btn-info btn-sm"
+                                       onclick="if(confirm('Duplicate this page as a draft? Original stays unchanged.')){ document.getElementById('page-duplicate-form').submit(); }">
+                                        <i class="fa fa-copy"></i> Duplicate Page
+                                    </button>
+                                    @endif
                                 </div>
                             </div>
                             <div class="row">

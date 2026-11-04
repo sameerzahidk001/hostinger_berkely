@@ -34,6 +34,7 @@
                     <i class="fa fa-external-link"></i> Visit Page
                 </a>
             @endif
+            @if(Route::has('course.duplicate'))
             <form action="{{ route('course.duplicate', $course->id) }}" method="POST" style="display:inline;">
                 @csrf
                 <button type="submit" class="btn btn-info btn-sm"
@@ -41,6 +42,7 @@
                     <i class="fa fa-copy"></i> Duplicate
                 </button>
             </form>
+            @endif
         </div>
     </div>
 

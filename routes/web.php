@@ -468,6 +468,7 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
                 Route::post('course-faq-update', 'courseFAQUpdate')->name('course.module-update-faq');
                 Route::get('{id}/show', 'show')->name('course.show');
                 Route::post('store', 'store')->name('course.store');
+                Route::post('{id}/duplicate', 'duplicate')->name('course.duplicate');
                 Route::delete('/{id}/delete', 'delete')->name('course.delete');
 
                 Route::POST('/add-course-syllabus', 'addCourseSyllabus');
@@ -599,6 +600,7 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
         Route::delete('pages/fees/packages/{id}', [PageFeeController::class, 'destroyPackage'])->name('admin.pages.fees.packages.destroy');
         // Some hosts/WAFs block method spoofing to PUT/PATCH; allow a POST update endpoint too.
         Route::post('pages/{id}/update', [PagesController::class, 'update'])->name('pages.update.post');
+        Route::post('pages/{id}/duplicate', [PagesController::class, 'duplicate'])->name('pages.duplicate');
         Route::post('user/{id}/update', [UserController::class, 'update'])->name('users.update.post');
         Route::resource('pages', PagesController::class);
         Route::resource('learner-stories', LearnerStoryController::class);

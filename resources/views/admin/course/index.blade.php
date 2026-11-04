@@ -269,6 +269,7 @@
                                                             'action' => route('course.delete', $data->id),
                                                         ])
                                                     </div>
+                                                    @if(Route::has('course.duplicate'))
                                                     <form action="{{ route('course.duplicate', $data->id) }}" method="POST" class="table-action-stack-extra">
                                                         @csrf
                                                         <button type="submit" class="btn btn-primary btn-xs"
@@ -277,6 +278,7 @@
                                                             <i class="fa fa-copy"></i> Duplicate
                                                         </button>
                                                     </form>
+                                                    @endif
                                                 </div>
                                             </td>
 
