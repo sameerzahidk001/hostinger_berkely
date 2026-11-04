@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.sortable-table-assets')
 @php $lmsUserPreviewUrlTpl = route('user.assessments.user-preview', ['userId' => '__ID__']); @endphp
 @section('content')
-<!-- lms-my-tests-20261104p KEEP: same sitting + same assessor rule on My Tests -->
+<!-- lms-my-tests-20261104q KEEP: code · type · Test|Self Test on every My Tests row -->
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
         <h2>{{ $section === 'mocks' ? 'Mock Test' : ($section === 'skill' ? 'Skill Test' : 'My Tests') }}</h2>
@@ -280,6 +280,9 @@
                         );
                         $statusSort = $att ? $att->statusLabel() : ($tab === 'missed' ? 'Missed' : ($tab === 'upcoming' ? 'Upcoming' : 'Available'));
                         $fromFolder = ! empty($row['from_folder']);
+                        $sittingKind = $fromFolder
+                            ? 'Folder test'
+                            : (($asg && method_exists($asg, 'sittingKindLabel')) ? $asg->sittingKindLabel() : 'Test');
                         $startParams = ['id' => $a->id];
                         if ($fromFolder && ! empty($row['folder_id'])) {
                             $startParams['folder'] = $row['folder_id'];
@@ -291,7 +294,7 @@
                         <td class="col-appt" data-sort="{{ $asg->id ?? 0 }}" style="white-space:nowrap;"><strong>{{ $apptId }}</strong></td>
                         <td class="col-title" data-sort="{{ $a->title }}">
                             {{ $a->title }}
-                            <br><small class="text-muted">{{ $a->displayCode() }} · {{ $a->kindLabel() }}@if($fromFolder) · Folder test@else · {{ ($asg && $asg->isSelfSitting()) ? 'Self Test' : 'Test' }}@endif</small>
+                            <br><small class="text-muted"><strong>{{ $a->displayCode() }} · {{ $a->kindLabel() }} · {{ $sittingKind }}</strong></small>
                             <br><small><strong>Attempt {{ $attemptNo }} of {{ $attemptTotal }}</strong></small>
                             @if($course)
                                 <br><small>
