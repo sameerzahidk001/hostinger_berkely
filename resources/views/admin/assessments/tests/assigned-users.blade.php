@@ -288,8 +288,11 @@
                             }
                             $spend = $attempt?->spendMinutes();
                             $appointment = $disp['appointment'] ?? null;
+                            $isSelfRow = $assignment && method_exists($assignment, 'isSelfSitting') && $assignment->isSelfSitting();
                             $isMock1Row = $assessment && (str_contains(mb_strtolower((string) $assessment->title), 'mock 1') && str_contains(mb_strtolower((string) $assessment->title), 'scs'));
-                            if ($appointment === null || $appointment === '' || $appointment === '—'
+                            if ($isSelfRow) {
+                                $appointment = 'Start anytime';
+                            } elseif ($appointment === null || $appointment === '' || $appointment === '—'
                                 || $appointment === 'Open (no appointment set)' || $appointment === 'Open'
                                 || $appointment === 'Start anytime' || $appointment === 'Self test — start anytime') {
                                 $appointment = $assignment && method_exists($assignment, 'appointmentStartLabel')
