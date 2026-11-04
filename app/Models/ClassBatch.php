@@ -171,8 +171,12 @@ class ClassBatch extends Model
         if ($batchId <= 0) {
             return $ids;
         }
+        $atAssign = static::membersOnBatchAtAssignment($batchId, $assignment);
+        if ($atAssign->isNotEmpty()) {
+            return $atAssign;
+        }
 
-        return static::membersOnBatchAtAssignment($batchId, $assignment);
+        return static::studentUserIdsFor($batchId);
     }
 
     /** Batch members already on the roster when this sitting was assigned. Late joiners stay out. */
@@ -205,7 +209,9 @@ class ClassBatch extends Model
                 }
             }
             if ($dated > 0) {
-                return $kept->unique()->values();
+                $kept = $kept->unique()->values();
+
+                return $kept->isNotEmpty() ? $kept : $live;
             }
         } catch (\Throwable $e) {
             return $live;
