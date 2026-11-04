@@ -3,7 +3,7 @@
 @include('admin.assessments.partials.sortable-table-assets')
 @php $lmsUserPreviewUrlTpl = route('user.assessments.user-preview', ['userId' => '__ID__']); @endphp
 @section('content')
-<!-- lms-my-tests-20261104k KEEP: same appointment ID as Assigned Tests, no painted Mock 1/2 -->
+<!-- lms-my-tests-20261104m KEEP: My Tests appointment id = named sitting Admin shows -->
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-10">
         <h2>{{ $section === 'mocks' ? 'Mock Test' : ($section === 'skill' ? 'Skill Test' : 'My Tests') }}</h2>
