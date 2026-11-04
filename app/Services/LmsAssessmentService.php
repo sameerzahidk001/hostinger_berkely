@@ -77,6 +77,7 @@ class LmsAssessmentService
         $ok = LmsAssessmentSchema::ensure();
         StudyMaterialFolder::ensureFolderAssessmentsTable();
         $this->restorePublishedAssignedTests();
+        $this->backfillAssignmentCriteria();
 
         return $ok;
     }
@@ -85,6 +86,71 @@ class LmsAssessmentService
     private function restorePublishedAssignedTests(): void
     {
         return;
+    }
+
+    /**
+     * Old sittings must match today's assign rules: sitting_kind set, later unused
+     * batch copies keep the original exam window. Not Mock-1-only.
+     */
+    private function backfillAssignmentCriteria(): void
+    {
+        static $done = false;
+        if ($done) {
+            return;
+        }
+        $done = true;
+        try {
+            if (! Schema::hasTable('lms_assessment_assignments')) {
+                return;
+            }
+            if (Schema::hasColumn('lms_assessment_assignments', 'sitting_kind')) {
+                DB::table('lms_assessment_assignments')
+                    ->whereNull('sitting_kind')
+                    ->update(['sitting_kind' => LmsAssessmentAssignment::KIND_EXAM]);
+            }
+            $rows = LmsAssessmentAssignment::query()
+                ->whereNotNull('class_batch_id')
+                ->where('class_batch_id', '>', 0)
+                ->orderBy('id')
+                ->get()
+                ->groupBy(fn ($a) => (int) $a->assessment_id . ':' . (int) $a->class_batch_id);
+            $attempted = [];
+            if (Schema::hasTable('lms_assessment_attempts')) {
+                $attempted = LmsAssessmentAttempt::query()
+                    ->whereNotNull('assignment_id')
+                    ->select('assignment_id')
+                    ->distinct()
+                    ->pluck('assignment_id')
+                    ->map(fn ($id) => (int) $id)
+                    ->all();
+                $attempted = array_fill_keys($attempted, true);
+            }
+            foreach ($rows as $group) {
+                $exam = $group->filter(fn ($a) => ! (method_exists($a, 'isSelfSitting') && $a->isSelfSitting()))
+                    ->sortBy(fn ($a) => (int) $a->id)
+                    ->values();
+                if ($exam->count() < 2) {
+                    continue;
+                }
+                $first = $exam->first();
+                if (! $first->available_from) {
+                    continue;
+                }
+                foreach ($exam->slice(1) as $later) {
+                    if (isset($attempted[(int) $later->id])) {
+                        continue;
+                    }
+                    $later->available_from = $first->available_from;
+                    $later->available_until = $first->available_until;
+                    if (Schema::hasColumn($later->getTable(), 'timezone') && filled($first->timezone)) {
+                        $later->timezone = $first->timezone;
+                    }
+                    $later->save();
+                }
+            }
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     public function canManageAssessments(): bool
