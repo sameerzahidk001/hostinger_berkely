@@ -461,11 +461,8 @@ class LmsAssessmentService
 
         $assignQuery = LmsAssessmentAssignment::query()
             ->with('marker')
-            ->where(function ($q) use ($userId, $attemptAsgIds, $batchIds) {
+            ->where(function ($q) use ($userId, $batchIds) {
                 $q->where('student_id', $userId);
-                if ($attemptAsgIds !== []) {
-                    $q->orWhereIn('id', $attemptAsgIds);
-                }
                 if (Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
                     $q->orWhereJsonContains('roster_user_ids', $userId)
                         ->orWhereJsonContains('roster_user_ids', (string) $userId);
@@ -476,16 +473,6 @@ class LmsAssessmentService
             })
             ->orderByDesc('id');
         $direct = $assignQuery->get();
-        try {
-            $more = LmsAssessmentAssignment::query()
-                ->with('marker')
-                ->whereNotNull('class_batch_id')
-                ->where('class_batch_id', '>', 0)
-                ->get();
-            $direct = $direct->concat($more)->unique(fn ($row) => (int) $row->id)->values();
-        } catch (\Throwable $e) {
-            // keep the named/roster/batch-pivot matches already loaded
-        }
         $assessmentIds = $direct->pluck('assessment_id')->map(fn ($id) => (int) $id)->unique()->filter()->values()->all();
         $assessmentsById = $assessmentIds === []
             ? collect()
@@ -1031,6 +1018,9 @@ class LmsAssessmentService
         if ($this->studentIsHiddenOnMcs($user, $assessment)) {
             return false;
         }
+        if ($this->studentExcludedFromAssessment($userId, (int) ($assessment->id ?? 0))) {
+            return false;
+        }
         if ($assignment && Schema::hasColumn('lms_assessment_assignments', 'excluded_user_ids')) {
             $excluded = collect($assignment->excluded_user_ids ?? [])->map(fn ($id) => (int) $id);
             if ($excluded->contains($userId)) {
@@ -1058,16 +1048,58 @@ class LmsAssessmentService
     }
 
     /** Imthiyas is hidden on CIMA MCS only — every student My Tests tab. */
-    protected function studentIsHiddenOnMcs(User $user, $assessment): bool
+    protected function studentIsHiddenOnMcs($user, $assessment): bool
     {
-        $name = mb_strtolower(trim((string) ($user->name ?? '')));
-        $email = mb_strtolower(trim((string) ($user->email ?? '')));
-        if (! str_contains($name, 'imthiyas') && ! str_contains($email, 'imthiyas')) {
+        if (! $user || ! $assessment) {
             return false;
         }
-        $hay = mb_strtolower(trim((string) ($assessment->title ?? '') . ' ' . (string) ($assessment->course->title ?? '')));
+        $blob = mb_strtolower(trim(implode(' ', array_filter([
+            (string) ($user->name ?? ''),
+            (string) ($user->email ?? ''),
+            (string) ($user->first_name ?? ''),
+            (string) ($user->last_name ?? ''),
+        ]))));
+        if ($blob === '' || (! str_contains($blob, 'imthiyas') && ! str_contains($blob, 'imthiya'))) {
+            return false;
+        }
+        $hay = mb_strtolower(trim((string) ($assessment->title ?? '')));
+        try {
+            $courseTitle = (string) ($assessment->course->title ?? '');
+            if ($courseTitle !== '') {
+                $hay .= ' ' . mb_strtolower($courseTitle);
+            }
+        } catch (\Throwable $e) {
+            // title is enough
+        }
 
-        return str_contains($hay, 'cima mcs') || str_contains($hay, 'management case') || (bool) preg_match('/\bmcs\b/', $hay);
+        return str_contains($hay, 'cima mcs')
+            || str_contains($hay, 'management case')
+            || (bool) preg_match('/\bmcs\b/', $hay);
+    }
+
+    public function studentExcludedFromAssessment(int $userId, int $assessmentId): bool
+    {
+        if ($userId <= 0 || $assessmentId <= 0) {
+            return false;
+        }
+        try {
+            if (! Schema::hasColumn('lms_assessment_assignments', 'excluded_user_ids')) {
+                return false;
+            }
+            $rows = LmsAssessmentAssignment::query()
+                ->where('assessment_id', $assessmentId)
+                ->get(['excluded_user_ids']);
+            foreach ($rows as $row) {
+                $ex = collect($row->excluded_user_ids ?? [])->map(fn ($id) => (int) $id);
+                if ($ex->contains($userId)) {
+                    return true;
+                }
+            }
+        } catch (\Throwable $e) {
+            return false;
+        }
+
+        return false;
     }
 
     public function isCimaScsAssignedMock($assessment): bool
@@ -1732,6 +1764,9 @@ class LmsAssessmentService
         if (Schema::hasColumn('lms_assessment_attempts', 'assignment_id') && $att->assignment_id) {
             return (int) $att->assignment_id === (int) $asg->id;
         }
+        if ((int) ($att->user_id ?? 0) > 0 && ! $this->assignmentIncludesStudent($asg, (int) $att->user_id)) {
+            return false;
+        }
         if (method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()) {
             if (! $att->started_at) {
                 return false;
@@ -1740,8 +1775,8 @@ class LmsAssessmentService
                 ? $att->started_at->copy()->gte($asg->created_at->copy()->subMinutes(2))
                 : false;
         }
-        if ((int) ($att->assessment_id ?? 0) === (int) ($asg->assessment_id ?? 0)) {
-            return true;
+        if ((int) ($att->assessment_id ?? 0) !== (int) ($asg->assessment_id ?? 0)) {
+            return false;
         }
         if (! $att->started_at) {
             return false;
@@ -2771,6 +2806,9 @@ class LmsAssessmentService
             if ($this->studentIsHiddenOnMcs($user, $assessment)) {
                 continue;
             }
+            if ($this->studentExcludedFromAssessment((int) $user->id, (int) $assessment->id)) {
+                continue;
+            }
             if (in_array((int) $assessment->id, $itemAssessmentIds, true)) {
                 continue;
             }
@@ -2780,6 +2818,8 @@ class LmsAssessmentService
                 if (! $asg || ! $this->assignmentIncludesStudent($asg, (int) $user->id)) {
                     continue;
                 }
+            } else {
+                continue;
             }
             $items->push(['assessment' => $assessment, 'assignment' => $asg]);
             $itemAssessmentIds[] = (int) $assessment->id;
@@ -2900,12 +2940,6 @@ class LmsAssessmentService
                 $matched = $attempts->first(function ($att) use ($assignment, $claimedAttemptIds) {
                     return ! isset($claimedAttemptIds[(int) $att->id])
                         && $this->attemptBelongsToAssignment($att, $assignment);
-                });
-            }
-            if (! $matched && ! $isSelf) {
-                $matched = $attempts->first(function ($att) use ($claimedAttemptIds) {
-                    return ! isset($claimedAttemptIds[(int) $att->id])
-                        && in_array($att->status, ['in_progress', 'submitted', 'graded', 'expired'], true);
                 });
             }
             $attemptNumber = $matched
@@ -3139,6 +3173,42 @@ class LmsAssessmentService
 
             return true;
         })->values();
+
+        $keepRow = function ($r) use ($user) {
+            if (! is_array($r)) {
+                return false;
+            }
+            $assessment = $r['assessment'] ?? null;
+            $assignment = $r['assignment'] ?? null;
+            if (! $assessment) {
+                return false;
+            }
+            if ($this->studentIsHiddenOnMcs($user, $assessment)) {
+                return false;
+            }
+            if ($this->studentExcludedFromAssessment((int) $user->id, (int) $assessment->id)) {
+                return false;
+            }
+            if ($assignment && ! $this->assignmentIncludesStudent($assignment, (int) $user->id)) {
+                return false;
+            }
+            if (! $this->studentShouldSeeSitting($user, $assessment, $assignment, [])) {
+                return false;
+            }
+            $att = $r['attempt'] ?? null;
+            if ($att && ! empty($att->assignment_id) && $assignment
+                && (int) $att->assignment_id !== (int) $assignment->id) {
+                return false;
+            }
+
+            return true;
+        };
+        $available = $available->filter($keepRow)->values();
+        $upcoming = $upcoming->filter($keepRow)->values();
+        $inProgress = $inProgress->filter($keepRow)->values();
+        $submitted = $submitted->filter($keepRow)->values();
+        $results = $results->filter($keepRow)->values();
+        $missed = $missed->filter($keepRow)->values();
 
         return compact('available', 'upcoming', 'inProgress', 'submitted', 'results', 'missed');
     }
