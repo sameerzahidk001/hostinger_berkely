@@ -292,6 +292,16 @@ class LmsAssessmentService
             })
             ->orderByDesc('id');
         $direct = $assignQuery->get();
+        try {
+            $more = LmsAssessmentAssignment::query()
+                ->with('marker')
+                ->whereNotNull('class_batch_id')
+                ->where('class_batch_id', '>', 0)
+                ->get();
+            $direct = $direct->concat($more)->unique(fn ($row) => (int) $row->id)->values();
+        } catch (\Throwable $e) {
+            // keep the named/roster/batch-pivot matches already loaded
+        }
         $assessmentIds = $direct->pluck('assessment_id')->map(fn ($id) => (int) $id)->unique()->filter()->values()->all();
         $assessmentsById = $assessmentIds === []
             ? collect()
@@ -299,28 +309,9 @@ class LmsAssessmentService
 
         $out = collect();
         foreach ($direct as $assignment) {
-            if (Schema::hasColumn('lms_assessment_assignments', 'excluded_user_ids')) {
-                $excluded = collect($assignment->excluded_user_ids ?? [])->map(fn ($id) => (int) $id);
-                if ($excluded->contains($userId)) {
-                    continue;
-                }
-            }
-            if (Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
-                $roster = collect($assignment->roster_user_ids ?? [])->map(fn ($id) => (int) $id)->filter()->values();
-                if ($roster->isNotEmpty()
-                    && (int) ($assignment->student_id ?? 0) !== $userId
-                    && ! $roster->contains($userId)
-                    && ! in_array((int) ($assignment->id ?? 0), $attemptAsgIds, true)) {
-                    continue;
-                }
-            }
-            if (! empty($assignment->class_batch_id)
-                && (int) ($assignment->student_id ?? 0) !== $userId
+            if (! $this->assignmentIncludesStudent($assignment, $userId)
                 && ! in_array((int) ($assignment->id ?? 0), $attemptAsgIds, true)) {
-                $allowed = ClassBatch::studentUserIdsForSitting($assignment);
-                if ($allowed->isNotEmpty() && ! $allowed->contains($userId)) {
-                    continue;
-                }
+                continue;
             }
             $assessment = $assessmentsById->get((int) $assignment->assessment_id);
             if (! $assessment || ! $this->studentShouldSeeSitting($user, $assessment, $assignment, $attemptAsgIds)) {
@@ -388,6 +379,32 @@ class LmsAssessmentService
                 return (int) data_get($row, 'assessment.id') . ':' . (int) data_get($row, 'assignment.id');
             })
             ->values();
+    }
+
+    /** Same people Admin lists on a sitting: named student, roster snapshot, or batch members at assign time. */
+    public function assignmentIncludesStudent($asg, int $userId): bool
+    {
+        if (! $asg || $userId <= 0) {
+            return false;
+        }
+        if ((int) ($asg->student_id ?? 0) === $userId) {
+            return true;
+        }
+        try {
+            if (Schema::hasColumn('lms_assessment_assignments', 'excluded_user_ids')) {
+                $excluded = collect($asg->excluded_user_ids ?? [])->map(fn ($id) => (int) $id);
+                if ($excluded->contains($userId)) {
+                    return false;
+                }
+            }
+        } catch (\Throwable $e) {
+            // fall through to roster/batch
+        }
+        try {
+            return ClassBatch::studentUserIdsForSitting($asg)->contains($userId);
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     public function scsAssignedMockKey($assessment): ?string
@@ -1122,18 +1139,7 @@ class LmsAssessmentService
             if (! $assignment || empty($assignment->id) || in_array((int) $assignment->id, $seenAsg, true)) {
                 continue;
             }
-            $named = (int) ($assignment->student_id ?? 0) === $userId;
-            $onRoster = Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')
-                && collect($assignment->roster_user_ids ?? [])->map(fn ($id) => (int) $id)->contains($userId);
-            $onBatch = false;
-            if (! $named && ! $onRoster && ! empty($assignment->class_batch_id)) {
-                try {
-                    $onBatch = ClassBatch::studentUserIdsForSitting($assignment)->contains($userId);
-                } catch (\Throwable $e) {
-                    $onBatch = false;
-                }
-            }
-            if (! $named && ! $onRoster && ! $onBatch) {
+            if (! $this->assignmentIncludesStudent($assignment, $userId)) {
                 continue;
             }
             $assessment = $assignment->assessment ?: LmsAssessment::query()->with('course')->find($assignment->assessment_id);
