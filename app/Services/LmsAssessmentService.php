@@ -603,9 +603,6 @@ class LmsAssessmentService
         if (! $asg || $userId <= 0) {
             return false;
         }
-        if ((int) ($asg->student_id ?? 0) === $userId) {
-            return true;
-        }
         try {
             if (Schema::hasColumn('lms_assessment_assignments', 'excluded_user_ids')) {
                 $excluded = collect($asg->excluded_user_ids ?? [])->map(fn ($id) => (int) $id);
@@ -614,12 +611,122 @@ class LmsAssessmentService
                 }
             }
         } catch (\Throwable $e) {
-            // fall through to roster/batch
+            // fall through to named/roster/batch
+        }
+        if ((int) ($asg->student_id ?? 0) === $userId) {
+            return true;
         }
         try {
             return ClassBatch::studentUserIdsForSitting($asg)->contains($userId);
         } catch (\Throwable $e) {
             return false;
+        }
+    }
+
+    /**
+     * Remove one person's sitting/attempt so it leaves Admin, instructor Assigned Tests, and student My Tests.
+     * Batch sittings stay for classmates; that student is excluded from the roster.
+     */
+    public function forgetStudentSitting(?LmsAssessmentAssignment $assignment, ?LmsAssessmentAttempt $attempt, int $studentId = 0): string
+    {
+        if ($studentId <= 0) {
+            $studentId = (int) ($attempt->user_id ?? $assignment->student_id ?? 0);
+        }
+        $assessmentId = (int) ($assignment->assessment_id ?? $attempt->assessment_id ?? 0);
+        $assignmentId = (int) ($assignment->id ?? $attempt->assignment_id ?? 0);
+        $code = '—';
+        if ($assignment && $studentId > 0 && method_exists($assignment, 'displayCodeForStudent')) {
+            $code = $assignment->displayCodeForStudent($studentId);
+        } elseif ($assignment) {
+            $code = $assignment->displayCode();
+        }
+
+        $deleteAttempt = function (LmsAssessmentAttempt $att): void {
+            try {
+                $att->answers()->delete();
+            } catch (\Throwable $e) {
+                // attempt row still goes
+            }
+            $att->delete();
+        };
+
+        if ($attempt && $attempt->exists) {
+            $deleteAttempt($attempt);
+        }
+
+        if ($assessmentId > 0 && $studentId > 0) {
+            $rows = LmsAssessmentAttempt::query()
+                ->where('assessment_id', $assessmentId)
+                ->where('user_id', $studentId)
+                ->get();
+            foreach ($rows as $att) {
+                $attAsg = (int) ($att->assignment_id ?? 0);
+                $belongs = false;
+                if ($assignmentId > 0 && ($attAsg === $assignmentId || $attAsg === 0)) {
+                    $belongs = $attAsg === $assignmentId
+                        || ($assignment && $this->attemptBelongsToAssignment($att, $assignment));
+                } elseif ($assignment && $this->attemptBelongsToAssignment($att, $assignment)) {
+                    $belongs = true;
+                } elseif ($assignmentId <= 0) {
+                    $belongs = true;
+                }
+                if ($belongs) {
+                    $deleteAttempt($att);
+                }
+            }
+        }
+
+        if ($assignment && $studentId > 0) {
+            $this->excludeStudentFromAssignment($assignment, $studentId);
+            $named = ! empty($assignment->student_id)
+                && (int) $assignment->student_id === $studentId
+                && empty($assignment->class_batch_id);
+            if ($named && $assignment->exists) {
+                $assignment->delete();
+            }
+        } elseif ($assessmentId > 0 && $studentId > 0) {
+            $named = LmsAssessmentAssignment::query()
+                ->where('assessment_id', $assessmentId)
+                ->where('student_id', $studentId)
+                ->get();
+            foreach ($named as $row) {
+                $this->excludeStudentFromAssignment($row, $studentId);
+                if (empty($row->class_batch_id)) {
+                    $row->delete();
+                }
+            }
+        }
+
+        return $code;
+    }
+
+    public function excludeStudentFromAssignment(LmsAssessmentAssignment $row, int $userId): void
+    {
+        if ($userId <= 0) {
+            return;
+        }
+        try {
+            if (Schema::hasColumn($row->getTable(), 'excluded_user_ids')) {
+                $ex = collect($row->excluded_user_ids ?? [])
+                    ->map(fn ($id) => (int) $id)
+                    ->push($userId)
+                    ->unique()
+                    ->filter()
+                    ->values()
+                    ->all();
+                $row->excluded_user_ids = $ex;
+            }
+            if (Schema::hasColumn($row->getTable(), 'roster_user_ids')) {
+                $roster = collect($row->roster_user_ids ?? [])
+                    ->map(fn ($id) => (int) $id)
+                    ->reject(fn ($id) => $id === $userId)
+                    ->values()
+                    ->all();
+                $row->roster_user_ids = $roster;
+            }
+            $row->save();
+        } catch (\Throwable $e) {
+            report($e);
         }
     }
 
@@ -2668,6 +2775,9 @@ class LmsAssessmentService
             $asg = null;
             if (! empty($att->assignment_id)) {
                 $asg = LmsAssessmentAssignment::query()->find($att->assignment_id);
+            }
+            if ($asg && ! $this->assignmentIncludesStudent($asg, (int) $user->id)) {
+                continue;
             }
             $items->push(['assessment' => $assessment, 'assignment' => $asg]);
             $itemAssessmentIds[] = (int) $assessment->id;

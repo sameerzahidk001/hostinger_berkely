@@ -493,6 +493,37 @@ class LmsAssessment extends Model
         return $this->status === 'published';
     }
 
+    public function isDisabled(): bool
+    {
+        return mb_strtolower(trim((string) $this->status)) === 'disabled';
+    }
+
+    /** True when anyone has a sitting or an attempt, so the test may only be disabled, not deleted. */
+    public function hasAssignedSittings(): bool
+    {
+        if (array_key_exists('assignments_count', $this->attributes)) {
+            if ((int) $this->assignments_count > 0) {
+                return true;
+            }
+        } else {
+            try {
+                if ($this->assignments()->exists()) {
+                    return true;
+                }
+            } catch (\Throwable $e) {
+                // fall through to attempts
+            }
+        }
+        if (array_key_exists('attempts_count', $this->attributes)) {
+            return (int) $this->attempts_count > 0;
+        }
+        try {
+            return Schema::hasTable('lms_assessment_attempts') && $this->attempts()->exists();
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
     public function isMock(): bool
     {
         return $this->kind === self::KIND_MOCK;

@@ -65,7 +65,7 @@ class LmsAssessmentController extends Controller
 
         $kind = trim((string) $request->get('kind', ''));
         $search = trim((string) $request->get('search', ''));
-        $query = LmsAssessment::query()->withCount(['questions', 'attempts'])->orderByDesc('id');
+        $query = LmsAssessment::query()->withCount(['questions', 'attempts', 'assignments'])->orderByDesc('id');
 
         if ($kind !== '' && array_key_exists($kind, LmsAssessment::kinds())) {
             $query->where('kind', $kind);
@@ -231,13 +231,27 @@ class LmsAssessmentController extends Controller
         abort_unless($this->lms->isAdminActor() || panel_sees_all_dashboards(), 403);
         $this->assessments->ensure();
         $a = LmsAssessment::findOrFail($id);
-        if (Schema::hasColumn($a->getTable(), 'status')) {
-            $a->status = 'disabled';
-            $a->save();
+        if ($a->hasAssignedSittings()) {
+            return redirect()->route('admin.assessments.tests.index')
+                ->with('error', 'This test has assigned sittings. Disable it instead of deleting.');
         }
         $a->delete();
 
         return redirect()->route('admin.assessments.tests.index')->with('success', 'Test removed.');
+    }
+
+    public function disable($id)
+    {
+        abort_unless($this->lms->isAdminActor() || panel_sees_all_dashboards(), 403);
+        $this->assessments->ensure();
+        $a = LmsAssessment::findOrFail($id);
+        if (Schema::hasColumn($a->getTable(), 'status')) {
+            $a->status = 'disabled';
+            $a->save();
+        }
+
+        return redirect()->route('admin.assessments.tests.index')
+            ->with('success', 'Test disabled. Existing sittings stay, but it cannot be assigned until it is published again.');
     }
 
     public function assignForm($id)
@@ -245,6 +259,10 @@ class LmsAssessmentController extends Controller
         $this->assessments->ensure();
         $assessment = LmsAssessment::with(['assignments.batch', 'assignments.student', 'assignments.marker', 'course'])->findOrFail($id);
         abort_unless($this->assessments->canManageSittingsFor($assessment), 403);
+        if ($assessment->isDisabled()) {
+            return redirect()->route('admin.assessments.tests.index')
+                ->with('error', 'Disabled tests cannot be assigned.');
+        }
         if (! $assessment->isSkill()) {
             $this->assertInstructorOwnsCourse((int) $assessment->course_id);
         }
@@ -267,6 +285,10 @@ class LmsAssessmentController extends Controller
         $this->assessments->ensure();
         $a = LmsAssessment::findOrFail($id);
         abort_unless($this->assessments->canManageSittingsFor($a), 403);
+        if ($a->isDisabled()) {
+            return redirect()->route('admin.assessments.tests.index')
+                ->with('error', 'Disabled tests cannot be assigned.');
+        }
         if (! $a->isSkill()) {
             $this->assertInstructorOwnsCourse((int) $a->course_id);
         }
@@ -419,17 +441,14 @@ class LmsAssessmentController extends Controller
             return redirect($assignedUrl)->with('error', 'That sitting was already removed.');
         }
 
+        $attempt = null;
         if ($attemptId > 0) {
             $attempt = LmsAssessmentAttempt::query()
                 ->where('id', $attemptId)
                 ->where('assessment_id', $assignment->assessment_id)
                 ->first();
-            if ($attempt) {
-                if ($studentId <= 0) {
-                    $studentId = (int) $attempt->user_id;
-                }
-                $attempt->answers()->delete();
-                $attempt->delete();
+            if ($attempt && $studentId <= 0) {
+                $studentId = (int) $attempt->user_id;
             }
         }
 
@@ -440,45 +459,14 @@ class LmsAssessmentController extends Controller
         $backUrl = route('admin.assessments.tests.assigned-users', array_filter([
             'assessment_id' => (int) ($assignment->assessment_id ?? 0) ?: null,
         ]));
-        if ($studentId > 0) {
-            $this->excludeStudentFromAssessment((int) $assignment->assessment_id, $studentId);
-            $attemptQuery = LmsAssessmentAttempt::query()
-                ->where('assessment_id', $assignment->assessment_id)
-                ->where('user_id', $studentId);
-            foreach ($attemptQuery->get() as $att) {
-                if ($this->assessments->attemptBelongsToAssignment($att, $assignment) || (int) ($att->assignment_id ?? 0) === (int) $assignment->id) {
-                    $att->answers()->delete();
-                    $att->delete();
-                }
-            }
-            $shared = ! empty($assignment->class_batch_id) || empty($assignment->student_id);
-            $code = $assignment->displayCodeForStudent($studentId);
-            if (! $shared && (int) $assignment->student_id === $studentId) {
-                $assignment->delete();
-            }
-
-            return redirect($backUrl)->with('success', 'Removed ' . $code . ' for that student only.');
-        }
-
-        $attemptQuery = LmsAssessmentAttempt::query()
-            ->where('assessment_id', $assignment->assessment_id);
-        if ($assignment->student_id) {
-            $attemptQuery->where('user_id', (int) $assignment->student_id);
-        }
-        foreach ($attemptQuery->get() as $att) {
-            if ($this->assessments->attemptBelongsToAssignment($att, $assignment)) {
-                $att->answers()->delete();
-                $att->delete();
-            }
-        }
-
-        $code = $assignment->displayCode();
-        if (! empty($assignment->class_batch_id) || empty($assignment->student_id)) {
+        if ($studentId <= 0 && (! empty($assignment->class_batch_id) || empty($assignment->student_id))) {
             return redirect($backUrl)->with('error', 'Choose the student row to remove. The batch sitting was not deleted.');
         }
-        $assignment->delete();
 
-        return redirect($backUrl)->with('success', 'Sitting ' . $code . ' removed.');
+        $code = $this->assessments->forgetStudentSitting($assignment, $attempt, $studentId);
+        $this->excludedTakersByAssessment = [];
+
+        return redirect($backUrl)->with('success', 'Removed ' . $code . '. It is no longer on student or instructor lists.');
     }
 
     public function destroyAttemptRow($attemptId)
@@ -492,17 +480,16 @@ class LmsAssessmentController extends Controller
         if (! $attempt) {
             return redirect($assignedUrl)->with('error', 'That sitting was already removed.');
         }
-        $uid = (int) ($attempt->user_id ?? 0);
         $aid = (int) ($attempt->assessment_id ?? 0);
-        $attempt->answers()->delete();
-        $attempt->delete();
-        if ($aid > 0 && $uid > 0) {
-            $this->excludeStudentFromAssessment($aid, $uid);
-        }
+        $assignment = ! empty($attempt->assignment_id)
+            ? LmsAssessmentAssignment::query()->find((int) $attempt->assignment_id)
+            : null;
+        $this->assessments->forgetStudentSitting($assignment, $attempt, (int) ($attempt->user_id ?? 0));
+        $this->excludedTakersByAssessment = [];
 
         return redirect()->route('admin.assessments.tests.assigned-users', array_filter([
             'assessment_id' => $aid ?: null,
-        ]))->with('success', 'Removed that student from the assigned test.');
+        ]))->with('success', 'Removed that sitting. It is no longer on student or instructor lists.');
     }
 
     /** Keep the batch sitting; never put this student back on this test. */
@@ -613,6 +600,9 @@ class LmsAssessmentController extends Controller
             $assessmentId, $assessmentFilterIds, $batchId, $courseId, $kind, $markerOnlyUid, $courseIdsScope
         ) {
             $assessment = $assignment->assessment ?? null;
+            if (! $assessment || (method_exists($assessment, 'trashed') && $assessment->trashed())) {
+                return false;
+            }
             if ($markerOnlyUid && ! $this->instructorOwnsSitting($markerOnlyUid, $assignment, $assessment)) {
                 return false;
             }
@@ -660,7 +650,7 @@ class LmsAssessmentController extends Controller
             if ($this->looksLikeCimaScsNovember($assessment) && ! $this->isCimaScsAssignedMock($assessment)) {
                 continue;
             }
-            if ($markerOnlyUid && method_exists($assessment, 'trashed') && $assessment->trashed()) {
+            if (method_exists($assessment, 'trashed') && $assessment->trashed()) {
                 continue;
             }
 
@@ -845,7 +835,7 @@ class LmsAssessmentController extends Controller
             if ($this->looksLikeCimaScsNovember($assessment) && ! $this->isCimaScsAssignedMock($assessment)) {
                 continue;
             }
-            if ($markerOnlyUid && method_exists($assessment, 'trashed') && $assessment->trashed()) {
+            if (method_exists($assessment, 'trashed') && $assessment->trashed()) {
                 continue;
             }
             if ($this->isRemovedTestTaker($student, $assessment)) {
@@ -4024,9 +4014,11 @@ class LmsAssessmentController extends Controller
                 ? $this->assessments->canManageSkillTests()
                 : $this->assessments->canCreateStudentAssessments(),
             'zohoWorkDriveReady' => $this->zoho->isWorkDriveReady(),
-            'canAssign' => $assessment->isSkill()
-                ? $this->assessments->canManageSkillTests()
-                : $this->assessments->canAssignStudentAssessments(),
+            'canAssign' => ! $assessment->isDisabled() && (
+                $assessment->isSkill()
+                    ? $this->assessments->canManageSkillTests()
+                    : $this->assessments->canAssignStudentAssessments()
+            ),
             'courseRequired' => $this->lms->isInstructorActor()
                 && ! $this->lms->isAdminActor()
                 && ! panel_sees_all_dashboards()

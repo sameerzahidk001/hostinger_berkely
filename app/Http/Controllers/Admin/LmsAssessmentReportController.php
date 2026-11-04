@@ -32,9 +32,11 @@ class LmsAssessmentReportController extends Controller
         $this->assessments->ensure();
 
         $attempt = LmsAssessmentAttempt::with('assessment')->findOrFail($attemptId);
-        $attempt->answers()->delete();
-        $attempt->delete();
+        $assignment = ! empty($attempt->assignment_id)
+            ? LmsAssessmentAssignment::query()->find((int) $attempt->assignment_id)
+            : null;
+        $this->assessments->forgetStudentSitting($assignment, $attempt, (int) ($attempt->user_id ?? 0));
 
-        return back()->with('success', 'Attempt removed.');
+        return back()->with('success', 'Removed that sitting. It is no longer on student or instructor lists.');
     }
 }

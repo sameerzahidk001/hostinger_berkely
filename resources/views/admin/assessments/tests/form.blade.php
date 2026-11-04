@@ -205,7 +205,7 @@
             @endif
             <a href="{{ route('admin.assessments.tests.index') }}" class="btn btn-default">Back</a>
             @if($assessment->exists)
-                @if($canAssign)
+                @if($canAssign && ! ($assessment->exists && method_exists($assessment, 'isDisabled') && $assessment->isDisabled()))
                     <a href="{{ route('admin.assessments.tests.assign', $assessment->id) }}" class="btn btn-success">Assign Test</a>
                     <a href="{{ route('admin.assessments.tests.assign', ['id' => $assessment->id, 'mode' => 'self']) }}" class="btn btn-success">Assign Self test</a>
                 @endif

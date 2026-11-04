@@ -7,8 +7,6 @@ use App\Http\Controllers\Admin\EmailController;
 use App\Http\Controllers\Admin\InstallmentController;
 use App\Http\Controllers\Admin\PaymentController as AdminPaymentController;
 use App\Http\Controllers\Admin\SettingController;
-use App\Http\Controllers\Admin\ContentEditorSettingsController;
-use App\Http\Controllers\Admin\AiContentController;
 use App\Http\Controllers\Admin\SubjectController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\FaqController;
@@ -326,6 +324,7 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
             Route::get('/tests/{id}/edit', [LmsAssessmentController::class, 'edit'])->name('tests.edit');
             Route::put('/tests/{id}', [LmsAssessmentController::class, 'update'])->name('tests.update');
             Route::post('/tests/{id}/remove', [LmsAssessmentController::class, 'destroy'])->name('tests.destroy');
+            Route::post('/tests/{id}/disable', [LmsAssessmentController::class, 'disable'])->name('tests.disable');
             Route::get('/tests/{id}/assign', [LmsAssessmentController::class, 'assignForm'])->name('tests.assign');
             Route::post('/tests/{id}/assign', [LmsAssessmentController::class, 'saveAssign'])->name('tests.assign.save');
             Route::get('/tests/{id}/attempts', [LmsAssessmentController::class, 'attempts'])->name('tests.attempts');
@@ -383,9 +382,6 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
 
         Route::get('smtp-settings', [SettingController::class, 'smtpSettings'])->name('admin.smtpSettings.index');
         Route::post('smtp-settings/store', [SettingController::class, 'smtpSettingsStore'])->name('admin.smtpSettings.store');
-        Route::get('/content-editor-settings', [ContentEditorSettingsController::class, 'edit'])->name('admin.content-editor.edit');
-        Route::post('/content-editor-settings', [ContentEditorSettingsController::class, 'update'])->name('admin.content-editor.update');
-        Route::post('/ai-content/generate', [AiContentController::class, 'generate'])->name('admin.ai-content.generate');
         Route::get('/site-settings', [SettingController::class, 'siteSettings'])->name('site-settings.index');
         Route::post('/site-settings', [SettingController::class, 'siteSettingsUpdate'])->name('site-settings.update');
         Route::get('/widget', [SettingController::class, 'widget'])->name('widget.index');
@@ -459,7 +455,6 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
                 Route::get('create', 'create')->name('course.create');
                 Route::get('/{id}/edit', 'edit')->name('course.edit');
                 Route::put('/{id}/update', 'update')->name('course.update');
-                Route::post('/{id}/duplicate', 'duplicate')->name('course.duplicate');
                 Route::post('{id}/update-status', 'updateStatus')->name('courses.update-status');
                 Route::get('disabled', 'disabledCourses')->name('admin.course.disabled');
                 Route::post('{id}/update-lecture-plan', 'updateStatusLecturePlan')->name('courses.update-status-lecture-plan-ajax');
@@ -583,7 +578,6 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
         Route::resource('faq', FaqController::class);
         Route::get('pages/inactive', [PagesController::class, 'disabledPages'])->name('admin.pages.disabled');
         Route::post('pages/{id}/update-status', [PagesController::class, 'updateStatus'])->name('pages.update-status');
-        Route::post('pages/{id}/duplicate', [PagesController::class, 'duplicate'])->name('pages.duplicate');
         Route::get('pages/fees', [PageFeeController::class, 'index'])->name('admin.pages.fees.index');
         Route::get('pages/{pageId}/fees', [PageFeeController::class, 'edit'])->name('admin.pages.fees.edit');
         Route::post('pages/{pageId}/fees/heading', [PageFeeController::class, 'updateHeading'])->name('admin.pages.fees.heading');
