@@ -276,6 +276,9 @@
                             } elseif ($assignment && $assignment->isNotYetOpen()) {
                                 $statusClass = 'lms-status-upcoming';
                                 $statusText = 'Upcoming';
+                            } elseif ($assignment && method_exists($assignment, 'isMissedByStartGrace') && $assignment->isMissedByStartGrace()) {
+                                $statusClass = 'lms-status-missed';
+                                $statusText = 'Missed';
                             } elseif ($assignment && ! $assignment->isSelfSitting() && $assignment->isExpired()) {
                                 $statusClass = 'lms-status-missed';
                                 $statusText = 'Missed';

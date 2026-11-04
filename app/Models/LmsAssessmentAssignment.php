@@ -360,6 +360,20 @@ class LmsAssessmentAssignment extends Model
         return now()->lt($start);
     }
 
+    /** Unused sittings become Missed once start time + 30 minutes has passed. */
+    public function isMissedByStartGrace(): bool
+    {
+        if ($this->isSelfSitting()) {
+            return false;
+        }
+        $start = $this->windowStart();
+        if (! $start) {
+            return false;
+        }
+
+        return now()->gte($start->copy()->addMinutes(30));
+    }
+
     public function isExpired(): bool
     {
         if ($this->isSelfSitting()) {

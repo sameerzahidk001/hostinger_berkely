@@ -1468,10 +1468,15 @@ class LmsAssessmentService
                 if ($usedOnSitting >= $this->maxAttemptsFor($assessment)) {
                     return false;
                 }
+                if ($usedOnSitting === 0 && ! $asg->isSelfSitting()
+                    && method_exists($asg, 'isMissedByStartGrace') && $asg->isMissedByStartGrace()) {
+                    return false;
+                }
                 if ($asg->isSelfSitting() || $asg->isAvailableNow()) {
                     return true;
                 }
-                if ($usedOnSitting === 0 && $this->sittingCanStartAfterWindow($assessment, $asg)) {
+                if ($usedOnSitting === 0 && $this->sittingCanStartAfterWindow($assessment, $asg)
+                    && ! (method_exists($asg, 'isMissedByStartGrace') && $asg->isMissedByStartGrace())) {
                     return true;
                 }
 
@@ -1553,16 +1558,14 @@ class LmsAssessmentService
                 ->filter(fn ($att) => $this->attemptBelongsToAssignment($att, $assignment))
                 ->count();
             $allowAnytimeRetake = $this->canRetake($user, $assessment, $assignment);
-            if (! $assignment->isSelfSitting() && $assignment->isExpired() && $usedOnSitting === 0) {
-                if ($this->sittingCanStartAfterWindow($assessment, $assignment)) {
-                    // Mock/practice/general stay startable on the same sitting.
-                } elseif ($allowAnytimeRetake) {
+            if (! $assignment->isSelfSitting() && $assignment->isNotYetOpen() && $usedOnSitting === 0) {
+                abort(403, 'This test is not open yet.');
+            } elseif (! $assignment->isSelfSitting() && method_exists($assignment, 'isMissedByStartGrace') && $assignment->isMissedByStartGrace() && $usedOnSitting === 0) {
+                if ($allowAnytimeRetake) {
                     $assignment = $this->ensureAnytimeRetakeSitting($user, $assessment, $assignment);
                 } else {
-                    abort(403, 'The availability window for this test has ended.');
+                    abort(403, 'The start window for this test has ended.');
                 }
-            } elseif (! $assignment->isSelfSitting() && $assignment->isNotYetOpen() && $usedOnSitting === 0) {
-                abort(403, 'This test is not open yet.');
             } elseif ($usedOnSitting > 0 && $allowAnytimeRetake && ! $assignment->isSelfSitting()) {
                 $assignment = $this->ensureAnytimeRetakeSitting($user, $assessment, $assignment);
             }
@@ -1580,8 +1583,8 @@ class LmsAssessmentService
                 if ($anyAsg && $anyAsg->isNotYetOpen()) {
                     abort(403, 'This test is not open yet.');
                 }
-                if ($anyAsg && $anyAsg->isExpired() && ! $this->sittingCanStartAfterWindow($assessment, $anyAsg)) {
-                    abort(403, 'The availability window for this test has ended.');
+                if ($anyAsg && method_exists($anyAsg, 'isMissedByStartGrace') && $anyAsg->isMissedByStartGrace() && ! $this->sittingCanStartAfterWindow($assessment, $anyAsg)) {
+                    abort(403, 'The start window for this test has ended.');
                 }
                 abort(403, 'No open assigned sitting. Ask admin to Assign a retake for this test.');
             }
@@ -2228,7 +2231,8 @@ class LmsAssessmentService
         $missedThisSitting = $assignment
             && ! $assignment->isSelfSitting()
             && ! $this->sittingCanStartAfterWindow($assessment, $assignment)
-            && ($assignment->isExpired() || $this->isCimaCohortEmail($user->email ?? null));
+            && method_exists($assignment, 'isMissedByStartGrace')
+            && $assignment->isMissedByStartGrace();
         if ($missedThisSitting || $this->missedExamSlotCount($user, $assessment) > 0) {
             return $max > 1;
         }
@@ -2267,7 +2271,8 @@ class LmsAssessmentService
             ->filter()
             ->filter(function ($asg) use ($assessment) {
                 return ! $asg->isSelfSitting()
-                    && $asg->isExpired()
+                    && method_exists($asg, 'isMissedByStartGrace')
+                    && $asg->isMissedByStartGrace()
                     && ! $this->sittingCanStartAfterWindow($assessment, $asg);
             });
         $hasUnusedMiss = $examSittings->contains(function ($asg) use ($attempts) {
@@ -2571,10 +2576,12 @@ class LmsAssessmentService
 
             // Disabled tests: keep taken/missed history, but never offer a new start.
             if (! $assessment->isPublished()) {
-                $cimaUnused = $this->isCimaCohortEmail($user->email ?? null)
-                    && $assignment
-                    && ! $assignment->isSelfSitting();
-                if ($assignment && ($assignment->isExpired() || $cimaUnused) && empty($mcs1AlreadyTaken)) {
+                if ($assignment && $assignment->isNotYetOpen()) {
+                    $upcoming->push($base + [
+                        'attempt' => null,
+                        'can_retake' => false,
+                    ]);
+                } elseif ($assignment && method_exists($assignment, 'isMissedByStartGrace') && $assignment->isMissedByStartGrace() && empty($mcs1AlreadyTaken)) {
                     $missed->push($base + [
                         'attempt' => null,
                         'can_retake' => $max > 1 || $this->canRetake($user, $assessment, $assignment),
@@ -2583,34 +2590,19 @@ class LmsAssessmentService
                 continue;
             }
 
-            $examWindowPassed = false;
-            if ($assignment) {
-                $start = $assignment->windowStart();
-                $strict = $this->usesStrictExamWindow($assessment);
-                if ($start && now()->lt($start)) {
-                    $examWindowPassed = false;
-                } elseif ($assignment->isNotYetOpen()) {
-                    $examWindowPassed = false;
-                } elseif ($strict) {
-                    $examWindowPassed = $assignment->isExpired();
-                } elseif (! $assignment->isSelfSitting() && $assignment->isExpired()) {
-                    $examWindowPassed = true;
-                }
-            }
-            if ($examWindowPassed && $this->sittingCanStartAfterWindow($assessment, $assignment)) {
-                $examWindowPassed = false;
-            }
-            if ($examWindowPassed && empty($mcs1AlreadyTaken)) {
+            $examWindowPassed = $assignment && method_exists($assignment, 'isMissedByStartGrace')
+                && $assignment->isMissedByStartGrace();
+            if ($assignment && $assignment->isNotYetOpen()) {
+                $upcoming->push($base + [
+                    'attempt' => null,
+                    'can_retake' => false,
+                ]);
+            } elseif ($examWindowPassed && empty($mcs1AlreadyTaken)) {
                 $missed->push($base + [
                     'attempt' => null,
                     'can_retake' => $max > 1 || $this->canRetake($user, $assessment, $assignment),
                     'attempt_number' => 1,
                     'attempt_total' => $max,
-                ]);
-            } elseif ($assignment && $assignment->isNotYetOpen()) {
-                $upcoming->push($base + [
-                    'attempt' => null,
-                    'can_retake' => false,
                 ]);
             } else {
                 // Each unused assigned sitting is its own start, even if Max attempts is 1.
