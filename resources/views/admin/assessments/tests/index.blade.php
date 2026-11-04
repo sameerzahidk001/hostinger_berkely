@@ -239,7 +239,7 @@
                                 <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.assign', $row->id) }}">Assign Test</a>
                                 <a class="btn btn-xs btn-default" href="{{ route('admin.assessments.tests.assign', ['id' => $row->id, 'mode' => 'self']) }}">Self test</a>
                             @endif
-                            <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.attempts', $row->id) }}">Results</a>
+                            <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.assigned-users', ['assessment_id' => $row->id]) }}">Results</a>
                             </div>
                             </div>
                         </td>

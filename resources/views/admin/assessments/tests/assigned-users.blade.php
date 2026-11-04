@@ -145,11 +145,11 @@
 @endphp
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">
-        <h2>Assigned Tests</h2>
+        <h2>@if(!empty($selectedAssessment)) Results: {{ $selectedAssessment->title }} @else Assigned Tests @endif</h2>
         <ol class="breadcrumb">
             <li><a href="{{ lms_portal_home() }}">Home</a></li>
             <li><a href="{{ route('admin.assessments.tests.index') }}">ALL TESTS</a></li>
-            <li class="active"><strong>Assigned Tests</strong></li>
+            <li class="active"><strong>@if(!empty($selectedAssessment)) Results @else Assigned Tests @endif</strong></li>
         </ol>
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
