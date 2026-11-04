@@ -27,6 +27,30 @@
         margin: 8px 0 4px;
         overflow-x: auto;
     }
+    .page-heading .btn,
+    .lms-tests-wrap .btn,
+    .lms-create-tests-row .btn,
+    .lms-tests-table .btn,
+    .lms-assigned-pager .btn {
+        font-weight: 700 !important;
+    }
+    .page-heading .btn-default,
+    .lms-tests-wrap .btn-default,
+    .lms-assigned-pager .btn-default {
+        background: #5bc0de;
+        border-color: #46b8da;
+        color: #fff !important;
+    }
+    .page-heading .btn-default:hover,
+    .page-heading .btn-default:focus,
+    .lms-tests-wrap .btn-default:hover,
+    .lms-tests-wrap .btn-default:focus,
+    .lms-assigned-pager .btn-default:hover,
+    .lms-assigned-pager .btn-default:focus {
+        background: #31b0d5;
+        border-color: #269abc;
+        color: #fff !important;
+    }
     .lms-create-tests-row .btn {
         flex: 1 1 0;
         white-space: nowrap;
@@ -72,36 +96,54 @@
         white-space: normal;
         overflow: visible;
     }
-    .lms-tests-table .col-date { width: 9%; }
-    .lms-tests-table .col-id { width: 7%; }
-    .lms-tests-table .col-title { width: 14%; }
-    .lms-tests-table .col-course { width: 13%; }
-    .lms-tests-table .col-type { width: 9%; }
-    .lms-tests-table .col-num { width: 5%; text-align: center; }
-    .lms-tests-table .col-assigned { width: 8%; text-align: center; white-space: normal; }
-    .lms-tests-table .col-status { width: 8%; }
+    .lms-tests-table .col-date { width: 8%; }
+    .lms-tests-table .col-id { width: 6%; }
+    .lms-tests-table .col-title { width: 12%; }
+    .lms-tests-table .col-course { width: 11%; }
+    .lms-tests-table .col-type { width: 8%; }
+    .lms-tests-table .col-num { width: 4%; text-align: center; }
+    .lms-tests-table .col-assigned,
+    .lms-tests-table .col-taken {
+        width: 12%;
+        text-align: center;
+        white-space: nowrap;
+    }
+    .lms-tests-table .col-status { width: 7%; }
     .lms-tests-table .col-action {
-        width: 28%;
+        width: 20%;
         overflow: visible;
     }
-    .lms-tests-table .lms-row-actions {
+    .lms-tests-table .table-action-stack {
         display: flex;
-        flex-wrap: wrap;
-        gap: 4px;
-        align-items: center;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
     }
-    .lms-tests-table .lms-row-actions form {
+    .lms-tests-table .table-action-stack-col {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        align-items: center;
+        gap: 4px;
+    }
+    .lms-tests-table .table-action-stack form,
+    .lms-tests-table .table-action-stack-col form {
         margin: 0;
         display: inline-flex;
     }
-    .lms-tests-table .lms-row-actions .btn {
+    .lms-tests-table .table-action-stack .btn {
         margin: 0;
         white-space: nowrap;
-        font-weight: 700;
         font-size: 11px;
-        padding: 3px 6px;
+        padding: 3px 7px;
         line-height: 1.3;
+        color: #fff !important;
+        border: none;
     }
+    .lms-tests-table .lms-btn-edit { background: #17a2b8; }
+    .lms-tests-table .lms-btn-edit:hover, .lms-tests-table .lms-btn-edit:focus { background: #117a8b; color: #fff !important; }
+    .lms-tests-table .lms-btn-self { background: #5cb85c; }
+    .lms-tests-table .lms-btn-self:hover, .lms-tests-table .lms-btn-self:focus { background: #449d44; color: #fff !important; }
 </style>
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">
@@ -113,7 +155,7 @@
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
         @if(!empty($canAssign))
-            <a href="{{ route('admin.assessments.tests.assigned-users') }}" class="btn btn-default btn-sm">Assigned Tests</a>
+            <a href="{{ route('admin.assessments.tests.assigned-users') }}" class="btn btn-info btn-sm">Assigned Tests</a>
         @endif
     </div>
     @if(!empty($canCreate))
@@ -149,7 +191,7 @@
                 </div>
                 <div class="col-sm-4">
                     <button class="btn btn-primary" type="submit">Filter</button>
-                    <a href="{{ route('admin.assessments.tests.index') }}" class="btn btn-default">Clear</a>
+                    <a href="{{ route('admin.assessments.tests.index') }}" class="btn btn-warning">Clear</a>
                 </div>
             </div>
         </form>
@@ -163,7 +205,7 @@
                     <th class="col-type" data-sort-col="4">Test Type <span class="sort-ind"></span></th>
                     <th class="col-num" data-sort-col="5">Qs <span class="sort-ind"></span></th>
                     <th class="col-num col-assigned" data-sort-col="6" title="People assigned on Test sittings and on Self Test sittings, counted separately.">Assigned students <span class="sort-ind"></span></th>
-                    <th class="col-num" data-sort-col="7" title="People who started that Test sitting or that Self Test sitting">Taken <span class="sort-ind"></span></th>
+                    <th class="col-num col-taken" data-sort-col="7" title="People who started that Test sitting or that Self Test sitting">Test Taken <span class="sort-ind"></span></th>
                     <th class="col-status" data-sort-col="8">Status <span class="sort-ind"></span></th>
                     <th class="col-action">Action</th>
                 </tr>
@@ -197,7 +239,7 @@
                             <span style="display:block;">Test {{ $examAssigned }}</span>
                             <span style="display:block;">Self Test {{ $selfAssigned }}</span>
                         </td>
-                        <td class="col-num" data-sort="{{ $examTaken + $selfTaken }}">
+                        <td class="col-num col-taken" data-sort="{{ $examTaken + $selfTaken }}">
                             <span style="display:block;">Test {{ $examTaken }}</span>
                             <span style="display:block;">Self Test {{ $selfTaken }}</span>
                         </td>
@@ -225,7 +267,7 @@
                             <div class="table-action-stack">
                             <div class="table-action-stack-col">
                             @if($canManageRow)
-                                <a class="btn btn-xs btn-default" href="{{ route('admin.assessments.tests.edit', $row->id) }}">Edit</a>
+                                <a class="btn btn-xs lms-btn-edit" href="{{ route('admin.assessments.tests.edit', $row->id) }}">Edit</a>
                             @endif
                             @if(!empty($canDelete))
                                 <form action="{{ route('admin.assessments.tests.destroy', $row->id) }}" method="POST" onsubmit="return confirm('Delete this test? It will be removed from ALL TESTS.');">
@@ -237,7 +279,7 @@
                             <div class="table-action-stack-col">
                             @if($canManageRow)
                                 <a class="btn btn-xs btn-primary" href="{{ route('admin.assessments.tests.assign', $row->id) }}">Assign Test</a>
-                                <a class="btn btn-xs btn-default" href="{{ route('admin.assessments.tests.assign', ['id' => $row->id, 'mode' => 'self']) }}">Self test</a>
+                                <a class="btn btn-xs lms-btn-self" href="{{ route('admin.assessments.tests.assign', ['id' => $row->id, 'mode' => 'self']) }}">Self test</a>
                             @endif
                             <a class="btn btn-xs btn-warning" href="{{ route('admin.assessments.tests.assigned-users', ['assessment_id' => $row->id]) }}">Results</a>
                             </div>
