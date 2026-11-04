@@ -999,12 +999,7 @@ class LmsAssessmentController extends Controller
         }
 
         foreach ($rowsByKey as $k => $r) {
-            $disp = $this->sittingDisplayForRow($r);
-            if (! empty($disp['_assignment'])) {
-                $rowsByKey[$k]['assignment'] = $disp['_assignment'];
-            }
-            unset($disp['_assignment']);
-            $rowsByKey[$k]['sitting_display'] = $disp;
+            $rowsByKey[$k] = $this->applySittingDisplayToRow($r);
         }
 
         if ($markerOnlyUid) {
@@ -1111,14 +1106,7 @@ class LmsAssessmentController extends Controller
             if (! empty($r['sitting_display'])) {
                 return $r;
             }
-            $disp = $this->sittingDisplayForRow($r);
-            if (! empty($disp['_assignment'])) {
-                $r['assignment'] = $disp['_assignment'];
-            }
-            unset($disp['_assignment']);
-            $r['sitting_display'] = $disp;
-
-            return $r;
+            return $this->applySittingDisplayToRow($r);
         })->values();
 
         try {
@@ -2431,12 +2419,7 @@ class LmsAssessmentController extends Controller
                     'attempt_total' => max(1, (int) ($assessment->max_attempts ?? 1)),
                 ];
                 try {
-                    $disp = $this->sittingDisplayForRow($row);
-                    if (! empty($disp['_assignment'])) {
-                        $row['assignment'] = $disp['_assignment'];
-                    }
-                    unset($disp['_assignment']);
-                    $row['sitting_display'] = $disp;
+                    $row = $this->applySittingDisplayToRow($row);
                 } catch (\Throwable $e) {
                     $row['sitting_display'] = [
                         'status' => 'Missed',
@@ -2462,20 +2445,7 @@ class LmsAssessmentController extends Controller
 
         $rows = $this->collapseDuplicateCimaScsRows($rows);
         $rows = $this->attachTakenAttemptsToExamRows($rows, $allAttempts ?? collect(), $assignments);
-        $rows = collect($rows)->map(function ($r) {
-            try {
-                $disp = $this->sittingDisplayForRow($r);
-                if (! empty($disp['_assignment'])) {
-                    $r['assignment'] = $disp['_assignment'];
-                }
-                unset($disp['_assignment']);
-                $r['sitting_display'] = $disp;
-            } catch (\Throwable $e) {
-                // keep existing display
-            }
-
-            return $r;
-        })->values();
+        $rows = collect($rows)->map(fn ($r) => $this->applySittingDisplayToRow($r))->values();
 
         return $rows;
     }
@@ -2540,12 +2510,7 @@ class LmsAssessmentController extends Controller
                 }
             }
             try {
-                $disp = $this->sittingDisplayForRow($r);
-                if (! empty($disp['_assignment'])) {
-                    $r['assignment'] = $disp['_assignment'];
-                }
-                unset($disp['_assignment']);
-                $r['sitting_display'] = $disp;
+                $r = $this->applySittingDisplayToRow($r);
             } catch (\Throwable $e) {
                 // keep existing display
             }
@@ -3231,11 +3196,73 @@ class LmsAssessmentController extends Controller
         return false;
     }
 
+    /** Put display + any started attempt back on the row so In progress is never painted Missed. */
+    protected function applySittingDisplayToRow(array $r): array
+    {
+        $disp = $this->sittingDisplayForRow($r);
+        if (! empty($disp['_assignment'])) {
+            $r['assignment'] = $disp['_assignment'];
+        }
+        if (! empty($disp['_attempt'])) {
+            $r['attempt'] = $disp['_attempt'];
+        }
+        unset($disp['_assignment'], $disp['_attempt']);
+        $r['sitting_display'] = $disp;
+
+        return $r;
+    }
+
+    /** Exam sitting with a started attempt keeps that attempt. Missed is only when nobody started. */
+    protected function startedExamAttemptForRow(array $row): ?LmsAssessmentAttempt
+    {
+        $uid = (int) ($row['student']->id ?? 0);
+        $assessment = $row['assessment'] ?? null;
+        $asg = $row['assignment'] ?? null;
+        if ($uid <= 0 || ! $assessment) {
+            return null;
+        }
+        if ($asg && method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting()) {
+            return null;
+        }
+        try {
+            $aids = $this->sameTitleAssessmentIds($assessment);
+            if ($aids === []) {
+                $aids = [(int) $assessment->id];
+            }
+            $q = LmsAssessmentAttempt::query()
+                ->whereIn('assessment_id', $aids)
+                ->where('user_id', $uid)
+                ->where(function ($q) {
+                    $q->whereNotNull('started_at')
+                        ->orWhereIn('status', ['in_progress', 'submitted', 'graded', 'expired']);
+                })
+                ->orderByDesc('id');
+            $selfIds = LmsAssessmentAssignment::query()
+                ->whereIn('assessment_id', $aids)
+                ->get()
+                ->filter(fn ($a) => method_exists($a, 'isSelfSitting') && $a->isSelfSitting())
+                ->pluck('id')
+                ->map(fn ($id) => (int) $id)
+                ->filter()
+                ->values()
+                ->all();
+            if ($selfIds !== []) {
+                $q->where(function ($q) use ($selfIds) {
+                    $q->whereNull('assignment_id')->orWhereNotIn('assignment_id', $selfIds);
+                });
+            }
+
+            return $q->first();
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
     protected function sittingDisplayForRow(array $row): array
     {
         $asg = $row['assignment'] ?? null;
         $assessment = $row['assessment'] ?? null;
-        $attempt = $row['attempt'] ?? null;
+        $attempt = $row['attempt'] ?? $this->startedExamAttemptForRow($row);
         if ($this->isCimaCohortSitting($assessment, $asg, collect([$row['student'] ?? null])) && ! $asg && $assessment) {
             $asg = $this->ensureCimaCohortAssignment($assessment);
             $row['assignment'] = $asg;
@@ -3335,6 +3362,7 @@ class LmsAssessmentController extends Controller
             'appt_id' => $apptId ?: '—',
             'appointment' => $start ?: '—',
             'timezone' => $tz ?: (string) config('app.timezone', 'Asia/Dubai'),
+            '_attempt' => $attempt,
             'created_by' => $created ?: 'Admin',
             'assessor' => $assessor ?: 'Admin / course instructors',
             'assessor_id' => $assessorId,
