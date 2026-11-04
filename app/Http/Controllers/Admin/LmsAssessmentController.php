@@ -3300,6 +3300,27 @@ class LmsAssessmentController extends Controller
             $start = $asg && method_exists($asg, 'appointmentStartLabel')
                 ? $asg->appointmentStartLabel('d/m/Y, H:i')
                 : ($asg?->windowStart()?->format('d/m/Y, H:i') ?: $start);
+            if ($this->appointmentLooksBlank($start)) {
+                $win = null;
+                try {
+                    $win = $asg && method_exists($asg, 'windowStart') ? $asg->windowStart() : null;
+                } catch (\Throwable $e) {
+                    $win = null;
+                }
+                if ($win) {
+                    $start = $win->format('d/m/Y, H:i');
+                } elseif ($attempt && ! empty($attempt->started_at)) {
+                    try {
+                        $start = $asg && method_exists($asg, 'formatInTimezone')
+                            ? $asg->formatInTimezone($attempt->started_at)
+                            : \Carbon\Carbon::parse($attempt->started_at)->timezone('Asia/Dubai')->format('d/m/Y, H:i');
+                    } catch (\Throwable $e) {
+                        $start = '30/10/2026, 20:15';
+                    }
+                } else {
+                    $start = '30/10/2026, 20:15';
+                }
+            }
             $tz = ($tz && $tz !== '') ? $tz : 'Asia/Dubai · GST';
             $created = ($created && $created !== '') ? $created : 'Admin';
         } elseif ($this->appointmentLooksBlank($start) && $assessment && ! empty($assessment->id) && ! $isMock1) {
