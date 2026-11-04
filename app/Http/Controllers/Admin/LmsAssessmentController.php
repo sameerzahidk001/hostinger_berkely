@@ -1859,13 +1859,16 @@ class LmsAssessmentController extends Controller
             if (! $assignment || empty($assignment->id)) {
                 continue;
             }
-            if (method_exists($assignment, 'isSelfSitting') && $assignment->isSelfSitting()) {
-                continue;
-            }
             $assessment = $assignment->assessment
                 ?? ($assessmentsById instanceof \Illuminate\Support\Collection
                     ? $assessmentsById->get((int) ($assignment->assessment_id ?? 0))
                     : null);
+            if ($assignment && method_exists($this->assessments, 'alignSittingWithExistingExamRule')) {
+                $this->assessments->alignSittingWithExistingExamRule($assignment, $assessment);
+            }
+            if (method_exists($assignment, 'isSelfSitting') && $assignment->isSelfSitting()) {
+                continue;
+            }
             if (! $this->isCimaCohortSitting($assessment, $assignment, $cohort)) {
                 continue;
             }
