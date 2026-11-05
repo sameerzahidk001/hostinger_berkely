@@ -14,6 +14,7 @@ class LmsCertificate extends Model
         'completion_id',
         'user_id',
         'course_id',
+        'template_id',
         'certificate_code',
         'status',
         'issued_at',
@@ -38,30 +39,33 @@ class LmsCertificate extends Model
 
     public static function ensureTable(): bool
     {
-        if (Schema::hasTable('lms_certificates')) {
-            return true;
+        if (! Schema::hasTable('lms_certificates')) {
+            Schema::create('lms_certificates', function (Blueprint $table) {
+                $table->id();
+                $table->unsignedBigInteger('completion_id')->nullable()->index();
+                $table->unsignedBigInteger('user_id')->index();
+                $table->unsignedBigInteger('course_id')->nullable()->index();
+                $table->unsignedBigInteger('template_id')->nullable()->index();
+                $table->string('certificate_code', 64)->unique();
+                $table->string('status', 40)->default('issued')->index();
+                $table->timestamp('issued_at')->nullable()->index();
+                $table->timestamp('revoked_at')->nullable();
+                $table->timestamp('emailed_at')->nullable();
+                $table->string('student_name', 255)->nullable();
+                $table->string('course_title', 500)->nullable();
+                $table->date('completion_date')->nullable();
+                $table->string('pdf_path', 500)->nullable();
+                $table->string('qr_payload', 500)->nullable();
+                $table->unsignedBigInteger('issued_by')->nullable();
+                $table->string('issued_by_name', 255)->nullable();
+                $table->text('revoke_reason')->nullable();
+                $table->timestamps();
+            });
+        } elseif (! Schema::hasColumn('lms_certificates', 'template_id')) {
+            Schema::table('lms_certificates', function (Blueprint $table) {
+                $table->unsignedBigInteger('template_id')->nullable()->index()->after('course_id');
+            });
         }
-
-        Schema::create('lms_certificates', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('completion_id')->nullable()->index();
-            $table->unsignedBigInteger('user_id')->index();
-            $table->unsignedBigInteger('course_id')->nullable()->index();
-            $table->string('certificate_code', 64)->unique();
-            $table->string('status', 40)->default('issued')->index();
-            $table->timestamp('issued_at')->nullable()->index();
-            $table->timestamp('revoked_at')->nullable();
-            $table->timestamp('emailed_at')->nullable();
-            $table->string('student_name', 255)->nullable();
-            $table->string('course_title', 500)->nullable();
-            $table->date('completion_date')->nullable();
-            $table->string('pdf_path', 500)->nullable();
-            $table->string('qr_payload', 500)->nullable();
-            $table->unsignedBigInteger('issued_by')->nullable();
-            $table->string('issued_by_name', 255)->nullable();
-            $table->text('revoke_reason')->nullable();
-            $table->timestamps();
-        });
 
         return Schema::hasTable('lms_certificates');
     }
@@ -94,5 +98,10 @@ class LmsCertificate extends Model
     public function completion()
     {
         return $this->belongsTo(StudentCompletion::class, 'completion_id');
+    }
+
+    public function template()
+    {
+        return $this->belongsTo(CertificateTemplate::class, 'template_id');
     }
 }

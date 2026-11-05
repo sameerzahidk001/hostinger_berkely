@@ -61,6 +61,7 @@ use App\Http\Controllers\Admin\LmsQuestionController;
 use App\Http\Controllers\Admin\LmsAssessmentController;
 use App\Http\Controllers\Admin\LmsAssessmentReportController;
 use App\Http\Controllers\Admin\CertificateCompletionController;
+use App\Http\Controllers\Admin\CertificateTemplateController;
 use App\Http\Controllers\Admin\LmsCertificateController;
 use App\Http\Controllers\VerifyCertificateController;
 use App\Http\Controllers\User\LmsAssessmentPortalController;
@@ -328,8 +329,16 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
             Route::post('/completions', [CertificateCompletionController::class, 'store'])->name('completions.store');
             Route::post('/completions/{id}/issue', [CertificateCompletionController::class, 'issue'])->whereNumber('id')->name('completions.issue');
 
+            Route::get('/templates', [CertificateTemplateController::class, 'index'])->name('templates.index');
+            Route::get('/templates/create', [CertificateTemplateController::class, 'create'])->name('templates.create');
+            Route::post('/templates', [CertificateTemplateController::class, 'store'])->name('templates.store');
+            Route::get('/templates/{id}/edit', [CertificateTemplateController::class, 'edit'])->whereNumber('id')->name('templates.edit');
+            Route::put('/templates/{id}', [CertificateTemplateController::class, 'update'])->whereNumber('id')->name('templates.update');
+            Route::delete('/templates/{id}', [CertificateTemplateController::class, 'destroy'])->whereNumber('id')->name('templates.destroy');
+
             Route::get('/', [LmsCertificateController::class, 'index'])->name('index');
             Route::get('/verify-logs', [LmsCertificateController::class, 'verifyLogs'])->name('verify-logs');
+            Route::get('/{id}/preview', [LmsCertificateController::class, 'preview'])->whereNumber('id')->name('preview');
             Route::get('/{id}/download', [LmsCertificateController::class, 'download'])->whereNumber('id')->name('download');
             Route::post('/{id}/email', [LmsCertificateController::class, 'email'])->whereNumber('id')->name('email');
             Route::post('/{id}/reissue', [LmsCertificateController::class, 'reissue'])->whereNumber('id')->name('reissue');

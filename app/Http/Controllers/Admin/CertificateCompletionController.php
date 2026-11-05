@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\CertificateTemplate;
+use App\Models\ClassBatch;
 use App\Models\Course;
 use App\Models\LmsCertificate;
 use App\Models\StudentCompletion;
@@ -11,6 +13,7 @@ use App\Services\CertificateIssuerService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\ValidationException;
 
 class CertificateCompletionController extends Controller
 {
@@ -18,8 +21,15 @@ class CertificateCompletionController extends Controller
     {
         StudentCompletion::ensureTable();
         LmsCertificate::ensureTable();
+        CertificateTemplate::ensureTable();
 
-        $q = StudentCompletion::query()->with(['user:id,name,email,first_name,last_name', 'course:id,title', 'certificate']);
+        $q = StudentCompletion::query()->with([
+            'user:id,name,email,first_name,last_name',
+            'course:id,title',
+            'batch:id,code,name',
+            'template:id,name',
+            'certificates',
+        ]);
         if ($request->filled('search')) {
             $s = trim((string) $request->input('search'));
             $q->where(function ($outer) use ($s) {
@@ -33,6 +43,9 @@ class CertificateCompletionController extends Controller
                     })
                     ->orWhereHas('course', function ($c) use ($s) {
                         $c->where('title', 'like', '%' . $s . '%');
+                    })
+                    ->orWhereHas('certificates', function ($c) use ($s) {
+                        $c->where('certificate_code', 'like', '%' . $s . '%');
                     });
             });
         }
@@ -60,6 +73,8 @@ class CertificateCompletionController extends Controller
     public function create()
     {
         StudentCompletion::ensureTable();
+        CertificateTemplate::ensureTable();
+
         $courses = Course::query()->orderBy('title')->limit(500)->get(['id', 'title']);
         $students = User::query()
             ->when(Schema::hasColumn('users', 'role'), function ($q) {
@@ -71,9 +86,19 @@ class CertificateCompletionController extends Controller
             ->limit(800)
             ->get(['id', 'name', 'email', 'first_name', 'last_name']);
 
+        $batches = ClassBatch::query()
+            ->with('course:id,title')
+            ->orderByDesc('id')
+            ->limit(400)
+            ->get(['id', 'code', 'name', 'course_id']);
+
+        $templates = CertificateTemplate::activeOptions();
+
         return view('admin.certificates.completion-form', [
             'courses' => $courses,
             'students' => $students,
+            'batches' => $batches,
+            'templates' => $templates,
         ]);
     }
 
@@ -81,68 +106,146 @@ class CertificateCompletionController extends Controller
     {
         StudentCompletion::ensureTable();
         LmsCertificate::ensureTable();
+        CertificateTemplate::ensureTable();
 
         $data = $request->validate([
-            'user_id' => 'required|integer|exists:users,id',
-            'course_id' => 'required|integer|exists:courses,id',
+            'target_type' => 'required|in:student,batch',
+            'user_id' => 'nullable|integer|exists:users,id',
+            'batch_id' => 'nullable|integer|exists:class_batches,id',
+            'course_id' => 'nullable|integer|exists:courses,id',
+            'template_id' => 'required|integer|exists:certificate_templates,id',
             'completed_at' => 'nullable|date',
             'notes' => 'nullable|string|max:2000',
             'issue_now' => 'nullable|boolean',
             'send_email' => 'nullable|boolean',
         ]);
 
-        $exists = StudentCompletion::query()
-            ->where('user_id', $data['user_id'])
-            ->where('course_id', $data['course_id'])
-            ->whereIn('status', ['completed', 'certificate_issued'])
-            ->exists();
-        if ($exists) {
-            return back()->withInput()->with('fail', 'An active completion already exists for this student and course.');
+        $template = CertificateTemplate::query()->findOrFail((int) $data['template_id']);
+        if (! $template->is_active) {
+            throw ValidationException::withMessages(['template_id' => 'Selected template is inactive.']);
         }
 
         $admin = Auth::guard('admin')->user() ?: Auth::user();
-        $completion = StudentCompletion::query()->create([
-            'user_id' => (int) $data['user_id'],
-            'course_id' => (int) $data['course_id'],
-            'status' => 'completed',
-            'completed_at' => ! empty($data['completed_at']) ? $data['completed_at'] : now(),
-            'marked_by' => $admin?->id,
-            'marked_by_name' => $admin
-                ? trim((string) ($admin->name ?? $admin->email ?? 'Admin'))
-                : (function_exists('audit_user_name') ? audit_user_name() : 'Admin'),
-            'notes' => $data['notes'] ?? null,
-        ]);
+        $issueNow = $request->boolean('issue_now', true);
+        $sendEmail = $request->boolean('send_email', true);
+        $completedAt = ! empty($data['completed_at']) ? $data['completed_at'] : now();
+        $notes = $data['notes'] ?? null;
+        $markedBy = $admin?->id;
+        $markedByName = $admin
+            ? trim((string) ($admin->name ?? $admin->email ?? 'Admin'))
+            : (function_exists('audit_user_name') ? audit_user_name() : 'Admin');
 
-        if ($request->boolean('issue_now')) {
-            $cert = $issuer->issueFromCompletion(
-                $completion,
-                $admin instanceof User ? $admin : null,
-                $request->boolean('send_email', true)
-            );
-            $msg = 'Completion saved and certificate issued: ' . $cert->certificate_code;
-            if ($request->boolean('send_email', true) && $cert->emailed_at) {
-                $msg .= ' Email sent to student.';
+        $targets = [];
+        if ($data['target_type'] === 'student') {
+            if (empty($data['user_id'])) {
+                throw ValidationException::withMessages(['user_id' => 'Select a student.']);
+            }
+            if (empty($data['course_id'])) {
+                throw ValidationException::withMessages(['course_id' => 'Select a course.']);
+            }
+            $targets[] = [
+                'user_id' => (int) $data['user_id'],
+                'course_id' => (int) $data['course_id'],
+                'batch_id' => null,
+            ];
+        } else {
+            if (empty($data['batch_id'])) {
+                throw ValidationException::withMessages(['batch_id' => 'Select a batch.']);
+            }
+            $batch = ClassBatch::query()->findOrFail((int) $data['batch_id']);
+            $courseId = (int) ($batch->course_id ?: ($data['course_id'] ?? 0));
+            if ($courseId <= 0) {
+                throw ValidationException::withMessages(['batch_id' => 'This batch has no course linked.']);
+            }
+            $studentIds = ClassBatch::studentUserIdsFor((int) $batch->id);
+            if ($studentIds->isEmpty()) {
+                throw ValidationException::withMessages(['batch_id' => 'No students found on this batch.']);
+            }
+            foreach ($studentIds as $sid) {
+                $targets[] = [
+                    'user_id' => (int) $sid,
+                    'course_id' => $courseId,
+                    'batch_id' => (int) $batch->id,
+                ];
+            }
+        }
+
+        $created = 0;
+        $issued = 0;
+        $codes = [];
+
+        foreach ($targets as $target) {
+            $completion = StudentCompletion::query()->create([
+                'user_id' => $target['user_id'],
+                'course_id' => $target['course_id'],
+                'batch_id' => $target['batch_id'],
+                'template_id' => (int) $template->id,
+                'status' => 'completed',
+                'completed_at' => $completedAt,
+                'marked_by' => $markedBy,
+                'marked_by_name' => $markedByName,
+                'notes' => $notes,
+            ]);
+            $created++;
+
+            if ($issueNow) {
+                $cert = $issuer->issueFromCompletion(
+                    $completion,
+                    $admin instanceof User ? $admin : null,
+                    $sendEmail,
+                    $template,
+                    true
+                );
+                $issued++;
+                $codes[] = $cert->certificate_code;
+            }
+        }
+
+        if ($issueNow) {
+            $msg = "Marked complete for {$created} student(s). Issued {$issued} certificate(s).";
+            if (count($codes) === 1) {
+                $msg .= ' Code: ' . $codes[0] . '.';
+            }
+            if ($sendEmail) {
+                $msg .= ' Email attempted for issued certificates.';
             }
 
             return redirect()
-                ->route('admin.certificates.index')
+                ->route('admin.certificates.completions.index')
                 ->with('success', $msg);
         }
 
         return redirect()
             ->route('admin.certificates.completions.index')
-            ->with('success', 'Student marked as completed.');
+            ->with('success', "Marked complete for {$created} student(s). Certificate not issued yet.");
     }
 
     public function issue(Request $request, int $id, CertificateIssuerService $issuer)
     {
         StudentCompletion::ensureTable();
         LmsCertificate::ensureTable();
+        CertificateTemplate::ensureTable();
 
         $completion = StudentCompletion::query()->findOrFail($id);
         $admin = Auth::guard('admin')->user() ?: Auth::user();
         $sendEmail = $request->boolean('send_email', true);
-        $cert = $issuer->issueFromCompletion($completion, $admin instanceof User ? $admin : null, $sendEmail);
+
+        $templateId = (int) $request->input('template_id', $completion->template_id ?: 0);
+        $template = $templateId > 0
+            ? CertificateTemplate::query()->find($templateId)
+            : CertificateTemplate::ensureDefault();
+        if (! $template) {
+            return back()->with('fail', 'No certificate template available. Create one first.');
+        }
+
+        // Allow another certificate for the same completion (multi-issue).
+        $cert = $issuer->issueFromCompletion(
+            $completion,
+            $admin instanceof User ? $admin : null,
+            $sendEmail,
+            $template,
+            true
+        );
 
         $msg = 'Certificate issued: ' . $cert->certificate_code;
         if ($sendEmail) {
@@ -150,7 +253,7 @@ class CertificateCompletionController extends Controller
         }
 
         return redirect()
-            ->route('admin.certificates.index')
+            ->route('admin.certificates.completions.index')
             ->with('success', $msg);
     }
 }

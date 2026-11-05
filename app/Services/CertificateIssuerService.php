@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Mail\CertificateIssuedMail;
+use App\Models\CertificateTemplate;
 use App\Models\Email;
 use App\Models\LmsCertificate;
 use App\Models\StudentCompletion;
@@ -17,26 +18,43 @@ use Illuminate\Support\Str;
 
 class CertificateIssuerService
 {
-    public function issueFromCompletion(StudentCompletion $completion, ?User $issuer = null, bool $sendEmail = false): LmsCertificate
-    {
+    public function issueFromCompletion(
+        StudentCompletion $completion,
+        ?User $issuer = null,
+        bool $sendEmail = false,
+        ?CertificateTemplate $template = null,
+        bool $forceNew = false
+    ): LmsCertificate {
         LmsCertificate::ensureTable();
         StudentCompletion::ensureTable();
+        CertificateTemplate::ensureTable();
 
-        $existing = LmsCertificate::query()
-            ->where('completion_id', $completion->id)
-            ->where('status', 'issued')
-            ->first();
-        if ($existing) {
-            if ($sendEmail) {
-                $this->emailCertificate($existing);
+        if (! $forceNew) {
+            $existing = LmsCertificate::query()
+                ->where('completion_id', $completion->id)
+                ->where('status', 'issued')
+                ->orderByDesc('id')
+                ->first();
+            if ($existing) {
+                if ($sendEmail) {
+                    $this->emailCertificate($existing);
+                }
+
+                return $existing;
             }
-
-            return $existing;
         }
 
-        $completion->loadMissing(['user', 'course']);
+        $completion->loadMissing(['user', 'course', 'template']);
         $student = $completion->user;
         $course = $completion->course;
+
+        if (! $template) {
+            $template = $completion->template
+                ?: ($completion->template_id
+                    ? CertificateTemplate::query()->find($completion->template_id)
+                    : null)
+                ?: CertificateTemplate::ensureDefault();
+        }
 
         $studentName = trim((string) ($student?->name ?? ''));
         if ($studentName === '') {
@@ -58,6 +76,7 @@ class CertificateIssuerService
             'completion_id' => $completion->id,
             'user_id' => (int) $completion->user_id,
             'course_id' => $completion->course_id ? (int) $completion->course_id : null,
+            'template_id' => $template?->id,
             'certificate_code' => $code,
             'status' => 'issued',
             'issued_at' => now(),
@@ -71,14 +90,18 @@ class CertificateIssuerService
                 : (function_exists('audit_user_name') ? audit_user_name() : 'Admin'),
         ]);
 
-        $pdfRel = $this->renderPdf($cert);
+        if ($template && (! $completion->template_id || (int) $completion->template_id !== (int) $template->id)) {
+            $completion->template_id = $template->id;
+        }
+
+        $pdfRel = $this->renderPdf($cert->fresh(['template']), $template);
         $cert->pdf_path = $pdfRel;
         $cert->save();
 
         if ($completion->status !== 'certificate_issued') {
             $completion->status = 'certificate_issued';
-            $completion->save();
         }
+        $completion->save();
 
         if ($sendEmail) {
             $this->emailCertificate($cert->fresh());
@@ -99,7 +122,9 @@ class CertificateIssuerService
             $cert->issued_by_name = trim((string) ($issuer->name ?? $issuer->email ?? 'Admin'));
         }
         $cert->qr_payload = url('/verify-certificate/' . rawurlencode((string) $cert->certificate_code));
-        $cert->pdf_path = $this->renderPdf($cert);
+        $cert->loadMissing('template');
+        $template = $cert->template ?: CertificateTemplate::ensureDefault();
+        $cert->pdf_path = $this->renderPdf($cert, $template);
         $cert->save();
 
         if ($sendEmail) {
@@ -126,7 +151,8 @@ class CertificateIssuerService
 
         $pdfAbs = public_path((string) $cert->pdf_path);
         if (! $cert->pdf_path || ! File::exists($pdfAbs)) {
-            $cert->pdf_path = $this->renderPdf($cert);
+            $cert->loadMissing('template');
+            $cert->pdf_path = $this->renderPdf($cert, $cert->template ?: CertificateTemplate::ensureDefault());
             $cert->save();
             $pdfAbs = public_path((string) $cert->pdf_path);
         }
@@ -228,11 +254,17 @@ class CertificateIssuerService
         return $prefix . str_pad((string) $seq, 6, '0', STR_PAD_LEFT);
     }
 
-    public function renderPdf(LmsCertificate $cert): string
+    public function renderPdf(LmsCertificate $cert, ?CertificateTemplate $template = null): string
     {
+        CertificateTemplate::ensureTable();
         $dir = public_path('certificates');
         if (! File::isDirectory($dir)) {
             File::makeDirectory($dir, 0755, true);
+        }
+
+        if (! $template) {
+            $cert->loadMissing('template');
+            $template = $cert->template ?: CertificateTemplate::ensureDefault();
         }
 
         $qrPath = $this->ensureQrImage($cert);
@@ -245,13 +277,16 @@ class CertificateIssuerService
         }
         $html = view('certificates.pdf', [
             'certificate' => $cert,
+            'template' => $template,
             'qrAbsolutePath' => $qrPath,
             'qrSrc' => $qrForPdf,
-            'schoolName' => 'Berkeley School of Business, Arts & Sciences',
+            'schoolName' => $template ? $template->schoolName() : 'Berkeley School of Business, Arts & Sciences',
         ])->render();
 
-        $pdf = Pdf::loadHTML($html)->setPaper('a4', 'landscape');
-        $fileName = Str::slug($cert->certificate_code) . '.pdf';
+        $orientation = $template ? $template->paperOrientation() : 'landscape';
+        $pdf = Pdf::loadHTML($html)->setPaper('a4', $orientation);
+        // Unique filename when multiple certs share similar codes over time.
+        $fileName = Str::slug($cert->certificate_code) . '-' . $cert->id . '.pdf';
         $absolute = $dir . DIRECTORY_SEPARATOR . $fileName;
         File::put($absolute, $pdf->output());
 

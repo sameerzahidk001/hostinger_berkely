@@ -79,6 +79,21 @@ class LmsCertificateController extends Controller
         return response()->download($path, $cert->certificate_code . '.pdf');
     }
 
+    public function preview(int $id)
+    {
+        LmsCertificate::ensureTable();
+        $cert = LmsCertificate::query()->findOrFail($id);
+        $path = public_path((string) $cert->pdf_path);
+        if (! $cert->pdf_path || ! File::exists($path)) {
+            return back()->with('fail', 'PDF file not found. Use Re-issue to regenerate.');
+        }
+
+        return response()->file($path, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="' . $cert->certificate_code . '.pdf"',
+        ]);
+    }
+
     public function email(int $id, CertificateIssuerService $issuer)
     {
         LmsCertificate::ensureTable();
