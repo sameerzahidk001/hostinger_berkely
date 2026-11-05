@@ -262,7 +262,7 @@ class LmsAssessmentController extends Controller
     public function assignForm($id)
     {
         $this->assessments->ensure();
-        $assessment = LmsAssessment::with(['assignments.batch', 'assignments.student', 'assignments.marker', 'course'])->findOrFail($id);
+        $assessment = LmsAssessment::query()->with('course')->findOrFail($id);
         abort_unless($this->assessments->canManageSittingsFor($assessment), 403);
         if ($assessment->isDisabled()) {
             return redirect()->route('admin.assessments.tests.index')
@@ -275,7 +275,7 @@ class LmsAssessmentController extends Controller
         // Assign = add new people only — never preload existing assignees.
         $assignMode = old('sitting_kind', request('mode')) === 'self' ? 'self' : 'exam';
 
-        return view('admin.assessments.tests.assign', array_merge($this->formData($assessment), [
+        return view('admin.assessments.tests.assign', array_merge($this->assignPickerData($assessment), [
             'selectedBatchIds' => old('batch_ids', []),
             'selectedStudentIds' => old('student_ids', []),
             'selectedMarkerId' => old('marker_user_id'),
@@ -4097,6 +4097,47 @@ class LmsAssessmentController extends Controller
                 // next row
             }
         }
+    }
+
+    /** Batches, users, and assessors for the Assign form. Does not load sitting history. */
+    protected function assignPickerData(LmsAssessment $assessment): array
+    {
+        $batches = Schema::hasTable('class_batches')
+            ? ClassBatch::query()->orderByDesc('id')->get(['id', 'code', 'name'])
+            : collect();
+
+        $assignableUsers = collect();
+        try {
+            $assignableUsers = User::query()
+                ->with('roles:id,name')
+                ->whereHas('roles', function ($q) {
+                    $q->whereIn('name', array_merge(['student'], $this->assessments->staffRoleNames()));
+                })
+                ->orderBy('name')
+                ->limit(800)
+                ->get(['id', 'name', 'email']);
+        } catch (\Throwable $e) {
+            $assignableUsers = User::query()->orderBy('name')->limit(800)->get(['id', 'name', 'email']);
+        }
+
+        $instructors = collect();
+        try {
+            $instructors = User::query()
+                ->whereHas('roles', fn ($q) => $q->whereIn('name', ['instructor', 'head_of_faculty', 'head-of-faculty']))
+                ->orderBy('name')
+                ->limit(400)
+                ->get(['id', 'name', 'email']);
+        } catch (\Throwable $e) {
+            // Keep an empty assessor list rather than failing the assign page.
+        }
+
+        return [
+            'assessment' => $assessment,
+            'batches' => $batches,
+            'students' => $assignableUsers,
+            'instructors' => $instructors,
+            'timezoneOptions' => LmsAssessmentAssignment::timezoneOptions(),
+        ];
     }
 
     protected function formData(LmsAssessment $assessment): array
