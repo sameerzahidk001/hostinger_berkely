@@ -14,6 +14,7 @@
     .lms-assigned-pager .lms-page-label { font-weight: 600; color: #333; }
     .lms-media-thumb { width:72px;height:54px;object-fit:cover;border:1px solid #e7eaec;display:block;background:#f4f4f4; }
     .lms-media-skip { display:block;width:72px;height:54px;line-height:54px;text-align:center;background:#f4f4f4;border:1px solid #e7eaec;font-size:10px;color:#888; }
+    .lms-media-broken { display:block;width:72px;height:54px;padding:6px 4px;line-height:1.2;text-align:center;background:#fff0f0;border:1px solid #f5c2c2;font-size:10px;color:#c0392b; }
     .lms-media-actions { display:flex; flex-direction:column; gap:4px; align-items:stretch; min-width:110px; }
     .lms-media-actions .btn { margin:0; }
     .lms-copy-ok { color:#1ab394; font-size:11px; display:none; }
@@ -100,8 +101,9 @@
         </div>
         <div class="ibox-content">
             <p class="text-muted">
-                Alternative Text, Title, Image Caption, and Description are separate columns — empty fields are highlighted so missing ones are easy to spot.
-                Edit inline and Save; linked pages/courses update when the sync box is checked. Filename can be renamed in the File column.
+                Alternative Text, Title, Image Caption, and Description are separate columns — empty fields show <em>Empty</em>.
+                A red <em>Broken file</em> thumbnail means the file is on disk but not a valid image (CDN returns “Invalid source image”) — re-upload a good PNG/JPG.
+                Edit inline and Save; linked pages/courses update when sync is checked.
                 Use <strong>Unused only</strong> to find images safe to delete.
             </p>
             <form method="GET" class="form-group" action="{{ route('admin.media.index') }}">
@@ -150,10 +152,12 @@
                             @endphp
                             <tr>
                                 <td>
-                                    @if(($row['size'] ?? 0) > 800000)
+                                    @if(empty($row['valid']))
+                                        <a href="{{ $row['url'] }}" target="_blank" rel="noopener" class="lms-media-broken" title="File exists but is not a valid image (Hostinger returns Invalid source image)">Broken file</a>
+                                    @elseif(($row['size'] ?? 0) > 800000)
                                         <a href="{{ $row['url'] }}" target="_blank" rel="noopener" class="lms-media-skip">Open</a>
                                     @else
-                                        <img src="{{ $row['url'] }}" alt="{{ $row['alt'] ?: $row['name'] }}" title="{{ $row['title'] ?? '' }}" class="lms-media-thumb" width="72" height="54" loading="lazy" decoding="async" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'lms-media-skip',textContent:'Missing'}));">
+                                        <img src="{{ $row['url'] }}" alt="{{ $row['alt'] ?: $row['name'] }}" title="{{ $row['title'] ?? '' }}" class="lms-media-thumb" width="72" height="54" loading="lazy" decoding="async" onerror="this.replaceWith(Object.assign(document.createElement('a'),{className:'lms-media-broken',textContent:'Broken file',href:this.src,target:'_blank',rel:'noopener'}));">
                                     @endif
                                 </td>
                                 <td>
@@ -165,19 +169,19 @@
                                 </td>
                                 <td class="lms-meta-col">
                                     <input type="text" name="alt" form="{{ $formId }}" class="form-control input-sm {{ $altMissing ? 'lms-meta-missing' : '' }}" value="{{ $row['alt'] }}" maxlength="255" placeholder="—">
-                                    @if($altMissing)<span class="lms-meta-empty-label">Missing</span>@endif
+                                    @if($altMissing)<span class="lms-meta-empty-label">Empty</span>@endif
                                 </td>
                                 <td class="lms-meta-col">
                                     <input type="text" name="title" form="{{ $formId }}" class="form-control input-sm {{ $titleMissing ? 'lms-meta-missing' : '' }}" value="{{ $row['title'] }}" maxlength="255" placeholder="—">
-                                    @if($titleMissing)<span class="lms-meta-empty-label">Missing</span>@endif
+                                    @if($titleMissing)<span class="lms-meta-empty-label">Empty</span>@endif
                                 </td>
                                 <td class="lms-meta-col">
                                     <textarea name="caption" form="{{ $formId }}" class="form-control input-sm {{ $captionMissing ? 'lms-meta-missing' : '' }}" rows="2" maxlength="2000" placeholder="—">{{ $row['caption'] }}</textarea>
-                                    @if($captionMissing)<span class="lms-meta-empty-label">Missing</span>@endif
+                                    @if($captionMissing)<span class="lms-meta-empty-label">Empty</span>@endif
                                 </td>
                                 <td class="lms-meta-col">
                                     <textarea name="description" form="{{ $formId }}" class="form-control input-sm {{ $descriptionMissing ? 'lms-meta-missing' : '' }}" rows="2" maxlength="5000" placeholder="—">{{ $row['description'] ?? '' }}</textarea>
-                                    @if($descriptionMissing)<span class="lms-meta-empty-label">Missing</span>@endif
+                                    @if($descriptionMissing)<span class="lms-meta-empty-label">Empty</span>@endif
                                 </td>
                                 <td>
                                     @if($row['links'] === [])
@@ -284,7 +288,7 @@
         var label = el.siblings('.lms-meta-empty-label');
         if (empty) {
             if (!label.length) {
-                el.after('<span class="lms-meta-empty-label">Missing</span>');
+                el.after('<span class="lms-meta-empty-label">Empty</span>');
             }
         } else {
             label.remove();
