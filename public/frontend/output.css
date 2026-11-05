@@ -3141,19 +3141,33 @@ video {
 .page-section {
   margin-top: 0 !important;
   margin-bottom: 0 !important;
-  padding-top: 2rem;
-  padding-bottom: 2rem;
+  padding-top: 2.75rem;
+  padding-bottom: 2.75rem;
 }
 
 @media (min-width: 960px) {
   .page-section {
-    padding-top: 2.25rem;
-    padding-bottom: 2.25rem;
+    padding-top: 3.25rem;
+    padding-bottom: 3.25rem;
   }
 }
 
+.cms-banner-section + .page-section {
+  padding-top: 3.5rem;
+}
+
 .page-section > .grid {
+  gap: 1.75rem;
+}
+
+.overlay-cards-section > .grid {
   gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .overlay-cards-section > .grid {
+    gap: 2rem;
+  }
 }
 
 .page-section .grid .cms-html section,

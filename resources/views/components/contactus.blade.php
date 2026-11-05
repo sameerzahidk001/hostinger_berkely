@@ -1,4 +1,4 @@
-<section id="section-{{ $id }}" class="page-section card-hidden px-6 min-[1200px]:px-[72px] md:px-12" style="background-color: {{ section_bg_color($background) }}">
+<section id="section-{{ $id }}" class="page-section card-hidden px-6 min-[1200px]:px-[72px] md:px-12 mt-4" style="background-color: {{ section_bg_color($background) }}">
     <div class="flex flex-col justify-center items-center">
         <div class="w-full text-center">
             <h2 class="text-[32px] font-canela leading-[38px] md:text-[40px] md:leading-[40px]" style="color: {{ $color }}">{{ $title }}</h2>

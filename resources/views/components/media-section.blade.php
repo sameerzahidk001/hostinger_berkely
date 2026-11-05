@@ -56,15 +56,15 @@
     </section>
 @elseif ($layout === 'layout-2')
     <section class="page-section lg:px-[48px]" style="background-color: {{ $resolvedSectionBg }}">
-        <div class="flex flex-col gap-10 xl:gap-0 {{ $direction === 'left' ? 'lg:flex-row' : 'lg:flex-row-reverse' }} items-stretch gap-y-10 ">
+        <div class="flex flex-col gap-8 lg:gap-12 {{ $direction === 'left' ? 'lg:flex-row' : 'lg:flex-row-reverse' }} items-stretch">
             <div class="flex-1 w-full basis-full">
                 <img src="{{ $image }}" alt="{{ image_alt($altText ?? null, $title ?? 'Media image') }}"
                     class="w-full h-full object-cover"
                     loading="lazy" decoding="async" width="1000" height="700">
             </div>
-            <div class="relative flex justify-center items-center px-8 lg:px-0 py-4 w-full basis-full ">
+            <div class="relative flex justify-center items-center px-6 lg:px-4 py-4 w-full basis-full">
                 <div
-                    class="flex-1 w-full xl:py-4 min-[1340px]:py-8 my-2 xl:absolute {{ $direction === 'left' ? 'xl:-left-20' : 'xl:-right-20' }} xl:px-8 gap-2 flex flex-col {{ $resolvedContentBg !== 'transparent' ? 'content-bg' : 'xl:bg-white' }}">
+                    class="flex-1 w-full py-4 gap-2 flex flex-col {{ $resolvedContentBg !== 'transparent' ? 'content-bg' : 'lg:bg-white' }}">
                     @if(isset($title))
                         <h2 class="font-roboto text-[32px] leading-[40px] md:text-[48px] md:leading-[58px] min-[960px]:text-[32px] min-[960px]:leading-[40px] tracking-wide max-w-[450px]"
                             style="color: {{ $color ?? 'inherit' }};">
