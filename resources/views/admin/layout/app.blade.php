@@ -332,6 +332,19 @@
                      <a href="{{ route('admin.rate-review.index') }}"><i class="fa fa-star"></i> <span class="nav-label">Rate and Review</span></a>
                   </li>
                   @endif
+                  @if(admin_menu_allowed('assessments') || admin_menu_allowed('class-schedules') || admin_menu_allowed('study-materials'))
+                  <li class="{{ request()->is('admin/certificates*') ? 'active' : '' }}">
+                     <a href="javascript:void(0)"><i class="fa fa-certificate"></i> <span class="nav-label">Certificates</span> <span class="fa arrow"></span></a>
+                     <ul class="nav nav-second-level">
+                        <li class="{{ request()->is('admin/certificates/completions*') ? 'active' : '' }}">
+                           <a href="{{ route('admin.certificates.completions.index') }}">Completions</a>
+                        </li>
+                        <li class="{{ request()->is('admin/certificates') && !request()->is('admin/certificates/completions*') ? 'active' : '' }}">
+                           <a href="{{ route('admin.certificates.index') }}">Issued certificates</a>
+                        </li>
+                     </ul>
+                  </li>
+                  @endif
                   @if(admin_menu_allowed('class-schedules'))
                   <li class="{{ request()->is('admin/class-schedules*') || request()->is('admin/class-batches*') || request()->is('admin/meeting-accounts*') || request()->is('admin/zoho-settings*') ? 'active' : '' }}">
                      <a href="javascript:void(0)"><i class="fa fa-calendar"></i> <span class="nav-label">Class Schedule</span> <span class="fa arrow"></span></a>
