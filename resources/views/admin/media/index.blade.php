@@ -15,6 +15,7 @@
     .lms-media-thumb { width:72px;height:54px;object-fit:cover;border:1px solid #e7eaec;display:block;background:#f4f4f4; }
     .lms-media-skip { display:block;width:72px;height:54px;line-height:54px;text-align:center;background:#f4f4f4;border:1px solid #e7eaec;font-size:10px;color:#888; }
     .lms-media-broken { display:block;width:72px;height:54px;padding:6px 4px;line-height:1.2;text-align:center;background:#fff0f0;border:1px solid #f5c2c2;font-size:10px;color:#c0392b; }
+    .lms-media-size { display:block; margin-top:4px; font-size:10px; color:#888; line-height:1.25; text-align:center; max-width:78px; }
     .lms-media-actions { display:flex; flex-direction:column; gap:4px; align-items:stretch; min-width:110px; }
     .lms-media-actions .btn { margin:0; }
     .lms-copy-ok { color:#1ab394; font-size:11px; display:none; }
@@ -149,16 +150,29 @@
                                 $titleMissing = trim((string) ($row['title'] ?? '')) === '';
                                 $captionMissing = trim((string) ($row['caption'] ?? '')) === '';
                                 $descriptionMissing = trim((string) ($row['description'] ?? '')) === '';
+                                $bytes = (int) ($row['size'] ?? 0);
+                                if ($bytes >= 1048576) {
+                                    $sizeLabel = rtrim(rtrim(number_format($bytes / 1048576, 2, '.', ''), '0'), '.') . ' MB';
+                                } elseif ($bytes >= 1024) {
+                                    $sizeLabel = number_format((int) round($bytes / 1024)) . ' KB';
+                                } else {
+                                    $sizeLabel = $bytes . ' B';
+                                }
+                                $dimLabel = '';
+                                if (! empty($row['width']) && ! empty($row['height'])) {
+                                    $dimLabel = (int) $row['width'] . '×' . (int) $row['height'];
+                                }
                             @endphp
                             <tr>
                                 <td>
                                     @if(empty($row['valid']))
                                         <a href="{{ $row['url'] }}" target="_blank" rel="noopener" class="lms-media-broken" title="File exists but is not a valid image (Hostinger returns Invalid source image)">Broken file</a>
-                                    @elseif(($row['size'] ?? 0) > 800000)
-                                        <a href="{{ $row['url'] }}" target="_blank" rel="noopener" class="lms-media-skip">Open</a>
                                     @else
                                         <img src="{{ $row['url'] }}" alt="{{ $row['alt'] ?: $row['name'] }}" title="{{ $row['title'] ?? '' }}" class="lms-media-thumb" width="72" height="54" loading="lazy" decoding="async" onerror="this.replaceWith(Object.assign(document.createElement('a'),{className:'lms-media-broken',textContent:'Broken file',href:this.src,target:'_blank',rel:'noopener'}));">
                                     @endif
+                                    <span class="lms-media-size" title="{{ number_format($bytes) }} bytes">
+                                        @if($dimLabel !== ''){{ $dimLabel }}<br>@endif{{ $sizeLabel }}
+                                    </span>
                                 </td>
                                 <td>
                                     <a href="{{ $row['url'] }}" target="_blank" rel="noopener" style="word-break:break-all;">{{ $row['name'] }}</a>
