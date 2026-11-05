@@ -1,7 +1,7 @@
 @extends('admin.layout.app')
 @section('title', 'Media')
 @section('content')
-{{-- lms-media-20261105e blade-safe + page-only image probe --}}
+{{-- lms-media-20261105f cached file list, no full-library scan on load --}}
 <style>
     .lms-assigned-pager {
         display: flex;
@@ -111,8 +111,11 @@
                 File size is shown under each preview. Red size = over {{ function_exists('lms_image_upload_max_kb') ? lms_image_upload_max_kb() : 300 }} KB — replace with a compressed image.
                 New uploads are limited to {{ function_exists('lms_image_upload_max_kb') ? lms_image_upload_max_kb() : 300 }} KB site-wide.
                 Use <strong>Download images zip</strong> for the full <code>public/images</code> folder to resize offline.
-                Use <strong>Unused only</strong> to find images safe to delete.
+                Use <strong>Unused only</strong> after a filename search (40 matches or fewer) to find images safe to delete.
             </p>
+            @if(!empty($unusedSkipped))
+                <div class="alert alert-warning">{{ $unusedSkipped }}</div>
+            @endif
             <form method="GET" class="form-group" action="{{ route('admin.media.index') }}">
                 <div class="row">
                     <div class="col-sm-7">
@@ -208,7 +211,9 @@
                                     @if($descriptionMissing)<span class="lms-meta-empty-label">Empty</span>@endif
                                 </td>
                                 <td>
-                                    @if($row['links'] === [])
+                                    @if(empty($row['links_known']))
+                                        <span class="text-muted small">Links not checked on this load. Delete still verifies links before removing a file.</span>
+                                    @elseif($row['links'] === [])
                                         <span class="label label-warning">Not linked</span>
                                         <div class="text-muted small" style="margin-top:4px;">Safe to delete if unused elsewhere</div>
                                     @else

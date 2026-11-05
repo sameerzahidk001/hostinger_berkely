@@ -10,6 +10,7 @@ use App\Models\PageSection;
 use App\Models\SiteSettings;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -25,7 +26,7 @@ class MediaController extends Controller
         $perPage = 15;
         $page = max(1, (int) $request->input('page', 1));
 
-        $files = $this->imageFiles();
+        $files = $this->cachedImageFiles();
         if ($search !== '') {
             $needle = mb_strtolower($search);
             $files = array_values(array_filter($files, function ($file) use ($needle) {
@@ -39,10 +40,26 @@ class MediaController extends Controller
             return ($b['mtime'] ?? 0) <=> ($a['mtime'] ?? 0);
         });
 
-        // Optional unused filter needs usage scan — apply after full sort then filter.
-        // For performance we still paginate; unused filter scans usages for all matching files in batches.
+        // Full-library unused scans time out (2000+ files × content LIKE). Only run
+        // them for a filename search that already narrowed the set.
+        $unusedSkipped = null;
         if ($unusedOnly) {
-            $files = $this->filterUnused($files);
+            if ($search === '' || count($files) > 40) {
+                $unusedOnly = false;
+                $unusedSkipped = 'Unused only was skipped so this page can load. Search a filename (40 matches or fewer), then tick Unused only again.';
+            } elseif ($this->capDbStatement(8)) {
+                try {
+                    $files = $this->filterUnused($files);
+                } catch (\Throwable $e) {
+                    $unusedOnly = false;
+                    $unusedSkipped = 'Unused check timed out. Narrow the filename search and try again.';
+                } finally {
+                    $this->clearDbStatementCap();
+                }
+            } else {
+                $unusedOnly = false;
+                $unusedSkipped = 'Unused only was skipped so this page can load. Search a filename, then tick Unused only again.';
+            }
         }
 
         $total = count($files);
@@ -51,47 +68,50 @@ class MediaController extends Controller
             $page = $lastPage;
         }
         $slice = array_slice($files, ($page - 1) * $perPage, $perPage);
-        $usages = $this->usageIndex($slice);
         $metaByPath = $this->metaIndex(array_column($slice, 'rel'));
-        $linkedMeta = $this->linkedMetaIndex($slice);
+
+        // Link lookup scans large page JSON. Cap it so nginx does not 504.
+        // Delete still runs a full link check before removing a file.
+        $usages = ['by_path' => [], 'by_name' => []];
+        $linksKnown = false;
+        if ($slice !== [] && $this->capDbStatement(8)) {
+            try {
+                $usages = $this->usageIndex($slice, false);
+                $linksKnown = true;
+            } catch (\Throwable $e) {
+                $usages = ['by_path' => [], 'by_name' => []];
+                $linksKnown = false;
+            } finally {
+                $this->clearDbStatementCap();
+            }
+        }
 
         $rows = [];
         foreach ($slice as $file) {
             $rel = str_replace('\\', '/', $file['rel']);
             $key = strtolower($rel);
             $base = strtolower($file['name']);
-            $links = array_values(array_unique(array_merge(
-                $usages['by_path'][$key] ?? [],
-                $usages['by_name'][$base] ?? []
-            )));
-            sort($links);
-            $stored = $metaByPath[$key] ?? [];
-            $linked = $linkedMeta[$key] ?? [];
-            $meta = MediaAsset::mergeDisplayMeta($stored, $linked);
-            // Soft-backfill empty media_assets fields from linked page/course values.
-            if (MediaAsset::ensureTable()) {
-                $fill = [];
-                foreach (['alt', 'title', 'caption', 'description'] as $field) {
-                    if (trim((string) ($stored[$field] ?? '')) === '' && trim((string) ($linked[$field] ?? '')) !== '') {
-                        $fill[$field] = $linked[$field];
-                    }
-                }
-                if ($fill !== []) {
-                    MediaAsset::upsertForPath($rel, $fill);
-                }
+            $links = [];
+            if ($linksKnown) {
+                $links = array_values(array_unique(array_merge(
+                    $usages['by_path'][$key] ?? [],
+                    $usages['by_name'][$base] ?? []
+                )));
+                sort($links);
             }
-            // Probe only this page of files (never all 2000+ on every request).
-            $probe = $this->probeImageFile(public_path($rel));
+            $meta = MediaAsset::mergeDisplayMeta($metaByPath[$key] ?? [], []);
+            $bytes = (int) ($file['size'] ?? 0);
             $rows[] = [
                 'rel' => $rel,
                 'url' => asset($rel),
                 'name' => $file['name'],
                 'mtime' => $file['mtime'],
-                'size' => (int) ($file['size'] ?? 0),
-                'valid' => (bool) ($probe['valid'] ?? false),
-                'width' => (int) ($probe['width'] ?? 0),
-                'height' => (int) ($probe['height'] ?? 0),
+                'size' => $bytes,
+                'valid' => $bytes >= 24,
+                'width' => 0,
+                'height' => 0,
                 'links' => $links,
+                'links_known' => $linksKnown,
                 'alt' => $meta['alt'],
                 'title' => $meta['title'],
                 'caption' => $meta['caption'],
@@ -115,6 +135,7 @@ class MediaController extends Controller
             'search' => $search,
             'rowsTotal' => $total,
             'unusedOnly' => $unusedOnly,
+            'unusedSkipped' => $unusedSkipped,
         ]);
     }
 
@@ -156,6 +177,7 @@ class MediaController extends Controller
         }
 
         $rel = 'images/library/' . $fileName;
+        $this->forgetImageCache();
         MediaAsset::upsertForPath($rel, [
             'alt' => $request->input('alt'),
             'title' => $request->input('title'),
@@ -211,6 +233,7 @@ class MediaController extends Controller
             if (! empty($renameResult['rel']) && $renameResult['rel'] !== $rel) {
                 $rel = $renameResult['rel'];
                 $renamed = true;
+                $this->forgetImageCache();
             }
         }
 
@@ -319,6 +342,7 @@ class MediaController extends Controller
         }
 
         File::delete($full);
+        $this->forgetImageCache();
 
         if (MediaAsset::ensureTable()) {
             MediaAsset::query()->where('path', MediaAsset::normalizePath($rel))->delete();
@@ -941,28 +965,147 @@ class MediaController extends Controller
         return $synced;
     }
 
-    private function imageFiles(): array
+    private function imageCachePath(): string
     {
-        $out = [];
-        foreach (['images', 'uploads'] as $dir) {
-            $path = public_path($dir);
-            if (! File::isDirectory($path)) {
-                continue;
-            }
-            foreach (File::allFiles($path) as $file) {
-                if (in_array(strtolower($file->getExtension()), ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'], true)) {
-                    $rel = $dir . '/' . str_replace('\\', '/', $file->getRelativePathname());
-                    $out[] = [
-                        'rel' => $rel,
-                        'name' => $file->getFilename(),
-                        'mtime' => $file->getMTime(),
-                        'size' => $file->getSize(),
-                    ];
+        return storage_path('app/media-library-index.json');
+    }
+
+    /** @return array<int, array{rel:string,name:string,mtime:int,size:int}> */
+    private function cachedImageFiles(): array
+    {
+        $path = $this->imageCachePath();
+        if (is_file($path)) {
+            $age = time() - (int) @filemtime($path);
+            if ($age >= 0 && $age < 900) {
+                $decoded = json_decode((string) @file_get_contents($path), true);
+                if (is_array($decoded)) {
+                    return $decoded;
                 }
             }
         }
 
+        $files = $this->imageFiles();
+        $this->writeImageCache($files);
+
+        return $files;
+    }
+
+    /** @param array<int, array{rel:string,name:string,mtime:int,size:int}> $files */
+    private function writeImageCache(array $files): void
+    {
+        $path = $this->imageCachePath();
+        $dir = dirname($path);
+        if (! is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+        $tmp = $path . '.tmp';
+        if (@file_put_contents($tmp, json_encode($files)) === false) {
+            return;
+        }
+        @rename($tmp, $path);
+    }
+
+    private function forgetImageCache(): void
+    {
+        $path = $this->imageCachePath();
+        if (is_file($path)) {
+            @unlink($path);
+        }
+    }
+
+    /**
+     * Abort long content searches before nginx returns 504.
+     * Returns false when the server does not allow a statement time limit.
+     */
+    private function capDbStatement(int $seconds): bool
+    {
+        $seconds = max(1, $seconds);
+        try {
+            DB::statement('SET SESSION max_statement_time=' . $seconds);
+
+            return true;
+        } catch (\Throwable $e) {
+            try {
+                DB::statement('SET SESSION MAX_EXECUTION_TIME=' . ($seconds * 1000));
+
+                return true;
+            } catch (\Throwable $e2) {
+                return false;
+            }
+        }
+    }
+
+    private function clearDbStatementCap(): void
+    {
+        try {
+            DB::statement('SET SESSION max_statement_time=0');
+        } catch (\Throwable $e) {
+            try {
+                DB::statement('SET SESSION MAX_EXECUTION_TIME=0');
+            } catch (\Throwable $e2) {
+                // Ignore — the request is ending or the variable is unsupported.
+            }
+        }
+    }
+
+    private function imageFiles(): array
+    {
+        $out = [];
+        $skipDirs = [
+            'uploads/study-materials' => true,
+            'uploads/dbs' => true,
+            'uploads/instructor-payment-slips' => true,
+        ];
+        foreach (['images', 'uploads'] as $dir) {
+            $path = public_path($dir);
+            if (! is_dir($path)) {
+                continue;
+            }
+            $this->collectImageFiles($path, $dir, $out, $skipDirs);
+        }
+
         return $out;
+    }
+
+    /**
+     * List image files without walking document/PDF trees (those made File::allFiles exceed the gateway timeout).
+     *
+     * @param  array<int, array{rel:string,name:string,mtime:int,size:int}>  $out
+     * @param  array<string, bool>  $skipDirs
+     */
+    private function collectImageFiles(string $dir, string $relPrefix, array &$out, array $skipDirs): void
+    {
+        if (isset($skipDirs[strtolower($relPrefix)])) {
+            return;
+        }
+
+        $items = @scandir($dir);
+        if ($items === false) {
+            return;
+        }
+
+        $exts = ['jpg' => true, 'jpeg' => true, 'png' => true, 'gif' => true, 'webp' => true, 'svg' => true];
+        foreach ($items as $name) {
+            if ($name === '.' || $name === '..') {
+                continue;
+            }
+            $full = $dir . DIRECTORY_SEPARATOR . $name;
+            $rel = $relPrefix . '/' . $name;
+            if (is_dir($full)) {
+                $this->collectImageFiles($full, $rel, $out, $skipDirs);
+                continue;
+            }
+            $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+            if (! isset($exts[$ext])) {
+                continue;
+            }
+            $out[] = [
+                'rel' => str_replace('\\', '/', $rel),
+                'name' => $name,
+                'mtime' => (int) (@filemtime($full) ?: 0),
+                'size' => (int) (@filesize($full) ?: 0),
+            ];
+        }
     }
 
     /**
@@ -1005,8 +1148,11 @@ class MediaController extends Controller
         }
     }
 
-    /** @param array<int, array{rel:string,name:string}> $files */
-    private function usageIndex(array $files): array
+    /**
+     * @param  array<int, array{rel:string,name:string}>  $files
+     * @param  bool  $matchBasename  Filename-only LIKE is much slower on large JSON. List view skips it; delete still uses it.
+     */
+    private function usageIndex(array $files, bool $matchBasename = true): array
     {
         $byPath = [];
         $byName = [];
@@ -1038,10 +1184,12 @@ class MediaController extends Controller
 
         if (class_exists(PageSection::class) && Schema::hasTable('page_sections')) {
             $q = PageSection::query()->with('page:id,page_name');
-            $q->where(function ($outer) use ($needles) {
+            $q->where(function ($outer) use ($needles, $matchBasename) {
                 foreach ($needles as $rel) {
                     $outer->orWhere('data', 'like', '%' . addcslashes($rel, '%_\\') . '%');
-                    $outer->orWhere('data', 'like', '%' . addcslashes(basename($rel), '%_\\') . '%');
+                    if ($matchBasename) {
+                        $outer->orWhere('data', 'like', '%' . addcslashes(basename($rel), '%_\\') . '%');
+                    }
                 }
             });
             foreach ($q->limit(300)->get() as $section) {
@@ -1065,12 +1213,15 @@ class MediaController extends Controller
             }
             if ($imgCols !== []) {
                 $q = Course::query()->select(array_merge(['id', 'title'], $imgCols));
-                $q->where(function ($outer) use ($needles, $imgCols) {
+                $q->where(function ($outer) use ($needles, $imgCols, $matchBasename) {
                     foreach ($needles as $rel) {
                         $like = '%' . addcslashes($rel, '%_\\') . '%';
                         $likeBase = '%' . addcslashes(basename($rel), '%_\\') . '%';
                         foreach ($imgCols as $col) {
-                            $outer->orWhere($col, 'like', $like)->orWhere($col, 'like', $likeBase);
+                            $outer->orWhere($col, 'like', $like);
+                            if ($matchBasename) {
+                                $outer->orWhere($col, 'like', $likeBase);
+                            }
                         }
                     }
                 });
@@ -1095,12 +1246,15 @@ class MediaController extends Controller
             }
             if ($existing !== []) {
                 $q = DynamicLabels::query()->select(array_merge(['id', 'course_id'], $existing));
-                $q->where(function ($outer) use ($needles, $existing) {
+                $q->where(function ($outer) use ($needles, $existing, $matchBasename) {
                     foreach ($needles as $rel) {
                         $like = '%' . addcslashes($rel, '%_\\') . '%';
                         $likeBase = '%' . addcslashes(basename($rel), '%_\\') . '%';
                         foreach ($existing as $col) {
-                            $outer->orWhere($col, 'like', $like)->orWhere($col, 'like', $likeBase);
+                            $outer->orWhere($col, 'like', $like);
+                            if ($matchBasename) {
+                                $outer->orWhere($col, 'like', $likeBase);
+                            }
                         }
                     }
                 });
