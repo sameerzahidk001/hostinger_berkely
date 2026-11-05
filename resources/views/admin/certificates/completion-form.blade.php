@@ -53,9 +53,13 @@
                         <input type="text" name="notes" class="form-control" value="{{ old('notes') }}" maxlength="2000">
                     </div>
                     <div class="col-md-12 form-group">
-                        <label class="checkbox-inline">
+                        <label class="checkbox-inline" style="display:block;margin-bottom:8px;">
                             <input type="checkbox" name="issue_now" value="1" @checked(old('issue_now', true))>
                             Also issue certificate now (PDF + QR)
+                        </label>
+                        <label class="checkbox-inline" style="display:block;">
+                            <input type="checkbox" name="send_email" value="1" @checked(old('send_email', true))>
+                            Email PDF to the student
                         </label>
                     </div>
                 </div>

@@ -33,6 +33,7 @@ class Email extends Model
             'lms-self-test-assigned' => 'LMS Self Test Assigned (start anytime)',
             'lms-test-submitted' => 'LMS Test Submitted',
             'lms-test-result-published' => 'LMS Test Result Published',
+            'certificate-issued' => 'Certificate Issued',
         ];
     }
 
@@ -86,6 +87,8 @@ class Email extends Model
                 return $lmsAssign . '<br><strong>{started_at}</strong> · <strong>{submitted_at}</strong> · <strong>{portal_url}</strong>';
             case 'lms-test-result-published':
                 return $lmsAssign . '<br><strong>{result_url}</strong> result page';
+            case 'certificate-issued':
+                return 'You can use: <strong>{name}</strong> <strong>{email}</strong> <strong>{course_name}</strong> <strong>{certificate_code}</strong> <strong>{issued_at}</strong> <strong>{completion_date}</strong> <strong>{verify_url}</strong> <strong>{portal_url}</strong> <strong>{login_url}</strong>';
             default:
                 return '';
         }

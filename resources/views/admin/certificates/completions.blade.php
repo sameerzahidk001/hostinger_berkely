@@ -90,7 +90,8 @@
                                     @else
                                         <form method="POST" action="{{ route('admin.certificates.completions.issue', $row->id) }}" style="display:inline;">
                                             @csrf
-                                            <button type="submit" class="btn btn-xs btn-primary">Issue certificate</button>
+                                            <input type="hidden" name="send_email" value="1">
+                                            <button type="submit" class="btn btn-xs btn-primary">Issue + email</button>
                                         </form>
                                     @endif
                                 </td>

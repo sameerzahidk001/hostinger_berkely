@@ -2,17 +2,22 @@
 
 namespace App\Services;
 
+use App\Mail\CertificateIssuedMail;
+use App\Models\Email;
 use App\Models\LmsCertificate;
 use App\Models\StudentCompletion;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class CertificateIssuerService
 {
-    public function issueFromCompletion(StudentCompletion $completion, ?User $issuer = null): LmsCertificate
+    public function issueFromCompletion(StudentCompletion $completion, ?User $issuer = null, bool $sendEmail = false): LmsCertificate
     {
         LmsCertificate::ensureTable();
         StudentCompletion::ensureTable();
@@ -22,6 +27,10 @@ class CertificateIssuerService
             ->where('status', 'issued')
             ->first();
         if ($existing) {
+            if ($sendEmail) {
+                $this->emailCertificate($existing);
+            }
+
             return $existing;
         }
 
@@ -43,7 +52,7 @@ class CertificateIssuerService
         }
 
         $code = $this->nextCertificateCode();
-        $verifyUrl = url('/verify-certificate/' . urlencode($code));
+        $verifyUrl = url('/verify-certificate/' . rawurlencode($code));
 
         $cert = LmsCertificate::query()->create([
             'completion_id' => $completion->id,
@@ -71,7 +80,134 @@ class CertificateIssuerService
             $completion->save();
         }
 
+        if ($sendEmail) {
+            $this->emailCertificate($cert->fresh());
+        }
+
         return $cert->fresh();
+    }
+
+    public function reissue(LmsCertificate $cert, ?User $issuer = null, bool $sendEmail = false): LmsCertificate
+    {
+        LmsCertificate::ensureTable();
+        $cert->status = 'issued';
+        $cert->revoked_at = null;
+        $cert->revoke_reason = null;
+        $cert->issued_at = now();
+        if ($issuer) {
+            $cert->issued_by = $issuer->id;
+            $cert->issued_by_name = trim((string) ($issuer->name ?? $issuer->email ?? 'Admin'));
+        }
+        $cert->qr_payload = url('/verify-certificate/' . rawurlencode((string) $cert->certificate_code));
+        $cert->pdf_path = $this->renderPdf($cert);
+        $cert->save();
+
+        if ($sendEmail) {
+            $this->emailCertificate($cert->fresh());
+        }
+
+        return $cert->fresh();
+    }
+
+    /**
+     * @return string|null Error message, or null on success.
+     */
+    public function emailCertificate(LmsCertificate $cert): ?string
+    {
+        LmsCertificate::ensureTable();
+        $cert->loadMissing('user');
+        $user = $cert->user;
+        if (! $user || empty($user->email)) {
+            return 'Student has no email address.';
+        }
+        if ($cert->isRevoked()) {
+            return 'Revoked certificates cannot be emailed. Re-issue first.';
+        }
+
+        $pdfAbs = public_path((string) $cert->pdf_path);
+        if (! $cert->pdf_path || ! File::exists($pdfAbs)) {
+            $cert->pdf_path = $this->renderPdf($cert);
+            $cert->save();
+            $pdfAbs = public_path((string) $cert->pdf_path);
+        }
+        if (! File::exists($pdfAbs)) {
+            return 'Certificate PDF could not be generated.';
+        }
+
+        $template = $this->ensureEmailTemplate();
+        if (! $template) {
+            return 'Certificate email template is missing.';
+        }
+
+        $placeholders = [
+            '{name}' => $cert->student_name ?: ($user->name ?? ''),
+            '{email}' => $user->email ?? '',
+            '{course_name}' => $cert->course_title ?: '—',
+            '{certificate_code}' => $cert->certificate_code,
+            '{issued_at}' => optional($cert->issued_at)->format('d M Y') ?: '—',
+            '{completion_date}' => optional($cert->completion_date)->format('d M Y') ?: '—',
+            '{verify_url}' => $cert->verifyUrl(),
+            '{portal_url}' => url(route('user.certificates.index', [], false)),
+            '{login_url}' => url('/login'),
+        ];
+
+        try {
+            $body = str_replace(array_keys($placeholders), array_values($placeholders), (string) $template->body);
+            $subject = str_replace(array_keys($placeholders), array_values($placeholders), (string) $template->subject);
+            $cc = ! empty($template->cc) ? array_filter(array_map('trim', explode(',', (string) $template->cc))) : [];
+            $bcc = ! empty($template->bcc) ? array_filter(array_map('trim', explode(',', (string) $template->bcc))) : [];
+
+            Mail::to($user->email)->cc($cc)->bcc($bcc)->send(new CertificateIssuedMail(
+                $user,
+                $subject,
+                $body,
+                $pdfAbs,
+                $cert->certificate_code . '.pdf'
+            ));
+
+            $cert->emailed_at = now();
+            $cert->save();
+        } catch (\Throwable $e) {
+            Log::warning('Certificate email failed: ' . $e->getMessage());
+
+            return 'Email sending failed: ' . $e->getMessage();
+        }
+
+        return null;
+    }
+
+    public function ensureEmailTemplate(): ?Email
+    {
+        if (! Schema::hasTable('emails')) {
+            return null;
+        }
+
+        $existing = Email::query()
+            ->whereIn('name', ['certificate-issued', 'Certificate Issued'])
+            ->orderByRaw("CASE name WHEN 'certificate-issued' THEN 0 ELSE 1 END")
+            ->first();
+        if ($existing) {
+            return $existing;
+        }
+
+        return Email::query()->firstOrCreate(
+            ['name' => 'certificate-issued'],
+            [
+                'subject' => 'Your certificate is ready | {course_name}',
+                'cc' => null,
+                'bcc' => null,
+                'body' => 'Dear {name},<br><br>'
+                    . 'Congratulations. Your digital certificate for <strong>{course_name}</strong> is ready.<br><br>'
+                    . 'Certificate code: <strong>{certificate_code}</strong><br>'
+                    . 'Issued: {issued_at}<br>'
+                    . 'Completion date: {completion_date}<br><br>'
+                    . 'Download the attached PDF, or verify online:<br>'
+                    . '<a href="{verify_url}">{verify_url}</a><br><br>'
+                    . 'You can also open your certificates in the student portal:<br>'
+                    . '<a href="{portal_url}">{portal_url}</a><br><br>'
+                    . 'Berkeley School of Business, Arts &amp; Sciences',
+            ]
+        );
     }
 
     public function nextCertificateCode(): string

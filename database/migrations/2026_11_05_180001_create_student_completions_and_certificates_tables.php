@@ -45,6 +45,17 @@ return new class extends Migration
                 $table->timestamps();
             });
         }
+
+        if (! Schema::hasTable('certificate_verify_logs')) {
+            Schema::create('certificate_verify_logs', function (Blueprint $table) {
+                $table->id();
+                $table->string('certificate_code', 64)->nullable()->index();
+                $table->string('result', 40)->nullable()->index();
+                $table->string('ip', 64)->nullable();
+                $table->string('user_agent', 500)->nullable();
+                $table->timestamps();
+            });
+        }
     }
 
     public function down(): void
