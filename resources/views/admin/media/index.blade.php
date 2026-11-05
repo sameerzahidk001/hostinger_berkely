@@ -1,7 +1,7 @@
 @extends('admin.layout.app')
 @section('title', 'Media')
 @section('content')
-{{-- lms-media-20261105d meta fields as separate columns --}}
+{{-- lms-media-20261105e blade-safe + page-only image probe --}}
 <style>
     .lms-assigned-pager {
         display: flex;
@@ -170,6 +170,9 @@
                                 if (! empty($row['width']) && ! empty($row['height'])) {
                                     $dimLabel = (int) $row['width'] . '×' . (int) $row['height'];
                                 }
+                                $hasLinks = ! empty($row['links']);
+                                $canDelete = ! function_exists('admin_can_delete') || admin_can_delete();
+                                $deleteTitle = $hasLinks ? 'Remove links first' : 'Delete unused image';
                             @endphp
                             <tr @if($isOver) style="background:#fff8f6;" @endif>
                                 <td>
@@ -235,12 +238,12 @@
                                             <i class="fa fa-copy"></i> Copy URL
                                         </button>
                                         <span class="lms-copy-ok">Copied</span>
-                                        @if(! function_exists('admin_can_delete') || admin_can_delete())
+                                        @if($canDelete)
                                             <form action="{{ route('admin.media.destroy') }}" method="POST" onsubmit="return confirm('Delete this image?');">
                                                 @csrf
                                                 @method('DELETE')
                                                 <input type="hidden" name="path" value="{{ $row['rel'] }}">
-                                                <button type="submit" class="btn btn-danger btn-xs" @disabled($row['links'] !== []) title="{{ $row['links'] !== [] ? 'Remove links first' : 'Delete unused image' }}">
+                                                <button type="submit" class="btn btn-danger btn-xs" @if($hasLinks) disabled @endif title="{{ $deleteTitle }}">
                                                     <i class="fa fa-trash"></i> Delete
                                                 </button>
                                             </form>
