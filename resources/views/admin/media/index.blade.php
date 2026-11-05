@@ -161,9 +161,7 @@
                                     @endif
                                 </td>
                                 <td>
-                                    <a href="{{ $row['url'] }}" target="_blank" rel="noopener">{{ $row['name'] }}</a>
-                                    <div class="text-muted small">{{ $row['rel'] }}</div>
-                                    <div class="text-muted small" style="word-break:break-all;max-width:220px;">{{ $row['url'] }}</div>
+                                    <a href="{{ $row['url'] }}" target="_blank" rel="noopener" style="word-break:break-all;">{{ $row['name'] }}</a>
                                     <label class="lms-meta-col-label" style="margin-top:6px;">Filename</label>
                                     <input type="text" name="filename" form="{{ $formId }}" class="form-control input-sm" value="{{ $row['name'] }}" maxlength="255" title="Rename file">
                                 </td>
