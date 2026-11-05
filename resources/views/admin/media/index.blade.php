@@ -1,7 +1,7 @@
 @extends('admin.layout.app')
 @section('title', 'Media')
 @section('content')
-{{-- lms-media-20261105h linked pages lookup without a giant OR query --}}
+{{-- lms-media-20261105i uploaded date, hide png/webp duplicates, drop help copy --}}
 <style>
     .lms-assigned-pager {
         display: flex;
@@ -31,6 +31,8 @@
     .lms-meta-empty-label { display:block; font-size:10px; color:#c87f0a; margin-top:3px; }
     .lms-meta-col-label { display:block; font-size:10px; font-weight:600; color:#888; text-transform:uppercase; letter-spacing:.02em; margin-bottom:3px; }
     #lms-media-table th.lms-meta-col { white-space:nowrap; }
+    .lms-media-uploaded { white-space:nowrap; font-size:12px; line-height:1.35; }
+    .lms-media-uploaded .t { display:block; color:#888; font-size:11px; }
 </style>
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">
@@ -104,15 +106,9 @@
 
     <div class="ibox">
         <div class="ibox-title">
-            <h5>All images <small class="text-muted">({{ (int) ($rowsTotal ?? $rows->total()) }} files · 15 per page)</small></h5>
+            <h5>All images <small class="text-muted">({{ (int) ($rowsTotal ?? $rows->total()) }} images · 15 per page)</small></h5>
         </div>
         <div class="ibox-content">
-            <p class="text-muted">
-                File size is shown under each preview. Red size = over {{ function_exists('lms_image_upload_max_kb') ? lms_image_upload_max_kb() : 300 }} KB — replace with a compressed image.
-                New uploads are limited to {{ function_exists('lms_image_upload_max_kb') ? lms_image_upload_max_kb() : 300 }} KB site-wide.
-                Use <strong>Download images zip</strong> for the full <code>public/images</code> folder to resize offline.
-                Use <strong>Unused only</strong> after a filename search (40 matches or fewer) to find images safe to delete.
-            </p>
             @if(!empty($unusedSkipped))
                 <div class="alert alert-warning">{{ $unusedSkipped }}</div>
             @endif
@@ -141,6 +137,7 @@
                 <table class="table table-striped table-bordered" id="lms-media-table">
                     <thead>
                         <tr>
+                            <th style="width:110px;">Uploaded date</th>
                             <th style="width:90px;">Image</th>
                             <th style="min-width:160px;">File</th>
                             <th class="lms-meta-col">Alternative Text</th>
@@ -178,6 +175,12 @@
                                 $deleteTitle = $hasLinks ? 'Remove links first' : 'Delete unused image';
                             @endphp
                             <tr @if($isOver) style="background:#fff8f6;" @endif>
+                                <td class="lms-media-uploaded">
+                                    {{ $row['uploaded_date'] ?? '—' }}
+                                    @if(!empty($row['uploaded_time']))
+                                        <span class="t">{{ $row['uploaded_time'] }}</span>
+                                    @endif
+                                </td>
                                 <td>
                                     @if(empty($row['valid']))
                                         <a href="{{ $row['url'] }}" target="_blank" rel="noopener" class="lms-media-broken" title="File exists but is not a valid image (Hostinger returns Invalid source image)">Broken file</a>
@@ -193,6 +196,9 @@
                                     <a href="{{ $row['url'] }}" target="_blank" rel="noopener" style="word-break:break-all;">{{ $row['name'] }}</a>
                                     <label class="lms-meta-col-label" style="margin-top:6px;">Filename</label>
                                     <input type="text" name="filename" form="{{ $formId }}" class="form-control input-sm" value="{{ $row['name'] }}" maxlength="255" title="Rename file">
+                                    @if(!empty($row['also_on_disk']))
+                                        <div class="text-muted small" style="margin-top:6px;">Also on disk: {{ $row['also_on_disk'] }}</div>
+                                    @endif
                                 </td>
                                 <td class="lms-meta-col">
                                     <input type="text" name="alt" form="{{ $formId }}" class="form-control input-sm {{ $altMissing ? 'lms-meta-missing' : '' }}" value="{{ $row['alt'] }}" maxlength="255" placeholder="—">
@@ -257,7 +263,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="8">No uploaded images found{{ !empty($unusedOnly) ? ' matching unused filter' : '' }}.</td></tr>
+                            <tr><td colspan="9">No uploaded images found{{ !empty($unusedOnly) ? ' matching unused filter' : '' }}.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

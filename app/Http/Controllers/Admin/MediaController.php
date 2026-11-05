@@ -10,6 +10,7 @@ use App\Models\PageSection;
 use App\Models\SiteSettings;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
@@ -26,13 +27,18 @@ class MediaController extends Controller
         $perPage = 15;
         $page = max(1, (int) $request->input('page', 1));
 
-        $files = $this->cachedImageFiles();
+        $files = $this->collapseDuplicateImages($this->cachedImageFiles());
         if ($search !== '') {
             $needle = mb_strtolower($search);
             $files = array_values(array_filter($files, function ($file) use ($needle) {
-                $hay = mb_strtolower(($file['rel'] ?? '') . ' ' . ($file['name'] ?? ''));
+                foreach (($file['variants'] ?? [$file]) as $variant) {
+                    $hay = mb_strtolower(($variant['rel'] ?? '') . ' ' . ($variant['name'] ?? ''));
+                    if (str_contains($hay, $needle)) {
+                        return true;
+                    }
+                }
 
-                return str_contains($hay, $needle);
+                return false;
             }));
         }
 
@@ -49,7 +55,7 @@ class MediaController extends Controller
                 $unusedSkipped = 'Unused only was skipped so this page can load. Search a filename (40 matches or fewer), then tick Unused only again.';
             } elseif ($this->capDbStatement(8)) {
                 try {
-                    $files = $this->filterUnused($files);
+                    $files = $this->filterUnusedGroups($files);
                 } catch (\Throwable $e) {
                     $unusedOnly = false;
                     $unusedSkipped = 'Unused check timed out. Narrow the filename search and try again.';
@@ -68,43 +74,59 @@ class MediaController extends Controller
             $page = $lastPage;
         }
         $slice = array_slice($files, ($page - 1) * $perPage, $perPage);
-        $metaByPath = $this->metaIndex(array_column($slice, 'rel'));
-
-        // Only the 15 files on this page. Include filename matches so CMS rows
-        // that store "image":"file.jpg" still show as linked.
-        $usages = $this->usageIndex($slice, true);
-        $linksKnown = true;
+        $lookup = [];
+        foreach ($slice as $file) {
+            foreach (($file['variants'] ?? [$file]) as $variant) {
+                $lookup[] = $variant;
+            }
+        }
+        $metaByPath = $this->metaIndex(array_column($lookup, 'rel'));
+        $usages = $this->usageIndex($lookup, true);
 
         $rows = [];
         foreach ($slice as $file) {
             $rel = str_replace('\\', '/', $file['rel']);
-            $key = strtolower($rel);
-            $base = strtolower($file['name']);
+            $variants = $file['variants'] ?? [$file];
             $links = [];
-            if ($linksKnown) {
-                $links = array_values(array_unique(array_merge(
-                    $usages['by_path'][$key] ?? [],
-                    $usages['by_name'][$base] ?? []
-                )));
-                sort($links);
+            $meta = [];
+            $also = [];
+            foreach ($variants as $variant) {
+                $vRel = strtolower(str_replace('\\', '/', (string) ($variant['rel'] ?? '')));
+                $vName = strtolower((string) ($variant['name'] ?? ''));
+                $links = array_merge(
+                    $links,
+                    $usages['by_path'][$vRel] ?? [],
+                    $usages['by_name'][$vName] ?? []
+                );
+                $stored = $metaByPath[$vRel] ?? [];
+                $meta = MediaAsset::mergeDisplayMeta($meta === [] ? $stored : $meta, $stored);
+                if (strcasecmp((string) ($variant['name'] ?? ''), (string) ($file['name'] ?? '')) !== 0) {
+                    $also[] = $variant['name'];
+                }
             }
-            $meta = MediaAsset::mergeDisplayMeta($metaByPath[$key] ?? [], []);
+            $links = array_values(array_unique($links));
+            sort($links);
             $bytes = (int) ($file['size'] ?? 0);
+            $mtime = (int) ($file['mtime'] ?? 0);
+            $uploaded = $mtime > 0 ? Carbon::createFromTimestamp($mtime, config('app.timezone')) : null;
             $rows[] = [
                 'rel' => $rel,
                 'url' => asset($rel),
                 'name' => $file['name'],
-                'mtime' => $file['mtime'],
+                'mtime' => $mtime,
+                'uploaded_date' => $uploaded ? $uploaded->format('d M Y') : '—',
+                'uploaded_time' => $uploaded ? $uploaded->format('H:i') : '',
                 'size' => $bytes,
                 'valid' => $bytes >= 24,
                 'width' => 0,
                 'height' => 0,
                 'links' => $links,
-                'links_known' => $linksKnown,
-                'alt' => $meta['alt'],
-                'title' => $meta['title'],
-                'caption' => $meta['caption'],
-                'description' => $meta['description'],
+                'links_known' => true,
+                'also_on_disk' => implode(', ', $also),
+                'alt' => $meta['alt'] ?? null,
+                'title' => $meta['title'] ?? null,
+                'caption' => $meta['caption'] ?? null,
+                'description' => $meta['description'] ?? null,
             ];
         }
 
@@ -704,6 +726,82 @@ class MediaController extends Controller
         }
 
         return $synced;
+    }
+
+    /**
+     * PNG + WebP (or JPG) copies of the same filename are one image.
+     * Keep the compressed WebP/AVIF when present.
+     *
+     * @param  array<int, array{rel:string,name:string,mtime?:int,size?:int}>  $files
+     * @return array<int, array{rel:string,name:string,mtime?:int,size?:int,variants:array}>
+     */
+    private function collapseDuplicateImages(array $files): array
+    {
+        $groups = [];
+        foreach ($files as $file) {
+            $rel = str_replace('\\', '/', (string) ($file['rel'] ?? ''));
+            $name = (string) ($file['name'] ?? basename($rel));
+            $dir = strtolower(trim(str_replace('\\', '/', dirname($rel)), '/.'));
+            $stem = strtolower((string) pathinfo($name, PATHINFO_FILENAME));
+            $groups[$dir . '|' . $stem][] = $file;
+        }
+
+        $rank = static function (array $file): array {
+            $ext = strtolower((string) pathinfo((string) ($file['name'] ?? ''), PATHINFO_EXTENSION));
+            $pref = ['webp' => 0, 'avif' => 1, 'jpg' => 2, 'jpeg' => 3, 'png' => 4, 'gif' => 5, 'svg' => 6];
+
+            return [$pref[$ext] ?? 9, (int) ($file['size'] ?? PHP_INT_MAX)];
+        };
+
+        $out = [];
+        foreach ($groups as $group) {
+            usort($group, static function ($a, $b) use ($rank) {
+                return $rank($a) <=> $rank($b);
+            });
+            $primary = $group[0];
+            $primary['variants'] = $group;
+            $out[] = $primary;
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  array<int, array{rel:string,name:string,variants?:array}>  $files
+     * @return array<int, array{rel:string,name:string,variants?:array}>
+     */
+    private function filterUnusedGroups(array $files): array
+    {
+        if ($files === []) {
+            return [];
+        }
+
+        $unused = [];
+        foreach (array_chunk($files, 15) as $chunk) {
+            $lookup = [];
+            foreach ($chunk as $file) {
+                foreach (($file['variants'] ?? [$file]) as $variant) {
+                    $lookup[] = $variant;
+                }
+            }
+            $usages = $this->usageIndex($lookup, true);
+            foreach ($chunk as $file) {
+                $linked = false;
+                foreach (($file['variants'] ?? [$file]) as $variant) {
+                    $key = strtolower(str_replace('\\', '/', (string) ($variant['rel'] ?? '')));
+                    $base = strtolower((string) ($variant['name'] ?? ''));
+                    if (($usages['by_path'][$key] ?? []) !== [] || ($usages['by_name'][$base] ?? []) !== []) {
+                        $linked = true;
+                        break;
+                    }
+                }
+                if (! $linked) {
+                    $unused[] = $file;
+                }
+            }
+        }
+
+        return $unused;
     }
 
     /**
