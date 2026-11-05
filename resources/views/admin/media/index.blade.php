@@ -1,7 +1,7 @@
 @extends('admin.layout.app')
 @section('title', 'Media')
 @section('content')
-{{-- lms-media-20261105f cached file list, no full-library scan on load --}}
+{{-- lms-media-20261105g show linked pages for the current page of files --}}
 <style>
     .lms-assigned-pager {
         display: flex;
