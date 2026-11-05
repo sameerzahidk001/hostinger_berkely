@@ -1,7 +1,7 @@
 @extends('admin.layout.app')
 @section('title', 'Media')
 @section('content')
-{{-- lms-media-20261105c alt/title/caption/description + filename rename + linked hydrate --}}
+{{-- lms-media-20261105d meta fields as separate columns --}}
 <style>
     .lms-assigned-pager {
         display: flex;
@@ -19,8 +19,13 @@
     .lms-copy-ok { color:#1ab394; font-size:11px; display:none; }
     .lms-meta-preview { font-size:11px; color:#676a6c; margin-top:4px; line-height:1.35; }
     .lms-meta-preview strong { color:#333; }
-    .lms-meta-form textarea.form-control { min-height:54px; }
-    .lms-meta-form .form-group { margin-bottom:8px; }
+    .lms-meta-col { min-width:140px; max-width:200px; vertical-align:top !important; }
+    .lms-meta-col .form-control { font-size:12px; }
+    .lms-meta-col textarea.form-control { min-height:54px; resize:vertical; }
+    .lms-meta-missing { background:#fff8e6 !important; border-color:#f0ad4e !important; }
+    .lms-meta-empty-label { display:block; font-size:10px; color:#c87f0a; margin-top:3px; }
+    .lms-meta-col-label { display:block; font-size:10px; font-weight:600; color:#888; text-transform:uppercase; letter-spacing:.02em; margin-bottom:3px; }
+    #lms-media-table th.lms-meta-col { white-space:nowrap; }
 </style>
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">
@@ -95,10 +100,8 @@
         </div>
         <div class="ibox-content">
             <p class="text-muted">
-                Edit <strong>filename</strong>, <strong>Alternative Text</strong>, <strong>Title</strong>, <strong>Image Caption</strong>, and <strong>Description</strong>.
-                Saving with “Also update linked…” rewrites those values (and the filename) on linked pages/courses.
-                Existing Alternative Text from linked pages/courses is loaded here automatically.
-                Editing Alternative Text on a page or course also updates Media.
+                Alternative Text, Title, Image Caption, and Description are separate columns — empty fields are highlighted so missing ones are easy to spot.
+                Edit inline and Save; linked pages/courses update when the sync box is checked. Filename can be renamed in the File column.
                 Use <strong>Unused only</strong> to find images safe to delete.
             </p>
             <form method="GET" class="form-group" action="{{ route('admin.media.index') }}">
@@ -127,15 +130,24 @@
                     <thead>
                         <tr>
                             <th style="width:90px;">Image</th>
-                            <th>File</th>
-                            <th style="min-width:260px;">Alternative Text / Title / Caption / Description</th>
+                            <th style="min-width:160px;">File</th>
+                            <th class="lms-meta-col">Alternative Text</th>
+                            <th class="lms-meta-col">Title</th>
+                            <th class="lms-meta-col">Image Caption</th>
+                            <th class="lms-meta-col">Description</th>
                             <th>Linked pages</th>
-                            <th style="width:120px;">Action</th>
+                            <th style="width:130px;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($rows as $row)
-                            @php $editId = 'meta-' . md5($row['rel']); @endphp
+                            @php
+                                $formId = 'meta-' . md5($row['rel']);
+                                $altMissing = trim((string) ($row['alt'] ?? '')) === '';
+                                $titleMissing = trim((string) ($row['title'] ?? '')) === '';
+                                $captionMissing = trim((string) ($row['caption'] ?? '')) === '';
+                                $descriptionMissing = trim((string) ($row['description'] ?? '')) === '';
+                            @endphp
                             <tr>
                                 <td>
                                     @if(($row['size'] ?? 0) > 800000)
@@ -147,53 +159,25 @@
                                 <td>
                                     <a href="{{ $row['url'] }}" target="_blank" rel="noopener">{{ $row['name'] }}</a>
                                     <div class="text-muted small">{{ $row['rel'] }}</div>
-                                    <div class="text-muted small" style="word-break:break-all;">{{ $row['url'] }}</div>
-                                    <div class="lms-meta-preview">
-                                        <div><strong>Alternative Text:</strong> {{ $row['alt'] ?: '—' }}</div>
-                                        <div><strong>Title:</strong> {{ $row['title'] ?: '—' }}</div>
-                                        <div><strong>Image Caption:</strong> {{ \Illuminate\Support\Str::limit($row['caption'] ?: '—', 80) }}</div>
-                                        <div><strong>Description:</strong> {{ \Illuminate\Support\Str::limit($row['description'] ?: '—', 80) }}</div>
-                                    </div>
+                                    <div class="text-muted small" style="word-break:break-all;max-width:220px;">{{ $row['url'] }}</div>
+                                    <label class="lms-meta-col-label" style="margin-top:6px;">Filename</label>
+                                    <input type="text" name="filename" form="{{ $formId }}" class="form-control input-sm" value="{{ $row['name'] }}" maxlength="255" title="Rename file">
                                 </td>
-                                <td>
-                                    <button type="button" class="btn btn-xs btn-white" data-toggle="collapse" data-target="#{{ $editId }}">
-                                        <i class="fa fa-pencil"></i> Edit meta
-                                    </button>
-                                    <div id="{{ $editId }}" class="collapse lms-meta-form" style="margin-top:8px;">
-                                        <form method="POST" action="{{ route('admin.media.meta') }}">
-                                            @csrf
-                                            @method('PUT')
-                                            <input type="hidden" name="path" value="{{ $row['rel'] }}">
-                                            <div class="form-group">
-                                                <label>Filename</label>
-                                                <input type="text" name="filename" class="form-control input-sm" value="{{ $row['name'] }}" maxlength="255">
-                                                <span class="help-block" style="margin-bottom:0;">Renames the file. Keep the same folder; linked pages/courses update when sync is on.</span>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Alternative Text</label>
-                                                <input type="text" name="alt" class="form-control input-sm" value="{{ $row['alt'] }}" maxlength="255">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Title</label>
-                                                <input type="text" name="title" class="form-control input-sm" value="{{ $row['title'] }}" maxlength="255">
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Image Caption</label>
-                                                <textarea name="caption" class="form-control input-sm" rows="2" maxlength="2000">{{ $row['caption'] }}</textarea>
-                                            </div>
-                                            <div class="form-group">
-                                                <label>Description</label>
-                                                <textarea name="description" class="form-control input-sm" rows="2" maxlength="5000">{{ $row['description'] ?? '' }}</textarea>
-                                            </div>
-                                            <label class="checkbox-inline" style="margin-bottom:8px;">
-                                                <input type="checkbox" name="sync_linked" value="1" checked>
-                                                Also update linked pages/courses
-                                            </label>
-                                            <div>
-                                                <button type="submit" class="btn btn-primary btn-xs">Save</button>
-                                            </div>
-                                        </form>
-                                    </div>
+                                <td class="lms-meta-col">
+                                    <input type="text" name="alt" form="{{ $formId }}" class="form-control input-sm {{ $altMissing ? 'lms-meta-missing' : '' }}" value="{{ $row['alt'] }}" maxlength="255" placeholder="—">
+                                    @if($altMissing)<span class="lms-meta-empty-label">Missing</span>@endif
+                                </td>
+                                <td class="lms-meta-col">
+                                    <input type="text" name="title" form="{{ $formId }}" class="form-control input-sm {{ $titleMissing ? 'lms-meta-missing' : '' }}" value="{{ $row['title'] }}" maxlength="255" placeholder="—">
+                                    @if($titleMissing)<span class="lms-meta-empty-label">Missing</span>@endif
+                                </td>
+                                <td class="lms-meta-col">
+                                    <textarea name="caption" form="{{ $formId }}" class="form-control input-sm {{ $captionMissing ? 'lms-meta-missing' : '' }}" rows="2" maxlength="2000" placeholder="—">{{ $row['caption'] }}</textarea>
+                                    @if($captionMissing)<span class="lms-meta-empty-label">Missing</span>@endif
+                                </td>
+                                <td class="lms-meta-col">
+                                    <textarea name="description" form="{{ $formId }}" class="form-control input-sm {{ $descriptionMissing ? 'lms-meta-missing' : '' }}" rows="2" maxlength="5000" placeholder="—">{{ $row['description'] ?? '' }}</textarea>
+                                    @if($descriptionMissing)<span class="lms-meta-empty-label">Missing</span>@endif
                                 </td>
                                 <td>
                                     @if($row['links'] === [])
@@ -209,7 +193,19 @@
                                     @endif
                                 </td>
                                 <td>
-                                    <div class="lms-media-actions">
+                                    <form id="{{ $formId }}" method="POST" action="{{ route('admin.media.meta') }}">
+                                        @csrf
+                                        @method('PUT')
+                                        <input type="hidden" name="path" value="{{ $row['rel'] }}">
+                                        <label class="checkbox-inline" style="margin:0 0 6px; display:block; white-space:normal; font-size:11px;">
+                                            <input type="checkbox" name="sync_linked" value="1" checked>
+                                            Update linked
+                                        </label>
+                                        <button type="submit" class="btn btn-primary btn-xs btn-block">
+                                            <i class="fa fa-save"></i> Save
+                                        </button>
+                                    </form>
+                                    <div class="lms-media-actions" style="margin-top:6px;">
                                         <button type="button" class="btn btn-white btn-xs lms-copy-url-btn" data-url="{{ $row['url'] }}" title="Copy full URL for src">
                                             <i class="fa fa-copy"></i> Copy URL
                                         </button>
@@ -228,7 +224,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="5">No uploaded images found{{ !empty($unusedOnly) ? ' matching unused filter' : '' }}.</td></tr>
+                            <tr><td colspan="8">No uploaded images found{{ !empty($unusedOnly) ? ' matching unused filter' : '' }}.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -279,6 +275,20 @@
         }).catch(function () {
             window.prompt('Copy this URL:', url);
         });
+    });
+
+    $(document).on('input', '.lms-meta-col .form-control', function () {
+        var el = $(this);
+        var empty = !$.trim(el.val() || '');
+        el.toggleClass('lms-meta-missing', empty);
+        var label = el.siblings('.lms-meta-empty-label');
+        if (empty) {
+            if (!label.length) {
+                el.after('<span class="lms-meta-empty-label">Missing</span>');
+            }
+        } else {
+            label.remove();
+        }
     });
 })();
 </script>
