@@ -141,19 +141,19 @@
 .page-section {
   margin-top: 0 !important;
   margin-bottom: 0 !important;
-  padding-top: 2.75rem;
-  padding-bottom: 2.75rem;
+  padding-top: calc(2.75rem + 30px);
+  padding-bottom: calc(2.75rem + 30px);
 }
 
 @media (min-width: 960px) {
   .page-section {
-    padding-top: 3.25rem;
-    padding-bottom: 3.25rem;
+    padding-top: calc(3.25rem + 30px);
+    padding-bottom: calc(3.25rem + 30px);
   }
 }
 
 .cms-banner-section + .page-section {
-  padding-top: 3.5rem;
+  padding-top: calc(3.5rem + 30px);
 }
 
 .page-section > .grid {
