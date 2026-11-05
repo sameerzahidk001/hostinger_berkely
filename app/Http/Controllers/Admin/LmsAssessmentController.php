@@ -721,7 +721,7 @@ class LmsAssessmentController extends Controller
             }
 
             foreach ($students as $student) {
-                if ($this->isRemovedTestTaker($student, $assessment)) {
+                if (! $this->studentOnSitting($student, $assignment, $assessment)) {
                     continue;
                 }
                 // One row per assignment sitting (same test can appear many times).
@@ -1830,7 +1830,7 @@ class LmsAssessmentController extends Controller
 
             return $students
                 ->unique(fn ($row) => (int) ($row->id ?? 0))
-                ->filter(fn ($row) => (int) ($row->id ?? 0) > 0 && ! $this->isRemovedTestTaker($row, $assessment))
+                ->filter(fn ($row) => $this->studentOnSitting($row, $assignment, $assessment))
                 ->values();
         }
         if ($this->looksLikeCimaScsNovember($assessment) && ! $this->isCimaScsAssignedMock($assessment)) {
@@ -1882,7 +1882,7 @@ class LmsAssessmentController extends Controller
 
             return $students
                 ->unique(fn ($row) => (int) ($row->id ?? 0))
-                ->filter(fn ($row) => (int) ($row->id ?? 0) > 0 && ! $this->isRemovedTestTaker($row, $assessment))
+                ->filter(fn ($row) => $this->studentOnSitting($row, $assignment, $assessment))
                 ->values();
         }
         if ($this->isMock1PersonSitting($assignment, $assessment)
@@ -1890,7 +1890,7 @@ class LmsAssessmentController extends Controller
                 && $this->assessments->isMock1FourthNovemberSitting($assignment, $assessment))) {
             return $students
                 ->unique(fn ($row) => (int) ($row->id ?? 0))
-                ->filter(fn ($row) => (int) ($row->id ?? 0) > 0 && ! $this->isRemovedTestTaker($row, $assessment))
+                ->filter(fn ($row) => $this->studentOnSitting($row, $assignment, $assessment))
                 ->values();
         }
         if ($assignment) {
@@ -1922,7 +1922,7 @@ class LmsAssessmentController extends Controller
         }
         return $students
             ->unique(fn ($row) => (int) ($row->id ?? 0))
-            ->filter(fn ($row) => (int) ($row->id ?? 0) > 0 && ! $this->isRemovedTestTaker($row, $assessment))
+            ->filter(fn ($row) => $this->studentOnSitting($row, $assignment, $assessment))
             ->values();
     }
 
@@ -3728,6 +3728,32 @@ class LmsAssessmentController extends Controller
         }
     }
 
+    protected function studentOnSitting($student, $assignment = null, $assessment = null): bool
+    {
+        if (! $student) {
+            return false;
+        }
+        $uid = (int) ($student->id ?? 0);
+        if ($uid <= 0) {
+            return false;
+        }
+        if ($this->isRemovedTestTaker($student, $assessment)) {
+            return false;
+        }
+        try {
+            if ($assignment && Schema::hasColumn('lms_assessment_assignments', 'excluded_user_ids')) {
+                $ex = collect($assignment->excluded_user_ids ?? [])->map(fn ($id) => (int) $id);
+                if ($ex->contains($uid)) {
+                    return false;
+                }
+            }
+        } catch (\Throwable $e) {
+            // keep named student
+        }
+
+        return true;
+    }
+
     /** Hide Imthiyas only on the CIMA MCS sitting, not on other batch tests. */
     protected function isRemovedTestTaker($student, $assessment = null): bool
     {
@@ -3735,9 +3761,6 @@ class LmsAssessmentController extends Controller
             return false;
         }
         $uid = (int) ($student->id ?? 0);
-        if ($uid > 0 && $assessment && $this->excludedUserIdsForAssessment($assessment)->contains($uid)) {
-            return true;
-        }
         $name = mb_strtolower(trim((string) ($student->name ?? '')));
         $email = mb_strtolower(trim((string) ($student->email ?? '')));
         if (! str_contains($name, 'imthiyas') && ! str_contains($email, 'imthiyas')) {
@@ -3885,7 +3908,6 @@ class LmsAssessmentController extends Controller
         $batchIds = collect($request->input('batch_ids', []))->map(fn ($id) => (int) $id)->filter()->unique()->values();
         $studentIds = collect($request->input('student_ids', []))->map(fn ($id) => (int) $id)->filter()->unique()->values();
         $this->pruneEmptyUnusedSittings($a, $sittingKind);
-        $this->clearExclusionsForUsers($a, $studentIds, $sittingKind);
         $covered = collect();
         foreach ($batchIds as $batchId) {
             $batchId = (int) $batchId;
