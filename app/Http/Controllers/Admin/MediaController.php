@@ -70,19 +70,17 @@ class MediaController extends Controller
         $slice = array_slice($files, ($page - 1) * $perPage, $perPage);
         $metaByPath = $this->metaIndex(array_column($slice, 'rel'));
 
-        // Link lookup scans large page JSON. Cap it so nginx does not 504.
-        // Delete still runs a full link check before removing a file.
+        // Only the 15 files on this page. Include filename matches so CMS rows
+        // that store "image":"file.jpg" still show as linked.
         $usages = ['by_path' => [], 'by_name' => []];
         $linksKnown = false;
-        if ($slice !== [] && $this->capDbStatement(8)) {
+        if ($slice !== []) {
             try {
-                $usages = $this->usageIndex($slice, false);
+                $usages = $this->usageIndex($slice, true);
                 $linksKnown = true;
             } catch (\Throwable $e) {
                 $usages = ['by_path' => [], 'by_name' => []];
                 $linksKnown = false;
-            } finally {
-                $this->clearDbStatementCap();
             }
         }
 
