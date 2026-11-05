@@ -6,7 +6,7 @@
         ($alignment == 'center' ? 'justify-center' : 
         ($alignment == 'right' ? 'justify-end' : ''));
 @endphp
-<section id="section-{{$id}}" class="card-hidden px-6 min-[1200px]:px-[72px] flex items-center mb-16 mt-16" 
+<section id="section-{{$id}}" class="card-hidden px-6 min-[1200px]:px-[72px] flex items-center mb-8 mt-8" 
     style="background: {{ section_bg_color($background) }}; background-size: cover; background-position: center;">
     <div class="flex flex-col md:flex-row gap-4 {{ $background != 'transparent' ? 'mb-16 mt-16' : '' }}">
         <h2 class="flex-1 font-canela text-[32px] leading-[40px] md:text-[48px] md:leading-[58px] min-[960px]:text-[56px] min-[960px]:leading-[67px] {{ $textAlignment }}" style="color: {{ $color }};">
