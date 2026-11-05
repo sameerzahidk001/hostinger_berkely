@@ -114,23 +114,39 @@ class ClassBatch extends Model
         if (! $assignment) {
             return $ids;
         }
+        $excluded = collect();
+        try {
+            if (Schema::hasColumn('lms_assessment_assignments', 'excluded_user_ids')) {
+                $excluded = collect($assignment->excluded_user_ids ?? [])->map(fn ($id) => (int) $id)->filter();
+            }
+        } catch (\Throwable $e) {
+            $excluded = collect();
+        }
+        $rosterSaved = false;
         try {
             if (Schema::hasColumn('lms_assessment_assignments', 'roster_user_ids')) {
+                $rawRoster = $assignment->getAttributes()['roster_user_ids'] ?? null;
+                $rosterSaved = $rawRoster !== null && $rawRoster !== '';
                 $ids = collect($assignment->roster_user_ids ?? [])->map(fn ($id) => (int) $id)->filter()->unique()->values();
             }
         } catch (\Throwable $e) {
             $ids = collect();
         }
+        if ($rosterSaved) {
+            return $ids->reject(fn ($id) => $excluded->contains((int) $id))->values();
+        }
         $batchId = (int) ($assignment->class_batch_id ?? 0);
         if ($batchId > 0) {
             $ids = $ids->merge(static::membersOnBatchAtAssignment($batchId, $assignment))
-                ->map(fn ($id) => (int) $id)->unique()->filter()->values();
+                ->map(fn ($id) => (int) $id)->unique()->filter()
+                ->reject(fn ($id) => $excluded->contains((int) $id))
+                ->values();
             if ($ids->isNotEmpty()) {
                 return $ids;
             }
         }
         if ($ids->isNotEmpty()) {
-            return $ids;
+            return $ids->reject(fn ($id) => $excluded->contains((int) $id))->values();
         }
         $title = (string) (optional($assignment->assessment)->title ?? '');
         $sitterIds = collect();
@@ -169,9 +185,11 @@ class ClassBatch extends Model
             }
         }
         if ($batchId <= 0) {
-            return $ids;
+            return $ids->reject(fn ($id) => $excluded->contains((int) $id))->values();
         }
-        $atAssign = static::membersOnBatchAtAssignment($batchId, $assignment);
+        $atAssign = static::membersOnBatchAtAssignment($batchId, $assignment)
+            ->reject(fn ($id) => $excluded->contains((int) $id))
+            ->values();
         if ($atAssign->isNotEmpty()) {
             return $atAssign;
         }

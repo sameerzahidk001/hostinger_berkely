@@ -714,21 +714,32 @@ class LmsAssessmentService
                     $deleteAttempt($att);
                 }
             }
+            if ($assignment && $assignment->exists) {
+                $this->excludeStudentFromAssignment($assignment, $studentId);
+                $named = ! empty($assignment->student_id)
+                    && (int) $assignment->student_id === $studentId
+                    && empty($assignment->class_batch_id);
+                if ($named || $this->sittingHasNoPeople($assignment)) {
+                    $assignment->delete();
+                }
+            }
             $siblings = LmsAssessmentAssignment::query()
                 ->where('assessment_id', $assessmentId)
                 ->get();
             foreach ($siblings as $row) {
+                if ($assignment && (int) $row->id === (int) $assignment->id) {
+                    continue;
+                }
                 if (Schema::hasColumn($row->getTable(), 'sitting_kind')) {
                     $rowKind = method_exists($row, 'isSelfSitting') && $row->isSelfSitting() ? 'self' : 'exam';
                     if ($rowKind !== $kind) {
                         continue;
                     }
                 }
-                $this->excludeStudentFromAssignment($row, $studentId);
                 $named = ! empty($row->student_id)
                     && (int) $row->student_id === $studentId
                     && empty($row->class_batch_id);
-                if ($named || $this->sittingHasNoPeople($row)) {
+                if ($named) {
                     $row->delete();
                 }
             }
@@ -749,8 +760,10 @@ class LmsAssessmentService
         if ($roster->isNotEmpty()) {
             return false;
         }
+        $rawRoster = $asg->getAttributes()['roster_user_ids'] ?? null;
+        $rosterSaved = $rawRoster !== null && $rawRoster !== '';
         $batchId = (int) ($asg->class_batch_id ?? 0);
-        if ($batchId > 0 && ! (method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting())) {
+        if (! $rosterSaved && $batchId > 0 && ! (method_exists($asg, 'isSelfSitting') && $asg->isSelfSitting())) {
             try {
                 if (ClassBatch::studentUserIdsFor($batchId)->isNotEmpty()) {
                     return false;
@@ -781,7 +794,9 @@ class LmsAssessmentService
             if (Schema::hasColumn($row->getTable(), 'excluded_user_ids')) {
                 $ex = collect($row->excluded_user_ids ?? [])
                     ->map(fn ($id) => (int) $id)
-                    ->reject(fn ($id) => $id === $userId)
+                    ->push($userId)
+                    ->unique()
+                    ->filter()
                     ->values()
                     ->all();
                 $row->excluded_user_ids = $ex;
