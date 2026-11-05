@@ -86,6 +86,7 @@ class MediaController extends Controller
                 'name' => $file['name'],
                 'mtime' => $file['mtime'],
                 'size' => (int) ($file['size'] ?? 0),
+                'valid' => (bool) ($file['valid'] ?? true),
                 'links' => $links,
                 'alt' => $meta['alt'],
                 'title' => $meta['title'],
@@ -907,17 +908,41 @@ class MediaController extends Controller
             foreach (File::allFiles($path) as $file) {
                 if (in_array(strtolower($file->getExtension()), ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'], true)) {
                     $rel = $dir . '/' . str_replace('\\', '/', $file->getRelativePathname());
+                    $full = $file->getPathname();
                     $out[] = [
                         'rel' => $rel,
                         'name' => $file->getFilename(),
                         'mtime' => $file->getMTime(),
                         'size' => $file->getSize(),
+                        'valid' => $this->isValidImageFile($full),
                     ];
                 }
             }
         }
 
         return $out;
+    }
+
+    private function isValidImageFile(string $path): bool
+    {
+        if (! is_file($path)) {
+            return false;
+        }
+        $size = @filesize($path);
+        if ($size === false || $size < 24) {
+            return false;
+        }
+
+        $ext = strtolower((string) pathinfo($path, PATHINFO_EXTENSION));
+        if ($ext === 'svg') {
+            $head = @file_get_contents($path, false, null, 0, 512);
+
+            return is_string($head) && stripos($head, '<svg') !== false;
+        }
+
+        $info = @getimagesize($path);
+
+        return is_array($info) && ! empty($info[0]) && ! empty($info[1]);
     }
 
     /** @param array<int, array{rel:string,name:string}> $files */
