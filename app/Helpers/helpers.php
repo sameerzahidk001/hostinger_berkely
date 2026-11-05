@@ -1177,6 +1177,10 @@ if (!function_exists('seo_field_limits')) {
             'focus_keyword_max' => 80,
             'priority_keywords_max_total' => 400,
             'additional_keywords_max_total' => 400,
+            'image_alt_max' => 125,
+            'image_title_max' => 60,
+            'image_caption_max' => 125,
+            'image_description_max' => 160,
         ];
     }
 }

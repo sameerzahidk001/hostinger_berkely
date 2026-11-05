@@ -154,12 +154,14 @@ class MediaController extends Controller
     {
         MediaAsset::ensureTable();
 
+        $metaMax = $this->clampSeoImageMeta($request);
+
         $request->validate([
             'image' => lms_image_upload_rule('required'),
-            'alt' => 'nullable|string|max:255',
-            'title' => 'nullable|string|max:255',
-            'caption' => 'nullable|string|max:2000',
-            'description' => 'nullable|string|max:5000',
+            'alt' => 'nullable|string|max:' . $metaMax['alt'],
+            'title' => 'nullable|string|max:' . $metaMax['title'],
+            'caption' => 'nullable|string|max:' . $metaMax['caption'],
+            'description' => 'nullable|string|max:' . $metaMax['description'],
         ], [
             'image.required' => 'Choose an image to upload.',
             'image.mimes' => 'Allowed types: JPG, PNG, GIF, WebP, SVG.',
@@ -208,13 +210,15 @@ class MediaController extends Controller
     {
         MediaAsset::ensureTable();
 
+        $metaMax = $this->clampSeoImageMeta($request);
+
         $request->validate([
             'path' => 'required|string|max:500',
             'filename' => 'nullable|string|max:255',
-            'alt' => 'nullable|string|max:255',
-            'title' => 'nullable|string|max:255',
-            'caption' => 'nullable|string|max:2000',
-            'description' => 'nullable|string|max:5000',
+            'alt' => 'nullable|string|max:' . $metaMax['alt'],
+            'title' => 'nullable|string|max:' . $metaMax['title'],
+            'caption' => 'nullable|string|max:' . $metaMax['caption'],
+            'description' => 'nullable|string|max:' . $metaMax['description'],
             'sync_linked' => 'nullable|boolean',
         ]);
 
@@ -869,6 +873,31 @@ class MediaController extends Controller
         return $synced;
     }
 
+    private function seoImageMetaLimits(): array
+    {
+        $limits = function_exists('seo_field_limits') ? seo_field_limits() : [];
+
+        return [
+            'alt' => (int) ($limits['image_alt_max'] ?? 125),
+            'title' => (int) ($limits['image_title_max'] ?? 60),
+            'caption' => (int) ($limits['image_caption_max'] ?? 125),
+            'description' => (int) ($limits['image_description_max'] ?? 160),
+        ];
+    }
+
+    private function clampSeoImageMeta(Request $request): array
+    {
+        $max = $this->seoImageMetaLimits();
+        $request->merge([
+            'alt' => Str::limit(trim((string) $request->input('alt')), $max['alt'], ''),
+            'title' => Str::limit(trim((string) $request->input('title')), $max['title'], ''),
+            'caption' => Str::limit(trim((string) $request->input('caption')), $max['caption'], ''),
+            'description' => Str::limit(trim((string) $request->input('description')), $max['description'], ''),
+        ]);
+
+        return $max;
+    }
+
     private function pathMatches(?string $stored, string $norm, string $base): bool
     {
         $storedNorm = MediaAsset::normalizePath((string) $stored);
@@ -895,28 +924,30 @@ class MediaController extends Controller
     {
         $changed = false;
 
+        $max = $this->seoImageMetaLimits();
+
         if ($this->pathMatches($data['image'] ?? null, $norm, $base)) {
             if ($alt !== '') {
-                $data['image_alt'] = Str::limit($alt, 125, '');
+                $data['image_alt'] = Str::limit($alt, $max['alt'], '');
                 $changed = true;
             }
             if ($title !== '') {
-                $data['image_title'] = Str::limit($title, 255, '');
+                $data['image_title'] = Str::limit($title, $max['title'], '');
                 $changed = true;
             }
             if ($caption !== '') {
-                $data['image_caption'] = $caption;
+                $data['image_caption'] = Str::limit($caption, $max['caption'], '');
                 $changed = true;
             }
             if ($description !== '') {
-                $data['image_description'] = $description;
+                $data['image_description'] = Str::limit($description, $max['description'], '');
                 $changed = true;
             }
         }
 
         if ($this->pathMatches($data['icon'] ?? null, $norm, $base)) {
             if ($alt !== '') {
-                $data['icon_alt'] = Str::limit($alt, 125, '');
+                $data['icon_alt'] = Str::limit($alt, $max['alt'], '');
                 $changed = true;
             }
         }
@@ -928,24 +959,24 @@ class MediaController extends Controller
                 }
                 if ($this->pathMatches($card['image'] ?? null, $norm, $base)) {
                     if ($alt !== '') {
-                        $data['cards'][$key]['image_alt'] = Str::limit($alt, 125, '');
+                        $data['cards'][$key]['image_alt'] = Str::limit($alt, $max['alt'], '');
                         $changed = true;
                     }
                     if ($title !== '') {
-                        $data['cards'][$key]['image_title'] = Str::limit($title, 255, '');
+                        $data['cards'][$key]['image_title'] = Str::limit($title, $max['title'], '');
                         $changed = true;
                     }
                     if ($caption !== '') {
-                        $data['cards'][$key]['image_caption'] = $caption;
+                        $data['cards'][$key]['image_caption'] = Str::limit($caption, $max['caption'], '');
                         $changed = true;
                     }
                     if ($description !== '') {
-                        $data['cards'][$key]['image_description'] = $description;
+                        $data['cards'][$key]['image_description'] = Str::limit($description, $max['description'], '');
                         $changed = true;
                     }
                 }
                 if ($this->pathMatches($card['icon'] ?? null, $norm, $base) && $alt !== '') {
-                    $data['cards'][$key]['icon_alt'] = Str::limit($alt, 125, '');
+                    $data['cards'][$key]['icon_alt'] = Str::limit($alt, $max['alt'], '');
                     $changed = true;
                 }
             }
@@ -960,7 +991,7 @@ class MediaController extends Controller
             return 0;
         }
         $synced = 0;
-        $altLimited = Str::limit($alt, 125, '');
+        $altLimited = Str::limit($alt, $this->seoImageMetaLimits()['alt'], '');
 
         $imgCols = [];
         foreach (['thumbnail', 'post_image', 'overview_img', 'image_text_2col_card'] as $col) {

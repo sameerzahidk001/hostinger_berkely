@@ -1,7 +1,14 @@
 @extends('admin.layout.app')
 @section('title', 'Media')
 @section('content')
-{{-- lms-media-20261105k 200kb copy, 30 per page --}}
+{{-- lms-media-20261105l seo char limits on media fields --}}
+@php
+    $seoLimits = function_exists('seo_field_limits') ? seo_field_limits() : [];
+    $altMax = (int) ($seoLimits['image_alt_max'] ?? 125);
+    $titleMax = (int) ($seoLimits['image_title_max'] ?? 60);
+    $captionMax = (int) ($seoLimits['image_caption_max'] ?? 125);
+    $descriptionMax = (int) ($seoLimits['image_description_max'] ?? 160);
+@endphp
 <style>
     .lms-assigned-pager {
         display: flex;
@@ -78,22 +85,22 @@
                         </div>
                         <div class="form-group">
                             <label>Image Caption</label>
-                            <input type="text" name="caption" class="form-control" value="{{ old('caption') }}" maxlength="2000" placeholder="Optional caption">
+                            <input type="text" name="caption" class="form-control" value="{{ old('caption') }}" maxlength="{{ $captionMax }}" data-maxlength="{{ $captionMax }}" placeholder="Optional caption">
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="form-group">
                             <label>Alternative Text</label>
-                            <input type="text" name="alt" class="form-control" value="{{ old('alt') }}" maxlength="255" placeholder="Describe the image">
+                            <input type="text" name="alt" class="form-control" value="{{ old('alt') }}" maxlength="{{ $altMax }}" data-maxlength="{{ $altMax }}" placeholder="Describe the image">
                         </div>
                         <div class="form-group">
                             <label>Title</label>
-                            <input type="text" name="title" class="form-control" value="{{ old('title') }}" maxlength="255" placeholder="Optional title">
+                            <input type="text" name="title" class="form-control" value="{{ old('title') }}" maxlength="{{ $titleMax }}" data-maxlength="{{ $titleMax }}" placeholder="Optional title">
                         </div>
                     </div>
                     <div class="col-md-12 form-group">
                         <label>Description</label>
-                        <textarea name="description" class="form-control" rows="1" maxlength="5000" placeholder="Optional longer description">{{ old('description') }}</textarea>
+                        <textarea name="description" class="form-control" rows="1" maxlength="{{ $descriptionMax }}" data-maxlength="{{ $descriptionMax }}" placeholder="Optional longer description">{{ old('description') }}</textarea>
                     </div>
                 </div>
                 <button type="submit" class="btn btn-primary"><i class="fa fa-upload"></i> Upload</button>
@@ -211,19 +218,19 @@
                                     @endif
                                 </td>
                                 <td class="lms-meta-col">
-                                    <input type="text" name="alt" form="{{ $formId }}" class="form-control input-sm {{ $altMissing ? 'lms-meta-missing' : '' }}" value="{{ $row['alt'] }}" maxlength="255" placeholder="—">
+                                    <input type="text" name="alt" form="{{ $formId }}" class="form-control input-sm {{ $altMissing ? 'lms-meta-missing' : '' }}" value="{{ $row['alt'] }}" maxlength="{{ $altMax }}" data-maxlength="{{ $altMax }}" placeholder="—">
                                     @if($altMissing)<span class="lms-meta-empty-label">Empty</span>@endif
                                 </td>
                                 <td class="lms-meta-col">
-                                    <input type="text" name="title" form="{{ $formId }}" class="form-control input-sm {{ $titleMissing ? 'lms-meta-missing' : '' }}" value="{{ $row['title'] }}" maxlength="255" placeholder="—">
+                                    <input type="text" name="title" form="{{ $formId }}" class="form-control input-sm {{ $titleMissing ? 'lms-meta-missing' : '' }}" value="{{ $row['title'] }}" maxlength="{{ $titleMax }}" data-maxlength="{{ $titleMax }}" placeholder="—">
                                     @if($titleMissing)<span class="lms-meta-empty-label">Empty</span>@endif
                                 </td>
                                 <td class="lms-meta-col">
-                                    <textarea name="caption" form="{{ $formId }}" class="form-control input-sm {{ $captionMissing ? 'lms-meta-missing' : '' }}" rows="2" maxlength="2000" placeholder="—">{{ $row['caption'] }}</textarea>
+                                    <textarea name="caption" form="{{ $formId }}" class="form-control input-sm {{ $captionMissing ? 'lms-meta-missing' : '' }}" rows="2" maxlength="{{ $captionMax }}" data-maxlength="{{ $captionMax }}" placeholder="—">{{ $row['caption'] }}</textarea>
                                     @if($captionMissing)<span class="lms-meta-empty-label">Empty</span>@endif
                                 </td>
                                 <td class="lms-meta-col">
-                                    <textarea name="description" form="{{ $formId }}" class="form-control input-sm {{ $descriptionMissing ? 'lms-meta-missing' : '' }}" rows="2" maxlength="5000" placeholder="—">{{ $row['description'] ?? '' }}</textarea>
+                                    <textarea name="description" form="{{ $formId }}" class="form-control input-sm {{ $descriptionMissing ? 'lms-meta-missing' : '' }}" rows="2" maxlength="{{ $descriptionMax }}" data-maxlength="{{ $descriptionMax }}" placeholder="—">{{ $row['description'] ?? '' }}</textarea>
                                     @if($descriptionMissing)<span class="lms-meta-empty-label">Empty</span>@endif
                                 </td>
                                 <td>
