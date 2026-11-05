@@ -202,6 +202,8 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
         Route::delete('/filemanager/delete/{folder?}', [FileManagerController::class, 'destroy'])->where('folder', '.*')->name('filemanager.delete');
         Route::delete('/filemanager/deleteFolder/{folder?}', [FileManagerController::class, 'deleteFolder'])->where('folder', '.*')->name('filemanager.deleteFolder');
         Route::get('/media', [MediaController::class, 'index'])->name('admin.media.index');
+        Route::post('/media/upload', [MediaController::class, 'upload'])->name('admin.media.upload');
+        Route::put('/media/meta', [MediaController::class, 'updateMeta'])->name('admin.media.meta');
         Route::delete('/media', [MediaController::class, 'destroy'])->name('admin.media.destroy');
 
         // FILE MANAGER ENDS

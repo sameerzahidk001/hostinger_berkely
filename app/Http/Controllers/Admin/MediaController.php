@@ -4,18 +4,24 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Course;
+use App\Models\DynamicLabels;
+use App\Models\MediaAsset;
 use App\Models\PageSection;
 use App\Models\SiteSettings;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class MediaController extends Controller
 {
     public function index(Request $request)
     {
+        MediaAsset::ensureTable();
+
         $search = trim((string) $request->input('search', ''));
+        $unusedOnly = $request->boolean('unused');
         $perPage = 15;
         $page = max(1, (int) $request->input('page', 1));
 
@@ -33,6 +39,12 @@ class MediaController extends Controller
             return ($b['mtime'] ?? 0) <=> ($a['mtime'] ?? 0);
         });
 
+        // Optional unused filter needs usage scan — apply after full sort then filter.
+        // For performance we still paginate; unused filter scans usages for all matching files in batches.
+        if ($unusedOnly) {
+            $files = $this->filterUnused($files);
+        }
+
         $total = count($files);
         $lastPage = max(1, (int) ceil(($total ?: 1) / $perPage));
         if ($page > $lastPage) {
@@ -40,6 +52,7 @@ class MediaController extends Controller
         }
         $slice = array_slice($files, ($page - 1) * $perPage, $perPage);
         $usages = $this->usageIndex($slice);
+        $metaByPath = $this->metaIndex(array_column($slice, 'rel'));
 
         $rows = [];
         foreach ($slice as $file) {
@@ -51,6 +64,7 @@ class MediaController extends Controller
                 $usages['by_name'][$base] ?? []
             )));
             sort($links);
+            $meta = $metaByPath[$key] ?? ['alt' => null, 'title' => null, 'caption' => null];
             $rows[] = [
                 'rel' => $rel,
                 'url' => asset($rel),
@@ -58,6 +72,9 @@ class MediaController extends Controller
                 'mtime' => $file['mtime'],
                 'size' => (int) ($file['size'] ?? 0),
                 'links' => $links,
+                'alt' => $meta['alt'],
+                'title' => $meta['title'],
+                'caption' => $meta['caption'],
             ];
         }
 
@@ -76,7 +93,104 @@ class MediaController extends Controller
             'rows' => $pager,
             'search' => $search,
             'rowsTotal' => $total,
+            'unusedOnly' => $unusedOnly,
         ]);
+    }
+
+    public function upload(Request $request)
+    {
+        MediaAsset::ensureTable();
+
+        $request->validate([
+            'image' => 'required|file|mimes:jpg,jpeg,png,gif,webp,svg|max:10240',
+            'alt' => 'nullable|string|max:255',
+            'title' => 'nullable|string|max:255',
+            'caption' => 'nullable|string|max:2000',
+        ], [
+            'image.required' => 'Choose an image to upload.',
+            'image.mimes' => 'Allowed types: JPG, PNG, GIF, WebP, SVG.',
+            'image.max' => 'Image must be 10 MB or smaller.',
+        ]);
+
+        $file = $request->file('image');
+        $original = pathinfo((string) $file->getClientOriginalName(), PATHINFO_FILENAME);
+        $ext = strtolower((string) $file->getClientOriginalExtension());
+        $safe = preg_replace('/[^a-zA-Z0-9_-]+/', '-', $original) ?: 'image';
+        $safe = trim($safe, '-') ?: 'image';
+        $fileName = strtolower($safe) . '-' . substr(uniqid('', true), -8) . '.' . $ext;
+
+        $destDir = public_path('images/library');
+        if (! File::isDirectory($destDir)) {
+            File::makeDirectory($destDir, 0755, true);
+        }
+
+        if (function_exists('public_upload_move')) {
+            public_upload_move($file, $destDir, $fileName);
+        } else {
+            $file->move($destDir, $fileName);
+            if (function_exists('persist_moved_upload')) {
+                persist_moved_upload($destDir, $fileName);
+            }
+        }
+
+        $rel = 'images/library/' . $fileName;
+        MediaAsset::upsertForPath($rel, [
+            'alt' => $request->input('alt'),
+            'title' => $request->input('title'),
+            'caption' => $request->input('caption'),
+        ]);
+
+        $url = asset($rel);
+
+        return redirect()
+            ->route('admin.media.index', ['search' => $fileName])
+            ->with('success', 'Image uploaded. Full URL ready to copy.')
+            ->with('uploaded_url', $url);
+    }
+
+    public function updateMeta(Request $request)
+    {
+        MediaAsset::ensureTable();
+
+        $request->validate([
+            'path' => 'required|string|max:500',
+            'alt' => 'nullable|string|max:255',
+            'title' => 'nullable|string|max:255',
+            'caption' => 'nullable|string|max:2000',
+            'sync_linked' => 'nullable|boolean',
+        ]);
+
+        $rel = MediaAsset::normalizePath($request->input('path'));
+        if ($rel === '' || str_contains($rel, '..')) {
+            return back()->with('fail', 'Invalid image path.');
+        }
+
+        $root = strtolower(explode('/', $rel)[0] ?? '');
+        if (! in_array($root, ['images', 'uploads'], true)) {
+            return back()->with('fail', 'Only images under images/ or uploads/ can be updated.');
+        }
+
+        $alt = trim((string) $request->input('alt', ''));
+        $title = trim((string) $request->input('title', ''));
+        $caption = trim((string) $request->input('caption', ''));
+
+        MediaAsset::upsertForPath($rel, [
+            'alt' => $alt !== '' ? $alt : null,
+            'title' => $title !== '' ? $title : null,
+            'caption' => $caption !== '' ? $caption : null,
+        ]);
+
+        $synced = 0;
+        if ($request->boolean('sync_linked')) {
+            $synced = $this->syncMetaToLinked($rel, $alt, $title, $caption);
+        }
+
+        $msg = 'Image Alt / Title / Caption saved.';
+        if ($synced > 0) {
+            $msg .= ' Updated ' . $synced . ' linked page/course reference' . ($synced === 1 ? '' : 's') . '.';
+        }
+
+        return back()->with('success', $msg);
     }
 
     public function destroy(Request $request)
@@ -96,9 +210,297 @@ class MediaController extends Controller
             return back()->with('fail', 'File not found.');
         }
 
+        // Block delete when still linked
+        $usages = $this->usageIndex([['rel' => $rel, 'name' => basename($rel)]]);
+        $key = strtolower($rel);
+        $links = array_values(array_unique(array_merge(
+            $usages['by_path'][$key] ?? [],
+            $usages['by_name'][strtolower(basename($rel))] ?? []
+        )));
+        if ($links !== []) {
+            return back()->with('fail', 'This image is still linked. Remove it from pages/courses first, or filter Unused to find safe deletes.');
+        }
+
         File::delete($full);
 
-        return back()->with('success', 'Image deleted.');
+        if (MediaAsset::ensureTable()) {
+            MediaAsset::query()->where('path', MediaAsset::normalizePath($rel))->delete();
+        }
+
+        return back()->with('success', 'Unused image deleted.');
+    }
+
+    /**
+     * @param  array<int, string|null>  $rels
+     * @return array<string, array{alt:?string,title:?string,caption:?string}>
+     */
+    private function metaIndex(array $rels): array
+    {
+        if (! MediaAsset::ensureTable()) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach ($rels as $rel) {
+            $n = MediaAsset::normalizePath((string) $rel);
+            if ($n !== '') {
+                $normalized[] = $n;
+            }
+        }
+        if ($normalized === []) {
+            return [];
+        }
+
+        $out = [];
+        foreach (MediaAsset::query()->whereIn('path', $normalized)->get() as $row) {
+            $out[strtolower($row->path)] = [
+                'alt' => $row->alt,
+                'title' => $row->title,
+                'caption' => $row->caption,
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  array<int, array{rel:string,name:string}>  $files
+     * @return array<int, array{rel:string,name:string,mtime?:int,size?:int}>
+     */
+    private function filterUnused(array $files): array
+    {
+        if ($files === []) {
+            return [];
+        }
+
+        $chunkSize = 40;
+        $unused = [];
+        foreach (array_chunk($files, $chunkSize) as $chunk) {
+            $usages = $this->usageIndex($chunk);
+            foreach ($chunk as $file) {
+                $rel = str_replace('\\', '/', $file['rel']);
+                $key = strtolower($rel);
+                $base = strtolower($file['name']);
+                $links = array_merge($usages['by_path'][$key] ?? [], $usages['by_name'][$base] ?? []);
+                if ($links === []) {
+                    $unused[] = $file;
+                }
+            }
+        }
+
+        return $unused;
+    }
+
+    private function syncMetaToLinked(string $rel, string $alt, string $title, string $caption): int
+    {
+        $synced = 0;
+        $norm = MediaAsset::normalizePath($rel);
+        $base = basename($norm);
+
+        if (class_exists(PageSection::class) && Schema::hasTable('page_sections')) {
+            $q = PageSection::query()->with('page:id,page_name');
+            $q->where(function ($outer) use ($norm, $base) {
+                $outer->where('data', 'like', '%' . addcslashes($norm, '%_\\') . '%')
+                    ->orWhere('data', 'like', '%' . addcslashes($base, '%_\\') . '%');
+            });
+            foreach ($q->limit(300)->get() as $section) {
+                $data = $section->data;
+                if (is_string($data)) {
+                    $decoded = json_decode($data, true);
+                    $data = is_array($decoded) ? $decoded : null;
+                }
+                if (! is_array($data)) {
+                    continue;
+                }
+                $changed = $this->patchSectionMeta($data, $norm, $base, $alt, $title, $caption);
+                if ($changed) {
+                    $section->data = $data;
+                    $section->save();
+                    $synced++;
+                }
+            }
+        }
+
+        if (class_exists(Course::class) && Schema::hasTable('courses')) {
+            $synced += $this->syncCourseMeta($norm, $base, $alt);
+        }
+
+        return $synced;
+    }
+
+    private function pathMatches(?string $stored, string $norm, string $base): bool
+    {
+        $storedNorm = MediaAsset::normalizePath((string) $stored);
+        if ($storedNorm === '') {
+            return false;
+        }
+        if (strcasecmp($storedNorm, $norm) === 0) {
+            return true;
+        }
+        if (strcasecmp(basename($storedNorm), $base) === 0 && (
+            str_ends_with(strtolower($norm), '/' . strtolower($base))
+            || str_ends_with(strtolower($storedNorm), '/' . strtolower($base))
+        )) {
+            // Filename match when one side is library filename-only
+            return str_contains(strtolower($norm), 'images/library/')
+                || str_contains(strtolower($storedNorm), 'images/library/')
+                || ! str_contains($storedNorm, '/');
+        }
+
+        return false;
+    }
+
+    private function patchSectionMeta(array &$data, string $norm, string $base, string $alt, string $title, string $caption): bool
+    {
+        $changed = false;
+
+        if ($this->pathMatches($data['image'] ?? null, $norm, $base)) {
+            if ($alt !== '') {
+                $data['image_alt'] = Str::limit($alt, 125, '');
+                $changed = true;
+            }
+            if ($title !== '') {
+                $data['image_title'] = Str::limit($title, 255, '');
+                $changed = true;
+            }
+            if ($caption !== '') {
+                $data['image_caption'] = $caption;
+                $changed = true;
+            }
+        }
+
+        if ($this->pathMatches($data['icon'] ?? null, $norm, $base)) {
+            if ($alt !== '') {
+                $data['icon_alt'] = Str::limit($alt, 125, '');
+                $changed = true;
+            }
+        }
+
+        if (! empty($data['cards']) && is_array($data['cards'])) {
+            foreach ($data['cards'] as $key => $card) {
+                if (! is_array($card)) {
+                    continue;
+                }
+                if ($this->pathMatches($card['image'] ?? null, $norm, $base)) {
+                    if ($alt !== '') {
+                        $data['cards'][$key]['image_alt'] = Str::limit($alt, 125, '');
+                        $changed = true;
+                    }
+                    if ($title !== '') {
+                        $data['cards'][$key]['image_title'] = Str::limit($title, 255, '');
+                        $changed = true;
+                    }
+                    if ($caption !== '') {
+                        $data['cards'][$key]['image_caption'] = $caption;
+                        $changed = true;
+                    }
+                }
+                if ($this->pathMatches($card['icon'] ?? null, $norm, $base) && $alt !== '') {
+                    $data['cards'][$key]['icon_alt'] = Str::limit($alt, 125, '');
+                    $changed = true;
+                }
+            }
+        }
+
+        return $changed;
+    }
+
+    private function syncCourseMeta(string $norm, string $base, string $alt): int
+    {
+        if ($alt === '') {
+            return 0;
+        }
+        $synced = 0;
+        $altLimited = Str::limit($alt, 125, '');
+
+        $imgCols = [];
+        foreach (['thumbnail', 'post_image', 'overview_img', 'image_text_2col_card'] as $col) {
+            if (Schema::hasColumn('courses', $col)) {
+                $imgCols[] = $col;
+            }
+        }
+
+        if ($imgCols !== []) {
+            $q = Course::query()->select(array_merge(['id', 'title', 'image_alts'], $imgCols));
+            $q->where(function ($outer) use ($norm, $base, $imgCols) {
+                $likePath = '%' . addcslashes($norm, '%_\\') . '%';
+                $likeBase = '%' . addcslashes($base, '%_\\') . '%';
+                foreach ($imgCols as $col) {
+                    $outer->orWhere($col, 'like', $likePath)->orWhere($col, 'like', $likeBase);
+                }
+            });
+            foreach ($q->limit(200)->get() as $course) {
+                $map = is_array($course->image_alts) ? $course->image_alts : [];
+                $dirty = false;
+                if ($this->pathMatches($course->overview_img ?? null, $norm, $base)) {
+                    $map['overview_img'] = $altLimited;
+                    $dirty = true;
+                }
+                if ($this->pathMatches($course->thumbnail ?? null, $norm, $base)) {
+                    $map['thumbnail'] = $altLimited;
+                    $dirty = true;
+                }
+                if ($this->pathMatches($course->post_image ?? null, $norm, $base)) {
+                    $map['post_image'] = $altLimited;
+                    $dirty = true;
+                }
+                $twoCol = $course->image_text_2col_card ?? null;
+                if (is_string($twoCol)) {
+                    $decoded = json_decode($twoCol, true);
+                    $twoCol = is_array($decoded) ? $decoded : null;
+                }
+                if (is_array($twoCol) && $this->pathMatches($twoCol['image'] ?? null, $norm, $base)) {
+                    $map['image_text_2col'] = $altLimited;
+                    $dirty = true;
+                }
+                if ($dirty && Schema::hasColumn('courses', 'image_alts')) {
+                    $course->image_alts = $map;
+                    $course->save();
+                    $synced++;
+                }
+            }
+        }
+
+        if (class_exists(DynamicLabels::class) && Schema::hasTable('course_dynamic_labels')) {
+            $labelCols = [
+                'banner_image', 'who_can_do_img', 'lectures_img', 'practice_session_img',
+                'mock_examination_img', 'career_path_section_img', 'exam_information_section_img',
+                'learner_stories_img', 'what_you_earn_img',
+            ];
+            $existing = [];
+            foreach ($labelCols as $col) {
+                if (Schema::hasColumn('course_dynamic_labels', $col)) {
+                    $existing[] = $col;
+                }
+            }
+            if ($existing !== []) {
+                $q = DynamicLabels::query()->select(array_merge(['id', 'course_id', 'image_alts'], $existing));
+                $q->where(function ($outer) use ($norm, $base, $existing) {
+                    $likePath = '%' . addcslashes($norm, '%_\\') . '%';
+                    $likeBase = '%' . addcslashes($base, '%_\\') . '%';
+                    foreach ($existing as $col) {
+                        $outer->orWhere($col, 'like', $likePath)->orWhere($col, 'like', $likeBase);
+                    }
+                });
+                foreach ($q->limit(200)->get() as $label) {
+                    $map = is_array($label->image_alts) ? $label->image_alts : [];
+                    $dirty = false;
+                    foreach ($existing as $col) {
+                        if ($this->pathMatches($label->{$col} ?? null, $norm, $base)) {
+                            $map[$col] = $altLimited;
+                            $dirty = true;
+                        }
+                    }
+                    if ($dirty) {
+                        $label->image_alts = $map;
+                        $label->save();
+                        $synced++;
+                    }
+                }
+            }
+        }
+
+        return $synced;
     }
 
     private function imageFiles(): array
@@ -161,9 +563,10 @@ class MediaController extends Controller
             $q->where(function ($outer) use ($needles) {
                 foreach ($needles as $rel) {
                     $outer->orWhere('data', 'like', '%' . addcslashes($rel, '%_\\') . '%');
+                    $outer->orWhere('data', 'like', '%' . addcslashes(basename($rel), '%_\\') . '%');
                 }
             });
-            foreach ($q->limit(200)->get() as $section) {
+            foreach ($q->limit(300)->get() as $section) {
                 $page = $section->page;
                 if (! $page) {
                     continue;
@@ -187,14 +590,47 @@ class MediaController extends Controller
                 $q->where(function ($outer) use ($needles, $imgCols) {
                     foreach ($needles as $rel) {
                         $like = '%' . addcslashes($rel, '%_\\') . '%';
+                        $likeBase = '%' . addcslashes(basename($rel), '%_\\') . '%';
                         foreach ($imgCols as $col) {
-                            $outer->orWhere($col, 'like', $like);
+                            $outer->orWhere($col, 'like', $like)->orWhere($col, 'like', $likeBase);
                         }
                     }
                 });
                 foreach ($q->limit(200)->get() as $course) {
                     $label = 'Course: ' . ($course->title ?: ('#' . $course->id));
                     $add(json_encode($course->getAttributes()), $label, route('course.edit', $course->id));
+                }
+            }
+        }
+
+        if (class_exists(DynamicLabels::class) && Schema::hasTable('course_dynamic_labels')) {
+            $labelCols = [
+                'banner_image', 'who_can_do_img', 'lectures_img', 'practice_session_img',
+                'mock_examination_img', 'career_path_section_img', 'exam_information_section_img',
+                'learner_stories_img', 'what_you_earn_img',
+            ];
+            $existing = [];
+            foreach ($labelCols as $col) {
+                if (Schema::hasColumn('course_dynamic_labels', $col)) {
+                    $existing[] = $col;
+                }
+            }
+            if ($existing !== []) {
+                $q = DynamicLabels::query()->select(array_merge(['id', 'course_id'], $existing));
+                $q->where(function ($outer) use ($needles, $existing) {
+                    foreach ($needles as $rel) {
+                        $like = '%' . addcslashes($rel, '%_\\') . '%';
+                        $likeBase = '%' . addcslashes(basename($rel), '%_\\') . '%';
+                        foreach ($existing as $col) {
+                            $outer->orWhere($col, 'like', $like)->orWhere($col, 'like', $likeBase);
+                        }
+                    }
+                });
+                foreach ($q->limit(200)->get() as $labelRow) {
+                    $courseId = (int) $labelRow->course_id;
+                    $label = 'Course labels #' . $courseId;
+                    $url = $courseId > 0 ? route('course.edit', $courseId) : '#';
+                    $add(json_encode($labelRow->getAttributes()), $label, $url);
                 }
             }
         }
