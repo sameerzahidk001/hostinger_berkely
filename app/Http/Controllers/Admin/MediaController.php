@@ -72,17 +72,8 @@ class MediaController extends Controller
 
         // Only the 15 files on this page. Include filename matches so CMS rows
         // that store "image":"file.jpg" still show as linked.
-        $usages = ['by_path' => [], 'by_name' => []];
-        $linksKnown = false;
-        if ($slice !== []) {
-            try {
-                $usages = $this->usageIndex($slice, true);
-                $linksKnown = true;
-            } catch (\Throwable $e) {
-                $usages = ['by_path' => [], 'by_name' => []];
-                $linksKnown = false;
-            }
-        }
+        $usages = $this->usageIndex($slice, true);
+        $linksKnown = true;
 
         $rows = [];
         foreach ($slice as $file) {
@@ -1146,9 +1137,17 @@ class MediaController extends Controller
         }
     }
 
+    private function mediaNamedUrl(string $name, mixed $params, string $fallback): string
+    {
+        try {
+            return route($name, $params);
+        } catch (\Throwable $e) {
+            return $fallback;
+        }
+    }
+
     /**
      * @param  array<int, array{rel:string,name:string}>  $files
-     * @param  bool  $matchBasename  Filename-only LIKE is much slower on large JSON. List view skips it; delete still uses it.
      */
     private function usageIndex(array $files, bool $matchBasename = true): array
     {
@@ -1159,117 +1158,144 @@ class MediaController extends Controller
         }
 
         $add = function (string $blob, string $label, string $url) use (&$byPath, &$byName, $files) {
-            if ($blob === '') {
+            if ($blob === '' || $url === '') {
                 return;
             }
+            $hay = strtolower(str_replace('\\', '/', $blob));
             foreach ($files as $file) {
-                $rel = str_replace('\\', '/', (string) ($file['rel'] ?? ''));
+                $rel = strtolower(str_replace('\\', '/', (string) ($file['rel'] ?? '')));
+                $name = strtolower((string) ($file['name'] ?? ''));
                 if ($rel === '') {
                     continue;
                 }
-                if (stripos($blob, $rel) === false && stripos($blob, $file['name']) === false) {
+                if (! str_contains($hay, $rel) && ($name === '' || ! str_contains($hay, $name))) {
                     continue;
                 }
-                $key = strtolower($rel);
-                $byPath[$key][$url] = $label;
-                $byName[strtolower($file['name'])][$url] = $label;
+                $byPath[$rel][$url] = $label;
+                if ($name !== '') {
+                    $byName[$name][$url] = $label;
+                }
             }
         };
 
-        $needles = array_values(array_filter(array_map(function ($file) {
-            return str_replace('\\', '/', (string) ($file['rel'] ?? ''));
-        }, $files)));
-
-        if (class_exists(PageSection::class) && Schema::hasTable('page_sections')) {
-            $q = PageSection::query()->with('page:id,page_name');
-            $q->where(function ($outer) use ($needles, $matchBasename) {
-                foreach ($needles as $rel) {
-                    $outer->orWhere('data', 'like', '%' . addcslashes($rel, '%_\\') . '%');
-                    if ($matchBasename) {
-                        $outer->orWhere('data', 'like', '%' . addcslashes(basename($rel), '%_\\') . '%');
-                    }
+        $terms = [];
+        foreach ($files as $file) {
+            $rel = str_replace('\\', '/', (string) ($file['rel'] ?? ''));
+            $base = (string) ($file['name'] ?? basename($rel));
+            if ($matchBasename) {
+                if ($base !== '') {
+                    $terms[$base] = true;
                 }
-            });
-            foreach ($q->limit(300)->get() as $section) {
-                $page = $section->page;
-                if (! $page) {
-                    continue;
-                }
-                $label = $page->page_name ?: ('Page #' . $page->id);
-                $data = $section->data;
-                $blob = is_string($data) ? $data : json_encode($data);
-                $add((string) $blob, $label, route('pages.edit', $page->id));
+            } elseif ($rel !== '') {
+                $terms[$rel] = true;
             }
         }
+        $terms = array_keys($terms);
 
-        if (class_exists(Course::class) && Schema::hasTable('courses')) {
-            $imgCols = [];
-            foreach (['thumbnail', 'post_image', 'overview_img', 'banner_section', 'image_text_2col_card'] as $col) {
-                if (Schema::hasColumn('courses', $col)) {
-                    $imgCols[] = $col;
-                }
-            }
-            if ($imgCols !== []) {
-                $q = Course::query()->select(array_merge(['id', 'title'], $imgCols));
-                $q->where(function ($outer) use ($needles, $imgCols, $matchBasename) {
-                    foreach ($needles as $rel) {
-                        $like = '%' . addcslashes($rel, '%_\\') . '%';
-                        $likeBase = '%' . addcslashes(basename($rel), '%_\\') . '%';
-                        foreach ($imgCols as $col) {
-                            $outer->orWhere($col, 'like', $like);
-                            if ($matchBasename) {
-                                $outer->orWhere($col, 'like', $likeBase);
-                            }
-                        }
+        try {
+            if (class_exists(PageSection::class) && Schema::hasTable('page_sections') && $terms !== []) {
+                $q = PageSection::query()->select(['id', 'page_id', 'data'])->with('page:id,page_name');
+                $q->where(function ($outer) use ($terms) {
+                    foreach ($terms as $term) {
+                        $like = '%' . addcslashes($term, '%_\\') . '%';
+                        $outer->orWhereRaw('CAST(`data` AS CHAR) LIKE ?', [$like]);
                     }
                 });
-                foreach ($q->limit(200)->get() as $course) {
-                    $label = 'Course: ' . ($course->title ?: ('#' . $course->id));
-                    $add(json_encode($course->getAttributes()), $label, route('course.edit', $course->id));
-                }
-            }
-        }
-
-        if (class_exists(DynamicLabels::class) && Schema::hasTable('course_dynamic_labels')) {
-            $labelCols = [
-                'banner_image', 'who_can_do_img', 'lectures_img', 'practice_session_img',
-                'mock_examination_img', 'career_path_section_img', 'exam_information_section_img',
-                'learner_stories_img', 'what_you_earn_img',
-            ];
-            $existing = [];
-            foreach ($labelCols as $col) {
-                if (Schema::hasColumn('course_dynamic_labels', $col)) {
-                    $existing[] = $col;
-                }
-            }
-            if ($existing !== []) {
-                $q = DynamicLabels::query()->select(array_merge(['id', 'course_id'], $existing));
-                $q->where(function ($outer) use ($needles, $existing, $matchBasename) {
-                    foreach ($needles as $rel) {
-                        $like = '%' . addcslashes($rel, '%_\\') . '%';
-                        $likeBase = '%' . addcslashes(basename($rel), '%_\\') . '%';
-                        foreach ($existing as $col) {
-                            $outer->orWhere($col, 'like', $like);
-                            if ($matchBasename) {
-                                $outer->orWhere($col, 'like', $likeBase);
-                            }
-                        }
+                foreach ($q->limit(200)->get() as $section) {
+                    $page = $section->page;
+                    if (! $page) {
+                        continue;
                     }
-                });
-                foreach ($q->limit(200)->get() as $labelRow) {
-                    $courseId = (int) $labelRow->course_id;
-                    $label = 'Course labels #' . $courseId;
-                    $url = $courseId > 0 ? route('course.edit', $courseId) : '#';
-                    $add(json_encode($labelRow->getAttributes()), $label, $url);
+                    $label = $page->page_name ?: ('Page #' . $page->id);
+                    $data = $section->data;
+                    $blob = is_string($data) ? $data : (string) json_encode($data);
+                    $add($blob, $label, $this->mediaNamedUrl(
+                        'pages.edit',
+                        $page->id,
+                        url('/admin/pages/' . $page->id . '/edit')
+                    ));
                 }
             }
+        } catch (\Throwable $e) {
+            // Keep other sources even if page JSON search fails.
         }
 
-        if (class_exists(SiteSettings::class) && Schema::hasTable('site_settings')) {
-            $settings = SiteSettings::query()->first();
-            if ($settings) {
-                $add(json_encode($settings->toArray()), 'Site Settings', route('site-settings.index'));
+        try {
+            if (class_exists(Course::class) && Schema::hasTable('courses')) {
+                $imgCols = [];
+                foreach (['thumbnail', 'post_image', 'overview_img', 'banner_section', 'image_text_2col_card'] as $col) {
+                    if (Schema::hasColumn('courses', $col)) {
+                        $imgCols[] = $col;
+                    }
+                }
+                if ($imgCols !== []) {
+                    $q = Course::query()->select(array_merge(['id', 'title'], $imgCols));
+                    if ($terms !== [] && Course::query()->count() > 400) {
+                        $q->where(function ($outer) use ($terms, $imgCols) {
+                            foreach ($terms as $term) {
+                                $like = '%' . addcslashes($term, '%_\\') . '%';
+                                foreach ($imgCols as $col) {
+                                    $outer->orWhere($col, 'like', $like);
+                                }
+                            }
+                        });
+                    }
+                    foreach ($q->limit(400)->get() as $course) {
+                        $label = 'Course: ' . ($course->title ?: ('#' . $course->id));
+                        $add(json_encode($course->getAttributes()), $label, $this->mediaNamedUrl(
+                            'course.edit',
+                            $course->id,
+                            url('/admin/course/' . $course->id . '/edit')
+                        ));
+                    }
+                }
             }
+        } catch (\Throwable $e) {
+            // Keep page links even if course lookup fails.
+        }
+
+        try {
+            if (class_exists(DynamicLabels::class) && Schema::hasTable('course_dynamic_labels')) {
+                $labelCols = [
+                    'banner_image', 'who_can_do_img', 'lectures_img', 'practice_session_img',
+                    'mock_examination_img', 'career_path_section_img', 'exam_information_section_img',
+                    'learner_stories_img', 'what_you_earn_img',
+                ];
+                $existing = [];
+                foreach ($labelCols as $col) {
+                    if (Schema::hasColumn('course_dynamic_labels', $col)) {
+                        $existing[] = $col;
+                    }
+                }
+                if ($existing !== []) {
+                    $q = DynamicLabels::query()->select(array_merge(['id', 'course_id'], $existing));
+                    foreach ($q->limit(400)->get() as $labelRow) {
+                        $courseId = (int) $labelRow->course_id;
+                        $label = $courseId > 0 ? ('Course labels #' . $courseId) : 'Course labels';
+                        $url = $courseId > 0
+                            ? $this->mediaNamedUrl('course.edit', $courseId, url('/admin/course/' . $courseId . '/edit'))
+                            : '#';
+                        $add(json_encode($labelRow->getAttributes()), $label, $url);
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // Ignore labels source.
+        }
+
+        try {
+            if (class_exists(SiteSettings::class) && Schema::hasTable('site_settings')) {
+                $settings = SiteSettings::query()->first();
+                if ($settings) {
+                    $add(
+                        json_encode($settings->toArray()),
+                        'Site Settings',
+                        $this->mediaNamedUrl('site-settings.index', [], url('/admin/site-settings'))
+                    );
+                }
+            }
+        } catch (\Throwable $e) {
+            // Ignore settings source.
         }
 
         $flatten = function (array $map) {
