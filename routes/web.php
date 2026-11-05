@@ -64,6 +64,7 @@ use App\Http\Controllers\Admin\CertificateCompletionController;
 use App\Http\Controllers\Admin\LmsCertificateController;
 use App\Http\Controllers\VerifyCertificateController;
 use App\Http\Controllers\User\LmsAssessmentPortalController;
+use App\Http\Controllers\User\CertificateController as UserCertificateController;
 
 //student controllers starts
 use App\Http\Controllers\Student\HomeController as StudentHomeController;
@@ -328,7 +329,10 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
             Route::post('/completions/{id}/issue', [CertificateCompletionController::class, 'issue'])->whereNumber('id')->name('completions.issue');
 
             Route::get('/', [LmsCertificateController::class, 'index'])->name('index');
+            Route::get('/verify-logs', [LmsCertificateController::class, 'verifyLogs'])->name('verify-logs');
             Route::get('/{id}/download', [LmsCertificateController::class, 'download'])->whereNumber('id')->name('download');
+            Route::post('/{id}/email', [LmsCertificateController::class, 'email'])->whereNumber('id')->name('email');
+            Route::post('/{id}/reissue', [LmsCertificateController::class, 'reissue'])->whereNumber('id')->name('reissue');
             Route::post('/{id}/revoke', [LmsCertificateController::class, 'revoke'])->whereNumber('id')->name('revoke');
         });
 
@@ -735,6 +739,8 @@ Route::prefix('user')->middleware(['auth', 'approved', 'redirect.panel.from.stud
     Route::get('/assessments/users/{userId}/preview', [LmsAssessmentPortalController::class, 'userPreview'])->name('user.assessments.user-preview');
     Route::get('/assessments', [LmsAssessmentPortalController::class, 'index'])->name('user.assessments.index');
     Route::get('/mock-exams', [LmsAssessmentPortalController::class, 'mocks'])->name('user.assessments.mocks');
+    Route::get('/certificates', [UserCertificateController::class, 'index'])->name('user.certificates.index');
+    Route::get('/certificates/{id}/download', [UserCertificateController::class, 'download'])->whereNumber('id')->name('user.certificates.download');
     Route::get('/assessments/{id}/start', [LmsAssessmentPortalController::class, 'start'])->name('user.assessments.start');
     Route::get('/assessments/attempts/{attemptId}', [LmsAssessmentPortalController::class, 'take'])->name('user.assessments.take');
     Route::get('/assessments/attempts/{attemptId}/resource/{kind}/{index}', [LmsAssessmentPortalController::class, 'resource'])->name('user.assessments.resource');

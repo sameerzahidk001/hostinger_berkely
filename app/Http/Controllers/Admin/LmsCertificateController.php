@@ -3,9 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\CertificateVerifyLog;
 use App\Models\LmsCertificate;
 use App\Models\StudentCompletion;
+use App\Models\User;
+use App\Services\CertificateIssuerService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
 
 class LmsCertificateController extends Controller
@@ -39,16 +43,68 @@ class LmsCertificateController extends Controller
         ]);
     }
 
+    public function verifyLogs(Request $request)
+    {
+        CertificateVerifyLog::ensureTable();
+
+        $q = CertificateVerifyLog::query();
+        if ($request->filled('search')) {
+            $s = trim((string) $request->input('search'));
+            $q->where('certificate_code', 'like', '%' . $s . '%');
+        }
+        if ($request->filled('result')) {
+            $q->where('result', $request->input('result'));
+        }
+
+        $rows = $q->orderByDesc('id')->paginate(40)->withQueryString();
+
+        return view('admin.certificates.verify-logs', [
+            'rows' => $rows,
+            'filters' => [
+                'search' => (string) $request->input('search', ''),
+                'result' => (string) $request->input('result', ''),
+            ],
+        ]);
+    }
+
     public function download(int $id)
     {
         LmsCertificate::ensureTable();
         $cert = LmsCertificate::query()->findOrFail($id);
         $path = public_path((string) $cert->pdf_path);
         if (! $cert->pdf_path || ! File::exists($path)) {
-            return back()->with('fail', 'PDF file not found. Re-issue the certificate.');
+            return back()->with('fail', 'PDF file not found. Use Re-issue to regenerate.');
         }
 
         return response()->download($path, $cert->certificate_code . '.pdf');
+    }
+
+    public function email(int $id, CertificateIssuerService $issuer)
+    {
+        LmsCertificate::ensureTable();
+        $cert = LmsCertificate::query()->findOrFail($id);
+        $error = $issuer->emailCertificate($cert);
+        if ($error) {
+            return back()->with('fail', $error);
+        }
+
+        return back()->with('success', 'Certificate emailed to the student.');
+    }
+
+    public function reissue(Request $request, int $id, CertificateIssuerService $issuer)
+    {
+        LmsCertificate::ensureTable();
+        $cert = LmsCertificate::query()->findOrFail($id);
+        $admin = Auth::guard('admin')->user() ?: Auth::user();
+        $sendEmail = $request->boolean('send_email', false);
+        $fresh = $issuer->reissue($cert, $admin instanceof User ? $admin : null, $sendEmail);
+
+        $msg = 'Certificate re-issued: ' . $fresh->certificate_code;
+        if ($sendEmail) {
+            $msg .= $fresh->emailed_at ? ' Email sent.' : ' (email not sent)';
+        }
+
+        return back()->with('success', $msg);
     }
 
     public function revoke(Request $request, int $id)

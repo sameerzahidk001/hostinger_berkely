@@ -407,6 +407,12 @@
                      <span class="nav-label">My Tests</span>
                   </a>
                </li>
+               <li class="{{ request()->routeIs('user.certificates.*') ? 'active' : '' }}">
+                  <a href="{{ route('user.certificates.index') }}">
+                     <i class="fa fa-certificate"></i>
+                     <span class="nav-label">My Certificates</span>
+                  </a>
+               </li>
                <li class="{{ request()->routeIs('user.rate-review.*') ? 'active' : '' }}">
                   <a href="{{ route('user.rate-review.index') }}">
                      <i class="fa fa-star"></i>

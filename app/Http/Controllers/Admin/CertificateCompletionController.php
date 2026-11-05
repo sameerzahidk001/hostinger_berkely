@@ -88,6 +88,7 @@ class CertificateCompletionController extends Controller
             'completed_at' => 'nullable|date',
             'notes' => 'nullable|string|max:2000',
             'issue_now' => 'nullable|boolean',
+            'send_email' => 'nullable|boolean',
         ]);
 
         $exists = StudentCompletion::query()
@@ -113,11 +114,19 @@ class CertificateCompletionController extends Controller
         ]);
 
         if ($request->boolean('issue_now')) {
-            $issuer->issueFromCompletion($completion, $admin instanceof User ? $admin : null);
+            $cert = $issuer->issueFromCompletion(
+                $completion,
+                $admin instanceof User ? $admin : null,
+                $request->boolean('send_email', true)
+            );
+            $msg = 'Completion saved and certificate issued: ' . $cert->certificate_code;
+            if ($request->boolean('send_email', true) && $cert->emailed_at) {
+                $msg .= ' Email sent to student.';
+            }
 
             return redirect()
                 ->route('admin.certificates.index')
-                ->with('success', 'Completion saved and certificate issued.');
+                ->with('success', $msg);
         }
 
         return redirect()
@@ -125,17 +134,23 @@ class CertificateCompletionController extends Controller
             ->with('success', 'Student marked as completed.');
     }
 
-    public function issue(int $id, CertificateIssuerService $issuer)
+    public function issue(Request $request, int $id, CertificateIssuerService $issuer)
     {
         StudentCompletion::ensureTable();
         LmsCertificate::ensureTable();
 
         $completion = StudentCompletion::query()->findOrFail($id);
         $admin = Auth::guard('admin')->user() ?: Auth::user();
-        $cert = $issuer->issueFromCompletion($completion, $admin instanceof User ? $admin : null);
+        $sendEmail = $request->boolean('send_email', true);
+        $cert = $issuer->issueFromCompletion($completion, $admin instanceof User ? $admin : null, $sendEmail);
+
+        $msg = 'Certificate issued: ' . $cert->certificate_code;
+        if ($sendEmail) {
+            $msg .= $cert->emailed_at ? ' Email sent.' : ' (email not sent — check student email / SMTP)';
+        }
 
         return redirect()
             ->route('admin.certificates.index')
-            ->with('success', 'Certificate issued: ' . $cert->certificate_code);
+            ->with('success', $msg);
     }
 }

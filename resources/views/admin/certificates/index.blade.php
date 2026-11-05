@@ -10,6 +10,7 @@
         </ol>
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
+        <a href="{{ route('admin.certificates.verify-logs') }}" class="btn btn-white">Verify log</a>
         <a href="{{ route('admin.certificates.completions.index') }}" class="btn btn-white">Completions</a>
         <a href="{{ route('admin.certificates.completions.create') }}" class="btn btn-primary"><i class="fa fa-plus"></i> Mark complete</a>
     </div>
@@ -47,7 +48,7 @@
                             <th>Course</th>
                             <th>Issued</th>
                             <th>Status</th>
-                            <th style="width:220px;">Action</th>
+                            <th style="width:280px;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -69,11 +70,29 @@
                                 </td>
                                 <td>
                                     <a class="btn btn-xs btn-info" href="{{ route('admin.certificates.download', $row->id) }}"><i class="fa fa-download"></i> PDF</a>
+                                    <a class="btn btn-xs btn-white" href="{{ $row->verifyUrl() }}" target="_blank" rel="noopener">Verify</a>
                                     @if(! $row->isRevoked())
+                                        <form method="POST" action="{{ route('admin.certificates.email', $row->id) }}" style="display:inline;">
+                                            @csrf
+                                            <button type="submit" class="btn btn-xs btn-primary" title="{{ $row->emailed_at ? 'Last emailed '.$row->emailed_at->format('d M Y H:i') : 'Not emailed yet' }}">Email</button>
+                                        </form>
+                                        <form method="POST" action="{{ route('admin.certificates.reissue', $row->id) }}" style="display:inline;" onsubmit="return confirm('Regenerate the PDF for this certificate?');">
+                                            @csrf
+                                            <button type="submit" class="btn btn-xs btn-warning">Re-issue PDF</button>
+                                        </form>
                                         <form method="POST" action="{{ route('admin.certificates.revoke', $row->id) }}" style="display:inline;" onsubmit="return confirm('Revoke this certificate?');">
                                             @csrf
                                             <button type="submit" class="btn btn-xs btn-danger">Revoke</button>
                                         </form>
+                                    @else
+                                        <form method="POST" action="{{ route('admin.certificates.reissue', $row->id) }}" style="display:inline;" onsubmit="return confirm('Re-issue this certificate and regenerate PDF?');">
+                                            @csrf
+                                            <input type="hidden" name="send_email" value="1">
+                                            <button type="submit" class="btn btn-xs btn-warning">Re-issue + email</button>
+                                        </form>
+                                    @endif
+                                    @if($row->emailed_at)
+                                        <div class="text-muted small" style="margin-top:4px;">Emailed {{ $row->emailed_at->format('d M Y') }}</div>
                                     @endif
                                 </td>
                             </tr>
