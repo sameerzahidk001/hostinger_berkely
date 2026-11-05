@@ -1,7 +1,7 @@
 @extends('admin.layout.app')
 @section('title', 'Media')
 @section('content')
-{{-- lms-media-20261105b alt/title/caption + unused filter --}}
+{{-- lms-media-20261105c alt/title/caption/description + filename rename + linked hydrate --}}
 <style>
     .lms-assigned-pager {
         display: flex;
@@ -55,7 +55,7 @@
                         <span class="help-block">Saved to <code>images/library/</code>. Max 10 MB.</span>
                     </div>
                     <div class="col-md-6 form-group">
-                        <label>Alt text</label>
+                        <label>Alternative Text</label>
                         <input type="text" name="alt" class="form-control" value="{{ old('alt') }}" maxlength="255" placeholder="Describe the image">
                     </div>
                     <div class="col-md-6 form-group">
@@ -63,8 +63,12 @@
                         <input type="text" name="title" class="form-control" value="{{ old('title') }}" maxlength="255" placeholder="Optional title">
                     </div>
                     <div class="col-md-6 form-group">
-                        <label>Caption</label>
+                        <label>Image Caption</label>
                         <input type="text" name="caption" class="form-control" value="{{ old('caption') }}" maxlength="2000" placeholder="Optional caption">
+                    </div>
+                    <div class="col-md-12 form-group">
+                        <label>Description</label>
+                        <textarea name="description" class="form-control" rows="2" maxlength="5000" placeholder="Optional longer description">{{ old('description') }}</textarea>
                     </div>
                 </div>
                 <button type="submit" class="btn btn-primary"><i class="fa fa-upload"></i> Upload</button>
@@ -91,8 +95,11 @@
         </div>
         <div class="ibox-content">
             <p class="text-muted">
-                Edit <strong>Alt</strong>, <strong>Title</strong>, and <strong>Caption</strong> per image. Saving also updates linked pages/courses when that file is used.
-                Use <strong>Unused only</strong> to find images safe to delete (delete is blocked while still linked).
+                Edit <strong>filename</strong>, <strong>Alternative Text</strong>, <strong>Title</strong>, <strong>Image Caption</strong>, and <strong>Description</strong>.
+                Saving with “Also update linked…” rewrites those values (and the filename) on linked pages/courses.
+                Existing Alternative Text from linked pages/courses is loaded here automatically.
+                Editing Alternative Text on a page or course also updates Media.
+                Use <strong>Unused only</strong> to find images safe to delete.
             </p>
             <form method="GET" class="form-group" action="{{ route('admin.media.index') }}">
                 <div class="row">
@@ -121,7 +128,7 @@
                         <tr>
                             <th style="width:90px;">Image</th>
                             <th>File</th>
-                            <th style="min-width:220px;">Alt / Title / Caption</th>
+                            <th style="min-width:260px;">Alternative Text / Title / Caption / Description</th>
                             <th>Linked pages</th>
                             <th style="width:120px;">Action</th>
                         </tr>
@@ -142,9 +149,10 @@
                                     <div class="text-muted small">{{ $row['rel'] }}</div>
                                     <div class="text-muted small" style="word-break:break-all;">{{ $row['url'] }}</div>
                                     <div class="lms-meta-preview">
-                                        <div><strong>Alt:</strong> {{ $row['alt'] ?: '—' }}</div>
+                                        <div><strong>Alternative Text:</strong> {{ $row['alt'] ?: '—' }}</div>
                                         <div><strong>Title:</strong> {{ $row['title'] ?: '—' }}</div>
-                                        <div><strong>Caption:</strong> {{ \Illuminate\Support\Str::limit($row['caption'] ?: '—', 80) }}</div>
+                                        <div><strong>Image Caption:</strong> {{ \Illuminate\Support\Str::limit($row['caption'] ?: '—', 80) }}</div>
+                                        <div><strong>Description:</strong> {{ \Illuminate\Support\Str::limit($row['description'] ?: '—', 80) }}</div>
                                     </div>
                                 </td>
                                 <td>
@@ -157,7 +165,12 @@
                                             @method('PUT')
                                             <input type="hidden" name="path" value="{{ $row['rel'] }}">
                                             <div class="form-group">
-                                                <label>Alt</label>
+                                                <label>Filename</label>
+                                                <input type="text" name="filename" class="form-control input-sm" value="{{ $row['name'] }}" maxlength="255">
+                                                <span class="help-block" style="margin-bottom:0;">Renames the file. Keep the same folder; linked pages/courses update when sync is on.</span>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Alternative Text</label>
                                                 <input type="text" name="alt" class="form-control input-sm" value="{{ $row['alt'] }}" maxlength="255">
                                             </div>
                                             <div class="form-group">
@@ -165,8 +178,12 @@
                                                 <input type="text" name="title" class="form-control input-sm" value="{{ $row['title'] }}" maxlength="255">
                                             </div>
                                             <div class="form-group">
-                                                <label>Caption</label>
+                                                <label>Image Caption</label>
                                                 <textarea name="caption" class="form-control input-sm" rows="2" maxlength="2000">{{ $row['caption'] }}</textarea>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Description</label>
+                                                <textarea name="description" class="form-control input-sm" rows="2" maxlength="5000">{{ $row['description'] ?? '' }}</textarea>
                                             </div>
                                             <label class="checkbox-inline" style="margin-bottom:8px;">
                                                 <input type="checkbox" name="sync_linked" value="1" checked>

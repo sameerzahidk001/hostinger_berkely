@@ -13,24 +13,35 @@ class MediaAsset extends Model
         'alt',
         'title',
         'caption',
+        'description',
     ];
 
     public static function ensureTable(): bool
     {
-        if (Schema::hasTable('media_assets')) {
-            return true;
+        if (! Schema::hasTable('media_assets')) {
+            Schema::create('media_assets', function (Blueprint $table) {
+                $table->id();
+                $table->string('path', 500)->unique();
+                $table->string('alt', 255)->nullable();
+                $table->string('title', 255)->nullable();
+                $table->text('caption')->nullable();
+                $table->text('description')->nullable();
+                $table->timestamps();
+            });
         }
 
-        Schema::create('media_assets', function (Blueprint $table) {
-            $table->id();
-            $table->string('path', 500)->unique();
-            $table->string('alt', 255)->nullable();
-            $table->string('title', 255)->nullable();
-            $table->text('caption')->nullable();
-            $table->timestamps();
-        });
+        if (! Schema::hasTable('media_assets')) {
+            return false;
+        }
 
-        return Schema::hasTable('media_assets');
+        // Additive: older live tables may lack description.
+        if (! Schema::hasColumn('media_assets', 'description')) {
+            Schema::table('media_assets', function (Blueprint $table) {
+                $table->text('description')->nullable()->after('caption');
+            });
+        }
+
+        return true;
     }
 
     public static function normalizePath(?string $path): string
@@ -84,7 +95,7 @@ class MediaAsset extends Model
         $rel = static::normalizePath($path);
 
         $row = static::query()->firstOrNew(['path' => $rel]);
-        foreach (['alt', 'title', 'caption'] as $key) {
+        foreach (['alt', 'title', 'caption', 'description'] as $key) {
             if (array_key_exists($key, $attrs)) {
                 $val = $attrs[$key];
                 $row->{$key} = is_string($val) ? (trim($val) !== '' ? trim($val) : null) : $val;
@@ -93,5 +104,31 @@ class MediaAsset extends Model
         $row->save();
 
         return $row;
+    }
+
+    /**
+     * Prefer non-empty linked-source values when media row fields are empty.
+     *
+     * @param  array<string, mixed>|null  $row
+     * @param  array{alt?:?string,title?:?string,caption?:?string,description?:?string}  $linked
+     * @return array{alt:?string,title:?string,caption:?string,description:?string}
+     */
+    public static function mergeDisplayMeta(?array $row = null, array $linked = []): array
+    {
+        $src = $row ?? [];
+        $out = [
+            'alt' => $src['alt'] ?? null,
+            'title' => $src['title'] ?? null,
+            'caption' => $src['caption'] ?? null,
+            'description' => $src['description'] ?? null,
+        ];
+
+        foreach (['alt', 'title', 'caption', 'description'] as $key) {
+            if (trim((string) ($out[$key] ?? '')) === '' && trim((string) ($linked[$key] ?? '')) !== '') {
+                $out[$key] = trim((string) $linked[$key]);
+            }
+        }
+
+        return $out;
     }
 }

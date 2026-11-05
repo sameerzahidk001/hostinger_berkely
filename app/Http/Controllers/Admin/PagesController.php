@@ -379,6 +379,43 @@ class PagesController extends Controller
                 }
             }
 
+            // Reverse-sync Alternative Text / Title / Caption / Description into Media library.
+            if (function_exists('sync_media_asset_from_path')) {
+                if (! empty($section['image'])) {
+                    sync_media_asset_from_path($section['image'], [
+                        'alt' => $section['image_alt'] ?? null,
+                        'title' => $section['image_title'] ?? null,
+                        'caption' => $section['image_caption'] ?? null,
+                        'description' => $section['image_description'] ?? null,
+                    ]);
+                }
+                if (! empty($section['icon']) && ! empty($section['icon_alt'])) {
+                    sync_media_asset_from_path($section['icon'], [
+                        'alt' => $section['icon_alt'],
+                    ]);
+                }
+                if (! empty($section['cards']) && is_array($section['cards'])) {
+                    foreach ($section['cards'] as $card) {
+                        if (! is_array($card)) {
+                            continue;
+                        }
+                        if (! empty($card['image'])) {
+                            sync_media_asset_from_path($card['image'], [
+                                'alt' => $card['image_alt'] ?? null,
+                                'title' => $card['image_title'] ?? null,
+                                'caption' => $card['image_caption'] ?? null,
+                                'description' => $card['image_description'] ?? null,
+                            ]);
+                        }
+                        if (! empty($card['icon']) && ! empty($card['icon_alt'])) {
+                            sync_media_asset_from_path($card['icon'], [
+                                'alt' => $card['icon_alt'],
+                            ]);
+                        }
+                    }
+                }
+            }
+
             if (empty($section['section_type'])) {
                 continue;
             }

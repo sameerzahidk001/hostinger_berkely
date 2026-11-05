@@ -1535,11 +1535,11 @@ if (!function_exists('image_alt')) {
 
 if (!function_exists('media_asset_meta')) {
     /**
-     * @return array{alt:?string,title:?string,caption:?string}
+     * @return array{alt:?string,title:?string,caption:?string,description:?string}
      */
     function media_asset_meta(?string $path): array
     {
-        $empty = ['alt' => null, 'title' => null, 'caption' => null];
+        $empty = ['alt' => null, 'title' => null, 'caption' => null, 'description' => null];
         if (! $path || ! class_exists(\App\Models\MediaAsset::class)) {
             return $empty;
         }
@@ -1553,7 +1553,40 @@ if (!function_exists('media_asset_meta')) {
             'alt' => $asset->alt,
             'title' => $asset->title,
             'caption' => $asset->caption,
+            'description' => $asset->description ?? null,
         ];
+    }
+}
+
+if (!function_exists('sync_media_asset_from_path')) {
+    /**
+     * Reverse-sync: when a page/course saves Alternative Text (etc.), update Media library.
+     *
+     * @param  array{alt?:?string,title?:?string,caption?:?string,description?:?string}  $attrs
+     */
+    function sync_media_asset_from_path(?string $path, array $attrs): void
+    {
+        $path = trim((string) $path);
+        if ($path === '' || ! class_exists(\App\Models\MediaAsset::class)) {
+            return;
+        }
+
+        $hasValue = false;
+        foreach (['alt', 'title', 'caption', 'description'] as $key) {
+            if (array_key_exists($key, $attrs) && trim((string) $attrs[$key]) !== '') {
+                $hasValue = true;
+                break;
+            }
+        }
+        if (! $hasValue) {
+            return;
+        }
+
+        try {
+            \App\Models\MediaAsset::upsertForPath($path, $attrs);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('sync_media_asset_from_path failed: ' . $e->getMessage());
+        }
     }
 }
 
@@ -2261,7 +2294,31 @@ if (!function_exists('persist_model_image_alts')) {
         $model->setAttribute('image_alts', merge_image_alts($model->image_alts ?? null, $incoming));
 
         try {
-            return $model->save();
+            $ok = $model->save();
+            if ($ok && function_exists('sync_media_asset_from_path')) {
+                foreach ($incoming as $key => $alt) {
+                    $alt = trim((string) $alt);
+                    if ($alt === '') {
+                        continue;
+                    }
+                    $path = null;
+                    if ($key === 'image_text_2col') {
+                        $twoCol = $model->image_text_2col_card ?? null;
+                        if (is_string($twoCol)) {
+                            $decoded = json_decode($twoCol, true);
+                            $twoCol = is_array($decoded) ? $decoded : null;
+                        }
+                        $path = is_array($twoCol) ? ($twoCol['image'] ?? null) : null;
+                    } elseif (is_object($model) && isset($model->{$key})) {
+                        $path = $model->{$key};
+                    }
+                    if (is_string($path) && $path !== '') {
+                        sync_media_asset_from_path($path, ['alt' => $alt]);
+                    }
+                }
+            }
+
+            return $ok;
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning(
                 'Failed to save image_alts on ' . $model->getTable() . ': ' . $e->getMessage()
