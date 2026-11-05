@@ -3137,6 +3137,27 @@ video {
   margin-left: 5px;
 }
 
+/* Page card grids: tighter space between a lead-in section and the cards, and between the cards */
+section[id^="section-"]:has(> .grid) {
+  margin-top: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+section[id^="section-"] + section[id^="section-"]:has(> .grid) {
+  margin-top: 0.5rem;
+}
+
+section[id^="section-"] > .grid {
+  gap: 1.25rem;
+}
+
+section[id^="section-"] .grid .cms-html section,
+section[id^="section-"] .grid .cms-html [style*="padding:75px"],
+section[id^="section-"] .grid .cms-html [style*="padding: 75px"] {
+  padding-top: 0.25rem !important;
+  padding-bottom: 0.25rem !important;
+}
+
 /* CMS pages: neutralize accidental black backgrounds from editor paste or bad saves */
 section[id^="section-"] .cms-html [style*="background-color: #000"],
 section[id^="section-"] .cms-html [style*="background-color:#000"],

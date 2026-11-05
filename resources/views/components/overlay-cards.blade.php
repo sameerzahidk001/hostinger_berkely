@@ -5,8 +5,8 @@
     ($columns == 4 ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-4' : 
     ($columns == 5 ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-5' : ''))));
 @endphp
-<section class="card-hidden px-6 min-[1200px]:px-[72px] md:px-12 w-full mt-16 mb-16 show" style="background: {{ section_bg_color($background) }}">
-    <div class="grid place-content-center gap-10 {{ $background != 'transparent' ? 'mb-16 mt-16' : '' }} {{ $grid }}">
+<section class="card-hidden px-6 min-[1200px]:px-[72px] md:px-12 w-full mt-8 mb-8 show" style="background: {{ section_bg_color($background) }}">
+    <div class="grid place-content-center gap-5 {{ $background != 'transparent' ? 'mb-8 mt-8' : '' }} {{ $grid }}">
         @foreach ($cards as $card)
             @php
                 $hasImage = ! empty($card['image']);

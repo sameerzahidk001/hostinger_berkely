@@ -6,7 +6,7 @@
         ($columns == 5 ? 'md:grid-cols-2 lg:grid-cols-5' : ''))));
 @endphp
 
-<section id="section-{{$id}}" class="px-6 min-[1200px]:px-[72px] md:px-12 w-full mt-16 mb-16 {{ $backgroundColor || $backgroundImage ? 'py-16' : '' }}" style="
+<section id="section-{{$id}}" class="px-6 min-[1200px]:px-[72px] md:px-12 w-full mt-8 mb-8 {{ $backgroundColor || $backgroundImage ? 'py-8' : '' }}" style="
         background-size: cover; 
         background-position: center; 
         background-color: {{ section_bg_color($backgroundColor ?? null) }};
@@ -15,7 +15,7 @@
 
     @if($title || $subtitle || $description)
         @if (in_array($layout, ['layout-1', 'layout-3', 'layout-5']))
-            <div class="text-center mb-8">
+            <div class="text-center mb-4">
                 @if($subtitle)
                     <h3 class="text-[18px] text-primary" style="color: {{ $color ?? 'inherit' }};">{{ $subtitle }}</h3>
                 @endif
@@ -29,7 +29,7 @@
                 @endif
             </div>
         @elseif(in_array($layout, ['layout-2', 'layout-4', 'layout-6']))
-            <div class="flex flex-col md:flex-row gap-4 mb-8">
+            <div class="flex flex-col md:flex-row gap-4 mb-4">
                 <div class="flex-1">
                     @if($subtitle)
                         <h3 class="text-[18px] leading-[40px] md:text-[48px] md:leading-[58px] min-[960px]:text-[56px] min-[960px]:leading-[67px]"
@@ -55,7 +55,7 @@
         @endif
     @endif
 
-    <div class="grid gap-10 {{ $grid }}">
+    <div class="grid gap-5 {{ $grid }}">
         @foreach ($cards as $card)
             @php
                 $hasImage = ! empty($card['image']);
