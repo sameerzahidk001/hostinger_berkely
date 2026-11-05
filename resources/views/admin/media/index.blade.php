@@ -84,7 +84,7 @@
                 <div class="input-group">
                     <input type="text" class="form-control" value="{{ session('uploaded_url') }}" readonly>
                     <span class="input-group-btn">
-                        <button type="button" class="btn btn-white lms-copy-url-btn" data-url="{{ session('uploaded_url') }}">
+                        <button type="button" class="btn btn-info lms-copy-url-btn" data-url="{{ session('uploaded_url') }}">
                             <i class="fa fa-copy"></i> Copy URL
                         </button>
                     </span>
@@ -206,7 +206,7 @@
                                         </button>
                                     </form>
                                     <div class="lms-media-actions" style="margin-top:6px;">
-                                        <button type="button" class="btn btn-white btn-xs lms-copy-url-btn" data-url="{{ $row['url'] }}" title="Copy full URL for src">
+                                        <button type="button" class="btn btn-info btn-xs lms-copy-url-btn" data-url="{{ $row['url'] }}" title="Copy full URL for src">
                                             <i class="fa fa-copy"></i> Copy URL
                                         </button>
                                         <span class="lms-copy-ok">Copied</span>
