@@ -87,6 +87,8 @@ class MediaController extends Controller
                 'mtime' => $file['mtime'],
                 'size' => (int) ($file['size'] ?? 0),
                 'valid' => (bool) ($file['valid'] ?? true),
+                'width' => (int) ($file['width'] ?? 0),
+                'height' => (int) ($file['height'] ?? 0),
                 'links' => $links,
                 'alt' => $meta['alt'],
                 'title' => $meta['title'],
@@ -909,12 +911,15 @@ class MediaController extends Controller
                 if (in_array(strtolower($file->getExtension()), ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'], true)) {
                     $rel = $dir . '/' . str_replace('\\', '/', $file->getRelativePathname());
                     $full = $file->getPathname();
+                    $meta = $this->probeImageFile($full);
                     $out[] = [
                         'rel' => $rel,
                         'name' => $file->getFilename(),
                         'mtime' => $file->getMTime(),
                         'size' => $file->getSize(),
-                        'valid' => $this->isValidImageFile($full),
+                        'valid' => (bool) ($meta['valid'] ?? false),
+                        'width' => (int) ($meta['width'] ?? 0),
+                        'height' => (int) ($meta['height'] ?? 0),
                     ];
                 }
             }
@@ -923,26 +928,40 @@ class MediaController extends Controller
         return $out;
     }
 
-    private function isValidImageFile(string $path): bool
+    /**
+     * @return array{valid:bool,width:int,height:int}
+     */
+    private function probeImageFile(string $path): array
     {
+        $empty = ['valid' => false, 'width' => 0, 'height' => 0];
         if (! is_file($path)) {
-            return false;
+            return $empty;
         }
         $size = @filesize($path);
         if ($size === false || $size < 24) {
-            return false;
+            return $empty;
         }
 
         $ext = strtolower((string) pathinfo($path, PATHINFO_EXTENSION));
         if ($ext === 'svg') {
             $head = @file_get_contents($path, false, null, 0, 512);
+            if (! is_string($head) || stripos($head, '<svg') === false) {
+                return $empty;
+            }
 
-            return is_string($head) && stripos($head, '<svg') !== false;
+            return ['valid' => true, 'width' => 0, 'height' => 0];
         }
 
         $info = @getimagesize($path);
+        if (! is_array($info) || empty($info[0]) || empty($info[1])) {
+            return $empty;
+        }
 
-        return is_array($info) && ! empty($info[0]) && ! empty($info[1]);
+        return [
+            'valid' => true,
+            'width' => (int) $info[0],
+            'height' => (int) $info[1],
+        ];
     }
 
     /** @param array<int, array{rel:string,name:string}> $files */
