@@ -6,7 +6,7 @@
         ($columns == 5 ? 'md:grid-cols-2 lg:grid-cols-5' : ''))));
 @endphp
 
-<section id="section-{{$id}}" class="px-6 min-[1200px]:px-[72px] md:px-12 w-full mt-8 mb-8 {{ $backgroundColor || $backgroundImage ? 'py-8' : '' }}" style="
+<section id="section-{{$id}}" class="page-section px-6 min-[1200px]:px-[72px] md:px-12 w-full" style="
         background-size: cover; 
         background-position: center; 
         background-color: {{ section_bg_color($backgroundColor ?? null) }};
@@ -55,7 +55,7 @@
         @endif
     @endif
 
-    <div class="grid gap-5 {{ $grid }}">
+    <div class="grid gap-6 {{ $grid }}">
         @foreach ($cards as $card)
             @php
                 $hasImage = ! empty($card['image']);

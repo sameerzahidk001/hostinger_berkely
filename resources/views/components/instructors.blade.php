@@ -270,7 +270,7 @@
     }
 </style>
 
-<section class="min-h-[174px] lg:px-[120px] px-4 md:px-8 w-full my-16 instructor-section">
+<section class="page-section min-h-[174px] lg:px-[120px] px-4 md:px-8 w-full instructor-section">
     @if (isset($title))
         <h2>{{ $title }}</h2>
     @endif

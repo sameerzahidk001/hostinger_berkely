@@ -3,7 +3,7 @@
         ($columns == 3 ? 'md:grid-cols-2 lg:grid-cols-3' : 
         ($columns == 4 ? 'md:grid-cols-2 lg:grid-cols-4' : ''));
 @endphp
-<section id="section-{{$id}}" class="card-hidden px-6 min-[1200px]:px-[72px] my-16 lg:pt-0 md:px-12 flex flex-col gap-16 w-full" >
+<section id="section-{{$id}}" class="page-section card-hidden px-6 min-[1200px]:px-[72px] lg:pt-0 md:px-12 flex flex-col gap-8 w-full" >
     <div class="flex m-0 z-20 flex-1 flex-col justify-center gap-4 min-[1200px]:px-[72px] md:px-12 px-6">
         <h2 class="text-[18px] font-semibold font-canela" style="color:{{ $color }}">{{ $title }} Courses ({{ count($courses ?? []) }})</h2>
         <!-- <div class="w-[100%] h-[1px] bg-gray-200"></div> -->

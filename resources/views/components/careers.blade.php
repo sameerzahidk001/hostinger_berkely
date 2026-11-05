@@ -12,8 +12,6 @@
     }
 
     .careers-section {
-        padding-top: 0.75rem;
-        padding-bottom: 0.75rem;
         margin-top: 0;
         margin-bottom: 0;
     }
@@ -37,7 +35,7 @@
 </style>
 <section
     id="section-{{ $id }}"
-    class="careers-section w-full lg:px-[120px] px-4 md:px-8"
+    class="page-section careers-section w-full lg:px-[120px] px-4 md:px-8"
     style="background-color: {{ section_bg_color($background) }}">
 
     @if (trim(strip_tags((string) ($title ?? ''))) !== '')

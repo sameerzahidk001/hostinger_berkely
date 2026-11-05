@@ -1,4 +1,4 @@
-<section class="card-hidden px-6 min-[1200px]:px-[72px] my-16 show">
+<section class="page-section card-hidden px-6 min-[1200px]:px-[72px] show">
         
     <div class="flex flex-col lg:flex-row items-center gap-x-24 gap-y-10">
 
