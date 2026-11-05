@@ -1510,11 +1510,18 @@ if (!function_exists('audit_user_name')) {
 }
 
 if (!function_exists('image_alt')) {
-    function image_alt(?string $alt, ?string $fallback = null): string
+    function image_alt(?string $alt, ?string $fallback = null, ?string $mediaPath = null): string
     {
         $alt = trim((string) $alt);
         if ($alt !== '') {
             return \Illuminate\Support\Str::limit($alt, 125, '');
+        }
+
+        if ($mediaPath && class_exists(\App\Models\MediaAsset::class)) {
+            $asset = \App\Models\MediaAsset::forPath($mediaPath);
+            if ($asset && trim((string) $asset->alt) !== '') {
+                return \Illuminate\Support\Str::limit(trim((string) $asset->alt), 125, '');
+            }
         }
 
         $fallback = trim((string) $fallback);
@@ -1523,6 +1530,30 @@ if (!function_exists('image_alt')) {
         }
 
         return 'Image';
+    }
+}
+
+if (!function_exists('media_asset_meta')) {
+    /**
+     * @return array{alt:?string,title:?string,caption:?string}
+     */
+    function media_asset_meta(?string $path): array
+    {
+        $empty = ['alt' => null, 'title' => null, 'caption' => null];
+        if (! $path || ! class_exists(\App\Models\MediaAsset::class)) {
+            return $empty;
+        }
+
+        $asset = \App\Models\MediaAsset::forPath($path);
+        if (! $asset) {
+            return $empty;
+        }
+
+        return [
+            'alt' => $asset->alt,
+            'title' => $asset->title,
+            'caption' => $asset->caption,
+        ];
     }
 }
 
