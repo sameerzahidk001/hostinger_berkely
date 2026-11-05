@@ -60,6 +60,9 @@ use App\Http\Controllers\User\InstructorBatchPaymentController as UserInstructor
 use App\Http\Controllers\Admin\LmsQuestionController;
 use App\Http\Controllers\Admin\LmsAssessmentController;
 use App\Http\Controllers\Admin\LmsAssessmentReportController;
+use App\Http\Controllers\Admin\CertificateCompletionController;
+use App\Http\Controllers\Admin\LmsCertificateController;
+use App\Http\Controllers\VerifyCertificateController;
 use App\Http\Controllers\User\LmsAssessmentPortalController;
 
 //student controllers starts
@@ -77,6 +80,10 @@ Route::view('/test', 'test');
 
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
 Route::get('/robots.txt', [SitemapController::class, 'robots'])->name('robots');
+
+Route::get('/verify-certificate/{code?}', [VerifyCertificateController::class, 'show'])
+    ->where('code', '.*')
+    ->name('certificates.verify');
 
 Route::redirect('/home', '/', 301);
 Route::redirect('/index.php', '/', 301);
@@ -312,6 +319,17 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
             Route::post('/{id}/unlock', [AdminInstructorReviewController::class, 'unlock'])->name('unlock');
             Route::post('/{id}/toggle-name', [AdminInstructorReviewController::class, 'toggleStudentName'])->name('toggle-name');
             Route::delete('/{id}', [AdminInstructorReviewController::class, 'destroy'])->name('destroy');
+        });
+
+        Route::prefix('certificates')->name('admin.certificates.')->group(function () {
+            Route::get('/completions', [CertificateCompletionController::class, 'index'])->name('completions.index');
+            Route::get('/completions/create', [CertificateCompletionController::class, 'create'])->name('completions.create');
+            Route::post('/completions', [CertificateCompletionController::class, 'store'])->name('completions.store');
+            Route::post('/completions/{id}/issue', [CertificateCompletionController::class, 'issue'])->whereNumber('id')->name('completions.issue');
+
+            Route::get('/', [LmsCertificateController::class, 'index'])->name('index');
+            Route::get('/{id}/download', [LmsCertificateController::class, 'download'])->whereNumber('id')->name('download');
+            Route::post('/{id}/revoke', [LmsCertificateController::class, 'revoke'])->whereNumber('id')->name('revoke');
         });
 
         Route::prefix('assessments')->name('admin.assessments.')->group(function () {
