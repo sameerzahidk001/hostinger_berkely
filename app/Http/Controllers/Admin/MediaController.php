@@ -81,57 +81,21 @@ class MediaController extends Controller
             }
         }
         $metaByPath = $this->metaIndex(array_column($lookup, 'rel'));
-        $usages = ['by_path' => [], 'by_name' => []];
-        $linksKnown = false;
-        $deadline = microtime(true) + 8;
-        $capped = $this->capDbStatement(4);
-        if ($capped) {
-            try {
-                $complete = true;
-                foreach (array_chunk($lookup, 8) as $chunk) {
-                    if (microtime(true) >= $deadline) {
-                        $complete = false;
-                        break;
-                    }
-                    $part = $this->usageIndex($chunk, true);
-                    foreach (['by_path', 'by_name'] as $bucket) {
-                        foreach (($part[$bucket] ?? []) as $key => $map) {
-                            $usages[$bucket][$key] = ($usages[$bucket][$key] ?? []) + $map;
-                        }
-                    }
-                }
-                $linksKnown = $complete;
-            } catch (\Throwable $e) {
-                $usages = ['by_path' => [], 'by_name' => []];
-                $linksKnown = false;
-            } finally {
-                $this->clearDbStatementCap();
-            }
-        }
 
         $rows = [];
         foreach ($slice as $file) {
             $rel = str_replace('\\', '/', $file['rel']);
             $variants = $file['variants'] ?? [$file];
-            $links = [];
             $meta = [];
             $also = [];
             foreach ($variants as $variant) {
                 $vRel = strtolower(str_replace('\\', '/', (string) ($variant['rel'] ?? '')));
-                $vName = strtolower((string) ($variant['name'] ?? ''));
-                $links = array_merge(
-                    $links,
-                    $usages['by_path'][$vRel] ?? [],
-                    $usages['by_name'][$vName] ?? []
-                );
                 $stored = $metaByPath[$vRel] ?? [];
                 $meta = MediaAsset::mergeDisplayMeta($meta === [] ? $stored : $meta, $stored);
                 if (strcasecmp((string) ($variant['name'] ?? ''), (string) ($file['name'] ?? '')) !== 0) {
                     $also[] = $variant['name'];
                 }
             }
-            $links = array_values(array_unique($links));
-            sort($links);
             $bytes = (int) ($file['size'] ?? 0);
             $mtime = (int) ($file['mtime'] ?? 0);
             $uploaded = $mtime > 0 ? Carbon::createFromTimestamp($mtime, config('app.timezone')) : null;
@@ -146,8 +110,8 @@ class MediaController extends Controller
                 'valid' => $bytes >= 24,
                 'width' => 0,
                 'height' => 0,
-                'links' => $links,
-                'links_known' => $linksKnown || $links !== [],
+                'links' => [],
+                'links_known' => false,
                 'also_on_disk' => implode(', ', $also),
                 'alt' => $meta['alt'] ?? null,
                 'title' => $meta['title'] ?? null,
@@ -1119,12 +1083,9 @@ class MediaController extends Controller
     {
         $path = $this->imageCachePath();
         if (is_file($path)) {
-            $age = time() - (int) @filemtime($path);
-            if ($age >= 0 && $age < 900) {
-                $decoded = json_decode((string) @file_get_contents($path), true);
-                if (is_array($decoded)) {
-                    return $decoded;
-                }
+            $decoded = json_decode((string) @file_get_contents($path), true);
+            if (is_array($decoded)) {
+                return $decoded;
             }
         }
 
@@ -1195,17 +1156,9 @@ class MediaController extends Controller
     private function imageFiles(): array
     {
         $out = [];
-        $skipDirs = [
-            'uploads/study-materials' => true,
-            'uploads/dbs' => true,
-            'uploads/instructor-payment-slips' => true,
-        ];
-        foreach (['images', 'uploads'] as $dir) {
-            $path = public_path($dir);
-            if (! is_dir($path)) {
-                continue;
-            }
-            $this->collectImageFiles($path, $dir, $out, $skipDirs);
+        $path = public_path('images');
+        if (is_dir($path)) {
+            $this->collectImageFiles($path, 'images', $out, []);
         }
 
         return $out;
