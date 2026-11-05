@@ -45,8 +45,8 @@ class SchoolController extends Controller
         // Validate the request
         $request->validate([
             'name' => 'required|string|max:255|unique:schools,name',
-            'icon' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'icon' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:300',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:300',
             'short_description' => 'nullable|string|max:500',
         ]);
 
@@ -100,8 +100,8 @@ class SchoolController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
-            'icon' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'icon' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:300',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:300',
             'short_description' => 'nullable|string',
         ]);
 

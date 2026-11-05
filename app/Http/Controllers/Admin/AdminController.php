@@ -1474,7 +1474,7 @@ class AdminController extends Controller
     {
         $imageRules = [
             'image_path' => 'nullable|string',
-            'image' => 'nullable|file|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'image' => 'nullable|file|image|mimes:jpeg,png,jpg,gif,webp|max:300',
         ];
 
         if (Auth::guard('admin')->check()) {

@@ -27,7 +27,7 @@ class HomepageController extends Controller
         $data = $request->validate([
             'title' => 'required|string|max:50',
             'description' => 'nullable|string|max:100',
-            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:300',
             'url_text' => 'nullable|string|max:50',
             'url' => 'nullable|url',
         ]);
@@ -59,7 +59,7 @@ class HomepageController extends Controller
             'sections.*.title' => 'required|string|max:255',
             'sections.*.subtitle' => 'nullable|string|max:500',
             'sections.*.description' => 'nullable|string',
-            'sections.*.image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'sections.*.image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:300',
             'sections.*.link' => 'nullable|string',
         ]);
 

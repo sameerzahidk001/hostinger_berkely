@@ -500,9 +500,72 @@ if (!function_exists('persist_moved_upload')) {
     }
 }
 
+if (!function_exists('lms_image_upload_max_kb')) {
+    /** Max image upload size in kilobytes (Laravel `max:` rule unit). */
+    function lms_image_upload_max_kb(): int
+    {
+        return 300;
+    }
+}
+
+if (!function_exists('lms_image_upload_max_bytes')) {
+    function lms_image_upload_max_bytes(): int
+    {
+        return lms_image_upload_max_kb() * 1024;
+    }
+}
+
+if (!function_exists('lms_image_upload_rule')) {
+    /**
+     * Shared image upload validation rule (300 KB cap).
+     */
+    function lms_image_upload_rule(string $required = 'nullable', bool $allowSvg = true): string
+    {
+        $mimes = $allowSvg
+            ? 'jpg,jpeg,png,gif,webp,svg'
+            : 'jpg,jpeg,png,gif,webp';
+
+        return $required . '|file|mimes:' . $mimes . '|max:' . lms_image_upload_max_kb();
+    }
+}
+
+if (!function_exists('assert_image_upload_size')) {
+    /**
+     * Reject oversized image uploads early (covers paths that skip FormRequest rules).
+     *
+     * @param  \Illuminate\Http\UploadedFile|mixed  $file
+     */
+    function assert_image_upload_size($file): void
+    {
+        if (! $file || ! is_object($file) || ! method_exists($file, 'getSize')) {
+            return;
+        }
+
+        $name = method_exists($file, 'getClientOriginalName')
+            ? (string) $file->getClientOriginalName()
+            : (method_exists($file, 'getFilename') ? (string) $file->getFilename() : '');
+        $ext = strtolower((string) pathinfo($name, PATHINFO_EXTENSION));
+        if (method_exists($file, 'getClientOriginalExtension') && $ext === '') {
+            $ext = strtolower((string) $file->getClientOriginalExtension());
+        }
+        if (! in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'bmp', 'heic', 'heif'], true)) {
+            return;
+        }
+
+        $size = (int) $file->getSize();
+        if ($size > lms_image_upload_max_bytes()) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'image' => 'Image must be ' . lms_image_upload_max_kb() . ' KB or smaller. Compress or resize, then upload again.',
+            ]);
+        }
+    }
+}
+
 if (!function_exists('public_upload_move')) {
     function public_upload_move($file, string $destinationPath, string $fileName): void
     {
+        assert_image_upload_size($file);
+
         if (! is_dir($destinationPath)) {
             @mkdir($destinationPath, 0755, true);
         }

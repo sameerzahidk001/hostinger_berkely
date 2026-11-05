@@ -121,7 +121,7 @@ class MediaController extends Controller
         MediaAsset::ensureTable();
 
         $request->validate([
-            'image' => 'required|file|mimes:jpg,jpeg,png,gif,webp,svg|max:10240',
+            'image' => lms_image_upload_rule('required'),
             'alt' => 'nullable|string|max:255',
             'title' => 'nullable|string|max:255',
             'caption' => 'nullable|string|max:2000',
@@ -129,7 +129,7 @@ class MediaController extends Controller
         ], [
             'image.required' => 'Choose an image to upload.',
             'image.mimes' => 'Allowed types: JPG, PNG, GIF, WebP, SVG.',
-            'image.max' => 'Image must be 10 MB or smaller.',
+            'image.max' => 'Image must be ' . lms_image_upload_max_kb() . ' KB or smaller.',
         ]);
 
         $file = $request->file('image');
@@ -246,6 +246,46 @@ class MediaController extends Controller
         }
 
         return back()->with('success', $msg);
+    }
+
+    public function downloadImagesZip()
+    {
+        $root = public_path('images');
+        if (! File::isDirectory($root)) {
+            return back()->with('fail', 'Images folder not found.');
+        }
+
+        $tmp = storage_path('app/tmp');
+        if (! File::isDirectory($tmp)) {
+            File::makeDirectory($tmp, 0755, true);
+        }
+
+        $zipPath = $tmp . DIRECTORY_SEPARATOR . 'eduberkeley-images-' . date('Ymd-His') . '.zip';
+        if (File::exists($zipPath)) {
+            File::delete($zipPath);
+        }
+
+        $zip = new \ZipArchive();
+        if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            return back()->with('fail', 'Could not create zip file.');
+        }
+
+        $rootNorm = rtrim(str_replace('\\', '/', $root), '/');
+        foreach (File::allFiles($root) as $file) {
+            $full = str_replace('\\', '/', $file->getPathname());
+            $local = ltrim(substr($full, strlen($rootNorm)), '/');
+            if ($local === '') {
+                continue;
+            }
+            $zip->addFile($file->getPathname(), 'images/' . $local);
+        }
+        $zip->close();
+
+        if (! File::exists($zipPath) || File::size($zipPath) < 32) {
+            return back()->with('fail', 'Zip is empty or failed to build.');
+        }
+
+        return response()->download($zipPath, 'eduberkeley-images.zip')->deleteFileAfterSend(true);
     }
 
     public function destroy(Request $request)
