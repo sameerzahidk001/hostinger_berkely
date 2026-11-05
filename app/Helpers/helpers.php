@@ -504,7 +504,7 @@ if (!function_exists('lms_image_upload_max_kb')) {
     /** Max image upload size in kilobytes (Laravel `max:` rule unit). */
     function lms_image_upload_max_kb(): int
     {
-        return 300;
+        return 200;
     }
 }
 
