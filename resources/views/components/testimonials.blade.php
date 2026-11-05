@@ -7,7 +7,7 @@
 @endphp
 
 <section
-    class="page-section flex flex-col gap-10 min-[1200px]:px-[30px] md:px-12 px-6 justify-between relative min-h-[230px]"
+    class="page-section flex flex-col gap-10 min-[1200px]:px-[30px] md:px-12 px-6 justify-between relative min-h-[230px] pt-10"
     style="background-color: {{ $background }}">
 
     <!-- Search + Sort Form -->

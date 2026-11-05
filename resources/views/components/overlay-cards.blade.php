@@ -5,8 +5,8 @@
     ($columns == 4 ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-4' : 
     ($columns == 5 ? 'grid-cols-1 md:grid-cols-2 xl:grid-cols-5' : ''))));
 @endphp
-<section id="section-{{ $id }}" class="page-section card-hidden px-6 min-[1200px]:px-[72px] md:px-12 w-full show" style="background: {{ section_bg_color($background) }}">
-    <div class="grid place-content-center gap-6 {{ $grid }}">
+<section id="section-{{ $id }}" class="page-section overlay-cards-section card-hidden px-4 md:px-6 min-[1200px]:px-8 w-full show" style="background: {{ section_bg_color($background) }}">
+    <div class="grid place-content-center gap-8 {{ $grid }}">
         @foreach ($cards as $card)
             @php
                 $hasImage = ! empty($card['image']);
