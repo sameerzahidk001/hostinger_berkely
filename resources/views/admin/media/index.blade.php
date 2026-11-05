@@ -1,7 +1,7 @@
 @extends('admin.layout.app')
 @section('title', 'Media')
 @section('content')
-{{-- lms-media-20261105i uploaded date, hide png/webp duplicates, drop help copy --}}
+{{-- lms-media-20261105j compact upload form --}}
 <style>
     .lms-assigned-pager {
         display: flex;
@@ -33,6 +33,12 @@
     #lms-media-table th.lms-meta-col { white-space:nowrap; }
     .lms-media-uploaded { white-space:nowrap; font-size:12px; line-height:1.35; }
     .lms-media-uploaded .t { display:block; color:#888; font-size:11px; }
+    #lms-media-upload .ibox-content { padding-top:12px; padding-bottom:12px; }
+    #lms-media-upload .form-group { margin-bottom:8px; }
+    #lms-media-upload .form-group > label { margin-bottom:3px; }
+    #lms-media-upload .help-block { margin:3px 0 0; }
+    #lms-media-upload textarea.form-control { min-height:36px; height:36px; resize:vertical; }
+    #lms-media-upload .row { margin-bottom:0; }
 </style>
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">
@@ -64,26 +70,30 @@
             <form method="POST" action="{{ route('admin.media.upload') }}" enctype="multipart/form-data">
                 @csrf
                 <div class="row">
-                    <div class="col-md-6 form-group">
-                        <label>Image file *</label>
-                        <input type="file" name="image" class="form-control lms-image-max-input" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,image/*" required data-max-kb="{{ function_exists('lms_image_upload_max_kb') ? lms_image_upload_max_kb() : 300 }}">
-                        <span class="help-block">Saved to <code>images/library/</code>. Max {{ function_exists('lms_image_upload_max_kb') ? lms_image_upload_max_kb() : 300 }} KB.</span>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Image file *</label>
+                            <input type="file" name="image" class="form-control lms-image-max-input" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,image/*" required data-max-kb="{{ function_exists('lms_image_upload_max_kb') ? lms_image_upload_max_kb() : 300 }}">
+                            <span class="help-block">Saved to <code>images/library/</code>. Max {{ function_exists('lms_image_upload_max_kb') ? lms_image_upload_max_kb() : 300 }} KB.</span>
+                        </div>
+                        <div class="form-group">
+                            <label>Image Caption</label>
+                            <input type="text" name="caption" class="form-control" value="{{ old('caption') }}" maxlength="2000" placeholder="Optional caption">
+                        </div>
                     </div>
-                    <div class="col-md-6 form-group">
-                        <label>Alternative Text</label>
-                        <input type="text" name="alt" class="form-control" value="{{ old('alt') }}" maxlength="255" placeholder="Describe the image">
-                    </div>
-                    <div class="col-md-6 form-group">
-                        <label>Title</label>
-                        <input type="text" name="title" class="form-control" value="{{ old('title') }}" maxlength="255" placeholder="Optional title">
-                    </div>
-                    <div class="col-md-6 form-group">
-                        <label>Image Caption</label>
-                        <input type="text" name="caption" class="form-control" value="{{ old('caption') }}" maxlength="2000" placeholder="Optional caption">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Alternative Text</label>
+                            <input type="text" name="alt" class="form-control" value="{{ old('alt') }}" maxlength="255" placeholder="Describe the image">
+                        </div>
+                        <div class="form-group">
+                            <label>Title</label>
+                            <input type="text" name="title" class="form-control" value="{{ old('title') }}" maxlength="255" placeholder="Optional title">
+                        </div>
                     </div>
                     <div class="col-md-12 form-group">
                         <label>Description</label>
-                        <textarea name="description" class="form-control" rows="2" maxlength="5000" placeholder="Optional longer description">{{ old('description') }}</textarea>
+                        <textarea name="description" class="form-control" rows="1" maxlength="5000" placeholder="Optional longer description">{{ old('description') }}</textarea>
                     </div>
                 </div>
                 <button type="submit" class="btn btn-primary"><i class="fa fa-upload"></i> Upload</button>
