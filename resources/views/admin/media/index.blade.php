@@ -186,7 +186,7 @@
                                     @endif
                                     <span class="lms-media-size {{ $isOver ? 'is-over' : '' }}" title="{{ number_format($bytes) }} bytes">
                                         @if($dimLabel !== ''){{ $dimLabel }}<br>@endif
-                                        <span class="lms-media-size-badge {{ $isOver ? 'is-over' : '' }}">{{ $sizeLabel }}@if($isOver) · over 300 KB@endif</span>
+                                        <span class="lms-media-size-badge {{ $isOver ? 'is-over' : '' }}">{{ $sizeLabel }}@if($isOver) · over 300 KB @endif</span>
                                     </span>
                                 </td>
                                 <td>
