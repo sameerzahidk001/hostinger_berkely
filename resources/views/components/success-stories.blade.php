@@ -1,4 +1,4 @@
-<section class="card-hidden px-6 min-[1200px]:px-[72px] my-16">
+<section class="page-section card-hidden px-6 min-[1200px]:px-[72px]">
     <!-- Main Title and Description Section -->
     <div class="flex flex-col md:flex-row gap-4 mb-16">
         <h2 class="flex-1 font-canela text-primary text-[32px] leading-[40px] md:text-[48px] md:leading-[58px] min-[960px]:text-[56px] min-[960px]:leading-[67px]">

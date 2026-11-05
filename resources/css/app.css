@@ -137,25 +137,30 @@
   margin-left: 5px;
 }
 
-/* Page card grids: tighter space between a lead-in section and the cards, and between the cards */
-section[id^="section-"]:has(> .grid) {
-  margin-top: 1.25rem;
-  margin-bottom: 2rem;
+/* Equal vertical rhythm on home and inner CMS pages (text, lists, cards, media) */
+.page-section {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  padding-top: 2rem;
+  padding-bottom: 2rem;
 }
 
-section[id^="section-"] + section[id^="section-"]:has(> .grid) {
-  margin-top: 0.5rem;
+@media (min-width: 960px) {
+  .page-section {
+    padding-top: 2.25rem;
+    padding-bottom: 2.25rem;
+  }
 }
 
-section[id^="section-"] > .grid {
-  gap: 1.25rem;
+.page-section > .grid {
+  gap: 1.5rem;
 }
 
-section[id^="section-"] .grid .cms-html section,
-section[id^="section-"] .grid .cms-html [style*="padding:75px"],
-section[id^="section-"] .grid .cms-html [style*="padding: 75px"] {
-  padding-top: 0.25rem !important;
-  padding-bottom: 0.25rem !important;
+.page-section .grid .cms-html section,
+.page-section .grid .cms-html [style*="padding:75px"],
+.page-section .grid .cms-html [style*="padding: 75px"] {
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.75rem !important;
 }
 
 /* CMS pages: neutralize accidental black backgrounds from editor paste or bad saves */

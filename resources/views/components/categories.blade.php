@@ -6,7 +6,7 @@
         ($columns == 5 ? 'md:grid-cols-2 lg:grid-cols-5' : ''))));
 @endphp
 {{-- @dd($categories) --}}
-<section id="section-{{ $id }}" class="card-hidden px-6 min-[1200px]:px-[72px] md:px-12 flex flex-col gap-16 w-full my-16 {{ section_bg_color($background) !== 'transparent' ? 'py-16' : '' }}" style="background-color: {{ section_bg_color($background ?? null) }};">
+<section id="section-{{ $id }}" class="page-section card-hidden px-6 min-[1200px]:px-[72px] md:px-12 flex flex-col gap-8 w-full" style="background-color: {{ section_bg_color($background ?? null) }};">
     <div class="flex flex-col flex-1 gap-y-10 justify-between {{ $layout == 'layout-1' ? 'md:flex-row gap-x-20' : '' }}">
         @if (isset($title) && isset($description))
             <div class="flex flex-1 flex-col gap-2">

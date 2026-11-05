@@ -62,7 +62,7 @@
     }
 </style>
 
-<section class="flex flex-col text-black card-hidden my-16 {{ section_bg_color($background) !== 'transparent' ? 'pb-16 pt-16' : '' }}"
+<section class="page-section flex flex-col text-black card-hidden"
     style="background-color: {{ section_bg_color($background) }};">
     <div class="flex flex-col items-center px-2 sm:px-4 md:px-10 lg:px-32 gap-8">
         <div class="b-custom">

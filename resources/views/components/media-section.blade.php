@@ -10,7 +10,7 @@
     }
 </style>
 @if ($layout === 'layout-1')
-    <section id="section-{{$id}}" class="card-hidden px-6 min-[1200px]:px-[72px] my-16 {{ $resolvedSectionBg !== 'transparent' ? 'py-16' : '' }} md:px-12" style="background-color: {{ $resolvedSectionBg }}">
+    <section id="section-{{$id}}" class="page-section card-hidden px-6 min-[1200px]:px-[72px] md:px-12" style="background-color: {{ $resolvedSectionBg }}">
         <div class="flex flex-col {{ $direction === 'left' ? 'lg:flex-row' : 'lg:flex-row-reverse' }} items-center gap-x-24 gap-y-10">
             <div class="flex-1">
                 <img src="{{ $image }}" alt="{{ image_alt($altText ?? null, $title ?? 'Media image') }}"
@@ -55,7 +55,7 @@
         </div>
     </section>
 @elseif ($layout === 'layout-2')
-    <section class="lg:px-[48px] my-16 {{ $resolvedSectionBg !== 'transparent' ? 'py-16' : '' }}" style="background-color: {{ $resolvedSectionBg }}">
+    <section class="page-section lg:px-[48px]" style="background-color: {{ $resolvedSectionBg }}">
         <div class="flex flex-col gap-10 xl:gap-0 {{ $direction === 'left' ? 'lg:flex-row' : 'lg:flex-row-reverse' }} items-stretch gap-y-10 ">
             <div class="flex-1 w-full basis-full">
                 <img src="{{ $image }}" alt="{{ image_alt($altText ?? null, $title ?? 'Media image') }}"
