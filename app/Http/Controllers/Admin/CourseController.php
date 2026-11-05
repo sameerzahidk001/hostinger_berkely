@@ -1381,7 +1381,9 @@ class CourseController extends Controller
     {
         // Validate the uploaded file
         $request->validate([
-            'upload' => 'required|image|mimes:jpg,jpeg,png,gif|max:2048',
+            'upload' => function_exists('lms_image_upload_rule')
+                ? lms_image_upload_rule('required', false)
+                : 'required|image|mimes:jpg,jpeg,png,gif|max:300',
         ]);
 
         // Check if the file is uploaded

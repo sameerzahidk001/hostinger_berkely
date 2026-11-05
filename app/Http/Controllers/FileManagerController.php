@@ -46,7 +46,11 @@ public function store(Request $request)
     public function upload(Request $request, $folder = null)
     {
         $request->validate([
-            'file' => 'required|file|max:2048',
+            'file' => function_exists('lms_image_upload_rule')
+                ? lms_image_upload_rule('required')
+                : 'required|file|mimes:jpg,jpeg,png,gif,webp,svg|max:300',
+        ], [
+            'file.max' => 'Image must be ' . (function_exists('lms_image_upload_max_kb') ? lms_image_upload_max_kb() : 300) . ' KB or smaller.',
         ]);
 
         $destinationPath = public_path($folder);
@@ -56,6 +60,9 @@ public function store(Request $request)
         }
 
         $file = $request->file('file');
+        if (function_exists('assert_image_upload_size')) {
+            assert_image_upload_size($file);
+        }
         $uploadedName = $file->getClientOriginalName();
         $file->move($destinationPath, $uploadedName);
         persist_moved_upload($destinationPath, $uploadedName);

@@ -15,7 +15,10 @@
     .lms-media-thumb { width:72px;height:54px;object-fit:cover;border:1px solid #e7eaec;display:block;background:#f4f4f4; }
     .lms-media-skip { display:block;width:72px;height:54px;line-height:54px;text-align:center;background:#f4f4f4;border:1px solid #e7eaec;font-size:10px;color:#888; }
     .lms-media-broken { display:block;width:72px;height:54px;padding:6px 4px;line-height:1.2;text-align:center;background:#fff0f0;border:1px solid #f5c2c2;font-size:10px;color:#c0392b; }
-    .lms-media-size { display:block; margin-top:4px; font-size:10px; color:#888; line-height:1.25; text-align:center; max-width:78px; }
+    .lms-media-size { display:block; margin-top:4px; font-size:11px; color:#555; line-height:1.3; text-align:center; max-width:86px; font-weight:600; }
+    .lms-media-size.is-over { color:#c0392b; }
+    .lms-media-size-badge { display:inline-block; margin-top:2px; padding:1px 5px; border-radius:3px; background:#f5f5f5; font-size:10px; font-weight:600; color:#555; }
+    .lms-media-size-badge.is-over { background:#fdecea; color:#c0392b; }
     .lms-media-actions { display:flex; flex-direction:column; gap:4px; align-items:stretch; min-width:110px; }
     .lms-media-actions .btn { margin:0; }
     .lms-copy-ok { color:#1ab394; font-size:11px; display:none; }
@@ -38,6 +41,9 @@
         </ol>
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
+        <a href="{{ route('admin.media.download-images-zip') }}" class="btn btn-white">
+            <i class="fa fa-download"></i> Download images zip
+        </a>
         <button type="button" class="btn btn-primary" data-toggle="collapse" data-target="#lms-media-upload">
             <i class="fa fa-upload"></i> Upload image
         </button>
@@ -58,8 +64,8 @@
                 <div class="row">
                     <div class="col-md-6 form-group">
                         <label>Image file *</label>
-                        <input type="file" name="image" class="form-control" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,image/*" required>
-                        <span class="help-block">Saved to <code>images/library/</code>. Max 10 MB.</span>
+                        <input type="file" name="image" class="form-control lms-image-max-input" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,image/*" required data-max-kb="{{ function_exists('lms_image_upload_max_kb') ? lms_image_upload_max_kb() : 300 }}">
+                        <span class="help-block">Saved to <code>images/library/</code>. Max {{ function_exists('lms_image_upload_max_kb') ? lms_image_upload_max_kb() : 300 }} KB.</span>
                     </div>
                     <div class="col-md-6 form-group">
                         <label>Alternative Text</label>
@@ -102,9 +108,9 @@
         </div>
         <div class="ibox-content">
             <p class="text-muted">
-                Alternative Text, Title, Image Caption, and Description are separate columns — empty fields show <em>Empty</em>.
-                A red <em>Broken file</em> thumbnail means the file is on disk but not a valid image (CDN returns “Invalid source image”) — re-upload a good PNG/JPG.
-                Edit inline and Save; linked pages/courses update when sync is checked.
+                File size is shown under each preview. Red size = over {{ function_exists('lms_image_upload_max_kb') ? lms_image_upload_max_kb() : 300 }} KB — replace with a compressed image.
+                New uploads are limited to {{ function_exists('lms_image_upload_max_kb') ? lms_image_upload_max_kb() : 300 }} KB site-wide.
+                Use <strong>Download images zip</strong> for the full <code>public/images</code> folder to resize offline.
                 Use <strong>Unused only</strong> to find images safe to delete.
             </p>
             <form method="GET" class="form-group" action="{{ route('admin.media.index') }}">
@@ -151,6 +157,8 @@
                                 $captionMissing = trim((string) ($row['caption'] ?? '')) === '';
                                 $descriptionMissing = trim((string) ($row['description'] ?? '')) === '';
                                 $bytes = (int) ($row['size'] ?? 0);
+                                $maxBytes = function_exists('lms_image_upload_max_bytes') ? lms_image_upload_max_bytes() : (300 * 1024);
+                                $isOver = $bytes > $maxBytes;
                                 if ($bytes >= 1048576) {
                                     $sizeLabel = rtrim(rtrim(number_format($bytes / 1048576, 2, '.', ''), '0'), '.') . ' MB';
                                 } elseif ($bytes >= 1024) {
@@ -163,15 +171,16 @@
                                     $dimLabel = (int) $row['width'] . '×' . (int) $row['height'];
                                 }
                             @endphp
-                            <tr>
+                            <tr @if($isOver) style="background:#fff8f6;" @endif>
                                 <td>
                                     @if(empty($row['valid']))
                                         <a href="{{ $row['url'] }}" target="_blank" rel="noopener" class="lms-media-broken" title="File exists but is not a valid image (Hostinger returns Invalid source image)">Broken file</a>
                                     @else
                                         <img src="{{ $row['url'] }}" alt="{{ $row['alt'] ?: $row['name'] }}" title="{{ $row['title'] ?? '' }}" class="lms-media-thumb" width="72" height="54" loading="lazy" decoding="async" onerror="this.replaceWith(Object.assign(document.createElement('a'),{className:'lms-media-broken',textContent:'Broken file',href:this.src,target:'_blank',rel:'noopener'}));">
                                     @endif
-                                    <span class="lms-media-size" title="{{ number_format($bytes) }} bytes">
-                                        @if($dimLabel !== ''){{ $dimLabel }}<br>@endif{{ $sizeLabel }}
+                                    <span class="lms-media-size {{ $isOver ? 'is-over' : '' }}" title="{{ number_format($bytes) }} bytes">
+                                        @if($dimLabel !== ''){{ $dimLabel }}<br>@endif
+                                        <span class="lms-media-size-badge {{ $isOver ? 'is-over' : '' }}">{{ $sizeLabel }}@if($isOver) · over 300 KB@endif</span>
                                     </span>
                                 </td>
                                 <td>
@@ -304,6 +313,17 @@
             }
         } else {
             label.remove();
+        }
+    });
+
+    $(document).on('change', '.lms-image-max-input', function () {
+        var input = this;
+        var maxKb = parseInt(input.getAttribute('data-max-kb') || '300', 10);
+        var file = input.files && input.files[0];
+        if (!file) return;
+        if (file.size > maxKb * 1024) {
+            alert('Image must be ' + maxKb + ' KB or smaller. This file is ' + Math.round(file.size / 1024) + ' KB.');
+            input.value = '';
         }
     });
 })();

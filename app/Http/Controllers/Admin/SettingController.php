@@ -119,16 +119,16 @@ class SettingController extends Controller
 
         // Create the validator instance
         $validator = Validator::make($request->all(), [
-            'logo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
-            'white_logo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
-            'favicon' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
+            'logo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:300',
+            'white_logo' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:300',
+            'favicon' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:300',
             'header_logo' => 'nullable|string|in:logo,white_logo',
             'header_menu' => 'nullable|string',
             'header_button' => 'nullable|boolean',
             'header_button_text' => 'nullable|string|max:255',
             'header_button_url' => 'nullable|url|max:500',
             'header_search' => 'nullable|boolean',
-            'header_search_image' => 'nullable|image|mimes:jpeg,png,jpg,webp,svg|max:2048',
+            'header_search_image' => 'nullable|image|mimes:jpeg,png,jpg,webp,svg|max:300',
             'login' => 'nullable|boolean',
             'login_text' => 'nullable|string|max:255',
             'register' => 'nullable|boolean',
@@ -157,7 +157,7 @@ class SettingController extends Controller
         // Add additional validation for social media fields
         foreach ($socialMedia as $platform) {
             $validator->addRules([
-                "{$platform}_icon" => 'nullable|image|mimes:jpeg,png,jpg,webp,svg|max:2048',
+                "{$platform}_icon" => 'nullable|image|mimes:jpeg,png,jpg,webp,svg|max:300',
                 "{$platform}_url" => 'nullable|url|max:500',
             ]);
         }

@@ -80,7 +80,7 @@ class CourseTestimonialController extends Controller
             'linkedin_url' => 'nullable|url',
             'rating' => 'nullable|integer|min:1|max:5',
             'image_path' => 'nullable|string',
-            'local_file_input' => 'nullable|file|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'local_file_input' => 'nullable|file|image|mimes:jpeg,png,jpg,gif,webp|max:300',
         ]);
 
         if ($validator->fails()) {
@@ -164,7 +164,7 @@ class CourseTestimonialController extends Controller
             'linkedin_url' => 'nullable|url',
             'rating' => 'nullable|integer|min:1|max:5',
             'image_path' => 'nullable|string',
-            'local_file_input' => 'nullable|file|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+            'local_file_input' => 'nullable|file|image|mimes:jpeg,png,jpg,gif,webp|max:300',
         ]);
 
         if ($validator->fails()) {
