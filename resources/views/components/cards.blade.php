@@ -11,7 +11,7 @@
         ($alignment == 'center' ? 'justify-center' : 
         ($alignment == 'right' ? 'justify-end' : ''));
 @endphp
-<section id="section-{{$id}}" class="page-section card-hidden px-6 min-[1200px]:px-[72px] lg:pt-0 md:px-12 flex flex-col gap-6 w-full" style="background-color: {{ section_bg_color($backgroundColor ?? null) }};">
+<section id="section-{{$id}}" class="page-section card-hidden px-6 min-[1200px]:px-[72px] md:px-12 flex flex-col gap-6 w-full" style="background-color: {{ section_bg_color($backgroundColor ?? null) }};">
     <div class="grid gap-6 {{ $grid }}">
         @foreach ($cards as $card)
             @if (in_array($layout, ['layout-1']))
