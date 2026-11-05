@@ -10,13 +10,13 @@
     margin: 0;
   }
   .frame {
-    border: 10px solid #000435;
+    border: 10px solid {{ optional($template)->primary_color ?: '#000435' }};
     padding: 18px;
-    height: 520px;
+    height: {{ ($template && $template->paperOrientation() === 'portrait') ? '780px' : '520px' }};
     position: relative;
   }
   .inner {
-    border: 2px solid #f8961f;
+    border: 2px solid {{ optional($template)->accent_color ?: '#f8961f' }};
     height: 100%;
     box-sizing: border-box;
     padding: 28px 36px;
@@ -31,7 +31,7 @@
   }
   h1 {
     font-size: 34px;
-    color: #000435;
+    color: {{ optional($template)->primary_color ?: '#000435' }};
     margin: 0 0 8px;
   }
   .school {
@@ -52,7 +52,7 @@
   }
   .course {
     font-size: 18px;
-    color: #000435;
+    color: {{ optional($template)->primary_color ?: '#000435' }};
     margin: 0 0 18px;
   }
   .meta {
@@ -79,12 +79,12 @@
 <body>
   <div class="frame">
     <div class="inner">
-      <p class="eyebrow">Certificate of Completion</p>
-      <h1>Digital Certificate</h1>
+      <p class="eyebrow">{{ $template ? $template->eyebrowText() : 'Certificate of Completion' }}</p>
+      <h1>{{ $template ? $template->titleText() : 'Digital Certificate' }}</h1>
       <p class="school">{{ $schoolName }}</p>
-      <p class="line">This is to certify that</p>
+      <p class="line">{{ $template ? $template->introLineText() : 'This is to certify that' }}</p>
       <p class="name">{{ $certificate->student_name }}</p>
-      <p class="line">has successfully completed</p>
+      <p class="line">{{ $template ? $template->completionLineText() : 'has successfully completed' }}</p>
       <p class="course">{{ $certificate->course_title }}</p>
       <p class="meta">
         Completion date:

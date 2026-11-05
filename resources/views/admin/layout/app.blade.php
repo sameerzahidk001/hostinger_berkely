@@ -339,6 +339,9 @@
                         <li class="{{ request()->is('admin/certificates/completions*') ? 'active' : '' }}">
                            <a href="{{ route('admin.certificates.completions.index') }}">Completions</a>
                         </li>
+                        <li class="{{ request()->is('admin/certificates/templates*') ? 'active' : '' }}">
+                           <a href="{{ route('admin.certificates.templates.index') }}">Templates</a>
+                        </li>
                         <li class="{{ request()->is('admin/certificates') && !request()->is('admin/certificates/*') ? 'active' : '' }}">
                            <a href="{{ route('admin.certificates.index') }}">Issued certificates</a>
                         </li>

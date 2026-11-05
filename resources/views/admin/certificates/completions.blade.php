@@ -2,14 +2,15 @@
 @section('title', 'Completions')
 @section('content')
 <div class="row wrapper border-bottom white-bg page-heading">
-    <div class="col-lg-8">
+    <div class="col-lg-7">
         <h2>Completions</h2>
         <ol class="breadcrumb">
             <li><a href="{{ lms_portal_home() }}">Home</a></li>
             <li class="active"><strong>Certificates</strong></li>
         </ol>
     </div>
-    <div class="col-lg-4 text-right" style="padding-top:20px;">
+    <div class="col-lg-5 text-right" style="padding-top:20px;">
+        <a href="{{ route('admin.certificates.templates.index') }}" class="btn btn-white">Templates</a>
         <a href="{{ route('admin.certificates.index') }}" class="btn btn-white">Issued certificates</a>
         <a href="{{ route('admin.certificates.completions.create') }}" class="btn btn-primary"><i class="fa fa-plus"></i> Mark complete</a>
     </div>
@@ -23,7 +24,7 @@
             <form method="GET" class="form-group">
                 <div class="row">
                     <div class="col-sm-4">
-                        <input type="search" name="search" class="form-control" value="{{ $filters['search'] }}" placeholder="Student, course, notes">
+                        <input type="search" name="search" class="form-control" value="{{ $filters['search'] }}" placeholder="Student, course, certificate code">
                     </div>
                     <div class="col-sm-3">
                         <select name="course_id" class="form-control">
@@ -50,11 +51,11 @@
                     <thead>
                         <tr>
                             <th>Student</th>
-                            <th>Course</th>
+                            <th>Course / Batch</th>
                             <th>Completed</th>
-                            <th>Status</th>
-                            <th>Marked by</th>
-                            <th style="width:160px;">Action</th>
+                            <th>Completion</th>
+                            <th>Certificate</th>
+                            <th style="width:260px;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -68,30 +69,68 @@
                                 if ($studentLabel === '') {
                                     $studentLabel = '#'.$row->user_id;
                                 }
+                                $certs = $row->certificates ?? collect();
+                                $issued = $certs->where('status', 'issued');
                             @endphp
                             <tr>
                                 <td>
                                     {{ $studentLabel }}
                                     <div class="text-muted small">{{ $student->email ?? '' }}</div>
                                 </td>
-                                <td>{{ $row->course->title ?? ('#'.$row->course_id) }}</td>
-                                <td>{{ optional($row->completed_at)->format('d M Y H:i') ?: '—' }}</td>
                                 <td>
-                                    @if($row->status === 'certificate_issued')
-                                        <span class="label label-primary">Certificate issued</span>
-                                    @else
-                                        <span class="label label-success">Completed</span>
+                                    {{ $row->course->title ?? ('#'.$row->course_id) }}
+                                    @if($row->batch)
+                                        <div class="text-muted small">Batch: {{ $row->batch->code ?: $row->batch->name }}</div>
+                                    @endif
+                                    @if($row->template)
+                                        <div class="text-muted small">Template: {{ $row->template->name }}</div>
                                     @endif
                                 </td>
-                                <td>{{ $row->marked_by_name ?: '—' }}</td>
+                                <td>{{ optional($row->completed_at)->format('d M Y H:i') ?: '—' }}</td>
                                 <td>
-                                    @if($row->certificate)
-                                        <a class="btn btn-xs btn-white" href="{{ route('admin.certificates.download', $row->certificate->id) }}">PDF</a>
+                                    <span class="label label-success">Completed</span>
+                                    <div class="text-muted small" style="margin-top:4px;">{{ $row->marked_by_name ?: '—' }}</div>
+                                </td>
+                                <td>
+                                    @if($issued->isNotEmpty())
+                                        <span class="label label-primary">Issued ({{ $issued->count() }})</span>
+                                        <ul class="list-unstyled m-t-sm m-b-none">
+                                            @foreach($issued as $cert)
+                                                <li style="margin-bottom:6px;">
+                                                    <code>{{ $cert->certificate_code }}</code>
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                    @elseif($certs->where('status', 'revoked')->isNotEmpty())
+                                        <span class="label label-danger">Revoked only</span>
                                     @else
+                                        <span class="label label-warning">Not issued</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @forelse($issued as $cert)
+                                        <div style="margin-bottom:6px;">
+                                            <a class="btn btn-xs btn-white" href="{{ route('admin.certificates.preview', $cert->id) }}" target="_blank" rel="noopener">Preview</a>
+                                            <a class="btn btn-xs btn-info" href="{{ route('admin.certificates.download', $cert->id) }}">Download</a>
+                                        </div>
+                                    @empty
                                         <form method="POST" action="{{ route('admin.certificates.completions.issue', $row->id) }}" style="display:inline;">
                                             @csrf
                                             <input type="hidden" name="send_email" value="1">
+                                            @if($row->template_id)
+                                                <input type="hidden" name="template_id" value="{{ $row->template_id }}">
+                                            @endif
                                             <button type="submit" class="btn btn-xs btn-primary">Issue + email</button>
+                                        </form>
+                                    @endforelse
+                                    @if($issued->isNotEmpty())
+                                        <form method="POST" action="{{ route('admin.certificates.completions.issue', $row->id) }}" style="display:inline;margin-top:4px;">
+                                            @csrf
+                                            <input type="hidden" name="send_email" value="1">
+                                            @if($row->template_id)
+                                                <input type="hidden" name="template_id" value="{{ $row->template_id }}">
+                                            @endif
+                                            <button type="submit" class="btn btn-xs btn-warning" title="Issue another certificate for this completion">Issue another</button>
                                         </form>
                                     @endif
                                 </td>
