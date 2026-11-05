@@ -81,7 +81,33 @@ class MediaController extends Controller
             }
         }
         $metaByPath = $this->metaIndex(array_column($lookup, 'rel'));
-        $usages = $this->usageIndex($lookup, true);
+        $usages = ['by_path' => [], 'by_name' => []];
+        $linksKnown = false;
+        $deadline = microtime(true) + 8;
+        $capped = $this->capDbStatement(4);
+        if ($capped) {
+            try {
+                $complete = true;
+                foreach (array_chunk($lookup, 8) as $chunk) {
+                    if (microtime(true) >= $deadline) {
+                        $complete = false;
+                        break;
+                    }
+                    $part = $this->usageIndex($chunk, true);
+                    foreach (['by_path', 'by_name'] as $bucket) {
+                        foreach (($part[$bucket] ?? []) as $key => $map) {
+                            $usages[$bucket][$key] = ($usages[$bucket][$key] ?? []) + $map;
+                        }
+                    }
+                }
+                $linksKnown = $complete;
+            } catch (\Throwable $e) {
+                $usages = ['by_path' => [], 'by_name' => []];
+                $linksKnown = false;
+            } finally {
+                $this->clearDbStatementCap();
+            }
+        }
 
         $rows = [];
         foreach ($slice as $file) {
@@ -121,7 +147,7 @@ class MediaController extends Controller
                 'width' => 0,
                 'height' => 0,
                 'links' => $links,
-                'links_known' => true,
+                'links_known' => $linksKnown || $links !== [],
                 'also_on_disk' => implode(', ', $also),
                 'alt' => $meta['alt'] ?? null,
                 'title' => $meta['title'] ?? null,
