@@ -24,7 +24,7 @@ class MediaController extends Controller
 
         $search = trim((string) $request->input('search', ''));
         $unusedOnly = $request->boolean('unused');
-        $perPage = 15;
+        $perPage = 30;
         $page = max(1, (int) $request->input('page', 1));
 
         $files = $this->collapseDuplicateImages($this->cachedImageFiles());

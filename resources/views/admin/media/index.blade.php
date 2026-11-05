@@ -1,7 +1,7 @@
 @extends('admin.layout.app')
 @section('title', 'Media')
 @section('content')
-{{-- lms-media-20261105j compact upload form --}}
+{{-- lms-media-20261105k 200kb copy, 30 per page --}}
 <style>
     .lms-assigned-pager {
         display: flex;
@@ -73,8 +73,8 @@
                     <div class="col-md-6">
                         <div class="form-group">
                             <label>Image file *</label>
-                            <input type="file" name="image" class="form-control lms-image-max-input" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,image/*" required data-max-kb="{{ function_exists('lms_image_upload_max_kb') ? lms_image_upload_max_kb() : 300 }}">
-                            <span class="help-block">Saved to <code>images/library/</code>. Max {{ function_exists('lms_image_upload_max_kb') ? lms_image_upload_max_kb() : 300 }} KB.</span>
+                            <input type="file" name="image" class="form-control lms-image-max-input" accept=".jpg,.jpeg,.png,.gif,.webp,.svg,image/*" required data-max-kb="{{ function_exists('lms_image_upload_max_kb') ? lms_image_upload_max_kb() : 200 }}">
+                            <span class="help-block">Saved to <code>images/library/</code>. Make sure the image size is Max 200 KB.</span>
                         </div>
                         <div class="form-group">
                             <label>Image Caption</label>
@@ -116,7 +116,7 @@
 
     <div class="ibox">
         <div class="ibox-title">
-            <h5>All images <small class="text-muted">({{ (int) ($rowsTotal ?? $rows->total()) }} images · 15 per page)</small></h5>
+            <h5>All images <small class="text-muted">({{ (int) ($rowsTotal ?? $rows->total()) }} images · 30 per page)</small></h5>
         </div>
         <div class="ibox-content">
             @if(!empty($unusedSkipped))
@@ -167,7 +167,7 @@
                                 $captionMissing = trim((string) ($row['caption'] ?? '')) === '';
                                 $descriptionMissing = trim((string) ($row['description'] ?? '')) === '';
                                 $bytes = (int) ($row['size'] ?? 0);
-                                $maxBytes = function_exists('lms_image_upload_max_bytes') ? lms_image_upload_max_bytes() : (300 * 1024);
+                                $maxBytes = function_exists('lms_image_upload_max_bytes') ? lms_image_upload_max_bytes() : (200 * 1024);
                                 $isOver = $bytes > $maxBytes;
                                 if ($bytes >= 1048576) {
                                     $sizeLabel = rtrim(rtrim(number_format($bytes / 1048576, 2, '.', ''), '0'), '.') . ' MB';
@@ -199,7 +199,7 @@
                                     @endif
                                     <span class="lms-media-size {{ $isOver ? 'is-over' : '' }}" title="{{ number_format($bytes) }} bytes">
                                         @if($dimLabel !== ''){{ $dimLabel }}<br>@endif
-                                        <span class="lms-media-size-badge {{ $isOver ? 'is-over' : '' }}">{{ $sizeLabel }}@if($isOver) · over 300 KB @endif</span>
+                                        <span class="lms-media-size-badge {{ $isOver ? 'is-over' : '' }}">{{ $sizeLabel }}@if($isOver) · over 200 KB @endif</span>
                                     </span>
                                 </td>
                                 <td>
@@ -342,7 +342,7 @@
 
     $(document).on('change', '.lms-image-max-input', function () {
         var input = this;
-        var maxKb = parseInt(input.getAttribute('data-max-kb') || '300', 10);
+        var maxKb = parseInt(input.getAttribute('data-max-kb') || '200', 10);
         var file = input.files && input.files[0];
         if (!file) return;
         if (file.size > maxKb * 1024) {
