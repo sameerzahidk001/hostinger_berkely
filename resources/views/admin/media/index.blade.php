@@ -235,7 +235,7 @@
                                             <i class="fa fa-copy"></i> Copy URL
                                         </button>
                                         <span class="lms-copy-ok">Copied</span>
-                                        @if(function_exists('admin_can_delete') ? admin_can_delete() : true)
+                                        @if(! function_exists('admin_can_delete') || admin_can_delete())
                                             <form action="{{ route('admin.media.destroy') }}" method="POST" onsubmit="return confirm('Delete this image?');">
                                                 @csrf
                                                 @method('DELETE')
