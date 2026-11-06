@@ -1363,8 +1363,7 @@ class MediaController extends Controller
                     }
                     foreach (array_keys($stems) as $stem) {
                         $like = '%' . addcslashes($stem, '%_\\') . '%';
-                        $outer->orWhereRaw('`data` LIKE ?', [$like])
-                            ->orWhereRaw('CAST(`data` AS CHAR) LIKE ?', [$like]);
+                        $outer->orWhereRaw('`data` LIKE ?', [$like]);
                     }
                 });
                 foreach ($q->orderByDesc('id')->limit(400)->get() as $section) {

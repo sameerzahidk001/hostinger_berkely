@@ -406,8 +406,18 @@
             });
         });
         if (!rels.length) return;
-        var params = rels.map(function (rel) { return 'rel[]=' + encodeURIComponent(rel); }).join('&');
-        fetch(linksUrl + '?' + params, { credentials: 'same-origin' })
+        var csrf = document.querySelector('meta[name="csrf-token"]');
+        fetch(linksUrl, {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRF-TOKEN': csrf ? csrf.content : ''
+            },
+            body: JSON.stringify({ rel: rels })
+        })
             .then(function (res) {
                 if (!res.ok) throw new Error('links ' + res.status);
                 return res.json();
