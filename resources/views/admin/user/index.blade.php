@@ -47,6 +47,7 @@
                                     <tr>
                                         <th>#</th>
                                         <th>Name</th>
+                                        <th>Student ID</th>
                                         <th>Image</th>
                                         <th>Email</th>
                                         <th>Mobile</th>
@@ -64,6 +65,7 @@
                                         <tr>
                                             <td>{{ $loop->iteration }}</td>
                                             <td style="white-space: nowrap;">{{ $data->name }}</td>
+                                            <td>{{ $data->student_number ?: '—' }}</td>
                                             <td><img src="{{ asset($data->image) }}" width="30" height="30"
                                                     alt="user image"></td>
                                             <td>{{ $data->email }}</td>

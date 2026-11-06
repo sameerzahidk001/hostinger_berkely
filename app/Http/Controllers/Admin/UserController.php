@@ -31,6 +31,7 @@ class UserController extends Controller
 
             $type = $request->query('type', Role::first()?->name);
             $roleIds = role_ids_for_list_type((string) $type);
+            User::ensureStudentNumberColumn();
 
             $usersQuery = User::query()->with('roles')->orderByDesc('created_at');
 
@@ -265,6 +266,7 @@ class UserController extends Controller
     {
         try {
             $user = User::findOrFail($id); // Find the user by ID
+            $user->ensureFixedStudentId();
             $roles = Role::all(); // Get all roles for the dropdown
             $countries = Country::all();
             $lmsTab = $request->query('tab') === 'lms';

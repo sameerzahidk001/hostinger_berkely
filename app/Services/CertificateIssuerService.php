@@ -9,7 +9,6 @@ use App\Models\LmsCertificate;
 use App\Models\StudentCompletion;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -343,124 +342,24 @@ class CertificateIssuerService
 
     public function resolveStudentNumber(?User $user, ?string $override = null): string
     {
-        $this->ensureUserStudentNumberColumn();
-
-        if ($user) {
-            $existing = $this->existingBsbForUser($user);
-            if ($existing !== '') {
-                $this->persistUserStudentNumber($user, $existing);
-
-                return $existing;
-            }
+        if (! $user) {
+            return User::nextBsbStudentId();
         }
 
-        $next = $this->nextBsbNumber();
-        if ($user) {
-            $this->persistUserStudentNumber($user, $next);
-        }
-
-        return $next;
-    }
-
-    protected function existingBsbForUser(User $user): string
-    {
-        $fromUser = $this->normalizeBsb((string) ($user->student_number ?? ''));
-        if ($fromUser !== '') {
-            return $fromUser;
-        }
-
+        $fromCert = '';
         if (Schema::hasTable('lms_certificates')) {
-            $fromCert = LmsCertificate::query()
+            $fromCert = User::normalizeBsbStudentId((string) LmsCertificate::query()
                 ->where('user_id', (int) $user->id)
                 ->where('student_number', 'like', 'BSB%')
                 ->orderBy('id')
-                ->value('student_number');
-            $fromCert = $this->normalizeBsb((string) $fromCert);
-            if ($fromCert !== '') {
-                return $fromCert;
-            }
+                ->value('student_number'));
+        }
+        if ($fromCert !== '' && User::normalizeBsbStudentId((string) ($user->student_number ?? '')) === '') {
+            $user->student_number = $fromCert;
+            $user->save();
         }
 
-        if (Schema::hasTable('student_completions')) {
-            $fromCompletion = StudentCompletion::query()
-                ->where('user_id', (int) $user->id)
-                ->where('student_number', 'like', 'BSB%')
-                ->orderBy('id')
-                ->value('student_number');
-            $fromCompletion = $this->normalizeBsb((string) $fromCompletion);
-            if ($fromCompletion !== '') {
-                return $fromCompletion;
-            }
-        }
-
-        return '';
-    }
-
-    protected function nextBsbNumber(): string
-    {
-        static $seq = null;
-        if ($seq === null) {
-            $seq = 0;
-            foreach (['lms_certificates', 'student_completions', 'users'] as $table) {
-                if (! Schema::hasTable($table) || ! Schema::hasColumn($table, 'student_number')) {
-                    continue;
-                }
-                $values = \Illuminate\Support\Facades\DB::table($table)
-                    ->where('student_number', 'like', 'BSB%')
-                    ->pluck('student_number');
-                foreach ($values as $value) {
-                    $n = $this->bsbSequence((string) $value);
-                    if ($n > $seq) {
-                        $seq = $n;
-                    }
-                }
-            }
-        }
-        $seq++;
-        if ($seq > 9999999) {
-            $seq = 9999999;
-        }
-
-        return 'BSB' . str_pad((string) $seq, 7, '0', STR_PAD_LEFT);
-    }
-
-    protected function normalizeBsb(string $value): string
-    {
-        $value = strtoupper(trim($value));
-        if (preg_match('/^BSB(\d{1,7})$/', $value, $m)) {
-            return 'BSB' . str_pad($m[1], 7, '0', STR_PAD_LEFT);
-        }
-
-        return '';
-    }
-
-    protected function bsbSequence(string $value): int
-    {
-        $normalized = $this->normalizeBsb($value);
-
-        return $normalized === '' ? 0 : (int) substr($normalized, 3);
-    }
-
-    protected function persistUserStudentNumber(User $user, string $number): void
-    {
-        if (! Schema::hasColumn('users', 'student_number')) {
-            return;
-        }
-        if ($this->normalizeBsb((string) ($user->student_number ?? '')) === $number) {
-            return;
-        }
-        $user->setAttribute('student_number', $number);
-        $user->save();
-    }
-
-    protected function ensureUserStudentNumberColumn(): void
-    {
-        if (! Schema::hasTable('users') || Schema::hasColumn('users', 'student_number')) {
-            return;
-        }
-        Schema::table('users', function (Blueprint $table) {
-            $table->string('student_number', 20)->nullable();
-        });
+        return $user->ensureFixedStudentId();
     }
 
     public function pdfPublicSrc(?string $relative): ?string
