@@ -55,6 +55,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'ip_address',
         'approved',
         'is_on_web',
+        'student_number',
     ];
 
     /**
@@ -66,6 +67,13 @@ class User extends Authenticatable implements MustVerifyEmail
         'password',
         'remember_token',
     ];
+
+    protected static function booted(): void
+    {
+        static::created(function (User $user) {
+            $user->ensureFixedStudentId();
+        });
+    }
 
     /**
      * The attributes that should be cast.
@@ -374,6 +382,80 @@ class User extends Authenticatable implements MustVerifyEmail
         });
 
         return Schema::hasColumn('users', 'latitude') && Schema::hasColumn('users', 'longitude');
+    }
+
+    public static function ensureStudentNumberColumn(): bool
+    {
+        if (! Schema::hasTable('users')) {
+            return false;
+        }
+        if (! Schema::hasColumn('users', 'student_number')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->string('student_number', 20)->nullable();
+            });
+        }
+
+        return Schema::hasColumn('users', 'student_number');
+    }
+
+    public function ensureFixedStudentId(): string
+    {
+        if (! static::ensureStudentNumberColumn()) {
+            return '';
+        }
+
+        $existing = static::normalizeBsbStudentId((string) ($this->student_number ?? ''));
+        if ($existing !== '') {
+            if ((string) $this->student_number !== $existing) {
+                $this->student_number = $existing;
+                $this->save();
+            }
+
+            return $existing;
+        }
+
+        $next = static::nextBsbStudentId();
+        $this->student_number = $next;
+        $this->save();
+
+        return $next;
+    }
+
+    public static function normalizeBsbStudentId(string $value): string
+    {
+        $value = strtoupper(trim($value));
+        if (preg_match('/^BSB(\d{1,7})$/', $value, $m)) {
+            return 'BSB' . str_pad($m[1], 7, '0', STR_PAD_LEFT);
+        }
+
+        return '';
+    }
+
+    public static function nextBsbStudentId(): string
+    {
+        static $seq = null;
+        if ($seq === null) {
+            $seq = 0;
+            foreach (['users', 'lms_certificates', 'student_completions'] as $table) {
+                if (! Schema::hasTable($table) || ! Schema::hasColumn($table, 'student_number')) {
+                    continue;
+                }
+                $values = DB::table($table)->where('student_number', 'like', 'BSB%')->pluck('student_number');
+                foreach ($values as $value) {
+                    $normalized = static::normalizeBsbStudentId((string) $value);
+                    $n = $normalized === '' ? 0 : (int) substr($normalized, 3);
+                    if ($n > $seq) {
+                        $seq = $n;
+                    }
+                }
+            }
+        }
+        $seq++;
+        if ($seq > 9999999) {
+            $seq = 9999999;
+        }
+
+        return 'BSB' . str_pad((string) $seq, 7, '0', STR_PAD_LEFT);
     }
 
     public function hasMapLocation(): bool

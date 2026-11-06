@@ -95,6 +95,14 @@
                                 </div>
                             </div>
 
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label>Student ID</label>
+                                    <input type="text" class="form-control" value="Assigned automatically on save" readonly>
+                                    <span class="help-block">Format BSB0000001 (10 characters). Fixed on the user.</span>
+                                </div>
+                            </div>
+
                             <!-- Email -->
                             <div class="col-md-4">
                                 <div class="form-group">
