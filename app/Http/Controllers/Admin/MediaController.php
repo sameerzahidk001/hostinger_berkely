@@ -164,7 +164,10 @@ class MediaController extends Controller
             }
             $root = strtolower(explode('/', $n)[0] ?? '');
             if (! in_array($root, ['images', 'uploads'], true)) {
-                continue;
+                if (str_contains($n, '/')) {
+                    continue;
+                }
+                $n = 'images/library/' . $n;
             }
             $files[] = ['rel' => $n, 'name' => basename($n)];
         }
