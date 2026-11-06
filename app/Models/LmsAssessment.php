@@ -128,15 +128,32 @@ class LmsAssessment extends Model
         return str_contains($title, 'scs') && str_contains($title, 'mock');
     }
 
-    /** Only SCS Mock 1 and Mock 2 were assigned to people. Mock 3–7 stay unassigned. */
+    /** SCS Mock 1/2, plus any later mock that already has a saved sitting. */
     public function isCimaScsAssignedMockTitle(): bool
     {
         if (! $this->isCimaScsNovemberTitle()) {
             return false;
         }
         $title = mb_strtolower(trim((string) ($this->title ?? '')));
+        if (preg_match('/\bmock\s*[12]\b/', $title)) {
+            return true;
+        }
 
-        return (bool) preg_match('/\bmock\s*[12]\b/', $title);
+        return $this->hasStoredSittings();
+    }
+
+    public function hasStoredSittings(): bool
+    {
+        try {
+            $ids = $this->sameTitleAssessmentIds();
+            if ($ids === []) {
+                return false;
+            }
+
+            return LmsAssessmentAssignment::query()->whereIn('assessment_id', $ids)->exists();
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 
     public function markerUsers()
