@@ -21,7 +21,11 @@ class LmsCertificate extends Model
         'revoked_at',
         'emailed_at',
         'student_name',
+        'student_number',
         'course_title',
+        'course_subtitle',
+        'programme_duration',
+        'cpd_hours',
         'completion_date',
         'pdf_path',
         'qr_payload',
@@ -52,7 +56,11 @@ class LmsCertificate extends Model
                 $table->timestamp('revoked_at')->nullable();
                 $table->timestamp('emailed_at')->nullable();
                 $table->string('student_name', 255)->nullable();
+                $table->string('student_number', 100)->nullable();
                 $table->string('course_title', 500)->nullable();
+                $table->string('course_subtitle', 500)->nullable();
+                $table->string('programme_duration', 255)->nullable();
+                $table->string('cpd_hours', 100)->nullable();
                 $table->date('completion_date')->nullable();
                 $table->string('pdf_path', 500)->nullable();
                 $table->string('qr_payload', 500)->nullable();
@@ -61,10 +69,22 @@ class LmsCertificate extends Model
                 $table->text('revoke_reason')->nullable();
                 $table->timestamps();
             });
-        } elseif (! Schema::hasColumn('lms_certificates', 'template_id')) {
-            Schema::table('lms_certificates', function (Blueprint $table) {
-                $table->unsignedBigInteger('template_id')->nullable()->index()->after('course_id');
-            });
+        } else {
+            if (! Schema::hasColumn('lms_certificates', 'template_id')) {
+                Schema::table('lms_certificates', function (Blueprint $table) {
+                    $table->unsignedBigInteger('template_id')->nullable()->index();
+                });
+            }
+            foreach ([
+                'student_number' => fn (Blueprint $t) => $t->string('student_number', 100)->nullable(),
+                'course_subtitle' => fn (Blueprint $t) => $t->string('course_subtitle', 500)->nullable(),
+                'programme_duration' => fn (Blueprint $t) => $t->string('programme_duration', 255)->nullable(),
+                'cpd_hours' => fn (Blueprint $t) => $t->string('cpd_hours', 100)->nullable(),
+            ] as $col => $cb) {
+                if (! Schema::hasColumn('lms_certificates', $col)) {
+                    Schema::table('lms_certificates', $cb);
+                }
+            }
         }
 
         return Schema::hasTable('lms_certificates');

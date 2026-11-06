@@ -88,7 +88,7 @@ class Email extends Model
             case 'lms-test-result-published':
                 return $lmsAssign . '<br><strong>{result_url}</strong> result page';
             case 'certificate-issued':
-                return 'You can use: <strong>{name}</strong> <strong>{email}</strong> <strong>{course_name}</strong> <strong>{certificate_code}</strong> <strong>{issued_at}</strong> <strong>{completion_date}</strong> <strong>{verify_url}</strong> <strong>{portal_url}</strong> <strong>{login_url}</strong>';
+                return 'You can use: <strong>{name}</strong> <strong>{email}</strong> <strong>{student_id}</strong> <strong>{course_name}</strong> <strong>{certificate_code}</strong> <strong>{issued_at}</strong> <strong>{completion_date}</strong> <strong>{verify_url}</strong> <strong>{portal_url}</strong> <strong>{login_url}</strong>';
             default:
                 return '';
         }

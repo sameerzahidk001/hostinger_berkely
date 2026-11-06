@@ -99,10 +99,26 @@
                     </div>
 
                     <div class="col-md-3 form-group">
-                        <label>Completion date</label>
+                        <label>Awarded / completion date</label>
                         <input type="date" name="completed_at" class="form-control" value="{{ old('completed_at', now()->toDateString()) }}">
                     </div>
                     <div class="col-md-3 form-group">
+                        <label>Student ID (optional override)</label>
+                        <input type="text" name="student_number" class="form-control" value="{{ old('student_number') }}" maxlength="100" placeholder="e.g. BID20099805B">
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Course subtitle (optional)</label>
+                        <input type="text" name="course_subtitle" class="form-control" value="{{ old('course_subtitle') }}" placeholder="e.g. (CIA Challenge Exam Training)">
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Programme duration</label>
+                        <input type="text" name="programme_duration" class="form-control" value="{{ old('programme_duration') }}" placeholder="e.g. 6 Months">
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>CPD hours</label>
+                        <input type="text" name="cpd_hours" class="form-control" value="{{ old('cpd_hours') }}" placeholder="e.g. 30">
+                    </div>
+                    <div class="col-md-12 form-group">
                         <label>Notes (internal)</label>
                         <input type="text" name="notes" class="form-control" value="{{ old('notes') }}" maxlength="2000">
                     </div>

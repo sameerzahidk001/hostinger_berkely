@@ -43,10 +43,20 @@
                     <span class="badge valid">Valid</span>
                     <div class="meta">
                         <div><strong>Student:</strong> {{ $certificate->student_name }}</div>
+                        <div><strong>Student ID:</strong> {{ $certificate->student_number ?: '—' }}</div>
                         <div><strong>Course:</strong> {{ $certificate->course_title }}</div>
+                        @if($certificate->course_subtitle)
+                            <div><strong>Subtitle:</strong> {{ $certificate->course_subtitle }}</div>
+                        @endif
+                        @if($certificate->programme_duration)
+                            <div><strong>Programme duration:</strong> {{ $certificate->programme_duration }}</div>
+                        @endif
+                        @if($certificate->cpd_hours)
+                            <div><strong>CPD hours:</strong> {{ $certificate->cpd_hours }}</div>
+                        @endif
                         <div><strong>Completion date:</strong> {{ optional($certificate->completion_date)->format('d M Y') ?: '—' }}</div>
                         <div><strong>Issued:</strong> {{ optional($certificate->issued_at)->format('d M Y') ?: '—' }}</div>
-                        <div><strong>Code:</strong> {{ $certificate->certificate_code }}</div>
+                        <div><strong>Certificate number:</strong> {{ $certificate->certificate_code }}</div>
                         <p style="margin:12px 0 0;">This certificate was issued by Berkeley School of Business, Arts &amp; Sciences.</p>
                     </div>
                 @elseif($result === 'revoked')

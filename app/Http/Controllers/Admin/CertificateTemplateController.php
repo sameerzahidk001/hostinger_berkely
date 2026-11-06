@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\CertificateTemplate;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 
 class CertificateTemplateController extends Controller
 {
@@ -22,20 +24,12 @@ class CertificateTemplateController extends Controller
     public function create()
     {
         CertificateTemplate::ensureTable();
+        $defaults = CertificateTemplate::berkeleyDefaults();
+        $defaults['is_default'] = false;
+        $defaults['name'] = 'Berkeley Certificate of Completion';
 
         return view('admin.certificates.templates.form', [
-            'template' => new CertificateTemplate([
-                'eyebrow' => 'Certificate of Completion',
-                'title' => 'Digital Certificate',
-                'school_name' => 'Berkeley School of Business, Arts & Sciences',
-                'intro_line' => 'This is to certify that',
-                'completion_line' => 'has successfully completed',
-                'orientation' => 'landscape',
-                'primary_color' => '#000435',
-                'accent_color' => '#f8961f',
-                'is_active' => true,
-                'is_default' => false,
-            ]),
+            'template' => new CertificateTemplate($defaults),
             'mode' => 'create',
         ]);
     }
@@ -45,6 +39,7 @@ class CertificateTemplateController extends Controller
         CertificateTemplate::ensureTable();
         $data = $this->validated($request);
         $template = CertificateTemplate::query()->create($data);
+        $this->storeImages($request, $template);
         if (! empty($data['is_default'])) {
             $template->markAsDefault();
         } elseif (! CertificateTemplate::query()->where('is_default', true)->exists()) {
@@ -74,6 +69,7 @@ class CertificateTemplateController extends Controller
         $data = $this->validated($request);
         $template->fill($data);
         $template->save();
+        $this->storeImages($request, $template);
         if (! empty($data['is_default'])) {
             $template->markAsDefault();
         }
@@ -99,21 +95,75 @@ class CertificateTemplateController extends Controller
     {
         $data = $request->validate([
             'name' => 'required|string|max:255',
-            'eyebrow' => 'nullable|string|max:255',
-            'title' => 'nullable|string|max:255',
+            'heading_line' => 'nullable|string|max:255',
+            'body_text' => 'nullable|string|max:2000',
             'school_name' => 'nullable|string|max:255',
-            'intro_line' => 'nullable|string|max:500',
-            'completion_line' => 'nullable|string|max:500',
             'orientation' => 'required|in:landscape,portrait',
             'primary_color' => 'nullable|string|max:20',
             'accent_color' => 'nullable|string|max:20',
+            'signer_left_name' => 'nullable|string|max:255',
+            'signer_left_title' => 'nullable|string|max:255',
+            'signer_right_name' => 'nullable|string|max:255',
+            'signer_right_title' => 'nullable|string|max:255',
+            'footer_org_line' => 'nullable|string|max:500',
+            'footer_email' => 'nullable|string|max:255',
+            'footer_website' => 'nullable|string|max:255',
+            'verify_heading' => 'nullable|string|max:255',
+            'default_duration' => 'nullable|string|max:255',
+            'default_cpd_hours' => 'nullable|string|max:100',
             'is_active' => 'nullable|boolean',
             'is_default' => 'nullable|boolean',
+            'background_image' => 'nullable|file|mimes:jpg,jpeg,png,webp|max:2048',
+            'logo_image' => 'nullable|file|mimes:jpg,jpeg,png,webp|max:500',
+            'seal_image' => 'nullable|file|mimes:jpg,jpeg,png,webp|max:500',
+            'signer_left_image' => 'nullable|file|mimes:jpg,jpeg,png,webp|max:500',
+            'signer_right_image' => 'nullable|file|mimes:jpg,jpeg,png,webp|max:500',
         ]);
 
         $data['is_active'] = $request->boolean('is_active', true);
         $data['is_default'] = $request->boolean('is_default', false);
+        $data['eyebrow'] = 'CERTIFICATE';
+        $data['title'] = 'OF COMPLETION';
+        unset(
+            $data['background_image'],
+            $data['logo_image'],
+            $data['seal_image'],
+            $data['signer_left_image'],
+            $data['signer_right_image']
+        );
 
         return $data;
+    }
+
+    private function storeImages(Request $request, CertificateTemplate $template): void
+    {
+        $map = [
+            'background_image' => 'background_path',
+            'logo_image' => 'logo_path',
+            'seal_image' => 'seal_path',
+            'signer_left_image' => 'signer_left_signature',
+            'signer_right_image' => 'signer_right_signature',
+        ];
+        $dirRel = 'certificates/templates/' . $template->id;
+        $dirAbs = public_path($dirRel);
+        if (! File::isDirectory($dirAbs)) {
+            File::makeDirectory($dirAbs, 0755, true);
+        }
+
+        $changed = false;
+        foreach ($map as $input => $column) {
+            $file = $request->file($input);
+            if (! $file) {
+                continue;
+            }
+            $ext = strtolower((string) $file->getClientOriginalExtension()) ?: 'png';
+            $name = $column . '-' . Str::random(6) . '.' . $ext;
+            $file->move($dirAbs, $name);
+            $template->{$column} = $dirRel . '/' . $name;
+            $changed = true;
+        }
+        if ($changed) {
+            $template->save();
+        }
     }
 }
