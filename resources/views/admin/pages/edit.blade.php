@@ -141,6 +141,13 @@
                                     @endif
                                 </div>
                             </div>
+                            @if(in_array((string) $page->url, ['ecert-verify', 'verify-certificate'], true) || strcasecmp((string) $page->page_name, 'Verify Certificate') === 0)
+                                <div class="alert alert-info" style="margin-bottom:12px;">
+                                    This is the public Verify Certificate page. Title Section / Content text is shown above the verification form.
+                                    Keep the URL as <code>ecert-verify</code>.
+                                    <a href="{{ url('/ecert-verify') }}" target="_blank" rel="noopener">View page</a>
+                                </div>
+                            @endif
                             <div class="row">
                                 <div class="col-lg-4">
                                     <label for="">Page Name</label>

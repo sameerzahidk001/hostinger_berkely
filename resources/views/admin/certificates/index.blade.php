@@ -21,7 +21,13 @@
     <div class="ibox">
         <div class="ibox-title"><h5>Issued certificates</h5></div>
         <div class="ibox-content">
-            <p class="text-muted">Public verify page: <a href="{{ url('/ecert-verify') }}" target="_blank" rel="noopener">/ecert-verify</a></p>
+            <p class="text-muted">Public verify page: <a href="{{ url('/ecert-verify') }}" target="_blank" rel="noopener">/ecert-verify</a>
+                @php $verifyCmsPage = \App\Models\Page::ensureVerifyCertificatePage(); @endphp
+                @if($verifyCmsPage)
+                    — content writers edit the text above the form in
+                    <a href="{{ route('pages.edit', $verifyCmsPage->id) }}">Pages → {{ $verifyCmsPage->page_name }}</a>
+                @endif
+            </p>
             <form method="GET" class="form-group">
                 <div class="row">
                     <div class="col-sm-5">

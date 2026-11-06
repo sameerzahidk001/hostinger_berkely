@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\CertificateVerifyLog;
 use App\Models\LmsCertificate;
+use App\Models\Page;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -18,18 +19,13 @@ class VerifyCertificateController extends Controller
         $inputCode = trim((string) ($code ?: $request->input('code', '')));
         $inputCode = rawurldecode($inputCode);
 
-        return view('certificates.verify', [
-            'code' => $inputCode,
-            'certificate' => null,
-            'result' => null,
-            'old' => [
-                'verifier_name' => old('verifier_name', ''),
-                'verifier_email' => old('verifier_email', ''),
-                'verifier_phone' => old('verifier_phone', ''),
-                'verifier_organization' => old('verifier_organization', ''),
-                'verifier_position' => old('verifier_position', ''),
-                'verifier_reason' => old('verifier_reason', ''),
-            ],
+        return $this->verifyView($inputCode, null, null, [
+            'verifier_name' => old('verifier_name', ''),
+            'verifier_email' => old('verifier_email', ''),
+            'verifier_phone' => old('verifier_phone', ''),
+            'verifier_organization' => old('verifier_organization', ''),
+            'verifier_position' => old('verifier_position', ''),
+            'verifier_reason' => old('verifier_reason', ''),
         ]);
     }
 
@@ -94,18 +90,46 @@ class VerifyCertificateController extends Controller
             // Logging must never break verify UX.
         }
 
+        return $this->verifyView($inputCode, $certificate, $result, [
+            'verifier_name' => $data['verifier_name'],
+            'verifier_email' => $data['verifier_email'],
+            'verifier_phone' => $data['verifier_phone'],
+            'verifier_organization' => $data['verifier_organization'],
+            'verifier_position' => $data['verifier_position'],
+            'verifier_reason' => $data['verifier_reason'],
+        ]);
+    }
+
+    protected function verifyView(string $code, $certificate, ?string $result, array $old)
+    {
+        $cmsPage = null;
+        try {
+            $cmsPage = Page::ensureVerifyCertificatePage();
+            if ($cmsPage) {
+                $cmsPage->load('sections');
+                $cmsPage->setRelation(
+                    'sections',
+                    $cmsPage->sections->sortBy('order')->values()->map(function ($section) {
+                        $decoded = is_string($section->data) ? json_decode($section->data, true) : $section->data;
+                        $section->data = is_array($decoded) ? $decoded : [];
+                        if (empty($section->section_type)) {
+                            $section->section_type = $section->data['section_type'] ?? null;
+                        }
+
+                        return $section;
+                    })
+                );
+            }
+        } catch (\Throwable $e) {
+            $cmsPage = null;
+        }
+
         return view('certificates.verify', [
-            'code' => $inputCode,
+            'code' => $code,
             'certificate' => $certificate,
             'result' => $result,
-            'old' => [
-                'verifier_name' => $data['verifier_name'],
-                'verifier_email' => $data['verifier_email'],
-                'verifier_phone' => $data['verifier_phone'],
-                'verifier_organization' => $data['verifier_organization'],
-                'verifier_position' => $data['verifier_position'],
-                'verifier_reason' => $data['verifier_reason'],
-            ],
+            'old' => $old,
+            'cmsPage' => $cmsPage,
         ]);
     }
 }

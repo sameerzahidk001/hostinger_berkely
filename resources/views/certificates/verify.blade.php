@@ -7,6 +7,10 @@
     .ecert-verify .card { background:#fff; border:1px solid #e5e7eb; padding:28px 24px; }
     .ecert-verify h1 { font-family: Georgia, "Times New Roman", serif; font-size:28px; margin:0 0 8px; color:#000435; }
     .ecert-verify .sub { color:#6b7280; margin:0 0 20px; font-size:14px; }
+    .ecert-verify .cms-html { color:#6b7280; margin:0 0 20px; font-size:14px; line-height:1.55; }
+    .ecert-verify .cms-html p { margin:0 0 10px; }
+    .ecert-verify .cms-html p:last-child { margin-bottom:0; }
+    .ecert-verify .cms-media { max-width:100%; height:auto; margin:0 0 16px; }
     .ecert-verify label { display:block; font-size:13px; font-weight:600; margin:0 0 6px; }
     .ecert-verify .req { color:#c0392b; }
     .ecert-verify input, .ecert-verify textarea { width:100%; padding:10px 12px; border:1px solid #cbd5e1; box-sizing:border-box; font-size:15px; }
@@ -32,8 +36,30 @@
 <section class="ecert-verify">
 <div class="wrap">
     <div class="card">
-        <h1>Verify Certificate</h1>
-        <p class="sub">Anyone can verify a Berkeley e-certificate. All fields below are required. Enter the certificate ID / number from the document or QR link.</p>
+        @php
+            $cmsSections = collect(optional($cmsPage ?? null)->sections);
+            $hasCmsCopy = $cmsSections->contains(function ($section) {
+                $data = is_array($section->data ?? null) ? $section->data : [];
+                return trim((string) (($data['title'] ?? '') . strip_tags((string) ($data['description'] ?? '')))) !== '';
+            });
+        @endphp
+        @if($hasCmsCopy)
+            @foreach($cmsSections as $section)
+                @php $data = is_array($section->data ?? null) ? $section->data : []; @endphp
+                @if(!empty($data['image']))
+                    <img class="cms-media" src="{{ media_url($data['image']) }}" alt="{{ image_alt($data['image_alt'] ?? null, $data['title'] ?? 'Verify Certificate') }}">
+                @endif
+                @if(!empty($data['title']))
+                    <h1>{{ $data['title'] }}</h1>
+                @endif
+                @if(!empty($data['description']))
+                    <div class="cms-html">{!! render_cms_html($data['description']) !!}</div>
+                @endif
+            @endforeach
+        @else
+            <h1>Verify Certificate</h1>
+            <p class="sub">Anyone can verify a Berkeley e-certificate. All fields below are required. Enter the certificate ID / number from the document or QR link.</p>
+        @endif
 
         @if($errors->any())
             <div class="errors">
