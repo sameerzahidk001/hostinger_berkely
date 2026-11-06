@@ -102,7 +102,7 @@ class LmsCertificate extends Model
 
     public function verifyUrl(): string
     {
-        return url('/verify-certificate/' . urlencode((string) $this->certificate_code));
+        return url('/ecert-verify/' . urlencode((string) $this->certificate_code));
     }
 
     public function user()

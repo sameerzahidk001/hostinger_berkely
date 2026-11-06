@@ -226,6 +226,11 @@ class CertificateTemplate extends Model
         return $parts ? implode(' ', $parts) : 'CERTIFICATE OF COMPLETION';
     }
 
+    public function titleText(): string
+    {
+        return $this->headingText();
+    }
+
     public function bodyText(): string
     {
         $v = trim((string) $this->body_text);

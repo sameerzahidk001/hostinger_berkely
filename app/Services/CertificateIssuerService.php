@@ -77,7 +77,7 @@ class CertificateIssuerService
         $studentNumber = $this->resolveStudentNumber($student, $completion->student_number ?? null);
 
         $code = $this->nextCertificateCode();
-        $verifyUrl = url('/verify-certificate/' . rawurlencode($code));
+        $verifyUrl = url('/ecert-verify/' . rawurlencode($code));
 
         $cert = LmsCertificate::query()->create([
             'completion_id' => $completion->id,
@@ -132,7 +132,7 @@ class CertificateIssuerService
             $cert->issued_by = $issuer->id;
             $cert->issued_by_name = trim((string) ($issuer->name ?? $issuer->email ?? 'Admin'));
         }
-        $cert->qr_payload = url('/verify-certificate/' . rawurlencode((string) $cert->certificate_code));
+        $cert->qr_payload = url('/ecert-verify/' . rawurlencode((string) $cert->certificate_code));
         $cert->loadMissing('template');
         $template = $cert->template ?: CertificateTemplate::ensureDefault();
         $cert->pdf_path = $this->renderPdf($cert, $template);

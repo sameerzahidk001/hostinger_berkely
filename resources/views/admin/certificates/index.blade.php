@@ -21,7 +21,7 @@
     <div class="ibox">
         <div class="ibox-title"><h5>Issued certificates</h5></div>
         <div class="ibox-content">
-            <p class="text-muted">Public verify page: <a href="{{ url('/verify-certificate') }}" target="_blank" rel="noopener">/verify-certificate</a></p>
+            <p class="text-muted">Public verify page: <a href="{{ url('/ecert-verify') }}" target="_blank" rel="noopener">/ecert-verify</a></p>
             <form method="GET" class="form-group">
                 <div class="row">
                     <div class="col-sm-5">

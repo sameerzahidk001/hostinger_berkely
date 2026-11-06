@@ -23,8 +23,9 @@ class CertificateCompletionController extends Controller
         LmsCertificate::ensureTable();
         CertificateTemplate::ensureTable();
 
+        $userCols = $this->userSelectColumns();
         $q = StudentCompletion::query()->with([
-            'user:id,name,email,first_name,last_name',
+            'user:' . implode(',', $userCols),
             'course:id,title',
             'batch:id,code,name',
             'template:id,name',
@@ -37,9 +38,13 @@ class CertificateCompletionController extends Controller
                     ->orWhere('marked_by_name', 'like', '%' . $s . '%')
                     ->orWhereHas('user', function ($u) use ($s) {
                         $u->where('name', 'like', '%' . $s . '%')
-                            ->orWhere('email', 'like', '%' . $s . '%')
-                            ->orWhere('first_name', 'like', '%' . $s . '%')
-                            ->orWhere('last_name', 'like', '%' . $s . '%');
+                            ->orWhere('email', 'like', '%' . $s . '%');
+                        if (Schema::hasColumn('users', 'first_name')) {
+                            $u->orWhere('first_name', 'like', '%' . $s . '%');
+                        }
+                        if (Schema::hasColumn('users', 'last_name')) {
+                            $u->orWhere('last_name', 'like', '%' . $s . '%');
+                        }
                     })
                     ->orWhereHas('course', function ($c) use ($s) {
                         $c->where('title', 'like', '%' . $s . '%');
@@ -84,7 +89,7 @@ class CertificateCompletionController extends Controller
             })
             ->orderBy('name')
             ->limit(800)
-            ->get(['id', 'name', 'email', 'first_name', 'last_name']);
+            ->get($this->userSelectColumns());
 
         $batches = ClassBatch::query()
             ->with('course:id,title')
@@ -263,5 +268,18 @@ class CertificateCompletionController extends Controller
         return redirect()
             ->route('admin.certificates.completions.index')
             ->with('success', $msg);
+    }
+
+    /** @return array<int, string> */
+    private function userSelectColumns(): array
+    {
+        $cols = ['id', 'name', 'email'];
+        foreach (['first_name', 'last_name'] as $col) {
+            if (Schema::hasColumn('users', $col)) {
+                $cols[] = $col;
+            }
+        }
+
+        return $cols;
     }
 }

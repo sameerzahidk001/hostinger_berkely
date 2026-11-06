@@ -11,6 +11,7 @@ use App\Services\CertificateIssuerService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
 
 class LmsCertificateController extends Controller
 {
@@ -50,7 +51,14 @@ class LmsCertificateController extends Controller
         $q = CertificateVerifyLog::query();
         if ($request->filled('search')) {
             $s = trim((string) $request->input('search'));
-            $q->where('certificate_code', 'like', '%' . $s . '%');
+            $q->where(function ($outer) use ($s) {
+                $outer->where('certificate_code', 'like', '%' . $s . '%');
+                foreach (['verifier_name', 'verifier_email', 'verifier_organization', 'verifier_phone'] as $col) {
+                    if (Schema::hasColumn('certificate_verify_logs', $col)) {
+                        $outer->orWhere($col, 'like', '%' . $s . '%');
+                    }
+                }
+            });
         }
         if ($request->filled('result')) {
             $q->where('result', $request->input('result'));
