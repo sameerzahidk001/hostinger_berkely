@@ -112,6 +112,9 @@ class MediaController extends Controller
                 'height' => 0,
                 'links' => [],
                 'links_known' => false,
+                'variant_rels' => array_values(array_unique(array_filter(array_map(static function ($variant) {
+                    return str_replace('\\', '/', (string) ($variant['rel'] ?? ''));
+                }, $variants)))),
                 'also_on_disk' => implode(', ', $also),
                 'alt' => $meta['alt'] ?? null,
                 'title' => $meta['title'] ?? null,
@@ -137,7 +140,46 @@ class MediaController extends Controller
             'rowsTotal' => $total,
             'unusedOnly' => $unusedOnly,
             'unusedSkipped' => $unusedSkipped,
+            'mediaLinksUrl' => route('admin.media.links'),
         ]);
+    }
+
+    public function links(Request $request)
+    {
+        $rels = $request->input('rel', []);
+        if (! is_array($rels)) {
+            $rels = [$rels];
+        }
+        $files = [];
+        foreach (array_slice($rels, 0, 4) as $rel) {
+            $n = MediaAsset::normalizePath((string) $rel);
+            if ($n === '' || str_contains($n, '..')) {
+                continue;
+            }
+            $root = strtolower(explode('/', $n)[0] ?? '');
+            if (! in_array($root, ['images', 'uploads'], true)) {
+                continue;
+            }
+            $files[] = ['rel' => $n, 'name' => basename($n)];
+        }
+
+        $usages = ['by_path' => [], 'by_name' => []];
+        if ($files === []) {
+            return response()->json(['usages' => $usages]);
+        }
+
+        $capped = $this->capDbStatement(3);
+        try {
+            $usages = $this->usageIndex($files, true);
+        } catch (\Throwable $e) {
+            $usages = ['by_path' => [], 'by_name' => []];
+        } finally {
+            if ($capped) {
+                $this->clearDbStatementCap();
+            }
+        }
+
+        return response()->json(['usages' => $usages]);
     }
 
     public function upload(Request $request)
@@ -263,9 +305,7 @@ class MediaController extends Controller
         if ($renamed) {
             $synced += $this->rewritePathInLinked($oldRel, $rel);
         }
-        if ($request->boolean('sync_linked')) {
-            $synced += $this->syncMetaToLinked($rel, $alt, $title, $caption, $description);
-        }
+        $synced += $this->syncMetaToLinked($rel, $alt, $title, $caption, $description);
 
         $msg = 'Image metadata saved.';
         if ($renamed) {
@@ -1306,7 +1346,7 @@ class MediaController extends Controller
                 $q->where(function ($outer) use ($terms) {
                     foreach ($terms as $term) {
                         $like = '%' . addcslashes($term, '%_\\') . '%';
-                        $outer->orWhereRaw('CAST(`data` AS CHAR) LIKE ?', [$like]);
+                        $outer->orWhere('data', 'like', $like);
                     }
                 });
                 foreach ($q->limit(200)->get() as $section) {
