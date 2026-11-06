@@ -31,7 +31,7 @@ class UserController extends Controller
 
             $type = $request->query('type', Role::first()?->name);
             $roleIds = role_ids_for_list_type((string) $type);
-            User::ensureStudentNumberColumn();
+            User::ensureStudentIdColumn();
 
             $usersQuery = User::query()->with('roles')->orderByDesc('created_at');
 
