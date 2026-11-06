@@ -1209,6 +1209,9 @@ class LmsAssessmentService
         if (! $assessment) {
             return false;
         }
+        if (method_exists($assessment, 'isCimaScsAssignedMockTitle')) {
+            return $assessment->isCimaScsAssignedMockTitle();
+        }
         if ($this->isCimaScsMock1($assessment)) {
             return true;
         }
@@ -1220,7 +1223,7 @@ class LmsAssessmentService
             return false;
         }
 
-        return (bool) preg_match('/\bmock\s*2\b/', $title);
+        return (bool) preg_match('/\bmock\s*[12]\b/', $title);
     }
 
     /** CIMA case sittings expire. Mock/practice/general stay startable after the clock. */

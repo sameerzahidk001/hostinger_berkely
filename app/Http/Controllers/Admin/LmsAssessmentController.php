@@ -2049,24 +2049,20 @@ class LmsAssessmentController extends Controller
         return str_contains($title, 'cima') && str_contains($title, 'mock');
     }
 
-    /** Only Mock 1 and Mock 2 were assigned to people. Mock 3–7 have no sitters. */
+    /** Mock 1/2, or a later SCS mock that already has a saved sitting. */
     protected function isCimaScsAssignedMock($assessment): bool
     {
         if (! $assessment) {
             return false;
         }
-        if (method_exists($this->assessments, 'isCimaScsMock1') && $this->assessments->isCimaScsMock1($assessment)) {
-            return true;
+        if (method_exists($assessment, 'isCimaScsAssignedMockTitle')) {
+            return $assessment->isCimaScsAssignedMockTitle();
         }
-        $title = mb_strtolower(trim((string) ($assessment->title ?? '')));
-        if ($title === '' || str_contains($title, 'masterclass') || str_contains($title, 'mcs')) {
-            return false;
-        }
-        if (! str_contains($title, 'scs')) {
-            return false;
+        if (method_exists($this->assessments, 'isCimaScsAssignedMock')) {
+            return $this->assessments->isCimaScsAssignedMock($assessment);
         }
 
-        return (bool) preg_match('/\bmock\s*2\b/', $title);
+        return false;
     }
 
     protected function loadCimaScsNovemberBatch(): ?ClassBatch
