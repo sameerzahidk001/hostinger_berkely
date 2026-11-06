@@ -21,13 +21,19 @@
     <div class="ibox">
         <div class="ibox-title"><h5>Issued certificates</h5></div>
         <div class="ibox-content">
-            <p class="text-muted">Public verify page: <a href="{{ url('/ecert-verify') }}" target="_blank" rel="noopener">/ecert-verify</a>
-                @php $verifyCmsPage = \App\Models\Page::ensureVerifyCertificatePage(); @endphp
-                @if($verifyCmsPage)
-                    — content writers edit the text above the form in
-                    <a href="{{ route('pages.edit', $verifyCmsPage->id) }}">Pages → {{ $verifyCmsPage->page_name }}</a>
-                @endif
-            </p>
+            <p class="text-muted">Public verify page: <a href="{{ url('/ecert-verify') }}" target="_blank" rel="noopener">/ecert-verify</a>. Edit the intro text in the box below (this avoids the Pages builder 403 / CAPTCHA block).</p>
+            <form method="POST" action="{{ route('admin.certificates.verify-copy') }}" style="margin-bottom:18px;padding:12px;border:1px solid #e5e7eb;background:#fafafa;">
+                @csrf
+                <div class="form-group">
+                    <label>Verify page title</label>
+                    <input class="form-control" type="text" name="title" value="{{ old('title', $verifyCopy['title'] ?? 'Verify Certificate') }}" required>
+                </div>
+                <div class="form-group">
+                    <label>Text above the form (HTML allowed)</label>
+                    <textarea class="form-control" name="html" rows="5">{{ old('html', $verifyCopy['html'] ?? '') }}</textarea>
+                </div>
+                <button class="btn btn-primary btn-sm" type="submit">Save intro text</button>
+            </form>
             <form method="GET" class="form-group">
                 <div class="row">
                     <div class="col-sm-5">

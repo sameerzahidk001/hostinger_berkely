@@ -87,6 +87,8 @@ Route::get('/robots.txt', [SitemapController::class, 'robots'])->name('robots');
 Route::get('/ecert-verify/{code?}', [VerifyCertificateController::class, 'show'])
     ->where('code', '.*')
     ->name('certificates.verify');
+Route::post('/ecert-verify/verifier', [VerifyCertificateController::class, 'saveVerifier'])
+    ->name('certificates.verify.verifier');
 Route::post('/ecert-verify', [VerifyCertificateController::class, 'check'])
     ->name('certificates.verify.check');
 Route::get('/verify-certificate/{code?}', [VerifyCertificateController::class, 'show'])
@@ -344,6 +346,7 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
             Route::delete('/templates/{id}', [CertificateTemplateController::class, 'destroy'])->whereNumber('id')->name('templates.destroy');
 
             Route::get('/', [LmsCertificateController::class, 'index'])->name('index');
+            Route::post('/verify-copy', [LmsCertificateController::class, 'saveVerifyCopy'])->name('verify-copy');
             Route::get('/verify-logs', [LmsCertificateController::class, 'verifyLogs'])->name('verify-logs');
             Route::get('/{id}/preview', [LmsCertificateController::class, 'preview'])->whereNumber('id')->name('preview');
             Route::get('/{id}/download', [LmsCertificateController::class, 'download'])->whereNumber('id')->name('download');
@@ -640,6 +643,7 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
         Route::delete('pages/fees/categories/{id}', [PageFeeController::class, 'destroyCategory'])->name('admin.pages.fees.categories.destroy');
         Route::delete('pages/fees/packages/{id}', [PageFeeController::class, 'destroyPackage'])->name('admin.pages.fees.packages.destroy');
         // Some hosts/WAFs block method spoofing to PUT/PATCH; allow a POST update endpoint too.
+        Route::get('cms-compose/{id}', [PagesController::class, 'edit'])->name('pages.compose');
         Route::post('pages/{id}/update', [PagesController::class, 'update'])->name('pages.update.post');
         Route::post('pages/{id}/duplicate', [PagesController::class, 'duplicate'])->name('pages.duplicate');
         Route::post('user/{id}/update', [UserController::class, 'update'])->name('users.update.post');

@@ -877,8 +877,32 @@ if (!function_exists('render_cms_html')) {
         }
 
         return strip_cms_inline_backgrounds(
-            rewrite_public_hrefs(rewrite_cms_asset_urls(demote_page_headings($html)))
+            rewrite_public_hrefs(rewrite_cms_asset_urls(demote_page_headings(strip_waf_captcha_html($html))))
         );
+    }
+}
+
+if (!function_exists('strip_waf_captcha_html')) {
+    function strip_waf_captcha_html(mixed $value): mixed
+    {
+        if (is_array($value)) {
+            foreach ($value as $k => $v) {
+                $value[$k] = strip_waf_captcha_html($v);
+            }
+
+            return $value;
+        }
+
+        if (! is_string($value) || $value === '') {
+            return $value;
+        }
+
+        $html = preg_replace('/<script[^>]*(recaptcha|hcaptcha|turnstile|captcha)[^>]*>.*?<\/script>/is', '', $value) ?? $value;
+        $html = preg_replace('/<iframe[^>]*(recaptcha|hcaptcha|turnstile|google\.com\/recaptcha)[^>]*>.*?<\/iframe>/is', '', $html) ?? $html;
+        $html = preg_replace('/https?:\/\/www\.google\.com\/recaptcha[^"\'\s]*/i', '', $html) ?? $html;
+        $html = preg_replace('/\bg-recaptcha\b/i', '', $html) ?? $html;
+
+        return $html;
     }
 }
 

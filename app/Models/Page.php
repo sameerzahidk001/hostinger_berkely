@@ -60,13 +60,13 @@ class Page extends Model
         return Str::slug($name);
     }
 
-    public static function ensureVerifyCertificatePage(): ?self
+    public static function findVerifyCertificatePage(): ?self
     {
         if (! \Illuminate\Support\Facades\Schema::hasTable('pages')) {
             return null;
         }
 
-        $page = static::query()
+        return static::query()
             ->where(function ($q) {
                 $q->whereIn('url', ['ecert-verify', 'verify-certificate'])
                     ->orWhere('page_name', 'Verify Certificate');
@@ -74,43 +74,11 @@ class Page extends Model
             ->orderByRaw("CASE WHEN url IN ('ecert-verify','verify-certificate') THEN 0 ELSE 1 END")
             ->orderBy('id')
             ->first();
+    }
 
-        if (! $page) {
-            $page = new static([
-                'page_name' => 'Verify Certificate',
-                'url' => 'ecert-verify',
-                'parent_id' => null,
-            ]);
-            assign_column_if_exists($page, 'status', 1);
-            $page->save();
-        }
-
-        if (! class_exists(PageSection::class) || ! \Illuminate\Support\Facades\Schema::hasTable('page_sections')) {
-            return $page;
-        }
-
-        if ($page->sections()->exists()) {
-            return $page;
-        }
-
-        PageSection::create([
-            'page_id' => $page->id,
-            'section_type' => 'title-section',
-            'order' => 0,
-            'data' => json_encode([
-                'section_type' => 'title-section',
-                'title' => 'Verify Certificate',
-                'description' => '<p>Anyone can verify a Berkeley e-certificate. All fields below are required. Enter the certificate ID / number from the document or QR link.</p>',
-                'url' => '',
-                'url_text' => '',
-                'url_target' => '1',
-                'background' => '',
-                'color' => '#000435',
-                'alignment' => 'left',
-            ], JSON_UNESCAPED_UNICODE),
-        ]);
-
-        return $page;
+    public static function ensureVerifyCertificatePage(): ?self
+    {
+        return static::findVerifyCertificatePage();
     }
 
 }
