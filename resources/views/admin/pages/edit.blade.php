@@ -130,7 +130,7 @@
                         <div class="ibox-content">
                             <div class="row" style="margin-bottom: 12px;">
                                 <div class="col-lg-12 text-right">
-                                    <a href="{{ route('admin.pages.fees.edit', $page->id) }}" class="btn btn-warning btn-sm">
+                                    <a href="{{ route('admin.pages.fees.edit', $page->id) }}" class="btn btn-warning btn-sm" style="margin-right:6px;">
                                         <i class="fa fa-money"></i> Fee Update in Page
                                     </a>
                                     @if(Route::has('pages.duplicate'))
@@ -141,6 +141,13 @@
                                     @endif
                                 </div>
                             </div>
+                            @if(in_array((string) $page->url, ['ecert-verify', 'verify-certificate'], true) || strcasecmp((string) $page->page_name, 'Verify Certificate') === 0)
+                                <div class="alert alert-info" style="margin-bottom:12px;">
+                                    This is the public Verify Certificate page. Title Section / Content text is shown above the verification form.
+                                    Keep the URL as <code>ecert-verify</code>.
+                                    <a href="{{ url('/ecert-verify') }}" target="_blank" rel="noopener">View page</a>
+                                </div>
+                            @endif
                             <div class="row">
                                 <div class="col-lg-4">
                                     <label for="">Page Name</label>
@@ -3256,11 +3263,24 @@
                             onChange: function (contents, $editable) {
                                 $editable.find('ul').addClass('list-disc list-inside');
                                 $editable.find('ol').addClass('list-decimal list-inside');
+                                if (window.ContentEditorEnhancer) {
+                                    var $ta = $(this);
+                                    if ($ta.length) {
+                                        // refresh live character counter for this editor
+                                        try {
+                                            var evt = $.Event('summernote.change');
+                                            $ta.trigger(evt);
+                                        } catch (e) {}
+                                    }
+                                }
                             }
                         }
                     });
 
                     this.classList.add("summernote-initialized");
+                    if (window.ContentEditorEnhancer && typeof window.ContentEditorEnhancer.attachSummernote === 'function') {
+                        window.ContentEditorEnhancer.attachSummernote($(this));
+                    }
                 }
             });
 
@@ -5425,3 +5445,5 @@
 
     </script>
 @endpush
+
+@include('admin.partials.content-editor-enhancements', ['editorModule' => 'pages'])

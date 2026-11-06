@@ -33,6 +33,7 @@ class PagesController extends Controller
         $data['category_page_id'] = SiteSettings::pluck('categories')->first();
         $data['categories_pages_slug_base'] = SiteSettings::pluck('category_perma')->first();
         $data['pagesStatusEnabled'] = pages_status_enabled();
+        Page::ensureVerifyCertificatePage();
 
         $query = Page::with(['parent', 'seo', 'faqs', 'createdBy', 'updatedBy']);
 
@@ -571,6 +572,7 @@ class PagesController extends Controller
 
         return is_array($sections) ? $sections : null;
     }
+
 
     public function duplicate(string $id, PageDuplicationService $duplicator)
     {
