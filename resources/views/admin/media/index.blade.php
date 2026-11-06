@@ -1,7 +1,7 @@
 @extends('admin.layout.app')
 @section('title', 'Media')
 @section('content')
-{{-- lms-media-20261106b linked page urls + working linked-pages sort --}}
+{{-- lms-media-20261106c match filename-only page image links --}}
 @php
     $seoLimits = function_exists('seo_field_limits') ? seo_field_limits() : [];
     $altMax = (int) ($seoLimits['image_alt_max'] ?? 125);
@@ -357,7 +357,12 @@
         rels.forEach(function (rel) {
             var key = String(rel || '').replace(/\\/g, '/').toLowerCase();
             var name = key.split('/').pop();
-            var list = [].concat((usages.by_path && usages.by_path[key]) || [], (usages.by_name && usages.by_name[name]) || []);
+            var stem = name.replace(/\.[^.]+$/, '');
+            var list = [].concat(
+                (usages.by_path && usages.by_path[key]) || [],
+                (usages.by_name && usages.by_name[name]) || [],
+                (usages.by_name && usages.by_name[stem]) || []
+            );
             list.forEach(function (item) {
                 if (!item || seen[item]) return;
                 seen[item] = true;
