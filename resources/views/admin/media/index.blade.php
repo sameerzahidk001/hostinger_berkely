@@ -1,7 +1,7 @@
 @extends('admin.layout.app')
 @section('title', 'Media')
 @section('content')
-{{-- lms-media-20261106e SHOW LINKS for current page only --}}
+{{-- lms-media-20261106f numbered linked pages --}}
 @php
     $seoLimits = function_exists('seo_field_limits') ? seo_field_limits() : [];
     $altMax = (int) ($seoLimits['image_alt_max'] ?? 125);
@@ -50,7 +50,9 @@
     #lms-media-table thead th.lms-sort:after { content:' \2195'; color:#bbb; font-size:11px; }
     #lms-media-table thead th.lms-sort.is-asc:after { content:' \25B2'; color:#333; }
     #lms-media-table thead th.lms-sort.is-desc:after { content:' \25BC'; color:#333; }
-    .lms-media-links a { display:block; }
+    .lms-media-links ol { margin:0; padding-left:0; list-style:none; }
+    .lms-media-links li { margin:0 0 4px; line-height:1.35; }
+    .lms-media-links a { display:inline; }
     .lms-load-links-btn { display:block; margin-top:6px; white-space:normal; }
 </style>
 <div class="row wrapper border-bottom white-bg page-heading">
@@ -390,16 +392,16 @@
             $del.prop('disabled', false).attr('title', 'Delete unused image');
             return;
         }
-        var html = '<ul class="list-unstyled m-b-none">';
+        var html = '<ol class="m-b-none">';
         var labels = [];
-        found.forEach(function (item) {
+        found.forEach(function (item, i) {
             var parts = String(item).split('|');
             var label = parts.shift() || 'Page';
             var href = parts.join('|') || '#';
             labels.push(label);
-            html += '<li><a href="' + href.replace(/"/g, '&quot;') + '">' + $('<div>').text(label).html() + '</a></li>';
+            html += '<li><a href="' + href.replace(/"/g, '&quot;') + '">' + $('<div>').text((i + 1) + '. ' + label).html() + '</a></li>';
         });
-        html += '</ul>';
+        html += '</ol>';
         $cell.attr('data-sort-value', labels.join(' ').toLowerCase()).html(html);
         $del.prop('disabled', true).attr('title', 'Remove links first');
     }
