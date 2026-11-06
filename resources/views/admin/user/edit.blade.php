@@ -115,7 +115,7 @@
                                 <div class="col-md-6">
                                     <div class="form-group">
                                         <label>Student ID</label>
-                                        <input type="text" class="form-control" value="{{ $user->student_number }}" readonly>
+                                        <input type="text" class="form-control" value="{{ $user->studentIdValue() }}" readonly>
                                         <span class="help-block">Fixed auto ID (BSB0000001). It does not change.</span>
                                     </div>
                                 </div>

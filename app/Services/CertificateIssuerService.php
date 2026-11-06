@@ -354,7 +354,8 @@ class CertificateIssuerService
                 ->orderBy('id')
                 ->value('student_number'));
         }
-        if ($fromCert !== '' && User::normalizeBsbStudentId((string) ($user->student_number ?? '')) === '') {
+        if ($fromCert !== '' && $user->studentIdValue() === '') {
+            $user->student_id = $fromCert;
             $user->student_number = $fromCert;
             $user->save();
         }

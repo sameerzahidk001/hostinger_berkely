@@ -55,6 +55,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'ip_address',
         'approved',
         'is_on_web',
+        'student_id',
         'student_number',
     ];
 
@@ -386,8 +387,18 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public static function ensureStudentNumberColumn(): bool
     {
+        return static::ensureStudentIdColumn();
+    }
+
+    public static function ensureStudentIdColumn(): bool
+    {
         if (! Schema::hasTable('users')) {
             return false;
+        }
+        if (! Schema::hasColumn('users', 'student_id')) {
+            Schema::table('users', function (Blueprint $table) {
+                $table->string('student_id', 20)->nullable();
+            });
         }
         if (! Schema::hasColumn('users', 'student_number')) {
             Schema::table('users', function (Blueprint $table) {
@@ -395,30 +406,48 @@ class User extends Authenticatable implements MustVerifyEmail
             });
         }
 
-        return Schema::hasColumn('users', 'student_number');
+        return Schema::hasColumn('users', 'student_id');
+    }
+
+    public function studentIdValue(): string
+    {
+        return static::normalizeBsbStudentId((string) ($this->student_id ?? ''))
+            ?: static::normalizeBsbStudentId((string) ($this->student_number ?? ''));
     }
 
     public function ensureFixedStudentId(): string
     {
-        if (! static::ensureStudentNumberColumn()) {
+        if (! static::ensureStudentIdColumn()) {
             return '';
         }
 
-        $existing = static::normalizeBsbStudentId((string) ($this->student_number ?? ''));
+        $existing = $this->studentIdValue();
         if ($existing !== '') {
-            if ((string) $this->student_number !== $existing) {
-                $this->student_number = $existing;
-                $this->save();
-            }
+            $this->writeStudentId($existing);
 
             return $existing;
         }
 
         $next = static::nextBsbStudentId();
-        $this->student_number = $next;
-        $this->save();
+        $this->writeStudentId($next);
 
         return $next;
+    }
+
+    protected function writeStudentId(string $value): void
+    {
+        $dirty = false;
+        if (Schema::hasColumn('users', 'student_id') && (string) ($this->student_id ?? '') !== $value) {
+            $this->student_id = $value;
+            $dirty = true;
+        }
+        if (Schema::hasColumn('users', 'student_number') && (string) ($this->student_number ?? '') !== $value) {
+            $this->student_number = $value;
+            $dirty = true;
+        }
+        if ($dirty) {
+            $this->save();
+        }
     }
 
     public static function normalizeBsbStudentId(string $value): string
@@ -436,11 +465,17 @@ class User extends Authenticatable implements MustVerifyEmail
         static $seq = null;
         if ($seq === null) {
             $seq = 0;
-            foreach (['users', 'lms_certificates', 'student_completions'] as $table) {
-                if (! Schema::hasTable($table) || ! Schema::hasColumn($table, 'student_number')) {
+            $scans = [
+                ['users', 'student_id'],
+                ['users', 'student_number'],
+                ['lms_certificates', 'student_number'],
+                ['student_completions', 'student_number'],
+            ];
+            foreach ($scans as [$table, $column]) {
+                if (! Schema::hasTable($table) || ! Schema::hasColumn($table, $column)) {
                     continue;
                 }
-                $values = DB::table($table)->where('student_number', 'like', 'BSB%')->pluck('student_number');
+                $values = DB::table($table)->where($column, 'like', 'BSB%')->pluck($column);
                 foreach ($values as $value) {
                     $normalized = static::normalizeBsbStudentId((string) $value);
                     $n = $normalized === '' ? 0 : (int) substr($normalized, 3);
