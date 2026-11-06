@@ -1,7 +1,7 @@
 @extends('admin.layout.app')
 @section('title', 'Media')
 @section('content')
-{{-- lms-media-20261106a hide update-linked, ajax links, sortable headers --}}
+{{-- lms-media-20261106b linked page urls + working linked-pages sort --}}
 @php
     $seoLimits = function_exists('seo_field_limits') ? seo_field_limits() : [];
     $altMax = (int) ($seoLimits['image_alt_max'] ?? 125);
@@ -166,7 +166,7 @@
                             <th class="lms-sort lms-meta-col" data-sort="input">Title</th>
                             <th class="lms-sort lms-meta-col" data-sort="input">Image Caption</th>
                             <th class="lms-sort lms-meta-col" data-sort="input">Description</th>
-                            <th class="lms-sort" data-sort="text">Linked pages</th>
+                            <th class="lms-sort" data-sort="text" data-col="links">Linked pages</th>
                             <th style="width:130px;">Action</th>
                         </tr>
                     </thead>
@@ -238,7 +238,7 @@
                                     <textarea name="description" form="{{ $formId }}" class="form-control input-sm {{ $descriptionMissing ? 'lms-meta-missing' : '' }}" rows="2" maxlength="{{ $descriptionMax }}" data-maxlength="{{ $descriptionMax }}" placeholder="—">{{ $row['description'] ?? '' }}</textarea>
                                     @if($descriptionMissing)<span class="lms-meta-empty-label">Empty</span>@endif
                                 </td>
-                                <td class="lms-media-links" data-rels="{{ e(json_encode($row['variant_rels'] ?? [$row['rel']])) }}">
+                                <td class="lms-media-links" data-col="links" data-rels="{{ e(json_encode($row['variant_rels'] ?? [$row['rel']])) }}">
                                     <span class="text-muted small">Checking links…</span>
                                 </td>
                                 <td>
@@ -389,30 +389,33 @@
     function loadMediaLinks() {
         if (!linksUrl) return;
         var cells = $('#lms-media-table .lms-media-links').toArray();
-        var i = 0;
-        var running = 0;
-        function pump() {
-            while (running < 2 && i < cells.length) {
-                (function (cell) {
-                    running++;
-                    var rels = [];
-                    try { rels = JSON.parse(cell.getAttribute('data-rels') || '[]'); } catch (e) { rels = []; }
-                    if (!rels.length) {
-                        renderLinks(cell, { by_path: {}, by_name: {} });
-                        running--;
-                        pump();
-                        return;
-                    }
-                    var params = rels.map(function (rel) { return 'rel[]=' + encodeURIComponent(rel); }).join('&');
-                    fetch(linksUrl + '?' + params, { credentials: 'same-origin' })
-                        .then(function (res) { return res.ok ? res.json() : { usages: { by_path: {}, by_name: {} } }; })
-                        .then(function (data) { renderLinks(cell, (data && data.usages) ? data.usages : { by_path: {}, by_name: {} }); })
-                        .catch(function () { $(cell).html('<span class="text-muted small">Links not checked on this load.</span>'); })
-                        .then(function () { running--; pump(); });
-                })(cells[i++]);
-            }
-        }
-        pump();
+        var rels = [];
+        var seen = {};
+        cells.forEach(function (cell) {
+            var list = [];
+            try { list = JSON.parse(cell.getAttribute('data-rels') || '[]'); } catch (e) { list = []; }
+            list.forEach(function (rel) {
+                if (!rel || seen[rel]) return;
+                seen[rel] = true;
+                rels.push(rel);
+            });
+        });
+        if (!rels.length) return;
+        var params = rels.map(function (rel) { return 'rel[]=' + encodeURIComponent(rel); }).join('&');
+        fetch(linksUrl + '?' + params, { credentials: 'same-origin' })
+            .then(function (res) {
+                if (!res.ok) throw new Error('links ' + res.status);
+                return res.json();
+            })
+            .then(function (data) {
+                var usages = (data && data.usages) ? data.usages : { by_path: {}, by_name: {} };
+                cells.forEach(function (cell) { renderLinks(cell, usages); });
+            })
+            .catch(function () {
+                cells.forEach(function (cell) {
+                    $(cell).attr('data-sort-value', 'zzz').html('<span class="text-muted small">Could not load linked pages. Refresh this page.</span>');
+                });
+            });
     }
     loadMediaLinks();
 
@@ -420,14 +423,17 @@
         var $th = $(this);
         var $table = $('#lms-media-table');
         var index = $th.index();
+        var col = $th.attr('data-col');
         var type = $th.data('sort') || 'text';
         var asc = !$th.hasClass('is-asc');
         $table.find('thead th').removeClass('is-asc is-desc');
         $th.addClass(asc ? 'is-asc' : 'is-desc');
         var rows = $table.find('tbody tr').get();
         rows.sort(function (a, b) {
-            var av = sortValue(a.cells[index], type);
-            var bv = sortValue(b.cells[index], type);
+            var ac = col ? a.querySelector('[data-col="' + col + '"]') : a.cells[index];
+            var bc = col ? b.querySelector('[data-col="' + col + '"]') : b.cells[index];
+            var av = sortValue(ac, type);
+            var bv = sortValue(bc, type);
             if (av < bv) return asc ? -1 : 1;
             if (av > bv) return asc ? 1 : -1;
             return 0;
