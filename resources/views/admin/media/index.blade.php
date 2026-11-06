@@ -1,7 +1,7 @@
 @extends('admin.layout.app')
 @section('title', 'Media')
 @section('content')
-{{-- lms-media-20261105l seo char limits on media fields --}}
+{{-- lms-media-20261106a hide update-linked, ajax links, sortable headers --}}
 @php
     $seoLimits = function_exists('seo_field_limits') ? seo_field_limits() : [];
     $altMax = (int) ($seoLimits['image_alt_max'] ?? 125);
@@ -46,6 +46,11 @@
     #lms-media-upload .help-block { margin:3px 0 0; }
     #lms-media-upload textarea.form-control { min-height:36px; height:36px; resize:vertical; }
     #lms-media-upload .row { margin-bottom:0; }
+    #lms-media-table thead th.lms-sort { cursor:pointer; user-select:none; white-space:nowrap; }
+    #lms-media-table thead th.lms-sort:after { content:' \2195'; color:#bbb; font-size:11px; }
+    #lms-media-table thead th.lms-sort.is-asc:after { content:' \25B2'; color:#333; }
+    #lms-media-table thead th.lms-sort.is-desc:after { content:' \25BC'; color:#333; }
+    .lms-media-links a { display:block; }
 </style>
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">
@@ -154,14 +159,14 @@
                 <table class="table table-striped table-bordered" id="lms-media-table">
                     <thead>
                         <tr>
-                            <th style="width:110px;">Uploaded date</th>
-                            <th style="width:90px;">Image</th>
-                            <th style="min-width:160px;">File</th>
-                            <th class="lms-meta-col">Alternative Text</th>
-                            <th class="lms-meta-col">Title</th>
-                            <th class="lms-meta-col">Image Caption</th>
-                            <th class="lms-meta-col">Description</th>
-                            <th>Linked pages</th>
+                            <th class="lms-sort" data-sort="num" style="width:110px;">Uploaded date</th>
+                            <th class="lms-sort" data-sort="text" style="width:90px;">Image</th>
+                            <th class="lms-sort" data-sort="text" style="min-width:160px;">File</th>
+                            <th class="lms-sort lms-meta-col" data-sort="input">Alternative Text</th>
+                            <th class="lms-sort lms-meta-col" data-sort="input">Title</th>
+                            <th class="lms-sort lms-meta-col" data-sort="input">Image Caption</th>
+                            <th class="lms-sort lms-meta-col" data-sort="input">Description</th>
+                            <th class="lms-sort" data-sort="text">Linked pages</th>
                             <th style="width:130px;">Action</th>
                         </tr>
                     </thead>
@@ -192,7 +197,7 @@
                                 $deleteTitle = $hasLinks ? 'Remove links first' : 'Delete unused image';
                             @endphp
                             <tr @if($isOver) style="background:#fff8f6;" @endif>
-                                <td class="lms-media-uploaded">
+                                <td class="lms-media-uploaded" data-sort-value="{{ (int) ($row['mtime'] ?? 0) }}">
                                     {{ $row['uploaded_date'] ?? '—' }}
                                     @if(!empty($row['uploaded_time']))
                                         <span class="t">{{ $row['uploaded_time'] }}</span>
@@ -209,7 +214,7 @@
                                         <span class="lms-media-size-badge {{ $isOver ? 'is-over' : '' }}">{{ $sizeLabel }}@if($isOver) · over 200 KB @endif</span>
                                     </span>
                                 </td>
-                                <td>
+                                <td data-sort-value="{{ strtolower((string) $row['name']) }}">
                                     <a href="{{ $row['url'] }}" target="_blank" rel="noopener" style="word-break:break-all;">{{ $row['name'] }}</a>
                                     <label class="lms-meta-col-label" style="margin-top:6px;">Filename</label>
                                     <input type="text" name="filename" form="{{ $formId }}" class="form-control input-sm" value="{{ $row['name'] }}" maxlength="255" title="Rename file">
@@ -233,30 +238,15 @@
                                     <textarea name="description" form="{{ $formId }}" class="form-control input-sm {{ $descriptionMissing ? 'lms-meta-missing' : '' }}" rows="2" maxlength="{{ $descriptionMax }}" data-maxlength="{{ $descriptionMax }}" placeholder="—">{{ $row['description'] ?? '' }}</textarea>
                                     @if($descriptionMissing)<span class="lms-meta-empty-label">Empty</span>@endif
                                 </td>
-                                <td>
-                                    @if(empty($row['links_known']))
-                                        <span class="text-muted small">Links not checked on this load. Delete still verifies links before removing a file.</span>
-                                    @elseif($row['links'] === [])
-                                        <span class="label label-warning">Not linked</span>
-                                        <div class="text-muted small" style="margin-top:4px;">Safe to delete if unused elsewhere</div>
-                                    @else
-                                        <ul class="list-unstyled m-b-none">
-                                            @foreach($row['links'] as $link)
-                                                @php [$label, $href] = array_pad(explode('|', $link, 2), 2, '#'); @endphp
-                                                <li><a href="{{ $href }}">{{ $label }}</a></li>
-                                            @endforeach
-                                        </ul>
-                                    @endif
+                                <td class="lms-media-links" data-rels="{{ e(json_encode($row['variant_rels'] ?? [$row['rel']])) }}">
+                                    <span class="text-muted small">Checking links…</span>
                                 </td>
                                 <td>
                                     <form id="{{ $formId }}" method="POST" action="{{ route('admin.media.meta') }}">
                                         @csrf
                                         @method('PUT')
                                         <input type="hidden" name="path" value="{{ $row['rel'] }}">
-                                        <label class="checkbox-inline" style="margin:0 0 6px; display:block; white-space:normal; font-size:11px;">
-                                            <input type="checkbox" name="sync_linked" value="1" checked>
-                                            Update linked
-                                        </label>
+                                        <input type="hidden" name="sync_linked" value="1">
                                         <button type="submit" class="btn btn-primary btn-xs btn-block">
                                             <i class="fa fa-save"></i> Save
                                         </button>
@@ -271,7 +261,7 @@
                                                 @csrf
                                                 @method('DELETE')
                                                 <input type="hidden" name="path" value="{{ $row['rel'] }}">
-                                                <button type="submit" class="btn btn-danger btn-xs" @if($hasLinks) disabled @endif title="{{ $deleteTitle }}">
+                                                <button type="submit" class="btn btn-danger btn-xs lms-media-delete" @if($hasLinks) disabled @endif title="{{ $deleteTitle }}">
                                                     <i class="fa fa-trash"></i> Delete
                                                 </button>
                                             </form>
@@ -357,6 +347,103 @@
             input.value = '';
         }
     });
+
+    var linksUrl = @json($mediaLinksUrl ?? '');
+    function renderLinks(cell, usages) {
+        var rels = [];
+        try { rels = JSON.parse(cell.getAttribute('data-rels') || '[]'); } catch (e) { rels = []; }
+        var found = [];
+        var seen = {};
+        rels.forEach(function (rel) {
+            var key = String(rel || '').replace(/\\/g, '/').toLowerCase();
+            var name = key.split('/').pop();
+            var list = [].concat((usages.by_path && usages.by_path[key]) || [], (usages.by_name && usages.by_name[name]) || []);
+            list.forEach(function (item) {
+                if (!item || seen[item]) return;
+                seen[item] = true;
+                found.push(item);
+            });
+        });
+        found.sort();
+        var $cell = $(cell);
+        var $row = $cell.closest('tr');
+        var $del = $row.find('.lms-media-delete');
+        if (!found.length) {
+            $cell.attr('data-sort-value', 'not-linked').html('<span class="label label-warning">Not linked</span><div class="text-muted small" style="margin-top:4px;">Safe to delete if unused elsewhere</div>');
+            $del.prop('disabled', false).attr('title', 'Delete unused image');
+            return;
+        }
+        var html = '<ul class="list-unstyled m-b-none">';
+        var labels = [];
+        found.forEach(function (item) {
+            var parts = String(item).split('|');
+            var label = parts.shift() || 'Page';
+            var href = parts.join('|') || '#';
+            labels.push(label);
+            html += '<li><a href="' + href.replace(/"/g, '&quot;') + '">' + $('<div>').text(label).html() + '</a></li>';
+        });
+        html += '</ul>';
+        $cell.attr('data-sort-value', labels.join(' ').toLowerCase()).html(html);
+        $del.prop('disabled', true).attr('title', 'Remove links first');
+    }
+    function loadMediaLinks() {
+        if (!linksUrl) return;
+        var cells = $('#lms-media-table .lms-media-links').toArray();
+        var i = 0;
+        var running = 0;
+        function pump() {
+            while (running < 2 && i < cells.length) {
+                (function (cell) {
+                    running++;
+                    var rels = [];
+                    try { rels = JSON.parse(cell.getAttribute('data-rels') || '[]'); } catch (e) { rels = []; }
+                    if (!rels.length) {
+                        renderLinks(cell, { by_path: {}, by_name: {} });
+                        running--;
+                        pump();
+                        return;
+                    }
+                    var params = rels.map(function (rel) { return 'rel[]=' + encodeURIComponent(rel); }).join('&');
+                    fetch(linksUrl + '?' + params, { credentials: 'same-origin' })
+                        .then(function (res) { return res.ok ? res.json() : { usages: { by_path: {}, by_name: {} } }; })
+                        .then(function (data) { renderLinks(cell, (data && data.usages) ? data.usages : { by_path: {}, by_name: {} }); })
+                        .catch(function () { $(cell).html('<span class="text-muted small">Links not checked on this load.</span>'); })
+                        .then(function () { running--; pump(); });
+                })(cells[i++]);
+            }
+        }
+        pump();
+    }
+    loadMediaLinks();
+
+    $('#lms-media-table thead').on('click', 'th.lms-sort', function () {
+        var $th = $(this);
+        var $table = $('#lms-media-table');
+        var index = $th.index();
+        var type = $th.data('sort') || 'text';
+        var asc = !$th.hasClass('is-asc');
+        $table.find('thead th').removeClass('is-asc is-desc');
+        $th.addClass(asc ? 'is-asc' : 'is-desc');
+        var rows = $table.find('tbody tr').get();
+        rows.sort(function (a, b) {
+            var av = sortValue(a.cells[index], type);
+            var bv = sortValue(b.cells[index], type);
+            if (av < bv) return asc ? -1 : 1;
+            if (av > bv) return asc ? 1 : -1;
+            return 0;
+        });
+        $table.find('tbody').append(rows);
+    });
+    function sortValue(cell, type) {
+        if (!cell) return '';
+        var attr = cell.getAttribute('data-sort-value');
+        if (type === 'num') return parseFloat(attr || '0') || 0;
+        if (type === 'input') {
+            var field = cell.querySelector('input, textarea');
+            return ((field && field.value) || '').toLowerCase();
+        }
+        return String(attr || cell.textContent || '').toLowerCase().trim();
+    }
 })();
 </script>
 @endpush
