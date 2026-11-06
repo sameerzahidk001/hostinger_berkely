@@ -21,7 +21,7 @@ class MediaController extends Controller
     public function index(Request $request)
     {
         try {
-            app(\App\Services\LibraryCompressReplaceService::class)->run(8);
+            app(\App\Services\LibraryCompressReplaceService::class)->run(3);
         } catch (\Throwable $e) {
             // Media list still loads if a replace pass is incomplete.
         }
@@ -151,6 +151,7 @@ class MediaController extends Controller
 
     public function links(Request $request)
     {
+        @set_time_limit(25);
         $rels = $request->input('rel', []);
         if (! is_array($rels)) {
             $rels = [$rels];
@@ -168,18 +169,20 @@ class MediaController extends Controller
             $files[] = ['rel' => $n, 'name' => basename($n)];
         }
 
+        $index = ['complete' => false];
         $usages = ['by_path' => [], 'by_name' => []];
-        if ($files === []) {
-            return response()->json(['usages' => $usages]);
-        }
-
         try {
-            $usages = $this->usageIndex($files, true);
+            $svc = app(\App\Services\MediaLinkIndexService::class);
+            $index = $svc->ensure(8);
+            $usages = $svc->usagesFor($files, $index);
         } catch (\Throwable $e) {
-            return response()->json(['usages' => $usages, 'error' => true], 504);
+            $index['complete'] = false;
         }
 
-        return response()->json(['usages' => $usages]);
+        return response()->json([
+            'usages' => $usages,
+            'complete' => ! empty($index['complete']),
+        ]);
     }
 
     public function upload(Request $request)
@@ -1155,6 +1158,11 @@ class MediaController extends Controller
         $path = $this->imageCachePath();
         if (is_file($path)) {
             @unlink($path);
+        }
+        try {
+            app(\App\Services\MediaLinkIndexService::class)->forget();
+        } catch (\Throwable $e) {
+            @unlink(storage_path('app/media-link-index.json'));
         }
     }
 

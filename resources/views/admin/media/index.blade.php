@@ -419,19 +419,59 @@
             body: JSON.stringify({ rel: rels })
         })
             .then(function (res) {
+                if (res.status === 419) {
+                    var q = rels.map(function (r) { return 'rel[]=' + encodeURIComponent(r); }).join('&');
+                    return fetch(linksUrl + (linksUrl.indexOf('?') >= 0 ? '&' : '?') + q, {
+                        method: 'GET',
+                        credentials: 'same-origin',
+                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                    });
+                }
+                return res;
+            })
+            .then(function (res) {
                 if (!res.ok) throw new Error('links ' + res.status);
                 return res.json();
             })
             .then(function (data) {
                 var usages = (data && data.usages) ? data.usages : { by_path: {}, by_name: {} };
-                cells.forEach(function (cell) { renderLinks(cell, usages); });
+                var complete = !!(data && data.complete);
+                cells.forEach(function (cell) {
+                    if (!complete) {
+                        var relsForCell = [];
+                        try { relsForCell = JSON.parse(cell.getAttribute('data-rels') || '[]'); } catch (e) { relsForCell = []; }
+                        var has = false;
+                        relsForCell.forEach(function (rel) {
+                            var key = String(rel || '').replace(/\\/g, '/').toLowerCase();
+                            var name = key.split('/').pop();
+                            var stem = name.replace(/\.[^.]+$/, '');
+                            if ((usages.by_path && usages.by_path[key] && usages.by_path[key].length)
+                                || (usages.by_name && usages.by_name[name] && usages.by_name[name].length)
+                                || (usages.by_name && usages.by_name[stem] && usages.by_name[stem].length)) {
+                                has = true;
+                            }
+                        });
+                        if (!has) return;
+                    }
+                    renderLinks(cell, usages);
+                });
+                if (!complete && window.__lmsMediaLinkTries < 12) {
+                    window.__lmsMediaLinkTries += 1;
+                    setTimeout(loadMediaLinks, 900);
+                }
             })
             .catch(function () {
+                if (window.__lmsMediaLinkTries < 4) {
+                    window.__lmsMediaLinkTries += 1;
+                    setTimeout(loadMediaLinks, 1200);
+                    return;
+                }
                 cells.forEach(function (cell) {
                     $(cell).attr('data-sort-value', 'zzz').html('<span class="text-muted small">Could not load linked pages. Refresh this page.</span>');
                 });
             });
     }
+    window.__lmsMediaLinkTries = 0;
     loadMediaLinks();
 
     $('#lms-media-table thead').on('click', 'th.lms-sort', function () {
