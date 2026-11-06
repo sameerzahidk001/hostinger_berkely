@@ -3,10 +3,10 @@
 @push('style')
 <style>
     .ecert-verify { background:#f4f6f8; color:#111; padding: 96px 16px 48px; }
-    .ecert-verify .wrap { max-width:760px; margin:0 auto; }
+    .ecert-verify .wrap { max-width:980px; margin:0 auto; }
     .ecert-verify .card { background:#fff; border:1px solid #e5e7eb; padding:28px 24px; }
     .ecert-verify h1 { font-family: Georgia, "Times New Roman", serif; font-size:28px; margin:0 0 8px; color:#000435; }
-    .ecert-verify h2 { font-size:18px; margin:22px 0 8px; color:#000435; }
+    .ecert-verify h2 { font-size:18px; margin:0 0 8px; color:#000435; }
     .ecert-verify .sub { color:#6b7280; margin:0 0 20px; font-size:14px; }
     .ecert-verify .cms-html { color:#6b7280; margin:0 0 20px; font-size:14px; line-height:1.55; }
     .ecert-verify .cms-html p { margin:0 0 10px; }
@@ -14,8 +14,12 @@
     .ecert-verify .req { color:#c0392b; }
     .ecert-verify input, .ecert-verify textarea { width:100%; padding:10px 12px; border:1px solid #cbd5e1; box-sizing:border-box; font-size:15px; background:#fff; }
     .ecert-verify textarea { min-height:72px; resize:vertical; }
-    .ecert-verify .row { display:flex; gap:12px; flex-wrap:wrap; }
-    .ecert-verify .row > div { flex:1 1 240px; margin-bottom:14px; }
+    .ecert-verify .cols { display:grid; grid-template-columns: 1fr 1fr; gap: 28px 40px; align-items:start; }
+    .ecert-verify .row { display:grid; grid-template-columns: 1fr 1fr; gap:12px 16px; margin-bottom:14px; }
+    .ecert-verify .row > div { min-width:0; }
+    @media (max-width: 800px) {
+        .ecert-verify .cols, .ecert-verify .row { grid-template-columns: 1fr; }
+    }
     .ecert-verify button[type="submit"] { margin-top:8px; background:#000435; color:#fff; border:0; padding:11px 18px; cursor:pointer; font-size:15px; }
     .ecert-verify button[disabled] { opacity:.45; cursor:not-allowed; pointer-events:none; }
     .ecert-verify .errors, .ecert-verify .flash-fail { background:#fdecea; color:#9b1c1c; padding:10px 12px; margin-bottom:16px; font-size:13px; }
@@ -60,59 +64,64 @@
             </div>
         @endif
 
-        <h2>Verify with</h2>
-        <p class="hint">Student ID and Certificate Number are both required. They stay disabled until verifier details are submitted.</p>
-        <form method="POST" action="{{ url('/ecert-verify') }}" id="ecert-check-form">
-            @csrf
-            <div class="row {{ $verifierReady ? '' : 'locked' }}">
-                <div>
-                    <label for="student_number">Student ID <span class="req">*</span></label>
-                    <input id="student_number" type="text" name="student_number" value="{{ old('student_number', $old['student_number'] ?? '') }}"
-                        @unless($verifierReady) disabled readonly tabindex="-1" aria-disabled="true" @endunless
-                        @if($verifierReady) required @endif autocomplete="off">
-                </div>
-                <div>
-                    <label for="code">Certificate Number <span class="req">*</span></label>
-                    <input id="code" type="text" name="code" value="{{ old('code', $code) }}"
-                        @unless($verifierReady) disabled readonly tabindex="-1" aria-disabled="true" @endunless
-                        @if($verifierReady) required @endif autocomplete="off">
-                </div>
+        <div class="cols">
+            <div>
+                <h2>Verify with</h2>
+                <p class="hint">Student ID and Certificate Number are both required. They stay disabled until verifier details are submitted.</p>
+                <form method="POST" action="{{ url('/ecert-verify') }}" id="ecert-check-form">
+                    @csrf
+                    <div class="row {{ $verifierReady ? '' : 'locked' }}">
+                        <div>
+                            <label for="student_number">Student ID <span class="req">*</span></label>
+                            <input id="student_number" type="text" name="student_number" value="{{ old('student_number', $old['student_number'] ?? '') }}"
+                                @unless($verifierReady) disabled readonly tabindex="-1" aria-disabled="true" @endunless
+                                @if($verifierReady) required @endif autocomplete="off">
+                        </div>
+                        <div>
+                            <label for="code">Certificate Number <span class="req">*</span></label>
+                            <input id="code" type="text" name="code" value="{{ old('code', $code) }}"
+                                @unless($verifierReady) disabled readonly tabindex="-1" aria-disabled="true" @endunless
+                                @if($verifierReady) required @endif autocomplete="off">
+                        </div>
+                    </div>
+                    <button type="submit" @unless($verifierReady) disabled tabindex="-1" aria-disabled="true" @endunless>Check Certificate</button>
+                </form>
             </div>
-            <button type="submit" @unless($verifierReady) disabled tabindex="-1" aria-disabled="true" @endunless>Check Certificate</button>
-        </form>
-
-        <h2>Verifier details</h2>
-        <p class="hint">The person verifying can be anyone, not necessarily the student.</p>
-        <form method="POST" action="{{ url('/ecert-verify/verifier') }}">
-            @csrf
-            <div class="row">
-                <div>
-                    <label for="verifier_name">Name <span class="req">*</span></label>
-                    <input id="verifier_name" type="text" name="verifier_name" value="{{ old('verifier_name', $old['verifier_name'] ?? '') }}" required>
-                </div>
-                <div>
-                    <label for="verifier_email">Email address <span class="req">*</span></label>
-                    <input id="verifier_email" type="email" name="verifier_email" value="{{ old('verifier_email', $old['verifier_email'] ?? '') }}" required>
-                </div>
-                <div>
-                    <label for="verifier_phone">Contact number <span class="req">*</span></label>
-                    <input id="verifier_phone" type="text" name="verifier_phone" value="{{ old('verifier_phone', $old['verifier_phone'] ?? '') }}" required>
-                </div>
-                <div>
-                    <label for="verifier_organization">Organization / company name <span class="req">*</span></label>
-                    <input id="verifier_organization" type="text" name="verifier_organization" value="{{ old('verifier_organization', $old['verifier_organization'] ?? '') }}" required>
-                </div>
-                <div>
-                    <label for="verifier_position">Position <span class="req">*</span></label>
-                    <input id="verifier_position" type="text" name="verifier_position" value="{{ old('verifier_position', $old['verifier_position'] ?? '') }}" required>
-                </div>
-                <div style="flex-basis:100%;">
-                    <label for="verifier_reason">Reason for verification <span class="req">*</span></label>
-                    <textarea id="verifier_reason" name="verifier_reason" required>{{ old('verifier_reason', $old['verifier_reason'] ?? '') }}</textarea>
-                </div>
+            <div>
+                <h2>Verifier details</h2>
+                <p class="hint">The person verifying can be anyone, not necessarily the student.</p>
+                <form method="POST" action="{{ url('/ecert-verify/verifier') }}">
+                    @csrf
+                    <div class="row">
+                        <div>
+                            <label for="verifier_name">Name <span class="req">*</span></label>
+                            <input id="verifier_name" type="text" name="verifier_name" value="{{ old('verifier_name', $old['verifier_name'] ?? '') }}" required>
+                        </div>
+                        <div>
+                            <label for="verifier_email">Email address <span class="req">*</span></label>
+                            <input id="verifier_email" type="email" name="verifier_email" value="{{ old('verifier_email', $old['verifier_email'] ?? '') }}" required>
+                        </div>
+                        <div>
+                            <label for="verifier_phone">Contact number <span class="req">*</span></label>
+                            <input id="verifier_phone" type="text" name="verifier_phone" value="{{ old('verifier_phone', $old['verifier_phone'] ?? '') }}" required>
+                        </div>
+                        <div>
+                            <label for="verifier_organization">Organization / company name <span class="req">*</span></label>
+                            <input id="verifier_organization" type="text" name="verifier_organization" value="{{ old('verifier_organization', $old['verifier_organization'] ?? '') }}" required>
+                        </div>
+                        <div>
+                            <label for="verifier_position">Position <span class="req">*</span></label>
+                            <input id="verifier_position" type="text" name="verifier_position" value="{{ old('verifier_position', $old['verifier_position'] ?? '') }}" required>
+                        </div>
+                        <div>
+                            <label for="verifier_reason">Reason for verification <span class="req">*</span></label>
+                            <textarea id="verifier_reason" name="verifier_reason" required>{{ old('verifier_reason', $old['verifier_reason'] ?? '') }}</textarea>
+                        </div>
+                    </div>
+                    <button type="submit">{{ $verifierReady ? 'Update verifier details' : 'Submit verifier details' }}</button>
+                </form>
             </div>
-            <button type="submit">{{ $verifierReady ? 'Update verifier details' : 'Submit verifier details' }}</button>
-        </form>
+        </div>
 
         @if($result)
             <div class="result {{ $result }}">
