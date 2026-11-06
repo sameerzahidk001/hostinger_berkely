@@ -9,7 +9,9 @@ class PaymentGatewayController extends Controller
 {
     public function index()
     {
-        $gateways = PaymentGateway::all();
+        PaymentGateway::ensureStripe();
+        $gateways = PaymentGateway::query()->orderBy('name')->get();
+
         return view('admin.payment_gateways.index', compact('gateways'));
     }
 
@@ -35,10 +37,12 @@ class PaymentGatewayController extends Controller
             'test_keys' => [
                 'client_id' => $request->test_client_id,
                 'secret_key' => $request->test_secret_key,
+                'webhook_secret' => $request->input('test_webhook_secret', data_get($gateway->test_keys, 'webhook_secret')),
             ],
             'production_keys' => [
                 'client_id' => $request->prod_client_id,
                 'secret_key' => $request->prod_secret_key,
+                'webhook_secret' => $request->input('prod_webhook_secret', data_get($gateway->production_keys, 'webhook_secret')),
             ],
             'status' => $request->status,
             'active' => $request->has('active'),

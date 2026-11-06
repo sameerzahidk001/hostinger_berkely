@@ -144,7 +144,11 @@
 
                     <div class="row receipt-meta-row">
                         <div class="col-xs-3 text-left">
-                            <p><strong>Paid Amount:</strong><br>{{ format_payment_aed_amount($installment->payment, (float) $installment->paid_amount) }}</p>
+                            <p><strong>Paid Amount:</strong><br>{{ format_payment_aed_amount($installment->payment, (float) $installment->paid_amount) }}
+                                @if(!empty($installment->payment_method))
+                                    <span class="text-muted">({{ ucfirst($installment->payment_method) }}@if(!empty($installment->charge_currency) && strtoupper((string)$installment->charge_currency) !== 'AED') {{ strtoupper($installment->charge_currency) }} {{ number_format((float)$installment->charge_amount, 2) }}@endif)</span>
+                                @endif
+                            </p>
                         </div>
                         <div class="col-xs-3 text-center">
                             <p><strong>Due Date:</strong><br>{{ $installment->due_date ?? 'N/A' }}</p>

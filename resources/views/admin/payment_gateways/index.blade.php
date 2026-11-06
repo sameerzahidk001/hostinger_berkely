@@ -27,9 +27,12 @@
                     <td>{{ $gateway->name }}</td>
                     <td>{{ $gateway->slug }}</td>
                     <td>
-                        <span class="badge bg-{{ $gateway->status === 'active' ? 'success' : 'secondary' }}">
+                        <span class="badge bg-{{ $gateway->status === 'live' || $gateway->status === 'active' ? 'success' : 'secondary' }}">
                             {{ ucfirst($gateway->status) }}
                         </span>
+                        @if($gateway->isStripe())
+                            <div class="text-muted small">USD checkout</div>
+                        @endif
                     </td>
                     <td>
                         <span class="badge bg-{{ $gateway->active ? 'info' : 'warning' }}">

@@ -4,13 +4,20 @@
 @section('content')
 <div class="ibox-content">
     <h3 class="mb-4">Edit Payment Gateway: {{ $gateway->name }}</h3>
+    @if($gateway->isStripe())
+        <div class="alert alert-info">
+            Stripe is the <strong>USD</strong> path. Set Test or Live keys, then mark Gateway Active.
+            Webhook URL: <code>{{ url('/stripe/webhook') }}</code>
+            (events: <code>checkout.session.completed</code>)
+        </div>
+    @endif
     <form method="POST" action="{{ route('admin.payment-gateways.update', $gateway->id) }}">
         @csrf
         <div class="row">
             <div class="col-md-6">
                 <h5>Test Mode Keys</h5>
                 <div style="margin-bottom: 15px;">
-                    <label>ID</label>
+                    <label>{{ $gateway->isStripe() ? 'Publishable key' : 'ID' }}</label>
                     <input type="text" name="test_client_id" class="form-control"
                         value="{{ $gateway->test_keys['client_id'] ?? '' }}">
                 </div>
@@ -19,11 +26,18 @@
                     <input type="text" name="test_secret_key" class="form-control"
                         value="{{ $gateway->test_keys['secret_key'] ?? '' }}">
                 </div>
+                @if($gateway->isStripe())
+                <div style="margin-bottom: 15px;">
+                    <label>Webhook signing secret (optional)</label>
+                    <input type="text" name="test_webhook_secret" class="form-control"
+                        value="{{ $gateway->test_keys['webhook_secret'] ?? '' }}">
+                </div>
+                @endif
             </div>
             <div class="col-md-6">
                 <h5>Production Mode Keys</h5>
                 <div style="margin-bottom: 15px;">
-                    <label>ID</label>
+                    <label>{{ $gateway->isStripe() ? 'Publishable key' : 'ID' }}</label>
                     <input type="text" name="prod_client_id" class="form-control"
                         value="{{ $gateway->production_keys['client_id'] ?? '' }}">
                 </div>
@@ -32,6 +46,13 @@
                     <input type="text" name="prod_secret_key" class="form-control"
                         value="{{ $gateway->production_keys['secret_key'] ?? '' }}">
                 </div>
+                @if($gateway->isStripe())
+                <div style="margin-bottom: 15px;">
+                    <label>Webhook signing secret (optional)</label>
+                    <input type="text" name="prod_webhook_secret" class="form-control"
+                        value="{{ $gateway->production_keys['webhook_secret'] ?? '' }}">
+                </div>
+                @endif
             </div>
             <div class="col-md-6">
                 <div style="margin-bottom: 15px;">

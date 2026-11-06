@@ -19,4 +19,23 @@ class PaymentGateway extends Model
         'production_keys' => 'array',
         'active' => 'boolean',
     ];
+
+    public static function ensureStripe(): self
+    {
+        return static::query()->firstOrCreate(
+            ['slug' => 'stripe'],
+            [
+                'name' => 'Stripe (USD)',
+                'status' => 'test',
+                'active' => false,
+                'test_keys' => ['client_id' => '', 'secret_key' => '', 'webhook_secret' => ''],
+                'production_keys' => ['client_id' => '', 'secret_key' => '', 'webhook_secret' => ''],
+            ]
+        );
+    }
+
+    public function isStripe(): bool
+    {
+        return strtolower((string) $this->slug) === 'stripe';
+    }
 }

@@ -41,6 +41,7 @@ use App\Http\Controllers\User\TestimonialController as UserTestimonialController
 use App\Http\Controllers\User\HomeController as UserHomeController;
 use App\Http\Controllers\User\InstallmentController as UserInstallmentController;
 use App\Http\Controllers\NoonWebhookController;
+use App\Http\Controllers\StripeWebhookController;
 use App\Http\Controllers\User\StudyMaterialController as UserStudyMaterialController;
 use App\Http\Controllers\User\HistoryController as UserHistoryController;
 use App\Http\Controllers\Admin\StudyMaterialFolderController;
@@ -716,6 +717,7 @@ Route::get('/login/captcha', [\App\Http\Controllers\Auth\LoginController::class,
     ->name('login.captcha');
 
 Route::post('/noon/webhook', [NoonWebhookController::class, 'handle'])->name('noon.webhook');
+Route::post('/stripe/webhook', [StripeWebhookController::class, 'handle'])->name('stripe.webhook');
 
 Route::prefix('user')->middleware(['auth', 'approved', 'redirect.panel.from.student', 'log.admin.activity', 'lms.exam.lock'])->group(function () {
 
@@ -728,6 +730,10 @@ Route::prefix('user')->middleware(['auth', 'approved', 'redirect.panel.from.stud
     Route::get('/cart', [CartController::class, 'index'])->name('user.cart.index');
     Route::post('/generate/noonCheckout', [UserHomeController::class, 'generateNoonCheckout'])->name('user.generate.noonCheckout');
     Route::get('/noon/return', [UserHomeController::class, 'handleNoonReturn'])->name('user.noon.return');
+    Route::post('/pay/quote', [UserHomeController::class, 'paymentQuote'])->name('user.pay.quote');
+    Route::post('/generate/stripeCheckout', [UserHomeController::class, 'generateStripeCheckout'])->name('user.generate.stripeCheckout');
+    Route::get('/stripe/return', [UserHomeController::class, 'handleStripeReturn'])->name('user.stripe.return');
+    Route::get('/stripe/cancel', [UserHomeController::class, 'handleStripeCancel'])->name('user.stripe.cancel');
     Route::post('/generate/rakBankPaySession', [UserHomeController::class, 'generateRakBankPaySession'])->name('user.generate.rakBankPaySession');
     Route::get('/rakbank/return', [UserHomeController::class, 'handleRakBankReturn'])->name('user.rakbank.return');
 

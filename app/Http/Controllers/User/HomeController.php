@@ -11,6 +11,7 @@ use Illuminate\Http\Request;
 use App\Models\Installment;
 use App\Services\NoonCheckoutService;
 use App\Services\RakBankCheckoutService;
+use App\Services\StripeCheckoutService;
 use App\Services\StudyMaterialService;
 use App\Http\Controllers\User\StudyMaterialController;
 
@@ -164,6 +165,89 @@ class HomeController extends Controller
         return redirect()
             ->route('user.home')
             ->with('error', 'Payment could not be confirmed automatically. If your card was charged, please contact support with your bank reference.');
+    }
+
+    public function paymentQuote(Request $request, StripeCheckoutService $stripe)
+    {
+        $request->validate([
+            'installment_id' => 'required|exists:installments,id',
+        ]);
+
+        $installment = Installment::with(['payment.courseFee'])
+            ->where('user_id', Auth::id())
+            ->findOrFail($request->installment_id);
+
+        try {
+            $quote = $stripe->quote($installment);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 422);
+        }
+
+        return response()->json([
+            'success' => true,
+            'quote' => $quote,
+        ]);
+    }
+
+    public function generateStripeCheckout(Request $request, StripeCheckoutService $stripe)
+    {
+        $request->validate([
+            'installment_id' => 'required|exists:installments,id',
+        ]);
+
+        $installment = Installment::with(['payment.course', 'payment.courseFee', 'user'])
+            ->where('user_id', Auth::id())
+            ->findOrFail($request->installment_id);
+
+        try {
+            $session = $stripe->createCheckoutSession($installment, $request);
+        } catch (\Throwable $e) {
+            Log::error('Stripe checkout initiate failed: ' . $e->getMessage(), [
+                'installment_id' => $installment->id,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage() ?: 'Stripe payment could not be started.',
+            ], 502);
+        }
+
+        return response()->json([
+            'success' => true,
+            'checkoutUrl' => $session['checkout_url'],
+            'usd' => $session['usd'],
+            'aed' => $session['aed'],
+        ]);
+    }
+
+    public function handleStripeReturn(Request $request, StripeCheckoutService $stripe)
+    {
+        $sessionId = trim((string) $request->query('session_id', ''));
+        if ($sessionId === '') {
+            return redirect()->route('user.home')->with('error', 'Missing Stripe session.');
+        }
+
+        try {
+            $installment = $stripe->fulfillSession($sessionId, $request);
+        } catch (\Throwable $e) {
+            Log::error('Stripe return fulfill failed: ' . $e->getMessage());
+
+            return redirect()->route('user.home')->with('error', 'Payment could not be confirmed yet. If you were charged, contact support.');
+        }
+
+        if ($installment && (int) $installment->user_id === (int) Auth::id() && $installment->status === 'paid') {
+            return redirect()->route('user.home')->with('success', 'Payment received successfully. Your installment is updated.');
+        }
+
+        return redirect()->route('user.home')->with('error', 'Payment is not confirmed yet. Please wait a moment and refresh.');
+    }
+
+    public function handleStripeCancel()
+    {
+        return redirect()->route('user.home')->with('error', 'USD payment was cancelled. No charge was made.');
     }
 
     public function generateRakBankPaySession(Request $request)
