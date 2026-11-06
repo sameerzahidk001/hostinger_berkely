@@ -1304,19 +1304,30 @@ class MediaController extends Controller
             if ($blob === '' || $url === '') {
                 return;
             }
-            $hay = strtolower(str_replace('\\', '/', $blob));
+            $hay = strtolower(str_replace('\\', '', $blob));
             foreach ($files as $file) {
                 $rel = strtolower(str_replace('\\', '/', (string) ($file['rel'] ?? '')));
                 $name = strtolower((string) ($file['name'] ?? ''));
-                if ($rel === '') {
+                $stem = strtolower((string) pathinfo($name, PATHINFO_FILENAME));
+                if ($rel === '' && $name === '') {
                     continue;
                 }
-                if (! str_contains($hay, $rel) && ($name === '' || ! str_contains($hay, $name))) {
+                $relKey = str_replace('\\', '', $rel);
+                $nameKey = str_replace('\\', '', $name);
+                $matched = ($relKey !== '' && str_contains($hay, $relKey))
+                    || ($nameKey !== '' && str_contains($hay, $nameKey))
+                    || (strlen($stem) >= 8 && str_contains($hay, $stem));
+                if (! $matched) {
                     continue;
                 }
-                $byPath[$rel][$url] = $label;
+                if ($rel !== '') {
+                    $byPath[$rel][$url] = $label;
+                }
                 if ($name !== '') {
                     $byName[$name][$url] = $label;
+                }
+                if (strlen($stem) >= 8) {
+                    $byName[$stem][$url] = $label;
                 }
             }
         };
@@ -1342,18 +1353,28 @@ class MediaController extends Controller
         try {
             if (class_exists(PageSection::class) && Schema::hasTable('page_sections') && $terms !== []) {
                 $q = PageSection::query()->select(['id', 'page_id', 'data'])->with('page:id,page_name');
-                $q->where(function ($outer) {
-                    $outer->whereRaw('CAST(`data` AS CHAR) LIKE ?', ['%images/library/%'])
-                        ->orWhereRaw('CAST(`data` AS CHAR) LIKE ?', ['%/library/%']);
+                $q->where(function ($outer) use ($terms) {
+                    $stems = [];
+                    foreach ($terms as $term) {
+                        $stem = (string) pathinfo((string) $term, PATHINFO_FILENAME);
+                        if (strlen($stem) >= 8) {
+                            $stems[$stem] = true;
+                        }
+                    }
+                    foreach (array_keys($stems) as $stem) {
+                        $like = '%' . addcslashes($stem, '%_\\') . '%';
+                        $outer->orWhereRaw('`data` LIKE ?', [$like])
+                            ->orWhereRaw('CAST(`data` AS CHAR) LIKE ?', [$like]);
+                    }
                 });
-                foreach ($q->limit(400)->get() as $section) {
+                foreach ($q->orderByDesc('id')->limit(400)->get() as $section) {
                     $page = $section->page;
                     if (! $page) {
                         continue;
                     }
                     $label = $page->page_name ?: ('Page #' . $page->id);
                     $data = $section->data;
-                    $blob = is_string($data) ? $data : (string) json_encode($data);
+                    $blob = is_string($data) ? $data : (string) json_encode($data, JSON_UNESCAPED_SLASHES);
                     $add($blob, $label, $this->mediaNamedUrl(
                         'pages.edit',
                         $page->id,
