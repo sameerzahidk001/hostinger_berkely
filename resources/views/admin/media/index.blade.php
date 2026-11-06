@@ -51,6 +51,7 @@
     #lms-media-table thead th.lms-sort.is-asc:after { content:' \25B2'; color:#333; }
     #lms-media-table thead th.lms-sort.is-desc:after { content:' \25BC'; color:#333; }
     .lms-media-links a { display:block; }
+    .lms-load-links-btn { display:block; margin-top:6px; white-space:normal; }
 </style>
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">
@@ -166,7 +167,12 @@
                             <th class="lms-sort lms-meta-col" data-sort="input">Title</th>
                             <th class="lms-sort lms-meta-col" data-sort="input">Image Caption</th>
                             <th class="lms-sort lms-meta-col" data-sort="input">Description</th>
-                            <th class="lms-sort" data-sort="text" data-col="links">Linked pages</th>
+                            <th class="lms-sort" data-sort="text" data-col="links">
+                                Linked pages
+                                <button type="button" class="btn btn-primary btn-xs lms-load-links-btn" id="lms-load-page-links">
+                                    Load this page
+                                </button>
+                            </th>
                             <th style="width:130px;">Action</th>
                         </tr>
                     </thead>
@@ -238,8 +244,8 @@
                                     <textarea name="description" form="{{ $formId }}" class="form-control input-sm {{ $descriptionMissing ? 'lms-meta-missing' : '' }}" rows="2" maxlength="{{ $descriptionMax }}" data-maxlength="{{ $descriptionMax }}" placeholder="—">{{ $row['description'] ?? '' }}</textarea>
                                     @if($descriptionMissing)<span class="lms-meta-empty-label">Empty</span>@endif
                                 </td>
-                                <td class="lms-media-links" data-col="links" data-rels="{{ e(json_encode($row['variant_rels'] ?? [$row['rel']])) }}">
-                                    <span class="text-muted small">Checking links…</span>
+                                <td class="lms-media-links" data-col="links" data-rels="{{ e(json_encode($row['variant_rels'] ?? [$row['rel']])) }}" data-sort-value="">
+                                    <span class="text-muted small">—</span>
                                 </td>
                                 <td>
                                     <form id="{{ $formId }}" method="POST" action="{{ route('admin.media.meta') }}">
@@ -391,23 +397,9 @@
         $cell.attr('data-sort-value', labels.join(' ').toLowerCase()).html(html);
         $del.prop('disabled', true).attr('title', 'Remove links first');
     }
-    function loadMediaLinks() {
-        if (!linksUrl) return;
-        var cells = $('#lms-media-table .lms-media-links').toArray();
-        var rels = [];
-        var seen = {};
-        cells.forEach(function (cell) {
-            var list = [];
-            try { list = JSON.parse(cell.getAttribute('data-rels') || '[]'); } catch (e) { list = []; }
-            list.forEach(function (rel) {
-                if (!rel || seen[rel]) return;
-                seen[rel] = true;
-                rels.push(rel);
-            });
-        });
-        if (!rels.length) return;
+    function postLinkBatch(rels) {
         var csrf = document.querySelector('meta[name="csrf-token"]');
-        fetch(linksUrl, {
+        return fetch(linksUrl, {
             method: 'POST',
             credentials: 'same-origin',
             headers: {
@@ -417,62 +409,79 @@
                 'X-CSRF-TOKEN': csrf ? csrf.content : ''
             },
             body: JSON.stringify({ rel: rels })
-        })
-            .then(function (res) {
-                if (res.status === 419) {
-                    var q = rels.map(function (r) { return 'rel[]=' + encodeURIComponent(r); }).join('&');
-                    return fetch(linksUrl + (linksUrl.indexOf('?') >= 0 ? '&' : '?') + q, {
-                        method: 'GET',
-                        credentials: 'same-origin',
-                        headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
-                    });
-                }
-                return res;
-            })
-            .then(function (res) {
-                if (!res.ok) throw new Error('links ' + res.status);
-                return res.json();
-            })
-            .then(function (data) {
-                var usages = (data && data.usages) ? data.usages : { by_path: {}, by_name: {} };
-                var complete = !!(data && data.complete);
-                cells.forEach(function (cell) {
-                    if (!complete) {
-                        var relsForCell = [];
-                        try { relsForCell = JSON.parse(cell.getAttribute('data-rels') || '[]'); } catch (e) { relsForCell = []; }
-                        var has = false;
-                        relsForCell.forEach(function (rel) {
-                            var key = String(rel || '').replace(/\\/g, '/').toLowerCase();
-                            var name = key.split('/').pop();
-                            var stem = name.replace(/\.[^.]+$/, '');
-                            if ((usages.by_path && usages.by_path[key] && usages.by_path[key].length)
-                                || (usages.by_name && usages.by_name[name] && usages.by_name[name].length)
-                                || (usages.by_name && usages.by_name[stem] && usages.by_name[stem].length)) {
-                                has = true;
-                            }
-                        });
-                        if (!has) return;
-                    }
-                    renderLinks(cell, usages);
+        }).then(function (res) {
+            if (res.status === 419) {
+                var q = rels.map(function (r) { return 'rel[]=' + encodeURIComponent(r); }).join('&');
+                return fetch(linksUrl + (linksUrl.indexOf('?') >= 0 ? '&' : '?') + q, {
+                    method: 'GET',
+                    credentials: 'same-origin',
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
                 });
-                if (!complete && window.__lmsMediaLinkTries < 12) {
-                    window.__lmsMediaLinkTries += 1;
-                    setTimeout(loadMediaLinks, 900);
-                }
-            })
-            .catch(function () {
-                if (window.__lmsMediaLinkTries < 4) {
-                    window.__lmsMediaLinkTries += 1;
-                    setTimeout(loadMediaLinks, 1200);
-                    return;
-                }
-                cells.forEach(function (cell) {
-                    $(cell).attr('data-sort-value', 'zzz').html('<span class="text-muted small">Could not load linked pages. Refresh this page.</span>');
+            }
+            return res;
+        }).then(function (res) {
+            if (!res.ok) throw new Error('links ' + res.status);
+            return res.json();
+        });
+    }
+    function loadMediaLinks() {
+        if (!linksUrl) return Promise.resolve();
+        var btn = document.getElementById('lms-load-page-links');
+        var cells = $('#lms-media-table .lms-media-links').toArray();
+        var items = [];
+        cells.forEach(function (cell) {
+            var list = [];
+            try { list = JSON.parse(cell.getAttribute('data-rels') || '[]'); } catch (e) { list = []; }
+            if (!list.length) return;
+            items.push({ cell: cell, rels: list });
+        });
+        if (!items.length) return Promise.resolve();
+        items.forEach(function (item) {
+            $(item.cell).html('<span class="text-muted small">Checking…</span>');
+        });
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = 'Loading…';
+        }
+        var chunkSize = 5;
+        var chunks = [];
+        for (var i = 0; i < items.length; i += chunkSize) {
+            chunks.push(items.slice(i, i + chunkSize));
+        }
+        var done = 0;
+        var run = Promise.resolve();
+        chunks.forEach(function (chunk) {
+            run = run.then(function () {
+                done += chunk.length;
+                if (btn) btn.textContent = 'Loading ' + done + '/' + items.length;
+                var rels = [];
+                chunk.forEach(function (item) {
+                    item.rels.forEach(function (rel) {
+                        if (rels.indexOf(rel) === -1) rels.push(rel);
+                    });
+                });
+                return postLinkBatch(rels).then(function (data) {
+                    var usages = (data && data.usages) ? data.usages : { by_path: {}, by_name: {} };
+                    chunk.forEach(function (item) { renderLinks(item.cell, usages); });
+                }).catch(function () {
+                    chunk.forEach(function (item) {
+                        $(item.cell).attr('data-sort-value', 'zzz').html('<span class="text-muted small">Could not load. Try Load this page again.</span>');
+                    });
                 });
             });
+        });
+        return run.then(function () {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Load this page';
+            }
+        });
     }
-    window.__lmsMediaLinkTries = 0;
-    loadMediaLinks();
+    $(document).on('click', '#lms-load-page-links', function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        loadMediaLinks();
+    });
 
     $('#lms-media-table thead').on('click', 'th.lms-sort', function () {
         var $th = $(this);
