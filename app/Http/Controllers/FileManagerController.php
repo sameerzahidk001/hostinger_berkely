@@ -1,6 +1,7 @@
 <?php
 namespace App\Http\Controllers;
 
+use App\Services\LibraryCompressReplaceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 
@@ -8,13 +9,65 @@ class FileManagerController extends Controller
 {
     public function index()
     {
-        $basePath = public_path();
-    
-        $files = collect(File::allFiles($basePath))->filter(function ($file) {
-            return in_array($file->getExtension(), ['jpg', 'jpeg', 'png', 'gif', 'webp']);
-        });
-    
-        return view('admin.file-manager.index', compact('files'));
+        try {
+            app(LibraryCompressReplaceService::class)->run(6);
+        } catch (\Throwable $e) {
+            // Listing must still open if replace is mid-run.
+        }
+
+        $imageFiles = $this->compressedLibraryFiles();
+
+        return view('admin.file-manager.index', compact('imageFiles'));
+    }
+
+    /**
+     * @return array<int, array{url:string,name:string,rel:string}>
+     */
+    private function compressedLibraryFiles(): array
+    {
+        $dir = public_path('images/library');
+        if (! is_dir($dir)) {
+            return [];
+        }
+        $names = @scandir($dir);
+        if (! is_array($names)) {
+            return [];
+        }
+        $groups = [];
+        foreach ($names as $name) {
+            if ($name === '.' || $name === '..') {
+                continue;
+            }
+            $ext = strtolower((string) pathinfo($name, PATHINFO_EXTENSION));
+            if (! in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'svg'], true)) {
+                continue;
+            }
+            $stem = strtolower((string) pathinfo($name, PATHINFO_FILENAME));
+            $full = $dir . DIRECTORY_SEPARATOR . $name;
+            $groups[$stem][] = [
+                'name' => $name,
+                'rel' => 'images/library/' . $name,
+                'mtime' => (int) (@filemtime($full) ?: 0),
+                'size' => (int) (@filesize($full) ?: 0),
+                'ext' => $ext,
+            ];
+        }
+        $rank = ['webp' => 0, 'avif' => 1, 'jpg' => 2, 'jpeg' => 3, 'png' => 4, 'gif' => 5, 'svg' => 6];
+        $out = [];
+        foreach ($groups as $files) {
+            usort($files, static function ($a, $b) use ($rank) {
+                $ra = [$rank[$a['ext']] ?? 9, (int) $a['size']];
+                $rb = [$rank[$b['ext']] ?? 9, (int) $b['size']];
+
+                return $ra <=> $rb;
+            });
+            $keep = $files[0];
+            $keep['url'] = asset($keep['rel']);
+            $out[] = $keep;
+        }
+        usort($out, static fn ($a, $b) => ($b['mtime'] <=> $a['mtime']));
+
+        return $out;
     }
     
 

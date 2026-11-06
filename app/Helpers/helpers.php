@@ -215,6 +215,13 @@ if (!function_exists('media_url')) {
         $path = ltrim($path, '/');
 
         $path = ltrim(str_replace('\\', '/', $path), '/');
+        if (function_exists('prefer_compressed_library_relative')) {
+            if (! str_starts_with($path, 'images/') && ! str_starts_with($path, 'frontend/') && ! str_starts_with($path, 'admin/')) {
+                $path = prefer_compressed_library_relative('images/library/' . $path);
+            } else {
+                $path = prefer_compressed_library_relative($path);
+            }
+        }
         $encoded = implode('/', array_map(static function (string $part): string {
             return rawurlencode(rawurldecode($part));
         }, explode('/', $path)));
@@ -228,6 +235,36 @@ if (!function_exists('media_url')) {
         }
 
         return asset('images/library/' . $encoded);
+    }
+}
+
+if (! function_exists('prefer_compressed_library_relative')) {
+    function prefer_compressed_library_relative(string $rel): string
+    {
+        $rel = ltrim(str_replace('\\', '/', $rel), '/');
+        $ext = strtolower((string) pathinfo($rel, PATHINFO_EXTENSION));
+        if (in_array($ext, ['webp', 'avif', 'svg', ''], true)) {
+            return $rel;
+        }
+        $dir = str_replace('\\', '/', (string) dirname($rel));
+        $stem = (string) pathinfo($rel, PATHINFO_FILENAME);
+        if ($stem === '') {
+            return $rel;
+        }
+        $candidates = [];
+        foreach (['webp', 'avif'] as $next) {
+            if ($dir !== '.' && $dir !== '') {
+                $candidates[] = $dir . '/' . $stem . '.' . $next;
+            }
+            $candidates[] = 'images/library/' . $stem . '.' . $next;
+        }
+        foreach (array_unique($candidates) as $cand) {
+            if (is_file(public_path($cand))) {
+                return $cand;
+            }
+        }
+
+        return $rel;
     }
 }
 

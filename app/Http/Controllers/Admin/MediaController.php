@@ -20,6 +20,11 @@ class MediaController extends Controller
 {
     public function index(Request $request)
     {
+        try {
+            app(\App\Services\LibraryCompressReplaceService::class)->run(8);
+        } catch (\Throwable $e) {
+            // Media list still loads if a replace pass is incomplete.
+        }
         MediaAsset::ensureTable();
 
         $search = trim((string) $request->input('search', ''));

@@ -1,8 +1,6 @@
 @if(request()->ajax())
     @php
-        $imageFiles = collect(\File::allFiles(public_path()))
-            ->filter(fn($file) => in_array($file->getExtension(), ['jpg', 'jpeg', 'png', 'gif', 'webp']))
-            ->sortByDesc(fn($file) => $file->getMTime());
+        $imageFiles = $imageFiles ?? [];
     @endphp
 
     {{-- Search UI --}}
@@ -22,9 +20,8 @@
     <div class="row" id="fileGrid">
         @foreach($imageFiles as $file)
             @php
-                $filePath = str_replace('\\', '/', $file->getRelativePathname());
-                $fileUrl = asset($filePath);
-                $baseName = basename($filePath);
+                $fileUrl = is_array($file) ? ($file['url'] ?? '') : asset(str_replace('\\', '/', $file->getRelativePathname()));
+                $baseName = is_array($file) ? ($file['name'] ?? '') : basename($file->getRelativePathname());
             @endphp
 
             <div class="col-xs-6 col-sm-4 col-md-3 col-lg-3 file-card" data-filename="{{ $baseName }}">
