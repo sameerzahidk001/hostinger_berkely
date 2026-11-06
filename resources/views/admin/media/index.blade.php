@@ -1,7 +1,7 @@
 @extends('admin.layout.app')
 @section('title', 'Media')
 @section('content')
-{{-- lms-media-20261106c match filename-only page image links --}}
+{{-- lms-media-20261106e SHOW LINKS for current page only --}}
 @php
     $seoLimits = function_exists('seo_field_limits') ? seo_field_limits() : [];
     $altMax = (int) ($seoLimits['image_alt_max'] ?? 125);
@@ -167,10 +167,10 @@
                             <th class="lms-sort lms-meta-col" data-sort="input">Title</th>
                             <th class="lms-sort lms-meta-col" data-sort="input">Image Caption</th>
                             <th class="lms-sort lms-meta-col" data-sort="input">Description</th>
-                            <th class="lms-sort" data-sort="text" data-col="links">
+                            <th data-col="links">
                                 Linked pages
                                 <button type="button" class="btn btn-primary btn-xs lms-load-links-btn" id="lms-load-page-links">
-                                    Load this page
+                                    SHOW LINKS
                                 </button>
                             </th>
                             <th style="width:130px;">Action</th>
@@ -244,7 +244,7 @@
                                     <textarea name="description" form="{{ $formId }}" class="form-control input-sm {{ $descriptionMissing ? 'lms-meta-missing' : '' }}" rows="2" maxlength="{{ $descriptionMax }}" data-maxlength="{{ $descriptionMax }}" placeholder="—">{{ $row['description'] ?? '' }}</textarea>
                                     @if($descriptionMissing)<span class="lms-meta-empty-label">Empty</span>@endif
                                 </td>
-                                <td class="lms-media-links" data-col="links" data-rels="{{ e(json_encode($row['variant_rels'] ?? [$row['rel']])) }}" data-sort-value="">
+                                <td class="lms-media-links" data-col="links" data-rels='@json($row['variant_rels'] ?? [$row['rel']])' data-sort-value="">
                                     <span class="text-muted small">—</span>
                                 </td>
                                 <td>
@@ -355,9 +355,15 @@
     });
 
     var linksUrl = @json($mediaLinksUrl ?? '');
+    function parseRels(cell) {
+        var raw = cell.getAttribute('data-rels') || '';
+        if (!raw) return [];
+        try { var parsed = JSON.parse(raw); if (Array.isArray(parsed)) return parsed.filter(Boolean); } catch (e) {}
+        try { var parsed2 = JSON.parse(raw.replace(/&quot;/g, '"')); if (Array.isArray(parsed2)) return parsed2.filter(Boolean); } catch (e2) {}
+        return raw.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    }
     function renderLinks(cell, usages) {
-        var rels = [];
-        try { rels = JSON.parse(cell.getAttribute('data-rels') || '[]'); } catch (e) { rels = []; }
+        var rels = parseRels(cell);
         var found = [];
         var seen = {};
         rels.forEach(function (rel) {
@@ -398,52 +404,40 @@
         $del.prop('disabled', true).attr('title', 'Remove links first');
     }
     function postLinkBatch(rels) {
-        var csrf = document.querySelector('meta[name="csrf-token"]');
-        return fetch(linksUrl, {
-            method: 'POST',
+        var q = rels.map(function (r) { return 'rel[]=' + encodeURIComponent(r); }).join('&');
+        var url = linksUrl + (linksUrl.indexOf('?') >= 0 ? '&' : '?') + q;
+        return fetch(url, {
+            method: 'GET',
             credentials: 'same-origin',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRF-TOKEN': csrf ? csrf.content : ''
-            },
-            body: JSON.stringify({ rel: rels })
-        }).then(function (res) {
-            if (res.status === 419) {
-                var q = rels.map(function (r) { return 'rel[]=' + encodeURIComponent(r); }).join('&');
-                return fetch(linksUrl + (linksUrl.indexOf('?') >= 0 ? '&' : '?') + q, {
-                    method: 'GET',
-                    credentials: 'same-origin',
-                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
-                });
-            }
-            return res;
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
         }).then(function (res) {
             if (!res.ok) throw new Error('links ' + res.status);
             return res.json();
         });
     }
     function loadMediaLinks() {
-        if (!linksUrl) return Promise.resolve();
         var btn = document.getElementById('lms-load-page-links');
-        var cells = $('#lms-media-table .lms-media-links').toArray();
+        var cells = document.querySelectorAll('#lms-media-table .lms-media-links');
         var items = [];
         cells.forEach(function (cell) {
-            var list = [];
-            try { list = JSON.parse(cell.getAttribute('data-rels') || '[]'); } catch (e) { list = []; }
+            var list = parseRels(cell);
             if (!list.length) return;
             items.push({ cell: cell, rels: list });
         });
-        if (!items.length) return Promise.resolve();
+        if (!linksUrl || !items.length) {
+            cells.forEach(function (cell) {
+                cell.innerHTML = '<span class="text-muted small">No files to check on this page.</span>';
+            });
+            return Promise.resolve();
+        }
         items.forEach(function (item) {
-            $(item.cell).html('<span class="text-muted small">Checking…</span>');
+            item.cell.innerHTML = '<span class="text-muted small">Checking…</span>';
         });
         if (btn) {
             btn.disabled = true;
-            btn.textContent = 'Loading…';
+            btn.textContent = 'SHOWING…';
         }
-        var chunkSize = 5;
+        var chunkSize = 3;
         var chunks = [];
         for (var i = 0; i < items.length; i += chunkSize) {
             chunks.push(items.slice(i, i + chunkSize));
@@ -453,7 +447,7 @@
         chunks.forEach(function (chunk) {
             run = run.then(function () {
                 done += chunk.length;
-                if (btn) btn.textContent = 'Loading ' + done + '/' + items.length;
+                if (btn) btn.textContent = 'SHOW LINKS ' + done + '/' + items.length;
                 var rels = [];
                 chunk.forEach(function (item) {
                     item.rels.forEach(function (rel) {
@@ -465,7 +459,8 @@
                     chunk.forEach(function (item) { renderLinks(item.cell, usages); });
                 }).catch(function () {
                     chunk.forEach(function (item) {
-                        $(item.cell).attr('data-sort-value', 'zzz').html('<span class="text-muted small">Could not load. Try Load this page again.</span>');
+                        item.cell.setAttribute('data-sort-value', 'zzz');
+                        item.cell.innerHTML = '<span class="text-muted small">Could not load. Click SHOW LINKS again.</span>';
                     });
                 });
             });
@@ -473,15 +468,18 @@
         return run.then(function () {
             if (btn) {
                 btn.disabled = false;
-                btn.textContent = 'Load this page';
+                btn.textContent = 'SHOW LINKS';
             }
         });
     }
-    $(document).on('click', '#lms-load-page-links', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        loadMediaLinks();
-    });
+    var linksBtn = document.getElementById('lms-load-page-links');
+    if (linksBtn) {
+        linksBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            loadMediaLinks();
+        }, true);
+    }
 
     $('#lms-media-table thead').on('click', 'th.lms-sort', function () {
         var $th = $(this);
