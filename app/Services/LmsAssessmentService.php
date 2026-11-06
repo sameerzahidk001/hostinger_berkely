@@ -561,8 +561,12 @@ class LmsAssessmentService
             if ($named) {
                 continue;
             }
+            $asgId = (int) ($asg->id ?? 0);
+            if ($asgId > 0 && in_array($asgId, $attemptAsgIds, true)) {
+                continue;
+            }
             $aid = (int) data_get($row, 'assessment.id');
-            $unused[$aid][$i] = (int) $asg->id;
+            $unused[$aid][$i] = $asgId;
         }
         $drop = [];
         foreach ($unused as $indexes) {
@@ -572,7 +576,7 @@ class LmsAssessmentService
             asort($indexes);
             $keep = array_key_first($indexes);
             foreach ($indexes as $i => $id) {
-                if ($i !== $keep) {
+                if ($i !== $keep && ! in_array((int) $id, $attemptAsgIds, true)) {
                     $drop[$i] = true;
                 }
             }
@@ -2973,13 +2977,22 @@ class LmsAssessmentService
             if ($assignment && ! $this->studentShouldSeeSitting($user, $assessment, $assignment, [])) {
                 continue;
             }
+            $aid = (int) $assessment->id;
+            $asgId = (int) ($assignment?->id ?? 0);
+            $sittingHasThisStudentAttempt = $asgId > 0
+                && $attemptsByAssessment->get($aid)
+                && $attemptsByAssessment->get($aid)->contains(
+                    fn ($att) => (int) ($att->assignment_id ?? 0) === $asgId
+                );
             if ($assignment && empty($row['from_folder'])
                 && empty($assignment->student_id)
                 && ! empty($assignment->class_batch_id)
-                && ! ($assignment->isSelfSitting())) {
+                && ! ($assignment->isSelfSitting())
+                && ! $sittingHasThisStudentAttempt) {
                 $orig = $this->originalExamSittingFor($assessment);
                 if ($orig && (int) $orig->id !== (int) $assignment->id) {
                     $assignment = $orig;
+                    $asgId = (int) ($assignment->id ?? 0);
                 }
             }
             if ($assignment && ! $this->assignmentIncludesStudent($assignment, (int) $user->id)) {
@@ -2989,8 +3002,6 @@ class LmsAssessmentService
             if ($assignment && ! $fromFolder) {
                 $this->alignSittingWithExistingExamRule($assignment, $assessment);
             }
-            $aid = (int) $assessment->id;
-            $asgId = (int) ($assignment?->id ?? 0);
             $mcs1AlreadyTaken = $this->isCimaMcsMock1($assessment)
                 && $asgId > 0
                 && $attemptsByAssessment->get($aid)
@@ -3175,8 +3186,14 @@ class LmsAssessmentService
                     continue;
                 }
                 $claimedAttemptIds[(int) $att->id] = true;
-                $matchRow = $items->first(fn ($r) => is_array($r) && $this->attemptBelongsToAssignment($att, $r['assignment'] ?? null));
-                $asg = is_array($matchRow) ? ($matchRow['assignment'] ?? null) : null;
+                $asg = null;
+                if (! empty($att->assignment_id)) {
+                    $asg = LmsAssessmentAssignment::query()->find((int) $att->assignment_id);
+                }
+                if (! $asg) {
+                    $matchRow = $items->first(fn ($r) => is_array($r) && $this->attemptBelongsToAssignment($att, $r['assignment'] ?? null));
+                    $asg = is_array($matchRow) ? ($matchRow['assignment'] ?? null) : null;
+                }
                 if (! $asg && is_array($sample)) {
                     $asg = $sample['assignment'] ?? null;
                 }
@@ -3198,6 +3215,48 @@ class LmsAssessmentService
                     $submitted->push($rowBase);
                 }
             }
+        }
+        $submitted = $submitted->unique(fn ($r) => (int) ($r['attempt']->id ?? 0))->values();
+        $results = $results->unique(fn ($r) => (int) ($r['attempt']->id ?? 0))->values();
+        $listedAttemptIds = $results->concat($submitted)->map(fn ($r) => (int) ($r['attempt']->id ?? 0))->filter()->all();
+        foreach ($userAttempts as $att) {
+            if (! in_array($att->status, ['submitted', 'graded', 'expired'], true)) {
+                continue;
+            }
+            if (in_array((int) $att->id, $listedAttemptIds, true)) {
+                continue;
+            }
+            $assessment = $att->assessment ?: LmsAssessment::query()->with('course')->find($att->assessment_id);
+            if (! $assessment || (method_exists($assessment, 'trashed') && $assessment->trashed())) {
+                continue;
+            }
+            if ($kind && $assessment->kind !== $kind) {
+                continue;
+            }
+            if ($this->studentIsHiddenOnMcs($user, $assessment)) {
+                continue;
+            }
+            $asg = ! empty($att->assignment_id)
+                ? LmsAssessmentAssignment::query()->find((int) $att->assignment_id)
+                : null;
+            $rowBase = [
+                'assessment' => $assessment,
+                'assignment' => $asg,
+                'attempt' => $att,
+                'attempts_used' => ($attemptsByAssessment->get((int) $att->assessment_id) ?? collect())->count(),
+                'max_attempts' => $this->maxAttemptsFor($assessment),
+                'attempt_number' => 1,
+                'attempt_total' => max(1, $this->maxAttemptsFor($assessment)),
+                'from_folder' => false,
+                'folder_id' => null,
+                'can_retake' => false,
+            ];
+            if ($assessment->isPractice() || $att->results_published) {
+                $results->push($rowBase);
+            } else {
+                $submitted->push($rowBase);
+            }
+            $listedAttemptIds[] = (int) $att->id;
         }
         $submitted = $submitted->unique(fn ($r) => (int) ($r['attempt']->id ?? 0))->values();
         $results = $results->unique(fn ($r) => (int) ($r['attempt']->id ?? 0))->values();
@@ -3286,6 +3345,10 @@ class LmsAssessmentService
                 return false;
             }
             $att = $r['attempt'] ?? null;
+            $finished = $att && in_array($att->status, ['submitted', 'graded', 'expired'], true);
+            if ($finished) {
+                return (int) ($att->user_id ?? 0) === (int) $user->id;
+            }
             if ($att && ! empty($att->assignment_id) && $assignment
                 && (int) $att->assignment_id !== (int) $assignment->id) {
                 return false;
