@@ -17,6 +17,10 @@ class StudentCompletion extends Model
         'template_id',
         'status',
         'completed_at',
+        'programme_duration',
+        'cpd_hours',
+        'course_subtitle',
+        'student_number',
         'marked_by',
         'marked_by_name',
         'notes',
@@ -37,15 +41,31 @@ class StudentCompletion extends Model
                 $table->unsignedBigInteger('template_id')->nullable()->index();
                 $table->string('status', 40)->default('completed')->index();
                 $table->timestamp('completed_at')->nullable()->index();
+                $table->string('programme_duration', 255)->nullable();
+                $table->string('cpd_hours', 100)->nullable();
+                $table->string('course_subtitle', 500)->nullable();
+                $table->string('student_number', 100)->nullable();
                 $table->unsignedBigInteger('marked_by')->nullable()->index();
                 $table->string('marked_by_name', 255)->nullable();
                 $table->text('notes')->nullable();
                 $table->timestamps();
             });
-        } elseif (! Schema::hasColumn('student_completions', 'template_id')) {
-            Schema::table('student_completions', function (Blueprint $table) {
-                $table->unsignedBigInteger('template_id')->nullable()->index()->after('batch_id');
-            });
+        } else {
+            if (! Schema::hasColumn('student_completions', 'template_id')) {
+                Schema::table('student_completions', function (Blueprint $table) {
+                    $table->unsignedBigInteger('template_id')->nullable()->index();
+                });
+            }
+            foreach ([
+                'programme_duration' => fn (Blueprint $t) => $t->string('programme_duration', 255)->nullable(),
+                'cpd_hours' => fn (Blueprint $t) => $t->string('cpd_hours', 100)->nullable(),
+                'course_subtitle' => fn (Blueprint $t) => $t->string('course_subtitle', 500)->nullable(),
+                'student_number' => fn (Blueprint $t) => $t->string('student_number', 100)->nullable(),
+            ] as $col => $cb) {
+                if (! Schema::hasColumn('student_completions', $col)) {
+                    Schema::table('student_completions', $cb);
+                }
+            }
         }
 
         return Schema::hasTable('student_completions');

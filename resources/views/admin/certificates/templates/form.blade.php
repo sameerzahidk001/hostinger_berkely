@@ -17,7 +17,8 @@
     @endif
     <div class="ibox">
         <div class="ibox-content">
-            <form method="POST" action="{{ $mode === 'edit' ? route('admin.certificates.templates.update', $template->id) : route('admin.certificates.templates.store') }}">
+            <p class="text-muted">Per-student values filled at issue time: student name, student ID, course, duration, CPD hours, awarded date, certificate number, QR.</p>
+            <form method="POST" action="{{ $mode === 'edit' ? route('admin.certificates.templates.update', $template->id) : route('admin.certificates.templates.store') }}" enctype="multipart/form-data">
                 @csrf
                 @if($mode === 'edit') @method('PUT') @endif
                 <div class="row">
@@ -28,8 +29,8 @@
                     <div class="col-md-3 form-group">
                         <label>Orientation *</label>
                         <select name="orientation" class="form-control" required>
+                            <option value="portrait" @selected(old('orientation', $template->orientation ?: 'portrait') === 'portrait')>Portrait (A4)</option>
                             <option value="landscape" @selected(old('orientation', $template->orientation) === 'landscape')>Landscape</option>
-                            <option value="portrait" @selected(old('orientation', $template->orientation) === 'portrait')>Portrait</option>
                         </select>
                     </div>
                     <div class="col-md-3 form-group">
@@ -39,35 +40,116 @@
                             <option value="0" @selected(old('is_active', $template->is_active ? '1' : '0') === '0')>Inactive</option>
                         </select>
                     </div>
-                    <div class="col-md-6 form-group">
-                        <label>Eyebrow (top small text)</label>
-                        <input type="text" name="eyebrow" class="form-control" value="{{ old('eyebrow', $template->eyebrow) }}" maxlength="255">
+                    <div class="col-md-12 form-group">
+                        <label>Heading</label>
+                        <input type="text" name="heading_line" class="form-control" value="{{ old('heading_line', $template->heading_line ?: $template->headingText()) }}" maxlength="255">
                     </div>
-                    <div class="col-md-6 form-group">
-                        <label>Title on PDF</label>
-                        <input type="text" name="title" class="form-control" value="{{ old('title', $template->title) }}" maxlength="255">
+                    <div class="col-md-12 form-group">
+                        <label>Body text (under student name)</label>
+                        <textarea name="body_text" class="form-control" rows="2" maxlength="2000">{{ old('body_text', $template->body_text ?: $template->bodyText()) }}</textarea>
                     </div>
                     <div class="col-md-12 form-group">
                         <label>School name</label>
                         <input type="text" name="school_name" class="form-control" value="{{ old('school_name', $template->school_name) }}" maxlength="255">
                     </div>
-                    <div class="col-md-6 form-group">
-                        <label>Line before student name</label>
-                        <input type="text" name="intro_line" class="form-control" value="{{ old('intro_line', $template->intro_line) }}" maxlength="500">
+                    <div class="col-md-4 form-group">
+                        <label>Default programme duration</label>
+                        <input type="text" name="default_duration" class="form-control" value="{{ old('default_duration', $template->default_duration) }}" placeholder="e.g. 6 Months">
                     </div>
-                    <div class="col-md-6 form-group">
-                        <label>Line before course name</label>
-                        <input type="text" name="completion_line" class="form-control" value="{{ old('completion_line', $template->completion_line) }}" maxlength="500">
+                    <div class="col-md-4 form-group">
+                        <label>Default CPD hours</label>
+                        <input type="text" name="default_cpd_hours" class="form-control" value="{{ old('default_cpd_hours', $template->default_cpd_hours) }}" placeholder="e.g. 30">
                     </div>
-                    <div class="col-md-3 form-group">
+                    <div class="col-md-2 form-group">
                         <label>Primary colour</label>
-                        <input type="color" name="primary_color" class="form-control" value="{{ old('primary_color', $template->primary_color ?: '#000435') }}">
+                        <input type="color" name="primary_color" class="form-control" value="{{ old('primary_color', $template->primary_color ?: '#6b1d2a') }}">
                     </div>
-                    <div class="col-md-3 form-group">
+                    <div class="col-md-2 form-group">
                         <label>Accent colour</label>
-                        <input type="color" name="accent_color" class="form-control" value="{{ old('accent_color', $template->accent_color ?: '#f8961f') }}">
+                        <input type="color" name="accent_color" class="form-control" value="{{ old('accent_color', $template->accent_color ?: '#c5a46a') }}">
                     </div>
-                    <div class="col-md-6 form-group" style="padding-top:28px;">
+                </div>
+
+                <h4>Images</h4>
+                <div class="row">
+                    <div class="col-md-4 form-group">
+                        <label>Background</label>
+                        <input type="file" name="background_image" class="form-control" accept="image/*">
+                        <p class="help-block m-b-none">Leave empty to use the Berkeley background. PNG/JPG up to 2 MB.</p>
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Logo (optional extra)</label>
+                        <input type="file" name="logo_image" class="form-control" accept="image/*">
+                    </div>
+                    <div class="col-md-4 form-group">
+                        <label>Seal / badge (optional extra)</label>
+                        <input type="file" name="seal_image" class="form-control" accept="image/*">
+                    </div>
+                </div>
+
+                <h4>Signing authorities</h4>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="well">
+                            <strong>Left signer</strong>
+                            <div class="form-group">
+                                <label>Name</label>
+                                <input type="text" name="signer_left_name" class="form-control" value="{{ old('signer_left_name', $template->signer_left_name) }}">
+                            </div>
+                            <div class="form-group">
+                                <label>Title</label>
+                                <input type="text" name="signer_left_title" class="form-control" value="{{ old('signer_left_title', $template->signer_left_title) }}">
+                            </div>
+                            <div class="form-group">
+                                <label>E-signature image</label>
+                                <input type="file" name="signer_left_image" class="form-control" accept="image/*">
+                                @if($template->signer_left_signature)
+                                    <p class="help-block m-b-none">Current: <a href="{{ asset($template->signer_left_signature) }}" target="_blank" rel="noopener">view</a></p>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="well">
+                            <strong>Right signer</strong>
+                            <div class="form-group">
+                                <label>Name</label>
+                                <input type="text" name="signer_right_name" class="form-control" value="{{ old('signer_right_name', $template->signer_right_name) }}">
+                            </div>
+                            <div class="form-group">
+                                <label>Title</label>
+                                <input type="text" name="signer_right_title" class="form-control" value="{{ old('signer_right_title', $template->signer_right_title) }}">
+                            </div>
+                            <div class="form-group">
+                                <label>E-signature image</label>
+                                <input type="file" name="signer_right_image" class="form-control" accept="image/*">
+                                @if($template->signer_right_signature)
+                                    <p class="help-block m-b-none">Current: <a href="{{ asset($template->signer_right_signature) }}" target="_blank" rel="noopener">view</a></p>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <h4>Verification footer</h4>
+                <div class="row">
+                    <div class="col-md-12 form-group">
+                        <label>Verify heading</label>
+                        <input type="text" name="verify_heading" class="form-control" value="{{ old('verify_heading', $template->verify_heading) }}">
+                    </div>
+                    <div class="col-md-12 form-group">
+                        <label>Organisation line</label>
+                        <input type="text" name="footer_org_line" class="form-control" value="{{ old('footer_org_line', $template->footer_org_line) }}">
+                    </div>
+                    <div class="col-md-6 form-group">
+                        <label>Registrar email</label>
+                        <input type="text" name="footer_email" class="form-control" value="{{ old('footer_email', $template->footer_email) }}">
+                    </div>
+                    <div class="col-md-6 form-group">
+                        <label>Website</label>
+                        <input type="text" name="footer_website" class="form-control" value="{{ old('footer_website', $template->footer_website) }}">
+                    </div>
+                    <div class="col-md-12 form-group">
                         <label class="checkbox-inline">
                             <input type="checkbox" name="is_default" value="1" @checked(old('is_default', $template->is_default))>
                             Set as default template

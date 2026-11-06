@@ -68,6 +68,13 @@ class CertificateIssuerService
         if ($courseTitle === '') {
             $courseTitle = 'Course';
         }
+        $courseSubtitle = trim((string) ($completion->course_subtitle ?: ($course?->short_name ?? '')));
+        $duration = trim((string) ($completion->programme_duration ?: ($template?->default_duration ?? '')));
+        if ($duration === '' && $course) {
+            $duration = trim((string) ($course->course_duration ?? '') . ' ' . (string) ($course->duration_unit ?? ''));
+        }
+        $cpd = trim((string) ($completion->cpd_hours ?: ($template?->default_cpd_hours ?? '')));
+        $studentNumber = $this->resolveStudentNumber($student, $completion->student_number ?? null);
 
         $code = $this->nextCertificateCode();
         $verifyUrl = url('/verify-certificate/' . rawurlencode($code));
@@ -81,7 +88,11 @@ class CertificateIssuerService
             'status' => 'issued',
             'issued_at' => now(),
             'student_name' => Str::limit($studentName, 255, ''),
+            'student_number' => Str::limit($studentNumber, 100, ''),
             'course_title' => Str::limit($courseTitle, 500, ''),
+            'course_subtitle' => Str::limit($courseSubtitle, 500, ''),
+            'programme_duration' => Str::limit($duration, 255, ''),
+            'cpd_hours' => Str::limit($cpd, 100, ''),
             'completion_date' => optional($completion->completed_at)->toDateString() ?: now()->toDateString(),
             'qr_payload' => $verifyUrl,
             'issued_by' => $issuer?->id,
@@ -170,6 +181,7 @@ class CertificateIssuerService
             '{email}' => $user->email ?? '',
             '{course_name}' => $cert->course_title ?: '—',
             '{certificate_code}' => $cert->certificate_code,
+            '{student_id}' => $cert->student_number ?: '—',
             '{issued_at}' => optional($cert->issued_at)->format('d M Y') ?: '—',
             '{completion_date}' => optional($cert->completion_date)->format('d M Y') ?: '—',
             '{verify_url}' => $cert->verifyUrl(),
@@ -268,22 +280,19 @@ class CertificateIssuerService
         }
 
         $qrPath = $this->ensureQrImage($cert);
-        $qrForPdf = null;
-        if ($qrPath && is_file($qrPath)) {
-            $qrForPdf = str_replace('\\', '/', $qrPath);
-            if (! str_starts_with($qrForPdf, 'file://')) {
-                $qrForPdf = 'file:///' . ltrim($qrForPdf, '/');
-            }
-        }
         $html = view('certificates.pdf', [
             'certificate' => $cert,
             'template' => $template,
-            'qrAbsolutePath' => $qrPath,
-            'qrSrc' => $qrForPdf,
+            'qrSrc' => $this->pdfFileSrc($qrPath),
+            'bgSrc' => $this->pdfPublicSrc($template?->resolvedBackgroundPath()),
+            'logoSrc' => $this->pdfPublicSrc($template?->logo_path),
+            'sealSrc' => $this->pdfPublicSrc($template?->seal_path),
+            'signerLeftSrc' => $this->pdfPublicSrc($template?->signer_left_signature),
+            'signerRightSrc' => $this->pdfPublicSrc($template?->signer_right_signature),
             'schoolName' => $template ? $template->schoolName() : 'Berkeley School of Business, Arts & Sciences',
         ])->render();
 
-        $orientation = $template ? $template->paperOrientation() : 'landscape';
+        $orientation = $template ? $template->paperOrientation() : 'portrait';
         $pdf = Pdf::loadHTML($html)->setPaper('a4', $orientation);
         // Unique filename when multiple certs share similar codes over time.
         $fileName = Str::slug($cert->certificate_code) . '-' . $cert->id . '.pdf';
@@ -325,5 +334,49 @@ class CertificateIssuerService
         }
 
         return File::exists($file) ? $file : null;
+    }
+
+    public function resolveStudentNumber(?User $user, ?string $override = null): string
+    {
+        $override = trim((string) $override);
+        if ($override !== '') {
+            return $override;
+        }
+        if (! $user) {
+            return '';
+        }
+        foreach (['student_number', 'student_code', 'admission_no', 'admission_number', 'registration_no'] as $col) {
+            $val = trim((string) ($user->{$col} ?? ''));
+            if ($val !== '') {
+                return $val;
+            }
+        }
+
+        return 'STU-' . str_pad((string) $user->id, 6, '0', STR_PAD_LEFT);
+    }
+
+    public function pdfPublicSrc(?string $relative): ?string
+    {
+        $relative = trim((string) $relative);
+        if ($relative === '') {
+            return null;
+        }
+        $relative = ltrim(str_replace('\\', '/', $relative), '/');
+        $abs = public_path($relative);
+
+        return is_file($abs) ? $this->pdfFileSrc($abs) : null;
+    }
+
+    public function pdfFileSrc(?string $absolute): ?string
+    {
+        if (! $absolute || ! is_file($absolute)) {
+            return null;
+        }
+        $path = str_replace('\\', '/', $absolute);
+        if (! str_starts_with($path, 'file://')) {
+            $path = 'file:///' . ltrim($path, '/');
+        }
+
+        return $path;
     }
 }
