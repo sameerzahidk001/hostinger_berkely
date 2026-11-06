@@ -5,23 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Verify Certificate — Berkeley</title>
     <style>
-        body { margin:0; font-family: Georgia, "Times New Roman", serif; background:#f4f6f8; color:#111; }
-        .wrap { max-width:720px; margin:40px auto; padding:0 16px; }
+        body { margin:0; font-family: Arial, Helvetica, sans-serif; background:#f4f6f8; color:#111; }
+        .wrap { max-width:760px; margin:36px auto; padding:0 16px; }
         .card { background:#fff; border:1px solid #e5e7eb; padding:28px 24px; }
-        h1 { font-size:28px; margin:0 0 8px; color:#000435; }
-        .sub { color:#6b7280; margin:0 0 20px; font-family: Arial, sans-serif; font-size:14px; }
-        label { display:block; font-family: Arial, sans-serif; font-size:13px; margin-bottom:6px; }
-        input[type=text] { width:100%; padding:10px 12px; border:1px solid #cbd5e1; box-sizing:border-box; font-size:15px; }
-        button { margin-top:12px; background:#000435; color:#fff; border:0; padding:10px 16px; cursor:pointer; font-family: Arial, sans-serif; }
+        h1 { font-family: Georgia, "Times New Roman", serif; font-size:28px; margin:0 0 8px; color:#000435; }
+        .sub { color:#6b7280; margin:0 0 20px; font-size:14px; }
+        label { display:block; font-size:13px; font-weight:600; margin:0 0 6px; }
+        .req { color:#c0392b; }
+        input, textarea { width:100%; padding:10px 12px; border:1px solid #cbd5e1; box-sizing:border-box; font-size:15px; }
+        textarea { min-height:72px; resize:vertical; }
+        .row { display:flex; gap:12px; flex-wrap:wrap; }
+        .row > div { flex:1 1 240px; margin-bottom:14px; }
+        button { margin-top:8px; background:#000435; color:#fff; border:0; padding:11px 18px; cursor:pointer; font-size:15px; }
+        .errors { background:#fdecea; color:#9b1c1c; padding:10px 12px; margin-bottom:16px; font-size:13px; }
         .result { margin-top:22px; padding:16px; border-left:4px solid #000435; background:#f8fafc; }
         .result.valid { border-left-color:#16a34a; }
         .result.revoked { border-left-color:#dc2626; }
         .result.not_found { border-left-color:#f59e0b; }
-        .badge { display:inline-block; padding:3px 8px; font-size:12px; font-family: Arial, sans-serif; color:#fff; }
+        .badge { display:inline-block; padding:3px 8px; font-size:12px; color:#fff; }
         .badge.valid { background:#16a34a; }
         .badge.revoked { background:#dc2626; }
         .badge.not_found { background:#f59e0b; }
-        .meta { font-family: Arial, sans-serif; font-size:14px; line-height:1.55; margin-top:10px; }
+        .meta { font-size:14px; line-height:1.55; margin-top:10px; }
         a { color:#000435; }
     </style>
 </head>
@@ -29,12 +34,51 @@
 <div class="wrap">
     <div class="card">
         <h1>Verify Certificate</h1>
-        <p class="sub">Berkeley School of Business, Arts &amp; Sciences — confirm a digital certificate by code or QR link.</p>
+        <p class="sub">Anyone can verify a Berkeley e-certificate. All fields below are required. Enter the certificate ID / number from the document or QR link.</p>
 
-        <form method="GET" action="{{ url('/verify-certificate') }}">
-            <label for="code">Certificate code</label>
-            <input id="code" type="text" name="code" value="{{ $code }}" placeholder="e.g. CERT-2026-000001" required>
-            <button type="submit">Verify</button>
+        @if($errors->any())
+            <div class="errors">
+                <ul style="margin:0; padding-left:18px;">
+                    @foreach($errors->all() as $e)
+                        <li>{{ $e }}</li>
+                    @endforeach
+                </ul>
+            </div>
+        @endif
+
+        <form method="POST" action="{{ url('/ecert-verify') }}">
+            @csrf
+            <div class="row">
+                <div style="flex-basis:100%;">
+                    <label for="code">Certificate ID / number <span class="req">*</span></label>
+                    <input id="code" type="text" name="code" value="{{ old('code', $code) }}" placeholder="e.g. CERT-2026-000001" required>
+                </div>
+                <div>
+                    <label for="verifier_name">Name <span class="req">*</span></label>
+                    <input id="verifier_name" type="text" name="verifier_name" value="{{ old('verifier_name', $old['verifier_name'] ?? '') }}" required>
+                </div>
+                <div>
+                    <label for="verifier_email">Email address <span class="req">*</span></label>
+                    <input id="verifier_email" type="email" name="verifier_email" value="{{ old('verifier_email', $old['verifier_email'] ?? '') }}" required>
+                </div>
+                <div>
+                    <label for="verifier_phone">Contact number <span class="req">*</span></label>
+                    <input id="verifier_phone" type="text" name="verifier_phone" value="{{ old('verifier_phone', $old['verifier_phone'] ?? '') }}" required>
+                </div>
+                <div>
+                    <label for="verifier_organization">Organization / company name <span class="req">*</span></label>
+                    <input id="verifier_organization" type="text" name="verifier_organization" value="{{ old('verifier_organization', $old['verifier_organization'] ?? '') }}" required>
+                </div>
+                <div>
+                    <label for="verifier_position">Position <span class="req">*</span></label>
+                    <input id="verifier_position" type="text" name="verifier_position" value="{{ old('verifier_position', $old['verifier_position'] ?? '') }}" required>
+                </div>
+                <div style="flex-basis:100%;">
+                    <label for="verifier_reason">Reason for verification <span class="req">*</span></label>
+                    <textarea id="verifier_reason" name="verifier_reason" required>{{ old('verifier_reason', $old['verifier_reason'] ?? '') }}</textarea>
+                </div>
+            </div>
+            <button type="submit">Verify certificate</button>
         </form>
 
         @if($result)

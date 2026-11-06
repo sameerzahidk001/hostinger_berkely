@@ -230,7 +230,7 @@
         Email: {{ $template->footer_email ?: 'Registrar@eduberkeley.com' }}
         &nbsp;|&nbsp;
         Web: {{ $template->footer_website ?: 'www.eduberkeley.com' }}<br>
-        Scan QR code or visit {{ url('/verify-certificate') }} to authenticate e-Certificate
+        Scan QR code or visit {{ url('/ecert-verify') }} to authenticate e-Certificate
       </div>
       @if(!empty($qrSrc))
         <div class="qr"><img src="{{ $qrSrc }}" alt="Verify QR"></div>

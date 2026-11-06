@@ -84,9 +84,14 @@ Route::view('/test', 'test');
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
 Route::get('/robots.txt', [SitemapController::class, 'robots'])->name('robots');
 
-Route::get('/verify-certificate/{code?}', [VerifyCertificateController::class, 'show'])
+Route::get('/ecert-verify/{code?}', [VerifyCertificateController::class, 'show'])
     ->where('code', '.*')
     ->name('certificates.verify');
+Route::post('/ecert-verify', [VerifyCertificateController::class, 'check'])
+    ->name('certificates.verify.check');
+Route::get('/verify-certificate/{code?}', [VerifyCertificateController::class, 'show'])
+    ->where('code', '.*')
+    ->name('certificates.verify.legacy');
 
 Route::redirect('/home', '/', 301);
 Route::redirect('/index.php', '/', 301);

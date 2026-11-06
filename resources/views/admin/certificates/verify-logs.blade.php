@@ -43,8 +43,10 @@
                             <th>When</th>
                             <th>Code</th>
                             <th>Result</th>
+                            <th>Verifier</th>
+                            <th>Organisation</th>
+                            <th>Reason</th>
                             <th>IP</th>
-                            <th>User agent</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -63,11 +65,20 @@
                                         {{ $row->result ?: '—' }}
                                     @endif
                                 </td>
+                                <td>
+                                    {{ $row->verifier_name ?: '—' }}
+                                    <div class="text-muted small">{{ $row->verifier_email ?: '' }}</div>
+                                    <div class="text-muted small">{{ $row->verifier_phone ?: '' }}</div>
+                                </td>
+                                <td>
+                                    {{ $row->verifier_organization ?: '—' }}
+                                    <div class="text-muted small">{{ $row->verifier_position ?: '' }}</div>
+                                </td>
+                                <td class="small">{{ $row->verifier_reason ?: '—' }}</td>
                                 <td>{{ $row->ip ?: '—' }}</td>
-                                <td class="small text-muted">{{ \Illuminate\Support\Str::limit((string) $row->user_agent, 80) }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="5">No verification attempts logged yet.</td></tr>
+                            <tr><td colspan="7">No verification attempts logged yet.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
