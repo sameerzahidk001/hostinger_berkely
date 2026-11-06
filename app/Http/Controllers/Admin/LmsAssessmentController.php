@@ -1144,22 +1144,6 @@ class LmsAssessmentController extends Controller
             $rows = $rows->filter(fn ($r) => $this->assignedRowMatchesSearch($r, $search))->values();
         }
 
-        if ($resultsView) {
-            $haveAttemptIds = [];
-            $rows = $rows->filter(function ($r) use (&$haveAttemptIds) {
-                $att = $r['attempt'] ?? ($r['sitting_display']['_attempt'] ?? null);
-                if (empty($att->id)) {
-                    return false;
-                }
-                $id = (int) $att->id;
-                if (isset($haveAttemptIds[$id])) {
-                    return false;
-                }
-                $haveAttemptIds[$id] = true;
-
-                return true;
-            })->values();
-        }
         $rows = $this->dedupeAssignedSittingRows($rows);
         $rows = $this->renumberCollapsedAttempts($rows);
 
@@ -1281,7 +1265,6 @@ class LmsAssessmentController extends Controller
     {
         $query = array_filter([
             'assessment_id' => (int) $id,
-            'view' => 'results',
             'export' => $request->query('export'),
             'page' => $request->query('page'),
             'status' => $request->query('status'),
@@ -1401,7 +1384,6 @@ class LmsAssessmentController extends Controller
             $this->assessments->publishResults($attempt->fresh(), $request->input('grader_feedback'));
             return redirect()->route('admin.assessments.tests.assigned-users', [
                 'assessment_id' => $attempt->assessment_id,
-                'view' => 'results',
             ])->with('success', 'Marks saved and results published to the student.');
         }
 
