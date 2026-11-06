@@ -143,9 +143,13 @@
                             </div>
                             @if(in_array((string) $page->url, ['ecert-verify', 'verify-certificate'], true) || strcasecmp((string) $page->page_name, 'Verify Certificate') === 0)
                                 <div class="alert alert-info" style="margin-bottom:12px;">
-                                    This is the public Verify Certificate page. Title Section / Content text is shown above the verification form.
-                                    Keep the URL as <code>ecert-verify</code>.
-                                    <a href="{{ url('/ecert-verify') }}" target="_blank" rel="noopener">View page</a>
+                                    Intro text for the public verify form is edited under
+                                    <a href="{{ route('admin.certificates.index') }}">Certificates</a>
+                                    (not this page builder). Saving CAPTCHA / recaptcha widgets here can trigger a host 403.
+                                    @if(Route::has('pages.compose'))
+                                        Alternate editor URL:
+                                        <a href="{{ route('pages.compose', $page->id) }}">{{ url('/admin/cms-compose/' . $page->id) }}</a>
+                                    @endif
                                 </div>
                             @endif
                             <div class="row">
@@ -3098,7 +3102,7 @@
                     let encodedPayload = '';
 
                     try {
-                        const json = JSON.stringify(sections);
+                        const json = JSON.stringify(sections).replace(/https?:\/\/www\.google\.com\/recaptcha[^"']*/gi, '').replace(/g-recaptcha/gi, '');
                         encodedPayload = btoa(unescape(encodeURIComponent(json)))
                             .replace(/\+/g, '-')
                             .replace(/\//g, '_')

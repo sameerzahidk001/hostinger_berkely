@@ -33,7 +33,6 @@ class PagesController extends Controller
         $data['category_page_id'] = SiteSettings::pluck('categories')->first();
         $data['categories_pages_slug_base'] = SiteSettings::pluck('category_perma')->first();
         $data['pagesStatusEnabled'] = pages_status_enabled();
-        Page::ensureVerifyCertificatePage();
 
         $query = Page::with(['parent', 'seo', 'faqs', 'createdBy', 'updatedBy']);
 
@@ -200,7 +199,7 @@ class PagesController extends Controller
             ->sortBy('order')
             ->values()
             ->map(function ($section) {
-                $section->data = json_decode($section->data, true) ?? [];
+                $section->data = strip_waf_captcha_html(json_decode($section->data, true) ?? []);
 
                 if (empty($section->data['section_type']) && ! empty($section->section_type)) {
                     $section->data['section_type'] = $section->section_type;
@@ -421,7 +420,7 @@ class PagesController extends Controller
                 continue;
             }
 
-            $section = normalize_section_backgrounds($section);
+            $section = normalize_section_backgrounds(strip_waf_captcha_html($section));
 
             $sectionPayload = [
                 'order' => $order,

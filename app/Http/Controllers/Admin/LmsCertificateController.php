@@ -8,6 +8,7 @@ use App\Models\LmsCertificate;
 use App\Models\StudentCompletion;
 use App\Models\User;
 use App\Services\CertificateIssuerService;
+use App\Services\CertificateVerifyCopyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
@@ -41,7 +42,19 @@ class LmsCertificateController extends Controller
                 'search' => (string) $request->input('search', ''),
                 'status' => (string) $request->input('status', ''),
             ],
+            'verifyCopy' => app(CertificateVerifyCopyService::class)->get(),
         ]);
+    }
+
+    public function saveVerifyCopy(Request $request, CertificateVerifyCopyService $copy)
+    {
+        $data = $request->validate([
+            'title' => 'required|string|max:180',
+            'html' => 'nullable|string|max:20000',
+        ]);
+        $copy->save($data['title'], $data['html'] ?? '');
+
+        return back()->with('success', 'Verify page intro text saved.');
     }
 
     public function verifyLogs(Request $request)

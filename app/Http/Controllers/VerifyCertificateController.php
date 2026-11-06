@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\CertificateVerifyLog;
 use App\Models\LmsCertificate;
 use App\Models\Page;
+use App\Services\CertificateVerifyCopyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
@@ -19,7 +20,8 @@ class VerifyCertificateController extends Controller
         $inputCode = trim((string) ($code ?: $request->input('code', '')));
         $inputCode = rawurldecode($inputCode);
 
-        return $this->verifyView($inputCode, null, null, [
+        return $this->verifyView($request, $inputCode, null, null, [
+            'student_number' => old('student_number', ''),
             'verifier_name' => old('verifier_name', ''),
             'verifier_email' => old('verifier_email', ''),
             'verifier_phone' => old('verifier_phone', ''),
@@ -29,13 +31,9 @@ class VerifyCertificateController extends Controller
         ]);
     }
 
-    public function check(Request $request)
+    public function saveVerifier(Request $request)
     {
-        LmsCertificate::ensureTable();
-        CertificateVerifyLog::ensureTable();
-
         $data = $request->validate([
-            'code' => 'required|string|max:80',
             'verifier_name' => 'required|string|max:255',
             'verifier_email' => 'required|email|max:255',
             'verifier_phone' => 'required|string|max:80',
@@ -43,7 +41,6 @@ class VerifyCertificateController extends Controller
             'verifier_position' => 'required|string|max:255',
             'verifier_reason' => 'required|string|max:500',
         ], [
-            'code.required' => 'Enter the certificate ID / number.',
             'verifier_name.required' => 'Name is required.',
             'verifier_email.required' => 'Email address is required.',
             'verifier_phone.required' => 'Contact number is required.',
@@ -52,10 +49,34 @@ class VerifyCertificateController extends Controller
             'verifier_reason.required' => 'Reason for verification is required.',
         ]);
 
+        $request->session()->put('ecert_verifier', $data);
+
+        return redirect()->to(url('/ecert-verify'))
+            ->with('success', 'Verifier details saved. Enter Student ID and Certificate Number to continue.');
+    }
+
+    public function check(Request $request)
+    {
+        LmsCertificate::ensureTable();
+        CertificateVerifyLog::ensureTable();
+
+        $verifier = $this->verifierFromSession($request);
+        if (! $verifier) {
+            return redirect()->to(url('/ecert-verify'))
+                ->with('fail', 'Enter verifier details first. Student ID and Certificate Number stay locked until then.');
+        }
+
+        $data = $request->validate([
+            'student_number' => 'required|string|max:100',
+            'code' => 'required|string|max:80',
+        ], [
+            'student_number.required' => 'Enter the Student ID.',
+            'code.required' => 'Enter the Certificate Number.',
+        ]);
+
         $inputCode = trim((string) $data['code']);
-        $certificate = LmsCertificate::query()
-            ->where('certificate_code', $inputCode)
-            ->first();
+        $studentNumber = trim((string) $data['student_number']);
+        $certificate = $this->matchCertificate($inputCode, $studentNumber);
 
         if (! $certificate) {
             $result = 'not_found';
@@ -72,14 +93,9 @@ class VerifyCertificateController extends Controller
                 'ip' => substr((string) $request->ip(), 0, 64),
                 'user_agent' => substr((string) $request->userAgent(), 0, 500),
             ];
-            $extra = [
-                'verifier_name' => $data['verifier_name'],
-                'verifier_email' => $data['verifier_email'],
-                'verifier_phone' => $data['verifier_phone'],
-                'verifier_organization' => $data['verifier_organization'],
-                'verifier_position' => $data['verifier_position'],
-                'verifier_reason' => $data['verifier_reason'],
-            ];
+            $extra = array_merge($verifier, [
+                'student_number' => $studentNumber,
+            ]);
             foreach ($extra as $col => $value) {
                 if (Schema::hasColumn('certificate_verify_logs', $col)) {
                     $row[$col] = $value;
@@ -90,28 +106,34 @@ class VerifyCertificateController extends Controller
             // Logging must never break verify UX.
         }
 
-        return $this->verifyView($inputCode, $certificate, $result, [
-            'verifier_name' => $data['verifier_name'],
-            'verifier_email' => $data['verifier_email'],
-            'verifier_phone' => $data['verifier_phone'],
-            'verifier_organization' => $data['verifier_organization'],
-            'verifier_position' => $data['verifier_position'],
-            'verifier_reason' => $data['verifier_reason'],
-        ]);
+        return $this->verifyView($request, $inputCode, $certificate, $result, array_merge($verifier, [
+            'student_number' => $studentNumber,
+        ]));
     }
 
-    protected function verifyView(string $code, $certificate, ?string $result, array $old)
+    protected function verifyView(Request $request, string $code, $certificate, ?string $result, array $old)
     {
+        $copy = app(CertificateVerifyCopyService::class)->get();
+        $verifierReady = $this->verifierFromSession($request) !== null;
+        if ($verifierReady) {
+            $sessionVerifier = $this->verifierFromSession($request);
+            foreach ($sessionVerifier as $key => $value) {
+                if (($old[$key] ?? '') === '') {
+                    $old[$key] = $value;
+                }
+            }
+        }
+
         $cmsPage = null;
         try {
-            $cmsPage = Page::ensureVerifyCertificatePage();
+            $cmsPage = Page::findVerifyCertificatePage();
             if ($cmsPage) {
                 $cmsPage->load('sections');
                 $cmsPage->setRelation(
                     'sections',
                     $cmsPage->sections->sortBy('order')->values()->map(function ($section) {
                         $decoded = is_string($section->data) ? json_decode($section->data, true) : $section->data;
-                        $section->data = is_array($decoded) ? $decoded : [];
+                        $section->data = strip_waf_captcha_html(is_array($decoded) ? $decoded : []);
                         if (empty($section->section_type)) {
                             $section->section_type = $section->data['section_type'] ?? null;
                         }
@@ -130,6 +152,47 @@ class VerifyCertificateController extends Controller
             'result' => $result,
             'old' => $old,
             'cmsPage' => $cmsPage,
+            'copy' => $copy,
+            'verifierReady' => $verifierReady,
         ]);
+    }
+
+    protected function verifierFromSession(Request $request): ?array
+    {
+        $row = $request->session()->get('ecert_verifier');
+        if (! is_array($row)) {
+            return null;
+        }
+        foreach (['verifier_name', 'verifier_email', 'verifier_phone', 'verifier_organization', 'verifier_position', 'verifier_reason'] as $key) {
+            if (trim((string) ($row[$key] ?? '')) === '') {
+                return null;
+            }
+        }
+
+        return $row;
+    }
+
+    protected function matchCertificate(string $code, string $studentNumber): ?LmsCertificate
+    {
+        $codeNorm = $this->normId($code);
+        $studentNorm = $this->normId($studentNumber);
+        if ($codeNorm === '' || $studentNorm === '') {
+            return null;
+        }
+
+        $candidates = LmsCertificate::query()
+            ->where('certificate_code', $code)
+            ->orWhereRaw('LOWER(certificate_code) = ?', [strtolower($code)])
+            ->get();
+
+        return $candidates->first(function (LmsCertificate $cert) use ($codeNorm, $studentNorm) {
+            return $this->normId((string) $cert->certificate_code) === $codeNorm
+                && $this->normId((string) $cert->student_number) === $studentNorm;
+        });
+    }
+
+    protected function normId(string $value): string
+    {
+        return strtoupper((string) preg_replace('/[\s\-]+/', '', trim($value)));
     }
 }

@@ -6,19 +6,20 @@
     .ecert-verify .wrap { max-width:760px; margin:0 auto; }
     .ecert-verify .card { background:#fff; border:1px solid #e5e7eb; padding:28px 24px; }
     .ecert-verify h1 { font-family: Georgia, "Times New Roman", serif; font-size:28px; margin:0 0 8px; color:#000435; }
+    .ecert-verify h2 { font-size:18px; margin:22px 0 8px; color:#000435; }
     .ecert-verify .sub { color:#6b7280; margin:0 0 20px; font-size:14px; }
     .ecert-verify .cms-html { color:#6b7280; margin:0 0 20px; font-size:14px; line-height:1.55; }
     .ecert-verify .cms-html p { margin:0 0 10px; }
-    .ecert-verify .cms-html p:last-child { margin-bottom:0; }
-    .ecert-verify .cms-media { max-width:100%; height:auto; margin:0 0 16px; }
     .ecert-verify label { display:block; font-size:13px; font-weight:600; margin:0 0 6px; }
     .ecert-verify .req { color:#c0392b; }
-    .ecert-verify input, .ecert-verify textarea { width:100%; padding:10px 12px; border:1px solid #cbd5e1; box-sizing:border-box; font-size:15px; }
+    .ecert-verify input, .ecert-verify textarea { width:100%; padding:10px 12px; border:1px solid #cbd5e1; box-sizing:border-box; font-size:15px; background:#fff; }
     .ecert-verify textarea { min-height:72px; resize:vertical; }
     .ecert-verify .row { display:flex; gap:12px; flex-wrap:wrap; }
     .ecert-verify .row > div { flex:1 1 240px; margin-bottom:14px; }
     .ecert-verify button[type="submit"] { margin-top:8px; background:#000435; color:#fff; border:0; padding:11px 18px; cursor:pointer; font-size:15px; }
-    .ecert-verify .errors { background:#fdecea; color:#9b1c1c; padding:10px 12px; margin-bottom:16px; font-size:13px; }
+    .ecert-verify button[disabled] { opacity:.45; cursor:not-allowed; pointer-events:none; }
+    .ecert-verify .errors, .ecert-verify .flash-fail { background:#fdecea; color:#9b1c1c; padding:10px 12px; margin-bottom:16px; font-size:13px; }
+    .ecert-verify .flash-ok { background:#e8f8ee; color:#166534; padding:10px 12px; margin-bottom:16px; font-size:13px; }
     .ecert-verify .result { margin-top:22px; padding:16px; border-left:4px solid #000435; background:#f8fafc; }
     .ecert-verify .result.valid { border-left-color:#16a34a; }
     .ecert-verify .result.revoked { border-left-color:#dc2626; }
@@ -29,6 +30,10 @@
     .ecert-verify .badge.not_found { background:#f59e0b; }
     .ecert-verify .meta { font-size:14px; line-height:1.55; margin-top:10px; }
     .ecert-verify a { color:#000435; }
+    .ecert-verify .locked { position:relative; }
+    .ecert-verify .locked::after { content:""; position:absolute; inset:0; background:rgba(248,250,252,.65); cursor:not-allowed; }
+    .ecert-verify .locked input { background:#f1f5f9; pointer-events:none; }
+    .ecert-verify .hint { font-size:13px; color:#6b7280; margin:0 0 12px; }
 </style>
 @endpush
 
@@ -36,31 +41,15 @@
 <section class="ecert-verify">
 <div class="wrap">
     <div class="card">
-        @php
-            $cmsSections = collect(optional($cmsPage ?? null)->sections);
-            $hasCmsCopy = $cmsSections->contains(function ($section) {
-                $data = is_array($section->data ?? null) ? $section->data : [];
-                return trim((string) (($data['title'] ?? '') . strip_tags((string) ($data['description'] ?? '')))) !== '';
-            });
-        @endphp
-        @if($hasCmsCopy)
-            @foreach($cmsSections as $section)
-                @php $data = is_array($section->data ?? null) ? $section->data : []; @endphp
-                @if(!empty($data['image']))
-                    <img class="cms-media" src="{{ media_url($data['image']) }}" alt="{{ image_alt($data['image_alt'] ?? null, $data['title'] ?? 'Verify Certificate') }}">
-                @endif
-                @if(!empty($data['title']))
-                    <h1>{{ $data['title'] }}</h1>
-                @endif
-                @if(!empty($data['description']))
-                    <div class="cms-html">{!! render_cms_html($data['description']) !!}</div>
-                @endif
-            @endforeach
-        @else
-            <h1>Verify Certificate</h1>
-            <p class="sub">Anyone can verify a Berkeley e-certificate. All fields below are required. Enter the certificate ID / number from the document or QR link.</p>
-        @endif
+        <h1>{{ $copy['title'] ?? 'Verify Certificate' }}</h1>
+        <div class="cms-html">{!! render_cms_html($copy['html'] ?? '') !!}</div>
 
+        @if(session('success'))
+            <div class="flash-ok">{{ session('success') }}</div>
+        @endif
+        @if(session('fail'))
+            <div class="flash-fail">{{ session('fail') }}</div>
+        @endif
         @if($errors->any())
             <div class="errors">
                 <ul style="margin:0; padding-left:18px;">
@@ -71,13 +60,32 @@
             </div>
         @endif
 
-        <form method="POST" action="{{ url('/ecert-verify') }}">
+        <h2>Verify with</h2>
+        <p class="hint">Student ID and Certificate Number are both required. They stay disabled until verifier details are submitted.</p>
+        <form method="POST" action="{{ url('/ecert-verify') }}" id="ecert-check-form">
+            @csrf
+            <div class="row {{ $verifierReady ? '' : 'locked' }}">
+                <div>
+                    <label for="student_number">Student ID <span class="req">*</span></label>
+                    <input id="student_number" type="text" name="student_number" value="{{ old('student_number', $old['student_number'] ?? '') }}"
+                        @unless($verifierReady) disabled readonly tabindex="-1" aria-disabled="true" @endunless
+                        @if($verifierReady) required @endif autocomplete="off">
+                </div>
+                <div>
+                    <label for="code">Certificate Number <span class="req">*</span></label>
+                    <input id="code" type="text" name="code" value="{{ old('code', $code) }}"
+                        @unless($verifierReady) disabled readonly tabindex="-1" aria-disabled="true" @endunless
+                        @if($verifierReady) required @endif autocomplete="off">
+                </div>
+            </div>
+            <button type="submit" @unless($verifierReady) disabled tabindex="-1" aria-disabled="true" @endunless>Check Certificate</button>
+        </form>
+
+        <h2>Verifier details</h2>
+        <p class="hint">The person verifying can be anyone, not necessarily the student.</p>
+        <form method="POST" action="{{ url('/ecert-verify/verifier') }}">
             @csrf
             <div class="row">
-                <div style="flex-basis:100%;">
-                    <label for="code">Certificate ID / number <span class="req">*</span></label>
-                    <input id="code" type="text" name="code" value="{{ old('code', $code) }}" required>
-                </div>
                 <div>
                     <label for="verifier_name">Name <span class="req">*</span></label>
                     <input id="verifier_name" type="text" name="verifier_name" value="{{ old('verifier_name', $old['verifier_name'] ?? '') }}" required>
@@ -103,7 +111,7 @@
                     <textarea id="verifier_reason" name="verifier_reason" required>{{ old('verifier_reason', $old['verifier_reason'] ?? '') }}</textarea>
                 </div>
             </div>
-            <button type="submit">Verify certificate</button>
+            <button type="submit">{{ $verifierReady ? 'Update verifier details' : 'Submit verifier details' }}</button>
         </form>
 
         @if($result)
@@ -131,14 +139,15 @@
                 @elseif($result === 'revoked')
                     <span class="badge revoked">Revoked</span>
                     <div class="meta">
-                        <div><strong>Code:</strong> {{ $certificate->certificate_code }}</div>
+                        <div><strong>Certificate number:</strong> {{ $certificate->certificate_code }}</div>
                         <div><strong>Student:</strong> {{ $certificate->student_name }}</div>
+                        <div><strong>Student ID:</strong> {{ $certificate->student_number ?: '—' }}</div>
                         <div><strong>Course:</strong> {{ $certificate->course_title }}</div>
                         <p style="margin:12px 0 0;">This certificate is no longer valid.</p>
                     </div>
                 @else
                     <span class="badge not_found">Not found</span>
-                    <div class="meta">No certificate matches <strong>{{ $code }}</strong>. Check the code and try again.</div>
+                    <div class="meta">No certificate matches that Student ID and Certificate Number. Check both values and try again.</div>
                 @endif
             </div>
         @endif
@@ -146,3 +155,17 @@
 </div>
 </section>
 @endsection
+
+@push('script')
+<script>
+(function () {
+    var locked = document.querySelectorAll('.ecert-verify .locked input, .ecert-verify button[disabled]');
+    locked.forEach(function (el) {
+        el.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); }, true);
+        el.addEventListener('keydown', function (e) { e.preventDefault(); e.stopPropagation(); }, true);
+        el.addEventListener('paste', function (e) { e.preventDefault(); }, true);
+        el.addEventListener('focus', function () { this.blur(); }, true);
+    });
+})();
+</script>
+@endpush

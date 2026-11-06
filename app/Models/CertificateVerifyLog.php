@@ -21,6 +21,7 @@ class CertificateVerifyLog extends Model
         'verifier_organization',
         'verifier_position',
         'verifier_reason',
+        'student_number',
     ];
 
     public static function ensureTable(): bool
@@ -54,6 +55,7 @@ class CertificateVerifyLog extends Model
             'verifier_organization' => fn (Blueprint $t) => $t->string('verifier_organization', 255)->nullable(),
             'verifier_position' => fn (Blueprint $t) => $t->string('verifier_position', 255)->nullable(),
             'verifier_reason' => fn (Blueprint $t) => $t->string('verifier_reason', 500)->nullable(),
+            'student_number' => fn (Blueprint $t) => $t->string('student_number', 100)->nullable(),
         ];
         foreach ($adds as $col => $cb) {
             if (! Schema::hasColumn('certificate_verify_logs', $col)) {
