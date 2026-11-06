@@ -46,7 +46,9 @@
 <div class="wrap">
     <div class="card">
         <h1>{{ $copy['title'] ?? 'Verify Certificate' }}</h1>
-        <div class="cms-html">{!! render_cms_html($copy['html'] ?? '') !!}</div>
+        @if(trim(strip_tags((string) ($copy['html'] ?? ''))) !== '')
+            <div class="cms-html">{!! render_cms_html($copy['html']) !!}</div>
+        @endif
 
         @if(session('success'))
             <div class="flash-ok">{{ session('success') }}</div>

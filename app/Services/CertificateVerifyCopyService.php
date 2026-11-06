@@ -12,7 +12,7 @@ class CertificateVerifyCopyService
     {
         $defaults = [
             'title' => 'Verify Certificate',
-            'html' => '<p>Anyone can verify a Berkeley e-certificate. Enter verifier details first. Student ID and Certificate Number stay locked until those details are submitted. Both IDs are required.</p>',
+            'html' => '',
         ];
 
         try {
@@ -28,7 +28,7 @@ class CertificateVerifyCopyService
 
             return [
                 'title' => $title !== '' ? $title : $defaults['title'],
-                'html' => $html !== '' ? $html : $defaults['html'],
+                'html' => $html,
             ];
         } catch (\Throwable $e) {
             return $defaults;
