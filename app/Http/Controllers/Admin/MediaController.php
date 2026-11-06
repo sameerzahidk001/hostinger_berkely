@@ -151,7 +151,7 @@ class MediaController extends Controller
             $rels = [$rels];
         }
         $files = [];
-        foreach (array_slice($rels, 0, 4) as $rel) {
+        foreach (array_slice($rels, 0, 80) as $rel) {
             $n = MediaAsset::normalizePath((string) $rel);
             if ($n === '' || str_contains($n, '..')) {
                 continue;
@@ -168,15 +168,10 @@ class MediaController extends Controller
             return response()->json(['usages' => $usages]);
         }
 
-        $capped = $this->capDbStatement(3);
         try {
             $usages = $this->usageIndex($files, true);
         } catch (\Throwable $e) {
-            $usages = ['by_path' => [], 'by_name' => []];
-        } finally {
-            if ($capped) {
-                $this->clearDbStatementCap();
-            }
+            return response()->json(['usages' => $usages, 'error' => true], 504);
         }
 
         return response()->json(['usages' => $usages]);
@@ -1333,6 +1328,10 @@ class MediaController extends Controller
             if ($matchBasename) {
                 if ($base !== '') {
                     $terms[$base] = true;
+                    $stem = (string) pathinfo($base, PATHINFO_FILENAME);
+                    if (strlen($stem) >= 8) {
+                        $terms[$stem] = true;
+                    }
                 }
             } elseif ($rel !== '') {
                 $terms[$rel] = true;
@@ -1343,13 +1342,11 @@ class MediaController extends Controller
         try {
             if (class_exists(PageSection::class) && Schema::hasTable('page_sections') && $terms !== []) {
                 $q = PageSection::query()->select(['id', 'page_id', 'data'])->with('page:id,page_name');
-                $q->where(function ($outer) use ($terms) {
-                    foreach ($terms as $term) {
-                        $like = '%' . addcslashes($term, '%_\\') . '%';
-                        $outer->orWhere('data', 'like', $like);
-                    }
+                $q->where(function ($outer) {
+                    $outer->whereRaw('CAST(`data` AS CHAR) LIKE ?', ['%images/library/%'])
+                        ->orWhereRaw('CAST(`data` AS CHAR) LIKE ?', ['%/library/%']);
                 });
-                foreach ($q->limit(200)->get() as $section) {
+                foreach ($q->limit(400)->get() as $section) {
                     $page = $section->page;
                     if (! $page) {
                         continue;
@@ -1378,10 +1375,10 @@ class MediaController extends Controller
                 }
                 if ($imgCols !== []) {
                     $q = Course::query()->select(array_merge(['id', 'title'], $imgCols));
-                    if ($terms !== [] && Course::query()->count() > 400) {
+                    if ($terms !== []) {
                         $q->where(function ($outer) use ($terms, $imgCols) {
                             foreach ($terms as $term) {
-                                $like = '%' . addcslashes($term, '%_\\') . '%';
+                                $like = '%' . addcslashes((string) $term, '%_\\') . '%';
                                 foreach ($imgCols as $col) {
                                     $outer->orWhere($col, 'like', $like);
                                 }
@@ -1417,6 +1414,16 @@ class MediaController extends Controller
                 }
                 if ($existing !== []) {
                     $q = DynamicLabels::query()->select(array_merge(['id', 'course_id'], $existing));
+                    if ($terms !== []) {
+                        $q->where(function ($outer) use ($terms, $existing) {
+                            foreach ($terms as $term) {
+                                $like = '%' . addcslashes((string) $term, '%_\\') . '%';
+                                foreach ($existing as $col) {
+                                    $outer->orWhere($col, 'like', $like);
+                                }
+                            }
+                        });
+                    }
                     foreach ($q->limit(400)->get() as $labelRow) {
                         $courseId = (int) $labelRow->course_id;
                         $label = $courseId > 0 ? ('Course labels #' . $courseId) : 'Course labels';
