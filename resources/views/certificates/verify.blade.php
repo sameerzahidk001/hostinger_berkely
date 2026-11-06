@@ -1,36 +1,35 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Verify Certificate — Berkeley</title>
-    <style>
-        body { margin:0; font-family: Arial, Helvetica, sans-serif; background:#f4f6f8; color:#111; }
-        .wrap { max-width:760px; margin:36px auto; padding:0 16px; }
-        .card { background:#fff; border:1px solid #e5e7eb; padding:28px 24px; }
-        h1 { font-family: Georgia, "Times New Roman", serif; font-size:28px; margin:0 0 8px; color:#000435; }
-        .sub { color:#6b7280; margin:0 0 20px; font-size:14px; }
-        label { display:block; font-size:13px; font-weight:600; margin:0 0 6px; }
-        .req { color:#c0392b; }
-        input, textarea { width:100%; padding:10px 12px; border:1px solid #cbd5e1; box-sizing:border-box; font-size:15px; }
-        textarea { min-height:72px; resize:vertical; }
-        .row { display:flex; gap:12px; flex-wrap:wrap; }
-        .row > div { flex:1 1 240px; margin-bottom:14px; }
-        button { margin-top:8px; background:#000435; color:#fff; border:0; padding:11px 18px; cursor:pointer; font-size:15px; }
-        .errors { background:#fdecea; color:#9b1c1c; padding:10px 12px; margin-bottom:16px; font-size:13px; }
-        .result { margin-top:22px; padding:16px; border-left:4px solid #000435; background:#f8fafc; }
-        .result.valid { border-left-color:#16a34a; }
-        .result.revoked { border-left-color:#dc2626; }
-        .result.not_found { border-left-color:#f59e0b; }
-        .badge { display:inline-block; padding:3px 8px; font-size:12px; color:#fff; }
-        .badge.valid { background:#16a34a; }
-        .badge.revoked { background:#dc2626; }
-        .badge.not_found { background:#f59e0b; }
-        .meta { font-size:14px; line-height:1.55; margin-top:10px; }
-        a { color:#000435; }
-    </style>
-</head>
-<body>
+@extends('layouts.app')
+
+@push('style')
+<style>
+    .ecert-verify { background:#f4f6f8; color:#111; padding: 96px 16px 48px; }
+    .ecert-verify .wrap { max-width:760px; margin:0 auto; }
+    .ecert-verify .card { background:#fff; border:1px solid #e5e7eb; padding:28px 24px; }
+    .ecert-verify h1 { font-family: Georgia, "Times New Roman", serif; font-size:28px; margin:0 0 8px; color:#000435; }
+    .ecert-verify .sub { color:#6b7280; margin:0 0 20px; font-size:14px; }
+    .ecert-verify label { display:block; font-size:13px; font-weight:600; margin:0 0 6px; }
+    .ecert-verify .req { color:#c0392b; }
+    .ecert-verify input, .ecert-verify textarea { width:100%; padding:10px 12px; border:1px solid #cbd5e1; box-sizing:border-box; font-size:15px; }
+    .ecert-verify textarea { min-height:72px; resize:vertical; }
+    .ecert-verify .row { display:flex; gap:12px; flex-wrap:wrap; }
+    .ecert-verify .row > div { flex:1 1 240px; margin-bottom:14px; }
+    .ecert-verify button[type="submit"] { margin-top:8px; background:#000435; color:#fff; border:0; padding:11px 18px; cursor:pointer; font-size:15px; }
+    .ecert-verify .errors { background:#fdecea; color:#9b1c1c; padding:10px 12px; margin-bottom:16px; font-size:13px; }
+    .ecert-verify .result { margin-top:22px; padding:16px; border-left:4px solid #000435; background:#f8fafc; }
+    .ecert-verify .result.valid { border-left-color:#16a34a; }
+    .ecert-verify .result.revoked { border-left-color:#dc2626; }
+    .ecert-verify .result.not_found { border-left-color:#f59e0b; }
+    .ecert-verify .badge { display:inline-block; padding:3px 8px; font-size:12px; color:#fff; }
+    .ecert-verify .badge.valid { background:#16a34a; }
+    .ecert-verify .badge.revoked { background:#dc2626; }
+    .ecert-verify .badge.not_found { background:#f59e0b; }
+    .ecert-verify .meta { font-size:14px; line-height:1.55; margin-top:10px; }
+    .ecert-verify a { color:#000435; }
+</style>
+@endpush
+
+@section('content')
+<section class="ecert-verify">
 <div class="wrap">
     <div class="card">
         <h1>Verify Certificate</h1>
@@ -51,7 +50,7 @@
             <div class="row">
                 <div style="flex-basis:100%;">
                     <label for="code">Certificate ID / number <span class="req">*</span></label>
-                    <input id="code" type="text" name="code" value="{{ old('code', $code) }}" placeholder="e.g. CERT-2026-000001" required>
+                    <input id="code" type="text" name="code" value="{{ old('code', $code) }}" required>
                 </div>
                 <div>
                     <label for="verifier_name">Name <span class="req">*</span></label>
@@ -119,5 +118,5 @@
         @endif
     </div>
 </div>
-</body>
-</html>
+</section>
+@endsection
