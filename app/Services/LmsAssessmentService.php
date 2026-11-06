@@ -573,8 +573,16 @@ class LmsAssessmentService
             if (count($indexes) < 2) {
                 continue;
             }
-            asort($indexes);
-            $keep = array_key_first($indexes);
+            $withUser = [];
+            foreach ($indexes as $i => $asgId) {
+                $asg = $rows[$i]['assignment'] ?? null;
+                if ($asg && $this->assignmentIncludesStudent($asg, $uid)) {
+                    $withUser[$i] = (int) $asgId;
+                }
+            }
+            $pool = $withUser !== [] ? $withUser : $indexes;
+            arsort($pool);
+            $keep = array_key_first($pool);
             foreach ($indexes as $i => $id) {
                 if ($i !== $keep && ! in_array((int) $id, $attemptAsgIds, true)) {
                     $drop[$i] = true;
@@ -1575,7 +1583,7 @@ class LmsAssessmentService
             || $assessment->isSkill();
     }
 
-    /** Person SCS Mock sittings this student was assigned (Mock 1 and Mock 2). */
+    /** Person SCS Mock sittings this student was assigned (Mock 1, Mock 2, Mock 3, …). */
     protected function attachScsMockSittingsForUser(User $user, Collection $out, ?string $kind = null): void
     {
         $userId = (int) $user->id;
@@ -1584,10 +1592,8 @@ class LmsAssessmentService
         }
         try {
             $aids = LmsAssessment::query()
-                ->where(function ($q) {
-                    $q->where('title', 'like', '%SCS Mock%')
-                        ->orWhere('title', 'like', '%SCS mock%');
-                })
+                ->where('title', 'like', '%SCS%')
+                ->where('title', 'like', '%Mock%')
                 ->pluck('id')
                 ->map(fn ($id) => (int) $id)
                 ->filter()
@@ -1621,6 +1627,9 @@ class LmsAssessmentService
             }
             $assessment = $assignment->assessment ?: LmsAssessment::query()->with('course')->find($assignment->assessment_id);
             if (! $assessment || (method_exists($assessment, 'trashed') && $assessment->trashed())) {
+                continue;
+            }
+            if (method_exists($assessment, 'isCimaScsNovemberTitle') && ! $assessment->isCimaScsNovemberTitle()) {
                 continue;
             }
             if ($kind && $assessment->kind !== $kind) {
@@ -1696,7 +1705,8 @@ class LmsAssessmentService
             $orig = $this->originalExamSittingFor($assessment);
             if ($orig && (int) $orig->id !== (int) $assignment->id
                 && empty($assignment->student_id)
-                && ! empty($assignment->class_batch_id)) {
+                && ! empty($assignment->class_batch_id)
+                && $this->assignmentIncludesStudent($orig, (int) $user->id)) {
                 $assignment = $orig;
             }
             if (method_exists($assignment, 'applyMissingExamWindow') && ! $assignment->available_from) {
@@ -2993,7 +3003,8 @@ class LmsAssessmentService
                 && ! ($assignment->isSelfSitting())
                 && ! $sittingHasThisStudentAttempt) {
                 $orig = $this->originalExamSittingFor($assessment);
-                if ($orig && (int) $orig->id !== (int) $assignment->id) {
+                if ($orig && (int) $orig->id !== (int) $assignment->id
+                    && $this->assignmentIncludesStudent($orig, (int) $user->id)) {
                     $assignment = $orig;
                     $asgId = (int) ($assignment->id ?? 0);
                 }

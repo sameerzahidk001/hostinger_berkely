@@ -132,10 +132,20 @@ class ClassBatch extends Model
         } catch (\Throwable $e) {
             $ids = collect();
         }
-        if ($rosterSaved) {
+        $batchId = (int) ($assignment->class_batch_id ?? 0);
+        $batchSitting = $batchId > 0 && empty($assignment->student_id);
+        if ($rosterSaved && $ids->isNotEmpty()) {
+            if ($batchSitting) {
+                $ids = $ids->merge(static::membersOnBatchAtAssignment($batchId, $assignment));
+            }
+
+            return $ids->map(fn ($id) => (int) $id)->unique()->filter()
+                ->reject(fn ($id) => $excluded->contains((int) $id))
+                ->values();
+        }
+        if ($rosterSaved && ! $batchSitting) {
             return $ids->reject(fn ($id) => $excluded->contains((int) $id))->values();
         }
-        $batchId = (int) ($assignment->class_batch_id ?? 0);
         if ($batchId > 0) {
             $ids = $ids->merge(static::membersOnBatchAtAssignment($batchId, $assignment))
                 ->map(fn ($id) => (int) $id)->unique()->filter()
