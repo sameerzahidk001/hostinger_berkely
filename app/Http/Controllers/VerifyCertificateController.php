@@ -146,6 +146,20 @@ class VerifyCertificateController extends Controller
             $cmsPage = null;
         }
 
+        if (trim(strip_tags((string) ($copy['html'] ?? ''))) === '' && $cmsPage) {
+            $parts = [];
+            foreach ($cmsPage->sections ?? [] as $section) {
+                $data = is_array($section->data ?? null) ? $section->data : [];
+                $html = trim((string) ($data['description'] ?? $data['content'] ?? ''));
+                if ($html !== '') {
+                    $parts[] = $html;
+                }
+            }
+            if ($parts !== []) {
+                $copy['html'] = implode('', $parts);
+            }
+        }
+
         return view('certificates.verify', [
             'code' => $code,
             'certificate' => $certificate,
