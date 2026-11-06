@@ -151,13 +151,13 @@ class MediaController extends Controller
 
     public function links(Request $request)
     {
-        @set_time_limit(25);
+        @set_time_limit(20);
         $rels = $request->input('rel', []);
         if (! is_array($rels)) {
             $rels = [$rels];
         }
         $files = [];
-        foreach (array_slice($rels, 0, 80) as $rel) {
+        foreach (array_slice($rels, 0, 8) as $rel) {
             $n = MediaAsset::normalizePath((string) $rel);
             if ($n === '' || str_contains($n, '..')) {
                 continue;
@@ -169,19 +169,18 @@ class MediaController extends Controller
             $files[] = ['rel' => $n, 'name' => basename($n)];
         }
 
-        $index = ['complete' => false];
         $usages = ['by_path' => [], 'by_name' => []];
-        try {
-            $svc = app(\App\Services\MediaLinkIndexService::class);
-            $index = $svc->ensure(8);
-            $usages = $svc->usagesFor($files, $index);
-        } catch (\Throwable $e) {
-            $index['complete'] = false;
+        if ($files !== []) {
+            try {
+                $usages = $this->usageIndexLite($files);
+            } catch (\Throwable $e) {
+                $usages = ['by_path' => [], 'by_name' => []];
+            }
         }
 
         return response()->json([
             'usages' => $usages,
-            'complete' => ! empty($index['complete']),
+            'complete' => true,
         ]);
     }
 
@@ -1300,6 +1299,125 @@ class MediaController extends Controller
         } catch (\Throwable $e) {
             return $fallback;
         }
+    }
+
+    /**
+     * Linked-page lookup for the current Media table page only (a few files).
+     *
+     * @param  array<int, array{rel:string,name:string}>  $files
+     * @return array{by_path: array<string, array<int, string>>, by_name: array<string, array<int, string>>}
+     */
+    private function usageIndexLite(array $files): array
+    {
+        $byPath = [];
+        $byName = [];
+        $put = function (array $group, array $tokens) use (&$byPath, &$byName) {
+            $tokens = array_values(array_unique(array_filter($tokens)));
+            if ($tokens === []) {
+                foreach ($group as $file) {
+                    $rel = strtolower(str_replace('\\', '/', (string) ($file['rel'] ?? '')));
+                    $name = strtolower((string) ($file['name'] ?? basename($rel)));
+                    $stem = strtolower((string) pathinfo($name, PATHINFO_FILENAME));
+                    if ($rel !== '' && ! isset($byPath[$rel])) {
+                        $byPath[$rel] = [];
+                    }
+                    if ($name !== '' && ! isset($byName[$name])) {
+                        $byName[$name] = [];
+                    }
+                    if (strlen($stem) >= 8 && ! isset($byName[$stem])) {
+                        $byName[$stem] = [];
+                    }
+                }
+
+                return;
+            }
+            foreach ($group as $file) {
+                $rel = strtolower(str_replace('\\', '/', (string) ($file['rel'] ?? '')));
+                $name = strtolower((string) ($file['name'] ?? basename($rel)));
+                $stem = strtolower((string) pathinfo($name, PATHINFO_FILENAME));
+                if ($rel !== '') {
+                    $byPath[$rel] = array_values(array_unique(array_merge($byPath[$rel] ?? [], $tokens)));
+                }
+                if ($name !== '') {
+                    $byName[$name] = array_values(array_unique(array_merge($byName[$name] ?? [], $tokens)));
+                }
+                if (strlen($stem) >= 8) {
+                    $byName[$stem] = array_values(array_unique(array_merge($byName[$stem] ?? [], $tokens)));
+                }
+            }
+        };
+
+        $groups = [];
+        foreach ($files as $file) {
+            $name = strtolower((string) ($file['name'] ?? basename((string) ($file['rel'] ?? ''))));
+            $stem = strtolower((string) pathinfo($name, PATHINFO_FILENAME));
+            $key = strlen($stem) >= 8 ? $stem : $name;
+            if ($key === '') {
+                continue;
+            }
+            $groups[$key][] = $file;
+        }
+
+        if (Schema::hasTable('page_sections') && Schema::hasTable('pages')) {
+            foreach ($groups as $stem => $group) {
+                $like = '%' . addcslashes((string) $stem, '%_\\') . '%';
+                try {
+                    $pages = DB::table('page_sections as s')
+                        ->join('pages as p', 'p.id', '=', 's.page_id')
+                        ->where('s.data', 'like', $like)
+                        ->select('p.id', 'p.page_name')
+                        ->distinct()
+                        ->limit(20)
+                        ->get();
+                } catch (\Throwable $e) {
+                    $pages = collect();
+                }
+                $tokens = [];
+                foreach ($pages as $page) {
+                    $label = trim((string) ($page->page_name ?? '')) ?: ('Page #' . $page->id);
+                    $tokens[] = $label . '|' . $this->mediaNamedUrl(
+                        'pages.edit',
+                        $page->id,
+                        url('/admin/pages/' . $page->id . '/edit')
+                    );
+                }
+                $put($group, $tokens);
+            }
+        }
+
+        try {
+            if (class_exists(Course::class) && Schema::hasTable('courses')) {
+                $cols = array_values(array_filter(
+                    ['thumbnail', 'post_image', 'overview_img', 'banner_section', 'image_text_2col_card'],
+                    fn ($col) => Schema::hasColumn('courses', $col)
+                ));
+                if ($cols !== []) {
+                    foreach ($groups as $stem => $group) {
+                        $like = '%' . addcslashes((string) $stem, '%_\\') . '%';
+                        $q = Course::query()->select(array_merge(['id', 'title'], $cols));
+                        $q->where(function ($outer) use ($like, $cols) {
+                            foreach ($cols as $col) {
+                                $outer->orWhere($col, 'like', $like);
+                            }
+                        });
+                        $tokens = [];
+                        foreach ($q->limit(20)->get() as $course) {
+                            $label = 'Course: ' . trim((string) ($course->title ?: ('#' . $course->id)));
+                            $tokens[] = $label . '|' . $this->mediaNamedUrl(
+                                'course.edit',
+                                $course->id,
+                                url('/admin/course/' . $course->id . '/edit')
+                            );
+                        }
+                        $put($group, $tokens);
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // Pages still show if course columns differ.
+        }
+
+        return ['by_path' => $byPath, 'by_name' => $byName];
     }
 
     /**
