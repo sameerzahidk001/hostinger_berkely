@@ -6,12 +6,10 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Http;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\PaymentGateway;
+use App\Services\StripeCheckoutService;
 use Illuminate\Http\Request;
-use Stripe\Checkout\Session;
 use App\Models\Installment;
-use Stripe\StripeClient;
 use App\Models\Payment;
-use Stripe\Stripe;
 
 class InstallmentController extends Controller
 {
@@ -30,35 +28,16 @@ class InstallmentController extends Controller
         $card = $request->card;
 
         // Get payment gateway config
-        $stripeGateway = PaymentGateway::where('slug', 'stripe')->first();
         $paypalGateway = PaymentGateway::where('slug', 'paypal')->first();
 
         if ($request->method === 'stripe') {
-            $secret = $stripeGateway->test_keys['secret_key'] ?? null;
-
-            if (!$secret) {
-                return response()->json(['success' => false, 'message' => 'Stripe key missing']);
+            try {
+                $session = app(StripeCheckoutService::class)->createCheckoutSession($installment, $request);
+            } catch (\Throwable $e) {
+                return response()->json(['success' => false, 'message' => $e->getMessage()]);
             }
 
-            $stripe = new StripeClient($secret);
-            $session = $stripe->checkout->sessions->create([
-                'payment_method_types' => ['card'],
-                'line_items' => [[
-                    'price_data' => [
-                        'currency' => 'usd',
-                        'product_data' => [
-                            'name' => "Installment: {$installment->name}",
-                        ],
-                        'unit_amount' => $amount * 100,
-                    ],
-                    'quantity' => 1,
-                ]],
-                'mode' => 'payment',
-                'success_url' => route('stripe.success', $installment->id),
-                'cancel_url' => route('stripe.cancel'),
-            ]);
-
-            return response()->json(['success' => true, 'url' => $session->url]);
+            return response()->json(['success' => true, 'url' => $session['checkout_url']]);
         }
 
         if ($request->method === 'paypal') {

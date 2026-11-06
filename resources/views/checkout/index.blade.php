@@ -121,6 +121,7 @@
                                 class="w-full mt-6 bg-[#bc1904] hover:bg-[#a21503] transition-colors duration-200 border border-transparent rounded-lg py-3 px-4 flex items-center justify-center text-base font-semibold text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#bc1904] shadow-sm">
                                 Complete Order
                             </button>
+                            <p class="mt-3 text-center text-xs text-gray-500">After this, open Pay Now on your invoice and choose USD (Stripe) or AED.</p>
 
                             <p class="mt-4 text-center text-sm text-gray-500">
                                 or
