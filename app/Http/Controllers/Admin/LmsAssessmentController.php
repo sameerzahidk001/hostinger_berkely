@@ -1147,7 +1147,7 @@ class LmsAssessmentController extends Controller
         if ($resultsView) {
             $haveAttemptIds = [];
             $rows = $rows->filter(function ($r) use (&$haveAttemptIds) {
-                $att = $r['attempt'] ?? null;
+                $att = $r['attempt'] ?? ($r['sitting_display']['_attempt'] ?? null);
                 if (empty($att->id)) {
                     return false;
                 }
@@ -1159,33 +1159,6 @@ class LmsAssessmentController extends Controller
 
                 return true;
             })->values();
-            foreach ($allAttempts as $att) {
-                if (isset($haveAttemptIds[(int) ($att->id ?? 0)])) {
-                    continue;
-                }
-                $student = $att->user
-                    ?: ($peopleById->get((int) $att->user_id) ?? User::query()->find($att->user_id));
-                if (! $student) {
-                    continue;
-                }
-                $assessment = $att->assessment
-                    ?: ($assessmentsById->get((int) $att->assessment_id) ?? LmsAssessment::withTrashed()->find($att->assessment_id));
-                if (! $assessment) {
-                    continue;
-                }
-                $asg = $this->assignmentForAttempt($att, $assignments, $assignmentsById);
-                $row = $this->applySittingDisplayToRow([
-                    'assessment' => $assessment,
-                    'student' => $student,
-                    'assignment' => $asg,
-                    'attempt' => $att,
-                    'attempt_number' => 1,
-                    'attempt_total' => max(1, (int) ($assessment->max_attempts ?? 1)),
-                ]);
-                $rows->push($row);
-                $haveAttemptIds[(int) $att->id] = true;
-            }
-            $rows = $rows->values();
         }
         $rows = $this->dedupeAssignedSittingRows($rows);
         $rows = $this->renumberCollapsedAttempts($rows);
@@ -2360,16 +2333,11 @@ class LmsAssessmentController extends Controller
                 if ($attAsgId === (int) ($asg->id ?? 0)) {
                     return true;
                 }
-                if ($attAsgId <= 0 || ! $attAsg) {
-                    return true;
+                if ($attAsgId > 0) {
+                    return false;
                 }
-                $onOwnSitting = $list->contains(function ($row) use ($attAsgId, $uid) {
-                    return (int) ($row['assignment']->id ?? 0) === $attAsgId
-                        && (int) ($row['student']->id ?? 0) === $uid
-                        && ! empty($row['attempt']);
-                });
 
-                return ! $onOwnSitting;
+                return (int) ($att->assessment_id ?? 0) === (int) ($asg->assessment_id ?? $assessment->id ?? 0);
             });
             if ($match) {
                 $r['attempt'] = $match;
@@ -3313,31 +3281,21 @@ class LmsAssessmentController extends Controller
             return null;
         }
         try {
-            $aids = $this->sameTitleAssessmentIds($assessment);
-            if ($aids === []) {
-                $aids = [(int) $assessment->id];
-            }
             $q = LmsAssessmentAttempt::query()
-                ->whereIn('assessment_id', $aids)
                 ->where('user_id', $uid)
                 ->where(function ($q) {
                     $q->whereNotNull('started_at')
                         ->orWhereIn('status', ['in_progress', 'submitted', 'graded', 'expired']);
                 })
                 ->orderByDesc('id');
-            $selfIds = LmsAssessmentAssignment::query()
-                ->whereIn('assessment_id', $aids)
-                ->get()
-                ->filter(fn ($a) => method_exists($a, 'isSelfSitting') && $a->isSelfSitting())
-                ->pluck('id')
-                ->map(fn ($id) => (int) $id)
-                ->filter()
-                ->values()
-                ->all();
-            if ($selfIds !== []) {
-                $q->where(function ($q) use ($selfIds) {
-                    $q->whereNull('assignment_id')->orWhereNotIn('assignment_id', $selfIds);
-                });
+            if ($asg && ! empty($asg->id)) {
+                $q->where('assignment_id', (int) $asg->id);
+            } else {
+                $aids = $this->sameTitleAssessmentIds($assessment);
+                if ($aids === []) {
+                    $aids = [(int) $assessment->id];
+                }
+                $q->whereIn('assessment_id', $aids);
             }
 
             return $q->first();
