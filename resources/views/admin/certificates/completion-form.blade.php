@@ -98,13 +98,9 @@
                         </p>
                     </div>
 
-                    <div class="col-md-3 form-group">
+                    <div class="col-md-6 form-group">
                         <label>Awarded / completion date</label>
                         <input type="date" name="completed_at" class="form-control" value="{{ old('completed_at', now()->toDateString()) }}">
-                    </div>
-                    <div class="col-md-3 form-group">
-                        <label>Student ID (optional override)</label>
-                        <input type="text" name="student_number" class="form-control" value="{{ old('student_number') }}" maxlength="100" placeholder="e.g. BID20099805B">
                     </div>
                     <div class="col-md-4 form-group">
                         <label>Course subtitle (optional)</label>
