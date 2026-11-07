@@ -3,18 +3,23 @@
 <head>
 <meta charset="utf-8">
 <style>
-  @page { margin: 0; }
+  @page { size: A4 portrait; margin: 0; }
   * { box-sizing: border-box; }
-  body {
+  html, body {
     font-family: DejaVu Sans, sans-serif;
     color: #1f1f1f;
     margin: 0;
+    padding: 0;
+    width: 210mm;
+    height: 297mm;
   }
   .page {
     position: relative;
     width: 210mm;
     height: 297mm;
     overflow: hidden;
+    page-break-after: avoid;
+    page-break-inside: avoid;
   }
   .bg {
     position: absolute;

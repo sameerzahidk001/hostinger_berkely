@@ -176,13 +176,9 @@ class CertificateIssuerService
             return 'Revoked certificates cannot be emailed. Re-issue first.';
         }
 
+        $cert->loadMissing('template');
+        $cert = $this->refreshPdf($cert);
         $pdfAbs = public_path((string) $cert->pdf_path);
-        if (! $cert->pdf_path || ! File::exists($pdfAbs)) {
-            $cert->loadMissing('template');
-            $cert->pdf_path = $this->renderPdf($cert, $cert->template ?: CertificateTemplate::ensureDefault());
-            $cert->save();
-            $pdfAbs = public_path((string) $cert->pdf_path);
-        }
         if (! File::exists($pdfAbs)) {
             return 'Certificate PDF could not be generated.';
         }
@@ -317,8 +313,9 @@ class CertificateIssuerService
             'schoolName' => $template ? $template->schoolName() : 'Berkeley School of Business, Arts & Sciences',
         ])->render();
 
-        $orientation = $template ? $template->paperOrientation() : 'portrait';
-        $pdf = Pdf::loadHTML($html)->setPaper('a4', $orientation);
+        // Artwork and HTML are A4 portrait. Landscape paper leaves a white strip
+        // and spills the footer onto a second page in Zoho/Gmail PDF preview.
+        $pdf = Pdf::loadHTML($html)->setPaper('a4', 'portrait');
         // Unique filename when multiple certs share similar codes over time.
         $fileName = Str::slug($cert->certificate_code) . '-' . $cert->id . '.pdf';
         $absolute = $dir . DIRECTORY_SEPARATOR . $fileName;
