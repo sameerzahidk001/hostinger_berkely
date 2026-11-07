@@ -325,9 +325,7 @@ class CertificateIssuerService
             $options = $dompdf->getOptions();
             $options->set('isRemoteEnabled', true);
             $options->set('isHtml5ParserEnabled', true);
-            if (method_exists($options, 'setChroot')) {
-                $options->setChroot(public_path());
-            }
+            $options->set('dpi', 96);
         } catch (\Throwable $e) {
             // PDF still writes with default options.
         }
@@ -431,17 +429,16 @@ class CertificateIssuerService
             return null;
         }
         $relative = ltrim(str_replace('\\', '/', $relative), '/');
-        foreach ([
-            public_path($relative),
-            base_path('public/' . $relative),
-            base_path($relative),
-        ] as $abs) {
-            if (is_file($abs)) {
-                return $this->pdfFileSrc($abs);
-            }
+        $abs = $this->resolvePublicFile($relative);
+        if ($abs) {
+            return $this->pdfFileSrc($abs);
         }
 
-        return null;
+        try {
+            return url('/' . $relative);
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
     public function pdfFileSrc(?string $absolute): ?string
@@ -449,18 +446,84 @@ class CertificateIssuerService
         if (! $absolute || ! is_file($absolute)) {
             return null;
         }
+
+        $jpeg = $this->pdfJpegData($absolute);
+        if ($jpeg) {
+            return 'data:image/jpeg;base64,' . base64_encode($jpeg);
+        }
+
         $raw = @file_get_contents($absolute);
         if ($raw === false || $raw === '') {
             return null;
         }
         $mime = 'image/png';
-        if (function_exists('mime_content_type')) {
-            $detected = @mime_content_type($absolute);
-            if (is_string($detected) && str_starts_with($detected, 'image/')) {
-                $mime = $detected;
-            }
+        $ext = strtolower((string) pathinfo($absolute, PATHINFO_EXTENSION));
+        if (in_array($ext, ['jpg', 'jpeg'], true)) {
+            $mime = 'image/jpeg';
+        } elseif ($ext === 'gif') {
+            $mime = 'image/gif';
+        } elseif ($ext === 'webp') {
+            $mime = 'image/webp';
         }
 
         return 'data:' . $mime . ';base64,' . base64_encode($raw);
+    }
+
+    private function resolvePublicFile(string $relative): ?string
+    {
+        $candidates = [
+            public_path($relative),
+            base_path('public/' . $relative),
+            base_path($relative),
+        ];
+        $doc = isset($_SERVER['DOCUMENT_ROOT']) ? rtrim(str_replace('\\', '/', (string) $_SERVER['DOCUMENT_ROOT']), '/') : '';
+        if ($doc !== '') {
+            $candidates[] = $doc . '/' . $relative;
+        }
+        foreach ($candidates as $abs) {
+            if ($abs && is_file($abs) && filesize($abs) > 32) {
+                return $abs;
+            }
+        }
+
+        return null;
+    }
+
+    private function pdfJpegData(string $absolute): ?string
+    {
+        if (! function_exists('imagecreatefromstring') || ! function_exists('imagejpeg')) {
+            return null;
+        }
+        $raw = @file_get_contents($absolute);
+        if ($raw === false || $raw === '') {
+            return null;
+        }
+        $src = @imagecreatefromstring($raw);
+        if (! $src) {
+            return null;
+        }
+        $w = imagesx($src);
+        $h = imagesy($src);
+        if ($w < 1 || $h < 1) {
+            imagedestroy($src);
+
+            return null;
+        }
+        $maxW = 1240;
+        $maxH = 1754;
+        $scale = min(1, $maxW / $w, $maxH / $h);
+        $nw = max(1, (int) round($w * $scale));
+        $nh = max(1, (int) round($h * $scale));
+        $dst = imagecreatetruecolor($nw, $nh);
+        $white = imagecolorallocate($dst, 255, 255, 255);
+        imagefilledrectangle($dst, 0, 0, $nw, $nh, $white);
+        imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
+        ob_start();
+        imagejpeg($dst, null, 82);
+        $jpeg = ob_get_clean();
+        imagedestroy($src);
+        imagedestroy($dst);
+
+        return is_string($jpeg) && $jpeg !== '' ? $jpeg : null;
     }
 }

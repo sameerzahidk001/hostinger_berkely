@@ -255,4 +255,14 @@ class CertificateTemplate extends Model
 
         return $v !== '' ? $v : self::DEFAULT_BG;
     }
+
+    public function imageViewUrl(?string $path): ?string
+    {
+        $path = ltrim(str_replace('\\', '/', trim((string) $path)), '/');
+        if ($path === '') {
+            return null;
+        }
+
+        return asset($path);
+    }
 }

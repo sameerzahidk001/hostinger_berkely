@@ -78,18 +78,43 @@
 
                 <h4>Images</h4>
                 <div class="row">
+                    @php
+                        $bgView = $template->imageViewUrl($template->resolvedBackgroundPath());
+                        $logoView = $template->imageViewUrl($template->logo_path);
+                        $sealView = $template->imageViewUrl($template->seal_path);
+                        $leftView = $template->imageViewUrl($template->signer_left_signature);
+                        $rightView = $template->imageViewUrl($template->signer_right_signature);
+                    @endphp
                     <div class="col-md-4 form-group">
                         <label>Background</label>
                         <input type="file" name="background_image" class="form-control" accept="image/*">
                         <p class="help-block m-b-none">Leave empty to use the Berkeley background. PNG/JPG up to 2 MB.</p>
+                        @if($bgView)
+                            <p class="help-block m-b-none" style="margin-top:8px;">
+                                <a href="{{ $bgView }}" target="_blank" rel="noopener">View</a>
+                            </p>
+                            <img src="{{ $bgView }}" alt="Background" style="max-width:100%;max-height:140px;border:1px solid #e5e7eb;margin-top:4px;">
+                        @endif
                     </div>
                     <div class="col-md-4 form-group">
                         <label>Logo (optional extra)</label>
                         <input type="file" name="logo_image" class="form-control" accept="image/*">
+                        @if($logoView)
+                            <p class="help-block m-b-none" style="margin-top:8px;">
+                                <a href="{{ $logoView }}" target="_blank" rel="noopener">View</a>
+                            </p>
+                            <img src="{{ $logoView }}" alt="Logo" style="max-width:100%;max-height:80px;border:1px solid #e5e7eb;margin-top:4px;">
+                        @endif
                     </div>
                     <div class="col-md-4 form-group">
                         <label>Seal / badge (optional extra)</label>
                         <input type="file" name="seal_image" class="form-control" accept="image/*">
+                        @if($sealView)
+                            <p class="help-block m-b-none" style="margin-top:8px;">
+                                <a href="{{ $sealView }}" target="_blank" rel="noopener">View</a>
+                            </p>
+                            <img src="{{ $sealView }}" alt="Seal" style="max-width:100%;max-height:80px;border:1px solid #e5e7eb;margin-top:4px;">
+                        @endif
                     </div>
                 </div>
 
@@ -109,8 +134,11 @@
                             <div class="form-group">
                                 <label>E-signature image</label>
                                 <input type="file" name="signer_left_image" class="form-control" accept="image/*">
-                                @if($template->signer_left_signature)
-                                    <p class="help-block m-b-none">Current: <a href="{{ asset($template->signer_left_signature) }}" target="_blank" rel="noopener">view</a></p>
+                                @if($leftView)
+                                    <p class="help-block m-b-none" style="margin-top:8px;">
+                                        <a href="{{ $leftView }}" target="_blank" rel="noopener">View</a>
+                                    </p>
+                                    <img src="{{ $leftView }}" alt="Left signature" style="max-height:48px;max-width:100%;margin-top:4px;">
                                 @endif
                             </div>
                         </div>
@@ -129,8 +157,11 @@
                             <div class="form-group">
                                 <label>E-signature image</label>
                                 <input type="file" name="signer_right_image" class="form-control" accept="image/*">
-                                @if($template->signer_right_signature)
-                                    <p class="help-block m-b-none">Current: <a href="{{ asset($template->signer_right_signature) }}" target="_blank" rel="noopener">view</a></p>
+                                @if($rightView)
+                                    <p class="help-block m-b-none" style="margin-top:8px;">
+                                        <a href="{{ $rightView }}" target="_blank" rel="noopener">View</a>
+                                    </p>
+                                    <img src="{{ $rightView }}" alt="Right signature" style="max-height:48px;max-width:100%;margin-top:4px;">
                                 @endif
                             </div>
                         </div>
