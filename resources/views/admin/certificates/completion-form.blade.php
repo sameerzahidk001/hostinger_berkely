@@ -86,6 +86,22 @@
                     </div>
 
                     <div class="col-md-6 form-group">
+                        <label>Awarded / completion date</label>
+                        <input type="date" name="completed_at" class="form-control" value="{{ old('completed_at', now()->toDateString()) }}">
+                    </div>
+                    <div class="col-md-6 form-group">
+                        <label>Course subtitle (optional)</label>
+                        <input type="text" name="course_subtitle" class="form-control" value="{{ old('course_subtitle') }}" placeholder="e.g. (CIA Challenge Exam Training)">
+                    </div>
+                    <div class="col-md-6 form-group">
+                        <label>Programme duration</label>
+                        <input type="text" name="programme_duration" class="form-control" value="{{ old('programme_duration') }}" placeholder="e.g. 6 Months">
+                    </div>
+                    <div class="col-md-6 form-group">
+                        <label>CPD hours</label>
+                        <input type="text" name="cpd_hours" class="form-control" value="{{ old('cpd_hours') }}" placeholder="e.g. 30">
+                    </div>
+                    <div class="col-md-12 form-group">
                         <label>Certificate template *</label>
                         <select name="template_id" class="form-control" required @disabled($templates->isEmpty())>
                             <option value="">Select template</option>
@@ -98,23 +114,6 @@
                         <p class="help-block m-b-none">
                             <a href="{{ route('admin.certificates.templates.index') }}" target="_blank" rel="noopener">Manage templates</a>
                         </p>
-                    </div>
-
-                    <div class="col-md-6 form-group">
-                        <label>Awarded / completion date</label>
-                        <input type="date" name="completed_at" class="form-control" value="{{ old('completed_at', now()->toDateString()) }}">
-                    </div>
-                    <div class="col-md-4 form-group">
-                        <label>Course subtitle (optional)</label>
-                        <input type="text" name="course_subtitle" class="form-control" value="{{ old('course_subtitle') }}" placeholder="e.g. (CIA Challenge Exam Training)">
-                    </div>
-                    <div class="col-md-4 form-group">
-                        <label>Programme duration</label>
-                        <input type="text" name="programme_duration" class="form-control" value="{{ old('programme_duration') }}" placeholder="e.g. 6 Months">
-                    </div>
-                    <div class="col-md-4 form-group">
-                        <label>CPD hours</label>
-                        <input type="text" name="cpd_hours" class="form-control" value="{{ old('cpd_hours') }}" placeholder="e.g. 30">
                     </div>
                     <div class="col-md-12 form-group">
                         <label>Notes (internal)</label>
