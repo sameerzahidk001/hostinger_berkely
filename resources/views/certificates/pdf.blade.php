@@ -55,8 +55,8 @@
     text-transform: uppercase;
     letter-spacing: 2px;
   }
-  .heading .h1 { font-size: 22px; font-weight: bold; margin: 0; }
-  .heading .h2 { font-size: 13px; font-weight: bold; margin: 3px 0 0; letter-spacing: 3px; }
+  .heading .h1 { font-size: 32px; font-weight: bold; margin: 0; }
+  .heading .h2 { font-size: 18px; font-weight: bold; margin: 4px 0 0; letter-spacing: 3px; }
   .student {
     position: absolute;
     top: 78mm;
