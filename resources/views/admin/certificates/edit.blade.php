@@ -27,7 +27,7 @@
                     </div>
                     <div class="col-md-4 form-group">
                         <label>Student ID</label>
-                        <input type="text" class="form-control" value="{{ $cert->student_number ?: optional($cert->user)->studentIdValue() }}" readonly>
+                        <input type="text" class="form-control" value="{{ $cert->student_number ?: (optional($cert->user)->student_id ?? optional($cert->user)->student_number) }}" readonly>
                     </div>
                     <div class="col-md-4 form-group">
                         <label>Status</label>
@@ -55,7 +55,11 @@
                     </div>
                     <div class="col-md-4 form-group">
                         <label>Awarded / completion date</label>
-                        <input type="date" name="completion_date" class="form-control" value="{{ old('completion_date', optional($cert->completion_date)->format('Y-m-d')) }}">
+                        @php
+                            $awarded = $cert->completion_date;
+                            $awardedVal = is_object($awarded) ? $awarded->format('Y-m-d') : substr((string) $awarded, 0, 10);
+                        @endphp
+                        <input type="date" name="completion_date" class="form-control" value="{{ old('completion_date', $awardedVal) }}">
                     </div>
                     <div class="col-md-8 form-group">
                         <label>Template</label>

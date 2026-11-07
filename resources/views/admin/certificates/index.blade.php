@@ -149,10 +149,9 @@
                                     <div class="text-muted small" style="margin-top:4px;">{{ $row->marked_by_name ?: '—' }}</div>
                                 </td>
                                 <td>
-                                    <a class="btn btn-xs btn-white" href="{{ route('admin.certificates.completions.edit', $row->id) }}">Edit</a>
                                     @forelse($certs as $cert)
                                         <div style="margin-bottom:8px;">
-                                            <a class="btn btn-xs btn-white" href="{{ route('admin.certificates.edit', $cert->id) }}">Edit cert</a>
+                                            <a class="btn btn-xs btn-white" href="{{ route('admin.certificates.edit', $cert->id) }}">Edit</a>
                                             <a class="btn btn-xs btn-white" href="{{ route('admin.certificates.preview', $cert->id) }}" target="_blank" rel="noopener">Preview</a>
                                             <a class="btn btn-xs btn-info" href="{{ route('admin.certificates.download', $cert->id) }}"><i class="fa fa-download"></i> PDF</a>
                                             @if(! $cert->isRevoked())
@@ -180,6 +179,7 @@
                                             @endif
                                         </div>
                                     @empty
+                                        <a class="btn btn-xs btn-white" href="{{ route('admin.certificates.completions.edit', $row->id) }}">Edit</a>
                                         <form method="POST" action="{{ route('admin.certificates.completions.issue', $row->id) }}" style="display:inline;">
                                             @csrf
                                             <input type="hidden" name="send_email" value="1">

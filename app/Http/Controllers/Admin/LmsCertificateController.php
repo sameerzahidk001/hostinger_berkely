@@ -222,9 +222,26 @@ class LmsCertificateController extends Controller
     public function edit(int $id)
     {
         LmsCertificate::ensureTable();
+        StudentCompletion::ensureTable();
         CertificateTemplate::ensureTable();
-        $cert = LmsCertificate::query()->with(['user', 'course', 'template'])->findOrFail($id);
         $templates = CertificateTemplate::activeOptions();
+
+        $cert = LmsCertificate::query()->with(['user', 'course', 'template'])->find($id);
+        if (! $cert) {
+            $completion = StudentCompletion::query()->with(['user', 'course', 'template', 'certificates'])->find($id);
+            if ($completion) {
+                $cert = $completion->certificates->sortByDesc('id')->first();
+                if ($cert) {
+                    $cert->load(['user', 'course', 'template']);
+                } else {
+                    return view('admin.certificates.completion-edit', [
+                        'completion' => $completion,
+                        'templates' => $templates,
+                    ]);
+                }
+            }
+        }
+        abort_unless($cert, 404);
 
         return view('admin.certificates.edit', [
             'cert' => $cert,
@@ -235,7 +252,17 @@ class LmsCertificateController extends Controller
     public function update(Request $request, int $id, CertificateIssuerService $issuer)
     {
         LmsCertificate::ensureTable();
-        $cert = LmsCertificate::query()->findOrFail($id);
+        $cert = LmsCertificate::query()->find($id);
+        if (! $cert) {
+            $completion = StudentCompletion::query()->find($id);
+            if ($completion) {
+                $cert = LmsCertificate::query()
+                    ->where('completion_id', $completion->id)
+                    ->orderByDesc('id')
+                    ->first();
+            }
+        }
+        abort_unless($cert, 404);
         $data = $request->validate([
             'student_name' => 'required|string|max:255',
             'course_title' => 'required|string|max:500',
@@ -243,7 +270,7 @@ class LmsCertificateController extends Controller
             'programme_duration' => 'nullable|string|max:255',
             'cpd_hours' => 'nullable|string|max:100',
             'completion_date' => 'nullable|date',
-            'template_id' => 'nullable|integer|exists:certificate_templates,id',
+            'template_id' => 'nullable|integer',
             'regenerate_pdf' => 'nullable|boolean',
         ]);
 
@@ -258,12 +285,18 @@ class LmsCertificateController extends Controller
         }
         $cert->save();
 
+        $pdfNote = '';
         if ($request->boolean('regenerate_pdf', true) && ! $cert->isRevoked()) {
-            $issuer->refreshPdf($cert->fresh());
+            try {
+                $issuer->refreshPdf($cert->fresh());
+                $pdfNote = ' and PDF updated.';
+            } catch (\Throwable $e) {
+                $pdfNote = '. Details saved, but the PDF could not be regenerated.';
+            }
         }
 
         return redirect()
             ->route('admin.certificates.index')
-            ->with('success', 'Certificate details saved' . ($request->boolean('regenerate_pdf', true) ? ' and PDF updated.' : '.'));
+            ->with('success', 'Certificate details saved' . $pdfNote);
     }
 }
