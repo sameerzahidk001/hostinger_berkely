@@ -21,6 +21,13 @@ class VerifyCertificateController extends Controller
         $inputCode = rawurldecode($inputCode);
         $sid = trim((string) ($request->query('sid') ?: $request->input('student_number', '')));
         $sid = rawurldecode($sid);
+        $scan = $request->session()->get('ecert_scan', []);
+        if ($inputCode === '') {
+            $inputCode = trim((string) ($scan['code'] ?? ''));
+        }
+        if ($sid === '') {
+            $sid = trim((string) ($scan['student_number'] ?? ''));
+        }
         if ($inputCode !== '' && $sid === '') {
             $matched = $this->findByCode($inputCode);
             $sid = trim((string) ($matched->student_number ?? ''));
@@ -30,8 +37,14 @@ class VerifyCertificateController extends Controller
             'student_number' => $sid,
         ]);
 
-        return $this->verifyView($request, $inputCode, null, null, [
-            'student_number' => old('student_number', $sid),
+        $verifierReady = $this->verifierFromSession($request) !== null;
+        $hasScanInUrl = trim((string) ($code ?: $request->query('sid', ''))) !== '';
+        if (! $verifierReady && $hasScanInUrl) {
+            return redirect()->to(url('/ecert-verify'));
+        }
+
+        return $this->verifyView($request, $verifierReady ? $inputCode : '', null, null, [
+            'student_number' => old('student_number', $verifierReady ? $sid : ''),
             'verifier_name' => old('verifier_name', ''),
             'verifier_email' => old('verifier_email', ''),
             'verifier_phone' => old('verifier_phone', ''),
@@ -61,16 +74,8 @@ class VerifyCertificateController extends Controller
 
         $request->session()->put('ecert_verifier', $data);
 
-        $scan = $request->session()->get('ecert_scan', []);
-        $code = trim((string) ($request->input('scan_code') ?: ($scan['code'] ?? '')));
-        $sid = trim((string) ($request->input('scan_sid') ?: ($scan['student_number'] ?? '')));
-        $url = url('/ecert-verify' . ($code !== '' ? '/' . rawurlencode($code) : ''));
-        if ($sid !== '') {
-            $url .= '?sid=' . rawurlencode($sid);
-        }
-
-        return redirect()->to($url)
-            ->with('success', 'Verifier details saved. Check Student ID and Certificate Number to continue.');
+        return redirect()->to(url('/ecert-verify'))
+            ->with('success', 'Verifier details saved. Student ID and Certificate Number are ready to check.');
     }
 
     public function check(Request $request)
@@ -150,6 +155,16 @@ class VerifyCertificateController extends Controller
                     $old[$key] = $value;
                 }
             }
+            $scan = $request->session()->get('ecert_scan', []);
+            if ($code === '') {
+                $code = trim((string) ($scan['code'] ?? ''));
+            }
+            if (trim((string) ($old['student_number'] ?? '')) === '') {
+                $old['student_number'] = trim((string) ($scan['student_number'] ?? ''));
+            }
+        } else {
+            $old['student_number'] = '';
+            $code = '';
         }
 
         $cmsPage = null;
@@ -189,9 +204,9 @@ class VerifyCertificateController extends Controller
         }
 
         return view('certificates.verify', [
-            'code' => $code,
-            'certificate' => $certificate,
-            'result' => $result,
+            'code' => $verifierReady ? $code : '',
+            'certificate' => $verifierReady ? $certificate : null,
+            'result' => $verifierReady ? $result : null,
             'old' => $old,
             'cmsPage' => $cmsPage,
             'copy' => $copy,
