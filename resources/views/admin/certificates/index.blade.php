@@ -189,16 +189,6 @@
                                             <button type="submit" class="btn btn-xs btn-primary">Issue + email</button>
                                         </form>
                                     @endforelse
-                                    @if($issued->isNotEmpty())
-                                        <form method="POST" action="{{ route('admin.certificates.completions.issue', $row->id) }}" style="display:inline;">
-                                            @csrf
-                                            <input type="hidden" name="send_email" value="1">
-                                            @if($row->template_id)
-                                                <input type="hidden" name="template_id" value="{{ $row->template_id }}">
-                                            @endif
-                                            <button type="submit" class="btn btn-xs btn-warning" title="Issue another certificate for this student/course">Issue another</button>
-                                        </form>
-                                    @endif
                                 </td>
                             </tr>
                         @empty
