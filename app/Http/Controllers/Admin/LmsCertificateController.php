@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\CertificateVerifyLog;
+use App\Models\Course;
 use App\Models\LmsCertificate;
 use App\Models\StudentCompletion;
 use App\Models\User;
@@ -20,40 +21,75 @@ class LmsCertificateController extends Controller
     {
         LmsCertificate::ensureTable();
         StudentCompletion::ensureTable();
+        CertificateTemplate::ensureTable();
 
-        $q = LmsCertificate::query()->with(['user:id,name,email', 'course:id,title']);
+        $userCols = ['id', 'name', 'email'];
+        foreach (['first_name', 'last_name', 'student_id', 'student_number'] as $col) {
+            if (Schema::hasColumn('users', $col)) {
+                $userCols[] = $col;
+            }
+        }
+
+        $q = StudentCompletion::query()->with([
+            'user:' . implode(',', $userCols),
+            'course:id,title',
+            'batch:id,code,name',
+            'template:id,name',
+            'certificates',
+        ]);
         if ($request->filled('search')) {
             $s = trim((string) $request->input('search'));
             $q->where(function ($outer) use ($s) {
-                $outer->where('certificate_code', 'like', '%' . $s . '%')
-                    ->orWhere('student_name', 'like', '%' . $s . '%')
-                    ->orWhere('student_number', 'like', '%' . $s . '%')
-                    ->orWhere('course_title', 'like', '%' . $s . '%')
+                $outer->where('notes', 'like', '%' . $s . '%')
+                    ->orWhere('marked_by_name', 'like', '%' . $s . '%')
                     ->orWhere('course_subtitle', 'like', '%' . $s . '%');
+                if (Schema::hasColumn('student_completions', 'student_number')) {
+                    $outer->orWhere('student_number', 'like', '%' . $s . '%');
+                }
+                $outer
+                    ->orWhereHas('user', function ($u) use ($s) {
+                        $u->where('name', 'like', '%' . $s . '%')
+                            ->orWhere('email', 'like', '%' . $s . '%');
+                        if (Schema::hasColumn('users', 'student_id')) {
+                            $u->orWhere('student_id', 'like', '%' . $s . '%');
+                        }
+                    })
+                    ->orWhereHas('course', function ($c) use ($s) {
+                        $c->where('title', 'like', '%' . $s . '%');
+                    })
+                    ->orWhereHas('certificates', function ($c) use ($s) {
+                        $c->where('certificate_code', 'like', '%' . $s . '%')
+                            ->orWhere('student_name', 'like', '%' . $s . '%')
+                            ->orWhere('student_number', 'like', '%' . $s . '%');
+                    });
             });
         }
-        if ($request->filled('status')) {
-            $q->where('status', $request->input('status'));
+        if ($request->filled('course_id')) {
+            $q->where('course_id', (int) $request->input('course_id'));
+        }
+        $status = (string) $request->input('status', '');
+        if ($status === 'issued' || $status === 'certificate_issued') {
+            $q->whereHas('certificates', function ($c) {
+                $c->where('status', 'issued');
+            });
+        } elseif ($status === 'revoked') {
+            $q->whereHas('certificates', function ($c) {
+                $c->where('status', 'revoked');
+            });
+        } elseif ($status === 'not_issued' || $status === 'completed') {
+            $q->whereDoesntHave('certificates');
         }
 
-        $rows = $q->orderByDesc('issued_at')->orderByDesc('id')->paginate(20)->withQueryString();
-
-        $pending = collect();
-        if ($request->input('status') === '' || $request->input('status') === null) {
-            $pending = StudentCompletion::query()
-                ->with(['user', 'course', 'template'])
-                ->whereDoesntHave('certificates')
-                ->orderByDesc('id')
-                ->limit(100)
-                ->get();
-        }
+        $rows = $q->orderByDesc('completed_at')->orderByDesc('id')->paginate(20)->withQueryString();
+        $courses = Course::query()->orderBy('title')->limit(500)->get(['id', 'title']);
 
         return view('admin.certificates.index', [
             'rows' => $rows,
-            'pending' => $pending,
+            'courses' => $courses,
             'filters' => [
                 'search' => (string) $request->input('search', ''),
-                'status' => (string) $request->input('status', ''),
+                'status' => $status,
+                'course_id' => (string) $request->input('course_id', ''),
             ],
         ]);
     }
