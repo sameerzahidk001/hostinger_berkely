@@ -12,7 +12,7 @@
     <div class="col-lg-5 text-right" style="padding-top:20px;">
         <a href="{{ route('admin.certificates.templates.index') }}" class="btn btn-white">Templates</a>
         <a href="{{ route('admin.certificates.index') }}" class="btn btn-white">Issued certificates</a>
-        <a href="{{ route('admin.certificates.completions.create') }}" class="btn btn-primary"><i class="fa fa-plus"></i> Mark complete</a>
+        <a href="{{ route('admin.certificates.completions.create') }}" class="btn btn-primary"><i class="fa fa-plus"></i> Issue Certificate</a>
     </div>
 </div>
 <div class="wrapper wrapper-content">
@@ -51,11 +51,13 @@
                     <thead>
                         <tr>
                             <th>Student</th>
+                            <th>Student ID</th>
                             <th>Course / Batch</th>
+                            <th>Duration / CPD</th>
                             <th>Completed</th>
                             <th>Completion</th>
                             <th>Certificate</th>
-                            <th style="width:260px;">Action</th>
+                            <th style="width:280px;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -78,13 +80,26 @@
                                     <div class="text-muted small">{{ $student->email ?? '' }}</div>
                                 </td>
                                 <td>
+                                    @php
+                                        $sid = $student && method_exists($student, 'studentIdValue') ? $student->studentIdValue() : ($row->student_number ?: ($student->student_id ?? $student->student_number ?? ''));
+                                    @endphp
+                                    <code>{{ $sid ?: '—' }}</code>
+                                </td>
+                                <td>
                                     {{ $row->course->title ?? ('#'.$row->course_id) }}
+                                    @if($row->course_subtitle)
+                                        <div class="text-muted small">{{ $row->course_subtitle }}</div>
+                                    @endif
                                     @if($row->batch)
                                         <div class="text-muted small">Batch: {{ $row->batch->code ?: $row->batch->name }}</div>
                                     @endif
                                     @if($row->template)
                                         <div class="text-muted small">Template: {{ $row->template->name }}</div>
                                     @endif
+                                </td>
+                                <td>
+                                    {{ $row->programme_duration ?: '—' }}
+                                    <div class="text-muted small">CPD: {{ $row->cpd_hours ?: '—' }}</div>
                                 </td>
                                 <td>{{ optional($row->completed_at)->format('d M Y H:i') ?: '—' }}</td>
                                 <td>
@@ -108,8 +123,10 @@
                                     @endif
                                 </td>
                                 <td>
+                                    <a class="btn btn-xs btn-white" href="{{ route('admin.certificates.completions.edit', $row->id) }}">Edit</a>
                                     @forelse($issued as $cert)
                                         <div style="margin-bottom:6px;">
+                                            <a class="btn btn-xs btn-white" href="{{ route('admin.certificates.edit', $cert->id) }}">Edit cert</a>
                                             <a class="btn btn-xs btn-white" href="{{ route('admin.certificates.preview', $cert->id) }}" target="_blank" rel="noopener">Preview</a>
                                             <a class="btn btn-xs btn-info" href="{{ route('admin.certificates.download', $cert->id) }}">Download</a>
                                         </div>
@@ -136,7 +153,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="6">No completions yet. Use Mark complete to start.</td></tr>
+                            <tr><td colspan="8">No certificates yet. Use Issue Certificate to start.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

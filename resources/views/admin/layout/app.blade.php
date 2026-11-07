@@ -336,7 +336,10 @@
                   <li class="{{ request()->is('admin/certificates*') ? 'active' : '' }}">
                      <a href="javascript:void(0)"><i class="fa fa-certificate"></i> <span class="nav-label">Certificates</span> <span class="fa arrow"></span></a>
                      <ul class="nav nav-second-level">
-                        <li class="{{ request()->is('admin/certificates/completions*') ? 'active' : '' }}">
+                        <li class="{{ request()->is('admin/certificates/completions/create') ? 'active' : '' }}">
+                           <a href="{{ route('admin.certificates.completions.create') }}">Issue Certificate</a>
+                        </li>
+                        <li class="{{ request()->is('admin/certificates/completions') || request()->is('admin/certificates/completions/*') && !request()->is('admin/certificates/completions/create') ? 'active' : '' }}">
                            <a href="{{ route('admin.certificates.completions.index') }}">Completions</a>
                         </li>
                         <li class="{{ request()->is('admin/certificates/templates*') ? 'active' : '' }}">

@@ -7,8 +7,8 @@ use App\Models\CertificateVerifyLog;
 use App\Models\LmsCertificate;
 use App\Models\StudentCompletion;
 use App\Models\User;
+use App\Models\CertificateTemplate;
 use App\Services\CertificateIssuerService;
-use App\Services\CertificateVerifyCopyService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
@@ -27,7 +27,9 @@ class LmsCertificateController extends Controller
             $q->where(function ($outer) use ($s) {
                 $outer->where('certificate_code', 'like', '%' . $s . '%')
                     ->orWhere('student_name', 'like', '%' . $s . '%')
-                    ->orWhere('course_title', 'like', '%' . $s . '%');
+                    ->orWhere('student_number', 'like', '%' . $s . '%')
+                    ->orWhere('course_title', 'like', '%' . $s . '%')
+                    ->orWhere('course_subtitle', 'like', '%' . $s . '%');
             });
         }
         if ($request->filled('status')) {
@@ -42,19 +44,7 @@ class LmsCertificateController extends Controller
                 'search' => (string) $request->input('search', ''),
                 'status' => (string) $request->input('status', ''),
             ],
-            'verifyCopy' => app(CertificateVerifyCopyService::class)->get(),
         ]);
-    }
-
-    public function saveVerifyCopy(Request $request, CertificateVerifyCopyService $copy)
-    {
-        $data = $request->validate([
-            'title' => 'required|string|max:180',
-            'html' => 'nullable|string|max:20000',
-        ]);
-        $copy->save($data['title'], $data['html'] ?? '');
-
-        return back()->with('success', 'Verify page intro text saved.');
     }
 
     public function verifyLogs(Request $request)
@@ -78,6 +68,29 @@ class LmsCertificateController extends Controller
         }
 
         $rows = $q->orderByDesc('id')->paginate(40)->withQueryString();
+        foreach ($rows as $row) {
+            $needsCity = Schema::hasColumn('certificate_verify_logs', 'ip_city') && trim((string) ($row->ip_city ?? '')) === '';
+            $needsCountry = Schema::hasColumn('certificate_verify_logs', 'ip_country') && trim((string) ($row->ip_country ?? '')) === '';
+            if (($needsCity || $needsCountry) && ! empty($row->ip) && function_exists('resolve_ip_location')) {
+                $place = resolve_ip_location((string) $row->ip);
+                $dirty = false;
+                if ($needsCity && ! empty($place['city'])) {
+                    $row->ip_city = substr((string) $place['city'], 0, 120);
+                    $dirty = true;
+                }
+                if ($needsCountry && ! empty($place['country'])) {
+                    $row->ip_country = substr((string) $place['country'], 0, 120);
+                    $dirty = true;
+                }
+                if ($dirty) {
+                    try {
+                        $row->save();
+                    } catch (\Throwable $e) {
+                        // Display still uses in-memory values.
+                    }
+                }
+            }
+        }
 
         return view('admin.certificates.verify-logs', [
             'rows' => $rows,
@@ -157,5 +170,53 @@ class LmsCertificateController extends Controller
         $cert->save();
 
         return back()->with('success', 'Certificate revoked: ' . $cert->certificate_code);
+    }
+
+    public function edit(int $id)
+    {
+        LmsCertificate::ensureTable();
+        CertificateTemplate::ensureTable();
+        $cert = LmsCertificate::query()->with(['user', 'course', 'template'])->findOrFail($id);
+        $templates = CertificateTemplate::activeOptions();
+
+        return view('admin.certificates.edit', [
+            'cert' => $cert,
+            'templates' => $templates,
+        ]);
+    }
+
+    public function update(Request $request, int $id, CertificateIssuerService $issuer)
+    {
+        LmsCertificate::ensureTable();
+        $cert = LmsCertificate::query()->findOrFail($id);
+        $data = $request->validate([
+            'student_name' => 'required|string|max:255',
+            'course_title' => 'required|string|max:500',
+            'course_subtitle' => 'nullable|string|max:500',
+            'programme_duration' => 'nullable|string|max:255',
+            'cpd_hours' => 'nullable|string|max:100',
+            'completion_date' => 'nullable|date',
+            'template_id' => 'nullable|integer|exists:certificate_templates,id',
+            'regenerate_pdf' => 'nullable|boolean',
+        ]);
+
+        $cert->student_name = $data['student_name'];
+        $cert->course_title = $data['course_title'];
+        $cert->course_subtitle = $data['course_subtitle'] ?? null;
+        $cert->programme_duration = $data['programme_duration'] ?? null;
+        $cert->cpd_hours = $data['cpd_hours'] ?? null;
+        $cert->completion_date = $data['completion_date'] ?? $cert->completion_date;
+        if (! empty($data['template_id'])) {
+            $cert->template_id = (int) $data['template_id'];
+        }
+        $cert->save();
+
+        if ($request->boolean('regenerate_pdf', true) && ! $cert->isRevoked()) {
+            $issuer->refreshPdf($cert->fresh());
+        }
+
+        return redirect()
+            ->route('admin.certificates.index')
+            ->with('success', 'Certificate details saved' . ($request->boolean('regenerate_pdf', true) ? ' and PDF updated.' : '.'));
     }
 }
