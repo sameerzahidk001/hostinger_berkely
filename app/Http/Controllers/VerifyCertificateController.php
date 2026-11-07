@@ -86,7 +86,7 @@ class VerifyCertificateController extends Controller
         $verifier = $this->verifierFromSession($request);
         if (! $verifier) {
             return redirect()->to(url('/ecert-verify'))
-                ->with('fail', 'Enter verifier details first. Student ID and Certificate Number stay locked until then.');
+                ->with('fail', 'Submit verifier details first. Student ID and Certificate Number stay empty until then.');
         }
 
         $data = $request->validate([
