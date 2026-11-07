@@ -346,6 +346,10 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
             Route::get('/templates', [CertificateTemplateController::class, 'index'])->name('templates.index');
             Route::get('/templates/create', [CertificateTemplateController::class, 'create'])->name('templates.create');
             Route::post('/templates', [CertificateTemplateController::class, 'store'])->name('templates.store');
+            Route::get('/templates/{id}/image/{slot}', [CertificateTemplateController::class, 'previewImage'])
+                ->whereNumber('id')
+                ->where('slot', 'background|logo|seal|signer_left|signer_right')
+                ->name('templates.image');
             Route::get('/templates/{id}/edit', [CertificateTemplateController::class, 'edit'])->whereNumber('id')->name('templates.edit');
             Route::put('/templates/{id}', [CertificateTemplateController::class, 'update'])->whereNumber('id')->name('templates.update');
             Route::delete('/templates/{id}', [CertificateTemplateController::class, 'destroy'])->whereNumber('id')->name('templates.destroy');
