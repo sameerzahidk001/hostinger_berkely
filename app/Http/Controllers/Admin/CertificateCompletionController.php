@@ -196,13 +196,12 @@ class CertificateCompletionController extends Controller
             return back()->with('fail', 'No certificate template available. Create one first.');
         }
 
-        // Allow another certificate for the same completion (multi-issue).
         $cert = $issuer->issueFromCompletion(
             $completion,
             $admin instanceof User ? $admin : null,
             $sendEmail,
             $template,
-            true
+            false
         );
 
         $msg = 'Certificate issued: ' . $cert->certificate_code;
