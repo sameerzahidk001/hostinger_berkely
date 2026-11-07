@@ -168,7 +168,7 @@ class VerifyCertificateController extends Controller
             'code' => 'required|string|max:80',
         ], [
             'student_number.required' => 'Enter the Student ID.',
-            'code.required' => 'Enter the Certificate Number.',
+            'code.required' => 'Enter the Certification ID.',
         ]);
 
         $inputCode = trim((string) $data['code']);

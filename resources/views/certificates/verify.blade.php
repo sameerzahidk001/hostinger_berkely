@@ -64,7 +64,7 @@
             <li>Fill in your information</li>
             <li>Verify your email address with the OTP sent to your email address</li>
             <li>Submit your details</li>
-            <li>Enter the Certification Number and Student ID</li>
+            <li>Enter the Certification ID and Student ID</li>
             <li>Check the Certificate details.</li>
         </ol>
 
@@ -137,7 +137,7 @@
             <div class="panel">
                 <h2>Certificate Details to Verify:</h2>
                 @if($verifierReady)
-                    <p class="hint">Enter the Certification Number and Student ID, then check the certificate details.</p>
+                    <p class="hint">Enter the Certification ID and Student ID, then check the certificate details.</p>
                 @else
                     <p class="hint">Complete your details and email OTP first. These fields stay empty until then.</p>
                 @endif
@@ -149,7 +149,7 @@
                             <input id="student_number" type="text" name="student_number" value="{{ $verifierReady ? old('student_number', $old['student_number'] ?? '') : '' }}" @if($verifierReady) required @else disabled @endif autocomplete="off">
                         </div>
                         <div>
-                            <label for="code">Certificate Number <span class="req">*</span></label>
+                            <label for="code">Certification ID <span class="req">*</span></label>
                             <input id="code" type="text" name="code" value="{{ $verifierReady ? old('code', $code) : '' }}" @if($verifierReady) required @else disabled @endif autocomplete="off">
                         </div>
                     </div>
@@ -175,13 +175,13 @@
                                 @endif
                                 <div><strong>Completion date:</strong> {{ optional($certificate->completion_date)->format('d M Y') ?: '—' }}</div>
                                 <div><strong>Issued:</strong> {{ optional($certificate->issued_at)->format('d M Y') ?: '—' }}</div>
-                                <div><strong>Certificate number:</strong> {{ $certificate->certificate_code }}</div>
+                                <div><strong>Certification ID:</strong> {{ $certificate->certificate_code }}</div>
                                 <p style="margin:12px 0 0;">This certificate was issued by Berkeley School of Business, Arts &amp; Sciences.</p>
                             </div>
                         @elseif($result === 'revoked')
                             <span class="badge revoked">Revoked</span>
                             <div class="meta">
-                                <div><strong>Certificate number:</strong> {{ $certificate->certificate_code }}</div>
+                                <div><strong>Certification ID:</strong> {{ $certificate->certificate_code }}</div>
                                 <div><strong>Student:</strong> {{ $certificate->student_name }}</div>
                                 <div><strong>Student ID:</strong> {{ $certificate->student_number ?: '—' }}</div>
                                 <div><strong>Course:</strong> {{ $certificate->course_title }}</div>
@@ -189,7 +189,7 @@
                             </div>
                         @else
                             <span class="badge not_found">Not found</span>
-                            <div class="meta">No certificate matches that Student ID and Certificate Number. Check both values and try again.</div>
+                            <div class="meta">No certificate matches that Student ID and Certification ID. Check both values and try again.</div>
                         @endif
                     </div>
                 @endif

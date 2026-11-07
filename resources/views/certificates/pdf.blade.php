@@ -231,7 +231,7 @@
       <div class="verify-meta">
         STUDENT ID: {{ $certificate->student_number ?: '—' }}
         &nbsp;&nbsp;&nbsp;
-        CERTIFICATE NUMBER: {{ $certificate->certificate_code }}<br>
+        CERTIFICATION ID: {{ $certificate->certificate_code }}<br>
         {{ $template->footer_org_line ?: 'Berkeley School of Business, Arts & Sciences Ltd. | UKPRN: 10101119' }}<br>
         Email: {{ $template->footer_email ?: 'Registrar@eduberkeley.com' }}
         &nbsp;|&nbsp;

@@ -22,7 +22,7 @@
                 @csrf
                 <div class="row">
                     <div class="col-md-4 form-group">
-                        <label>Certificate number</label>
+                        <label>Certification ID</label>
                         <input type="text" class="form-control" value="{{ $cert->certificate_code }}" readonly>
                     </div>
                     <div class="col-md-4 form-group">
