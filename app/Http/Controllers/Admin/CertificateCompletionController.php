@@ -213,7 +213,7 @@ class CertificateCompletionController extends Controller
         }
 
         if ($issueNow) {
-            $msg = "Marked complete for {$created} student(s). Issued {$issued} certificate(s).";
+            $msg = "Issued {$issued} certificate(s) for {$created} student(s).";
             if (count($codes) === 1) {
                 $msg .= ' Code: ' . $codes[0] . '.';
             }
@@ -228,7 +228,7 @@ class CertificateCompletionController extends Controller
 
         return redirect()
             ->route('admin.certificates.completions.index')
-            ->with('success', "Marked complete for {$created} student(s). Certificate not issued yet.");
+            ->with('success', "Saved for {$created} student(s). Certificate not issued yet.");
     }
 
     public function issue(Request $request, int $id, CertificateIssuerService $issuer)
@@ -268,11 +268,71 @@ class CertificateCompletionController extends Controller
             ->with('success', $msg);
     }
 
+    public function edit(int $id)
+    {
+        StudentCompletion::ensureTable();
+        CertificateTemplate::ensureTable();
+        $completion = StudentCompletion::query()->with(['user', 'course', 'template', 'certificates'])->findOrFail($id);
+        $templates = CertificateTemplate::activeOptions();
+
+        return view('admin.certificates.completion-edit', [
+            'completion' => $completion,
+            'templates' => $templates,
+        ]);
+    }
+
+    public function update(Request $request, int $id, CertificateIssuerService $issuer)
+    {
+        StudentCompletion::ensureTable();
+        $completion = StudentCompletion::query()->findOrFail($id);
+        $data = $request->validate([
+            'completed_at' => 'nullable|date',
+            'programme_duration' => 'nullable|string|max:255',
+            'cpd_hours' => 'nullable|string|max:100',
+            'course_subtitle' => 'nullable|string|max:500',
+            'template_id' => 'nullable|integer|exists:certificate_templates,id',
+            'notes' => 'nullable|string|max:2000',
+            'apply_to_certificate' => 'nullable|boolean',
+        ]);
+
+        $completion->completed_at = $data['completed_at'] ?? $completion->completed_at;
+        $completion->programme_duration = $data['programme_duration'] ?? null;
+        $completion->cpd_hours = $data['cpd_hours'] ?? null;
+        $completion->course_subtitle = $data['course_subtitle'] ?? null;
+        $completion->notes = $data['notes'] ?? $completion->notes;
+        if (! empty($data['template_id'])) {
+            $completion->template_id = (int) $data['template_id'];
+        }
+        $completion->save();
+
+        if ($request->boolean('apply_to_certificate', true)) {
+            $latest = LmsCertificate::query()
+                ->where('completion_id', $completion->id)
+                ->orderByDesc('id')
+                ->first();
+            if ($latest && ! $latest->isRevoked()) {
+                $latest->course_subtitle = $completion->course_subtitle;
+                $latest->programme_duration = $completion->programme_duration;
+                $latest->cpd_hours = $completion->cpd_hours;
+                $latest->completion_date = optional($completion->completed_at)->toDateString() ?: $latest->completion_date;
+                if ($completion->template_id) {
+                    $latest->template_id = $completion->template_id;
+                }
+                $latest->save();
+                $issuer->refreshPdf($latest->fresh());
+            }
+        }
+
+        return redirect()
+            ->route('admin.certificates.completions.index')
+            ->with('success', 'Certificate details saved.');
+    }
+
     /** @return array<int, string> */
     private function userSelectColumns(): array
     {
         $cols = ['id', 'name', 'email'];
-        foreach (['first_name', 'last_name'] as $col) {
+        foreach (['first_name', 'last_name', 'student_id', 'student_number'] as $col) {
             if (Schema::hasColumn('users', $col)) {
                 $cols[] = $col;
             }

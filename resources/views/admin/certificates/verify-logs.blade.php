@@ -75,7 +75,19 @@
                                     <div class="text-muted small">{{ $row->verifier_position ?: '' }}</div>
                                 </td>
                                 <td class="small">{{ $row->verifier_reason ?: '—' }}</td>
-                                <td>{{ $row->ip ?: '—' }}</td>
+                                <td>
+                                    {{ $row->ip ?: '—' }}
+                                    @php
+                                        $city = trim((string) ($row->ip_city ?? ''));
+                                        $country = trim((string) ($row->ip_country ?? ''));
+                                        $place = trim(implode(', ', array_filter([$city, $country])));
+                                    @endphp
+                                    @if($place !== '')
+                                        <div class="text-muted small">{{ $place }}</div>
+                                    @else
+                                        <div class="text-muted small">City / country from IP not available</div>
+                                    @endif
+                                </td>
                             </tr>
                         @empty
                             <tr><td colspan="7">No verification attempts logged yet.</td></tr>

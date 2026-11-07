@@ -12,7 +12,7 @@
     <div class="col-lg-4 text-right" style="padding-top:20px;">
         <a href="{{ route('admin.certificates.verify-logs') }}" class="btn btn-white">Verify log</a>
         <a href="{{ route('admin.certificates.completions.index') }}" class="btn btn-white">Completions</a>
-        <a href="{{ route('admin.certificates.completions.create') }}" class="btn btn-primary"><i class="fa fa-plus"></i> Mark complete</a>
+        <a href="{{ route('admin.certificates.completions.create') }}" class="btn btn-primary"><i class="fa fa-plus"></i> Issue Certificate</a>
     </div>
 </div>
 <div class="wrapper wrapper-content">
@@ -21,19 +21,6 @@
     <div class="ibox">
         <div class="ibox-title"><h5>Issued certificates</h5></div>
         <div class="ibox-content">
-            <p class="text-muted">Public verify page: <a href="{{ url('/ecert-verify') }}" target="_blank" rel="noopener">/ecert-verify</a>. Edit the intro text in the box below (this avoids the Pages builder 403 / CAPTCHA block).</p>
-            <form method="POST" action="{{ route('admin.certificates.verify-copy') }}" style="margin-bottom:18px;padding:12px;border:1px solid #e5e7eb;background:#fafafa;">
-                @csrf
-                <div class="form-group">
-                    <label>Verify page title</label>
-                    <input class="form-control" type="text" name="title" value="{{ old('title', $verifyCopy['title'] ?? 'Verify Certificate') }}" required>
-                </div>
-                <div class="form-group">
-                    <label>Text above the form (HTML allowed)</label>
-                    <textarea class="form-control" name="html" rows="5">{{ old('html', $verifyCopy['html'] ?? '') }}</textarea>
-                </div>
-                <button class="btn btn-primary btn-sm" type="submit">Save intro text</button>
-            </form>
             <form method="GET" class="form-group">
                 <div class="row">
                     <div class="col-sm-5">
@@ -56,8 +43,11 @@
                     <thead>
                         <tr>
                             <th>Code</th>
+                            <th>Student ID</th>
                             <th>Student</th>
                             <th>Course</th>
+                            <th>Duration / CPD</th>
+                            <th>Awarded</th>
                             <th>Issued</th>
                             <th>Status</th>
                             <th style="width:280px;">Action</th>
@@ -70,8 +60,19 @@
                                     <code>{{ $row->certificate_code }}</code>
                                     <div class="text-muted small"><a href="{{ $row->verifyUrl() }}" target="_blank" rel="noopener">Verify link</a></div>
                                 </td>
+                                <td><code>{{ $row->student_number ?: '—' }}</code></td>
                                 <td>{{ $row->student_name }}</td>
-                                <td>{{ $row->course_title }}</td>
+                                <td>
+                                    {{ $row->course_title }}
+                                    @if($row->course_subtitle)
+                                        <div class="text-muted small">{{ $row->course_subtitle }}</div>
+                                    @endif
+                                </td>
+                                <td>
+                                    {{ $row->programme_duration ?: '—' }}
+                                    <div class="text-muted small">CPD: {{ $row->cpd_hours ?: '—' }}</div>
+                                </td>
+                                <td>{{ optional($row->completion_date)->format('d M Y') ?: '—' }}</td>
                                 <td>{{ optional($row->issued_at)->format('d M Y H:i') ?: '—' }}</td>
                                 <td>
                                     @if($row->isRevoked())
@@ -81,6 +82,7 @@
                                     @endif
                                 </td>
                                 <td>
+                                    <a class="btn btn-xs btn-white" href="{{ route('admin.certificates.edit', $row->id) }}">Edit</a>
                                     <a class="btn btn-xs btn-info" href="{{ route('admin.certificates.download', $row->id) }}"><i class="fa fa-download"></i> PDF</a>
                                     <a class="btn btn-xs btn-white" href="{{ $row->verifyUrl() }}" target="_blank" rel="noopener">Verify</a>
                                     @if(! $row->isRevoked())
@@ -109,7 +111,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="6">No certificates issued yet.</td></tr>
+                            <tr><td colspan="9">No certificates issued yet.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

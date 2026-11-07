@@ -3474,11 +3474,6 @@ if (!function_exists('getUserLocation')) {
             return $header ? ['country' => $header, 'city' => null, 'region' => null, 'postal' => null, 'loc' => null] : ['error' => 'Private IP'];
         }
 
-        $header = visitor_country_header();
-        if ($header) {
-            return ['country' => $header, 'city' => null, 'region' => null, 'postal' => null, 'loc' => null];
-        }
-
         $mmdb = storage_path('app/geoip.mmdb');
         if (is_file($mmdb) && class_exists(\Torann\GeoIP\Facades\GeoIP::class)) {
             try {
@@ -3541,6 +3536,11 @@ if (!function_exists('getUserLocation')) {
             }
         }
 
+        $header = visitor_country_header();
+        if ($header) {
+            return ['country' => $header, 'city' => null, 'region' => null, 'postal' => null, 'loc' => null];
+        }
+
         return ['error' => 'Failed to get location.'];
     }
 }
@@ -3556,19 +3556,13 @@ if (!function_exists('resolve_ip_location')) {
             'location' => null,
         ];
 
-        $header = visitor_country_header();
-        if ($header) {
-            $name = \App\Models\Country::where('iso_code', $header)->value('name') ?: $header;
-            return [
-                'country' => $name,
-                'city' => null,
-                'region' => null,
-                'postal' => null,
-                'location' => null,
-            ];
-        }
-
         if (! $ip) {
+            $header = visitor_country_header();
+            if ($header) {
+                $name = \App\Models\Country::where('iso_code', $header)->value('name') ?: $header;
+                return array_merge($empty, ['country' => $name]);
+            }
+
             return $empty;
         }
 

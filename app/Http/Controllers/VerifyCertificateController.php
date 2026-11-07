@@ -87,12 +87,22 @@ class VerifyCertificateController extends Controller
         }
 
         try {
+            $ip = function_exists('visitor_client_ip')
+                ? (visitor_client_ip($request) ?: (string) $request->ip())
+                : (string) $request->ip();
+            $place = function_exists('resolve_ip_location') ? resolve_ip_location($ip) : [];
             $row = [
                 'certificate_code' => Str::limit($inputCode, 64, ''),
                 'result' => $result,
-                'ip' => substr((string) $request->ip(), 0, 64),
+                'ip' => substr((string) $ip, 0, 64),
                 'user_agent' => substr((string) $request->userAgent(), 0, 500),
             ];
+            if (Schema::hasColumn('certificate_verify_logs', 'ip_city')) {
+                $row['ip_city'] = substr((string) ($place['city'] ?? ''), 0, 120) ?: null;
+            }
+            if (Schema::hasColumn('certificate_verify_logs', 'ip_country')) {
+                $row['ip_country'] = substr((string) ($place['country'] ?? ''), 0, 120) ?: null;
+            }
             $extra = array_merge($verifier, [
                 'student_number' => $studentNumber,
             ]);

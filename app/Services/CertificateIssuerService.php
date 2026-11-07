@@ -149,6 +149,18 @@ class CertificateIssuerService
         return $cert->fresh();
     }
 
+    public function refreshPdf(LmsCertificate $cert): LmsCertificate
+    {
+        LmsCertificate::ensureTable();
+        $cert->qr_payload = url('/ecert-verify/' . rawurlencode((string) $cert->certificate_code));
+        $cert->loadMissing('template');
+        $template = $cert->template ?: CertificateTemplate::ensureDefault();
+        $cert->pdf_path = $this->renderPdf($cert, $template);
+        $cert->save();
+
+        return $cert->fresh();
+    }
+
     /**
      * @return string|null Error message, or null on success.
      */

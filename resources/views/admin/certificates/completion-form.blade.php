@@ -1,13 +1,13 @@
 @extends('admin.layout.app')
-@section('title', 'Mark complete')
+@section('title', 'Issue Certificate')
 @section('content')
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col-lg-8">
-        <h2>Mark complete</h2>
+        <h2>Issue Certificate</h2>
         <ol class="breadcrumb">
             <li><a href="{{ lms_portal_home() }}">Home</a></li>
             <li><a href="{{ route('admin.certificates.completions.index') }}">Completions</a></li>
-            <li class="active"><strong>Mark complete</strong></li>
+            <li class="active"><strong>Issue Certificate</strong></li>
         </ol>
     </div>
 </div>
@@ -27,7 +27,7 @@
                 @csrf
                 <div class="row">
                     <div class="col-md-12 form-group">
-                        <label>Mark for *</label>
+                        <label>Issue for *</label>
                         <div>
                             <label class="radio-inline" style="margin-right:18px;">
                                 <input type="radio" name="target_type" value="student" @checked(old('target_type', 'student') === 'student')> Single student
@@ -46,6 +46,8 @@
                                 @php
                                     $label = $student->name ?: trim(($student->first_name ?? '').' '.($student->last_name ?? ''));
                                     if ($label === '') { $label = 'User #'.$student->id; }
+                                    $sid = method_exists($student, 'studentIdValue') ? $student->studentIdValue() : ($student->student_id ?? $student->student_number ?? '');
+                                    if ($sid) { $label .= ' — '.$sid; }
                                 @endphp
                                 <option value="{{ $student->id }}" @selected((string)old('user_id') === (string)$student->id)>
                                     {{ $label }} @if($student->email) ({{ $student->email }}) @endif
@@ -130,7 +132,7 @@
                         </label>
                     </div>
                 </div>
-                <button type="submit" class="btn btn-primary" @disabled($templates->isEmpty())>Save</button>
+                <button type="submit" class="btn btn-primary" @disabled($templates->isEmpty())>Issue certificate</button>
                 <a href="{{ route('admin.certificates.completions.index') }}" class="btn btn-white">Cancel</a>
             </form>
         </div>
