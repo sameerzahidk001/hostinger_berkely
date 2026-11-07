@@ -310,10 +310,10 @@ class CertificateIssuerService
             'template' => $template,
             'qrSrc' => $this->pdfFileSrc($qrPath),
             'bgSrc' => $this->pdfPublicSrc($template?->resolvedBackgroundPath()),
-            'logoSrc' => $this->pdfPublicSrc($template?->logo_path),
-            'sealSrc' => $this->pdfPublicSrc($template?->seal_path),
-            'signerLeftSrc' => $this->pdfPublicSrc($template?->signer_left_signature),
-            'signerRightSrc' => $this->pdfPublicSrc($template?->signer_right_signature),
+            'logoSrc' => $this->pdfOverlaySrc($template?->logo_path),
+            'sealSrc' => $this->pdfOverlaySrc($template?->seal_path),
+            'signerLeftSrc' => $this->pdfOverlaySrc($template?->signer_left_signature),
+            'signerRightSrc' => $this->pdfOverlaySrc($template?->signer_right_signature),
             'schoolName' => $template ? $template->schoolName() : 'Berkeley School of Business, Arts & Sciences',
         ])->render();
 
@@ -420,6 +420,101 @@ class CertificateIssuerService
         }
 
         return $user->ensureFixedStudentId();
+    }
+
+    public function pdfOverlaySrc(?string $relative): ?string
+    {
+        $relative = trim((string) $relative);
+        if ($relative === '') {
+            return null;
+        }
+        $relative = ltrim(str_replace('\\', '/', $relative), '/');
+        $abs = $this->resolvePublicFile($relative);
+        if (! $abs) {
+            return null;
+        }
+
+        $png = self::transparentPngBytes($abs);
+        if ($png) {
+            return 'data:image/png;base64,' . base64_encode($png);
+        }
+
+        $raw = @file_get_contents($abs);
+        if ($raw === false || $raw === '') {
+            return null;
+        }
+
+        return 'data:image/png;base64,' . base64_encode($raw);
+    }
+
+    /**
+     * Convert a signature/seal/logo to a PNG with real alpha (white paper becomes transparent).
+     */
+    public static function transparentPngBytes(string $absolute): ?string
+    {
+        if (! function_exists('imagecreatefromstring') || ! function_exists('imagepng')) {
+            return null;
+        }
+        $raw = @file_get_contents($absolute);
+        if ($raw === false || $raw === '') {
+            return null;
+        }
+        $src = @imagecreatefromstring($raw);
+        if (! $src) {
+            return null;
+        }
+        $w = imagesx($src);
+        $h = imagesy($src);
+        if ($w < 1 || $h < 1) {
+            imagedestroy($src);
+
+            return null;
+        }
+
+        $dst = imagecreatetruecolor($w, $h);
+        imagealphablending($dst, false);
+        imagesavealpha($dst, true);
+        $clear = imagecolorallocatealpha($dst, 0, 0, 0, 127);
+        imagefilledrectangle($dst, 0, 0, $w, $h, $clear);
+
+        for ($y = 0; $y < $h; $y++) {
+            for ($x = 0; $x < $w; $x++) {
+                $rgba = imagecolorat($src, $x, $y);
+                $r = ($rgba >> 16) & 0xFF;
+                $g = ($rgba >> 8) & 0xFF;
+                $b = $rgba & 0xFF;
+                $a = ($rgba >> 24) & 0x7F;
+                $avg = ($r + $g + $b) / 3;
+                if ($avg >= 248 && $a < 24) {
+                    $a = 127;
+                } elseif ($avg >= 230 && $a < 24) {
+                    $a = (int) min(127, (int) round((($avg - 230) / 25) * 127));
+                }
+                imagesetpixel($dst, $x, $y, imagecolorallocatealpha($dst, $r, $g, $b, $a));
+            }
+        }
+
+        ob_start();
+        imagepng($dst, null, 6);
+        $png = ob_get_clean();
+        imagedestroy($src);
+        imagedestroy($dst);
+
+        return is_string($png) && $png !== '' ? $png : null;
+    }
+
+    public static function writeTransparentPng(string $sourceAbs, string $destAbs): bool
+    {
+        $png = self::transparentPngBytes($sourceAbs);
+        if (! $png) {
+            return false;
+        }
+        $dir = dirname($destAbs);
+        if (! is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+
+        return file_put_contents($destAbs, $png) !== false;
     }
 
     public function pdfPublicSrc(?string $relative): ?string

@@ -188,9 +188,18 @@ class CertificateTemplateController extends Controller
             if (! $file) {
                 continue;
             }
-            $ext = strtolower((string) $file->getClientOriginalExtension()) ?: 'png';
-            $name = $column . '-' . Str::random(6) . '.' . $ext;
-            $file->move($dirAbs, $name);
+            $tmpName = $column . '-' . Str::random(6) . '-src.' . strtolower((string) $file->getClientOriginalExtension() ?: 'png');
+            $file->move($dirAbs, $tmpName);
+            $tmpAbs = $dirAbs . DIRECTORY_SEPARATOR . $tmpName;
+            $name = $column . '-' . Str::random(6) . '.png';
+            $destAbs = $dirAbs . DIRECTORY_SEPARATOR . $name;
+            $wrote = \App\Services\CertificateIssuerService::writeTransparentPng($tmpAbs, $destAbs);
+            if ($wrote && is_file($tmpAbs) && realpath($tmpAbs) !== realpath($destAbs)) {
+                File::delete($tmpAbs);
+            }
+            if (! $wrote) {
+                $name = $tmpName;
+            }
             $template->{$column} = $dirRel . '/' . $name;
             $changed = true;
         }
