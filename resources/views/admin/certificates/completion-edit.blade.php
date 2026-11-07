@@ -6,7 +6,7 @@
         <h2>Edit certificate details</h2>
         <ol class="breadcrumb">
             <li><a href="{{ lms_portal_home() }}">Home</a></li>
-            <li><a href="{{ route('admin.certificates.completions.index') }}">Completions</a></li>
+            <li><a href="{{ route('admin.certificates.index') }}">Certificates</a></li>
             <li class="active"><strong>Edit</strong></li>
         </ol>
     </div>
@@ -68,7 +68,7 @@
                     @endif
                 </div>
                 <button type="submit" class="btn btn-primary">Save</button>
-                <a href="{{ route('admin.certificates.completions.index') }}" class="btn btn-white">Cancel</a>
+                <a href="{{ route('admin.certificates.index') }}" class="btn btn-white">Cancel</a>
             </form>
         </div>
     </div>

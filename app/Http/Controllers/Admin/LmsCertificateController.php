@@ -38,8 +38,19 @@ class LmsCertificateController extends Controller
 
         $rows = $q->orderByDesc('issued_at')->orderByDesc('id')->paginate(20)->withQueryString();
 
+        $pending = collect();
+        if ($request->input('status') === '' || $request->input('status') === null) {
+            $pending = StudentCompletion::query()
+                ->with(['user', 'course', 'template'])
+                ->whereDoesntHave('certificates')
+                ->orderByDesc('id')
+                ->limit(100)
+                ->get();
+        }
+
         return view('admin.certificates.index', [
             'rows' => $rows,
+            'pending' => $pending,
             'filters' => [
                 'search' => (string) $request->input('search', ''),
                 'status' => (string) $request->input('status', ''),

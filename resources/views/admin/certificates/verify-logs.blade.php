@@ -11,7 +11,7 @@
         </ol>
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
-        <a href="{{ route('admin.certificates.index') }}" class="btn btn-white">Issued certificates</a>
+        <a href="{{ route('admin.certificates.index') }}" class="btn btn-white">Certificates</a>
     </div>
 </div>
 <div class="wrapper wrapper-content">

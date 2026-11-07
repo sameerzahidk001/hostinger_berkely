@@ -6,7 +6,7 @@
         <h2>Issue Certificate</h2>
         <ol class="breadcrumb">
             <li><a href="{{ lms_portal_home() }}">Home</a></li>
-            <li><a href="{{ route('admin.certificates.completions.index') }}">Completions</a></li>
+            <li><a href="{{ route('admin.certificates.index') }}">Certificates</a></li>
             <li class="active"><strong>Issue Certificate</strong></li>
         </ol>
     </div>
@@ -132,7 +132,7 @@
                     </div>
                 </div>
                 <button type="submit" class="btn btn-primary" @disabled($templates->isEmpty())>Issue certificate</button>
-                <a href="{{ route('admin.certificates.completions.index') }}" class="btn btn-white">Cancel</a>
+                <a href="{{ route('admin.certificates.index') }}" class="btn btn-white">Cancel</a>
             </form>
         </div>
     </div>
