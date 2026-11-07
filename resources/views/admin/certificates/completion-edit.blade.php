@@ -37,7 +37,8 @@
                     </div>
                     <div class="col-md-8 form-group">
                         <label>Template</label>
-                        <select name="template_id" class="form-control">
+                        <select name="template_id" class="form-control js-search-select" data-placeholder="Type to find template">
+                            <option value=""></option>
                             @foreach($templates as $tpl)
                                 <option value="{{ $tpl->id }}" @selected((string) old('template_id', $completion->template_id) === (string) $tpl->id)>{{ $tpl->name }}</option>
                             @endforeach
@@ -75,3 +76,15 @@
     </div>
 </div>
 @endsection
+@push('style')
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>.select2-container { width: 100% !important; }</style>
+@endpush
+@push('script')
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+$(function () {
+    $('.js-search-select').select2({ placeholder: 'Type to find template', allowClear: true, width: '100%' });
+});
+</script>
+@endpush
