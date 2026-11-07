@@ -29,8 +29,6 @@
     .ecert-verify button[type="submit"], .ecert-verify .btn-otp { margin-top:8px; background:#000435; color:#fff; border:0; padding:11px 18px; cursor:pointer; font-size:15px; }
     .ecert-verify .btn-otp { margin-top:0; white-space:nowrap; height:42px; }
     .ecert-verify button[disabled] { opacity:.45; cursor:not-allowed; pointer-events:none; }
-    .ecert-verify .steps { margin:0 0 20px; padding-left:20px; color:#374151; font-size:14px; line-height:1.6; }
-    .ecert-verify .steps li { margin:0 0 4px; }
     .ecert-verify .otp-row { display:grid; grid-template-columns: 1.3fr auto 1fr; gap:12px 12px; align-items:end; margin-bottom:14px; }
     .ecert-verify .otp-ok { font-size:13px; color:#166534; margin:6px 0 0; }
     .ecert-verify .errors, .ecert-verify .flash-fail { background:#fdecea; color:#9b1c1c; padding:10px 12px; margin-bottom:16px; font-size:13px; }
@@ -59,15 +57,6 @@
         @if(trim(strip_tags((string) ($copy['html'] ?? ''))) !== '')
             <div class="cms-html">{!! render_cms_html($copy['html']) !!}</div>
         @endif
-        <h3>Steps for Certificate Verification:</h3>
-        <ol class="steps">
-            <li>Fill in your information</li>
-            <li>Verify your email address with the OTP sent to your email address</li>
-            <li>Submit your details</li>
-            <li>Enter the Certification ID and Student ID</li>
-            <li>Check the Certificate details.</li>
-        </ol>
-
         @if(session('success'))
             <div class="flash-ok">{{ session('success') }}</div>
         @endif
