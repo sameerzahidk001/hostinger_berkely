@@ -252,7 +252,7 @@ class CertificateIssuerService
                 'bcc' => null,
                 'body' => 'Dear {name},<br><br>'
                     . 'Congratulations. Your digital certificate for <strong>{course_name}</strong> is ready.<br><br>'
-                    . 'Certificate code: <strong>{certificate_code}</strong><br>'
+                    . 'Certification ID: <strong>{certificate_code}</strong><br>'
                     . 'Issued: {issued_at}<br>'
                     . 'Completion date: {completion_date}<br><br>'
                     . 'Download the attached PDF, or verify online:<br>'
@@ -267,28 +267,8 @@ class CertificateIssuerService
     public function nextCertificateCode(): string
     {
         LmsCertificate::ensureTable();
-        $year = date('Y');
-        $prefix = 'CERT-' . $year . '-';
-        $last = LmsCertificate::query()
-            ->where('certificate_code', 'like', $prefix . '%')
-            ->orderByDesc('certificate_code')
-            ->value('certificate_code');
 
-        $seq = 1;
-        if (is_string($last) && preg_match('/(\d+)$/', $last, $m)) {
-            $seq = ((int) $m[1]) + 8;
-        }
-
-        do {
-            $code = $prefix . str_pad((string) $seq, 6, '0', STR_PAD_LEFT);
-            $taken = LmsCertificate::query()->where('certificate_code', $code)->exists();
-            if (! $taken) {
-                return $code;
-            }
-            $seq += 8;
-        } while ($seq < 1000000);
-
-        return $prefix . str_pad((string) (time() % 1000000), 6, '0', STR_PAD_LEFT);
+        return LmsCertificate::nextCertificateCode();
     }
 
     public function renderPdf(LmsCertificate $cert, ?CertificateTemplate $template = null): string

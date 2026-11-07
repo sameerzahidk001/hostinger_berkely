@@ -21,7 +21,7 @@
             <form method="GET" class="form-group">
                 <div class="row">
                     <div class="col-sm-5">
-                        <input type="search" name="search" class="form-control" value="{{ $filters['search'] }}" placeholder="Certificate code">
+                        <input type="search" name="search" class="form-control" value="{{ $filters['search'] }}" placeholder="Certification ID">
                     </div>
                     <div class="col-sm-3">
                         <select name="result" class="form-control">

@@ -17,7 +17,7 @@
     @endif
     <div class="ibox">
         <div class="ibox-content">
-            <p class="text-muted">Per-student values filled at issue time: student name, student ID, course, duration, CPD hours, awarded date, certificate number, QR.</p>
+            <p class="text-muted">Per-student values filled at issue time: student name, student ID, course, duration, CPD hours, awarded date, Certification ID, QR.</p>
             <form method="POST" action="{{ $mode === 'edit' ? route('admin.certificates.templates.update', $template->id) : route('admin.certificates.templates.store') }}" enctype="multipart/form-data">
                 @csrf
                 @if($mode === 'edit') @method('PUT') @endif

@@ -21,7 +21,7 @@
                 <table class="table table-striped table-bordered">
                     <thead>
                         <tr>
-                            <th>Code</th>
+                            <th>Certification ID</th>
                             <th>Course</th>
                             <th>Issued</th>
                             <th>Status</th>

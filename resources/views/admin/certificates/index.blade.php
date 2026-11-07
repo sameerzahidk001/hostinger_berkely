@@ -24,7 +24,7 @@
             <form method="GET" class="form-group">
                 <div class="row">
                     <div class="col-sm-4">
-                        <input type="search" name="search" class="form-control" value="{{ $filters['search'] }}" placeholder="Certificate ID, student, course">
+                        <input type="search" name="search" class="form-control" value="{{ $filters['search'] }}" placeholder="Certification ID, student, course">
                     </div>
                     <div class="col-sm-3">
                         <select name="course_id" class="form-control js-search-select" data-placeholder="Type to find course">
@@ -87,7 +87,7 @@
                                             $tplName = $tpl->name ?? '—';
                                         @endphp
                                         <div class="small" style="margin-bottom:8px;line-height:1.5;">
-                                            <div><strong>Certificate ID:</strong> <code>{{ $cert->certificate_code }}</code></div>
+                                            <div><strong>Certification ID:</strong> <code>{{ $cert->certificate_code }}</code></div>
                                             <div><strong>Template ID:</strong> {{ $tplId ?: '—' }}</div>
                                             <div><strong>Template Name:</strong> {{ $tplName }}</div>
                                         </div>
@@ -96,7 +96,7 @@
                                             $tpl = $row->template;
                                         @endphp
                                         <div class="small" style="line-height:1.5;">
-                                            <div><strong>Certificate ID:</strong> —</div>
+                                            <div><strong>Certification ID:</strong> —</div>
                                             <div><strong>Template ID:</strong> {{ $row->template_id ?: '—' }}</div>
                                             <div><strong>Template Name:</strong> {{ $tpl->name ?? '—' }}</div>
                                         </div>
@@ -151,7 +151,7 @@
                                 <td>
                                     @forelse($certs as $cert)
                                         <div style="margin-bottom:8px;">
-                                            <a class="btn btn-xs btn-white" href="{{ route('admin.certificates.edit', $cert->id) }}" title="Change name, course, dates, duration, CPD and template, then rebuild the PDF. Same certificate number.">Edit</a>
+                                            <a class="btn btn-xs btn-white" href="{{ route('admin.certificates.edit', $cert->id) }}" title="Change name, course, dates, duration, CPD and template, then rebuild the PDF. Same Certification ID.">Edit</a>
                                             <a class="btn btn-xs btn-white" href="{{ route('admin.certificates.preview', $cert->id) }}" target="_blank" rel="noopener" title="Open the current PDF in the browser.">Preview</a>
                                             <a class="btn btn-xs btn-info" href="{{ route('admin.certificates.download', $cert->id) }}" title="Download the PDF file."><i class="fa fa-download"></i> PDF</a>
                                             @if(! $cert->isRevoked())
@@ -161,7 +161,7 @@
                                                 </form>
                                                 <form method="POST" action="{{ route('admin.certificates.reissue', $cert->id) }}" style="display:inline;" onsubmit="return confirm('Regenerate the PDF for this certificate?');">
                                                     @csrf
-                                                    <button type="submit" class="btn btn-xs btn-warning" title="Keep the same certificate number and rebuild the PDF from the template (background, logo, text).">Re-issue PDF</button>
+                                                    <button type="submit" class="btn btn-xs btn-warning" title="Keep the same Certification ID and rebuild the PDF from the template (background, logo, text).">Re-issue PDF</button>
                                                 </form>
                                                 <form method="POST" action="{{ route('admin.certificates.revoke', $cert->id) }}" style="display:inline;" onsubmit="return confirm('Revoke this certificate?');">
                                                     @csrf

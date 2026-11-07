@@ -10,6 +10,8 @@ class LmsCertificate extends Model
 {
     protected $table = 'lms_certificates';
 
+    public const CODE_PREFIX = 'BSBC1';
+
     protected $fillable = [
         'completion_id',
         'user_id',
@@ -91,7 +93,64 @@ class LmsCertificate extends Model
             }
         }
 
+        static::migrateLegacyCertificateCodes();
+
         return Schema::hasTable('lms_certificates');
+    }
+
+    public static function nextCertificateCode(): string
+    {
+        static $seq = null;
+        if ($seq === null) {
+            $seq = 0;
+            if (Schema::hasTable('lms_certificates')) {
+                $values = static::query()
+                    ->where('certificate_code', 'like', self::CODE_PREFIX.'%')
+                    ->pluck('certificate_code');
+                foreach ($values as $value) {
+                    if (preg_match('/^BSBC1(\d{1,7})$/i', (string) $value, $m)) {
+                        $n = (int) $m[1];
+                        if ($n > $seq) {
+                            $seq = $n;
+                        }
+                    }
+                }
+            }
+        }
+
+        do {
+            $seq++;
+            if ($seq > 9999999) {
+                $seq = 9999999;
+            }
+            $code = self::CODE_PREFIX . str_pad((string) $seq, 7, '0', STR_PAD_LEFT);
+            $taken = Schema::hasTable('lms_certificates')
+                && static::query()->where('certificate_code', $code)->exists();
+            if (! $taken) {
+                return $code;
+            }
+        } while ($seq < 9999999);
+
+        return self::CODE_PREFIX . str_pad((string) (time() % 10000000), 7, '0', STR_PAD_LEFT);
+    }
+
+    public static function migrateLegacyCertificateCodes(): void
+    {
+        static $done = false;
+        if ($done || ! Schema::hasTable('lms_certificates')) {
+            return;
+        }
+        $done = true;
+
+        $legacy = static::query()
+            ->where('certificate_code', 'like', 'CERT-%')
+            ->orderBy('id')
+            ->get();
+        foreach ($legacy as $row) {
+            $row->certificate_code = static::nextCertificateCode();
+            $row->qr_payload = $row->verifyUrl();
+            $row->save();
+        }
     }
 
     public function isValid(): bool
