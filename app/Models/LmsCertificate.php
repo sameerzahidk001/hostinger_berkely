@@ -19,6 +19,7 @@ class LmsCertificate extends Model
         'status',
         'issued_at',
         'revoked_at',
+        'reissued_at',
         'emailed_at',
         'student_name',
         'student_number',
@@ -37,6 +38,7 @@ class LmsCertificate extends Model
     protected $casts = [
         'issued_at' => 'datetime',
         'revoked_at' => 'datetime',
+        'reissued_at' => 'datetime',
         'emailed_at' => 'datetime',
         'completion_date' => 'date',
     ];
@@ -54,6 +56,7 @@ class LmsCertificate extends Model
                 $table->string('status', 40)->default('issued')->index();
                 $table->timestamp('issued_at')->nullable()->index();
                 $table->timestamp('revoked_at')->nullable();
+                $table->timestamp('reissued_at')->nullable();
                 $table->timestamp('emailed_at')->nullable();
                 $table->string('student_name', 255)->nullable();
                 $table->string('student_number', 100)->nullable();
@@ -80,6 +83,7 @@ class LmsCertificate extends Model
                 'course_subtitle' => fn (Blueprint $t) => $t->string('course_subtitle', 500)->nullable(),
                 'programme_duration' => fn (Blueprint $t) => $t->string('programme_duration', 255)->nullable(),
                 'cpd_hours' => fn (Blueprint $t) => $t->string('cpd_hours', 100)->nullable(),
+                'reissued_at' => fn (Blueprint $t) => $t->timestamp('reissued_at')->nullable(),
             ] as $col => $cb) {
                 if (! Schema::hasColumn('lms_certificates', $col)) {
                     Schema::table('lms_certificates', $cb);

@@ -58,8 +58,10 @@
                             <th>Duration / CPD</th>
                             <th>Awarded</th>
                             <th>Issued</th>
+                            <th>Date of Revoke</th>
+                            <th>Date of Reissued</th>
                             <th>Status</th>
-                            <th style="width:300px;">Action</th>
+                            <th style="width:280px;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -81,10 +83,7 @@
                             <tr>
                                 <td>
                                     @forelse($certs as $cert)
-                                        <div style="margin-bottom:4px;">
-                                            <code>{{ $cert->certificate_code }}</code>
-                                            <div class="text-muted small"><a href="{{ $cert->verifyUrl() }}" target="_blank" rel="noopener">Verify link</a></div>
-                                        </div>
+                                        <div style="margin-bottom:4px;"><code>{{ $cert->certificate_code }}</code></div>
                                     @empty
                                         —
                                     @endforelse
@@ -113,6 +112,14 @@
                                 <td>{{ optional($latest->completion_date ?? $row->completed_at)->format('d M Y') ?: '—' }}</td>
                                 <td>{{ optional($latest->issued_at)->format('d M Y H:i') ?: '—' }}</td>
                                 <td>
+                                    @php $revokedAt = $certs->pluck('revoked_at')->filter()->sortDesc()->first(); @endphp
+                                    {{ $revokedAt ? $revokedAt->format('d M Y H:i') : '—' }}
+                                </td>
+                                <td>
+                                    @php $reissuedAt = $certs->pluck('reissued_at')->filter()->sortDesc()->first(); @endphp
+                                    {{ $reissuedAt ? $reissuedAt->format('d M Y H:i') : '—' }}
+                                </td>
+                                <td>
                                     @if($issued->isNotEmpty())
                                         <span class="label label-primary">Issued{{ $issued->count() > 1 ? ' ('.$issued->count().')' : '' }}</span>
                                     @elseif($certs->where('status', 'revoked')->isNotEmpty())
@@ -129,7 +136,6 @@
                                             <a class="btn btn-xs btn-white" href="{{ route('admin.certificates.edit', $cert->id) }}">Edit cert</a>
                                             <a class="btn btn-xs btn-white" href="{{ route('admin.certificates.preview', $cert->id) }}" target="_blank" rel="noopener">Preview</a>
                                             <a class="btn btn-xs btn-info" href="{{ route('admin.certificates.download', $cert->id) }}"><i class="fa fa-download"></i> PDF</a>
-                                            <a class="btn btn-xs btn-white" href="{{ $cert->verifyUrl() }}" target="_blank" rel="noopener">Verify</a>
                                             @if(! $cert->isRevoked())
                                                 <form method="POST" action="{{ route('admin.certificates.email', $cert->id) }}" style="display:inline;">
                                                     @csrf
@@ -177,7 +183,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="9">No certificates yet. Use Issue Certificate to start.</td></tr>
+                            <tr><td colspan="11">No certificates yet. Use Issue Certificate to start.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

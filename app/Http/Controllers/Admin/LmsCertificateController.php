@@ -12,7 +12,6 @@ use App\Models\CertificateTemplate;
 use App\Services\CertificateIssuerService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Schema;
 
 class LmsCertificateController extends Controller
@@ -148,25 +147,25 @@ class LmsCertificateController extends Controller
         ]);
     }
 
-    public function download(int $id)
+    public function download(int $id, CertificateIssuerService $issuer)
     {
         LmsCertificate::ensureTable();
         $cert = LmsCertificate::query()->findOrFail($id);
-        $path = public_path((string) $cert->pdf_path);
-        if (! $cert->pdf_path || ! File::exists($path)) {
-            return back()->with('fail', 'PDF file not found. Use Re-issue to regenerate.');
+        $path = $issuer->ensurePdfFile($cert);
+        if (! $path) {
+            return back()->with('fail', 'Certificate PDF could not be generated.');
         }
 
         return response()->download($path, $cert->certificate_code . '.pdf');
     }
 
-    public function preview(int $id)
+    public function preview(int $id, CertificateIssuerService $issuer)
     {
         LmsCertificate::ensureTable();
         $cert = LmsCertificate::query()->findOrFail($id);
-        $path = public_path((string) $cert->pdf_path);
-        if (! $cert->pdf_path || ! File::exists($path)) {
-            return back()->with('fail', 'PDF file not found. Use Re-issue to regenerate.');
+        $path = $issuer->ensurePdfFile($cert);
+        if (! $path) {
+            return back()->with('fail', 'Certificate PDF could not be generated.');
         }
 
         return response()->file($path, [
