@@ -19,7 +19,8 @@
         <div class="ibox-content">
             @php
                 $student = $completion->user;
-                $sid = $student ? $student->studentIdValue() : ($completion->student_number ?: '—');
+                $sid = $completion->student_number
+                    ?: (optional($student)->student_id ?? optional($student)->student_number ?: '—');
             @endphp
             <p class="text-muted">Student ID is fixed. These details can be edited before and after the certificate is issued.</p>
             <div class="row" style="margin-bottom:12px;">

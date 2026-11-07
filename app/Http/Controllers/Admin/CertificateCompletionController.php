@@ -236,7 +236,7 @@ class CertificateCompletionController extends Controller
             'programme_duration' => 'nullable|string|max:255',
             'cpd_hours' => 'nullable|string|max:100',
             'course_subtitle' => 'nullable|string|max:500',
-            'template_id' => 'nullable|integer|exists:certificate_templates,id',
+            'template_id' => 'nullable|integer',
             'notes' => 'nullable|string|max:2000',
             'apply_to_certificate' => 'nullable|boolean',
         ]);
@@ -265,7 +265,13 @@ class CertificateCompletionController extends Controller
                     $latest->template_id = $completion->template_id;
                 }
                 $latest->save();
-                $issuer->refreshPdf($latest->fresh());
+                try {
+                    $issuer->refreshPdf($latest->fresh());
+                } catch (\Throwable $e) {
+                    return redirect()
+                        ->route('admin.certificates.index')
+                        ->with('success', 'Certificate details saved. The PDF could not be regenerated.');
+                }
             }
         }
 
