@@ -41,6 +41,8 @@
     max-width: 70mm;
     height: auto;
     display: inline-block;
+    background: transparent;
+    border: 0;
   }
   .heading, .student, .body-text, .course, .meta, .date, .seal, .signer, .verify, .cert-no {
     z-index: 2;
@@ -113,7 +115,7 @@
     width: 210mm;
     text-align: center;
   }
-  .seal img { height: 28mm; }
+  .seal img { height: 28mm; background: transparent; border: 0; }
   .signer {
     position: absolute;
     top: 196mm;
@@ -122,7 +124,7 @@
   }
   .signer.left { left: 22mm; }
   .signer.right { right: 22mm; }
-  .signer img { height: 16mm; max-width: 50mm; }
+  .signer img { height: 16mm; max-width: 50mm; background: transparent; border: 0; }
   .signer .line { border-top: 0.4px solid #c5a46a; margin: 2px 10mm 3px; }
   .signer .name { font-size: 11px; font-style: italic; }
   .signer .role { font-size: 9px; color: #4b5563; }
