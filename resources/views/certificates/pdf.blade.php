@@ -27,14 +27,6 @@
     width: 210mm;
     height: 297mm;
   }
-  .cert-no {
-    position: absolute;
-    top: 14mm;
-    right: 16mm;
-    font-size: 9px;
-    letter-spacing: 0.4px;
-    color: #4b5563;
-  }
   .logo {
     position: absolute;
     top: 16mm;
@@ -171,8 +163,6 @@
     @if(!empty($bgSrc))
       <img class="bg" src="{{ $bgSrc }}" alt="">
     @endif
-
-    <div class="cert-no">CERT NO: {{ $certificate->certificate_code }}</div>
 
     @if(!empty($logoSrc))
       <div class="logo"><img src="{{ $logoSrc }}" alt=""></div>
