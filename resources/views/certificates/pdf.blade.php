@@ -38,8 +38,7 @@
   }
   .logo img {
     width: 70mm;
-    max-width: 70mm;
-    height: auto;
+    height: 22mm;
     display: inline-block;
     background: transparent;
     border: 0;

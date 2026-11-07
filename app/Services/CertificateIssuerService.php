@@ -310,10 +310,10 @@ class CertificateIssuerService
             'template' => $template,
             'qrSrc' => $this->pdfFileSrc($qrPath),
             'bgSrc' => $this->pdfPublicSrc($template?->resolvedBackgroundPath()),
-            'logoSrc' => $this->pdfOverlaySrc($template?->logo_path),
-            'sealSrc' => $this->pdfOverlaySrc($template?->seal_path),
-            'signerLeftSrc' => $this->pdfOverlaySrc($template?->signer_left_signature),
-            'signerRightSrc' => $this->pdfOverlaySrc($template?->signer_right_signature),
+            'logoSrc' => $this->pdfOverlaySrc($template?->logo_path, 900),
+            'sealSrc' => $this->pdfOverlaySrc($template?->seal_path, 500),
+            'signerLeftSrc' => $this->pdfOverlaySrc($template?->signer_left_signature, 500),
+            'signerRightSrc' => $this->pdfOverlaySrc($template?->signer_right_signature, 500),
             'schoolName' => $template ? $template->schoolName() : 'Berkeley School of Business, Arts & Sciences',
         ])->render();
 
@@ -422,7 +422,7 @@ class CertificateIssuerService
         return $user->ensureFixedStudentId();
     }
 
-    public function pdfOverlaySrc(?string $relative): ?string
+    public function pdfOverlaySrc(?string $relative, int $maxEdge = 800): ?string
     {
         $relative = trim((string) $relative);
         if ($relative === '') {
@@ -431,26 +431,21 @@ class CertificateIssuerService
         $relative = ltrim(str_replace('\\', '/', $relative), '/');
         $abs = $this->resolvePublicFile($relative);
         if (! $abs) {
-            return null;
+            return $this->pdfPublicSrc($relative);
         }
 
-        $png = self::transparentPngBytes($abs);
-        if ($png) {
+        $png = self::transparentPngBytes($abs, $maxEdge);
+        if (is_string($png) && strlen($png) > 64 && strlen($png) < 450000) {
             return 'data:image/png;base64,' . base64_encode($png);
         }
 
-        $raw = @file_get_contents($abs);
-        if ($raw === false || $raw === '') {
-            return null;
-        }
-
-        return 'data:image/png;base64,' . base64_encode($raw);
+        return $this->pdfFileSrc($abs);
     }
 
     /**
      * Convert a signature/seal/logo to a PNG with real alpha (white paper becomes transparent).
      */
-    public static function transparentPngBytes(string $absolute): ?string
+    public static function transparentPngBytes(string $absolute, int $maxEdge = 800): ?string
     {
         if (! function_exists('imagecreatefromstring') || ! function_exists('imagepng')) {
             return null;
@@ -471,15 +466,30 @@ class CertificateIssuerService
             return null;
         }
 
-        $dst = imagecreatetruecolor($w, $h);
+        $maxEdge = max(120, $maxEdge);
+        $scale = min(1, $maxEdge / max($w, $h));
+        $nw = max(1, (int) round($w * $scale));
+        $nh = max(1, (int) round($h * $scale));
+
+        $work = imagecreatetruecolor($nw, $nh);
+        imagealphablending($work, false);
+        imagesavealpha($work, true);
+        $clear = imagecolorallocatealpha($work, 0, 0, 0, 127);
+        imagefilledrectangle($work, 0, 0, $nw, $nh, $clear);
+        imagealphablending($work, true);
+        imagecopyresampled($work, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
+        imagealphablending($work, false);
+        imagesavealpha($work, true);
+        imagedestroy($src);
+
+        $dst = imagecreatetruecolor($nw, $nh);
         imagealphablending($dst, false);
         imagesavealpha($dst, true);
-        $clear = imagecolorallocatealpha($dst, 0, 0, 0, 127);
-        imagefilledrectangle($dst, 0, 0, $w, $h, $clear);
+        imagefilledrectangle($dst, 0, 0, $nw, $nh, $clear);
 
-        for ($y = 0; $y < $h; $y++) {
-            for ($x = 0; $x < $w; $x++) {
-                $rgba = imagecolorat($src, $x, $y);
+        for ($y = 0; $y < $nh; $y++) {
+            for ($x = 0; $x < $nw; $x++) {
+                $rgba = imagecolorat($work, $x, $y);
                 $r = ($rgba >> 16) & 0xFF;
                 $g = ($rgba >> 8) & 0xFF;
                 $b = $rgba & 0xFF;
@@ -497,7 +507,7 @@ class CertificateIssuerService
         ob_start();
         imagepng($dst, null, 6);
         $png = ob_get_clean();
-        imagedestroy($src);
+        imagedestroy($work);
         imagedestroy($dst);
 
         return is_string($png) && $png !== '' ? $png : null;
