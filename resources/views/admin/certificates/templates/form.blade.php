@@ -94,6 +94,11 @@
                                 <a href="{{ $bgView }}" target="_blank" rel="noopener">View</a>
                             </p>
                             <img src="{{ $bgView }}" alt="Background" style="max-width:100%;max-height:140px;border:1px solid #e5e7eb;margin-top:4px;">
+                            @if($template->exists && $template->background_path)
+                                <label class="checkbox-inline" style="display:block;margin-top:8px;">
+                                    <input type="checkbox" name="remove_background_image" value="1"> Remove this image
+                                </label>
+                            @endif
                         @endif
                     </div>
                     <div class="col-md-4 form-group">
@@ -104,6 +109,9 @@
                                 <a href="{{ $logoView }}" target="_blank" rel="noopener">View</a>
                             </p>
                             <img src="{{ $logoView }}" alt="Logo" style="max-width:100%;max-height:80px;border:1px solid #e5e7eb;margin-top:4px;">
+                            <label class="checkbox-inline" style="display:block;margin-top:8px;">
+                                <input type="checkbox" name="remove_logo_image" value="1"> Remove this image
+                            </label>
                         @endif
                     </div>
                     <div class="col-md-4 form-group">
@@ -114,6 +122,9 @@
                                 <a href="{{ $sealView }}" target="_blank" rel="noopener">View</a>
                             </p>
                             <img src="{{ $sealView }}" alt="Seal" style="max-width:100%;max-height:80px;border:1px solid #e5e7eb;margin-top:4px;">
+                            <label class="checkbox-inline" style="display:block;margin-top:8px;">
+                                <input type="checkbox" name="remove_seal_image" value="1"> Remove this image
+                            </label>
                         @endif
                     </div>
                 </div>
@@ -139,6 +150,9 @@
                                         <a href="{{ $leftView }}" target="_blank" rel="noopener">View</a>
                                     </p>
                                     <img src="{{ $leftView }}" alt="Left signature" style="max-height:48px;max-width:100%;margin-top:4px;">
+                                    <label class="checkbox-inline" style="display:block;margin-top:8px;">
+                                        <input type="checkbox" name="remove_signer_left_image" value="1"> Remove this image
+                                    </label>
                                 @endif
                             </div>
                         </div>
@@ -162,6 +176,9 @@
                                         <a href="{{ $rightView }}" target="_blank" rel="noopener">View</a>
                                     </p>
                                     <img src="{{ $rightView }}" alt="Right signature" style="max-height:48px;max-width:100%;margin-top:4px;">
+                                    <label class="checkbox-inline" style="display:block;margin-top:8px;">
+                                        <input type="checkbox" name="remove_signer_right_image" value="1"> Remove this image
+                                    </label>
                                 @endif
                             </div>
                         </div>

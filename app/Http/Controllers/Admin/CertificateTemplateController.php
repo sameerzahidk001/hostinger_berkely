@@ -69,6 +69,7 @@ class CertificateTemplateController extends Controller
         $data = $this->validated($request);
         $template->fill($data);
         $template->save();
+        $this->removeImages($request, $template);
         $this->storeImages($request, $template);
         if (! empty($data['is_default'])) {
             $template->markAsDefault();
@@ -133,6 +134,37 @@ class CertificateTemplateController extends Controller
         );
 
         return $data;
+    }
+
+    private function removeImages(Request $request, CertificateTemplate $template): void
+    {
+        $map = [
+            'remove_background_image' => 'background_path',
+            'remove_logo_image' => 'logo_path',
+            'remove_seal_image' => 'seal_path',
+            'remove_signer_left_image' => 'signer_left_signature',
+            'remove_signer_right_image' => 'signer_right_signature',
+        ];
+
+        $changed = false;
+        foreach ($map as $input => $column) {
+            if (! $request->boolean($input)) {
+                continue;
+            }
+            $path = trim((string) $template->{$column});
+            if ($path !== '' && ! str_contains($path, 'certificates/assets/')) {
+                $abs = public_path(ltrim(str_replace('\\', '/', $path), '/'));
+                if (is_file($abs)) {
+                    File::delete($abs);
+                }
+            }
+            $template->{$column} = null;
+            $changed = true;
+        }
+
+        if ($changed) {
+            $template->save();
+        }
     }
 
     private function storeImages(Request $request, CertificateTemplate $template): void
