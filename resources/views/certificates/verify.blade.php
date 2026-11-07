@@ -40,9 +40,8 @@
     .ecert-verify .badge.not_found { background:#f59e0b; }
     .ecert-verify .meta { font-size:14px; line-height:1.55; margin-top:10px; }
     .ecert-verify a { color:#000435; }
-    .ecert-verify .locked { position:relative; }
-    .ecert-verify .locked::after { content:""; position:absolute; inset:0; background:rgba(248,250,252,.65); cursor:not-allowed; }
-    .ecert-verify .locked input { background:#f1f5f9; pointer-events:none; }
+    .ecert-verify .locked input,
+    .ecert-verify .locked textarea { background:#f1f5f9; color:#64748b; cursor:not-allowed; pointer-events:none; }
     .ecert-verify .hint { font-size:13px; color:#6b7280; margin:0 0 12px; }
 </style>
 @endpush
@@ -108,25 +107,25 @@
             </div>
             <div class="panel">
                 <h2>Certificate Details to Verify:</h2>
-                @unless($verifierReady)
-                    <p class="hint">Submit your details first. Student ID and Certificate Number stay hidden until then.</p>
+                @if($verifierReady)
+                    <p class="hint">Student ID and Certificate Number are both required.</p>
                 @else
-                <p class="hint">Student ID and Certificate Number are both required.</p>
-                <form method="POST" action="{{ url('/ecert-verify') }}" id="ecert-check-form">
+                    <p class="hint">Fields are shown but disabled. Student ID and Certificate Number stay empty until you submit verifier details.</p>
+                @endif
+                <form method="POST" action="{{ url('/ecert-verify') }}" id="ecert-check-form" class="{{ $verifierReady ? '' : 'locked' }}">
                     @csrf
                     <div class="row">
                         <div>
                             <label for="student_number">Student ID <span class="req">*</span></label>
-                            <input id="student_number" type="text" name="student_number" value="{{ old('student_number', $old['student_number'] ?? '') }}" required autocomplete="off">
+                            <input id="student_number" type="text" name="student_number" value="{{ $verifierReady ? old('student_number', $old['student_number'] ?? '') : '' }}" @if($verifierReady) required @else disabled @endif autocomplete="off">
                         </div>
                         <div>
                             <label for="code">Certificate Number <span class="req">*</span></label>
-                            <input id="code" type="text" name="code" value="{{ old('code', $code) }}" required autocomplete="off">
+                            <input id="code" type="text" name="code" value="{{ $verifierReady ? old('code', $code) : '' }}" @if($verifierReady) required @else disabled @endif autocomplete="off">
                         </div>
                     </div>
-                    <button type="submit">Check Certificate</button>
+                    <button type="submit" @unless($verifierReady) disabled @endunless>Check Certificate</button>
                 </form>
-                @endunless
 
                 @if($result)
                     <div class="result {{ $result }}">
