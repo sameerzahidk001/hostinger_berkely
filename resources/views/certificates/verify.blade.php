@@ -77,6 +77,8 @@
                 <h2>Your details:</h2>
                 <form method="POST" action="{{ url('/ecert-verify/verifier') }}">
                     @csrf
+                    <input type="hidden" name="scan_code" value="{{ $code }}">
+                    <input type="hidden" name="scan_sid" value="{{ $old['student_number'] ?? '' }}">
                     <div class="row">
                         <div>
                             <label for="verifier_name">Name <span class="req">*</span></label>
@@ -108,7 +110,6 @@
             </div>
             <div class="panel">
                 <h2>Certificate Details to Verify:</h2>
-                <h3>Verify with</h3>
                 <p class="hint">Student ID and Certificate Number are both required. They stay disabled until verifier details are submitted.</p>
                 <form method="POST" action="{{ url('/ecert-verify') }}" id="ecert-check-form">
                     @csrf
