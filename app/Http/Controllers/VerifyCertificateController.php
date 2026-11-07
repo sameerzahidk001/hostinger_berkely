@@ -19,9 +19,19 @@ class VerifyCertificateController extends Controller
 
         $inputCode = trim((string) ($code ?: $request->input('code', '')));
         $inputCode = rawurldecode($inputCode);
+        $sid = trim((string) ($request->query('sid') ?: $request->input('student_number', '')));
+        $sid = rawurldecode($sid);
+        if ($inputCode !== '' && $sid === '') {
+            $matched = $this->findByCode($inputCode);
+            $sid = trim((string) ($matched->student_number ?? ''));
+        }
+        $request->session()->put('ecert_scan', [
+            'code' => $inputCode,
+            'student_number' => $sid,
+        ]);
 
         return $this->verifyView($request, $inputCode, null, null, [
-            'student_number' => old('student_number', ''),
+            'student_number' => old('student_number', $sid),
             'verifier_name' => old('verifier_name', ''),
             'verifier_email' => old('verifier_email', ''),
             'verifier_phone' => old('verifier_phone', ''),
@@ -51,8 +61,16 @@ class VerifyCertificateController extends Controller
 
         $request->session()->put('ecert_verifier', $data);
 
-        return redirect()->to(url('/ecert-verify'))
-            ->with('success', 'Verifier details saved. Enter Student ID and Certificate Number to continue.');
+        $scan = $request->session()->get('ecert_scan', []);
+        $code = trim((string) ($request->input('scan_code') ?: ($scan['code'] ?? '')));
+        $sid = trim((string) ($request->input('scan_sid') ?: ($scan['student_number'] ?? '')));
+        $url = url('/ecert-verify' . ($code !== '' ? '/' . rawurlencode($code) : ''));
+        if ($sid !== '') {
+            $url .= '?sid=' . rawurlencode($sid);
+        }
+
+        return redirect()->to($url)
+            ->with('success', 'Verifier details saved. Check Student ID and Certificate Number to continue.');
     }
 
     public function check(Request $request)
@@ -194,6 +212,24 @@ class VerifyCertificateController extends Controller
         }
 
         return $row;
+    }
+
+    protected function findByCode(string $code): ?LmsCertificate
+    {
+        $code = trim($code);
+        if ($code === '') {
+            return null;
+        }
+
+        $codeNorm = $this->normId($code);
+        $candidates = LmsCertificate::query()
+            ->where('certificate_code', $code)
+            ->orWhereRaw('LOWER(certificate_code) = ?', [strtolower($code)])
+            ->get();
+
+        return $candidates->first(function (LmsCertificate $cert) use ($codeNorm) {
+            return $this->normId((string) $cert->certificate_code) === $codeNorm;
+        });
     }
 
     protected function matchCertificate(string $code, string $studentNumber): ?LmsCertificate

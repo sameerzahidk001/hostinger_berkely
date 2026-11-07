@@ -106,7 +106,13 @@ class LmsCertificate extends Model
 
     public function verifyUrl(): string
     {
-        return url('/ecert-verify/' . urlencode((string) $this->certificate_code));
+        $url = url('/ecert-verify/' . rawurlencode((string) $this->certificate_code));
+        $sid = trim((string) ($this->student_number ?? ''));
+        if ($sid !== '') {
+            $url .= '?sid=' . rawurlencode($sid);
+        }
+
+        return $url;
     }
 
     public function user()
