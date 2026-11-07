@@ -251,9 +251,61 @@ class CertificateTemplate extends Model
 
     public function resolvedBackgroundPath(): string
     {
+        static::ensureDefaultBackgroundFile();
         $v = trim((string) $this->background_path);
 
         return $v !== '' ? $v : self::DEFAULT_BG;
+    }
+
+    public static function ensureDefaultBackgroundFile(): void
+    {
+        $rel = self::DEFAULT_BG;
+        $dest = public_path($rel);
+        if (is_file($dest) && filesize($dest) > 32) {
+            return;
+        }
+        $sources = [
+            base_path('public/' . $rel),
+            base_path($rel),
+        ];
+        foreach ($sources as $src) {
+            if ($src && $src !== $dest && is_file($src) && filesize($src) > 32) {
+                $dir = dirname($dest);
+                if (! is_dir($dir)) {
+                    @mkdir($dir, 0755, true);
+                }
+                @copy($src, $dest);
+
+                return;
+            }
+        }
+    }
+
+    public function absolutePublicFile(?string $path): ?string
+    {
+        $path = ltrim(str_replace('\\', '/', trim((string) $path)), '/');
+        if ($path === '') {
+            return null;
+        }
+        if (str_starts_with($path, 'public/')) {
+            $path = substr($path, 7);
+        }
+        $candidates = [
+            public_path($path),
+            base_path('public/' . $path),
+            base_path($path),
+        ];
+        $doc = isset($_SERVER['DOCUMENT_ROOT']) ? rtrim(str_replace('\\', '/', (string) $_SERVER['DOCUMENT_ROOT']), '/') : '';
+        if ($doc !== '') {
+            $candidates[] = $doc . '/' . $path;
+        }
+        foreach ($candidates as $abs) {
+            if ($abs && is_file($abs) && filesize($abs) > 32) {
+                return $abs;
+            }
+        }
+
+        return null;
     }
 
     public function imageViewUrl(?string $path): ?string
@@ -262,7 +314,39 @@ class CertificateTemplate extends Model
         if ($path === '') {
             return null;
         }
+        if (! $this->absolutePublicFile($path)) {
+            return null;
+        }
 
         return asset($path);
+    }
+
+    public function adminImageUrl(string $slot): ?string
+    {
+        if (! $this->exists || ! $this->id) {
+            return $slot === 'background' ? $this->imageViewUrl($this->resolvedBackgroundPath()) : null;
+        }
+        $rel = $this->slotPath($slot);
+        if ($rel === '' || ! $this->absolutePublicFile($rel)) {
+            return null;
+        }
+
+        return route('admin.certificates.templates.image', [
+            'id' => $this->id,
+            'slot' => $slot,
+            'v' => optional($this->updated_at)->timestamp ?? time(),
+        ]);
+    }
+
+    public function slotPath(string $slot): string
+    {
+        return match ($slot) {
+            'background' => $this->resolvedBackgroundPath(),
+            'logo' => trim((string) $this->logo_path),
+            'seal' => trim((string) $this->seal_path),
+            'signer_left' => trim((string) $this->signer_left_signature),
+            'signer_right' => trim((string) $this->signer_right_signature),
+            default => '',
+        };
     }
 }

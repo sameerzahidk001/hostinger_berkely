@@ -79,11 +79,11 @@
                 <h4>Images</h4>
                 <div class="row">
                     @php
-                        $bgView = $template->imageViewUrl($template->resolvedBackgroundPath());
-                        $logoView = $template->imageViewUrl($template->logo_path);
-                        $sealView = $template->imageViewUrl($template->seal_path);
-                        $leftView = $template->imageViewUrl($template->signer_left_signature);
-                        $rightView = $template->imageViewUrl($template->signer_right_signature);
+                        $bgView = $template->adminImageUrl('background') ?: $template->imageViewUrl($template->resolvedBackgroundPath());
+                        $logoView = $template->adminImageUrl('logo') ?: $template->imageViewUrl($template->logo_path);
+                        $sealView = $template->adminImageUrl('seal') ?: $template->imageViewUrl($template->seal_path);
+                        $leftView = $template->adminImageUrl('signer_left') ?: $template->imageViewUrl($template->signer_left_signature);
+                        $rightView = $template->adminImageUrl('signer_right') ?: $template->imageViewUrl($template->signer_right_signature);
                     @endphp
                     <div class="col-md-4 form-group">
                         <label>Background</label>
@@ -93,7 +93,7 @@
                             <p class="help-block m-b-none" style="margin-top:8px;">
                                 <a href="{{ $bgView }}" target="_blank" rel="noopener">View</a>
                             </p>
-                            <img src="{{ $bgView }}" alt="Background" style="max-width:100%;max-height:140px;border:1px solid #e5e7eb;margin-top:4px;">
+                            <img src="{{ $bgView }}" alt="Background" style="max-width:100%;max-height:180px;border:1px solid #cbd5e1;margin-top:4px;background:#eef1f5;padding:6px;display:block;">
                             @if($template->exists && $template->background_path)
                                 <label class="checkbox-inline" style="display:block;margin-top:8px;">
                                     <input type="checkbox" name="remove_background_image" value="1"> Remove this image

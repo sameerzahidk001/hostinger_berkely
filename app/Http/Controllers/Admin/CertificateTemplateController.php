@@ -24,6 +24,7 @@ class CertificateTemplateController extends Controller
     public function create()
     {
         CertificateTemplate::ensureTable();
+        CertificateTemplate::ensureDefaultBackgroundFile();
         $defaults = CertificateTemplate::berkeleyDefaults();
         $defaults['is_default'] = false;
         $defaults['name'] = 'Berkeley Certificate of Completion';
@@ -51,9 +52,68 @@ class CertificateTemplateController extends Controller
             ->with('success', 'Certificate template created.');
     }
 
+    public function previewImage(int $id, string $slot)
+    {
+        CertificateTemplate::ensureTable();
+        CertificateTemplate::ensureDefaultBackgroundFile();
+        $template = CertificateTemplate::query()->findOrFail($id);
+        $rel = $template->slotPath($slot);
+        $abs = $template->absolutePublicFile($rel);
+        if (! $abs) {
+            abort(404);
+        }
+
+        $raw = @file_get_contents($abs);
+        if ($raw === false || $raw === '') {
+            abort(404);
+        }
+
+        $mime = 'image/png';
+        $ext = strtolower((string) pathinfo($abs, PATHINFO_EXTENSION));
+        if (in_array($ext, ['jpg', 'jpeg'], true)) {
+            $mime = 'image/jpeg';
+        } elseif ($ext === 'webp') {
+            $mime = 'image/webp';
+        } elseif ($ext === 'gif') {
+            $mime = 'image/gif';
+        }
+
+        if ($slot === 'background' && function_exists('imagecreatefromstring') && function_exists('imagejpeg')) {
+            $src = @imagecreatefromstring($raw);
+            if ($src) {
+                $w = imagesx($src);
+                $h = imagesy($src);
+                $maxW = 900;
+                $maxH = 640;
+                $scale = min(1, $maxW / max(1, $w), $maxH / max(1, $h));
+                $nw = max(1, (int) round($w * $scale));
+                $nh = max(1, (int) round($h * $scale));
+                $dst = imagecreatetruecolor($nw, $nh);
+                $white = imagecolorallocate($dst, 255, 255, 255);
+                imagefilledrectangle($dst, 0, 0, $nw, $nh, $white);
+                imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
+                ob_start();
+                imagejpeg($dst, null, 84);
+                $jpeg = ob_get_clean();
+                imagedestroy($src);
+                imagedestroy($dst);
+                if (is_string($jpeg) && $jpeg !== '') {
+                    $raw = $jpeg;
+                    $mime = 'image/jpeg';
+                }
+            }
+        }
+
+        return response($raw, 200, [
+            'Content-Type' => $mime,
+            'Cache-Control' => 'private, max-age=120',
+        ]);
+    }
+
     public function edit(int $id)
     {
         CertificateTemplate::ensureTable();
+        CertificateTemplate::ensureDefaultBackgroundFile();
         $template = CertificateTemplate::query()->findOrFail($id);
 
         return view('admin.certificates.templates.form', [
@@ -188,17 +248,29 @@ class CertificateTemplateController extends Controller
             if (! $file) {
                 continue;
             }
-            $tmpName = $column . '-' . Str::random(6) . '-src.' . strtolower((string) $file->getClientOriginalExtension() ?: 'png');
+            $ext = strtolower((string) $file->getClientOriginalExtension() ?: 'png');
+            if (! in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true)) {
+                $ext = 'png';
+            }
+            $tmpName = $column . '-' . Str::random(6) . '-src.' . $ext;
             $file->move($dirAbs, $tmpName);
             $tmpAbs = $dirAbs . DIRECTORY_SEPARATOR . $tmpName;
-            $name = $column . '-' . Str::random(6) . '.png';
-            $destAbs = $dirAbs . DIRECTORY_SEPARATOR . $name;
-            $wrote = \App\Services\CertificateIssuerService::writeTransparentPng($tmpAbs, $destAbs);
-            if ($wrote && is_file($tmpAbs) && realpath($tmpAbs) !== realpath($destAbs)) {
-                File::delete($tmpAbs);
-            }
-            if (! $wrote) {
-                $name = $tmpName;
+            if ($column === 'background_path') {
+                // Keep the artwork opaque. Transparency knockout turns cream
+                // certificate paper into a broken/empty preview.
+                $name = $column . '-' . Str::random(6) . '.' . ($ext === 'jpeg' ? 'jpg' : $ext);
+                $destAbs = $dirAbs . DIRECTORY_SEPARATOR . $name;
+                File::move($tmpAbs, $destAbs);
+            } else {
+                $name = $column . '-' . Str::random(6) . '.png';
+                $destAbs = $dirAbs . DIRECTORY_SEPARATOR . $name;
+                $wrote = \App\Services\CertificateIssuerService::writeTransparentPng($tmpAbs, $destAbs);
+                if ($wrote && is_file($tmpAbs) && realpath($tmpAbs) !== realpath($destAbs)) {
+                    File::delete($tmpAbs);
+                }
+                if (! $wrote) {
+                    $name = $tmpName;
+                }
             }
             $template->{$column} = $dirRel . '/' . $name;
             $changed = true;
