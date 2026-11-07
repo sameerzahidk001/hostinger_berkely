@@ -36,7 +36,12 @@
     text-align: center;
     z-index: 2;
   }
-  .logo img { height: 22mm; }
+  .logo img {
+    width: 70mm;
+    max-width: 70mm;
+    height: auto;
+    display: inline-block;
+  }
   .heading, .student, .body-text, .course, .meta, .date, .seal, .signer, .verify, .cert-no {
     z-index: 2;
   }
