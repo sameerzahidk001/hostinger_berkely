@@ -6,7 +6,7 @@
         <h2>Certificate templates</h2>
         <ol class="breadcrumb">
             <li><a href="{{ lms_portal_home() }}">Home</a></li>
-            <li><a href="{{ route('admin.certificates.completions.index') }}">Certificates</a></li>
+            <li><a href="{{ route('admin.certificates.index') }}">Certificates</a></li>
             <li class="active"><strong>Templates</strong></li>
         </ol>
     </div>

@@ -19,60 +19,7 @@ class CertificateCompletionController extends Controller
 {
     public function index(Request $request)
     {
-        StudentCompletion::ensureTable();
-        LmsCertificate::ensureTable();
-        CertificateTemplate::ensureTable();
-
-        $userCols = $this->userSelectColumns();
-        $q = StudentCompletion::query()->with([
-            'user:' . implode(',', $userCols),
-            'course:id,title',
-            'batch:id,code,name',
-            'template:id,name',
-            'certificates',
-        ]);
-        if ($request->filled('search')) {
-            $s = trim((string) $request->input('search'));
-            $q->where(function ($outer) use ($s) {
-                $outer->where('notes', 'like', '%' . $s . '%')
-                    ->orWhere('marked_by_name', 'like', '%' . $s . '%')
-                    ->orWhereHas('user', function ($u) use ($s) {
-                        $u->where('name', 'like', '%' . $s . '%')
-                            ->orWhere('email', 'like', '%' . $s . '%');
-                        if (Schema::hasColumn('users', 'first_name')) {
-                            $u->orWhere('first_name', 'like', '%' . $s . '%');
-                        }
-                        if (Schema::hasColumn('users', 'last_name')) {
-                            $u->orWhere('last_name', 'like', '%' . $s . '%');
-                        }
-                    })
-                    ->orWhereHas('course', function ($c) use ($s) {
-                        $c->where('title', 'like', '%' . $s . '%');
-                    })
-                    ->orWhereHas('certificates', function ($c) use ($s) {
-                        $c->where('certificate_code', 'like', '%' . $s . '%');
-                    });
-            });
-        }
-        if ($request->filled('status')) {
-            $q->where('status', $request->input('status'));
-        }
-        if ($request->filled('course_id')) {
-            $q->where('course_id', (int) $request->input('course_id'));
-        }
-
-        $rows = $q->orderByDesc('completed_at')->orderByDesc('id')->paginate(20)->withQueryString();
-        $courses = Course::query()->orderBy('title')->limit(500)->get(['id', 'title']);
-
-        return view('admin.certificates.completions', [
-            'rows' => $rows,
-            'courses' => $courses,
-            'filters' => [
-                'search' => (string) $request->input('search', ''),
-                'status' => (string) $request->input('status', ''),
-                'course_id' => (string) $request->input('course_id', ''),
-            ],
-        ]);
+        return redirect()->route('admin.certificates.index', $request->query());
     }
 
     public function create()
@@ -222,12 +169,12 @@ class CertificateCompletionController extends Controller
             }
 
             return redirect()
-                ->route('admin.certificates.completions.index')
+                ->route('admin.certificates.index')
                 ->with('success', $msg);
         }
 
         return redirect()
-            ->route('admin.certificates.completions.index')
+            ->route('admin.certificates.index')
             ->with('success', "Saved for {$created} student(s). Certificate not issued yet.");
     }
 
@@ -264,7 +211,7 @@ class CertificateCompletionController extends Controller
         }
 
         return redirect()
-            ->route('admin.certificates.completions.index')
+            ->route('admin.certificates.index')
             ->with('success', $msg);
     }
 
@@ -324,7 +271,7 @@ class CertificateCompletionController extends Controller
         }
 
         return redirect()
-            ->route('admin.certificates.completions.index')
+            ->route('admin.certificates.index')
             ->with('success', 'Certificate details saved.');
     }
 

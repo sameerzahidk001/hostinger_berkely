@@ -339,14 +339,11 @@
                         <li class="{{ request()->is('admin/certificates/completions/create') ? 'active' : '' }}">
                            <a href="{{ route('admin.certificates.completions.create') }}">Issue Certificate</a>
                         </li>
-                        <li class="{{ request()->is('admin/certificates/completions') || request()->is('admin/certificates/completions/*') && !request()->is('admin/certificates/completions/create') ? 'active' : '' }}">
-                           <a href="{{ route('admin.certificates.completions.index') }}">Completions</a>
+                        <li class="{{ request()->is('admin/certificates') && !request()->is('admin/certificates/*') ? 'active' : '' }}">
+                           <a href="{{ route('admin.certificates.index') }}">Certificates</a>
                         </li>
                         <li class="{{ request()->is('admin/certificates/templates*') ? 'active' : '' }}">
                            <a href="{{ route('admin.certificates.templates.index') }}">Templates</a>
-                        </li>
-                        <li class="{{ request()->is('admin/certificates') && !request()->is('admin/certificates/*') ? 'active' : '' }}">
-                           <a href="{{ route('admin.certificates.index') }}">Issued certificates</a>
                         </li>
                         <li class="{{ request()->is('admin/certificates/verify-logs*') ? 'active' : '' }}">
                            <a href="{{ route('admin.certificates.verify-logs') }}">Verify log</a>

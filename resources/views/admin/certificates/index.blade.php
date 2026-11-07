@@ -11,7 +11,7 @@
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
         <a href="{{ route('admin.certificates.verify-logs') }}" class="btn btn-white">Verify log</a>
-        <a href="{{ route('admin.certificates.completions.index') }}" class="btn btn-white">Completions</a>
+        <a href="{{ route('admin.certificates.templates.index') }}" class="btn btn-white">Templates</a>
         <a href="{{ route('admin.certificates.completions.create') }}" class="btn btn-primary"><i class="fa fa-plus"></i> Issue Certificate</a>
     </div>
 </div>
@@ -19,7 +19,7 @@
     @if(session('success'))<div class="alert alert-success">{{ session('success') }}</div>@endif
     @if(session('fail'))<div class="alert alert-danger">{{ session('fail') }}</div>@endif
     <div class="ibox">
-        <div class="ibox-title"><h5>Issued certificates</h5></div>
+        <div class="ibox-title"><h5>Certificates</h5></div>
         <div class="ibox-content">
             <form method="GET" class="form-group">
                 <div class="row">
@@ -83,6 +83,7 @@
                                 </td>
                                 <td>
                                     <a class="btn btn-xs btn-white" href="{{ route('admin.certificates.edit', $row->id) }}">Edit</a>
+                                    <a class="btn btn-xs btn-white" href="{{ route('admin.certificates.preview', $row->id) }}" target="_blank" rel="noopener">Preview</a>
                                     <a class="btn btn-xs btn-info" href="{{ route('admin.certificates.download', $row->id) }}"><i class="fa fa-download"></i> PDF</a>
                                     <a class="btn btn-xs btn-white" href="{{ $row->verifyUrl() }}" target="_blank" rel="noopener">Verify</a>
                                     @if(! $row->isRevoked())
@@ -119,5 +120,50 @@
             {{ $rows->links() }}
         </div>
     </div>
+    @if(isset($pending) && $pending->isNotEmpty())
+    <div class="ibox">
+        <div class="ibox-title"><h5>Saved, not issued yet</h5></div>
+        <div class="ibox-content">
+            <div class="table-responsive">
+                <table class="table table-striped table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Student ID</th>
+                            <th>Course</th>
+                            <th>Awarded</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($pending as $row)
+                            @php
+                                $student = $row->user;
+                                $sid = $student && method_exists($student, 'studentIdValue') ? $student->studentIdValue() : ($row->student_number ?: '');
+                            @endphp
+                            <tr>
+                                <td>{{ $student->name ?? ('#'.$row->user_id) }}</td>
+                                <td><code>{{ $sid ?: '—' }}</code></td>
+                                <td>{{ $row->course->title ?? ($row->course_subtitle ?: '—') }}</td>
+                                <td>{{ optional($row->completed_at)->format('d M Y') ?: '—' }}</td>
+                                <td>
+                                    <a class="btn btn-xs btn-white" href="{{ route('admin.certificates.completions.edit', $row->id) }}">Edit</a>
+                                    <form method="POST" action="{{ route('admin.certificates.completions.issue', $row->id) }}" style="display:inline;">
+                                        @csrf
+                                        <input type="hidden" name="send_email" value="1">
+                                        @if($row->template_id)
+                                            <input type="hidden" name="template_id" value="{{ $row->template_id }}">
+                                        @endif
+                                        <button type="submit" class="btn btn-xs btn-primary">Issue + email</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    @endif
 </div>
 @endsection
