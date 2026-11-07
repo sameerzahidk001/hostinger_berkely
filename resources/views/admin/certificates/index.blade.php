@@ -52,10 +52,8 @@
                     <thead>
                         <tr>
                             <th>Certificate details</th>
-                            <th>Student ID</th>
-                            <th>Student</th>
-                            <th>Course / Batch</th>
-                            <th>Duration / CPD</th>
+                            <th>Student Details</th>
+                            <th>Course details</th>
                             <th>Awarded</th>
                             <th>Issued</th>
                             <th>Date of Revoke</th>
@@ -104,26 +102,31 @@
                                         </div>
                                     @endforelse
                                 </td>
-                                <td><code>{{ $sid ?: ($latest->student_number ?? '—') }}</code></td>
                                 <td>
-                                    {{ $latest->student_name ?? $studentLabel }}
-                                    <div class="text-muted small">{{ $student->email ?? '' }}</div>
+                                    @php
+                                        $country = '—';
+                                        if ($student && method_exists($student, 'displayCountryName')) {
+                                            $country = $student->displayCountryName();
+                                        } elseif (! empty($student->country)) {
+                                            $country = $student->country;
+                                        }
+                                        $batchLabel = $row->batch ? trim(($row->batch->code ? $row->batch->code.' — ' : '').($row->batch->name ?: '')) : '';
+                                    @endphp
+                                    <div class="small" style="line-height:1.5;">
+                                        <div><strong>Student ID:</strong> <code>{{ $sid ?: ($latest->student_number ?? '—') }}</code></div>
+                                        <div><strong>Student Name:</strong> {{ $latest->student_name ?? $studentLabel }}</div>
+                                        <div><strong>Email address:</strong> {{ $student->email ?? '—' }}</div>
+                                        <div><strong>Batch:</strong> {{ $batchLabel !== '' ? $batchLabel : '—' }}</div>
+                                        <div><strong>Country:</strong> {{ $country }}</div>
+                                    </div>
                                 </td>
                                 <td>
-                                    {{ $latest->course_title ?? ($row->course->title ?? ('#'.$row->course_id)) }}
-                                    @if($row->course_subtitle || ($latest->course_subtitle ?? null))
-                                        <div class="text-muted small">{{ $latest->course_subtitle ?? $row->course_subtitle }}</div>
-                                    @endif
-                                    @if($row->batch)
-                                        <div class="text-muted small">Batch: {{ $row->batch->code ?: $row->batch->name }}</div>
-                                    @endif
-                                    @if($row->template)
-                                        <div class="text-muted small">Template: {{ $row->template->name }}</div>
-                                    @endif
-                                </td>
-                                <td>
-                                    {{ $latest->programme_duration ?? $row->programme_duration ?: '—' }}
-                                    <div class="text-muted small">CPD: {{ $latest->cpd_hours ?? $row->cpd_hours ?: '—' }}</div>
+                                    <div class="small" style="line-height:1.5;">
+                                        <div><strong>Course Name:</strong> {{ $latest->course_title ?? ($row->course->title ?? '—') }}</div>
+                                        <div><strong>Sub Title:</strong> {{ $latest->course_subtitle ?? $row->course_subtitle ?: '—' }}</div>
+                                        <div><strong>Duration:</strong> {{ $latest->programme_duration ?? $row->programme_duration ?: '—' }}</div>
+                                        <div><strong>CPD:</strong> {{ $latest->cpd_hours ?? $row->cpd_hours ?: '—' }}</div>
+                                    </div>
                                 </td>
                                 <td>{{ optional($latest->completion_date ?? $row->completed_at)->format('d M Y') ?: '—' }}</td>
                                 <td>{{ optional($latest->issued_at)->format('d M Y H:i') ?: '—' }}</td>
@@ -199,7 +202,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="11">No certificates yet. Use Issue Certificate to start.</td></tr>
+                            <tr><td colspan="9">No certificates yet. Use Issue Certificate to start.</td></tr>
                         @endforelse
                     </tbody>
                 </table>

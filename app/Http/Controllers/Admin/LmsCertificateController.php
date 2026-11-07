@@ -23,7 +23,7 @@ class LmsCertificateController extends Controller
         CertificateTemplate::ensureTable();
 
         $userCols = ['id', 'name', 'email'];
-        foreach (['first_name', 'last_name', 'student_id', 'student_number'] as $col) {
+        foreach (['first_name', 'last_name', 'student_id', 'student_number', 'country'] as $col) {
             if (Schema::hasColumn('users', $col)) {
                 $userCols[] = $col;
             }
@@ -31,6 +31,7 @@ class LmsCertificateController extends Controller
 
         $q = StudentCompletion::query()->with([
             'user:' . implode(',', $userCols),
+            'user.countryarray:iso_code,name',
             'course:id,title',
             'batch:id,code,name',
             'template:id,name',
