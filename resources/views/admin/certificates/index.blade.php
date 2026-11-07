@@ -27,7 +27,7 @@
                         <input type="search" name="search" class="form-control" value="{{ $filters['search'] }}" placeholder="Certificate ID, student, course">
                     </div>
                     <div class="col-sm-3">
-                        <select name="course_id" class="form-control">
+                        <select name="course_id" class="form-control js-search-select" data-placeholder="Type to find course">
                             <option value="">All courses</option>
                             @foreach($courses ?? [] as $course)
                                 <option value="{{ $course->id }}" @selected((string)($filters['course_id'] ?? '') === (string)$course->id)>{{ $course->title }}</option>
@@ -202,3 +202,15 @@
     </div>
 </div>
 @endsection
+@push('style')
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>.select2-container { width: 100% !important; }</style>
+@endpush
+@push('script')
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+$(function () {
+    $('.js-search-select').select2({ placeholder: 'Type to find course', allowClear: true, width: '100%' });
+});
+</script>
+@endpush

@@ -40,7 +40,7 @@
 
                     <div class="col-md-6 form-group js-target-student">
                         <label>Student *</label>
-                        <select name="user_id" class="form-control">
+                        <select name="user_id" id="studentSelect" class="form-control js-search-select" data-placeholder="Type to find student">
                             <option value="">Select student</option>
                             @foreach($students as $student)
                                 @php
@@ -58,7 +58,7 @@
 
                     <div class="col-md-6 form-group js-target-student">
                         <label>Course *</label>
-                        <select name="course_id" class="form-control" id="courseSelect">
+                        <select name="course_id" class="form-control js-search-select" id="courseSelect" data-placeholder="Type to find course">
                             <option value="">Select course</option>
                             @foreach($courses as $course)
                                 <option value="{{ $course->id }}" @selected((string)old('course_id') === (string)$course->id)>{{ $course->title }}</option>
@@ -68,7 +68,7 @@
 
                     <div class="col-md-12 form-group js-target-batch" style="display:none;">
                         <label>Batch *</label>
-                        <select name="batch_id" class="form-control" id="batchSelect">
+                        <select name="batch_id" class="form-control js-search-select" id="batchSelect" data-placeholder="Type to find batch">
                             <option value="">Select batch</option>
                             @foreach($batches as $batch)
                                 @php
@@ -103,7 +103,7 @@
                     </div>
                     <div class="col-md-12 form-group">
                         <label>Certificate template *</label>
-                        <select name="template_id" class="form-control" required @disabled($templates->isEmpty())>
+                        <select name="template_id" id="templateSelect" class="form-control js-search-select" required @disabled($templates->isEmpty()) data-placeholder="Type to find template">
                             <option value="">Select template</option>
                             @foreach($templates as $tpl)
                                 <option value="{{ $tpl->id }}" @selected((string)old('template_id', optional($templates->firstWhere('is_default', true))->id) === (string)$tpl->id)>
@@ -137,21 +137,43 @@
         </div>
     </div>
 </div>
+@endsection
+@push('style')
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+.select2-container { width: 100% !important; }
+.select2-container .select2-selection--single { height: 34px; }
+.select2-container .select2-selection--single .select2-selection__rendered { line-height: 32px; }
+.select2-container .select2-selection--single .select2-selection__arrow { height: 32px; }
+</style>
+@endpush
+@push('script')
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
-(function () {
-    function syncTarget() {
-        var type = (document.querySelector('input[name="target_type"]:checked') || {}).value || 'student';
-        document.querySelectorAll('.js-target-student').forEach(function (el) {
-            el.style.display = type === 'student' ? '' : 'none';
-        });
-        document.querySelectorAll('.js-target-batch').forEach(function (el) {
-            el.style.display = type === 'batch' ? '' : 'none';
+$(function () {
+    function initSearchSelects() {
+        $('.js-search-select').each(function () {
+            var $el = $(this);
+            if ($el.hasClass('select2-hidden-accessible')) {
+                $el.select2('destroy');
+            }
+            $el.select2({
+                placeholder: $el.data('placeholder') || 'Type to find',
+                allowClear: true,
+                width: '100%'
+            });
         });
     }
-    document.querySelectorAll('input[name="target_type"]').forEach(function (el) {
-        el.addEventListener('change', syncTarget);
-    });
+
+    function syncTarget() {
+        var type = $('input[name="target_type"]:checked').val() || 'student';
+        $('.js-target-student').toggle(type === 'student');
+        $('.js-target-batch').toggle(type === 'batch');
+        initSearchSelects();
+    }
+
+    $('input[name="target_type"]').on('change', syncTarget);
     syncTarget();
-})();
+});
 </script>
-@endsection
+@endpush
