@@ -26,15 +26,20 @@
     top: 0; left: 0;
     width: 210mm;
     height: 297mm;
+    z-index: 0;
   }
   .logo {
     position: absolute;
-    top: 16mm;
+    top: 10mm;
     left: 0;
     width: 210mm;
     text-align: center;
+    z-index: 2;
   }
   .logo img { height: 22mm; }
+  .heading, .student, .body-text, .course, .meta, .date, .seal, .signer, .verify, .cert-no {
+    z-index: 2;
+  }
   .heading {
     position: absolute;
     top: 46mm;

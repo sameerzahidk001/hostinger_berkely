@@ -320,6 +320,17 @@ class CertificateIssuerService
         // Artwork and HTML are A4 portrait. Landscape paper leaves a white strip
         // and spills the footer onto a second page in Zoho/Gmail PDF preview.
         $pdf = Pdf::loadHTML($html)->setPaper('a4', 'portrait');
+        try {
+            $dompdf = $pdf->getDomPDF();
+            $options = $dompdf->getOptions();
+            $options->set('isRemoteEnabled', true);
+            $options->set('isHtml5ParserEnabled', true);
+            if (method_exists($options, 'setChroot')) {
+                $options->setChroot(public_path());
+            }
+        } catch (\Throwable $e) {
+            // PDF still writes with default options.
+        }
         // Unique filename when multiple certs share similar codes over time.
         $fileName = Str::slug($cert->certificate_code) . '-' . $cert->id . '.pdf';
         $absolute = $dir . DIRECTORY_SEPARATOR . $fileName;
@@ -420,9 +431,17 @@ class CertificateIssuerService
             return null;
         }
         $relative = ltrim(str_replace('\\', '/', $relative), '/');
-        $abs = public_path($relative);
+        foreach ([
+            public_path($relative),
+            base_path('public/' . $relative),
+            base_path($relative),
+        ] as $abs) {
+            if (is_file($abs)) {
+                return $this->pdfFileSrc($abs);
+            }
+        }
 
-        return is_file($abs) ? $this->pdfFileSrc($abs) : null;
+        return null;
     }
 
     public function pdfFileSrc(?string $absolute): ?string
@@ -430,11 +449,18 @@ class CertificateIssuerService
         if (! $absolute || ! is_file($absolute)) {
             return null;
         }
-        $path = str_replace('\\', '/', $absolute);
-        if (! str_starts_with($path, 'file://')) {
-            $path = 'file:///' . ltrim($path, '/');
+        $raw = @file_get_contents($absolute);
+        if ($raw === false || $raw === '') {
+            return null;
+        }
+        $mime = 'image/png';
+        if (function_exists('mime_content_type')) {
+            $detected = @mime_content_type($absolute);
+            if (is_string($detected) && str_starts_with($detected, 'image/')) {
+                $mime = $detected;
+            }
         }
 
-        return $path;
+        return 'data:' . $mime . ';base64,' . base64_encode($raw);
     }
 }

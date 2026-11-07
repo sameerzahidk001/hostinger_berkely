@@ -152,6 +152,11 @@ class LmsCertificateController extends Controller
     {
         LmsCertificate::ensureTable();
         $cert = LmsCertificate::query()->findOrFail($id);
+        try {
+            $cert = $issuer->refreshPdf($cert);
+        } catch (\Throwable $e) {
+            // Fall back to any existing file.
+        }
         $path = $issuer->ensurePdfFile($cert);
         if (! $path) {
             return back()->with('fail', 'Certificate PDF could not be generated.');
@@ -164,6 +169,11 @@ class LmsCertificateController extends Controller
     {
         LmsCertificate::ensureTable();
         $cert = LmsCertificate::query()->findOrFail($id);
+        try {
+            $cert = $issuer->refreshPdf($cert);
+        } catch (\Throwable $e) {
+            // Fall back to any existing file.
+        }
         $path = $issuer->ensurePdfFile($cert);
         if (! $path) {
             return back()->with('fail', 'Certificate PDF could not be generated.');
