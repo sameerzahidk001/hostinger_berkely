@@ -34,7 +34,7 @@ class LmsCertificateController extends Controller
             'course:id,title',
             'batch:id,code,name',
             'template:id,name',
-            'certificates',
+            'certificates.template:id,name',
         ]);
         if ($request->filled('search')) {
             $s = trim((string) $request->input('search'));

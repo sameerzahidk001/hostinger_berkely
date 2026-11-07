@@ -24,7 +24,7 @@
             <form method="GET" class="form-group">
                 <div class="row">
                     <div class="col-sm-4">
-                        <input type="search" name="search" class="form-control" value="{{ $filters['search'] }}" placeholder="Code, student, course">
+                        <input type="search" name="search" class="form-control" value="{{ $filters['search'] }}" placeholder="Certificate ID, student, course">
                     </div>
                     <div class="col-sm-3">
                         <select name="course_id" class="form-control">
@@ -51,7 +51,7 @@
                 <table class="table table-striped table-bordered">
                     <thead>
                         <tr>
-                            <th>Code</th>
+                            <th>Certificate details</th>
                             <th>Student ID</th>
                             <th>Student</th>
                             <th>Course / Batch</th>
@@ -83,9 +83,25 @@
                             <tr>
                                 <td>
                                     @forelse($certs as $cert)
-                                        <div style="margin-bottom:4px;"><code>{{ $cert->certificate_code }}</code></div>
+                                        @php
+                                            $tpl = $cert->template ?: $row->template;
+                                            $tplId = $cert->template_id ?: $row->template_id;
+                                            $tplName = $tpl->name ?? '—';
+                                        @endphp
+                                        <div class="small" style="margin-bottom:8px;line-height:1.5;">
+                                            <div><strong>Certificate ID:</strong> <code>{{ $cert->certificate_code }}</code></div>
+                                            <div><strong>Template ID:</strong> {{ $tplId ?: '—' }}</div>
+                                            <div><strong>Template Name:</strong> {{ $tplName }}</div>
+                                        </div>
                                     @empty
-                                        —
+                                        @php
+                                            $tpl = $row->template;
+                                        @endphp
+                                        <div class="small" style="line-height:1.5;">
+                                            <div><strong>Certificate ID:</strong> —</div>
+                                            <div><strong>Template ID:</strong> {{ $row->template_id ?: '—' }}</div>
+                                            <div><strong>Template Name:</strong> {{ $tpl->name ?? '—' }}</div>
+                                        </div>
                                     @endforelse
                                 </td>
                                 <td><code>{{ $sid ?: ($latest->student_number ?? '—') }}</code></td>
