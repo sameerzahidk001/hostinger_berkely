@@ -87,6 +87,9 @@ Route::get('/robots.txt', [SitemapController::class, 'robots'])->name('robots');
 Route::get('/ecert-verify/{code?}', [VerifyCertificateController::class, 'show'])
     ->where('code', '.*')
     ->name('certificates.verify');
+Route::post('/ecert-verify/otp', [VerifyCertificateController::class, 'sendOtp'])
+    ->middleware('throttle:5,1')
+    ->name('certificates.verify.otp');
 Route::post('/ecert-verify/verifier', [VerifyCertificateController::class, 'saveVerifier'])
     ->name('certificates.verify.verifier');
 Route::post('/ecert-verify', [VerifyCertificateController::class, 'check'])
