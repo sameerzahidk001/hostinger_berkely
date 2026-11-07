@@ -129,9 +129,10 @@ class CertificateIssuerService
     {
         LmsCertificate::ensureTable();
         $cert->status = 'issued';
-        $cert->revoked_at = null;
         $cert->revoke_reason = null;
-        $cert->issued_at = now();
+        if (Schema::hasColumn('lms_certificates', 'reissued_at')) {
+            $cert->reissued_at = now();
+        }
         if ($issuer) {
             $cert->issued_by = $issuer->id;
             $cert->issued_by_name = trim((string) ($issuer->name ?? $issuer->email ?? 'Admin'));
@@ -322,6 +323,34 @@ class CertificateIssuerService
         File::put($absolute, $pdf->output());
 
         return 'certificates/' . $fileName;
+    }
+
+    public function ensurePdfFile(LmsCertificate $cert): ?string
+    {
+        $candidates = [];
+        $stored = trim((string) $cert->pdf_path);
+        if ($stored !== '') {
+            $candidates[] = public_path($stored);
+            $candidates[] = base_path($stored);
+            if (preg_match('/^([A-Za-z]:\\\\|\/)/', $stored) === 1) {
+                $candidates[] = $stored;
+            }
+        }
+        $slug = Str::slug((string) $cert->certificate_code);
+        $candidates[] = public_path('certificates/' . $slug . '-' . $cert->id . '.pdf');
+        $candidates[] = public_path('certificates/' . $slug . '.pdf');
+        $candidates[] = public_path('certificates/' . $cert->certificate_code . '.pdf');
+
+        foreach ($candidates as $path) {
+            if ($path && is_file($path) && filesize($path) > 64) {
+                return $path;
+            }
+        }
+
+        $fresh = $this->refreshPdf($cert);
+        $path = public_path((string) $fresh->pdf_path);
+
+        return (is_file($path) && filesize($path) > 64) ? $path : null;
     }
 
     public function ensureQrImage(LmsCertificate $cert): ?string
