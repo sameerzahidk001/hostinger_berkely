@@ -271,15 +271,24 @@ class CertificateIssuerService
         $prefix = 'CERT-' . $year . '-';
         $last = LmsCertificate::query()
             ->where('certificate_code', 'like', $prefix . '%')
-            ->orderByDesc('id')
+            ->orderByDesc('certificate_code')
             ->value('certificate_code');
 
         $seq = 1;
         if (is_string($last) && preg_match('/(\d+)$/', $last, $m)) {
-            $seq = ((int) $m[1]) + 1;
+            $seq = ((int) $m[1]) + 8;
         }
 
-        return $prefix . str_pad((string) $seq, 6, '0', STR_PAD_LEFT);
+        do {
+            $code = $prefix . str_pad((string) $seq, 6, '0', STR_PAD_LEFT);
+            $taken = LmsCertificate::query()->where('certificate_code', $code)->exists();
+            if (! $taken) {
+                return $code;
+            }
+            $seq += 8;
+        } while ($seq < 1000000);
+
+        return $prefix . str_pad((string) (time() % 1000000), 6, '0', STR_PAD_LEFT);
     }
 
     public function renderPdf(LmsCertificate $cert, ?CertificateTemplate $template = null): string
