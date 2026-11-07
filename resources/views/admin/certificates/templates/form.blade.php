@@ -22,7 +22,13 @@
                 @csrf
                 @if($mode === 'edit') @method('PUT') @endif
                 <div class="row">
-                    <div class="col-md-6 form-group">
+                    @if($mode === 'edit')
+                    <div class="col-md-2 form-group">
+                        <label>Template ID</label>
+                        <input type="text" class="form-control" value="{{ $template->id }}" readonly>
+                    </div>
+                    @endif
+                    <div class="col-md-{{ $mode === 'edit' ? '4' : '6' }} form-group">
                         <label>Template name (admin) *</label>
                         <input type="text" name="name" class="form-control" value="{{ old('name', $template->name) }}" required maxlength="255">
                     </div>

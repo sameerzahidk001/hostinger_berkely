@@ -24,6 +24,7 @@
                 <table class="table table-striped table-bordered">
                     <thead>
                         <tr>
+                            <th>Template ID</th>
                             <th>Name</th>
                             <th>Title on PDF</th>
                             <th>Orientation</th>
@@ -34,6 +35,7 @@
                     <tbody>
                         @forelse($templates as $row)
                             <tr>
+                                <td><code>{{ $row->id }}</code></td>
                                 <td>
                                     {{ $row->name }}
                                     @if($row->is_default)<span class="label label-primary" style="margin-left:6px;">Default</span>@endif
@@ -59,7 +61,7 @@
                                 </td>
                             </tr>
                         @empty
-                            <tr><td colspan="5">No templates yet.</td></tr>
+                            <tr><td colspan="6">No templates yet.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
