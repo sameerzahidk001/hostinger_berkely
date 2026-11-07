@@ -285,15 +285,16 @@ class CertificateIssuerService
         }
 
         $qrPath = $this->ensureQrImage($cert);
+        $artwork = $this->certificateArtworkJpeg($template);
         $html = view('certificates.pdf', [
             'certificate' => $cert,
             'template' => $template,
             'qrSrc' => $this->pdfFileSrc($qrPath),
-            'bgSrc' => $this->pdfPublicSrc($template?->resolvedBackgroundPath()),
-            'logoSrc' => $this->pdfOverlaySrc($template?->logo_path, 900),
-            'sealSrc' => $this->pdfOverlaySrc($template?->seal_path, 500),
-            'signerLeftSrc' => $this->pdfOverlaySrc($template?->signer_left_signature, 500),
-            'signerRightSrc' => $this->pdfOverlaySrc($template?->signer_right_signature, 500),
+            'bgSrc' => $artwork,
+            'logoSrc' => null,
+            'sealSrc' => null,
+            'signerLeftSrc' => null,
+            'signerRightSrc' => null,
             'schoolName' => $template ? $template->schoolName() : 'Berkeley School of Business, Arts & Sciences',
         ])->render();
 
@@ -303,9 +304,14 @@ class CertificateIssuerService
         try {
             $dompdf = $pdf->getDomPDF();
             $options = $dompdf->getOptions();
-            $options->set('isRemoteEnabled', true);
+            $options->set('isRemoteEnabled', false);
             $options->set('isHtml5ParserEnabled', true);
             $options->set('dpi', 96);
+            if (method_exists($options, 'setChroot')) {
+                $options->setChroot(public_path());
+            } else {
+                $options->set('chroot', public_path());
+            }
         } catch (\Throwable $e) {
             // PDF still writes with default options.
         }
@@ -402,6 +408,114 @@ class CertificateIssuerService
         return $user->ensureFixedStudentId();
     }
 
+    public function certificateArtworkJpeg(?CertificateTemplate $template): ?string
+    {
+        if (! function_exists('imagecreatetruecolor') || ! function_exists('imagejpeg')) {
+            return null;
+        }
+        CertificateTemplate::ensureDefaultBackgroundFile();
+
+        $width = 1240;
+        $height = 1754;
+        $mm = $width / 210;
+        $canvas = imagecreatetruecolor($width, $height);
+        imagefilledrectangle($canvas, 0, 0, $width, $height, imagecolorallocate($canvas, 255, 255, 255));
+
+        $bgRel = $template ? $template->resolvedBackgroundPath() : CertificateTemplate::DEFAULT_BG;
+        $this->paintOntoCanvas($canvas, $this->resolvePublicFile($bgRel), 0, 0, $width, $height, false);
+
+        if ($template) {
+            $logoW = (int) round(70 * $mm);
+            $logoH = (int) round(22 * $mm);
+            $this->paintOntoCanvas(
+                $canvas,
+                $this->resolvePublicFile((string) $template->logo_path),
+                (int) round(($width - $logoW) / 2),
+                (int) round(10 * $mm),
+                $logoW,
+                $logoH,
+                true
+            );
+
+            $sealH = (int) round(28 * $mm);
+            $sealW = (int) round(40 * $mm);
+            $this->paintOntoCanvas(
+                $canvas,
+                $this->resolvePublicFile((string) $template->seal_path),
+                (int) round(($width - $sealW) / 2),
+                (int) round(188 * $mm),
+                $sealW,
+                $sealH,
+                true
+            );
+
+            $sigW = (int) round(50 * $mm);
+            $sigH = (int) round(16 * $mm);
+            $this->paintOntoCanvas(
+                $canvas,
+                $this->resolvePublicFile((string) $template->signer_left_signature),
+                (int) round(28 * $mm),
+                (int) round(196 * $mm),
+                $sigW,
+                $sigH,
+                true
+            );
+            $this->paintOntoCanvas(
+                $canvas,
+                $this->resolvePublicFile((string) $template->signer_right_signature),
+                (int) round($width - 28 * $mm - $sigW),
+                (int) round(196 * $mm),
+                $sigW,
+                $sigH,
+                true
+            );
+        }
+
+        ob_start();
+        imagejpeg($canvas, null, 86);
+        $jpeg = ob_get_clean();
+        imagedestroy($canvas);
+        if (! is_string($jpeg) || strlen($jpeg) < 64) {
+            return null;
+        }
+
+        return 'data:image/jpeg;base64,' . base64_encode($jpeg);
+    }
+
+    private function paintOntoCanvas($canvas, ?string $absolute, int $x, int $y, int $boxW, int $boxH, bool $keepRatio): void
+    {
+        if (! $absolute || ! is_file($absolute)) {
+            return;
+        }
+        $raw = @file_get_contents($absolute);
+        if ($raw === false || $raw === '') {
+            return;
+        }
+        $src = @imagecreatefromstring($raw);
+        if (! $src) {
+            return;
+        }
+        $sw = imagesx($src);
+        $sh = imagesy($src);
+        if ($sw < 1 || $sh < 1) {
+            imagedestroy($src);
+
+            return;
+        }
+        $dw = $boxW;
+        $dh = $boxH;
+        if ($keepRatio) {
+            $scale = min($boxW / $sw, $boxH / $sh);
+            $dw = max(1, (int) round($sw * $scale));
+            $dh = max(1, (int) round($sh * $scale));
+            $x += (int) round(($boxW - $dw) / 2);
+            $y += (int) round(($boxH - $dh) / 2);
+        }
+        imagealphablending($canvas, true);
+        imagecopyresampled($canvas, $src, $x, $y, 0, 0, $dw, $dh, $sw, $sh);
+        imagedestroy($src);
+    }
+
     public function pdfOverlaySrc(?string $relative, int $maxEdge = 800): ?string
     {
         $relative = trim((string) $relative);
@@ -411,7 +525,7 @@ class CertificateIssuerService
         $relative = ltrim(str_replace('\\', '/', $relative), '/');
         $abs = $this->resolvePublicFile($relative);
         if (! $abs) {
-            return $this->pdfPublicSrc($relative);
+            return null;
         }
 
         $png = self::transparentPngBytes($abs, $maxEdge);
@@ -519,11 +633,7 @@ class CertificateIssuerService
             return $this->pdfFileSrc($abs);
         }
 
-        try {
-            return url('/' . $relative);
-        } catch (\Throwable $e) {
-            return null;
-        }
+        return null;
     }
 
     public function pdfFileSrc(?string $absolute): ?string

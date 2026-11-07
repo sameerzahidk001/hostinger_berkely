@@ -59,8 +59,24 @@
 
     <div class="container">
         <div class="header">
-            <img src="{{ asset('frontend/images/pngs/header-logo-white.png') }}" alt="Company Logo" class="logo">
-            <br>
+            @php
+                $emailLogo = null;
+                foreach ([
+                    public_path('frontend/images/pngs/header-logo-white.png'),
+                    public_path('frontend/images/pngs/header-logo.png'),
+                    public_path('images/white_logo.png'),
+                    public_path('images/logo.png'),
+                ] as $logoPath) {
+                    if (is_string($logoPath) && is_file($logoPath) && filesize($logoPath) > 32) {
+                        $emailLogo = $logoPath;
+                        break;
+                    }
+                }
+            @endphp
+            @if($emailLogo && isset($message))
+                <img src="{{ $message->embed($emailLogo) }}" alt="Berkeley School of Business, Arts &amp; Sciences" class="logo">
+                <br>
+            @endif
             {{ $subject ?? 'Email Notification' }}
         </div>
 
