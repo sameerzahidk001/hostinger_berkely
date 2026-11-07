@@ -1608,7 +1608,7 @@ if (!function_exists('activity_is_profile_noise')) {
 }
 
 if (!function_exists('audit_user_name')) {
-    function audit_user_name($model, $fallbackId = null): string
+    function audit_user_name($model = null, $fallbackId = null): string
     {
         if ($model) {
             return panel_actor_display_name(

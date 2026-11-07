@@ -409,6 +409,25 @@ class User extends Authenticatable implements MustVerifyEmail
         return Schema::hasColumn('users', 'student_id');
     }
 
+    public static function backfillMissingStudentIds(): void
+    {
+        if (! static::ensureStudentIdColumn()) {
+            return;
+        }
+
+        $query = static::query();
+        $query->where(function ($outer) {
+            $outer->whereNull('student_id')->orWhere('student_id', '');
+            if (Schema::hasColumn('users', 'student_number')) {
+                $outer->orWhereNull('student_number')->orWhere('student_number', '');
+            }
+        });
+
+        foreach ($query->orderBy('id')->cursor() as $user) {
+            $user->ensureFixedStudentId();
+        }
+    }
+
     public function studentIdValue(): string
     {
         return static::normalizeBsbStudentId((string) ($this->student_id ?? ''))

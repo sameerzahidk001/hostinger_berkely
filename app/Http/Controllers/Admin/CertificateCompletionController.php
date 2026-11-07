@@ -141,7 +141,7 @@ class CertificateCompletionController extends Controller
         $markedBy = $admin?->id;
         $markedByName = $admin
             ? trim((string) ($admin->name ?? $admin->email ?? 'Admin'))
-            : (function_exists('audit_user_name') ? audit_user_name() : 'Admin');
+            : (function_exists('audit_user_name') ? audit_user_name(null) : 'Admin');
 
         $targets = [];
         if ($data['target_type'] === 'student') {
