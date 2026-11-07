@@ -102,7 +102,7 @@ class CertificateIssuerService
             'issued_by' => $issuer?->id,
             'issued_by_name' => $issuer
                 ? trim((string) ($issuer->name ?? $issuer->email ?? 'Admin'))
-                : (function_exists('audit_user_name') ? audit_user_name() : 'Admin'),
+                : (function_exists('audit_user_name') ? audit_user_name(null) : 'Admin'),
         ]);
 
         if ($template && (! $completion->template_id || (int) $completion->template_id !== (int) $template->id)) {

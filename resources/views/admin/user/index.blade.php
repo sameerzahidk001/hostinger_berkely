@@ -46,8 +46,8 @@
                                 <thead>
                                     <tr>
                                         <th>#</th>
-                                        <th>Name</th>
                                         <th>Student ID</th>
+                                        <th>Name</th>
                                         <th>Image</th>
                                         <th>Email</th>
                                         <th>Mobile</th>
@@ -64,8 +64,8 @@
                                     @forelse($users as $index => $data)
                                         <tr>
                                             <td>{{ $loop->iteration }}</td>
-                                            <td style="white-space: nowrap;">{{ $data->name }}</td>
                                             <td>{{ $data->studentIdValue() ?: '—' }}</td>
+                                            <td style="white-space: nowrap;">{{ $data->name }}</td>
                                             <td><img src="{{ asset($data->image) }}" width="30" height="30"
                                                     alt="user image"></td>
                                             <td>{{ $data->email }}</td>
