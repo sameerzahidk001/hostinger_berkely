@@ -803,6 +803,34 @@ if (!function_exists('card_image_url')) {
     }
 }
 
+if (! function_exists('cms_card_titles_fingerprint')) {
+    /** Same campus/card titles on overlay-cards + cards/grid-cards should only render once. */
+    function cms_card_titles_fingerprint($section): ?string
+    {
+        $type = (string) ($section->section_type ?? '');
+        if (! in_array($type, ['overlay-cards', 'cards', 'grid-cards'], true)) {
+            return null;
+        }
+        $data = $section->data ?? [];
+        if (is_string($data)) {
+            $decoded = json_decode($data, true);
+            $data = is_array($decoded) ? $decoded : [];
+        }
+        if (! is_array($data)) {
+            return null;
+        }
+        $titles = [];
+        foreach (($data['cards'] ?? []) as $card) {
+            $title = strtolower(trim((string) (is_array($card) ? ($card['title'] ?? '') : '')));
+            if ($title !== '') {
+                $titles[] = $title;
+            }
+        }
+
+        return $titles === [] ? null : implode('||', $titles);
+    }
+}
+
 if (!function_exists('demote_page_headings')) {
     /**
      * CMS/editor HTML often contains extra H1 tags. Keep a single page H1 in the template only.

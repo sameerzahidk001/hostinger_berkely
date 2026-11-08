@@ -106,7 +106,7 @@
                                 style="color: {{ $cardTextColor }}">{{ $card['title'] }}</span>
                         @endif
                         @if(isset($card['description']))
-                            <div class="hidden font-semibold group-hover:block text-[18px] {{ $hasImage ? 'text-white' : 'text-dark' }}" style="color: {{ $cardTextColor }}">
+                            <div class="hidden font-semibold group-hover:block text-[18px] cms-html {{ $hasImage ? 'text-white' : 'text-dark' }}" style="color: {{ $cardTextColor }}">
                                 {!! render_cms_html($card['description'] ?? '') !!}</div>
                         @endif
                         @if(isset($card['url']))

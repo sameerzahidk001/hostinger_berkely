@@ -2,7 +2,17 @@
 
 @section('content')
     <div class="h-[72px]"></div>
+    @php $seenCardFingerprints = []; @endphp
     @foreach ($page->sections as $section)
+        @php
+            $cardFingerprint = cms_card_titles_fingerprint($section);
+            if ($cardFingerprint && in_array($cardFingerprint, $seenCardFingerprints, true)) {
+                continue;
+            }
+            if ($cardFingerprint) {
+                $seenCardFingerprints[] = $cardFingerprint;
+            }
+        @endphp
         @if ($section->section_type === 'hero-banner')
             {{-- @dd($section->data) --}}
             <x-hero-banner 

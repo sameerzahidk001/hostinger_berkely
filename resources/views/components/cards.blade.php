@@ -79,7 +79,7 @@
                             </div>
                         @endif
                         @if(isset($card['description']) && $card['description'] != '')
-                            <div class="hidden group-hover:block text-white text-[18px] {{ $textAlignment }}" style="color: {{ $color ?? 'inherit' }}">
+                            <div class="hidden group-hover:block text-white text-[18px] cms-html {{ $textAlignment }}" style="color: {{ $color ?? 'inherit' }}">
                                 {!! render_cms_html($card['description'] ?? '') !!}</div>
                         @endif
                         @if(isset($card['url']))
