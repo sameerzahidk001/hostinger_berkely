@@ -6,7 +6,6 @@
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span>&times;</span></button>
             </div>
             <div class="modal-body">
-                <p class="text-muted" id="payCurrencyHint">Choose USD (Stripe) or AED (existing methods).</p>
                 <button type="button" class="btn btn-primary btn-block" id="payUsdBtn">
                     Pay in USD (Stripe)
                 </button>
@@ -93,11 +92,6 @@
             $('#payUsdBtn').prop('disabled', true).text('Pay in USD (Stripe) — not available yet');
         }
         $('#payAedBtn').prop('disabled', false).text('Pay in AED — ' + (quote.aed_label || 'AED'));
-        var hint = 'Choose USD (Stripe) or AED (existing methods).';
-        if (quote.rate) {
-            hint += ' Rate: 1 USD = ' + Number(quote.rate).toFixed(4) + ' AED.';
-        }
-        $('#payCurrencyHint').text(hint);
         $('#payCurrencyModal').modal('show');
     }
 

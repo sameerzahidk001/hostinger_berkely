@@ -139,12 +139,6 @@
     <div id="payCurrencyOverlay" class="fixed inset-0 z-[2000] hidden items-center justify-center bg-black/50 px-4">
         <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
             <h2 class="text-xl font-semibold text-gray-900">How would you like to pay?</h2>
-            <p class="mt-2 text-sm text-gray-600" id="checkoutPayHint">
-                Choose USD (Stripe) or AED.
-                @if(!empty($usdRate))
-                    Rate: 1 USD = {{ number_format((float) $usdRate, 4) }} AED.
-                @endif
-            </p>
             <button type="button" id="checkoutPayUsd"
                 class="mt-5 w-full rounded-lg bg-[#000435] px-4 py-3 text-white font-semibold {{ empty($stripeEnabled) ? 'opacity-50 cursor-not-allowed' : '' }}"
                 {{ empty($stripeEnabled) ? 'disabled' : '' }}>
