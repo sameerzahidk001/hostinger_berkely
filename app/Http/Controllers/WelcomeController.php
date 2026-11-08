@@ -173,6 +173,32 @@ class WelcomeController extends Controller
             return $section;
         });
 
+        $hasClients = $page->sections->contains(fn ($section) => ($section->section_type ?? '') === 'clients');
+        $seenClients = false;
+        $seenFingerprints = [];
+        $page->sections = $page->sections->filter(function ($section) use ($hasClients, &$seenClients, &$seenFingerprints) {
+            if (($section->section_type ?? '') === 'clients') {
+                if ($seenClients) {
+                    return false;
+                }
+                $seenClients = true;
+
+                return true;
+            }
+            if ($hasClients && cms_section_looks_like_client_logos($section)) {
+                return false;
+            }
+            $fingerprint = cms_card_titles_fingerprint($section);
+            if ($fingerprint) {
+                if (in_array($fingerprint, $seenFingerprints, true)) {
+                    return false;
+                }
+                $seenFingerprints[] = $fingerprint;
+            }
+
+            return true;
+        })->values();
+
         return $page;
     }
 
