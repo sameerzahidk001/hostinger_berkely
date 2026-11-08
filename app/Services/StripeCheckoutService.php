@@ -96,16 +96,22 @@ class StripeCheckoutService
         $packageCurrency = function_exists('payment_display_currency')
             ? payment_display_currency($installment->payment)
             : 'AED';
-        $usd = $this->usdFromAed($aed, $installment);
+        $usd = 0.0;
+        try {
+            $usd = $this->usdFromAed($aed, $installment);
+        } catch (\Throwable $e) {
+            $usd = 0.0;
+        }
         $rate = currency_rates_to_aed()['USD'] ?? null;
+        $stripeReady = $this->isEnabled() && $usd >= 0.5;
 
         return [
             'aed' => $aed,
             'usd' => $usd,
             'rate' => $rate ? (float) $rate : null,
             'aed_label' => format_payment_aed_amount($installment->payment, $aed),
-            'usd_label' => 'USD ' . number_format($usd, 2),
-            'stripe_enabled' => $this->isEnabled(),
+            'usd_label' => $usd > 0 ? 'USD ' . number_format($usd, 2) : 'USD',
+            'stripe_enabled' => $stripeReady,
             'package_currency' => $packageCurrency,
         ];
     }

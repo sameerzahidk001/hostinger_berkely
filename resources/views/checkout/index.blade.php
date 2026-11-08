@@ -117,11 +117,12 @@
                                 </div>
                             </div>
 
+                            <input type="hidden" name="pay_currency" id="pay_currency" value="">
                             <button type="submit"
                                 class="w-full mt-6 bg-[#bc1904] hover:bg-[#a21503] transition-colors duration-200 border border-transparent rounded-lg py-3 px-4 flex items-center justify-center text-base font-semibold text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#bc1904] shadow-sm">
                                 Complete Order
                             </button>
-                            <p class="mt-3 text-center text-xs text-gray-500">After this, open Pay Now on your invoice and choose USD (Stripe) or AED.</p>
+                            <p class="mt-3 text-center text-xs text-gray-500">You will choose USD (Stripe) or AED before payment starts.</p>
 
                             <p class="mt-4 text-center text-sm text-gray-500">
                                 or
@@ -134,4 +135,66 @@
             </div>
         </div>
     </div>
+
+    <div id="payCurrencyOverlay" class="fixed inset-0 z-[2000] hidden items-center justify-center bg-black/50 px-4">
+        <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <h2 class="text-xl font-semibold text-gray-900">How would you like to pay?</h2>
+            <p class="mt-2 text-sm text-gray-600" id="checkoutPayHint">
+                Choose USD (Stripe) or AED.
+                @if(!empty($usdRate))
+                    Rate: 1 USD = {{ number_format((float) $usdRate, 4) }} AED.
+                @endif
+            </p>
+            <button type="button" id="checkoutPayUsd"
+                class="mt-5 w-full rounded-lg bg-[#000435] px-4 py-3 text-white font-semibold {{ empty($stripeEnabled) ? 'opacity-50 cursor-not-allowed' : '' }}"
+                {{ empty($stripeEnabled) ? 'disabled' : '' }}>
+                @if(!empty($stripeEnabled) && !empty($usdTotal))
+                    Pay in USD (Stripe) — USD {{ number_format((float) $usdTotal, 2) }}
+                @else
+                    Pay in USD (Stripe) — not available yet
+                @endif
+            </button>
+            <button type="button" id="checkoutPayAed"
+                class="mt-3 w-full rounded-lg border border-gray-300 bg-white px-4 py-3 font-semibold text-gray-900">
+                Pay in AED — AED {{ number_format((float) ($aedTotal ?? 0), 2) }}
+            </button>
+            <button type="button" id="checkoutPayCancel" class="mt-4 w-full text-sm text-gray-500">Cancel</button>
+        </div>
+    </div>
+    <script>
+        (function () {
+            var form = document.getElementById('checkout-form');
+            var overlay = document.getElementById('payCurrencyOverlay');
+            var currencyInput = document.getElementById('pay_currency');
+            if (!form || !overlay) return;
+
+            function openOverlay(e) {
+                if (currencyInput && currencyInput.value) {
+                    return;
+                }
+                e.preventDefault();
+                overlay.classList.remove('hidden');
+                overlay.classList.add('flex');
+            }
+            function closeOverlay() {
+                overlay.classList.add('hidden');
+                overlay.classList.remove('flex');
+            }
+            function choose(currency) {
+                currencyInput.value = currency;
+                closeOverlay();
+                form.submit();
+            }
+
+            form.addEventListener('submit', openOverlay);
+            document.getElementById('checkoutPayUsd').addEventListener('click', function () {
+                if (this.disabled) return;
+                choose('usd');
+            });
+            document.getElementById('checkoutPayAed').addEventListener('click', function () {
+                choose('aed');
+            });
+            document.getElementById('checkoutPayCancel').addEventListener('click', closeOverlay);
+        })();
+    </script>
 @endsection

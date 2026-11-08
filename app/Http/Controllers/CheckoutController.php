@@ -7,8 +7,10 @@ use App\Models\Payment;
 use App\Models\CartItem;
 use App\Models\Installment;
 use App\Services\InvoiceService;
+use App\Services\NoonCheckoutService;
 use App\Services\PageFeeStructureService;
 use App\Services\PaymentCrmDispatcher;
+use App\Services\StripeCheckoutService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
@@ -32,6 +34,7 @@ class CheckoutController extends Controller
         }
 
         $displayTotals = [];
+        $aedTotal = 0.0;
         foreach ($carts as $item) {
             $fee = $item->feePackage();
             if (!$fee) {
@@ -41,9 +44,29 @@ class CheckoutController extends Controller
             $linePrice = format_package_price($fee->price, $fee->currency ?? 'AED', $item->quantity);
             $currency = $linePrice['currency'];
             $displayTotals[$currency] = ($displayTotals[$currency] ?? 0) + ((float) $fee->price * $item->quantity);
+            $aedTotal += package_settling_amount($fee->price, $fee->currency ?? 'AED') * $item->quantity;
         }
 
-        return view('checkout.index', compact('user', 'carts', 'displayTotals'));
+        $usdTotal = 0.0;
+        $usdRate = currency_rates_to_aed()['USD'] ?? null;
+        try {
+            if ($aedTotal > 0) {
+                $usdTotal = convert_from_aed($aedTotal, 'USD');
+            }
+        } catch (\Throwable $e) {
+            $usdTotal = 0.0;
+        }
+        $stripeEnabled = app(StripeCheckoutService::class)->isEnabled() && $usdTotal >= 0.5;
+
+        return view('checkout.index', compact(
+            'user',
+            'carts',
+            'displayTotals',
+            'aedTotal',
+            'usdTotal',
+            'usdRate',
+            'stripeEnabled'
+        ));
     }
 
     public function store(Request $request)
@@ -53,6 +76,7 @@ class CheckoutController extends Controller
         $validator = Validator::make($request->all(), [
             'cart_id'   => 'required|array',
             'cart_id.*' => 'required|exists:cart_items,id',
+            'pay_currency' => 'nullable|in:usd,aed',
         ]);
 
         if ($validator->fails()) {
@@ -60,6 +84,8 @@ class CheckoutController extends Controller
         }
 
         $validated = $validator->validated();
+        $payCurrency = strtolower((string) ($validated['pay_currency'] ?? ''));
+        $createdInstallments = [];
 
         foreach ($validated['cart_id'] as $value) {
             $cart = CartItem::with([
@@ -75,16 +101,25 @@ class CheckoutController extends Controller
             }
 
             if ($cart->isPageFee() && $cart->pageFeePackage) {
-                $this->checkoutPageFee($cart, $request);
+                $createdInstallments[] = $this->checkoutPageFee($cart, $request);
             } elseif ($cart->courseFee) {
-                $this->checkoutCourseFee($cart, $request);
+                $createdInstallments[] = $this->checkoutCourseFee($cart, $request);
             }
         }
 
-        return redirect()->route('user.home')->with('success', 'Checkout complete. Your invoice has been emailed and is available in your dashboard.');
+        $createdInstallments = array_values(array_filter($createdInstallments));
+        $first = $createdInstallments[0] ?? null;
+        if ($first && in_array($payCurrency, ['usd', 'aed'], true)) {
+            $paid = $this->startCheckoutPayment($first, $payCurrency, $request);
+            if ($paid) {
+                return $paid;
+            }
+        }
+
+        return redirect()->route('user.home')->with('success', 'Checkout complete. Your invoice has been emailed and is available in your dashboard. Open Pay Now and choose USD or AED.');
     }
 
-    private function checkoutCourseFee(CartItem $cart, Request $request): void
+    private function checkoutCourseFee(CartItem $cart, Request $request): ?Installment
     {
         $fee = $cart->courseFee;
         $displayCurrency = package_currency_code($fee->currency ?? 'AED');
@@ -104,7 +139,7 @@ class CheckoutController extends Controller
         $payment->source = 'checkout';
         $payment->save();
 
-        $this->createPendingInstallment($payment);
+        $installment = $this->createPendingInstallment($payment);
         app(InvoiceService::class)->sendInvoiceEmail($payment);
         PaymentCrmDispatcher::syncPayment($payment->fresh(['installments', 'user', 'course', 'courseFee']));
 
@@ -121,9 +156,11 @@ class CheckoutController extends Controller
         );
 
         $cart->delete();
+
+        return $installment;
     }
 
-    private function checkoutPageFee(CartItem $cart, Request $request): void
+    private function checkoutPageFee(CartItem $cart, Request $request): ?Installment
     {
         $fee = $cart->pageFeePackage;
         $category = $fee->category;
@@ -153,7 +190,7 @@ class CheckoutController extends Controller
         $payment->source = 'checkout';
         $payment->save();
 
-        $this->createPendingInstallment($payment);
+        $installment = $this->createPendingInstallment($payment);
         app(InvoiceService::class)->sendInvoiceEmail($payment);
         PaymentCrmDispatcher::syncPayment($payment->fresh([
             'installments', 'user', 'page', 'pageFeeService', 'pageFeePackage',
@@ -172,9 +209,11 @@ class CheckoutController extends Controller
         );
 
         $cart->delete();
+
+        return $installment;
     }
 
-    private function createPendingInstallment(Payment $payment): void
+    private function createPendingInstallment(Payment $payment): Installment
     {
         $installment = new Installment();
         $installment->name = 'Installment 1';
@@ -187,5 +226,43 @@ class CheckoutController extends Controller
         $installment->user_id = $payment->user_id;
         $installment->status = 'pending';
         $installment->save();
+
+        return $installment;
+    }
+
+    private function startCheckoutPayment(Installment $installment, string $currency, Request $request)
+    {
+        $installment->loadMissing(['payment.course', 'payment.courseFee', 'user']);
+
+        try {
+            if ($currency === 'usd') {
+                $session = app(StripeCheckoutService::class)->createCheckoutSession($installment, $request);
+                $url = $session['checkout_url'] ?? null;
+                if ($url) {
+                    return redirect()->away($url);
+                }
+            }
+
+            if ($currency === 'aed') {
+                $noon = app(NoonCheckoutService::class);
+                if (! $noon->isConfigured()) {
+                    return null;
+                }
+                $amount = number_format((float) $installment->remaining_amount, 2, '.', '');
+                $returnUrl = rtrim($request->getSchemeAndHttpHost(), '/') . '/user/noon/return';
+                $session = $noon->initiateCheckout($installment, $amount, $returnUrl, $request);
+                $url = $session['checkout_url'] ?? null;
+                if ($url) {
+                    return redirect()->away($url);
+                }
+            }
+        } catch (\Throwable $e) {
+            return redirect()->route('user.home')->with(
+                'error',
+                'Invoice created, but payment could not start: ' . $e->getMessage() . ' Use Pay Now and choose USD or AED.'
+            );
+        }
+
+        return null;
     }
 }
