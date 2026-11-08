@@ -2,9 +2,15 @@
 
 @section('content')
     <div class="h-[72px]"></div>
-    @php $seenCardFingerprints = []; @endphp
+    @php $seenCardFingerprints = []; $seenSearchBar = false; @endphp
     @foreach ($page->sections as $section)
         @php
+            if (cms_section_is_course_search($section)) {
+                if ($seenSearchBar) {
+                    continue;
+                }
+                $seenSearchBar = true;
+            }
             $cardFingerprint = cms_card_titles_fingerprint($section);
             if ($cardFingerprint && in_array($cardFingerprint, $seenCardFingerprints, true)) {
                 continue;

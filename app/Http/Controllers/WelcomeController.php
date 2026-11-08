@@ -175,8 +175,15 @@ class WelcomeController extends Controller
 
         $hasClients = $page->sections->contains(fn ($section) => ($section->section_type ?? '') === 'clients');
         $seenClients = false;
+        $seenSearch = false;
         $seenFingerprints = [];
-        $page->sections = $page->sections->filter(function ($section) use ($hasClients, &$seenClients, &$seenFingerprints) {
+        $page->sections = $page->sections->filter(function ($section) use ($hasClients, &$seenClients, &$seenSearch, &$seenFingerprints) {
+            if (cms_section_is_course_search($section)) {
+                if ($seenSearch) {
+                    return false;
+                }
+                $seenSearch = true;
+            }
             if (($section->section_type ?? '') === 'clients') {
                 if ($seenClients) {
                     return false;
