@@ -236,11 +236,7 @@ class CheckoutController extends Controller
 
         try {
             if ($currency === 'usd') {
-                $session = app(StripeCheckoutService::class)->createCheckoutSession($installment, $request);
-                $url = $session['checkout_url'] ?? null;
-                if ($url) {
-                    return redirect()->away($url);
-                }
+                return redirect()->route('user.pay.stripe', $installment->id);
             }
 
             if ($currency === 'aed') {
