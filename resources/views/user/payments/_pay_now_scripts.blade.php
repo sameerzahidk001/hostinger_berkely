@@ -85,6 +85,22 @@
         });
     }
 
+    function showPayCurrencyModal(quote) {
+        quote = quote || {};
+        if (quote.stripe_enabled) {
+            $('#payUsdBtn').prop('disabled', false).text('Pay in USD (Stripe) — ' + (quote.usd_label || 'USD'));
+        } else {
+            $('#payUsdBtn').prop('disabled', true).text('Pay in USD (Stripe) — not available yet');
+        }
+        $('#payAedBtn').prop('disabled', false).text('Pay in AED — ' + (quote.aed_label || 'AED'));
+        var hint = 'Choose USD (Stripe) or AED (existing methods).';
+        if (quote.rate) {
+            hint += ' Rate: 1 USD = ' + Number(quote.rate).toFixed(4) + ' AED.';
+        }
+        $('#payCurrencyHint').text(hint);
+        $('#payCurrencyModal').modal('show');
+    }
+
     $(document).on('click', '.payNowBtn', function () {
         $activeBtn = $(this);
         selectedId = $activeBtn.data('installment-id');
@@ -98,27 +114,20 @@
             headers: { 'X-CSRF-TOKEN': csrf() },
             success: function (res) {
                 var quote = (res && res.quote) ? res.quote : {};
-                if (!quote.stripe_enabled) {
-                    startNoon(selectedId);
-                    return;
-                }
-                $('#payUsdBtn').text('Pay in USD (Stripe) — ' + (quote.usd_label || 'USD'));
-                $('#payAedBtn').text('Pay in AED — ' + (quote.aed_label || 'AED'));
-                var hint = 'Amounts are locked for this payment session.';
-                if (quote.rate) {
-                    hint += ' Rate: 1 USD = ' + Number(quote.rate).toFixed(4) + ' AED.';
-                }
-                $('#payCurrencyHint').text(hint);
                 restoreBtn();
-                $('#payCurrencyModal').modal('show');
+                showPayCurrencyModal(quote);
             },
             error: function () {
-                startNoon(selectedId);
+                restoreBtn();
+                showPayCurrencyModal({});
             }
         });
     });
 
     $('#payUsdBtn').on('click', function () {
+        if ($(this).prop('disabled')) {
+            return;
+        }
         $('#payCurrencyModal').modal('hide');
         if ($activeBtn) {
             $activeBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Redirecting...');
