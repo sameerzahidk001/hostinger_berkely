@@ -92,14 +92,15 @@
     function showPayCurrencyModal(quote) {
         quote = quote || {};
         var item = quote.item_name || 'Selected item';
-        var lines = [];
-        if (quote.usd_label) lines.push(quote.usd_label);
-        if (quote.aed_label) lines.push(quote.aed_label);
-        if (!lines.length && quote.amount_label) lines.push(quote.amount_label);
+        var currency = String(quote.package_currency || '').toUpperCase();
+        var due = quote.amount_label || '';
+        if (!due) {
+            if (currency === 'USD') due = quote.usd_label || '';
+            else if (currency === 'AED') due = quote.aed_label || '';
+            else due = quote.usd_label || quote.aed_label || '';
+        }
         $('#payItemName').text(item);
-        $('#payAmountDue').html(lines.map(function (line) {
-            return $('<div>').text(line).prop('outerHTML');
-        }).join(''));
+        $('#payAmountDue').text(due);
         $('#payAmountAlt').text('');
         if (quote.stripe_enabled) {
             $('#payUsdBtn').prop('disabled', false).text('I would like to pay in USD');
