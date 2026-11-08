@@ -31,7 +31,8 @@ class MenuController extends Controller
                 $menus->push($item);
             }
         }
-        $pages = Page::get();
+        Page::ensureVerifyCertificatePage();
+        $pages = Page::query()->orderBy('page_name')->get();
         return view('admin.menu.index', compact('menus','pages'));
     }
 

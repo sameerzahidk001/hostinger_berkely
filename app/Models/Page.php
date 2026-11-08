@@ -78,7 +78,28 @@ class Page extends Model
 
     public static function ensureVerifyCertificatePage(): ?self
     {
-        return static::findVerifyCertificatePage();
+        $existing = static::findVerifyCertificatePage();
+        if ($existing) {
+            return $existing;
+        }
+
+        try {
+            $page = new static();
+            $page->page_name = 'Verify Certificate';
+            $page->url = 'ecert-verify';
+            $page->parent_id = null;
+            $page->save();
+            if (function_exists('assign_column_if_exists')) {
+                assign_column_if_exists($page, 'status', 1);
+                if ($page->isDirty()) {
+                    $page->save();
+                }
+            }
+
+            return $page->fresh() ?: $page;
+        } catch (\Throwable $e) {
+            return null;
+        }
     }
 
 }
