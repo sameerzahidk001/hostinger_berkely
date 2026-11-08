@@ -136,8 +136,8 @@
         </div>
     </div>
 
-    <div id="payCurrencyOverlay" class="fixed inset-0 z-[2000] hidden items-center justify-center bg-black/50 px-4">
-        <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+    <div id="payCurrencyOverlay" class="fixed inset-0 z-[2000] hidden items-center justify-center px-4" style="background-color: rgba(209, 213, 219, 0.92);">
+        <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl" style="background-color: #ffffff;">
             <h2 class="text-xl font-semibold text-gray-900">How would you like to pay?</h2>
             <div class="mt-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
                 @foreach($displayTotals as $currency => $amount)
