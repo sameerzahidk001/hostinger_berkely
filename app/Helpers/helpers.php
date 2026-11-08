@@ -831,6 +831,65 @@ if (! function_exists('cms_card_titles_fingerprint')) {
     }
 }
 
+if (! function_exists('cms_section_looks_like_client_logos')) {
+    /** Extra logo grids that duplicate the Clients section (no heading, many images). */
+    function cms_section_looks_like_client_logos($section): bool
+    {
+        $type = (string) ($section->section_type ?? '');
+        $data = $section->data ?? [];
+        if (is_string($data)) {
+            $decoded = json_decode($data, true);
+            $data = is_array($decoded) ? $decoded : [];
+        }
+        if (! is_array($data)) {
+            return false;
+        }
+
+        if (in_array($type, ['grid-cards', 'cards', 'overlay-cards'], true)) {
+            $cards = is_array($data['cards'] ?? null) ? $data['cards'] : [];
+            if (count($cards) < 4) {
+                return false;
+            }
+            $withImage = 0;
+            $withTitle = 0;
+            foreach ($cards as $card) {
+                if (! is_array($card)) {
+                    continue;
+                }
+                if (trim((string) ($card['image'] ?? '')) !== '') {
+                    $withImage++;
+                }
+                if (trim((string) ($card['title'] ?? '')) !== '') {
+                    $withTitle++;
+                }
+            }
+
+            return $withImage >= 4 && $withTitle <= 1;
+        }
+
+        if (in_array($type, ['content', 'title-section'], true)) {
+            $html = strtolower((string) ($data['description'] ?? ''));
+            $imgs = preg_match_all('/<img\b/i', $html);
+
+            return $imgs >= 6 || substr_count($html, 'images/clients') >= 3;
+        }
+
+        if ($type === 'list') {
+            $items = is_array($data['list_items'] ?? null) ? $data['list_items'] : [];
+            $icons = 0;
+            foreach ($items as $item) {
+                if (is_array($item) && trim((string) ($item['icon'] ?? '')) !== '') {
+                    $icons++;
+                }
+            }
+
+            return $icons >= 6;
+        }
+
+        return false;
+    }
+}
+
 if (!function_exists('demote_page_headings')) {
     /**
      * CMS/editor HTML often contains extra H1 tags. Keep a single page H1 in the template only.
