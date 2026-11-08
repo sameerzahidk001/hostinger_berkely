@@ -135,7 +135,7 @@ class StripeCheckoutService
         return convert_from_aed($aedAmount, 'USD');
     }
 
-    public function createCheckoutSession(Installment $installment, Request $request): array
+    public function createCheckoutSession(Installment $installment, Request $request, string $uiMode = 'hosted'): array
     {
         Installment::ensureStripeColumns();
         $installment->loadMissing(['payment.course', 'payment.courseFee', 'user']);
@@ -155,14 +155,13 @@ class StripeCheckoutService
             throw new \RuntimeException('USD amount is too small to charge on Stripe.');
         }
 
-        $name = trim((string) ($installment->payment?->course?->title ?? 'Course fee'));
-        $name .= ' — installment #' . $installment->installment_number;
+        $name = $this->lineItemName($installment);
 
         $successUrl = rtrim($request->getSchemeAndHttpHost(), '/')
             . '/user/stripe/return?session_id={CHECKOUT_SESSION_ID}';
         $cancelUrl = rtrim($request->getSchemeAndHttpHost(), '/') . '/user/stripe/cancel';
 
-        $session = $this->client()->checkout->sessions->create([
+        $payload = [
             'mode' => 'payment',
             'payment_method_types' => ['card'],
             'customer_email' => $installment->user?->email ?: null,
@@ -184,9 +183,17 @@ class StripeCheckoutService
                 'aed_amount' => (string) $aed,
                 'usd_amount' => (string) $usd,
             ],
-            'success_url' => $successUrl,
-            'cancel_url' => $cancelUrl,
-        ]);
+        ];
+        if ($uiMode === 'embedded') {
+            $payload['ui_mode'] = 'embedded';
+            $payload['return_url'] = $successUrl;
+            $payload['redirect_on_completion'] = 'always';
+        } else {
+            $payload['success_url'] = $successUrl;
+            $payload['cancel_url'] = $cancelUrl;
+        }
+
+        $session = $this->client()->checkout->sessions->create($payload);
 
         $this->storeStripeMeta($installment, [
             'stripe_session_id' => $session->id,
@@ -197,10 +204,31 @@ class StripeCheckoutService
 
         return [
             'checkout_url' => $session->url,
+            'client_secret' => $session->client_secret ?? null,
             'session_id' => $session->id,
             'usd' => $usd,
             'aed' => $aed,
         ];
+    }
+
+    public function lineItemName(Installment $installment): string
+    {
+        $name = trim((string) ($installment->payment?->course?->title ?? 'Course fee'));
+        $total = 1;
+        if ($installment->payment_id) {
+            $total = (int) Installment::query()
+                ->where('payment_id', $installment->payment_id)
+                ->count();
+        }
+        if ($total < 1) {
+            $total = 1;
+        }
+        $n = (int) ($installment->installment_number ?: 1);
+        if ($n < 1) {
+            $n = 1;
+        }
+
+        return $name . ' — installment ' . $n . ' of ' . $total;
     }
 
     public function fulfillSession(string $sessionId, Request $request): ?Installment

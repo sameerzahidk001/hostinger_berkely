@@ -124,7 +124,7 @@
         }
         $('#payCurrencyModal').modal('hide');
         if ($activeBtn) {
-            $activeBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Redirecting...');
+            $activeBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Opening Stripe...');
         }
         startStripe(selectedId);
     });

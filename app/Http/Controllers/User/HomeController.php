@@ -198,28 +198,57 @@ class HomeController extends Controller
             'installment_id' => 'required|exists:installments,id',
         ]);
 
-        $installment = Installment::with(['payment.course', 'payment.courseFee', 'user'])
+        $installment = Installment::query()
             ->where('user_id', Auth::id())
             ->findOrFail($request->installment_id);
 
-        try {
-            $session = $stripe->createCheckoutSession($installment, $request);
-        } catch (\Throwable $e) {
-            Log::error('Stripe checkout initiate failed: ' . $e->getMessage(), [
-                'installment_id' => $installment->id,
-            ]);
-
+        if (! $stripe->isEnabled() || ! $stripe->publishableKey()) {
             return response()->json([
                 'success' => false,
-                'error' => $e->getMessage() ?: 'Stripe payment could not be started.',
-            ], 502);
+                'error' => 'Stripe is not configured. Add the publishable key in Payment Gateway.',
+            ], 422);
         }
 
         return response()->json([
             'success' => true,
-            'checkoutUrl' => $session['checkout_url'],
-            'usd' => $session['usd'],
-            'aed' => $session['aed'],
+            'checkoutUrl' => route('user.pay.stripe', $installment->id),
+        ]);
+    }
+
+    public function stripePay(Request $request, int $installment, StripeCheckoutService $stripe)
+    {
+        $row = Installment::with(['payment.course', 'payment.courseFee', 'user'])
+            ->where('user_id', Auth::id())
+            ->findOrFail($installment);
+
+        $pk = $stripe->publishableKey();
+        if (! $pk) {
+            return redirect()->route('user.payments')
+                ->with('error', 'Stripe is not configured. Add the publishable key in Payment Gateway.');
+        }
+
+        try {
+            $session = $stripe->createCheckoutSession($row, $request, 'embedded');
+        } catch (\Throwable $e) {
+            Log::error('Stripe embedded checkout failed: ' . $e->getMessage(), [
+                'installment_id' => $row->id,
+            ]);
+
+            return redirect()->route('user.payments')
+                ->with('error', $e->getMessage() ?: 'USD Stripe payment could not be started.');
+        }
+
+        $secret = $session['client_secret'] ?? null;
+        if (! $secret) {
+            return redirect()->route('user.payments')
+                ->with('error', 'Stripe checkout could not be opened inside the portal.');
+        }
+
+        return view('user.payments.stripe', [
+            'publishableKey' => $pk,
+            'clientSecret' => $secret,
+            'installment' => $row,
+            'usd' => $session['usd'] ?? null,
         ]);
     }
 

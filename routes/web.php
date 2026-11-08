@@ -751,6 +751,9 @@ Route::prefix('user')->middleware(['auth', 'approved', 'redirect.panel.from.stud
     Route::get('/noon/return', [UserHomeController::class, 'handleNoonReturn'])->name('user.noon.return');
     Route::post('/pay/quote', [UserHomeController::class, 'paymentQuote'])->name('user.pay.quote');
     Route::post('/generate/stripeCheckout', [UserHomeController::class, 'generateStripeCheckout'])->name('user.generate.stripeCheckout');
+    Route::get('/pay/stripe/{installment}', [UserHomeController::class, 'stripePay'])
+        ->whereNumber('installment')
+        ->name('user.pay.stripe');
     Route::get('/stripe/return', [UserHomeController::class, 'handleStripeReturn'])->name('user.stripe.return');
     Route::get('/stripe/cancel', [UserHomeController::class, 'handleStripeCancel'])->name('user.stripe.cancel');
     Route::post('/generate/rakBankPaySession', [UserHomeController::class, 'generateRakBankPaySession'])->name('user.generate.rakBankPaySession');
