@@ -246,12 +246,15 @@
                                 <label for="pages">Select Page</label>
                                 <select class="form-control js-page-search" id="pages" data-placeholder="Type to find a page (e.g. Verify Certificate)">
                                     <option value="">None</option>
-                                    @foreach ($pages as $page)
+                                    @forelse ($pages as $page)
                                         <option value="{{ $page->id }}" data-link="{{ $page->url }}" data-name="{{ $page->page_name }}">
-                                            {{ $page->page_name }}
+                                            {{ $page->page_name ?: ('Page #'.$page->id) }}
                                         </option>
-                                    @endforeach
+                                    @empty
+                                        <option value="" disabled>No pages found</option>
+                                    @endforelse
                                 </select>
+                                <p class="help-block">{{ $pages->count() }} page{{ $pages->count() === 1 ? '' : 's' }} available. Click and type to search.</p>
                                 <input type="hidden" name="page_id" id="selected_page_id" value="">
                                 <input type="hidden" name="page_link" id="selected_page_link" value="">
                             </div>
@@ -311,7 +314,17 @@
 
 @push('style')
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<style>.select2-container { width: 100% !important; }</style>
+<style>
+.select2-container { width: 100% !important; }
+.modal .select2-container { z-index: 1; }
+.select2-container--open,
+.select2-dropdown,
+.select2-container--open .select2-dropdown {
+    z-index: 10060 !important;
+}
+#addMenuModal .modal-body,
+.modal .modal-body { overflow: visible; }
+</style>
 @endpush
 @push('script')
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
@@ -354,23 +367,48 @@
                     if (urlEl && opt.getAttribute('data-link')) urlEl.value = opt.getAttribute('data-link');
                 });
             });
-            if (window.jQuery) {
+            if (window.jQuery && jQuery.fn.select2) {
+                function bindPageSelect($el) {
+                    $el.off('select2:select.menuPages change.menuPages').on('select2:select.menuPages change.menuPages', function () {
+                        var opt = this.options[this.selectedIndex];
+                        if (!opt) return;
+                        var name = opt.getAttribute('data-name') || '';
+                        var link = opt.getAttribute('data-link') || '';
+                        var nameTarget = $el.attr('data-name');
+                        var urlTarget = $el.attr('data-url');
+                        if (nameTarget && document.querySelector(nameTarget)) {
+                            document.querySelector(nameTarget).value = name;
+                        }
+                        if (urlTarget && document.querySelector(urlTarget)) {
+                            document.querySelector(urlTarget).value = link;
+                        }
+                        if (this.id === 'pages') {
+                            var nameInput = document.getElementById('page_name');
+                            var hiddenId = document.getElementById('selected_page_id');
+                            var hiddenLink = document.getElementById('selected_page_link');
+                            if (nameInput) nameInput.value = name;
+                            if (hiddenId) hiddenId.value = this.value;
+                            if (hiddenLink) hiddenLink.value = link;
+                        }
+                    });
+                }
                 function initPageSearch(scope) {
                     var $root = scope ? $(scope) : $(document);
-                    $root.find('.js-page-search').each(function () {
+                    $root.find('select.js-page-search').each(function () {
                         var $el = $(this);
                         if ($el.hasClass('select2-hidden-accessible')) {
-                            return;
+                            $el.select2('destroy');
                         }
                         $el.select2({
                             placeholder: $el.data('placeholder') || 'Type to find a page',
                             allowClear: true,
                             width: '100%',
-                            dropdownParent: $el.closest('.modal').length ? $el.closest('.modal') : $(document.body)
+                            dropdownParent: $(document.body)
                         });
+                        bindPageSelect($el);
                     });
                 }
-                initPageSearch(document);
+                window.initMenuPageSearch = initPageSearch;
                 $(document).on('shown.bs.modal', '.modal', function () {
                     initPageSearch(this);
                 });
@@ -401,19 +439,8 @@
                 var target = sel ? document.querySelector(sel) : null;
                 if (!target) return;
                 target.classList.remove('hidden');
-                if (window.jQuery && jQuery.fn.select2) {
-                    jQuery(target).find('.js-page-search').each(function () {
-                        var $el = jQuery(this);
-                        if ($el.hasClass('select2-hidden-accessible')) {
-                            $el.select2('destroy');
-                        }
-                        $el.select2({
-                            placeholder: $el.data('placeholder') || 'Type to find a page',
-                            allowClear: true,
-                            width: '100%',
-                            dropdownParent: $el.closest('.modal').length ? $el.closest('.modal') : jQuery(document.body)
-                        });
-                    });
+                if (typeof window.initMenuPageSearch === 'function') {
+                    window.initMenuPageSearch(target);
                 }
                 if (typeof target.scrollIntoView === 'function') {
                     target.scrollIntoView({ block: 'nearest' });
@@ -475,10 +502,14 @@
             const hiddenPageId = document.getElementById('selected_page_id');
             const hiddenPageLink = document.getElementById('selected_page_link');
 
-            pageDropdown.addEventListener('change', function () {
-                hiddenPageId.value = this.value; // Update hidden input for page_id
-                hiddenPageLink.value = this.selectedOptions[0].getAttribute('data-link'); // Update hidden input for page_link
-            });
+            if (pageDropdown) {
+                pageDropdown.addEventListener('change', function () {
+                    if (hiddenPageId) hiddenPageId.value = this.value;
+                    if (hiddenPageLink && this.selectedOptions[0]) {
+                        hiddenPageLink.value = this.selectedOptions[0].getAttribute('data-link') || '';
+                    }
+                });
+            }
         });
     </script>
 @endpush

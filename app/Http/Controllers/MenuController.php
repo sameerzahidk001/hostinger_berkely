@@ -31,8 +31,16 @@ class MenuController extends Controller
                 $menus->push($item);
             }
         }
-        Page::ensureVerifyCertificatePage();
-        $pages = Page::query()->orderBy('page_name')->get();
+        try {
+            Page::ensureVerifyCertificatePage();
+        } catch (\Throwable $e) {
+            // Menu picker must still load if the verify page cannot be created.
+        }
+        try {
+            $pages = Page::query()->orderBy('page_name')->orderBy('id')->get(['id', 'page_name', 'url']);
+        } catch (\Throwable $e) {
+            $pages = collect();
+        }
         return view('admin.menu.index', compact('menus','pages'));
     }
 
