@@ -890,6 +890,34 @@ if (! function_exists('cms_section_looks_like_client_logos')) {
     }
 }
 
+if (! function_exists('cms_section_is_course_search')) {
+    /** Homepage search bar (CMS search-bar, or the same form pasted into a content block). */
+    function cms_section_is_course_search($section): bool
+    {
+        $type = (string) ($section->section_type ?? '');
+        if ($type === 'search-bar') {
+            return true;
+        }
+
+        $data = $section->data ?? [];
+        if (is_string($data)) {
+            $decoded = json_decode($data, true);
+            $data = is_array($decoded) ? $decoded : [];
+        }
+        if (! is_array($data)) {
+            return false;
+        }
+
+        $html = strtolower((string) ($data['description'] ?? '') . (string) ($data['content'] ?? ''));
+        if ($html === '') {
+            return false;
+        }
+
+        return str_contains($html, 'name="q"')
+            && (str_contains($html, 'search-form') || str_contains($html, 'what would you like to learn'));
+    }
+}
+
 if (!function_exists('demote_page_headings')) {
     /**
      * CMS/editor HTML often contains extra H1 tags. Keep a single page H1 in the template only.
