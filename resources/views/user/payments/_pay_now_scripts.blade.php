@@ -6,11 +6,16 @@
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span>&times;</span></button>
             </div>
             <div class="modal-body">
+                <div id="payAmountBox" style="margin:0 0 16px;padding:12px 14px;background:#f8fafc;border:1px solid #e5e7eb;">
+                    <div id="payItemName" style="font-weight:600;color:#111;margin-bottom:6px;"></div>
+                    <div id="payAmountDue" style="font-size:20px;font-weight:700;color:#000435;"></div>
+                    <div id="payAmountAlt" style="font-size:13px;color:#6b7280;margin-top:4px;"></div>
+                </div>
                 <button type="button" class="btn btn-primary btn-block" id="payUsdBtn">
-                    Pay in USD (Stripe)
+                    I would like to pay in USD
                 </button>
                 <button type="button" class="btn btn-white btn-block" id="payAedBtn">
-                    Pay in AED
+                    I would like to pay in AED
                 </button>
             </div>
         </div>
@@ -86,12 +91,22 @@
 
     function showPayCurrencyModal(quote) {
         quote = quote || {};
+        var item = quote.item_name || 'Selected item';
+        var lines = [];
+        if (quote.usd_label) lines.push(quote.usd_label);
+        if (quote.aed_label) lines.push(quote.aed_label);
+        if (!lines.length && quote.amount_label) lines.push(quote.amount_label);
+        $('#payItemName').text(item);
+        $('#payAmountDue').html(lines.map(function (line) {
+            return $('<div>').text(line).prop('outerHTML');
+        }).join(''));
+        $('#payAmountAlt').text('');
         if (quote.stripe_enabled) {
-            $('#payUsdBtn').prop('disabled', false).text('Pay in USD (Stripe) — ' + (quote.usd_label || 'USD'));
+            $('#payUsdBtn').prop('disabled', false).text('I would like to pay in USD');
         } else {
-            $('#payUsdBtn').prop('disabled', true).text('Pay in USD (Stripe) — not available yet');
+            $('#payUsdBtn').prop('disabled', true).text('I would like to pay in USD — not available yet');
         }
-        $('#payAedBtn').prop('disabled', false).text('Pay in AED — ' + (quote.aed_label || 'AED'));
+        $('#payAedBtn').prop('disabled', false).text('I would like to pay in AED');
         $('#payCurrencyModal').modal('show');
     }
 
