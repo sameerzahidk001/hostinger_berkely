@@ -143,12 +143,6 @@
                 @foreach($displayTotals as $currency => $amount)
                     <div class="text-lg font-bold text-[#000435]">{{ $currency }} {{ number_format($amount, 2) }}</div>
                 @endforeach
-                @if(!empty($usdTotal) && empty($displayTotals['USD']))
-                    <div class="text-sm text-gray-500 mt-1">USD {{ number_format((float) $usdTotal, 2) }}</div>
-                @endif
-                @if(!empty($aedTotal) && empty($displayTotals['AED']))
-                    <div class="text-sm text-gray-500 mt-1">AED {{ number_format((float) $aedTotal, 2) }}</div>
-                @endif
             </div>
             <button type="button" id="checkoutPayUsd"
                 class="mt-5 w-full rounded-lg bg-[#000435] px-4 py-3 text-white font-semibold {{ empty($stripeEnabled) ? 'opacity-50 cursor-not-allowed' : '' }}"
