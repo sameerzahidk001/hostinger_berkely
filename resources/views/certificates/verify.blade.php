@@ -26,11 +26,24 @@
         .ecert-verify .panel + .panel { border-left:0; border-top:1px solid #111; }
         .ecert-verify .span-2 { grid-column: auto; }
     }
-    .ecert-verify button[type="submit"], .ecert-verify .btn-otp { margin-top:8px; background:#000435; color:#fff; border:0; padding:11px 18px; cursor:pointer; font-size:15px; }
-    .ecert-verify .btn-otp { margin-top:0; white-space:nowrap; height:42px; }
+    .ecert-verify button[type="submit"] { margin-top:8px; background:#000435; color:#fff; border:0; padding:11px 18px; cursor:pointer; font-size:15px; }
     .ecert-verify button[disabled] { opacity:.45; cursor:not-allowed; pointer-events:none; }
-    .ecert-verify .otp-row { display:grid; grid-template-columns: 1.3fr auto 1fr; gap:12px 12px; align-items:end; margin-bottom:14px; }
-    .ecert-verify .otp-ok { font-size:13px; color:#166534; margin:6px 0 0; }
+    .ecert-verify .otp-row { display:grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); gap:12px; align-items:end; margin-bottom:8px; }
+    .ecert-verify .otp-row input { height:42px; }
+    .ecert-verify button.btn-otp {
+        margin-top:0;
+        background:#000435;
+        color:#fff;
+        border:0;
+        padding:0 16px;
+        cursor:pointer;
+        font-size:15px;
+        white-space:nowrap;
+        height:42px;
+        width:auto;
+    }
+    .ecert-verify .otp-spacer { display:block; font-size:13px; font-weight:600; margin:0 0 6px; visibility:hidden; }
+    .ecert-verify .otp-ok { font-size:13px; color:#166534; margin:0 0 14px; }
     .ecert-verify .errors, .ecert-verify .flash-fail { background:#fdecea; color:#9b1c1c; padding:10px 12px; margin-bottom:16px; font-size:13px; }
     .ecert-verify .flash-ok { background:#e8f8ee; color:#166534; padding:10px 12px; margin-bottom:16px; font-size:13px; }
     .ecert-verify .result { margin-top:22px; padding:16px; border-left:4px solid #000435; background:#f8fafc; }
@@ -100,13 +113,9 @@
                         <div>
                             <label for="verifier_email">Email Address <span class="req">*</span></label>
                             <input id="verifier_email" type="email" name="verifier_email" value="{{ old('verifier_email', $old['verifier_email'] ?? '') }}" required>
-                            @if($otpVerified)
-                                <p class="otp-ok">Email verified.</p>
-                            @elseif($otpPending)
-                                <p class="hint">OTP sent. Enter it here, then submit your details.</p>
-                            @endif
                         </div>
                         <div>
+                            <span class="otp-spacer">&nbsp;</span>
                             <button type="submit" class="btn-otp" formaction="{{ url('/ecert-verify/otp') }}" formnovalidate>Send OTP</button>
                         </div>
                         <div>
@@ -114,6 +123,11 @@
                             <input id="otp" type="text" name="otp" value="" inputmode="numeric" autocomplete="one-time-code" maxlength="6" @unless($otpVerified) required @endunless>
                         </div>
                     </div>
+                    @if($otpVerified)
+                        <p class="otp-ok">Email verified.</p>
+                    @elseif($otpPending)
+                        <p class="hint">OTP sent. Enter it here, then submit your details.</p>
+                    @endif
                     <div class="row">
                         <div class="span-2">
                             <label for="verifier_reason">Reason for Certificate Verification <span class="req">*</span></label>
