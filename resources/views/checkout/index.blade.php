@@ -136,8 +136,8 @@
         </div>
     </div>
 
-    <div id="payCurrencyOverlay" class="fixed inset-0 z-[2000] hidden items-center justify-center px-4" style="background-color: rgba(209, 213, 219, 0.92);">
-        <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl" style="background-color: #ffffff;">
+    <div id="payCurrencyOverlay" style="display:none;position:fixed;inset:0;z-index:10050;background:rgba(0,0,0,0.55);align-items:center;justify-content:center;padding:16px;">
+        <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl" style="background:#fff;">
             <h2 class="text-xl font-semibold text-gray-900">How would you like to pay?</h2>
             <div class="mt-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
                 @foreach($displayTotals as $currency => $amount)
@@ -172,12 +172,12 @@
                     return;
                 }
                 e.preventDefault();
-                overlay.classList.remove('hidden');
-                overlay.classList.add('flex');
+                overlay.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
             }
             function closeOverlay() {
-                overlay.classList.add('hidden');
-                overlay.classList.remove('flex');
+                overlay.style.display = 'none';
+                document.body.style.overflow = '';
             }
             function choose(currency) {
                 currencyInput.value = currency;
