@@ -137,10 +137,11 @@
                                                     </div>
                                                     <div class="form-group">
                                                         <label for="pages_{{ $menu->id }}">Or pick an existing page</label>
-                                                        <select class="form-control js-edit-page"
+                                                        <select class="form-control js-edit-page js-page-search"
                                                             id="pages_{{ $menu->id }}"
                                                             data-name="#custom_name_{{ $menu->id }}"
-                                                            data-url="#custom_url_{{ $menu->id }}">
+                                                            data-url="#custom_url_{{ $menu->id }}"
+                                                            data-placeholder="Type to find a page (e.g. Verify Certificate)">
                                                             <option value="">Keep current name and URL</option>
                                                             @foreach ($pages as $page)
                                                                 <option value="{{ $page->id }}"
@@ -243,7 +244,7 @@
                             <h6>Add Menus from Existing Pages</h6>
                             <div class="form-group">
                                 <label for="pages">Select Page</label>
-                                <select class="form-control" id="pages">
+                                <select class="form-control js-page-search" id="pages" data-placeholder="Type to find a page (e.g. Verify Certificate)">
                                     <option value="">None</option>
                                     @foreach ($pages as $page)
                                         <option value="{{ $page->id }}" data-link="{{ $page->url }}" data-name="{{ $page->page_name }}">
@@ -308,7 +309,12 @@
     </div>
 @endsection
 
+@push('style')
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>.select2-container { width: 100% !important; }</style>
+@endpush
 @push('script')
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!-- Page-Level Scripts -->
     <script>
@@ -349,6 +355,25 @@
                 });
             });
             if (window.jQuery) {
+                function initPageSearch(scope) {
+                    var $root = scope ? $(scope) : $(document);
+                    $root.find('.js-page-search').each(function () {
+                        var $el = $(this);
+                        if ($el.hasClass('select2-hidden-accessible')) {
+                            return;
+                        }
+                        $el.select2({
+                            placeholder: $el.data('placeholder') || 'Type to find a page',
+                            allowClear: true,
+                            width: '100%',
+                            dropdownParent: $el.closest('.modal').length ? $el.closest('.modal') : $(document.body)
+                        });
+                    });
+                }
+                initPageSearch(document);
+                $(document).on('shown.bs.modal', '.modal', function () {
+                    initPageSearch(this);
+                });
                 $(document).on('click', '.js-open-menu-edit', function (e) {
                     e.preventDefault();
                     var sel = $(this).attr('data-modal');
@@ -376,6 +401,20 @@
                 var target = sel ? document.querySelector(sel) : null;
                 if (!target) return;
                 target.classList.remove('hidden');
+                if (window.jQuery && jQuery.fn.select2) {
+                    jQuery(target).find('.js-page-search').each(function () {
+                        var $el = jQuery(this);
+                        if ($el.hasClass('select2-hidden-accessible')) {
+                            $el.select2('destroy');
+                        }
+                        $el.select2({
+                            placeholder: $el.data('placeholder') || 'Type to find a page',
+                            allowClear: true,
+                            width: '100%',
+                            dropdownParent: $el.closest('.modal').length ? $el.closest('.modal') : jQuery(document.body)
+                        });
+                    });
+                }
                 if (typeof target.scrollIntoView === 'function') {
                     target.scrollIntoView({ block: 'nearest' });
                 }
