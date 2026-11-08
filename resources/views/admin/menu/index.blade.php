@@ -316,14 +316,26 @@
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 <style>
 .select2-container { width: 100% !important; }
-.modal .select2-container { z-index: 1; }
-.select2-container--open,
-.select2-dropdown,
-.select2-container--open .select2-dropdown {
-    z-index: 10060 !important;
-}
+#addMenuModal,
+#addMenuModal .modal-dialog,
+#addMenuModal .modal-content,
 #addMenuModal .modal-body,
-.modal .modal-body { overflow: visible; }
+.modal .modal-dialog,
+.modal .modal-content,
+.modal .modal-body {
+    overflow: visible !important;
+}
+.select2-container--open { z-index: 2060 !important; }
+.select2-dropdown { z-index: 2070 !important; }
+.select2-search__field {
+    pointer-events: auto !important;
+    width: 100% !important;
+}
+select.js-page-search.select2-hidden-accessible {
+    position: absolute !important;
+    left: -99999px !important;
+    height: 1px !important;
+}
 </style>
 @endpush
 @push('script')
@@ -396,6 +408,7 @@
                     var $root = scope ? $(scope) : $(document);
                     $root.find('select.js-page-search').each(function () {
                         var $el = $(this);
+                        var $modal = $el.closest('.modal');
                         if ($el.hasClass('select2-hidden-accessible')) {
                             $el.select2('destroy');
                         }
@@ -403,14 +416,22 @@
                             placeholder: $el.data('placeholder') || 'Type to find a page',
                             allowClear: true,
                             width: '100%',
-                            dropdownParent: $(document.body)
+                            minimumResultsForSearch: 0,
+                            dropdownParent: $modal.length ? $modal : $(document.body)
                         });
                         bindPageSelect($el);
                     });
                 }
                 window.initMenuPageSearch = initPageSearch;
                 $(document).on('shown.bs.modal', '.modal', function () {
+                    $(document).off('focusin.bs.modal');
                     initPageSearch(this);
+                });
+                $(document).on('select2:open', function () {
+                    var field = document.querySelector('.select2-container--open .select2-search__field');
+                    if (field) {
+                        setTimeout(function () { field.focus(); }, 50);
+                    }
                 });
                 $(document).on('click', '.js-open-menu-edit', function (e) {
                     e.preventDefault();
