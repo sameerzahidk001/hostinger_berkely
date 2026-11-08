@@ -449,25 +449,28 @@ class CertificateIssuerService
                 true
             );
 
-            $sigW = (int) round(50 * $mm);
-            $sigH = (int) round(16 * $mm);
+            $sigW = (int) round(62 * $mm);
+            $sigH = (int) round(20 * $mm);
+            $sigY = (int) round(174 * $mm);
             $this->paintOntoCanvas(
                 $canvas,
                 $this->resolvePublicFile((string) $template->signer_left_signature),
-                (int) round(28 * $mm),
-                (int) round(196 * $mm),
+                (int) round(22 * $mm),
+                $sigY,
                 $sigW,
                 $sigH,
-                true
+                true,
+                'bottom'
             );
             $this->paintOntoCanvas(
                 $canvas,
                 $this->resolvePublicFile((string) $template->signer_right_signature),
-                (int) round($width - 28 * $mm - $sigW),
-                (int) round(196 * $mm),
+                (int) round(210 * $mm - 22 * $mm - $sigW),
+                $sigY,
                 $sigW,
                 $sigH,
-                true
+                true,
+                'bottom'
             );
         }
 
@@ -482,7 +485,7 @@ class CertificateIssuerService
         return 'data:image/jpeg;base64,' . base64_encode($jpeg);
     }
 
-    private function paintOntoCanvas($canvas, ?string $absolute, int $x, int $y, int $boxW, int $boxH, bool $keepRatio): void
+    private function paintOntoCanvas($canvas, ?string $absolute, int $x, int $y, int $boxW, int $boxH, bool $keepRatio, string $vAlign = 'center'): void
     {
         if (! $absolute || ! is_file($absolute)) {
             return;
@@ -509,7 +512,13 @@ class CertificateIssuerService
             $dw = max(1, (int) round($sw * $scale));
             $dh = max(1, (int) round($sh * $scale));
             $x += (int) round(($boxW - $dw) / 2);
-            $y += (int) round(($boxH - $dh) / 2);
+            if ($vAlign === 'bottom') {
+                $y += max(0, $boxH - $dh);
+            } elseif ($vAlign === 'top') {
+                // keep $y
+            } else {
+                $y += (int) round(($boxH - $dh) / 2);
+            }
         }
         imagealphablending($canvas, true);
         imagecopyresampled($canvas, $src, $x, $y, 0, 0, $dw, $dh, $sw, $sh);
