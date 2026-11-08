@@ -139,18 +139,29 @@
     <div id="payCurrencyOverlay" class="fixed inset-0 z-[2000] hidden items-center justify-center bg-black/50 px-4">
         <div class="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
             <h2 class="text-xl font-semibold text-gray-900">How would you like to pay?</h2>
+            <div class="mt-4 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
+                @foreach($displayTotals as $currency => $amount)
+                    <div class="text-lg font-bold text-[#000435]">{{ $currency }} {{ number_format($amount, 2) }}</div>
+                @endforeach
+                @if(!empty($usdTotal) && empty($displayTotals['USD']))
+                    <div class="text-sm text-gray-500 mt-1">USD {{ number_format((float) $usdTotal, 2) }}</div>
+                @endif
+                @if(!empty($aedTotal) && empty($displayTotals['AED']))
+                    <div class="text-sm text-gray-500 mt-1">AED {{ number_format((float) $aedTotal, 2) }}</div>
+                @endif
+            </div>
             <button type="button" id="checkoutPayUsd"
                 class="mt-5 w-full rounded-lg bg-[#000435] px-4 py-3 text-white font-semibold {{ empty($stripeEnabled) ? 'opacity-50 cursor-not-allowed' : '' }}"
                 {{ empty($stripeEnabled) ? 'disabled' : '' }}>
                 @if(!empty($stripeEnabled) && !empty($usdTotal))
-                    Pay in USD (Stripe) — USD {{ number_format((float) $usdTotal, 2) }}
+                    I would like to pay in USD
                 @else
-                    Pay in USD (Stripe) — not available yet
+                    I would like to pay in USD — not available yet
                 @endif
             </button>
             <button type="button" id="checkoutPayAed"
                 class="mt-3 w-full rounded-lg border border-gray-300 bg-white px-4 py-3 font-semibold text-gray-900">
-                Pay in AED — AED {{ number_format((float) ($aedTotal ?? 0), 2) }}
+                I would like to pay in AED
             </button>
             <button type="button" id="checkoutPayCancel" class="mt-4 w-full text-sm text-gray-500">Cancel</button>
         </div>

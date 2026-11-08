@@ -91,7 +91,7 @@ class StripeCheckoutService
      */
     public function quote(Installment $installment): array
     {
-        $installment->loadMissing('payment.courseFee');
+        $installment->loadMissing(['payment.courseFee', 'payment.course']);
         $aed = round((float) $installment->remaining_amount, 2);
         $packageCurrency = function_exists('payment_display_currency')
             ? payment_display_currency($installment->payment)
@@ -104,13 +104,22 @@ class StripeCheckoutService
         }
         $rate = currency_rates_to_aed()['USD'] ?? null;
         $stripeReady = $this->isEnabled() && $usd >= 0.5;
+        $itemName = trim((string) ($installment->payment?->course?->title ?? ''));
+        if ($itemName === '') {
+            $itemName = trim((string) ($installment->payment?->courseFee?->package_name ?? 'Course fee'));
+        }
+        $picked = function_exists('format_payment_aed_amount')
+            ? format_payment_aed_amount($installment->payment, $aed)
+            : ($packageCurrency . ' ' . number_format($aed, 2));
 
         return [
             'aed' => $aed,
             'usd' => $usd,
             'rate' => $rate ? (float) $rate : null,
-            'aed_label' => format_payment_aed_amount($installment->payment, $aed),
+            'aed_label' => 'AED ' . number_format($aed, 2),
             'usd_label' => $usd > 0 ? 'USD ' . number_format($usd, 2) : 'USD',
+            'item_name' => $itemName,
+            'amount_label' => $picked,
             'stripe_enabled' => $stripeReady,
             'package_currency' => $packageCurrency,
         ];
