@@ -2,7 +2,17 @@
 
 @section('content')
 
+    @php $seenCardFingerprints = []; @endphp
     @foreach ($page->sections as $section)
+        @php
+            $cardFingerprint = cms_card_titles_fingerprint($section);
+            if ($cardFingerprint && in_array($cardFingerprint, $seenCardFingerprints, true)) {
+                continue;
+            }
+            if ($cardFingerprint) {
+                $seenCardFingerprints[] = $cardFingerprint;
+            }
+        @endphp
         @if ($section->section_type === 'hero-banner')
             <x-hero-banner background="{{ media_url($section->data['image'] ?? null) }}"
                 :altText="image_alt($section->data['image_alt'] ?? null, $section->data['title'] ?? 'Hero banner')"
