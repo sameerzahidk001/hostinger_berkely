@@ -98,6 +98,9 @@ class StudyMaterialController extends Controller
         if ($asDownload) {
             abort_unless($item->allowsDownload(), 403);
         }
+        if ($request->boolean('poster')) {
+            return $this->posterResponse($item);
+        }
         if ($asDownload || $request->boolean('raw')) {
             return $this->streamItem($request, $item, $asDownload);
         }
@@ -108,6 +111,22 @@ class StudyMaterialController extends Controller
             'rawUrl' => $item->portalPreviewUrl(),
             'downloadUrl' => $item->portalDownloadUrl(),
         ]);
+    }
+
+    protected function posterResponse(StudyMaterialItem $item): Response
+    {
+        if ($item->external_url) {
+            $thumb = $this->zoho->fetchWorkDriveThumbnail($item->external_url);
+            if ($thumb && !empty($thumb['path']) && is_file($thumb['path'])) {
+                return response()->file($thumb['path'], [
+                    'Content-Type' => $thumb['mime'] ?? 'image/jpeg',
+                    'Cache-Control' => 'private, max-age=86400',
+                    'X-Content-Type-Options' => 'nosniff',
+                ]);
+            }
+        }
+
+        abort(404);
     }
 
     protected function streamItem(Request $request, StudyMaterialItem $item, bool $asDownload): Response

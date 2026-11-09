@@ -67,6 +67,7 @@
     min-height:170px;
 }
 .sm-video-thumb .sm-video-mark{
+    position:absolute;
     font-size:46px;
     color:#7dd3fc;
     z-index:1;
@@ -112,7 +113,6 @@
     color:#000435;
     font-weight:600;
     text-decoration:none;
-    height:100%;
 }
 .sm-file-link:hover{
     background:#f8fafc;

@@ -55,6 +55,9 @@
                             @php
                                 $previewUrl = $item->portalPreviewUrl();
                                 $posterUrl = $item->portalPosterUrl();
+                                $frameUrl = (! $item->isExternal() || str_starts_with(strtolower((string) $item->mime), 'video/'))
+                                    ? $item->portalFileUrl(['raw' => 1])
+                                    : null;
                             @endphp
                             <a href="{{ $previewUrl }}"
                                class="sm-video-thumb"
@@ -64,10 +67,12 @@
                                @if($item->allowsDownload()) data-sm-download="{{ $item->portalDownloadUrl() }}" @endif
                                @if($posterUrl) data-sm-poster="{{ $posterUrl }}" @endif>
                                 @if($posterUrl)
-                                    <img src="{{ $posterUrl }}" alt="{{ $item->name }}">
-                                @else
-                                    <i class="fa fa-file-video-o sm-video-mark"></i>
+                                    <img src="{{ $posterUrl }}" alt="{{ $item->name }}" onerror="this.style.display='none'">
                                 @endif
+                                @if($frameUrl)
+                                    <video muted playsinline preload="metadata" src="{{ $frameUrl }}#t=1"></video>
+                                @endif
+                                <i class="fa fa-file-video-o sm-video-mark"></i>
                                 <div class="sm-video-play"><span><i class="fa fa-play"></i></span></div>
                             </a>
                         @endif
