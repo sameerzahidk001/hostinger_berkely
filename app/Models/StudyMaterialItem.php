@@ -255,6 +255,14 @@ class StudyMaterialItem extends Model
             return 'video';
         }
 
+        $folderHint = strtolower(trim(
+            (string) ($this->folder->name ?? '') . ' ' . (string) ($this->parent->name ?? '')
+        ));
+        if (preg_match('/recording|lecture|masterclass|webinar|video/i', $folderHint)
+            && ! preg_match('/\.(pdf|docx?|pptx?|xlsx?|csv|txt|zip|rtf)$/', $name)) {
+            return 'video';
+        }
+
         return 'file';
     }
 
@@ -290,6 +298,6 @@ class StudyMaterialItem extends Model
 
         $id = app(ZohoLmsService::class)->workDriveResourceIdFromUrl($this->external_url);
 
-        return $id ? 'https://previewengine.zohoexternal.com/thumbnail/WD/' . $id . '?size=l' : null;
+        return $id ? $this->portalFileUrl(['poster' => 1]) : null;
     }
 }

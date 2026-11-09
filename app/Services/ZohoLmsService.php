@@ -592,11 +592,82 @@ class ZohoLmsService
 
     public function workDriveResourceIdFromUrl(string $url): ?string
     {
-        if (preg_match('#workdrive\.zoho(?:external)?\.com/(?:file|folder|embed)/([A-Za-z0-9_-]+)#i', $url, $match)) {
+        if (preg_match('#workdrive\.zoho(?:external)?\.com/(?:file|folder|embed|external|preview)/([A-Za-z0-9_-]+)#i', $url, $match)) {
+            return $match[1];
+        }
+        if (preg_match('#[?&](?:rid|resourceId|resource_id|id)=([A-Za-z0-9_-]+)#i', $url, $match)) {
             return $match[1];
         }
 
         return null;
+    }
+
+    public function fetchWorkDriveThumbnail(string $url): ?array
+    {
+        $resourceId = $this->workDriveResourceIdFromUrl($url);
+        if (!$resourceId) {
+            return null;
+        }
+
+        $dir = storage_path('app/study-posters');
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0775, true);
+        }
+        $cachePath = $dir . '/' . preg_replace('/[^A-Za-z0-9_-]/', '', $resourceId) . '.jpg';
+        if (is_file($cachePath) && filesize($cachePath) > 800) {
+            return ['path' => $cachePath, 'mime' => 'image/jpeg'];
+        }
+
+        $candidates = [
+            ['url' => 'https://previewengine.zohoexternal.com/thumbnail/WD/' . $resourceId . '?size=l', 'auth' => false],
+            ['url' => 'https://previewengine.zoho.com/thumbnail/WD/' . $resourceId . '?size=l', 'auth' => false],
+        ];
+        if ($this->isWorkDriveReady()) {
+            $candidates[] = [
+                'url' => rtrim((string) config('zoho.workdrive_url'), '/') . '/files/' . rawurlencode($resourceId),
+                'auth' => true,
+                'meta' => true,
+            ];
+        }
+
+        foreach ($candidates as $candidate) {
+            try {
+                $request = $this->http()->timeout(20)->withHeaders(['User-Agent' => 'Mozilla/5.0']);
+                if (!empty($candidate['auth'])) {
+                    $request = $request->withToken($this->accessToken(), 'Zoho-oauthtoken')->accept('application/vnd.api+json');
+                }
+                $response = $request->get($candidate['url']);
+                if (!$response->successful()) {
+                    continue;
+                }
+                if (!empty($candidate['meta'])) {
+                    $thumb = data_get($response->json(), 'data.attributes.thumbnail_url')
+                        ?: data_get($response->json(), 'data.attributes.thumbnail');
+                    if (is_string($thumb) && $thumb !== '') {
+                        $response = $this->http()->timeout(20)->get($thumb);
+                        if (!$response->successful()) {
+                            continue;
+                        }
+                    } else {
+                        continue;
+                    }
+                }
+                $mime = strtolower(trim(explode(';', (string) $response->header('Content-Type'))[0]));
+                $body = $response->body();
+                if (!str_starts_with($mime, 'image/') || strlen($body) < 800) {
+                    continue;
+                }
+                file_put_contents($cachePath, $body);
+
+                return ['path' => $cachePath, 'mime' => $mime];
+            } catch (Throwable $e) {
+                Log::warning('WorkDrive thumbnail failed', ['message' => $e->getMessage()]);
+            }
+        }
+
+        return is_file($cachePath) && filesize($cachePath) > 800
+            ? ['path' => $cachePath, 'mime' => 'image/jpeg']
+            : null;
     }
 
     public function resolveWorkDriveShareUrl(string $url): ?string
