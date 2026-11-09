@@ -218,7 +218,7 @@ class StudyMaterialItem extends Model
         return $this->type === 'file' && $this->allow_download !== false;
     }
 
-    protected function portalFileUrl(array $query = []): string
+    public function portalFileUrl(array $query = []): string
     {
         $params = array_merge(['itemId' => $this->id], $query);
 
