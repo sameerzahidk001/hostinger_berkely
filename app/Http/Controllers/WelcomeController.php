@@ -79,7 +79,7 @@ class WelcomeController extends Controller
         $expectedPerma = $siteSetting->category_perma ?? 'category';
 
         if ($categoryPerma !== $expectedPerma) {
-            abort(404);
+            return $this->pages($categoryPerma . '/' . $slug);
         }
 
         $breadcrumb = [['title' => 'Home', 'url' => route('welcome')]];
@@ -108,17 +108,34 @@ class WelcomeController extends Controller
 
     private function resolvePageBySlug(string $slug): ?Page
     {
-        $query = Page::where('url', $slug);
+        $path = trim(str_replace('\\', '/', $slug), '/');
+        $parts = $path === '' ? [] : explode('/', $path);
+        $leaf = $parts === [] ? $path : (string) end($parts);
+
+        $query = Page::query()->where('url', $leaf);
 
         if (\Illuminate\Support\Facades\Schema::hasColumn('pages', 'status')) {
             $query->where('status', 1);
         }
 
-        return $query
+        $candidates = $query
+            ->with('parent')
             ->withCount('sections')
             ->orderByDesc('sections_count')
             ->orderByDesc('id')
-            ->first();
+            ->get();
+
+        if ($candidates->isEmpty()) {
+            return null;
+        }
+
+        if (count($parts) > 1) {
+            return $candidates->first(function ($page) use ($path) {
+                return strcasecmp(trim((string) $page->full_url, '/'), $path) === 0;
+            });
+        }
+
+        return $candidates->first();
     }
 
     private function hydratePageSections(Page $page): Page

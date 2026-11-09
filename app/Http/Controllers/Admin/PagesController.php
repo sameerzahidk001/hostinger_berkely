@@ -117,6 +117,7 @@ class PagesController extends Controller
      */
     public function store(Request $request)
     {
+        $this->normalizePageUrlInput($request);
         $validator = Validator::make($request->all(), [
             'page_name' => 'required|string|max:255',
             'url' => [
@@ -224,6 +225,7 @@ class PagesController extends Controller
     {
         $page = Page::findOrFail($id);
         $this->mergeSectionsPayload($request);
+        $this->normalizePageUrlInput($request);
 
         $validator = Validator::make($request->all(), [
             'page_name' => 'required|string|max:255',
@@ -480,6 +482,17 @@ class PagesController extends Controller
             : 'pages.index';
 
         return redirect()->route($redirectRoute)->with('success', 'Page saved successfully!');
+    }
+
+    private function normalizePageUrlInput(Request $request): void
+    {
+        $url = strtolower(trim((string) $request->input('url')));
+        $url = trim(str_replace('\\', '/', $url), '/');
+        if (str_contains($url, '/')) {
+            $url = (string) basename($url);
+        }
+        $url = Str::slug($url);
+        $request->merge(['url' => $url]);
     }
 
     private function mergeSectionsPayload(Request $request): void
