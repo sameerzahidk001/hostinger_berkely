@@ -120,6 +120,8 @@
         @csrf
         <input type="hidden" name="sections_submitted" value="1">
         <input type="hidden" name="sections_payload" id="sections_payload" value="">
+        <input type="hidden" name="sections_editor_complete" id="sections_editor_complete" value="0">
+        <input type="hidden" name="sections_visible_count" id="sections_visible_count" value="">
         @if ($page->category_id)
             <input type="hidden" name="parent_id" value="">
         @endif
@@ -3118,6 +3120,17 @@
 
                     if (payloadInput) {
                         payloadInput.value = encodedPayload;
+                    }
+                    const visibleCount = builderContainer
+                        ? builderContainer.querySelectorAll('.ibox-container').length
+                        : Object.keys(sections).length;
+                    const completeInput = document.getElementById('sections_editor_complete');
+                    const visibleInput = document.getElementById('sections_visible_count');
+                    if (completeInput) {
+                        completeInput.value = '1';
+                    }
+                    if (visibleInput) {
+                        visibleInput.value = String(visibleCount);
                     }
 
                     for (const el of pageForm.elements) {

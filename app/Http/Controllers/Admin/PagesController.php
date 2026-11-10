@@ -444,12 +444,15 @@ class PagesController extends Controller
             $newSectionIds[] = $savedSection->id;
         }
 
-        // Delete removed sections — block accidental mass wipe when the editor sends incomplete data.
+        // Delete removed sections. Trust the editor when it sends the full remaining list.
         $sectionsToDelete = $existingSections->keys()->diff($newSectionIds);
         $existingCount = $existingSections->count();
         $incomingCount = count($newSectionIds);
+        $visibleCount = (int) $request->input('sections_visible_count', -1);
+        $editorComplete = $request->boolean('sections_editor_complete');
+        $payloadTrusted = $editorComplete && $visibleCount >= 0 && $incomingCount === $visibleCount;
 
-        if ($sectionsToDelete->isNotEmpty() && $existingCount > 0) {
+        if ($sectionsToDelete->isNotEmpty() && $existingCount > 0 && ! $payloadTrusted) {
             $wouldDeleteCount = $sectionsToDelete->count();
             $looksLikePartialSave = $incomingCount < $existingCount
                 && ($wouldDeleteCount > 1 || $incomingCount < (int) ceil($existingCount * 0.5));
