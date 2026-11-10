@@ -79,7 +79,7 @@
                         @if(isset($card['description']))
                             <div class="text-lg mt-2 cms-html" style="color: {{ $cardTextColor }}">{!! render_cms_html($card['description'] ?? '') !!}</div>
                         @endif
-                        @if(isset($card['url']))
+                        @if(cms_card_has_url($card))
                             <a href="{{ $card['url'] }}"
                                 class="inline-block mt-4 px-4 py-2 bg-secondary text-white rounded-lg hover:bg-primary transition duration-300"
                                 target="{{ $card['url_target'] == '0' ? '_blank' : '' }}"
@@ -109,7 +109,7 @@
                             <div class="hidden font-semibold group-hover:block text-[18px] cms-html {{ $hasImage ? 'text-white' : 'text-dark' }}" style="color: {{ $cardTextColor }}">
                                 {!! render_cms_html($card['description'] ?? '') !!}</div>
                         @endif
-                        @if(isset($card['url']))
+                        @if(cms_card_has_url($card))
                             <a href="{{ $card['url'] }}" class="flex items-center gap-2" target="{{ $card['url_target'] == '0' ? '_blank' : '' }}">
                                 <div
                                     class="flex group-hover:bg-secondary justify-center items-center rounded-full bg-primary min-h-10 min-w-10 max-h-10 max-w-10">
@@ -127,7 +127,7 @@
                             <img src="{{ $card['image'] }}" alt="{{ image_alt($card['image_alt'] ?? null, $card['title'] ?? 'Card image') }}" class="h-full w-full transition-all delay-300 duration-400 ease-in group-hover:scale-105 object-cover">
                         </div>
                     @endif
-                    @if(isset($card['title']) || isset($card['description']) || isset($card['url']))
+                    @if(isset($card['title']) || isset($card['description']) || cms_card_has_url($card))
                     <div class="mt-2">
                         @if(isset($card['title']))
                             <h2 class="font-canela text-[32px] leading-[41px] lg:leading-[40px] text-dark text-center lg:text-left mt-2" style="color: {{ $cardTextColor }}">
@@ -139,7 +139,7 @@
                                 {!! render_cms_html($card['description'] ?? '') !!}
                             </div>
                         @endif
-                        @if(isset($card['url']))
+                        @if(cms_card_has_url($card))
                             <a href="{{ $card['url'] }}" class="flex items-center gap-2" target="{{ $card['url_target'] == '0' ? '_blank' : '' }}">
                                 <div
                                     class="flex group-hover:bg-secondary justify-center items-center rounded-full bg-primary min-h-10 min-w-10 max-h-10 max-w-10">
