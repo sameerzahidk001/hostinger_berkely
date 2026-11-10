@@ -39,7 +39,7 @@
                         @if(isset($card['description']) && $card['description'] != '')
                             <div class="text-[18px] mt-2 cms-html {{ $textAlignment }}" style="color: {{ $color ?? 'inherit' }}">{!! render_cms_html($card['description'] ?? '') !!}</div>
                         @endif
-                        @if(isset($card['url']))
+                        @if(cms_card_has_url($card))
                             <a href="{{ $card['url'] }}" class="flex items-center gap-2" target="{{ $card['url_target'] == '0' ? '_blank' : '' }}">
                                 <div
                                     class="flex group-hover:bg-secondary justify-center items-center rounded-full bg-primary min-h-10 min-w-10 max-h-10 max-w-10">
@@ -82,7 +82,7 @@
                             <div class="hidden group-hover:block text-white text-[18px] cms-html {{ $textAlignment }}" style="color: {{ $color ?? 'inherit' }}">
                                 {!! render_cms_html($card['description'] ?? '') !!}</div>
                         @endif
-                        @if(isset($card['url']))
+                        @if(cms_card_has_url($card))
                             <a href="{{ $card['url'] }}" class="flex items-center gap-2" target="{{ $card['url_target'] == '0' ? '_blank' : '' }}">
                                 <div
                                     class="flex group-hover:bg-secondary justify-center items-center rounded-full bg-primary min-h-10 min-w-10 max-h-10 max-w-10">
@@ -100,7 +100,7 @@
                             <img src="{{ $card['image'] }}" alt="{{ image_alt($card['image_alt'] ?? null, $card['title'] ?? 'Card image') }}" class="h-full w-full transition-all delay-300 duration-400 ease-in group-hover:scale-105 object-cover" loading="lazy" decoding="async" width="800" height="500">
                         </div>
                     @endif
-                    @if(isset($card['title']) || isset($card['description']) || isset($card['url']))
+                    @if(isset($card['title']) || isset($card['description']) || cms_card_has_url($card))
                     <div class="mt-2">
                         @if(isset($card['title']) || (isset($card['icon']) && $card['icon'] != ''))
                             <div class="flex items-center justify-start mt-2 gap-2">
@@ -119,7 +119,7 @@
                                 {!! render_cms_html($card['description'] ?? '') !!}
                             </div>
                         @endif
-                        @if(isset($card['url']))
+                        @if(cms_card_has_url($card))
                             <a href="{{ $card['url'] }}" class="flex items-center gap-2" target="{{ $card['url_target'] == '0' ? '_blank' : '' }}">
                                 <div
                                     class="flex group-hover:bg-secondary justify-center items-center rounded-full bg-primary min-h-10 min-w-10 max-h-10 max-w-10">
@@ -156,7 +156,7 @@
                                 {!! render_cms_html($card['description'] ?? '') !!}
                             </p>
                         @endif
-                        @if(isset($card['url']))
+                        @if(cms_card_has_url($card))
                             <a href="{{ $card['url'] }}" class="flex items-center gap-2" target="{{ $card['url_target'] == '0' ? '_blank' : '' }}">
                                 <div
                                     class="flex group-hover:bg-secondary justify-center items-center rounded-full bg-primary min-h-10 min-w-10 max-h-10 max-w-10">

@@ -831,6 +831,22 @@ if (! function_exists('cms_card_titles_fingerprint')) {
     }
 }
 
+if (! function_exists('cms_card_has_url')) {
+    function cms_card_has_url($card): bool
+    {
+        if (! is_array($card)) {
+            return false;
+        }
+
+        $url = trim((string) ($card['url'] ?? ''));
+        if ($url === '' || $url === '#' || strcasecmp($url, 'null') === 0) {
+            return false;
+        }
+
+        return ! preg_match('/^javascript:/i', $url);
+    }
+}
+
 if (! function_exists('cms_section_looks_like_client_logos')) {
     /** Extra logo grids that duplicate the Clients section (no heading, many images). */
     function cms_section_looks_like_client_logos($section): bool
