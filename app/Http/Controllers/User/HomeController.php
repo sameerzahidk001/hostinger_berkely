@@ -196,6 +196,7 @@ class HomeController extends Controller
     {
         $request->validate([
             'installment_id' => 'required|exists:installments,id',
+            'pay_currency' => 'nullable|in:usd,gbp',
         ]);
 
         $installment = Installment::query()
@@ -209,9 +210,14 @@ class HomeController extends Controller
             ], 422);
         }
 
+        $currency = $stripe->normalizeStripeCurrency((string) $request->input('pay_currency', 'usd'));
+
         return response()->json([
             'success' => true,
-            'checkoutUrl' => route('user.pay.stripe', $installment->id),
+            'checkoutUrl' => route('user.pay.stripe', [
+                'installment' => $installment->id,
+                'currency' => strtolower($currency),
+            ]),
         ]);
     }
 
@@ -235,7 +241,7 @@ class HomeController extends Controller
             ]);
 
             return redirect()->route('user.payments')
-                ->with('error', $e->getMessage() ?: 'USD Stripe payment could not be started.');
+                ->with('error', $e->getMessage() ?: 'Stripe payment could not be started.');
         }
 
         $secret = $session['client_secret'] ?? null;
@@ -249,6 +255,7 @@ class HomeController extends Controller
             'clientSecret' => $secret,
             'installment' => $row,
             'usd' => $session['usd'] ?? null,
+            'chargeCurrency' => $session['charge_currency'] ?? 'USD',
         ]);
     }
 
@@ -276,7 +283,7 @@ class HomeController extends Controller
 
     public function handleStripeCancel()
     {
-        return redirect()->route('user.home')->with('error', 'USD payment was cancelled. No charge was made.');
+        return redirect()->route('user.home')->with('error', 'Stripe payment was cancelled. No charge was made.');
     }
 
     public function generateRakBankPaySession(Request $request)

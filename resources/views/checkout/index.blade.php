@@ -122,7 +122,7 @@
                                 class="w-full mt-6 bg-[#bc1904] hover:bg-[#a21503] transition-colors duration-200 border border-transparent rounded-lg py-3 px-4 flex items-center justify-center text-base font-semibold text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#bc1904] shadow-sm">
                                 Complete Order
                             </button>
-                            <p class="mt-3 text-center text-xs text-gray-500">You will choose USD (Stripe) or AED before payment starts.</p>
+                            <p class="mt-3 text-center text-xs text-gray-500">You will choose USD, GBP, or AED before payment starts.</p>
 
                             <p class="mt-4 text-center text-sm text-gray-500">
                                 or
@@ -151,6 +151,15 @@
                     I would like to pay in USD
                 @else
                     I would like to pay in USD — not available yet
+                @endif
+            </button>
+            <button type="button" id="checkoutPayGbp"
+                class="mt-3 w-full rounded-lg border border-gray-300 bg-white px-4 py-3 font-semibold text-gray-900 {{ empty($stripeGbpEnabled) ? 'opacity-50 cursor-not-allowed' : '' }}"
+                {{ empty($stripeGbpEnabled) ? 'disabled' : '' }}>
+                @if(!empty($stripeGbpEnabled) && !empty($gbpTotal))
+                    I would like to pay in GBP
+                @else
+                    I would like to pay in GBP — not available yet
                 @endif
             </button>
             <button type="button" id="checkoutPayAed"
@@ -190,6 +199,13 @@
                 if (this.disabled) return;
                 choose('usd');
             });
+            var gbpBtn = document.getElementById('checkoutPayGbp');
+            if (gbpBtn) {
+                gbpBtn.addEventListener('click', function () {
+                    if (this.disabled) return;
+                    choose('gbp');
+                });
+            }
             document.getElementById('checkoutPayAed').addEventListener('click', function () {
                 choose('aed');
             });

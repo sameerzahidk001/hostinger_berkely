@@ -7,7 +7,7 @@
         <ol class="breadcrumb">
             <li><a href="{{ route('user.home') }}">Home</a></li>
             <li><a href="{{ route('user.payments') }}">Payments</a></li>
-            <li class="active"><strong>USD checkout</strong></li>
+            <li class="active"><strong>{{ $chargeCurrency ?? 'USD' }} checkout</strong></li>
         </ol>
     </div>
 </div>
