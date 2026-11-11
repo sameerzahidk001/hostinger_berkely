@@ -87,7 +87,7 @@ class StripeCheckoutService
     }
 
     /**
-     * @return array{aed:float,usd:float,rate:?float,aed_label:string,usd_label:string,stripe_enabled:bool,package_currency:string}
+     * @return array<string,mixed>
      */
     public function quote(Installment $installment): array
     {
@@ -96,14 +96,11 @@ class StripeCheckoutService
         $packageCurrency = function_exists('payment_display_currency')
             ? payment_display_currency($installment->payment)
             : 'AED';
-        $usd = 0.0;
-        try {
-            $usd = $this->usdFromAed($aed, $installment);
-        } catch (\Throwable $e) {
-            $usd = 0.0;
-        }
-        $rate = currency_rates_to_aed()['USD'] ?? null;
-        $stripeReady = $this->isEnabled() && $usd >= 0.5;
+        $usd = $this->tryAmountInCurrency($aed, $installment, 'USD');
+        $gbp = $this->tryAmountInCurrency($aed, $installment, 'GBP');
+        $stripeOn = $this->isEnabled();
+        $usdReady = $stripeOn && $usd >= $this->stripeMinAmount('USD');
+        $gbpReady = $stripeOn && $gbp >= $this->stripeMinAmount('GBP');
         $itemName = trim((string) ($installment->payment?->course?->title ?? ''));
         if ($itemName === '') {
             $itemName = trim((string) ($installment->payment?->courseFee?->package_name ?? 'Course fee'));
@@ -115,33 +112,43 @@ class StripeCheckoutService
         return [
             'aed' => $aed,
             'usd' => $usd,
-            'rate' => $rate ? (float) $rate : null,
+            'gbp' => $gbp,
+            'rate' => currency_rates_to_aed()['USD'] ?? null,
+            'gbp_rate' => currency_rates_to_aed()['GBP'] ?? null,
             'aed_label' => 'AED ' . number_format($aed, 2),
             'usd_label' => $usd > 0 ? 'USD ' . number_format($usd, 2) : 'USD',
+            'gbp_label' => $gbp > 0 ? 'GBP ' . number_format($gbp, 2) : 'GBP',
             'item_name' => $itemName,
             'amount_label' => $picked,
-            'stripe_enabled' => $stripeReady,
+            'stripe_enabled' => $usdReady,
+            'gbp_enabled' => $gbpReady,
             'package_currency' => $packageCurrency,
         ];
     }
 
     public function usdFromAed(float $aedAmount, Installment $installment): float
     {
+        return $this->amountInCurrency($aedAmount, $installment, 'USD');
+    }
+
+    public function amountInCurrency(float $aedAmount, Installment $installment, string $currency): float
+    {
         $installment->loadMissing('payment.courseFee');
+        $code = strtoupper($currency);
         $packageCurrency = function_exists('payment_display_currency')
             ? payment_display_currency($installment->payment)
             : 'AED';
 
-        if ($packageCurrency === 'USD' && function_exists('payment_display_amount_from_aed')) {
+        if ($packageCurrency === $code && function_exists('payment_display_amount_from_aed')) {
             return payment_display_amount_from_aed($installment->payment, $aedAmount);
         }
 
-        $rate = currency_rates_to_aed()['USD'] ?? null;
+        $rate = currency_rates_to_aed()[$code] ?? null;
         if (! $rate) {
-            throw new \RuntimeException('USD currency rate is missing. Set USD in Currency Rate Setup.');
+            throw new \RuntimeException($code . ' currency rate is missing. Set ' . $code . ' in Currency Rate Setup.');
         }
 
-        return convert_from_aed($aedAmount, 'USD');
+        return convert_from_aed($aedAmount, $code);
     }
 
     public function createCheckoutSession(Installment $installment, Request $request, string $uiMode = 'hosted'): array
@@ -158,10 +165,14 @@ class StripeCheckoutService
             throw new \RuntimeException('This installment has no remaining balance.');
         }
 
-        $usd = $this->usdFromAed($aed, $installment);
-        $cents = (int) round($usd * 100);
-        if ($cents < 50) {
-            throw new \RuntimeException('USD amount is too small to charge on Stripe.');
+        $currency = $this->normalizeStripeCurrency(
+            (string) ($request->input('pay_currency') ?: $request->query('currency', 'usd'))
+        );
+        $amount = $this->amountInCurrency($aed, $installment, $currency);
+        $cents = (int) round($amount * 100);
+        $minCents = (int) round($this->stripeMinAmount($currency) * 100);
+        if ($cents < $minCents) {
+            throw new \RuntimeException(strtoupper($currency) . ' amount is too small to charge on Stripe.');
         }
 
         $name = $this->lineItemName($installment);
@@ -177,7 +188,7 @@ class StripeCheckoutService
             'client_reference_id' => (string) $installment->id,
             'line_items' => [[
                 'price_data' => [
-                    'currency' => 'usd',
+                    'currency' => strtolower($currency),
                     'unit_amount' => $cents,
                     'product_data' => [
                         'name' => $name,
@@ -190,7 +201,10 @@ class StripeCheckoutService
                 'payment_id' => (string) ($installment->payment_id ?? ''),
                 'user_id' => (string) $installment->user_id,
                 'aed_amount' => (string) $aed,
-                'usd_amount' => (string) $usd,
+                'charge_currency' => strtoupper($currency),
+                'charge_amount' => (string) $amount,
+                'usd_amount' => $currency === 'USD' ? (string) $amount : '',
+                'gbp_amount' => $currency === 'GBP' ? (string) $amount : '',
             ],
         ];
         if ($uiMode === 'embedded') {
@@ -206,18 +220,42 @@ class StripeCheckoutService
 
         $this->storeStripeMeta($installment, [
             'stripe_session_id' => $session->id,
-            'charge_currency' => 'USD',
-            'charge_amount' => $usd,
-            'fx_rate_to_aed' => currency_rates_to_aed()['USD'] ?? null,
+            'charge_currency' => strtoupper($currency),
+            'charge_amount' => $amount,
+            'fx_rate_to_aed' => currency_rates_to_aed()[strtoupper($currency)] ?? null,
         ]);
 
         return [
             'checkout_url' => $session->url,
             'client_secret' => $session->client_secret ?? null,
             'session_id' => $session->id,
-            'usd' => $usd,
+            'usd' => $currency === 'USD' ? $amount : $this->tryAmountInCurrency($aed, $installment, 'USD'),
+            'gbp' => $currency === 'GBP' ? $amount : $this->tryAmountInCurrency($aed, $installment, 'GBP'),
+            'charge_currency' => strtoupper($currency),
+            'charge_amount' => $amount,
             'aed' => $aed,
         ];
+    }
+
+    public function normalizeStripeCurrency(?string $currency): string
+    {
+        $code = strtoupper(trim((string) $currency));
+
+        return $code === 'GBP' ? 'GBP' : 'USD';
+    }
+
+    public function stripeMinAmount(string $currency): float
+    {
+        return strtoupper($currency) === 'GBP' ? 0.30 : 0.50;
+    }
+
+    public function tryAmountInCurrency(float $aedAmount, Installment $installment, string $currency): float
+    {
+        try {
+            return $this->amountInCurrency($aedAmount, $installment, $currency);
+        } catch (\Throwable $e) {
+            return 0.0;
+        }
     }
 
     public function lineItemName(Installment $installment): string
@@ -262,7 +300,12 @@ class StripeCheckoutService
         }
 
         $aed = (float) ($session->metadata['aed_amount'] ?? $installment->remaining_amount);
-        $usd = isset($session->amount_total) ? round(((int) $session->amount_total) / 100, 2) : (float) ($session->metadata['usd_amount'] ?? 0);
+        $chargeCurrency = $this->normalizeStripeCurrency(
+            (string) ($session->metadata['charge_currency'] ?? $session->currency ?? 'USD')
+        );
+        $charged = isset($session->amount_total)
+            ? round(((int) $session->amount_total) / 100, 2)
+            : (float) ($session->metadata['charge_amount'] ?? $session->metadata['usd_amount'] ?? 0);
         $intentId = is_object($session->payment_intent ?? null)
             ? (string) $session->payment_intent->id
             : (string) ($session->payment_intent ?? '');
@@ -270,9 +313,9 @@ class StripeCheckoutService
         $this->storeStripeMeta($installment, [
             'stripe_session_id' => $session->id,
             'stripe_payment_intent' => $intentId !== '' ? $intentId : null,
-            'charge_currency' => 'USD',
-            'charge_amount' => $usd,
-            'fx_rate_to_aed' => currency_rates_to_aed()['USD'] ?? null,
+            'charge_currency' => $chargeCurrency,
+            'charge_amount' => $charged,
+            'fx_rate_to_aed' => currency_rates_to_aed()[$chargeCurrency] ?? null,
         ]);
 
         if ($installment->status !== 'paid') {
@@ -285,8 +328,8 @@ class StripeCheckoutService
             $this->storeStripeMeta($installment, [
                 'stripe_session_id' => $session->id,
                 'stripe_payment_intent' => $intentId !== '' ? $intentId : null,
-                'charge_currency' => 'USD',
-                'charge_amount' => $usd,
+                'charge_currency' => $chargeCurrency,
+                'charge_amount' => $charged,
             ]);
         }
 

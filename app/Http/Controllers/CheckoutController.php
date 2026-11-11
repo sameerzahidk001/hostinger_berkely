@@ -48,7 +48,9 @@ class CheckoutController extends Controller
         }
 
         $usdTotal = 0.0;
+        $gbpTotal = 0.0;
         $usdRate = currency_rates_to_aed()['USD'] ?? null;
+        $gbpRate = currency_rates_to_aed()['GBP'] ?? null;
         try {
             if ($aedTotal > 0) {
                 $usdTotal = convert_from_aed($aedTotal, 'USD');
@@ -56,7 +58,16 @@ class CheckoutController extends Controller
         } catch (\Throwable $e) {
             $usdTotal = 0.0;
         }
-        $stripeEnabled = app(StripeCheckoutService::class)->isEnabled() && $usdTotal >= 0.5;
+        try {
+            if ($aedTotal > 0 && $gbpRate) {
+                $gbpTotal = convert_from_aed($aedTotal, 'GBP');
+            }
+        } catch (\Throwable $e) {
+            $gbpTotal = 0.0;
+        }
+        $stripe = app(StripeCheckoutService::class);
+        $stripeEnabled = $stripe->isEnabled() && $usdTotal >= $stripe->stripeMinAmount('USD');
+        $stripeGbpEnabled = $stripe->isEnabled() && $gbpTotal >= $stripe->stripeMinAmount('GBP');
 
         return view('checkout.index', compact(
             'user',
@@ -64,8 +75,11 @@ class CheckoutController extends Controller
             'displayTotals',
             'aedTotal',
             'usdTotal',
+            'gbpTotal',
             'usdRate',
-            'stripeEnabled'
+            'gbpRate',
+            'stripeEnabled',
+            'stripeGbpEnabled'
         ));
     }
 
@@ -76,7 +90,7 @@ class CheckoutController extends Controller
         $validator = Validator::make($request->all(), [
             'cart_id'   => 'required|array',
             'cart_id.*' => 'required|exists:cart_items,id',
-            'pay_currency' => 'nullable|in:usd,aed',
+            'pay_currency' => 'nullable|in:usd,gbp,aed',
         ]);
 
         if ($validator->fails()) {
@@ -109,14 +123,14 @@ class CheckoutController extends Controller
 
         $createdInstallments = array_values(array_filter($createdInstallments));
         $first = $createdInstallments[0] ?? null;
-        if ($first && in_array($payCurrency, ['usd', 'aed'], true)) {
+        if ($first && in_array($payCurrency, ['usd', 'gbp', 'aed'], true)) {
             $paid = $this->startCheckoutPayment($first, $payCurrency, $request);
             if ($paid) {
                 return $paid;
             }
         }
 
-        return redirect()->route('user.home')->with('success', 'Checkout complete. Your invoice has been emailed and is available in your dashboard. Open Pay Now and choose USD or AED.');
+        return redirect()->route('user.home')->with('success', 'Checkout complete. Your invoice has been emailed and is available in your dashboard. Open Pay Now and choose USD, GBP, or AED.');
     }
 
     private function checkoutCourseFee(CartItem $cart, Request $request): ?Installment
@@ -235,8 +249,11 @@ class CheckoutController extends Controller
         $installment->loadMissing(['payment.course', 'payment.courseFee', 'user']);
 
         try {
-            if ($currency === 'usd') {
-                return redirect()->route('user.pay.stripe', $installment->id);
+            if (in_array($currency, ['usd', 'gbp'], true)) {
+                return redirect()->route('user.pay.stripe', [
+                    'installment' => $installment->id,
+                    'currency' => $currency,
+                ]);
             }
 
             if ($currency === 'aed') {
@@ -255,7 +272,7 @@ class CheckoutController extends Controller
         } catch (\Throwable $e) {
             return redirect()->route('user.home')->with(
                 'error',
-                'Invoice created, but payment could not start: ' . $e->getMessage() . ' Use Pay Now and choose USD or AED.'
+                'Invoice created, but payment could not start: ' . $e->getMessage() . ' Use Pay Now and choose USD, GBP, or AED.'
             );
         }
 

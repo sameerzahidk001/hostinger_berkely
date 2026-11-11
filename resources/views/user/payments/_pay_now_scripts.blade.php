@@ -14,6 +14,9 @@
                 <button type="button" class="btn btn-primary btn-block" id="payUsdBtn">
                     I would like to pay in USD
                 </button>
+                <button type="button" class="btn btn-white btn-block" id="payGbpBtn">
+                    I would like to pay in GBP
+                </button>
                 <button type="button" class="btn btn-white btn-block" id="payAedBtn">
                     I would like to pay in AED
                 </button>
@@ -63,11 +66,11 @@
         });
     }
 
-    function startStripe(installmentId) {
+    function startStripe(installmentId, payCurrency) {
         $.ajax({
             url: '{{ route("user.generate.stripeCheckout") }}',
             method: 'POST',
-            data: { installment_id: installmentId },
+            data: { installment_id: installmentId, pay_currency: payCurrency || 'usd' },
             headers: { 'X-CSRF-TOKEN': csrf() },
             success: function (res) {
                 if (res.success !== false && res.checkoutUrl) {
@@ -75,11 +78,11 @@
                     return;
                 }
                 restoreBtn();
-                alert(res.error || 'USD Stripe payment could not be started.');
+                alert(res.error || 'Stripe payment could not be started.');
             },
             error: function (err) {
                 restoreBtn();
-                var message = 'USD Stripe payment could not be started.';
+                var message = 'Stripe payment could not be started.';
                 try {
                     var body = JSON.parse(err.responseText);
                     if (body.error) message = body.error;
@@ -96,8 +99,9 @@
         var due = quote.amount_label || '';
         if (!due) {
             if (currency === 'USD') due = quote.usd_label || '';
+            else if (currency === 'GBP') due = quote.gbp_label || '';
             else if (currency === 'AED') due = quote.aed_label || '';
-            else due = quote.usd_label || quote.aed_label || '';
+            else due = quote.usd_label || quote.gbp_label || quote.aed_label || '';
         }
         $('#payItemName').text(item);
         $('#payAmountDue').text(due);
@@ -106,6 +110,11 @@
             $('#payUsdBtn').prop('disabled', false).text('I would like to pay in USD');
         } else {
             $('#payUsdBtn').prop('disabled', true).text('I would like to pay in USD — not available yet');
+        }
+        if (quote.gbp_enabled) {
+            $('#payGbpBtn').prop('disabled', false).text('I would like to pay in GBP');
+        } else {
+            $('#payGbpBtn').prop('disabled', true).text('I would like to pay in GBP — not available yet');
         }
         $('#payAedBtn').prop('disabled', false).text('I would like to pay in AED');
         $('#payCurrencyModal').modal('show');
@@ -142,7 +151,18 @@
         if ($activeBtn) {
             $activeBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Opening Stripe...');
         }
-        startStripe(selectedId);
+        startStripe(selectedId, 'usd');
+    });
+
+    $('#payGbpBtn').on('click', function () {
+        if ($(this).prop('disabled')) {
+            return;
+        }
+        $('#payCurrencyModal').modal('hide');
+        if ($activeBtn) {
+            $activeBtn.prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Opening Stripe...');
+        }
+        startStripe(selectedId, 'gbp');
     });
 
     $('#payAedBtn').on('click', function () {
