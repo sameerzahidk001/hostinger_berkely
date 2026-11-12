@@ -37,6 +37,7 @@ class SitemapController extends Controller
             'Allow: /images/',
             'Allow: /frontend/images/',
             'Allow: /admin/images/',
+            'Allow: /admin/courses/',
             'Allow: /storage/',
             'Allow: /*.jpg$',
             'Allow: /*.jpeg$',
