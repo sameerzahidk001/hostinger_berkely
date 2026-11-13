@@ -347,6 +347,8 @@ class ContentDashboardReportService
             ['key' => 'title', 'label' => 'Title'],
             ['key' => 'status', 'label' => 'Status'],
             ['key' => 'type', 'label' => 'Type'],
+            ['key' => 'robots_index', 'label' => 'Index'],
+            ['key' => 'robots_follow', 'label' => 'Follow'],
             ['key' => 'seo_status', 'label' => 'SEO Status'],
             ['key' => 'seo_score', 'label' => 'SEO Score'],
             ['key' => 'created_by', 'label' => 'Created By'],
@@ -496,12 +498,19 @@ class ContentDashboardReportService
             'missing_follow' => $noun . ' with Missing Follow',
         ];
         $out = [];
+        $inserted = false;
         foreach ($labels as $key => $label) {
             $out[$key] = $label;
             if ($key === 'inactive') {
                 foreach ($extra as $extraKey => $extraLabel) {
                     $out[$extraKey] = $extraLabel;
                 }
+                $inserted = true;
+            }
+        }
+        if (! $inserted) {
+            foreach ($extra as $extraKey => $extraLabel) {
+                $out[$extraKey] = $extraLabel;
             }
         }
 
@@ -1099,7 +1108,7 @@ class ContentDashboardReportService
             return $this->missingPageSeoRows($search);
         }
 
-        $query = Page::query()->with(['createdBy', 'updatedBy']);
+        $query = Page::query()->with(['createdBy', 'updatedBy', 'seo']);
 
         $this->applyMetricFilters($query, $metric, $actorUserId, $from, $to, pages_status_enabled());
         $this->applyRobotsRelationFilter($query, 'page_id', $metric);
@@ -1117,14 +1126,17 @@ class ContentDashboardReportService
             $status = pages_status_enabled()
                 ? (((int) ($page->status ?? 1) === 1) ? 'Active' : 'Inactive')
                 : 'Active';
-            $seo = PagesSEO::query()->where('page_id', $page->id)->first();
+            $seo = $page->seo ?: PagesSEO::query()->where('page_id', $page->id)->first();
             [$seoStatus, $seoScore] = $this->seoStatusAndScore($seo, $analyzer);
+            $robots = $this->robotsDisplay($seo);
 
             return [
                 'id' => $page->id,
                 'title' => $page->page_name ?: ('Page #' . $page->id),
                 'status' => $status,
                 'type' => 'Page',
+                'robots_index' => $robots['index'],
+                'robots_follow' => $robots['follow'],
                 'seo_status' => $seoStatus,
                 'seo_score' => $seoScore,
                 'created_by' => audit_user_name($page->createdBy, $page->created_by ?? null),
@@ -1143,7 +1155,7 @@ class ContentDashboardReportService
             return $this->missingCourseSeoRows($search);
         }
 
-        $query = Course::withTrashed()->with(['createdBy', 'updatedBy']);
+        $query = Course::withTrashed()->with(['createdBy', 'updatedBy', 'seo']);
 
         $this->applyCourseMetricFilters($query, $metric, $actorUserId, $from, $to);
         $this->applyRobotsRelationFilter($query, 'course_id', $metric);
@@ -1158,15 +1170,18 @@ class ContentDashboardReportService
         $analyzer = app(SeoAnalyzerService::class);
 
         return $query->orderByDesc('updated_at')->limit(10000)->get()->map(function (Course $course) use ($analyzer) {
-            $seo = PagesSEO::query()->where('course_id', $course->id)->first();
+            $seo = $course->seo ?: PagesSEO::query()->where('course_id', $course->id)->first();
             [$seoStatus, $seoScore] = $this->seoStatusAndScore($seo, $analyzer);
             $isActive = empty($course->deleted_at);
+            $robots = $this->robotsDisplay($seo);
 
             return [
                 'id' => $course->id,
                 'title' => $course->title ?: ('Course #' . $course->id),
                 'status' => $isActive ? 'Active' : 'Inactive',
                 'type' => 'Course',
+                'robots_index' => $robots['index'],
+                'robots_follow' => $robots['follow'],
                 'seo_status' => $seoStatus,
                 'seo_score' => $seoScore,
                 'created_by' => audit_user_name($course->createdBy, $course->created_by ?? null),
@@ -1271,12 +1286,15 @@ class ContentDashboardReportService
                     : 'Active';
             }
             [$seoStatus, $seoScore] = $this->seoStatusAndScore($seo, $analyzer);
+            $robots = $this->robotsDisplay($seo);
 
             return [
                 'id' => $seo->id,
                 'title' => trim((string) ($seo->title ?: $linked ?: ('SEO #' . $seo->id))),
                 'status' => $status,
                 'type' => $type,
+                'robots_index' => $robots['index'],
+                'robots_follow' => $robots['follow'],
                 'seo_status' => $seoStatus,
                 'seo_score' => $seoScore,
                 'created_by' => audit_user_name($seo->createdBy, $seo->created_by ?? null),
@@ -1310,6 +1328,8 @@ class ContentDashboardReportService
                 'title' => $page->page_name ?: ('Page #' . $page->id),
                 'status' => 'Active',
                 'type' => 'Page',
+                'robots_index' => 'Missing',
+                'robots_follow' => 'Missing',
                 'seo_status' => 'Missing',
                 'seo_score' => '—',
                 'created_by' => audit_user_name($page->createdBy, $page->created_by ?? null),
@@ -1341,6 +1361,8 @@ class ContentDashboardReportService
                 'title' => $course->title ?: ('Course #' . $course->id),
                 'status' => 'Active',
                 'type' => 'Course',
+                'robots_index' => 'Missing',
+                'robots_follow' => 'Missing',
                 'seo_status' => 'Missing',
                 'seo_score' => '—',
                 'created_by' => audit_user_name($course->createdBy, $course->created_by ?? null),
@@ -1820,21 +1842,42 @@ class ContentDashboardReportService
         };
 
         if ($value !== null) {
-            $query->whereHas('seo', function ($q) use ($column, $value) {
-                $q->whereRaw('LOWER(TRIM(' . $column . ')) = ?', [$value]);
+            $query->whereHas('seo', function ($q) use ($column, $value, $foreignKey) {
+                $q->whereNotNull($foreignKey)
+                    ->whereRaw('LOWER(TRIM(' . $column . ')) = ?', [$value]);
             });
 
             return;
         }
 
-        $query->where(function ($outer) use ($column) {
+        $query->where(function ($outer) use ($column, $foreignKey) {
             $outer->whereDoesntHave('seo')
-                ->orWhereHas('seo', function ($q) use ($column) {
-                    $q->where(function ($inner) use ($column) {
-                        $inner->whereNull($column)->orWhereRaw('TRIM(' . $column . ') = ?', ['']);
-                    });
+                ->orWhereHas('seo', function ($q) use ($column, $foreignKey) {
+                    $q->whereNotNull($foreignKey)
+                        ->where(function ($inner) use ($column) {
+                            $inner->whereNull($column)->orWhereRaw('TRIM(' . $column . ') = ?', ['']);
+                        });
                 });
         });
+    }
+
+    /**
+     * @return array{index:string,follow:string}
+     */
+    private function robotsDisplay(?PagesSEO $seo): array
+    {
+        if (! $seo || ! Schema::hasColumn('pages_s_e_o_s', 'robots_index')) {
+            return ['index' => 'Missing', 'follow' => 'Missing'];
+        }
+        $index = strtolower(trim((string) ($seo->robots_index ?? '')));
+        $follow = Schema::hasColumn('pages_s_e_o_s', 'robots_follow')
+            ? strtolower(trim((string) ($seo->robots_follow ?? '')))
+            : '';
+
+        return [
+            'index' => $index === 'index' ? 'Index' : ($index === 'noindex' ? 'Noindex' : 'Missing'),
+            'follow' => $follow === 'follow' ? 'Follow' : ($follow === 'nofollow' ? 'No Follow' : 'Missing'),
+        ];
     }
 
     /**
