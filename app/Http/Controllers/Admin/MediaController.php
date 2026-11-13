@@ -28,11 +28,29 @@ class MediaController extends Controller
         MediaAsset::ensureTable();
 
         $search = trim((string) $request->input('search', ''));
+        $source = strtolower(trim((string) $request->input('source', 'all')));
+        if (! in_array($source, ['all', 'pages', 'courses'], true)) {
+            $source = 'all';
+        }
         $unusedOnly = $request->boolean('unused');
         $perPage = 30;
         $page = max(1, (int) $request->input('page', 1));
 
         $files = $this->collapseDuplicateImages($this->cachedImageFiles());
+        $pageCount = 0;
+        $courseCount = 0;
+        foreach ($files as $file) {
+            if ($this->mediaFileSource($file['rel'] ?? '') === 'courses') {
+                $courseCount++;
+            } else {
+                $pageCount++;
+            }
+        }
+        if ($source !== 'all') {
+            $files = array_values(array_filter($files, function ($file) use ($source) {
+                return $this->mediaFileSource($file['rel'] ?? '') === $source;
+            }));
+        }
         if ($search !== '') {
             $needle = mb_strtolower($search);
             $files = array_values(array_filter($files, function ($file) use ($needle) {
@@ -121,6 +139,7 @@ class MediaController extends Controller
                     return str_replace('\\', '/', (string) ($variant['rel'] ?? ''));
                 }, $variants)))),
                 'also_on_disk' => implode(', ', $also),
+                'source' => $this->mediaFileSource($rel),
                 'alt' => $meta['alt'] ?? null,
                 'title' => $meta['title'] ?? null,
                 'caption' => $meta['caption'] ?? null,
@@ -142,7 +161,10 @@ class MediaController extends Controller
         return view('admin.media.index', [
             'rows' => $pager,
             'search' => $search,
+            'source' => $source,
             'rowsTotal' => $total,
+            'pageImageCount' => $pageCount,
+            'courseImageCount' => $courseCount,
             'unusedOnly' => $unusedOnly,
             'unusedSkipped' => $unusedSkipped,
             'mediaLinksUrl' => route('admin.media.links'),
@@ -1243,6 +1265,15 @@ class MediaController extends Controller
         }
 
         return $out;
+    }
+
+    private function mediaFileSource(string $rel): string
+    {
+        $rel = strtolower(str_replace('\\', '/', ltrim($rel, '/')));
+
+        return str_starts_with($rel, 'images/courses/') || str_starts_with($rel, 'admin/courses/')
+            ? 'courses'
+            : 'pages';
     }
 
     private function mediaDiskPath(string $rel): string

@@ -131,13 +131,32 @@
 
     <div class="ibox">
         <div class="ibox-title">
-            <h5>All images <small class="text-muted">({{ (int) ($rowsTotal ?? $rows->total()) }} images · 30 per page)</small></h5>
+            @php
+                $mediaSource = $source ?? 'all';
+                $pageImageCount = (int) ($pageImageCount ?? 0);
+                $courseImageCount = (int) ($courseImageCount ?? 0);
+            @endphp
+            <h5>
+                @if($mediaSource === 'pages') Page images
+                @elseif($mediaSource === 'courses') Course images
+                @else All images
+                @endif
+                <small class="text-muted">({{ (int) ($rowsTotal ?? $rows->total()) }} shown · {{ $pageImageCount }} page · {{ $courseImageCount }} course · 30 per page)</small>
+            </h5>
         </div>
         <div class="ibox-content">
             @if(!empty($unusedSkipped))
                 <div class="alert alert-warning">{{ $unusedSkipped }}</div>
             @endif
+            <p class="m-b-sm">
+                <a href="{{ route('admin.media.index', array_filter(['search' => $search ?? null, 'unused' => !empty($unusedOnly) ? 1 : null])) }}" class="btn btn-{{ ($mediaSource ?? 'all') === 'all' ? 'primary' : 'white' }} btn-sm">All</a>
+                <a href="{{ route('admin.media.index', array_filter(['source' => 'pages', 'search' => $search ?? null, 'unused' => !empty($unusedOnly) ? 1 : null])) }}" class="btn btn-{{ ($mediaSource ?? '') === 'pages' ? 'primary' : 'white' }} btn-sm">Pages</a>
+                <a href="{{ route('admin.media.index', array_filter(['source' => 'courses', 'search' => $search ?? null, 'unused' => !empty($unusedOnly) ? 1 : null])) }}" class="btn btn-{{ ($mediaSource ?? '') === 'courses' ? 'primary' : 'white' }} btn-sm">Courses</a>
+            </p>
             <form method="GET" class="form-group" action="{{ route('admin.media.index') }}">
+                @if(($mediaSource ?? 'all') !== 'all')
+                    <input type="hidden" name="source" value="{{ $mediaSource }}">
+                @endif
                 <div class="row">
                     <div class="col-sm-7">
                         <div class="input-group">
@@ -223,7 +242,8 @@
                                     </span>
                                 </td>
                                 <td data-sort-value="{{ strtolower((string) $row['name']) }}">
-                                    <a href="{{ $row['url'] }}" target="_blank" rel="noopener" style="word-break:break-all;">{{ $row['name'] }}</a>
+                                    <span class="label {{ ($row['source'] ?? '') === 'courses' ? 'label-info' : 'label-default' }}" style="display:inline-block;margin-bottom:4px;">{{ ($row['source'] ?? '') === 'courses' ? 'Course' : 'Page' }}</span>
+                                    <a href="{{ $row['url'] }}" target="_blank" rel="noopener" style="word-break:break-all;display:block;">{{ $row['name'] }}</a>
                                     <label class="lms-meta-col-label" style="margin-top:6px;">Filename</label>
                                     <input type="text" name="filename" form="{{ $formId }}" class="form-control input-sm" value="{{ $row['name'] }}" maxlength="255" title="Rename file">
                                     @if(!empty($row['also_on_disk']))
