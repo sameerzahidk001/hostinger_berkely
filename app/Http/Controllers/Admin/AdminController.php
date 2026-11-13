@@ -792,6 +792,7 @@ class AdminController extends Controller
             'seo' => [],
             'training' => [],
             'fees' => [],
+            'images' => [],
         ];
 
         if ($showContentReports) {
@@ -807,6 +808,7 @@ class AdminController extends Controller
                 'seo' => $reportService->metricLabels('seo', $contentReportActorName),
                 'training' => $reportService->metricLabels('training', $contentReportActorName),
                 'fees' => $reportService->metricLabels('fees', $contentReportActorName),
+                'images' => $reportService->metricLabels('images', $contentReportActorName),
             ];
         }
 
@@ -1046,6 +1048,7 @@ class AdminController extends Controller
             'seo' => 'SEO ACTIVE',
             'training' => 'TRAINING CALENDAR',
             'fees' => 'FEE PACKAGE',
+            'images' => 'IMAGES',
             default => strtoupper($module),
         };
     }
