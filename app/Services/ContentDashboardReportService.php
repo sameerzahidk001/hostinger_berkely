@@ -2263,7 +2263,10 @@ class ContentDashboardReportService
      */
     private function collapsedMediaLibraryFiles(): array
     {
-        $path = storage_path('app/media-library-index.json');
+        $path = storage_path('app/media-library-index-v2.json');
+        if (! is_file($path)) {
+            $path = storage_path('app/media-library-index.json');
+        }
         $files = [];
         if (is_file($path)) {
             $decoded = json_decode((string) @file_get_contents($path), true);
