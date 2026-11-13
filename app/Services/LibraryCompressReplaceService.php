@@ -49,6 +49,7 @@ class LibraryCompressReplaceService
             if ($deleted > 0) {
                 @unlink(storage_path('app/media-library-index.json'));
                 @unlink(storage_path('app/media-library-index-v2.json'));
+                @unlink(storage_path('app/media-library-index-v3.json'));
                 @unlink(storage_path('app/media-link-index.json'));
             }
         }

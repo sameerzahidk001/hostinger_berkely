@@ -29,7 +29,7 @@ class MediaController extends Controller
 
         $search = trim((string) $request->input('search', ''));
         $source = strtolower(trim((string) $request->input('source', 'all')));
-        if (! in_array($source, ['all', 'pages', 'courses'], true)) {
+        if (! in_array($source, ['all', 'public', 'admin', 'pages', 'courses'], true)) {
             $source = 'all';
         }
         $unusedOnly = $request->boolean('unused');
@@ -37,18 +37,31 @@ class MediaController extends Controller
         $page = max(1, (int) $request->input('page', 1));
 
         $files = $this->collapseDuplicateImages($this->cachedImageFiles());
+        $publicCount = 0;
+        $adminCount = 0;
         $pageCount = 0;
         $courseCount = 0;
         foreach ($files as $file) {
-            if ($this->mediaFileSource($file['rel'] ?? '') === 'courses') {
-                $courseCount++;
+            $vis = MediaAsset::visibility($file['rel'] ?? '');
+            if ($vis === 'admin') {
+                $adminCount++;
             } else {
+                $publicCount++;
+            }
+            $kind = MediaAsset::contentSource($file['rel'] ?? '');
+            if ($kind === 'courses') {
+                $courseCount++;
+            } elseif ($kind === 'pages') {
                 $pageCount++;
             }
         }
-        if ($source !== 'all') {
+        if ($source === 'public' || $source === 'admin') {
             $files = array_values(array_filter($files, function ($file) use ($source) {
-                return $this->mediaFileSource($file['rel'] ?? '') === $source;
+                return MediaAsset::visibility($file['rel'] ?? '') === $source;
+            }));
+        } elseif ($source === 'pages' || $source === 'courses') {
+            $files = array_values(array_filter($files, function ($file) use ($source) {
+                return MediaAsset::contentSource($file['rel'] ?? '') === $source;
             }));
         }
         if ($search !== '') {
@@ -66,6 +79,12 @@ class MediaController extends Controller
         }
 
         usort($files, function ($a, $b) {
+            $va = MediaAsset::visibility($a['rel'] ?? '') === 'public' ? 0 : 1;
+            $vb = MediaAsset::visibility($b['rel'] ?? '') === 'public' ? 0 : 1;
+            if ($va !== $vb) {
+                return $va <=> $vb;
+            }
+
             return ($b['mtime'] ?? 0) <=> ($a['mtime'] ?? 0);
         });
 
@@ -139,7 +158,8 @@ class MediaController extends Controller
                     return str_replace('\\', '/', (string) ($variant['rel'] ?? ''));
                 }, $variants)))),
                 'also_on_disk' => implode(', ', $also),
-                'source' => $this->mediaFileSource($rel),
+                'source' => MediaAsset::contentSource($rel),
+                'visibility' => MediaAsset::visibility($rel),
                 'alt' => $meta['alt'] ?? null,
                 'title' => $meta['title'] ?? null,
                 'caption' => $meta['caption'] ?? null,
@@ -163,6 +183,8 @@ class MediaController extends Controller
             'search' => $search,
             'source' => $source,
             'rowsTotal' => $total,
+            'publicImageCount' => $publicCount,
+            'adminImageCount' => $adminCount,
             'pageImageCount' => $pageCount,
             'courseImageCount' => $courseCount,
             'unusedOnly' => $unusedOnly,
@@ -1149,7 +1171,7 @@ class MediaController extends Controller
 
     private function imageCachePath(): string
     {
-        return storage_path('app/media-library-index-v2.json');
+        return storage_path('app/media-library-index-v3.json');
     }
 
     /** @return array<int, array{rel:string,name:string,mtime:int,size:int}> */
@@ -1237,9 +1259,7 @@ class MediaController extends Controller
         $out = [];
         $path = public_path('images');
         if (is_dir($path)) {
-            $this->collectImageFiles($path, 'images', $out, [
-                'images/profiles' => true,
-            ]);
+            $this->collectImageFiles($path, 'images', $out, []);
         }
 
         $legacy = public_path('admin/courses');
@@ -1271,9 +1291,7 @@ class MediaController extends Controller
     {
         $rel = strtolower(str_replace('\\', '/', ltrim($rel, '/')));
 
-        return str_starts_with($rel, 'images/courses/') || str_starts_with($rel, 'admin/courses/')
-            ? 'courses'
-            : 'pages';
+        return MediaAsset::contentSource($rel);
     }
 
     private function mediaDiskPath(string $rel): string
