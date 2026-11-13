@@ -133,23 +133,33 @@
         <div class="ibox-title">
             @php
                 $mediaSource = $source ?? 'all';
+                $publicImageCount = (int) ($publicImageCount ?? 0);
+                $adminImageCount = (int) ($adminImageCount ?? 0);
                 $pageImageCount = (int) ($pageImageCount ?? 0);
                 $courseImageCount = (int) ($courseImageCount ?? 0);
             @endphp
             <h5>
-                @if($mediaSource === 'pages') Page images
+                @if($mediaSource === 'public') Public images
+                @elseif($mediaSource === 'admin') Admin images
+                @elseif($mediaSource === 'pages') Page images
                 @elseif($mediaSource === 'courses') Course images
                 @else All images
                 @endif
-                <small class="text-muted">({{ (int) ($rowsTotal ?? $rows->total()) }} shown · {{ $pageImageCount }} page · {{ $courseImageCount }} course · 30 per page)</small>
+                <small class="text-muted">({{ (int) ($rowsTotal ?? $rows->total()) }} shown · {{ $publicImageCount }} public · {{ $adminImageCount }} admin · {{ $pageImageCount }} page · {{ $courseImageCount }} course · 30 per page)</small>
             </h5>
         </div>
         <div class="ibox-content">
+            <p class="text-muted" style="margin:0 0 12px;font-size:13px;line-height:1.45;">
+                <strong>Public image:</strong> website files at <code>/images/…</code> (pages and courses).<br>
+                <strong>Admin:</strong> staff-only files at <code>/admin/…</code> and profile photos. Public is listed first.
+            </p>
             @if(!empty($unusedSkipped))
                 <div class="alert alert-warning">{{ $unusedSkipped }}</div>
             @endif
             <p class="m-b-sm">
                 <a href="{{ route('admin.media.index', array_filter(['search' => $search ?? null, 'unused' => !empty($unusedOnly) ? 1 : null])) }}" class="btn btn-{{ ($mediaSource ?? 'all') === 'all' ? 'primary' : 'white' }} btn-sm">All</a>
+                <a href="{{ route('admin.media.index', array_filter(['source' => 'public', 'search' => $search ?? null, 'unused' => !empty($unusedOnly) ? 1 : null])) }}" class="btn btn-{{ ($mediaSource ?? '') === 'public' ? 'primary' : 'white' }} btn-sm">Public</a>
+                <a href="{{ route('admin.media.index', array_filter(['source' => 'admin', 'search' => $search ?? null, 'unused' => !empty($unusedOnly) ? 1 : null])) }}" class="btn btn-{{ ($mediaSource ?? '') === 'admin' ? 'primary' : 'white' }} btn-sm">Admin</a>
                 <a href="{{ route('admin.media.index', array_filter(['source' => 'pages', 'search' => $search ?? null, 'unused' => !empty($unusedOnly) ? 1 : null])) }}" class="btn btn-{{ ($mediaSource ?? '') === 'pages' ? 'primary' : 'white' }} btn-sm">Pages</a>
                 <a href="{{ route('admin.media.index', array_filter(['source' => 'courses', 'search' => $search ?? null, 'unused' => !empty($unusedOnly) ? 1 : null])) }}" class="btn btn-{{ ($mediaSource ?? '') === 'courses' ? 'primary' : 'white' }} btn-sm">Courses</a>
             </p>
@@ -242,7 +252,16 @@
                                     </span>
                                 </td>
                                 <td data-sort-value="{{ strtolower((string) $row['name']) }}">
-                                    <span class="label {{ ($row['source'] ?? '') === 'courses' ? 'label-info' : 'label-default' }}" style="display:inline-block;margin-bottom:4px;">{{ ($row['source'] ?? '') === 'courses' ? 'Course' : 'Page' }}</span>
+                                    @php
+                                        $isAdminImg = ($row['visibility'] ?? '') === 'admin';
+                                        $srcKind = $row['source'] ?? '';
+                                    @endphp
+                                    <span class="label {{ $isAdminImg ? 'label-warning' : 'label-primary' }}" style="display:inline-block;margin-bottom:4px;">{{ $isAdminImg ? 'Admin' : 'Public' }}</span>
+                                    @if($srcKind === 'courses')
+                                        <span class="label label-info" style="display:inline-block;margin-bottom:4px;">Course</span>
+                                    @elseif($srcKind === 'pages')
+                                        <span class="label label-default" style="display:inline-block;margin-bottom:4px;">Page</span>
+                                    @endif
                                     <a href="{{ $row['url'] }}" target="_blank" rel="noopener" style="word-break:break-all;display:block;">{{ $row['name'] }}</a>
                                     <label class="lms-meta-col-label" style="margin-top:6px;">Filename</label>
                                     <input type="text" name="filename" form="{{ $formId }}" class="form-control input-sm" value="{{ $row['name'] }}" maxlength="255" title="Rename file">

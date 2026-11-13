@@ -75,6 +75,36 @@ class MediaAsset extends Model
         return $path;
     }
 
+    /**
+     * Public image: website URL under /images/… (pages and courses).
+     * Admin: /admin/… or profile photos — staff-only, not the public site.
+     */
+    public static function visibility(?string $path): string
+    {
+        $rel = strtolower(str_replace('\\', '/', static::normalizePath($path)));
+        if ($rel === '') {
+            return 'public';
+        }
+        if (str_starts_with($rel, 'admin/') || str_contains('/' . $rel . '/', '/profiles/')) {
+            return 'admin';
+        }
+
+        return 'public';
+    }
+
+    public static function contentSource(?string $path): string
+    {
+        $rel = strtolower(str_replace('\\', '/', static::normalizePath($path)));
+        if (static::visibility($rel) === 'admin') {
+            return 'admin';
+        }
+        if (str_starts_with($rel, 'images/courses/') || str_starts_with($rel, 'admin/courses/')) {
+            return 'courses';
+        }
+
+        return 'pages';
+    }
+
     public static function forPath(?string $path): ?self
     {
         if (! static::ensureTable()) {

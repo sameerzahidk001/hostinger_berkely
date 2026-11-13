@@ -157,6 +157,12 @@
                     @foreach(['courses' => 'Courses', 'pages' => 'Pages', 'seo' => 'SEO Active', 'training' => 'Training Calendar', 'fees' => 'Fee Package', 'images' => 'Images'] as $module => $moduleTitle)
                         @php $stats = $reports[$module] ?? []; @endphp
                         <div role="tabpanel" class="tab-pane {{ $activeTab === $module ? 'active' : '' }}" id="report-{{ $module }}">
+                            @if($module === 'images')
+                                <p class="text-muted" style="margin:0 0 12px;font-size:13px;line-height:1.45;">
+                                    <strong>Public image:</strong> website files at <code>/images/…</code> (pages and courses).<br>
+                                    <strong>Admin:</strong> staff-only files at <code>/admin/…</code> and profile photos. Public is listed first.
+                                </p>
+                            @endif
                             <div class="content-report-stat-row">
                                 @foreach(($metricLabels[$module] ?? []) as $metricKey => $metricLabel)
                                     @php

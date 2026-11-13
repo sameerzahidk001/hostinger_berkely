@@ -458,6 +458,8 @@ class ContentDashboardReportService
 
         if ($module === 'images') {
             return [
+                'public' => 'Public images',
+                'admin' => 'Admin images',
                 'total' => 'Total Images',
                 'linked_courses' => 'Images linked to Courses',
                 'linked_pages' => 'Images linked to Pages',
@@ -1842,6 +1844,8 @@ class ContentDashboardReportService
     {
         $rows = $this->imageInventory();
         $counts = [
+            'public' => 0,
+            'admin' => 0,
             'total' => count($rows),
             'linked_courses' => 0,
             'linked_pages' => 0,
@@ -1856,6 +1860,11 @@ class ContentDashboardReportService
             'without_description' => 0,
         ];
         foreach ($rows as $row) {
+            if (($row['visibility'] ?? 'public') === 'admin') {
+                $counts['admin']++;
+            } else {
+                $counts['public']++;
+            }
             if ($row['linked_course']) {
                 $counts['linked_courses']++;
             }
@@ -1889,6 +1898,8 @@ class ContentDashboardReportService
             }
 
             return match ($metric) {
+                'public' => ($row['visibility'] ?? 'public') === 'public',
+                'admin' => ($row['visibility'] ?? 'public') === 'admin',
                 'linked_courses' => $row['linked_course'],
                 'linked_pages' => $row['linked_page'],
                 'not_linked' => ! $row['linked'],
@@ -1966,6 +1977,7 @@ class ContentDashboardReportService
             $mtime = (int) ($file['mtime'] ?? 0);
             $rows[] = [
                 'rel' => $rel,
+                'visibility' => MediaAsset::visibility($rel),
                 'title' => (string) ($file['name'] ?? basename($rel)),
                 'web_url' => $rel !== '' ? asset($rel) : null,
                 'uploaded' => $mtime > 0 ? Carbon::createFromTimestamp($mtime, config('app.timezone'))->format('Y-m-d H:i') : '—',
@@ -1985,6 +1997,13 @@ class ContentDashboardReportService
                 'links' => $links,
             ];
         }
+
+        usort($rows, static function (array $a, array $b): int {
+            $va = ($a['visibility'] ?? 'public') === 'public' ? 0 : 1;
+            $vb = ($b['visibility'] ?? 'public') === 'public' ? 0 : 1;
+
+            return $va <=> $vb;
+        });
 
         return $rows;
     }
@@ -2252,7 +2271,10 @@ class ContentDashboardReportService
      */
     private function collapsedMediaLibraryFiles(): array
     {
-        $path = storage_path('app/media-library-index-v2.json');
+        $path = storage_path('app/media-library-index-v3.json');
+        if (! is_file($path)) {
+            $path = storage_path('app/media-library-index-v2.json');
+        }
         if (! is_file($path)) {
             $path = storage_path('app/media-library-index.json');
         }
