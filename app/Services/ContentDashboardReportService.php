@@ -2239,7 +2239,7 @@ class ContentDashboardReportService
             return [];
         }
         if (! preg_match_all(
-            '#(?:https?://[^/\s"\']+/)?(?:public/)?(/?(?:admin|images|uploads|frontend|storage)/[^\s"\'?<>\\]+\.(?:jpe?g|png|gif|webp|avif|svg))#i',
+            '#(?:https?://[^/\s"\']+/)?(?:public/)?(/?(?:admin|images|uploads|frontend|storage)/[A-Za-z0-9._/-]+\.(?:jpe?g|png|gif|webp|avif|svg))#i',
             $blob,
             $matches
         )) {
