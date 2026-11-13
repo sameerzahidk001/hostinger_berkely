@@ -699,7 +699,7 @@ class ContentDashboardReportService
             return $this->trainingCourseCoverageRows($metric, $search);
         }
 
-        if (! Schema::hasTable('course_agendas')) {
+        if (! is_file(app_path('Models/CourseAgenda.php')) || ! Schema::hasTable('course_agendas')) {
             return collect();
         }
 
