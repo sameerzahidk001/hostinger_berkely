@@ -162,8 +162,8 @@
                                     @endif
 
                                     <!-- Hidden file input -->
-                                    <input type="file" id="local_file_input" name="local_file_input" style="display: none;"
-                                        accept="image/*" onchange="uploadLocalFile(this)">
+                                    <input type="file" id="local_file_input" name="local_file_input" class="lms-profile-image-input" style="display: none;"
+                                        accept="image/*" data-max-kb="{{ function_exists('lms_profile_image_max_kb') ? lms_profile_image_max_kb() : 300 }}" onchange="uploadLocalFile(this)">
 
                                     <!-- File Source Modal -->
                                     <div id="fileModal" class="modal fade" tabindex="-1" role="dialog"

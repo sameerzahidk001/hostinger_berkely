@@ -27,7 +27,7 @@ class ProfileController extends Controller
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
             'image_path' => 'nullable|string',
-            'image' => 'nullable|file|image|mimes:jpeg,png,jpg,gif,webp|max:300',
+            'image' => lms_profile_image_upload_rule(),
             'email' => 'required|email|max:255|unique:users,email,' . Auth::id(),
             'mobile_number' => 'required|string|max:20',
             'gender' => 'nullable|in:Male,Female,Other',
@@ -123,6 +123,7 @@ class ProfileController extends Controller
             'podcasts.*.image' => 'nullable|file|image|mimes:jpeg,png,jpg,webp|max:300',
         ], [
             'country.required' => 'Country living is required',
+            'image.max' => 'Profile picture must be less than ' . lms_profile_image_max_kb() . ' KB.',
         ]);
 
         if ($validator->fails()) {

@@ -1477,7 +1477,7 @@ class AdminController extends Controller
     {
         $imageRules = [
             'image_path' => 'nullable|string',
-            'image' => 'nullable|file|image|mimes:jpeg,png,jpg,gif,webp|max:300',
+            'image' => lms_profile_image_upload_rule(),
         ];
 
         if (Auth::guard('admin')->check()) {
@@ -1487,7 +1487,9 @@ class AdminController extends Controller
                 'username' => 'required|string|max:255|unique:admins,username,' . $admin->id,
                 'email' => 'required|email|max:255|unique:admins,email,' . $admin->id,
                 'password' => 'nullable|string|min:8',
-            ], $imageRules));
+            ], $imageRules), [
+                'image.max' => 'Profile picture must be less than ' . lms_profile_image_max_kb() . ' KB.',
+            ]);
 
             $admin->username = $request->username;
             $admin->email = $request->email;
@@ -1514,7 +1516,9 @@ class AdminController extends Controller
             'username' => 'required|string|max:255',
             'email' => 'required|email|max:255|unique:users,email,' . $user->id,
             'password' => 'nullable|string|min:8',
-        ], $imageRules));
+        ], $imageRules), [
+            'image.max' => 'Profile picture must be less than ' . lms_profile_image_max_kb() . ' KB.',
+        ]);
 
         $user->name = $request->username;
         $user->email = $request->email;

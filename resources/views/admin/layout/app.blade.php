@@ -677,6 +677,7 @@
       @include('partials.session_expired_refresh')
       @include('partials.viewer-tz-sync')
       @include('partials.table-sort')
+      @include('partials.profile-image-size-check')
       @stack('script')
       <script>
          $(function () {

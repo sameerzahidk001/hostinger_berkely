@@ -183,7 +183,8 @@
                                 <div class="col-md-6 mb-3">
                                     <label for="image">Image</label>
                                     <input type="hidden" name="current_image" value="{{ old('current_image', $user->image) }}">
-                                    <input type="file" name="image" id="image" class="form-control">
+                                    <input type="file" name="image" id="image" class="form-control lms-profile-image-input" accept="image/*" data-max-kb="{{ function_exists('lms_profile_image_max_kb') ? lms_profile_image_max_kb() : 300 }}">
+                                    <span class="help-block">Profile picture must be less than 300 KB.</span>
                                     @error('image') <p class="text-danger text-xs italic">{{ $message }}</p> @enderror
                                 </div>
 
