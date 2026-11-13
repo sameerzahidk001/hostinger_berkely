@@ -408,6 +408,49 @@
         });
     }
 
+    function escapeHtml(value) {
+        return $('<div>').text(String(value == null ? '' : value)).html();
+    }
+
+    function safeHref(url) {
+        var u = String(url || '').trim();
+        if (!/^https?:\/\//i.test(u)) {
+            return '';
+        }
+        return u.replace(/"/g, '%22');
+    }
+
+    function anchor(url, label) {
+        var href = safeHref(url);
+        if (!href) {
+            return '';
+        }
+        return '<a href="' + href + '" target="_blank" rel="noopener">' + escapeHtml(label || url) + '</a>';
+    }
+
+    function linkifyPlain(text) {
+        return escapeHtml(text).replace(/(https?:\/\/[^\s|<]+)/g, function (url) {
+            var href = safeHref(url);
+            return href ? '<a href="' + href + '" target="_blank" rel="noopener">' + escapeHtml(url) + '</a>' : escapeHtml(url);
+        });
+    }
+
+    function linkedUrlsHtml(row) {
+        var links = row.links;
+        if (Array.isArray(links) && links.length) {
+            return links.map(function (link) {
+                var label = escapeHtml(link.label || 'Link');
+                var admin = anchor(link.url, link.url);
+                var web = anchor(link.web_url, link.web_url);
+                var parts = [admin, web].filter(Boolean);
+                return '<div style="margin:0 0 8px;line-height:1.4;"><strong>' + label + '</strong>'
+                    + (parts.length ? '<br>' + parts.join('<br>') : '')
+                    + '</div>';
+            }).join('');
+        }
+        return linkifyPlain(row.linked_urls || '—');
+    }
+
     function renderRows(rows) {
         if (!rows.length) {
             $('#contentReportTable tbody').html('<tr><td colspan="' + colCount + '" class="text-center text-muted">No records found.</td></tr>');
@@ -423,12 +466,17 @@
                 if (raw === null || raw === undefined || raw === '' || raw === '-' || raw === '—') {
                     raw = (key === 'created_by' || key === 'updated_by') ? 'Admin' : '—';
                 }
-                var text = $('<div>').text(String(raw)).html();
-                if (key === linkKey && row.url) {
-                    text = '<a href="' + row.url + '" target="_blank" rel="noopener">' + text + '</a>';
-                }
-                if (key === linkKey && row.web_url) {
-                    text += ' <a href="' + row.web_url + '" target="_blank" rel="noopener" style="font-weight:normal;">(Visit Web)</a>';
+                var text;
+                if (key === 'linked_urls') {
+                    text = linkedUrlsHtml(row);
+                } else {
+                    text = escapeHtml(raw);
+                    if (key === linkKey && row.url) {
+                        text = anchor(row.url, raw);
+                    }
+                    if (key === linkKey && row.web_url) {
+                        text += ' ' + anchor(row.web_url, '(Visit Web)');
+                    }
                 }
                 cells += '<td>' + text + '</td>';
             });
