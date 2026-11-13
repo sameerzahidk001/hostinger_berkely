@@ -306,6 +306,7 @@ class ContentDashboardReportService
             return [
                 ['key' => 'title', 'label' => 'Image'],
                 ['key' => 'linked_to', 'label' => 'Linked To'],
+                ['key' => 'linked_urls', 'label' => 'Linked URLs'],
                 ['key' => 'alt', 'label' => 'Alt'],
                 ['key' => 'image_title', 'label' => 'Title'],
                 ['key' => 'caption', 'label' => 'Caption'],
@@ -1906,17 +1907,20 @@ class ContentDashboardReportService
         $adminMedia = function_exists('route') ? route('admin.media.index') : url('/admin/media');
 
         return $rows->take(10000)->map(function (array $row) use ($adminMedia) {
+            $first = $row['links'][0] ?? null;
+
             return [
                 'id' => $row['rel'],
                 'title' => $row['title'],
                 'linked_to' => $row['linked_label'],
+                'linked_urls' => $row['linked_urls'] !== '' ? $row['linked_urls'] : '—',
                 'alt' => $row['alt'] !== '' ? $row['alt'] : '—',
                 'image_title' => $row['image_title'] !== '' ? $row['image_title'] : '—',
                 'caption' => $row['caption'] !== '' ? $row['caption'] : '—',
                 'description' => $row['description'] !== '' ? $row['description'] : '—',
                 'created_at' => $row['uploaded'],
-                'url' => $adminMedia . '?search=' . urlencode($row['title']),
-                'web_url' => $row['web_url'],
+                'url' => $first['url'] ?? ($adminMedia . '?search=' . urlencode($row['title'])),
+                'web_url' => $first['web_url'] ?? $row['web_url'],
             ];
         });
     }
@@ -1931,38 +1935,52 @@ class ContentDashboardReportService
             return $rows;
         }
 
+        $linkIndex = $this->contentImageLinkIndex();
         $files = $this->collapsedMediaLibraryFiles();
-        $metaByPath = $this->mediaAssetMetaByPath();
-        $usages = ['by_path' => [], 'by_name' => []];
-        try {
-            $index = app(MediaLinkIndexService::class);
-            $state = $index->ensure(2);
-            $usages = $index->usagesFor($files, $state);
-        } catch (\Throwable $e) {
-            $usages = ['by_path' => [], 'by_name' => []];
+        $seen = [];
+        foreach ($files as $file) {
+            $seen[strtolower(str_replace('\\', '/', (string) ($file['rel'] ?? '')))] = true;
+        }
+        foreach ($linkIndex['paths'] as $rel => $_unused) {
+            $rel = str_replace('\\', '/', (string) $rel);
+            $key = strtolower($rel);
+            if ($rel === '' || isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $files[] = [
+                'rel' => $rel,
+                'name' => basename($rel),
+                'mtime' => 0,
+                'size' => 0,
+                'variants' => [['rel' => $rel, 'name' => basename($rel)]],
+            ];
         }
 
+        $metaByPath = $this->mediaAssetMetaByPath();
         $rows = [];
         foreach ($files as $file) {
             $variants = $file['variants'] ?? [$file];
             $meta = ['alt' => '', 'title' => '', 'caption' => '', 'description' => ''];
-            $tokens = [];
+            $links = [];
             foreach ($variants as $variant) {
                 $rel = strtolower(str_replace('\\', '/', (string) ($variant['rel'] ?? '')));
                 $name = strtolower((string) ($variant['name'] ?? basename($rel)));
+                $stem = strtolower((string) pathinfo($name, PATHINFO_FILENAME));
                 $stored = $metaByPath[$rel] ?? [];
                 foreach (['alt', 'title', 'caption', 'description'] as $field) {
                     if ($meta[$field] === '' && trim((string) ($stored[$field] ?? '')) !== '') {
                         $meta[$field] = trim((string) $stored[$field]);
                     }
                 }
-                $tokens = array_merge(
-                    $tokens,
-                    $usages['by_path'][$rel] ?? [],
-                    $usages['by_name'][$name] ?? []
-                );
+                foreach (array_filter([$rel, $name, strlen($stem) >= 8 ? $stem : null]) as $lookup) {
+                    foreach ($linkIndex['by_key'][$lookup] ?? [] as $link) {
+                        $links[$link['url'] . '|' . $link['kind']] = $link;
+                    }
+                }
             }
-            $kinds = $this->classifyImageTokens($tokens);
+            $links = array_values($links);
+            $kinds = $this->classifyImageLinks($links);
             $rel = str_replace('\\', '/', (string) ($file['rel'] ?? ''));
             $mtime = (int) ($file['mtime'] ?? 0);
             $rows[] = [
@@ -1982,6 +2000,8 @@ class ContentDashboardReportService
                 'linked_page' => $kinds['page'],
                 'linked' => $kinds['linked'],
                 'linked_label' => $kinds['label'],
+                'linked_urls' => $kinds['urls'],
+                'links' => $links,
             ];
         }
 
@@ -1989,28 +2009,30 @@ class ContentDashboardReportService
     }
 
     /**
-     * @param  array<int, string>  $tokens
-     * @return array{course:bool,page:bool,linked:bool,label:string}
+     * @param  array<int, array{kind:string,label:string,url:string,web_url:?string}>  $links
+     * @return array{course:bool,page:bool,linked:bool,label:string,urls:string}
      */
-    private function classifyImageTokens(array $tokens): array
+    private function classifyImageLinks(array $links): array
     {
         $course = false;
         $page = false;
-        $other = false;
-        foreach ($tokens as $token) {
-            $label = strtolower(trim((string) explode('|', (string) $token, 2)[0]));
-            if ($label === '') {
-                continue;
-            }
-            if (str_starts_with($label, 'course')) {
+        $lines = [];
+        foreach ($links as $link) {
+            $kind = (string) ($link['kind'] ?? '');
+            if ($kind === 'course') {
                 $course = true;
-            } elseif ($label === 'site settings') {
-                $other = true;
-            } else {
+            } elseif ($kind === 'page') {
                 $page = true;
             }
+            $label = trim((string) ($link['label'] ?? ''));
+            $admin = trim((string) ($link['url'] ?? ''));
+            $web = trim((string) ($link['web_url'] ?? ''));
+            $parts = array_filter([$label !== '' ? $label : null, $admin !== '' ? $admin : null, $web !== '' ? $web : null]);
+            if ($parts !== []) {
+                $lines[] = implode(' | ', $parts);
+            }
         }
-        $linked = $course || $page || $other;
+        $lines = array_values(array_unique($lines));
         $parts = [];
         if ($course) {
             $parts[] = 'Course';
@@ -2018,16 +2040,222 @@ class ContentDashboardReportService
         if ($page) {
             $parts[] = 'Page';
         }
-        if ($other && ! $course && ! $page) {
-            $parts[] = 'Site';
-        }
 
         return [
             'course' => $course,
             'page' => $page,
-            'linked' => $linked,
+            'linked' => $course || $page,
             'label' => $parts !== [] ? implode(', ', $parts) : 'Not linked',
+            'urls' => $lines !== [] ? implode(' · ', array_slice($lines, 0, 12)) : '',
         ];
+    }
+
+    /**
+     * Direct course/page image usage (admin/courses paths included).
+     *
+     * @return array{by_key: array<string, array<int, array{kind:string,label:string,url:string,web_url:?string}>>, paths: array<string, true>}
+     */
+    private function contentImageLinkIndex(): array
+    {
+        static $index = null;
+        if (is_array($index)) {
+            return $index;
+        }
+
+        $byKey = [];
+        $paths = [];
+        $add = function (string $raw, array $link) use (&$byKey, &$paths): void {
+            $rel = class_exists(MediaAsset::class)
+                ? MediaAsset::normalizePath($raw)
+                : strtolower(ltrim(str_replace('\\', '/', $raw), '/'));
+            if ($rel === '') {
+                return;
+            }
+            $rel = strtolower($rel);
+            $name = basename($rel);
+            $stem = strtolower((string) pathinfo($name, PATHINFO_FILENAME));
+            $paths[$rel] = true;
+            foreach (array_filter([$rel, $name, strlen($stem) >= 8 ? $stem : null]) as $key) {
+                $list = $byKey[$key] ?? [];
+                $sig = $link['url'] . '|' . $link['kind'];
+                $exists = false;
+                foreach ($list as $existing) {
+                    if (($existing['url'] . '|' . $existing['kind']) === $sig) {
+                        $exists = true;
+                        break;
+                    }
+                }
+                if (! $exists) {
+                    $list[] = $link;
+                    $byKey[$key] = $list;
+                }
+            }
+        };
+
+        $courseMap = [];
+        if (class_exists(Course::class) && Schema::hasTable('courses')) {
+            $cols = ['id', 'title', 'slug'];
+            foreach (['thumbnail', 'post_image', 'overview_img', 'banner_section', 'image_text_2col_card'] as $col) {
+                if (Schema::hasColumn('courses', $col)) {
+                    $cols[] = $col;
+                }
+            }
+            foreach (Course::withTrashed()->select($cols)->orderBy('id')->cursor() as $course) {
+                $courseMap[(int) $course->id] = $course;
+                $link = [
+                    'kind' => 'course',
+                    'label' => trim((string) ($course->title ?: ('Course #' . $course->id))),
+                    'url' => route('course.edit', $course->id),
+                    'web_url' => function_exists('course_details_url') ? course_details_url($course) : url('course/' . $course->slug),
+                ];
+                foreach ($cols as $col) {
+                    if (in_array($col, ['id', 'title', 'slug'], true)) {
+                        continue;
+                    }
+                    foreach ($this->extractImageRels($course->{$col} ?? null) as $rel) {
+                        $add($rel, $link);
+                    }
+                }
+            }
+        }
+
+        if (class_exists(\App\Models\DynamicLabels::class) && Schema::hasTable('course_dynamic_labels')) {
+            $labelCols = [];
+            foreach ([
+                'banner_image', 'who_can_do_img', 'lectures_img', 'practice_session_img',
+                'mock_examination_img', 'career_path_section_img', 'exam_information_section_img',
+                'learner_stories_img', 'what_you_earn_img',
+            ] as $col) {
+                if (Schema::hasColumn('course_dynamic_labels', $col)) {
+                    $labelCols[] = $col;
+                }
+            }
+            if ($labelCols !== []) {
+                $select = array_merge(['id', 'course_id'], $labelCols);
+                foreach (\App\Models\DynamicLabels::query()->select($select)->orderBy('id')->cursor() as $row) {
+                    $courseId = (int) $row->course_id;
+                    if ($courseId < 1) {
+                        continue;
+                    }
+                    $course = $courseMap[$courseId] ?? null;
+                    $link = [
+                        'kind' => 'course',
+                        'label' => $course
+                            ? trim((string) ($course->title ?: ('Course #' . $courseId)))
+                            : ('Course #' . $courseId),
+                        'url' => route('course.edit', $courseId),
+                        'web_url' => $course && function_exists('course_details_url')
+                            ? course_details_url($course)
+                            : url('course/' . ($course->slug ?? $courseId)),
+                    ];
+                    foreach ($labelCols as $col) {
+                        foreach ($this->extractImageRels($row->{$col} ?? null) as $rel) {
+                            $add($rel, $link);
+                        }
+                    }
+                }
+            }
+        }
+
+        $pageMap = [];
+        if (class_exists(Page::class) && Schema::hasTable('pages')) {
+            $pageCols = ['id', 'page_name', 'url'];
+            foreach (['parent_id', 'category_id'] as $col) {
+                if (Schema::hasColumn('pages', $col)) {
+                    $pageCols[] = $col;
+                }
+            }
+            foreach (Page::query()->select($pageCols)->orderBy('id')->cursor() as $page) {
+                $pageMap[(int) $page->id] = $page;
+            }
+        }
+
+        if (class_exists(PagesSEO::class) && Schema::hasTable('pages_s_e_o_s') && Schema::hasColumn('pages_s_e_o_s', 'thumbnail')) {
+            foreach (PagesSEO::query()->select(['id', 'page_id', 'course_id', 'thumbnail'])->orderBy('id')->cursor() as $seo) {
+                $rels = $this->extractImageRels($seo->thumbnail);
+                if ($rels === []) {
+                    continue;
+                }
+                if ($seo->course_id) {
+                    $course = $courseMap[(int) $seo->course_id] ?? null;
+                    $link = [
+                        'kind' => 'course',
+                        'label' => $course ? trim((string) ($course->title ?: ('Course #' . $seo->course_id))) : ('Course #' . $seo->course_id),
+                        'url' => route('courses-pages-seo.edit', $seo->id),
+                        'web_url' => $course && function_exists('course_details_url') ? course_details_url($course) : null,
+                    ];
+                } else {
+                    $page = $pageMap[(int) $seo->page_id] ?? null;
+                    $link = [
+                        'kind' => 'page',
+                        'label' => $page ? trim((string) ($page->page_name ?: ('Page #' . $seo->page_id))) : ('Page #' . $seo->page_id),
+                        'url' => route('courses-pages-seo.edit', $seo->id),
+                        'web_url' => $page && function_exists('page_public_url') ? page_public_url($page) : null,
+                    ];
+                }
+                foreach ($rels as $rel) {
+                    $add($rel, $link);
+                }
+            }
+        }
+
+        try {
+            $state = app(MediaLinkIndexService::class)->ensure(4);
+            foreach (($state['by_stem'] ?? []) as $key => $tokens) {
+                if (! is_array($tokens)) {
+                    continue;
+                }
+                foreach ($tokens as $token) {
+                    [$label, $url] = array_pad(explode('|', (string) $token, 2), 2, '');
+                    $kind = str_starts_with(strtolower($label), 'course') ? 'course' : 'page';
+                    if (strtolower($label) === 'site settings') {
+                        continue;
+                    }
+                    $add((string) $key, [
+                        'kind' => $kind,
+                        'label' => $label,
+                        'url' => $url,
+                        'web_url' => null,
+                    ]);
+                }
+            }
+        } catch (\Throwable $e) {
+            // Direct course/page columns above are enough if the filename index is stale.
+        }
+
+        return $index = ['by_key' => $byKey, 'paths' => $paths];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function extractImageRels(mixed $value): array
+    {
+        if ($value === null || $value === '' || $value === []) {
+            return [];
+        }
+        $blob = is_array($value) ? (string) json_encode($value, JSON_UNESCAPED_SLASHES) : (string) $value;
+        if ($blob === '') {
+            return [];
+        }
+        if (! preg_match_all(
+            '#(?:https?://[^/\s"\']+/)?(?:public/)?(/?(?:admin|images|uploads|frontend|storage)/[^\s"\'?<>\\]+\.(?:jpe?g|png|gif|webp|avif|svg))#i',
+            $blob,
+            $matches
+        )) {
+            return [];
+        }
+        $out = [];
+        foreach ($matches[1] as $raw) {
+            $rel = class_exists(MediaAsset::class)
+                ? MediaAsset::normalizePath((string) $raw)
+                : strtolower(ltrim(str_replace('\\', '/', (string) $raw), '/'));
+            if ($rel !== '') {
+                $out[$rel] = $rel;
+            }
+        }
+
+        return array_values($out);
     }
 
     /**

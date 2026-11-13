@@ -272,21 +272,32 @@ class MediaLinkIndexService
         if ($blob === '') {
             return [];
         }
-        if (! preg_match_all('/(?:images\/library\/)?([a-zA-Z0-9][a-zA-Z0-9._-]{4,}\.(?:jpe?g|png|gif|webp|avif|svg))/i', $blob, $matches)) {
+        if (! preg_match_all(
+            '#(?:https?://[^/\s"\']+/)?(?:public/)?(/?(?:admin|images|uploads|frontend|storage)/[^\s"\'?<>\\]+\.(?:jpe?g|png|gif|webp|avif|svg)|[a-zA-Z0-9][a-zA-Z0-9._-]{4,}\.(?:jpe?g|png|gif|webp|avif|svg))#i',
+            $blob,
+            $matches
+        )) {
             return [];
         }
         $keys = [];
         foreach ($matches[1] as $raw) {
-            $base = strtolower(basename(str_replace('\\', '/', (string) $raw)));
+            $rel = strtolower(str_replace('\\', '/', ltrim((string) $raw, '/')));
+            $base = basename($rel);
             if ($base === '') {
                 continue;
             }
             $keys[$base] = true;
+            if ($rel !== $base) {
+                $keys[$rel] = true;
+            }
             $stem = strtolower((string) pathinfo($base, PATHINFO_FILENAME));
             if (strlen($stem) >= 8) {
                 $keys[$stem] = true;
             }
             $keys['images/library/' . $base] = true;
+            if (str_starts_with($rel, 'admin/')) {
+                $keys[$rel] = true;
+            }
         }
 
         return array_keys($keys);
