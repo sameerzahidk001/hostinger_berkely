@@ -269,7 +269,7 @@ class MediaController extends Controller
             return back()->with('fail', 'Only images under images/ or uploads/ can be updated.');
         }
 
-        $full = public_path($rel);
+        $full = $this->mediaDiskPath($rel);
         if (! File::exists($full) || ! File::isFile($full)) {
             return back()->with('fail', 'File not found.');
         }
@@ -375,7 +375,7 @@ class MediaController extends Controller
             return back()->with('fail', 'Only uploaded images in images/ or uploads/ can be deleted.');
         }
 
-        $full = public_path($rel);
+        $full = $this->mediaDiskPath($rel);
         if (! File::exists($full) || ! File::isFile($full)) {
             return back()->with('fail', 'File not found.');
         }
@@ -632,8 +632,15 @@ class MediaController extends Controller
             return ['rel' => $rel];
         }
 
-        $oldFull = public_path($rel);
-        $newFull = public_path($newRel);
+        $oldFull = $this->mediaDiskPath($rel);
+        $newFull = $this->mediaDiskPath($newRel);
+        if (str_starts_with(MediaAsset::normalizePath($rel), 'images/courses/') && ! File::exists($newFull)) {
+            $newFull = public_path($newRel);
+            $newDir = dirname($newFull);
+            if (! is_dir($newDir)) {
+                @mkdir($newDir, 0755, true);
+            }
+        }
         if (! File::exists($oldFull)) {
             return ['error' => 'File not found.'];
         }
@@ -1120,7 +1127,7 @@ class MediaController extends Controller
 
     private function imageCachePath(): string
     {
-        return storage_path('app/media-library-index.json');
+        return storage_path('app/media-library-index-v2.json');
     }
 
     /** @return array<int, array{rel:string,name:string,mtime:int,size:int}> */
@@ -1208,10 +1215,51 @@ class MediaController extends Controller
         $out = [];
         $path = public_path('images');
         if (is_dir($path)) {
-            $this->collectImageFiles($path, 'images', $out, []);
+            $this->collectImageFiles($path, 'images', $out, [
+                'images/profiles' => true,
+            ]);
+        }
+
+        $legacy = public_path('admin/courses');
+        if (is_dir($legacy)) {
+            $legacyFiles = [];
+            $this->collectImageFiles($legacy, 'admin/courses', $legacyFiles, []);
+            $seen = [];
+            foreach ($out as $file) {
+                $seen[strtolower(str_replace('\\', '/', (string) ($file['rel'] ?? '')))] = true;
+            }
+            foreach ($legacyFiles as $file) {
+                $rel = str_replace('\\', '/', (string) ($file['rel'] ?? ''));
+                if (str_starts_with($rel, 'admin/courses/')) {
+                    $file['rel'] = 'images/courses/' . substr($rel, strlen('admin/courses/'));
+                }
+                $key = strtolower($file['rel']);
+                if (isset($seen[$key])) {
+                    continue;
+                }
+                $seen[$key] = true;
+                $out[] = $file;
+            }
         }
 
         return $out;
+    }
+
+    private function mediaDiskPath(string $rel): string
+    {
+        $rel = MediaAsset::normalizePath($rel);
+        $primary = public_path($rel);
+        if (is_file($primary)) {
+            return $primary;
+        }
+        if (str_starts_with($rel, 'images/courses/')) {
+            $legacy = public_path('admin/courses/' . substr($rel, strlen('images/courses/')));
+            if (is_file($legacy)) {
+                return $legacy;
+            }
+        }
+
+        return $primary;
     }
 
     /**
