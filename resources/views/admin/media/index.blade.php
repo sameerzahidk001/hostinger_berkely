@@ -152,6 +152,7 @@
             <p class="text-muted" style="margin:0 0 12px;font-size:13px;line-height:1.45;">
                 <strong>Public image:</strong> website files at <code>/images/…</code> (pages and courses).<br>
                 <strong>Admin:</strong> staff-only files at <code>/admin/…</code> and profile photos. Public is listed first.
+                Click <strong>SHOW LINKS</strong> on Admin photos to see which user they are connected to.
             </p>
             @if(!empty($unusedSkipped))
                 <div class="alert alert-warning">{{ $unusedSkipped }}</div>
@@ -199,7 +200,7 @@
                             <th class="lms-sort lms-meta-col" data-sort="input">Image Caption</th>
                             <th class="lms-sort lms-meta-col" data-sort="input">Description</th>
                             <th data-col="links">
-                                Linked pages
+                                Linked to
                                 <button type="button" class="btn btn-primary btn-xs lms-load-links-btn" id="lms-load-page-links">
                                     SHOW LINKS
                                 </button>
@@ -427,7 +428,13 @@
         var $row = $cell.closest('tr');
         var $del = $row.find('.lms-media-delete');
         if (!found.length) {
-            $cell.attr('data-sort-value', 'not-linked').html('<span class="label label-warning">Not linked</span><div class="text-muted small" style="margin-top:4px;">Safe to delete if unused elsewhere</div>');
+            var isProfile = rels.some(function (rel) {
+                return String(rel || '').toLowerCase().indexOf('/profiles/') !== -1;
+            });
+            var emptyNote = isProfile
+                ? 'Not connected to a user profile'
+                : 'Safe to delete if unused elsewhere';
+            $cell.attr('data-sort-value', 'not-linked').html('<span class="label label-warning">Not linked</span><div class="text-muted small" style="margin-top:4px;">' + emptyNote + '</div>');
             $del.prop('disabled', false).attr('title', 'Delete unused image');
             return;
         }
