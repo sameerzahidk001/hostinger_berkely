@@ -1937,25 +1937,6 @@ class ContentDashboardReportService
 
         $linkIndex = $this->contentImageLinkIndex();
         $files = $this->collapsedMediaLibraryFiles();
-        $seen = [];
-        foreach ($files as $file) {
-            $seen[strtolower(str_replace('\\', '/', (string) ($file['rel'] ?? '')))] = true;
-        }
-        foreach ($linkIndex['paths'] as $rel => $_unused) {
-            $rel = str_replace('\\', '/', (string) $rel);
-            $key = strtolower($rel);
-            if ($rel === '' || isset($seen[$key])) {
-                continue;
-            }
-            $seen[$key] = true;
-            $files[] = [
-                'rel' => $rel,
-                'name' => basename($rel),
-                'mtime' => 0,
-                'size' => 0,
-                'variants' => [['rel' => $rel, 'name' => basename($rel)]],
-            ];
-        }
 
         $metaByPath = $this->mediaAssetMetaByPath();
         $rows = [];
@@ -2064,17 +2045,25 @@ class ContentDashboardReportService
 
         $byKey = [];
         $paths = [];
-        $add = function (string $raw, array $link) use (&$byKey, &$paths): void {
+        $add = function (string $raw, array $link, bool $asFile = true) use (&$byKey, &$paths): void {
             $rel = class_exists(MediaAsset::class)
                 ? MediaAsset::normalizePath($raw)
                 : strtolower(ltrim(str_replace('\\', '/', $raw), '/'));
             if ($rel === '') {
                 return;
             }
-            $rel = strtolower($rel);
+            $rel = strtolower(str_replace('\\', '/', $rel));
+            if (str_starts_with($rel, 'admin/courses/')) {
+                $rel = 'images/courses/' . substr($rel, strlen('admin/courses/'));
+            }
             $name = basename($rel);
             $stem = strtolower((string) pathinfo($name, PATHINFO_FILENAME));
-            $paths[$rel] = true;
+            $ext = strtolower((string) pathinfo($name, PATHINFO_EXTENSION));
+            $isImageFile = $asFile && in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif', 'svg'], true)
+                && ! str_contains($rel, '/profiles/');
+            if ($isImageFile) {
+                $paths[$rel] = true;
+            }
             foreach (array_filter([$rel, $name, strlen($stem) >= 8 ? $stem : null]) as $key) {
                 $list = $byKey[$key] ?? [];
                 $sig = $link['url'] . '|' . $link['kind'];
@@ -2216,7 +2205,7 @@ class ContentDashboardReportService
                         'label' => $label,
                         'url' => $url,
                         'web_url' => null,
-                    ]);
+                    ], false);
                 }
             }
         } catch (\Throwable $e) {
