@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class CourseAgenda extends Model
 {
+    // Training calendar rows (course_agendas). Keep this file in Git deploys.
     use HasFactory, TracksAudit;
 
     protected $fillable = [

@@ -534,7 +534,7 @@ class ContentDashboardReportService
 
     public function trainingStats(?int $actorUserId, ?Carbon $from, ?Carbon $to): array
     {
-        if (! Schema::hasTable('course_agendas')) {
+        if (! is_file(app_path('Models/CourseAgenda.php')) || ! Schema::hasTable('course_agendas')) {
             return array_merge($this->emptyStandardStats(), [
                 'courses_with_training' => 0,
                 'courses_without_training' => 0,
