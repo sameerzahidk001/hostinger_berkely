@@ -94,7 +94,7 @@ class UserController extends Controller
             'longitude' => 'nullable|numeric|between:-180,180',
             'country' => 'required|string|max:100',
             'image_path' => 'nullable|string',
-            'local_file_input' => 'nullable|file|image|mimes:jpeg,png,jpg,gif,webp|max:300',
+            'local_file_input' => lms_profile_image_upload_rule(),
             'short_description' => 'nullable|string',
             'long_description' => 'nullable|string',
             'experience' => 'nullable|string',
@@ -187,7 +187,7 @@ class UserController extends Controller
             $slug = Str::slug($originalName) . '-' . time();
             $fileName = $slug . '.' . $extension;
             $destinationPath = public_path('images/profiles/');
-            public_upload_move($file, $destinationPath, $fileName);
+            public_upload_move($file, $destinationPath, $fileName, lms_profile_image_max_kb());
             $image = 'images/profiles/' . $fileName;
         } elseif ($request->filled('image_path')) {
             $image = normalize_profile_image_path($request->image_path);
@@ -301,7 +301,7 @@ class UserController extends Controller
                 'name' => 'required|string|max:255',
                 'approved' => 'nullable|boolean',
                 'image_path' => 'nullable|string',
-                'local_file_input' => 'nullable|file|image|mimes:jpeg,png,jpg,gif,webp|max:300',
+                'local_file_input' => lms_profile_image_upload_rule(),
                 'city' => 'nullable|string|max:100',
                 'country' => 'required|string|max:100',
                 'latitude' => 'nullable|numeric|between:-90,90',

@@ -583,6 +583,28 @@ if (!function_exists('lms_image_upload_max_kb')) {
     }
 }
 
+if (!function_exists('lms_profile_image_max_kb')) {
+    /** Profile photo cap for all users (Laravel `max:` rule unit). */
+    function lms_profile_image_max_kb(): int
+    {
+        return 300;
+    }
+}
+
+if (!function_exists('lms_profile_image_max_bytes')) {
+    function lms_profile_image_max_bytes(): int
+    {
+        return lms_profile_image_max_kb() * 1024;
+    }
+}
+
+if (!function_exists('lms_profile_image_upload_rule')) {
+    function lms_profile_image_upload_rule(string $required = 'nullable'): string
+    {
+        return $required . '|file|image|mimes:jpeg,png,jpg,gif,webp|max:' . lms_profile_image_max_kb();
+    }
+}
+
 if (!function_exists('lms_image_upload_max_bytes')) {
     function lms_image_upload_max_bytes(): int
     {
@@ -610,7 +632,7 @@ if (!function_exists('assert_image_upload_size')) {
      *
      * @param  \Illuminate\Http\UploadedFile|mixed  $file
      */
-    function assert_image_upload_size($file): void
+    function assert_image_upload_size($file, ?int $maxKb = null): void
     {
         if (! $file || ! is_object($file) || ! method_exists($file, 'getSize')) {
             return;
@@ -628,18 +650,19 @@ if (!function_exists('assert_image_upload_size')) {
         }
 
         $size = (int) $file->getSize();
-        if ($size > lms_image_upload_max_bytes()) {
+        $limitKb = $maxKb ?: lms_image_upload_max_kb();
+        if ($size > ($limitKb * 1024)) {
             throw \Illuminate\Validation\ValidationException::withMessages([
-                'image' => 'Image must be ' . lms_image_upload_max_kb() . ' KB or smaller. Compress or resize, then upload again.',
+                'image' => 'Image must be ' . $limitKb . ' KB or smaller. Compress or resize, then upload again.',
             ]);
         }
     }
 }
 
 if (!function_exists('public_upload_move')) {
-    function public_upload_move($file, string $destinationPath, string $fileName): void
+    function public_upload_move($file, string $destinationPath, string $fileName, ?int $maxKb = null): void
     {
-        assert_image_upload_size($file);
+        assert_image_upload_size($file, $maxKb);
 
         if (! is_dir($destinationPath)) {
             @mkdir($destinationPath, 0755, true);
@@ -2748,7 +2771,7 @@ if (!function_exists('save_uploaded_profile_image')) {
                     mkdir($destinationPath, 0755, true);
                 }
 
-                public_upload_move($file, $destinationPath, $fileName);
+                public_upload_move($file, $destinationPath, $fileName, lms_profile_image_max_kb());
 
                 return 'images/profiles/' . $fileName;
             }
