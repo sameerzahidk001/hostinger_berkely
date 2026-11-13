@@ -64,6 +64,7 @@
                                         <span class="text-danger">{{ $message }}</span>
                                     @enderror
                                 </div>
+                                @include('admin.partials.robots-index-fields', ['colClass' => 'col-lg-6 mb'])
                                 <div class="col-lg-12 mb">
                                     <label class="mb-1">Short Description</label>
                                     <textarea class="form-control text-editor" id="short_description"
@@ -1004,5 +1005,3 @@
         };
     </script>
 @endpush
-
-@include('admin.partials.content-editor-enhancements', ['editorModule' => 'courses'])

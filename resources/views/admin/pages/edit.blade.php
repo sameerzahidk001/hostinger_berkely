@@ -215,6 +215,7 @@
                                         <p class="text-danger text-xs italic">{{ $message }}</p>
                                     @enderror
                                 </div>
+                                @include('admin.partials.robots-index-fields', ['seoMeta' => $meta ?? $page->seo ?? null])
                             </div>
                         </div>
                     </div>

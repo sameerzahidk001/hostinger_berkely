@@ -164,6 +164,7 @@ class PagesController extends Controller
         }
 
         if ($pageCreated) {
+            save_editor_robots_for($pageCreated, $request, true);
             session()->flash('success', 'Page created. Add content sections and save.');
             record_panel_activity(
                 'Page Created',
@@ -261,6 +262,7 @@ class PagesController extends Controller
             $page->parent_id = null;
         }
         $page->save();
+        save_editor_robots_for($page, $request);
 
         if (! pages_status_enabled()) {
             session()->flash('error', 'Page content saved, but Active/Disabled status is not saved until database/sql/add-pages-status-column.sql is run on the server.');
