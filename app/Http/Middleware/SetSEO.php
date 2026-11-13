@@ -61,10 +61,16 @@ class SetSEO
         $seo = $seoData?->seo;
 
         if ($seoData instanceof Page) {
-            $preferredPath = trim((string) $seoData->full_url, '/');
-            if ($preferredPath !== '') {
-                $canonical = rtrim((string) config('app.url'), '/') . '/' . $preferredPath;
+            $homeId = SiteSettings::value('home');
+            if ($homeId && (int) $seoData->id === (int) $homeId) {
+                $canonical = rtrim((string) config('app.url'), '/') . '/';
                 SEOTools::setCanonical($canonical);
+            } else {
+                $preferredPath = trim((string) $seoData->full_url, '/');
+                if ($preferredPath !== '' && ! in_array($preferredPath, ['home'], true)) {
+                    $canonical = rtrim((string) config('app.url'), '/') . '/' . $preferredPath;
+                    SEOTools::setCanonical($canonical);
+                }
             }
         }
 
