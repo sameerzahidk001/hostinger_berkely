@@ -44,44 +44,44 @@ class CourseDynamicLabels extends Controller
 
             $file = $request->file('who_can_do_img');
             $fileName = $file->getClientOriginalName();
-            $destinationPath = public_path('admin/courses');
+            $destinationPath = public_course_upload_dir();
             public_upload_move($file, $destinationPath, $fileName);
-            $data['who_can_do_img'] = '/admin/courses/' . $fileName;
+            $data['who_can_do_img'] = '/images/courses/' . $fileName;
         }
         if ($request->hasFile('lectures_img')) {
 
             $file = $request->file('lectures_img');
             $fileName = $file->getClientOriginalName();
-            $destinationPath = public_path('admin/courses');
+            $destinationPath = public_course_upload_dir();
             public_upload_move($file, $destinationPath, $fileName);
-            $data['lectures_img'] = '/admin/courses/' . $fileName;
+            $data['lectures_img'] = '/images/courses/' . $fileName;
             $data['lectures_img_file_type'] = $file->getClientOriginalExtension();
         }
         if ($request->hasFile('practice_session_img')) {
 
             $file = $request->file('practice_session_img');
             $fileName = $file->getClientOriginalName();
-            $destinationPath = public_path('admin/courses');
+            $destinationPath = public_course_upload_dir();
             public_upload_move($file, $destinationPath, $fileName);
-            $data['practice_session_img'] = '/admin/courses/' . $fileName;
+            $data['practice_session_img'] = '/images/courses/' . $fileName;
             $data['practice_session_img_file_type'] = $file->getClientOriginalExtension();
         }
         if ($request->hasFile('mock_examination_img')) {
 
             $file = $request->file('mock_examination_img');
             $fileName = $file->getClientOriginalName();
-            $destinationPath = public_path('admin/courses');
+            $destinationPath = public_course_upload_dir();
             public_upload_move($file, $destinationPath, $fileName);
-            $data['mock_examination_img'] = '/admin/courses/' . $fileName;
+            $data['mock_examination_img'] = '/images/courses/' . $fileName;
             $data['mock_examination_img_file_type'] = $file->getClientOriginalExtension();
         }
         if ($request->hasFile('exam_information_section_img')) {
 
             $file = $request->file('exam_information_section_img');
             $fileName = $file->getClientOriginalName();
-            $destinationPath = public_path('admin/courses');
+            $destinationPath = public_course_upload_dir();
             public_upload_move($file, $destinationPath, $fileName);
-            $data['exam_information_section_img'] = '/admin/courses/' . $fileName;
+            $data['exam_information_section_img'] = '/images/courses/' . $fileName;
             
         }
         
@@ -89,17 +89,17 @@ class CourseDynamicLabels extends Controller
 
             $file = $request->file('career_path_section_img');
             $fileName = $file->getClientOriginalName();
-            $destinationPath = public_path('admin/courses');
+            $destinationPath = public_course_upload_dir();
             public_upload_move($file, $destinationPath, $fileName);
-            $data['career_path_section_img'] = '/admin/courses/' . $fileName;
+            $data['career_path_section_img'] = '/images/courses/' . $fileName;
         }
         if ($request->hasFile('what_you_earn_img')) {
 
             $file = $request->file('what_you_earn_img');
             $fileName = $file->getClientOriginalName();
-            $destinationPath = public_path('admin/courses');
+            $destinationPath = public_course_upload_dir();
             public_upload_move($file, $destinationPath, $fileName);
-            $data['what_you_earn_img'] = '/admin/courses/' . $fileName;
+            $data['what_you_earn_img'] = '/images/courses/' . $fileName;
         }
 
         $course = Course::findOrFail($request->course_id);
@@ -144,61 +144,61 @@ class CourseDynamicLabels extends Controller
 
             $file = $request->file('who_can_do_img');
             $fileName = $file->getClientOriginalName();
-            $destinationPath = public_path('admin/courses');
+            $destinationPath = public_course_upload_dir();
             public_upload_move($file, $destinationPath, $fileName);
-            $data['who_can_do_img'] = '/admin/courses/' . $fileName;
+            $data['who_can_do_img'] = '/images/courses/' . $fileName;
         }
         
         if ($request->hasFile('exam_information_section_img')) {
 
             $file = $request->file('exam_information_section_img');
             $fileName = $file->getClientOriginalName();
-            $destinationPath = public_path('admin/courses');
+            $destinationPath = public_course_upload_dir();
             public_upload_move($file, $destinationPath, $fileName);
-            $data['exam_information_section_img'] = '/admin/courses/' . $fileName;
+            $data['exam_information_section_img'] = '/images/courses/' . $fileName;
         }
         if ($request->hasFile('lectures_img')) {
 
             $file = $request->file('lectures_img');
             $fileName = $file->getClientOriginalName();
-            $destinationPath = public_path('admin/courses');
+            $destinationPath = public_course_upload_dir();
             public_upload_move($file, $destinationPath, $fileName);
-            $data['lectures_img'] = '/admin/courses/' . $fileName;
+            $data['lectures_img'] = '/images/courses/' . $fileName;
             $data['lectures_img_file_type'] = $file->getClientOriginalExtension();
         }
         if ($request->hasFile('practice_session_img')) {
 
             $file = $request->file('practice_session_img');
             $fileName = $file->getClientOriginalName();
-            $destinationPath = public_path('admin/courses');
+            $destinationPath = public_course_upload_dir();
             public_upload_move($file, $destinationPath, $fileName);
-            $data['practice_session_img'] = '/admin/courses/' . $fileName;
+            $data['practice_session_img'] = '/images/courses/' . $fileName;
             $data['practice_session_img_file_type'] = $file->getClientOriginalExtension();
         }
         if ($request->hasFile('mock_examination_img')) {
 
             $file = $request->file('mock_examination_img');
             $fileName = $file->getClientOriginalName();
-            $destinationPath = public_path('admin/courses');
+            $destinationPath = public_course_upload_dir();
             public_upload_move($file, $destinationPath, $fileName);
-            $data['mock_examination_img'] = '/admin/courses/' . $fileName;
+            $data['mock_examination_img'] = '/images/courses/' . $fileName;
             $data['mock_examination_img_file_type'] = $file->getClientOriginalExtension();
         }
         if ($request->hasFile('career_path_section_img')) {
 
             $file = $request->file('career_path_section_img');
             $fileName = $file->getClientOriginalName();
-            $destinationPath = public_path('admin/courses');
+            $destinationPath = public_course_upload_dir();
             public_upload_move($file, $destinationPath, $fileName);
-            $data['career_path_section_img'] = '/admin/courses/' . $fileName;
+            $data['career_path_section_img'] = '/images/courses/' . $fileName;
         }
         if ($request->hasFile('what_you_earn_img')) {
 
             $file = $request->file('what_you_earn_img');
             $fileName = $file->getClientOriginalName();
-            $destinationPath = public_path('admin/courses');
+            $destinationPath = public_course_upload_dir();
             public_upload_move($file, $destinationPath, $fileName);
-            $data['what_you_earn_img'] = '/admin/courses/' . $fileName;
+            $data['what_you_earn_img'] = '/images/courses/' . $fileName;
         }
         $labelsUpdated = $labels->update($data);
         if ($labelsUpdated) {

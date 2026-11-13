@@ -215,6 +215,9 @@ if (!function_exists('media_url')) {
         $path = ltrim($path, '/');
 
         $path = ltrim(str_replace('\\', '/', $path), '/');
+        if (str_starts_with($path, 'admin/courses/')) {
+            $path = 'images/courses/' . substr($path, strlen('admin/courses/'));
+        }
         if (function_exists('prefer_compressed_library_relative')) {
             if (! str_starts_with($path, 'images/') && ! str_starts_with($path, 'frontend/') && ! str_starts_with($path, 'admin/')) {
                 $path = prefer_compressed_library_relative('images/library/' . $path);
@@ -235,6 +238,34 @@ if (!function_exists('media_url')) {
         }
 
         return asset('images/library/' . $encoded);
+    }
+}
+
+if (! function_exists('public_course_upload_dir')) {
+    function public_course_upload_dir(?string $subdir = null): string
+    {
+        $rel = 'images/courses';
+        if (is_string($subdir) && trim($subdir, '/') !== '') {
+            $rel .= '/' . trim(str_replace('\\', '/', $subdir), '/');
+        }
+        $dir = public_path($rel);
+        if (! is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+
+        return $dir;
+    }
+}
+
+if (! function_exists('public_course_upload_rel')) {
+    function public_course_upload_rel(string $fileName, ?string $subdir = null): string
+    {
+        $fileName = ltrim(str_replace('\\', '/', $fileName), '/');
+        $sub = is_string($subdir) && trim($subdir, '/') !== ''
+            ? trim(str_replace('\\', '/', $subdir), '/') . '/'
+            : '';
+
+        return '/images/courses/' . $sub . $fileName;
     }
 }
 
@@ -418,6 +449,12 @@ if (!function_exists('local_media_exists')) {
         if (is_file(public_path($relative))) {
             return true;
         }
+        if (str_starts_with($relative, 'images/courses/')) {
+            $legacy = 'admin/courses/' . substr($relative, strlen('images/courses/'));
+            if (is_file(public_path($legacy))) {
+                return true;
+            }
+        }
 
         return restore_public_upload_if_missing($relative);
     }
@@ -448,6 +485,7 @@ if (!function_exists('persistent_upload_dirs')) {
     {
         return [
             'admin/courses',
+            'images/courses',
             'images/profiles',
             'images/library',
             'images/clients',

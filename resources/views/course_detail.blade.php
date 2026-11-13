@@ -383,7 +383,7 @@
                                 loading="lazy" width="1200" height="800"
                                 class="w-full max-w-full min-h-[300px] xl:min-h-[500px] object-cover">
                         @else
-                            <img src="{{ asset('admin/courses/course.png') }}" alt="{{ course_image_alt($course, 'overview_img', $course->title . ' overview') }}"
+                            <img src="{{ media_url('images/courses/course.png') ?: media_url('admin/courses/course.png') }}" alt="{{ course_image_alt($course, 'overview_img', $course->title . ' overview') }}"
                                 loading="lazy" width="1200" height="800"
                                 class="w-full max-w-full min-h-[300px] xl:min-h-[500px] object-cover">
                         @endif
@@ -516,7 +516,7 @@
 
             <div class="card flex flex-col lg:flex-row items-stretch lg:items-start py-6 gap-x-16 gap-y-10 w-full max-w-full">
                 <div class="flex-1 w-full min-w-0 max-w-full">
-                    <img src="{{ isset($course->dynamicLabel) && $course->dynamicLabel->who_can_do_img ? asset($course->dynamicLabel->who_can_do_img) : asset('/admin/courses/cma2.jpeg') }}"
+                    <img src="{{ isset($course->dynamicLabel) && $course->dynamicLabel->who_can_do_img ? media_url($course->dynamicLabel->who_can_do_img) : (media_url('images/courses/cma2.jpeg') ?: media_url('admin/courses/cma2.jpeg')) }}"
                         alt="{{ course_image_alt($course, 'who_can_do_img', $course->dynamicLabel?->who_can_do ?? $course->title) }}" class="w-full object-cover min-h-[300px] xl:min-h-[400px]">
                 </div>
                 <div class="flex-1 w-full min-w-0 max-w-full text-white">
@@ -647,7 +647,7 @@
                                                                 class="w-8 h-8 hidden md:block" alt="">
                                                             @if ($subHeadingsUnit->thumbnail)
                                                                 <a href="{{ $subHeadingsUnit->unit_video }}" target="_blank">
-                                                                    <img src="{{ asset($subHeadingsUnit->thumbnail) }}"
+                                                                    <img src="{{ media_url($subHeadingsUnit->thumbnail) }}"
                                                                         class="min-w-8 max-w-8 min-h-8 max-h-8"
                                                                         alt="{{ image_alt(null, ($subHeadingsUnit->name ?? 'Unit') . ' thumbnail') }}">
                                                                 </a>
@@ -847,7 +847,7 @@
                                     'png',
                                     'gif',
                                 ]))))
-                    <img src="{{ asset($course->dynamicLabel->lectures_img) }}"
+                    <img src="{{ media_url($course->dynamicLabel->lectures_img) }}"
                         class="h-full transition-all delay-300 duration-400 ease-in w-full absolute group-hover:scale-105 object-cover"
                         alt="{{ course_image_alt($course, 'lectures_img', $course->dynamicLabel?->lectures ?? 'Lectures') }}">
                     <div class="absolute p-8 z-50 gap-4 flex flex-col justify-end bg-opacity-45 h-full w-full bottom-0">
@@ -866,7 +866,7 @@
                     <video
                         class="h-full transition-all delay-300 duration-400 ease-in w-full absolute group-hover:scale-105 object-cover"
                         autoplay="autoplay" muted>
-                        <source src="{{ asset($course->dynamicLabel->lectures_img) }}"
+                        <source src="{{ media_url($course->dynamicLabel->lectures_img) }}"
                             type="video/{{ $course->dynamicLabel->lectures_img_file_type }}">
                         Your browser does not support the video tag.
                     </video>
@@ -905,7 +905,7 @@
                                     'png',
                                     'gif',
                                 ]))))
-                    <img src="{{ asset($course->dynamicLabel->practice_session_img) }}"
+                    <img src="{{ media_url($course->dynamicLabel->practice_session_img) }}"
                         class="h-full transition-all delay-300 duration-400 ease-in w-full absolute group-hover:scale-105 object-cover"
                         alt="{{ course_image_alt($course, 'practice_session_img', $course->dynamicLabel?->practice_session ?? 'Practice session') }}">
                     <div class="absolute p-8 z-50 gap-4 flex flex-col justify-end bg-opacity-45 h-full w-full bottom-0">
@@ -924,7 +924,7 @@
                     <video
                         class="h-full transition-all delay-300 duration-400 ease-in w-full absolute group-hover:scale-105 object-cover"
                         autoplay="autoplay" muted>
-                        <source src="{{ asset($course->dynamicLabel->practice_session_img) }}"
+                        <source src="{{ media_url($course->dynamicLabel->practice_session_img) }}"
                             type="video/{{ $course->dynamicLabel->practice_session_img_file_type }}">
                         Your browser does not support the video tag.
                     </video>
@@ -961,7 +961,7 @@
                                     'png',
                                     'gif',
                                 ]))))
-                    <img src="{{ asset($course->dynamicLabel->mock_examination_img) }}"
+                    <img src="{{ media_url($course->dynamicLabel->mock_examination_img) }}"
                         class="h-full transition-all delay-300 duration-400 ease-in w-full absolute group-hover:scale-105 object-cover"
                         alt="{{ course_image_alt($course, 'mock_examination_img', $course->dynamicLabel?->mock_examination ?? 'Mock examination') }}">
                     <div class="absolute p-8 z-50 gap-4 flex flex-col justify-end bg-opacity-45 h-full w-full bottom-0">
@@ -980,7 +980,7 @@
                     <video
                         class="h-full transition-all delay-300 duration-400 ease-in w-full absolute group-hover:scale-105 object-cover"
                         autoplay="autoplay" muted>
-                        <source src="{{ asset($course->dynamicLabel->mock_examination_img) }}"
+                        <source src="{{ media_url($course->dynamicLabel->mock_examination_img) }}"
                             type="video/{{ $course->dynamicLabel->mock_examination_img_file_type }}">
                         Your browser does not support the video tag.
                     </video>
@@ -1106,13 +1106,13 @@
                                 <p>Invalid YouTube URL</p>
                             @endif
                         @elseif(isset($course->dynamicLabel) && $course->dynamicLabel->exam_information_section_img)
-                            <img src="{{ asset($course->dynamicLabel->exam_information_section_img) }}" alt="{{ course_image_alt($course, 'exam_information_section_img', $course->dynamicLabel?->exam_information_section ?? $course->title) }}"
+                            <img src="{{ media_url($course->dynamicLabel->exam_information_section_img) }}" alt="{{ course_image_alt($course, 'exam_information_section_img', $course->dynamicLabel?->exam_information_section ?? $course->title) }}"
                                 class="w-full max-w-full min-h-[300px] xl:min-h-[500px] object-cover">
                         @else
-                            <img src="{{ asset('admin/courses/cma1.jpeg') }}" alt="{{ course_image_alt($course, 'exam_information_section_img', $course->title . ' exam information') }}"
+                            <img src="{{ media_url('images/courses/cma1.jpeg') ?: media_url('admin/courses/cma1.jpeg') }}" alt="{{ course_image_alt($course, 'exam_information_section_img', $course->title . ' exam information') }}"
                                 class="w-full max-w-full min-h-[300px] xl:min-h-[500px] object-cover">
                         @endif
-                        <!-- <img src="{{ isset($course->dynamicLabel) && $course->dynamicLabel->exam_information_section_img ? asset($course->dynamicLabel->exam_information_section_img) : asset('admin/courses/cma1.jpeg') }}" alt=""
+                        <!-- <img src="{{ isset($course->dynamicLabel) && $course->dynamicLabel->exam_information_section_img ? media_url($course->dynamicLabel->exam_information_section_img) : asset('admin/courses/cma1.jpeg') }}" alt=""
                             class="w-full max-w-full min-h-[300px] xl:min-h-[500px] object-cover"> -->
                     </div>
                     <div class="flex-1 w-full min-w-0 max-w-full">
@@ -1417,7 +1417,7 @@
                 {{-- Left: image --}}
                 <div class="sm:w-5/12 lg:w-1/2 shrink-0 overflow-hidden rounded-xl bg-gray-100">
                     <img src="{{ isset($course->dynamicLabel) && $course->dynamicLabel->learner_stories_img
-                        ? asset($course->dynamicLabel->learner_stories_img)
+                        ? media_url($course->dynamicLabel->learner_stories_img)
                         : asset('frontend/images/jpg/sheikh.jpg') }}"
                         class="w-full h-full min-h-[320px] sm:min-h-full object-cover object-top"
                         loading="lazy" width="1200" height="800"
@@ -1501,7 +1501,7 @@
                 </div>
 
                 <div class="flex-1 w-full basis-full">
-                    <img src="{{ isset($course->dynamicLabel) && $course->dynamicLabel->career_path_section_img ? asset($course->dynamicLabel->career_path_section_img) : asset('admin/courses/cma2.jpeg') }}"
+                    <img src="{{ isset($course->dynamicLabel) && $course->dynamicLabel->career_path_section_img ? media_url($course->dynamicLabel->career_path_section_img) : (media_url('images/courses/cma2.jpeg') ?: media_url('admin/courses/cma2.jpeg')) }}"
                         alt="{{ course_image_alt($course, 'career_path_section_img', $course->dynamicLabel?->career_path_section ?? 'Career path') }}" class="w-full h-full object-cover">
                 </div>
             </div>
@@ -1541,7 +1541,7 @@
             <div class="max-w-[900px]">
                 <div class="flex flex-col lg:flex-row gap-8 lg:gap-16 pt-6 w-full max-w-full">
                     <div class="flex items-center justify-center md:justify-start shrink-0">
-                        <img src="{{ isset($course->dynamicLabel) && $course->dynamicLabel->what_you_earn_img ? asset($course->dynamicLabel->what_you_earn_img) : asset('frontend/images/jpg/Berkeley-Square-School-of-Arts-Certificate.jpg') }}"
+                        <img src="{{ isset($course->dynamicLabel) && $course->dynamicLabel->what_you_earn_img ? media_url($course->dynamicLabel->what_you_earn_img) : asset('frontend/images/jpg/Berkeley-Square-School-of-Arts-Certificate.jpg') }}"
                             alt="{{ course_image_alt($course, 'what_you_earn_img', $course->dynamicLabel?->what_you_earn ?? 'Certificate') }}"
                             class="w-full max-w-[275px] h-auto max-h-[350px] object-contain transition-all hover:scale-110 ease-in duration-200 delay-100">
                     </div>
