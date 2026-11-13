@@ -135,7 +135,7 @@ class CourseController extends Controller
     function edit($id)
     {
         //return $data['course'] = Course::with('subjects')->where('id', $id)->first();
-        $data['course'] = Course::withTrashed()->with('categories', 'dynamicLabel')->findOrFail($id);
+        $data['course'] = Course::withTrashed()->with('categories', 'dynamicLabel', 'seo')->findOrFail($id);
         $data['categories'] = Category::all();
         $data['schools'] = School::all();
         return view('admin.course.edit')->with($data);
@@ -219,6 +219,9 @@ class CourseController extends Controller
         $course->salary = $request->salary;
         $course->career_path = $request->career_path;
         $saveResult = $course->save();
+        if ($saveResult) {
+            save_editor_robots_for($course, $request, true);
+        }
         if (is_array($request->course && $request->course[0]['title'] != NULL)) {
             foreach ($request->course as $courseStructure) {
 
@@ -366,6 +369,7 @@ class CourseController extends Controller
             }
 
             $course_overview_updated = $course->update($updatedData);
+            save_editor_robots_for($course, $request);
 
             if ($request->has('categories') && !empty($request->categories)) {
                 $course->categories()->sync($request->categories);

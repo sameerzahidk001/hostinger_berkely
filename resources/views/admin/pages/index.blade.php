@@ -108,6 +108,7 @@
                                         <option value="0" @selected(old('status') === '0')>Disabled</option>
                                     </select>
                                 </div>
+                                @include('admin.partials.robots-index-fields')
                             </div>
                             <div class="row">
                                 <div class="col-lg-12" style="margin-top: 16px;text-align:right;">

@@ -1977,6 +1977,47 @@ if (!function_exists('seo_robots_content')) {
     }
 }
 
+if (! function_exists('save_editor_robots_for')) {
+    /**
+     * Persist Index/Follow from the page or course editor. Defaults to index, follow.
+     */
+    function save_editor_robots_for(\App\Models\Page|\App\Models\Course $model, \Illuminate\Http\Request $request, bool $force = false): void
+    {
+        if (! $force && ! $request->exists('robots_index') && ! $request->exists('robots_follow')) {
+            return;
+        }
+
+        ensure_seo_robots_columns_exist();
+
+        $index = in_array((string) $request->input('robots_index', 'index'), ['index', 'noindex'], true)
+            ? (string) $request->input('robots_index', 'index')
+            : 'index';
+        $follow = in_array((string) $request->input('robots_follow', 'follow'), ['follow', 'nofollow'], true)
+            ? (string) $request->input('robots_follow', 'follow')
+            : 'follow';
+
+        $query = \App\Models\PagesSEO::query();
+        if ($model instanceof \App\Models\Course) {
+            $seo = $query->firstOrNew(['course_id' => $model->id]);
+            $seo->course_id = $model->id;
+            $seo->page_id = null;
+            $fallbackTitle = (string) ($model->title ?? '');
+        } else {
+            $seo = $query->firstOrNew(['page_id' => $model->id]);
+            $seo->page_id = $model->id;
+            $seo->course_id = null;
+            $fallbackTitle = (string) ($model->page_name ?? '');
+        }
+
+        $seo->robots_index = $index;
+        $seo->robots_follow = $follow;
+        if (trim((string) ($seo->title ?? '')) === '' && $fallbackTitle !== '') {
+            $seo->title = $fallbackTitle;
+        }
+        $seo->save();
+    }
+}
+
 if (! function_exists('seo_courses_hub_url')) {
     function seo_courses_hub_url(): string
     {

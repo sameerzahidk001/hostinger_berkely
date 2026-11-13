@@ -248,6 +248,10 @@
                                     <input type="text" class="form-control" name="slug"
                                         value="{{ old('slug', $course->slug) }}">
                                 </div>
+                                @include('admin.partials.robots-index-fields', [
+                                    'seoMeta' => $course->seo ?? null,
+                                    'colClass' => 'col-lg-6 mb',
+                                ])
 
                                 <div class="col-lg-12 mb">
                                     <label class="mb-1">Assigned Schools</label>
