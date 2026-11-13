@@ -1925,6 +1925,14 @@ class ContentDashboardReportService
                 'title' => $row['title'],
                 'linked_to' => $row['linked_label'],
                 'linked_urls' => $row['linked_urls'] !== '' ? $row['linked_urls'] : '—',
+                'links' => array_values(array_map(static function (array $link): array {
+                    return [
+                        'kind' => (string) ($link['kind'] ?? ''),
+                        'label' => (string) ($link['label'] ?? ''),
+                        'url' => (string) ($link['url'] ?? ''),
+                        'web_url' => (string) ($link['web_url'] ?? ''),
+                    ];
+                }, $row['links'] ?? [])),
                 'alt' => $row['alt'] !== '' ? $row['alt'] : '—',
                 'image_title' => $row['image_title'] !== '' ? $row['image_title'] : '—',
                 'caption' => $row['caption'] !== '' ? $row['caption'] : '—',
