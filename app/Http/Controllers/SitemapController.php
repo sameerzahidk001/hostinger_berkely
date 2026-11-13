@@ -18,7 +18,7 @@ class SitemapController extends Controller
             report($e);
             $urls = [[
                 'loc' => $this->siteUrl('/'),
-                'lastmod' => now()->toAtomString(),
+                'lastmod' => null,
                 'changefreq' => 'daily',
                 'priority' => '1.0',
             ]];
@@ -69,23 +69,27 @@ class SitemapController extends Controller
     {
         $urls = [];
         $homeId = SiteSettings::value('home');
+        $homeUpdatedAt = null;
+        if ($homeId) {
+            $homeUpdatedAt = Page::query()->where('id', $homeId)->value('updated_at');
+        }
 
         $urls[] = [
             'loc' => $this->siteUrl('/'),
-            'lastmod' => now()->toAtomString(),
+            'lastmod' => $homeUpdatedAt ? \Illuminate\Support\Carbon::parse($homeUpdatedAt)->toAtomString() : null,
             'changefreq' => 'daily',
             'priority' => '1.0',
         ];
         $urls[] = [
             'loc' => $this->siteUrl('courses'),
-            'lastmod' => now()->toAtomString(),
+            'lastmod' => null,
             'changefreq' => 'weekly',
             'priority' => '0.6',
         ];
 
         $pageQuery = Page::query()
             ->select(['id', 'url', 'parent_id', 'category_id', 'updated_at'])
-            ->with(['seo', 'parent:id,url,parent_id,category_id'])
+            ->with(['seo', 'parent:id,url,parent_id,category_id', 'sections'])
             ->withCount('sections');
         if (Schema::hasColumn('pages', 'page_name')) {
             $pageQuery->addSelect('page_name');
@@ -113,8 +117,8 @@ class SitemapController extends Controller
                         continue;
                     }
 
-                    // Thin pages are still noindexed at request time in SetSEO.
-                    if ((int) ($page->sections_count ?? 0) === 0) {
+                    // Match public robots: empty/thin pages are noindex, so keep them out of the sitemap.
+                    if (seo_page_is_empty($page)) {
                         continue;
                     }
 
