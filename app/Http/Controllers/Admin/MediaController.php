@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Course;
 use App\Models\DynamicLabels;
 use App\Models\MediaAsset;
+use App\Models\User;
 use App\Models\PageSection;
 use App\Models\SiteSettings;
 use Illuminate\Http\Request;
@@ -1392,6 +1393,156 @@ class MediaController extends Controller
         }
     }
 
+    /**
+     * Default avatars used by many accounts — do not treat as a unique user link.
+     *
+     * @return array<int, string>
+     */
+    private function genericProfileNames(): array
+    {
+        return ['user.png', 'user.jpg', 'user.jpeg', 'user.webp', 'logo.png', 'default.png', 'placeholder.png'];
+    }
+
+    /**
+     * @param  array<string, array<int, array{rel?:string,name?:string}>>  $groups
+     * @return array<string, array<int, string>>
+     */
+    private function userImageTokensByGroup(array $groups): array
+    {
+        $out = [];
+        foreach (array_keys($groups) as $stem) {
+            $out[$stem] = [];
+        }
+        if ($groups === [] || ! class_exists(User::class) || ! Schema::hasTable('users')) {
+            return $out;
+        }
+        $cols = array_values(array_filter(
+            ['image', 'avatar', 'photo', 'profile_image'],
+            fn ($col) => Schema::hasColumn('users', $col)
+        ));
+        if ($cols === []) {
+            return $out;
+        }
+
+        $generics = $this->genericProfileNames();
+        $select = array_merge(['id', 'name', 'email'], $cols);
+        if (Schema::hasColumn('users', 'role')) {
+            $select[] = 'role';
+        }
+
+        $needles = [];
+        foreach ($groups as $stem => $group) {
+            $name = strtolower((string) ($group[0]['name'] ?? ''));
+            if ($stem === '' || in_array($name, $generics, true) || in_array((string) $stem, ['user', 'logo', 'default', 'placeholder'], true)) {
+                continue;
+            }
+            $needles[] = (string) $stem;
+        }
+        if ($needles === []) {
+            return $out;
+        }
+
+        $q = User::query()->select($select);
+        $q->where(function ($outer) use ($needles, $cols) {
+            foreach ($needles as $stem) {
+                $like = '%' . addcslashes($stem, '%_\\') . '%';
+                foreach ($cols as $col) {
+                    $outer->orWhere($col, 'like', $like);
+                }
+            }
+        });
+
+        foreach ($q->limit(250)->get() as $user) {
+            $hay = strtolower(implode(' ', array_map(fn ($col) => (string) ($user->{$col} ?? ''), $cols)));
+            $token = $this->userImageLinkToken($user);
+            if ($token === '') {
+                continue;
+            }
+            foreach ($groups as $stem => $_group) {
+                if ($stem !== '' && str_contains($hay, strtolower((string) $stem))) {
+                    $out[$stem][] = $token;
+                }
+            }
+        }
+
+        foreach ($out as $stem => $tokens) {
+            $out[$stem] = array_values(array_unique($tokens));
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  callable(string,string,string):void  $add
+     * @param  array<int, array{rel?:string,name?:string}>  $files
+     */
+    private function addUserImageUsages(callable $add, array $files): void
+    {
+        if ($files === [] || ! class_exists(User::class) || ! Schema::hasTable('users')) {
+            return;
+        }
+        $cols = array_values(array_filter(
+            ['image', 'avatar', 'photo', 'profile_image'],
+            fn ($col) => Schema::hasColumn('users', $col)
+        ));
+        if ($cols === []) {
+            return;
+        }
+        $select = array_merge(['id', 'name', 'email'], $cols);
+        if (Schema::hasColumn('users', 'role')) {
+            $select[] = 'role';
+        }
+        $generics = $this->genericProfileNames();
+        $needles = [];
+        foreach ($files as $file) {
+            $name = strtolower((string) ($file['name'] ?? basename((string) ($file['rel'] ?? ''))));
+            $stem = strtolower((string) pathinfo($name, PATHINFO_FILENAME));
+            if ($name === '' || in_array($name, $generics, true) || in_array($stem, ['user', 'logo', 'default', 'placeholder'], true)) {
+                continue;
+            }
+            $needles[] = $stem !== '' ? $stem : $name;
+        }
+        $needles = array_values(array_unique(array_filter($needles)));
+        if ($needles === []) {
+            return;
+        }
+
+        $q = User::query()->select($select);
+        $q->where(function ($outer) use ($needles, $cols) {
+            foreach ($needles as $needle) {
+                $like = '%' . addcslashes($needle, '%_\\') . '%';
+                foreach ($cols as $col) {
+                    $outer->orWhere($col, 'like', $like);
+                }
+            }
+        });
+
+        foreach ($q->limit(250)->get() as $user) {
+            $token = $this->userImageLinkToken($user);
+            if ($token === '') {
+                continue;
+            }
+            [$label, $url] = array_pad(explode('|', $token, 2), 2, '');
+            $blob = strtolower(implode(' ', array_map(fn ($col) => (string) ($user->{$col} ?? ''), $cols)));
+            $add($blob, $label, $url);
+        }
+    }
+
+    private function userImageLinkToken($user): string
+    {
+        $id = (int) ($user->id ?? 0);
+        if ($id < 1) {
+            return '';
+        }
+        $name = trim((string) ($user->name ?? '')) ?: ('User #' . $id);
+        $email = trim((string) ($user->email ?? ''));
+        $role = trim((string) ($user->role ?? ''));
+        $kind = $role !== '' ? ucfirst(str_replace('_', ' ', $role)) : 'User';
+        $label = $kind . ': ' . $name . ($email !== '' ? ' (' . $email . ')' : '');
+
+        return $label . '|' . $this->mediaNamedUrl('users.edit', $id, url('/admin/user/' . $id . '/edit'));
+    }
+
     private function mediaNamedUrl(string $name, mixed $params, string $fallback): string
     {
         try {
@@ -1515,6 +1666,15 @@ class MediaController extends Controller
             }
         } catch (\Throwable $e) {
             // Pages still show if course columns differ.
+        }
+
+        try {
+            $userTokens = $this->userImageTokensByGroup($groups);
+            foreach ($groups as $stem => $group) {
+                $put($group, $userTokens[$stem] ?? []);
+            }
+        } catch (\Throwable $e) {
+            // Profile photos still list if the users table differs.
         }
 
         return ['by_path' => $byPath, 'by_name' => $byName];
@@ -1702,6 +1862,12 @@ class MediaController extends Controller
             }
         } catch (\Throwable $e) {
             // Ignore settings source.
+        }
+
+        try {
+            $this->addUserImageUsages($add, $files);
+        } catch (\Throwable $e) {
+            // Pages/courses still count if user photos cannot be scanned.
         }
 
         $flatten = function (array $map) {
