@@ -83,6 +83,21 @@ Route::view('/test', 'test');
 
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
 Route::get('/robots.txt', [SitemapController::class, 'robots'])->name('robots');
+Route::get('/images/courses/{path}', function (string $path) {
+    $path = str_replace('\\', '/', $path);
+    if ($path === '' || str_contains($path, '..')) {
+        abort(404);
+    }
+    foreach ([
+        public_path('images/courses/' . $path),
+        public_path('admin/courses/' . $path),
+    ] as $full) {
+        if (is_file($full)) {
+            return response()->file($full, ['Cache-Control' => 'public, max-age=86400']);
+        }
+    }
+    abort(404);
+})->where('path', '.*')->name('public.course-images');
 
 Route::get('/ecert-verify/{code?}', [VerifyCertificateController::class, 'show'])
     ->where('code', '.*')

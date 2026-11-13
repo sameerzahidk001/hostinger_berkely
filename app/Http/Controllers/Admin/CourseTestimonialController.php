@@ -109,12 +109,12 @@ class CourseTestimonialController extends Controller
             $extension = $file->getClientOriginalExtension();
             $slug = Str::slug($originalName) . '-' . time();
             $fileName = $slug . '.' . $extension;
-            $destinationPath = public_path('admin/courses/testimonial/');
+            $destinationPath = public_course_upload_dir('testimonial');
             if (!is_dir($destinationPath)) {
                 mkdir($destinationPath, 0755, true);
             }
             public_upload_move($file, $destinationPath, $fileName);
-            $testimonial->image = '/admin/courses/testimonial/' . $fileName;
+            $testimonial->image = public_course_upload_rel($fileName, 'testimonial');
         } else {
             $imagePath = str_replace('\\', '/', trim((string) $request->input('image_path', '')));
             if ($imagePath !== '' && str_contains($imagePath, '/')) {
@@ -190,12 +190,12 @@ class CourseTestimonialController extends Controller
             $extension = $file->getClientOriginalExtension();
             $slug = Str::slug($originalName) . '-' . time();
             $fileName = $slug . '.' . $extension;
-            $destinationPath = public_path('admin/courses/testimonial/');
+            $destinationPath = public_course_upload_dir('testimonial');
             if (!is_dir($destinationPath)) {
                 mkdir($destinationPath, 0755, true);
             }
             public_upload_move($file, $destinationPath, $fileName);
-            $testimonial->image = '/admin/courses/testimonial/' . $fileName;
+            $testimonial->image = public_course_upload_rel($fileName, 'testimonial');
         } else {
             $imagePath = str_replace('\\', '/', trim((string) $request->input('image_path', '')));
             if ($imagePath !== '' && str_contains($imagePath, '/')) {
@@ -220,7 +220,10 @@ class CourseTestimonialController extends Controller
             ->where('image', $testimonial->image)
             ->exists();
 
-        if (!$imageStillUsed && !empty($testimonial->image) && Str::startsWith($testimonial->image, '/admin/courses/testimonial/')) {
+        if (!$imageStillUsed && !empty($testimonial->image) && (
+            Str::startsWith($testimonial->image, '/admin/courses/testimonial/')
+            || Str::startsWith($testimonial->image, '/images/courses/testimonial/')
+        )) {
             $oldFullPath = public_path(ltrim($testimonial->image, '/'));
             if (is_file($oldFullPath)) {
                 @unlink($oldFullPath);

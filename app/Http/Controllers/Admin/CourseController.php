@@ -161,9 +161,9 @@ class CourseController extends Controller
 
             $file = $request->file('thumbnail');
             $fileName = $file->getClientOriginalName();
-            $destinationPath = public_path('admin/courses');
+            $destinationPath = public_course_upload_dir();
             public_upload_move($file, $destinationPath, $fileName);
-            $thumbnail = '/admin/courses/' . $fileName;
+            $thumbnail = '/images/courses/' . $fileName;
 
         }
 
@@ -173,9 +173,9 @@ class CourseController extends Controller
             $extension = $file->getClientOriginalExtension();
             $slug = Str::slug($originalName) . '-' . time();
             $fileName = $slug . '.' . $extension;
-            $destinationPath = public_path('admin/courses');
+            $destinationPath = public_course_upload_dir();
             public_upload_move($file, $destinationPath, $fileName);
-            $updatedData['overview_img'] = '/admin/courses/' . $fileName;
+            $updatedData['overview_img'] = '/images/courses/' . $fileName;
         } elseif ($request->filled('overview_img_path')) {
             $updatedData['overview_img'] = $request->input('overview_img_path');
         }
@@ -184,18 +184,18 @@ class CourseController extends Controller
 
             $file = $request->file('video');
             $fileName = $file->getClientOriginalName();
-            $destinationPath = public_path('admin/courses');
+            $destinationPath = public_course_upload_dir();
             public_upload_move($file, $destinationPath, $fileName);
-            $video = '/admin/courses/' . $fileName;
+            $video = '/images/courses/' . $fileName;
 
         }
         if ($request->hasFile('thumbnail')) {
 
             $file = $request->file('thumbnail');
             $fileName = $file->getClientOriginalName();
-            $destinationPath = public_path('admin/courses');
+            $destinationPath = public_course_upload_dir();
             public_upload_move($file, $destinationPath, $fileName);
-            $thumbnail = '/admin/courses/' . $fileName;
+            $thumbnail = '/images/courses/' . $fileName;
         }
 
         $course = new Course;
@@ -245,9 +245,9 @@ class CourseController extends Controller
                             if (isset($unitData['video']) && $unitData['video'] instanceof \Illuminate\Http\UploadedFile) {
                                 $file = $unitData['video'];
                                 $fileName = $file->getClientOriginalName();
-                                $destinationPath = public_path('admin/courses');
+                                $destinationPath = public_course_upload_dir();
                                 public_upload_move($file, $destinationPath, $fileName);
-                                $unitVideoPath = '/admin/courses/' . $fileName;
+                                $unitVideoPath = '/images/courses/' . $fileName;
                             }
 
                             $subheading->subHeadingsUnits()->create([
@@ -367,9 +367,9 @@ class CourseController extends Controller
                 $extension = $file->getClientOriginalExtension();
                 $slug = Str::slug($originalName) . '-' . time();
                 $fileName = $slug . '.' . $extension;
-                $destinationPath = public_path('admin/courses');
+                $destinationPath = public_course_upload_dir();
                 public_upload_move($file, $destinationPath, $fileName);
-                $updatedData['overview_img'] = '/admin/courses/' . $fileName;
+                $updatedData['overview_img'] = '/images/courses/' . $fileName;
             } elseif ($request->filled('overview_img_path')) {
                 $updatedData['overview_img'] = $request->input('overview_img_path');
             }
@@ -449,9 +449,9 @@ class CourseController extends Controller
                     $extension = $file->getClientOriginalExtension();
                     $slug = Str::slug($originalName) . '-' . time();
                     $fileName = $slug . '.' . $extension;
-                    $destinationPath = public_path('admin/courses');
+                    $destinationPath = public_course_upload_dir();
                     public_upload_move($file, $destinationPath, $fileName);
-                    $createLabels['banner_image'] = '/admin/courses/' . $fileName;
+                    $createLabels['banner_image'] = '/images/courses/' . $fileName;
                 } elseif (!empty($request->input('label.banner_img_path'))) {
                     $createLabels['banner_image'] = $labelData['banner_img_path'];
                 }
@@ -499,9 +499,9 @@ class CourseController extends Controller
                     $extension = $file->getClientOriginalExtension();
                     $slug = Str::slug($originalName) . '-' . time();
                     $fileName = $slug . '.' . $extension;
-                    $destinationPath = public_path('admin/courses');
+                    $destinationPath = public_course_upload_dir();
                     public_upload_move($file, $destinationPath, $fileName);
-                    $createLabels['what_you_earn_img'] = '/admin/courses/' . $fileName;
+                    $createLabels['what_you_earn_img'] = '/images/courses/' . $fileName;
                 } elseif (!empty($labelData['what_you_earn_img_path'])) {
                     $createLabels['what_you_earn_img'] = $labelData['what_you_earn_img_path'];
                 }
@@ -552,9 +552,9 @@ class CourseController extends Controller
                     $extension = $file->getClientOriginalExtension();
                     $slug = Str::slug($originalName) . '-' . time();
                     $fileName = $slug . '.' . $extension;
-                    $destinationPath = public_path('admin/courses');
+                    $destinationPath = public_course_upload_dir();
                     public_upload_move($file, $destinationPath, $fileName);
-                    $createLabels['who_can_do_img'] = '/admin/courses/' . $fileName;
+                    $createLabels['who_can_do_img'] = '/images/courses/' . $fileName;
                 } elseif (!empty($labelData['who_can_do_img_path'])) {
                     $createLabels['who_can_do_img'] = $labelData['who_can_do_img_path'];
                 }
@@ -649,9 +649,9 @@ class CourseController extends Controller
                     $extension = $file->getClientOriginalExtension();
                     $slug = Str::slug($originalName) . '-' . time();
                     $fileName = $slug . '.' . $extension;
-                    $destinationPath = public_path('admin/courses');
+                    $destinationPath = public_course_upload_dir();
                     public_upload_move($file, $destinationPath, $fileName);
-                    $createLabels['lectures_img'] = '/admin/courses/' . $fileName;
+                    $createLabels['lectures_img'] = '/images/courses/' . $fileName;
                 } elseif (!empty($labelData['lectures_img_path'])) {
                     $createLabels['lectures_img'] = $labelData['lectures_img_path'];
                 }
@@ -662,9 +662,9 @@ class CourseController extends Controller
                     $extension = $file->getClientOriginalExtension();
                     $slug = Str::slug($originalName) . '-' . time();
                     $fileName = $slug . '.' . $extension;
-                    $destinationPath = public_path('admin/courses');
+                    $destinationPath = public_course_upload_dir();
                     public_upload_move($file, $destinationPath, $fileName);
-                    $createLabels['practice_session_img'] = '/admin/courses/' . $fileName;
+                    $createLabels['practice_session_img'] = '/images/courses/' . $fileName;
                 } elseif (!empty($labelData['practice_session_img_path'])) {
                     $createLabels['practice_session_img'] = $labelData['practice_session_img_path'];
                 }
@@ -675,9 +675,9 @@ class CourseController extends Controller
                     $extension = $file->getClientOriginalExtension();
                     $slug = Str::slug($originalName) . '-' . time();
                     $fileName = $slug . '.' . $extension;
-                    $destinationPath = public_path('admin/courses');
+                    $destinationPath = public_course_upload_dir();
                     public_upload_move($file, $destinationPath, $fileName);
-                    $createLabels['mock_examination_img'] = '/admin/courses/' . $fileName;
+                    $createLabels['mock_examination_img'] = '/images/courses/' . $fileName;
                 } elseif (!empty($labelData['mock_examination_img_path'])) {
                     $createLabels['mock_examination_img'] = $labelData['mock_examination_img_path'];
                 }
@@ -749,9 +749,9 @@ class CourseController extends Controller
                     $extension = $file->getClientOriginalExtension();
                     $slug = Str::slug($originalName) . '-' . time();
                     $fileName = $slug . '.' . $extension;
-                    $destinationPath = public_path('admin/courses');
+                    $destinationPath = public_course_upload_dir();
                     public_upload_move($file, $destinationPath, $fileName);
-                    $createLabels['career_path_section_img'] = '/admin/courses/' . $fileName;
+                    $createLabels['career_path_section_img'] = '/images/courses/' . $fileName;
                 } elseif (!empty($labelData['career_path_section_img_path'])) {
                     $createLabels['career_path_section_img'] = $labelData['career_path_section_img_path'];
                 }
@@ -817,9 +817,9 @@ class CourseController extends Controller
                     $extension = $file->getClientOriginalExtension();
                     $slug = Str::slug($originalName) . '-' . time();
                     $fileName = $slug . '.' . $extension;
-                    $destinationPath = public_path('admin/courses');
+                    $destinationPath = public_course_upload_dir();
                     public_upload_move($file, $destinationPath, $fileName);
-                    $createLabels['exam_information_section_img'] = '/admin/courses/' . $fileName;
+                    $createLabels['exam_information_section_img'] = '/images/courses/' . $fileName;
                 } elseif (!empty($labelData['exam_information_section_img_path'])) {
                     $createLabels['exam_information_section_img'] = $labelData['exam_information_section_img_path'];
                 }
@@ -874,9 +874,9 @@ class CourseController extends Controller
                     $extension = $file->getClientOriginalExtension();
                     $slug = Str::slug($originalName) . '-' . time();
                     $fileName = $slug . '.' . $extension;
-                    $destinationPath = public_path('admin/courses');
+                    $destinationPath = public_course_upload_dir();
                     public_upload_move($file, $destinationPath, $fileName);
-                    $createLabels['learner_stories_img'] = '/admin/courses/' . $fileName;
+                    $createLabels['learner_stories_img'] = '/images/courses/' . $fileName;
                 } elseif (!empty($labelData['learner_stories_img_path'])) {
                     $createLabels['learner_stories_img'] = $labelData['learner_stories_img_path'];
                 }
@@ -980,9 +980,9 @@ class CourseController extends Controller
                 $extension = $file->getClientOriginalExtension();
                 $slug = Str::slug($originalName) . '-' . time();
                 $fileName = $slug . '.' . $extension;
-                $destinationPath = public_path('admin/courses');
+                $destinationPath = public_course_upload_dir();
                 public_upload_move($file, $destinationPath, $fileName);
-                $image = '/admin/courses/' . $fileName;
+                $image = '/images/courses/' . $fileName;
             } elseif ($request->filled('image_text_2col_path')) {
                 $image = $request->input('image_text_2col_path');
             }
@@ -1241,9 +1241,9 @@ class CourseController extends Controller
                                 //return 'test';
                                 $file = $unitData['thumbnail'];
                                 $fileName = $file->getClientOriginalName();
-                                $destinationPath = public_path('admin/courses');
+                                $destinationPath = public_course_upload_dir();
                                 public_upload_move($file, $destinationPath, $fileName);
-                                $thumbnail = '/admin/courses/' . $fileName;
+                                $thumbnail = '/images/courses/' . $fileName;
                             }
                             // else{
                             //     $thumbnail = '/admin/courses/course-gen.png';
@@ -1350,9 +1350,9 @@ class CourseController extends Controller
                                 // return 'thumbnail';
                                 $file = $unitData['thumbnail'];
                                 $fileName = $file->getClientOriginalName();
-                                $destinationPath = public_path('admin/courses');
+                                $destinationPath = public_course_upload_dir();
                                 public_upload_move($file, $destinationPath, $fileName);
-                                $thumbnail = '/admin/courses/' . $fileName;
+                                $thumbnail = '/images/courses/' . $fileName;
                             } else {
                                 $thumbnail = $unitData['existing_thumbnail'] ?? null;
                             }
@@ -1400,9 +1400,9 @@ class CourseController extends Controller
         if ($request->hasFile('upload')) {
             $file = $request->file('upload');
             $fileName = $file->getClientOriginalName();
-            $destinationPath = public_path('admin/courses/editor');
+            $destinationPath = public_course_upload_dir('editor');
             public_upload_move($file, $destinationPath, $fileName);
-            $image = '/admin/courses/editor/' . $fileName;
+            $image = public_course_upload_rel($fileName, 'editor');
 
             // Return a JSON response with the URL of the uploaded image
             return response()->json([
@@ -1742,9 +1742,9 @@ class CourseController extends Controller
 
             $file = $request->file('image');
             $fileName = $file->getClientOriginalName();
-            $destinationPath = public_path('admin/courses');
+            $destinationPath = public_course_upload_dir();
             public_upload_move($file, $destinationPath, $fileName);
-            $path = '/admin/courses/' . $fileName;
+            $path = '/images/courses/' . $fileName;
 
             $course->courseRewards()->create([
                 'title' => $request->input('title'),
@@ -1790,9 +1790,9 @@ class CourseController extends Controller
 
             $file = $request->file("brochure");
             $fileName = $file->getClientOriginalName();
-            $destinationPath = public_path('admin/courses');
+            $destinationPath = public_course_upload_dir();
             public_upload_move($file, $destinationPath, $fileName);
-            $path = '/admin/courses/' . $fileName;
+            $path = '/images/courses/' . $fileName;
         } else {
             $path = 'courses/1708672161.jpg';
         }
@@ -1843,9 +1843,9 @@ class CourseController extends Controller
                 // $path = $image->storeAs('course-module', $filename, 'public');
                 $file = $request->file("highlights.$index.h-image");
                 $fileName = $file->getClientOriginalName();
-                $destinationPath = public_path('admin/courses');
+                $destinationPath = public_course_upload_dir();
                 public_upload_move($file, $destinationPath, $fileName);
-                $path = '/admin/courses/' . $fileName;
+                $path = '/images/courses/' . $fileName;
 
             } else {
                 //return 'else';

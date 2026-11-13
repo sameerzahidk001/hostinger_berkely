@@ -92,7 +92,7 @@ class SetSEO
             $title = (string) $seo->title;
             $description = (string) $seo->meta_description;
             $keywords = (string) $seo->keywords;
-            $imageUrl = $seo->thumbnail ? asset($seo->thumbnail) : '';
+            $imageUrl = $seo->thumbnail ? (media_url($seo->thumbnail) ?: asset($seo->thumbnail)) : '';
             $imageAlt = trim((string) ($seo->thumbnail_alt ?? '')) ?: $title;
             $pageUrl = $canonical;
 
@@ -221,7 +221,9 @@ class SetSEO
     private function applyCourseSchema(Course $course, ?PagesSEO $seo): void
     {
         $description = trim(strip_tags((string) ($course->short_description ?: $seo?->meta_description ?: '')));
-        $imageUrl = $seo?->thumbnail ? asset($seo->thumbnail) : ($course->thumbnail ? asset($course->thumbnail) : null);
+        $imageUrl = $seo?->thumbnail
+            ? (media_url($seo->thumbnail) ?: asset($seo->thumbnail))
+            : ($course->thumbnail ? (media_url($course->thumbnail) ?: asset($course->thumbnail)) : null);
         $graph = [
             '@type' => 'Course',
             'name' => (string) $course->title,
