@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Course;
 use App\Models\CourseAgenda;
 use App\Models\CourseFee;
+use App\Models\MediaAsset;
 use App\Models\Page;
 use App\Models\PageFeePackage;
 use App\Models\PagesSEO;
@@ -24,6 +25,7 @@ class ContentDashboardReportService
             'seo' => $this->seoStats($actorUserId, $from, $to),
             'training' => $this->trainingStats($actorUserId, $from, $to),
             'fees' => $this->feePackageStats($actorUserId, $from, $to),
+            'images' => $this->imageStats(),
             'date_from' => $dateFrom,
             'date_to' => $dateTo,
         ];
@@ -91,6 +93,7 @@ class ContentDashboardReportService
                 $actorUserId
             ),
             'updated_in_range' => $this->countUpdatedInRange(Page::class, $from, $to, false, $actorUserId),
+            ...$this->robotsRelationCounts(Page::query(), 'page_id'),
         ];
     }
 
@@ -156,6 +159,7 @@ class ContentDashboardReportService
                 $actorUserId
             ),
             'updated_in_range' => $this->countUpdatedInRange(Course::class, $from, $to, true, $actorUserId),
+            ...$this->robotsRelationCounts(Course::withTrashed(), 'course_id'),
         ];
     }
 
@@ -259,6 +263,7 @@ class ContentDashboardReportService
             'seo' => $this->seoDetailRows($metric, $actorUserId, $from, $to, $search),
             'training' => $this->trainingDetailRows($metric, $actorUserId, $from, $to, $search),
             'fees' => $this->feePackageDetailRows($metric, $actorUserId, $from, $to, $search),
+            'images' => $this->imageDetailRows($metric, $search),
             default => collect(),
         };
     }
@@ -294,6 +299,18 @@ class ContentDashboardReportService
                 ['key' => 'created_by', 'label' => 'Created By'],
                 ['key' => 'updated_at', 'label' => 'Last Modified'],
                 ['key' => 'updated_by', 'label' => 'Modified By'],
+            ];
+        }
+
+        if ($module === 'images') {
+            return [
+                ['key' => 'title', 'label' => 'Image'],
+                ['key' => 'linked_to', 'label' => 'Linked To'],
+                ['key' => 'alt', 'label' => 'Alt'],
+                ['key' => 'image_title', 'label' => 'Title'],
+                ['key' => 'caption', 'label' => 'Caption'],
+                ['key' => 'description', 'label' => 'Description'],
+                ['key' => 'created_at', 'label' => 'Uploaded'],
             ];
         }
 
@@ -438,9 +455,54 @@ class ContentDashboardReportService
             ];
         }
 
-        $noun = $module === 'courses' ? 'Courses' : 'Pages';
+        if ($module === 'images') {
+            return [
+                'total' => 'Total Images',
+                'linked_courses' => 'Images linked to Courses',
+                'linked_pages' => 'Images linked to Pages',
+                'not_linked' => 'Images not linked',
+                'with_alt' => 'Images with Alt',
+                'without_alt' => 'Images without Alt',
+                'with_title' => 'Images with Title',
+                'without_title' => 'Images without Title',
+                'with_caption' => 'Images with Caption',
+                'without_caption' => 'Images without Caption',
+                'with_description' => 'Images with Description',
+                'without_description' => 'Images without Description',
+            ];
+        }
 
-        return $this->standardMetricLabels($noun, $who);
+        $noun = $module === 'courses' ? 'Courses' : 'Pages';
+        $labels = $this->standardMetricLabels($noun, $who);
+
+        return $this->withRobotsMetricLabels($labels, $noun);
+    }
+
+    /**
+     * @param  array<string, string>  $labels
+     * @return array<string, string>
+     */
+    private function withRobotsMetricLabels(array $labels, string $noun): array
+    {
+        $extra = [
+            'with_index' => $noun . ' with Index',
+            'with_noindex' => $noun . ' with Noindex',
+            'missing_index' => $noun . ' with Missing Index',
+            'with_follow' => $noun . ' with Follow',
+            'with_nofollow' => $noun . ' with No Follow',
+            'missing_follow' => $noun . ' with Missing Follow',
+        ];
+        $out = [];
+        foreach ($labels as $key => $label) {
+            $out[$key] = $label;
+            if ($key === 'inactive') {
+                foreach ($extra as $extraKey => $extraLabel) {
+                    $out[$extraKey] = $extraLabel;
+                }
+            }
+        }
+
+        return $out;
     }
 
     private function standardMetricLabels(string $noun, string $who): array
@@ -1037,6 +1099,7 @@ class ContentDashboardReportService
         $query = Page::query()->with(['createdBy', 'updatedBy']);
 
         $this->applyMetricFilters($query, $metric, $actorUserId, $from, $to, pages_status_enabled());
+        $this->applyRobotsRelationFilter($query, 'page_id', $metric);
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -1080,6 +1143,7 @@ class ContentDashboardReportService
         $query = Course::withTrashed()->with(['createdBy', 'updatedBy']);
 
         $this->applyCourseMetricFilters($query, $metric, $actorUserId, $from, $to);
+        $this->applyRobotsRelationFilter($query, 'course_id', $metric);
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -1676,5 +1740,369 @@ class ContentDashboardReportService
         $to = $dateTo ? Carbon::parse($dateTo)->endOfDay() : null;
 
         return [$from, $to];
+    }
+
+    /**
+     * @return array{
+     *   with_index:int,with_noindex:int,missing_index:int,
+     *   with_follow:int,with_nofollow:int,missing_follow:int
+     * }
+     */
+    private function robotsRelationCounts($query, string $foreignKey): array
+    {
+        $empty = [
+            'with_index' => 0,
+            'with_noindex' => 0,
+            'missing_index' => (int) (clone $query)->count(),
+            'with_follow' => 0,
+            'with_nofollow' => 0,
+            'missing_follow' => (int) (clone $query)->count(),
+        ];
+        if (! Schema::hasTable('pages_s_e_o_s') || ! Schema::hasColumn('pages_s_e_o_s', 'robots_index')) {
+            return $empty;
+        }
+
+        $indexQuery = clone $query;
+        $noindexQuery = clone $query;
+        $missingIndexQuery = clone $query;
+        $followQuery = clone $query;
+        $nofollowQuery = clone $query;
+        $missingFollowQuery = clone $query;
+
+        $this->applyRobotsRelationFilter($indexQuery, $foreignKey, 'with_index');
+        $this->applyRobotsRelationFilter($noindexQuery, $foreignKey, 'with_noindex');
+        $this->applyRobotsRelationFilter($missingIndexQuery, $foreignKey, 'missing_index');
+        $this->applyRobotsRelationFilter($followQuery, $foreignKey, 'with_follow');
+        $this->applyRobotsRelationFilter($nofollowQuery, $foreignKey, 'with_nofollow');
+        $this->applyRobotsRelationFilter($missingFollowQuery, $foreignKey, 'missing_follow');
+
+        return [
+            'with_index' => (int) $indexQuery->count(),
+            'with_noindex' => (int) $noindexQuery->count(),
+            'missing_index' => (int) $missingIndexQuery->count(),
+            'with_follow' => (int) $followQuery->count(),
+            'with_nofollow' => (int) $nofollowQuery->count(),
+            'missing_follow' => (int) $missingFollowQuery->count(),
+        ];
+    }
+
+    private function applyRobotsRelationFilter($query, string $foreignKey, string $metric): void
+    {
+        if (! in_array($metric, ['with_index', 'with_noindex', 'missing_index', 'with_follow', 'with_nofollow', 'missing_follow'], true)) {
+            return;
+        }
+        if (! Schema::hasTable('pages_s_e_o_s') || ! Schema::hasColumn('pages_s_e_o_s', 'robots_index')) {
+            if (in_array($metric, ['with_index', 'with_noindex', 'with_follow', 'with_nofollow'], true)) {
+                $query->whereRaw('1 = 0');
+            }
+
+            return;
+        }
+
+        $column = str_contains($metric, 'follow') ? 'robots_follow' : 'robots_index';
+        if ($column === 'robots_follow' && ! Schema::hasColumn('pages_s_e_o_s', 'robots_follow')) {
+            if (in_array($metric, ['with_follow', 'with_nofollow'], true)) {
+                $query->whereRaw('1 = 0');
+            }
+
+            return;
+        }
+
+        $value = match ($metric) {
+            'with_index' => 'index',
+            'with_noindex' => 'noindex',
+            'with_follow' => 'follow',
+            'with_nofollow' => 'nofollow',
+            default => null,
+        };
+
+        if ($value !== null) {
+            $query->whereHas('seo', function ($q) use ($column, $value) {
+                $q->whereRaw('LOWER(TRIM(' . $column . ')) = ?', [$value]);
+            });
+
+            return;
+        }
+
+        $query->where(function ($outer) use ($column) {
+            $outer->whereDoesntHave('seo')
+                ->orWhereHas('seo', function ($q) use ($column) {
+                    $q->where(function ($inner) use ($column) {
+                        $inner->whereNull($column)->orWhereRaw('TRIM(' . $column . ') = ?', ['']);
+                    });
+                });
+        });
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    public function imageStats(): array
+    {
+        $rows = $this->imageInventory();
+        $counts = [
+            'total' => count($rows),
+            'linked_courses' => 0,
+            'linked_pages' => 0,
+            'not_linked' => 0,
+            'with_alt' => 0,
+            'without_alt' => 0,
+            'with_title' => 0,
+            'without_title' => 0,
+            'with_caption' => 0,
+            'without_caption' => 0,
+            'with_description' => 0,
+            'without_description' => 0,
+        ];
+        foreach ($rows as $row) {
+            if ($row['linked_course']) {
+                $counts['linked_courses']++;
+            }
+            if ($row['linked_page']) {
+                $counts['linked_pages']++;
+            }
+            if (! $row['linked']) {
+                $counts['not_linked']++;
+            }
+            foreach (['alt', 'title', 'caption', 'description'] as $field) {
+                if ($row['has_' . $field]) {
+                    $counts['with_' . $field]++;
+                } else {
+                    $counts['without_' . $field]++;
+                }
+            }
+        }
+
+        return $counts;
+    }
+
+    /**
+     * @return Collection<int, array<string, mixed>>
+     */
+    private function imageDetailRows(string $metric, ?string $search): Collection
+    {
+        $needle = mb_strtolower(trim((string) $search));
+        $rows = collect($this->imageInventory())->filter(function (array $row) use ($metric, $needle) {
+            if ($needle !== '' && ! str_contains(mb_strtolower($row['title'] . ' ' . $row['rel']), $needle)) {
+                return false;
+            }
+
+            return match ($metric) {
+                'linked_courses' => $row['linked_course'],
+                'linked_pages' => $row['linked_page'],
+                'not_linked' => ! $row['linked'],
+                'with_alt' => $row['has_alt'],
+                'without_alt' => ! $row['has_alt'],
+                'with_title' => $row['has_title'],
+                'without_title' => ! $row['has_title'],
+                'with_caption' => $row['has_caption'],
+                'without_caption' => ! $row['has_caption'],
+                'with_description' => $row['has_description'],
+                'without_description' => ! $row['has_description'],
+                default => true,
+            };
+        })->values();
+
+        $adminMedia = function_exists('route') ? route('admin.media.index') : url('/admin/media');
+
+        return $rows->take(10000)->map(function (array $row) use ($adminMedia) {
+            return [
+                'id' => $row['rel'],
+                'title' => $row['title'],
+                'linked_to' => $row['linked_label'],
+                'alt' => $row['alt'] !== '' ? $row['alt'] : '—',
+                'image_title' => $row['image_title'] !== '' ? $row['image_title'] : '—',
+                'caption' => $row['caption'] !== '' ? $row['caption'] : '—',
+                'description' => $row['description'] !== '' ? $row['description'] : '—',
+                'created_at' => $row['uploaded'],
+                'url' => $adminMedia . '?search=' . urlencode($row['title']),
+                'web_url' => $row['web_url'],
+            ];
+        });
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function imageInventory(): array
+    {
+        static $rows = null;
+        if (is_array($rows)) {
+            return $rows;
+        }
+
+        $files = $this->collapsedMediaLibraryFiles();
+        $metaByPath = $this->mediaAssetMetaByPath();
+        $usages = ['by_path' => [], 'by_name' => []];
+        try {
+            $index = app(MediaLinkIndexService::class);
+            $state = $index->ensure(2);
+            $usages = $index->usagesFor($files, $state);
+        } catch (\Throwable $e) {
+            $usages = ['by_path' => [], 'by_name' => []];
+        }
+
+        $rows = [];
+        foreach ($files as $file) {
+            $variants = $file['variants'] ?? [$file];
+            $meta = ['alt' => '', 'title' => '', 'caption' => '', 'description' => ''];
+            $tokens = [];
+            foreach ($variants as $variant) {
+                $rel = strtolower(str_replace('\\', '/', (string) ($variant['rel'] ?? '')));
+                $name = strtolower((string) ($variant['name'] ?? basename($rel)));
+                $stored = $metaByPath[$rel] ?? [];
+                foreach (['alt', 'title', 'caption', 'description'] as $field) {
+                    if ($meta[$field] === '' && trim((string) ($stored[$field] ?? '')) !== '') {
+                        $meta[$field] = trim((string) $stored[$field]);
+                    }
+                }
+                $tokens = array_merge(
+                    $tokens,
+                    $usages['by_path'][$rel] ?? [],
+                    $usages['by_name'][$name] ?? []
+                );
+            }
+            $kinds = $this->classifyImageTokens($tokens);
+            $rel = str_replace('\\', '/', (string) ($file['rel'] ?? ''));
+            $mtime = (int) ($file['mtime'] ?? 0);
+            $rows[] = [
+                'rel' => $rel,
+                'title' => (string) ($file['name'] ?? basename($rel)),
+                'web_url' => $rel !== '' ? asset($rel) : null,
+                'uploaded' => $mtime > 0 ? Carbon::createFromTimestamp($mtime, config('app.timezone'))->format('Y-m-d H:i') : '—',
+                'alt' => $meta['alt'],
+                'image_title' => $meta['title'],
+                'caption' => $meta['caption'],
+                'description' => $meta['description'],
+                'has_alt' => $meta['alt'] !== '',
+                'has_title' => $meta['title'] !== '',
+                'has_caption' => $meta['caption'] !== '',
+                'has_description' => $meta['description'] !== '',
+                'linked_course' => $kinds['course'],
+                'linked_page' => $kinds['page'],
+                'linked' => $kinds['linked'],
+                'linked_label' => $kinds['label'],
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @param  array<int, string>  $tokens
+     * @return array{course:bool,page:bool,linked:bool,label:string}
+     */
+    private function classifyImageTokens(array $tokens): array
+    {
+        $course = false;
+        $page = false;
+        $other = false;
+        foreach ($tokens as $token) {
+            $label = strtolower(trim((string) explode('|', (string) $token, 2)[0]));
+            if ($label === '') {
+                continue;
+            }
+            if (str_starts_with($label, 'course')) {
+                $course = true;
+            } elseif ($label === 'site settings') {
+                $other = true;
+            } else {
+                $page = true;
+            }
+        }
+        $linked = $course || $page || $other;
+        $parts = [];
+        if ($course) {
+            $parts[] = 'Course';
+        }
+        if ($page) {
+            $parts[] = 'Page';
+        }
+        if ($other && ! $course && ! $page) {
+            $parts[] = 'Site';
+        }
+
+        return [
+            'course' => $course,
+            'page' => $page,
+            'linked' => $linked,
+            'label' => $parts !== [] ? implode(', ', $parts) : 'Not linked',
+        ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function collapsedMediaLibraryFiles(): array
+    {
+        $path = storage_path('app/media-library-index.json');
+        $files = [];
+        if (is_file($path)) {
+            $decoded = json_decode((string) @file_get_contents($path), true);
+            if (is_array($decoded)) {
+                $files = $decoded;
+            }
+        }
+        if ($files === [] && class_exists(MediaAsset::class) && Schema::hasTable('media_assets')) {
+            foreach (MediaAsset::query()->select(['path'])->orderBy('id')->get() as $asset) {
+                $rel = MediaAsset::normalizePath((string) $asset->path);
+                if ($rel === '') {
+                    continue;
+                }
+                $files[] = [
+                    'rel' => $rel,
+                    'name' => basename($rel),
+                    'mtime' => 0,
+                    'size' => 0,
+                ];
+            }
+        }
+
+        $groups = [];
+        foreach ($files as $file) {
+            $rel = str_replace('\\', '/', (string) ($file['rel'] ?? ''));
+            $name = (string) ($file['name'] ?? basename($rel));
+            $dir = strtolower(trim(str_replace('\\', '/', dirname($rel)), '/.'));
+            $stem = strtolower((string) pathinfo($name, PATHINFO_FILENAME));
+            $groups[$dir . '|' . $stem][] = $file;
+        }
+        $out = [];
+        foreach ($groups as $group) {
+            $primary = $group[0];
+            $primary['variants'] = $group;
+            $out[] = $primary;
+        }
+
+        return $out;
+    }
+
+    /**
+     * @return array<string, array{alt:?string,title:?string,caption:?string,description:?string}>
+     */
+    private function mediaAssetMetaByPath(): array
+    {
+        if (! class_exists(MediaAsset::class) || ! Schema::hasTable('media_assets')) {
+            return [];
+        }
+        MediaAsset::ensureTable();
+        $cols = ['path', 'alt', 'title', 'caption'];
+        if (Schema::hasColumn('media_assets', 'description')) {
+            $cols[] = 'description';
+        }
+        $out = [];
+        foreach (MediaAsset::query()->get($cols) as $row) {
+            $key = strtolower(str_replace('\\', '/', MediaAsset::normalizePath((string) $row->path)));
+            if ($key === '') {
+                continue;
+            }
+            $out[$key] = [
+                'alt' => $row->alt,
+                'title' => $row->title,
+                'caption' => $row->caption,
+                'description' => $row->description ?? null,
+            ];
+        }
+
+        return $out;
     }
 }
