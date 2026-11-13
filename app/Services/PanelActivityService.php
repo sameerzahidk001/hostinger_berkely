@@ -625,7 +625,9 @@ class PanelActivityService
 
     private function trainingCalendarActivities(?int $userId, ?Carbon $from, ?Carbon $to, ?int $limit = null): Collection
     {
-        if (! Schema::hasTable('course_agendas') || ! Schema::hasColumn('course_agendas', 'created_by')) {
+        if (! is_file(app_path('Models/CourseAgenda.php'))
+            || ! Schema::hasTable('course_agendas')
+            || ! Schema::hasColumn('course_agendas', 'created_by')) {
             return collect();
         }
 
