@@ -495,7 +495,7 @@ if (!function_exists('persistent_upload_dirs')) {
 }
 
 if (!function_exists('copy_directory_contents')) {
-    function copy_directory_contents(string $from, string $to): void
+    function copy_directory_contents(string $from, string $to, bool $overwrite = false): void
     {
         if (! is_dir($from)) {
             return;
@@ -525,12 +525,67 @@ if (!function_exists('copy_directory_contents')) {
                 @mkdir($parent, 0755, true);
             }
 
-            if (is_file($target) && (int) $item->getSize() === (int) @filesize($target)) {
-                continue;
+            if (is_file($target)) {
+                if (! $overwrite) {
+                    continue;
+                }
+                if ((int) $item->getSize() === (int) @filesize($target)) {
+                    continue;
+                }
             }
 
             @copy($item->getPathname(), $target);
         }
+    }
+}
+
+if (!function_exists('forget_public_upload')) {
+    /** Hard-delete a public image and its persistent backup so Media delete and Git deploys cannot resurrect it. */
+    function forget_public_upload(?string $relativePath): bool
+    {
+        $relative = function_exists('normalize_public_media_relative_path')
+            ? normalize_public_media_relative_path($relativePath)
+            : ltrim(str_replace('\\', '/', (string) $relativePath), '/');
+
+        if (! is_string($relative) || $relative === '' || str_contains($relative, '..')) {
+            return false;
+        }
+
+        $base = strtolower(basename($relative));
+        if (in_array($base, ['user.png', '.gitkeep', ''], true)) {
+            return false;
+        }
+
+        $rels = [$relative];
+        if (str_starts_with($relative, 'images/courses/')) {
+            $rels[] = 'admin/courses/' . substr($relative, strlen('images/courses/'));
+        }
+
+        $stem = pathinfo($relative, PATHINFO_FILENAME);
+        $dir = str_replace('\\', '/', dirname($relative));
+        $dir = $dir === '.' ? '' : $dir . '/';
+        $ext = strtolower((string) pathinfo($relative, PATHINFO_EXTENSION));
+        foreach (['thumb', 'card', 'banner'] as $variant) {
+            $rels[] = $dir . $stem . '-' . $variant . '.' . $ext;
+        }
+        if (in_array($ext, ['jpg', 'jpeg', 'png'], true)) {
+            $rels[] = $dir . $stem . '.webp';
+        }
+
+        $deleted = false;
+        $persistentRoot = persistent_uploads_root() . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR;
+        foreach (array_unique($rels) as $rel) {
+            $public = public_path($rel);
+            if (is_file($public) && @unlink($public)) {
+                $deleted = true;
+            }
+            $backup = $persistentRoot . str_replace('/', DIRECTORY_SEPARATOR, $rel);
+            if (is_file($backup) && @unlink($backup)) {
+                $deleted = true;
+            }
+        }
+
+        return $deleted;
     }
 }
 
@@ -751,7 +806,11 @@ if (!function_exists('persist_public_uploads_tree')) {
         $root = persistent_uploads_root() . DIRECTORY_SEPARATOR . 'public';
 
         foreach (persistent_upload_dirs() as $dir) {
-            copy_directory_contents(public_path($dir), $root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $dir));
+            copy_directory_contents(
+                public_path($dir),
+                $root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $dir),
+                true
+            );
         }
     }
 }
@@ -795,7 +854,8 @@ if (!function_exists('restore_persistent_uploads_if_needed')) {
             foreach (persistent_upload_dirs() as $dir) {
                 copy_directory_contents(
                     $publicMirror . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $dir),
-                    public_path($dir)
+                    public_path($dir),
+                    false
                 );
             }
         }
@@ -2773,11 +2833,19 @@ if (!function_exists('save_uploaded_profile_image')) {
 
                 public_upload_move($file, $destinationPath, $fileName, lms_profile_image_max_kb());
 
+                if ($currentPath && $currentPath !== 'images/profiles/' . $fileName) {
+                    forget_public_upload($currentPath);
+                }
+
                 return 'images/profiles/' . $fileName;
             }
         }
 
         if ($request->boolean('remove_image')) {
+            if ($currentPath) {
+                forget_public_upload($currentPath);
+            }
+
             return '';
         }
 

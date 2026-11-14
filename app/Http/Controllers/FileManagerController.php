@@ -127,6 +127,10 @@ public function store(Request $request)
     public function destroy(Request $request)
     {
         $filePath = public_path($request->filename); // Ensure correct file path
+        $rel = ltrim(str_replace('\\', '/', (string) $request->filename), '/');
+        if (function_exists('forget_public_upload') && forget_public_upload($rel)) {
+            return back()->with('success', 'File deleted successfully!');
+        }
         if (File::exists($filePath)) {
             File::delete($filePath);
             return back()->with('success', 'File deleted successfully!');
