@@ -25,7 +25,6 @@
     <link rel="stylesheet" href="{{ asset('frontend/output.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" media="print" onload="this.media='all'">
     <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"></noscript>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/css/intlTelInput.css" media="print" onload="this.media='all'">
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         @font-face {
@@ -175,7 +174,7 @@
 
 <body class="min-h-screen flex flex-col">
     <header>
-        {!! $settings->header_settings ?? '' !!}
+        {!! strip_waf_captcha_html($settings->header_settings ?? '') !!}
 
         {{-- <div id="toggleDiv"
             class="mt-[70px] md:mt-[70px] lg:mt-[72px] min-[1200px]:px-[72px] bg-[#000435]  flex items-center z-[999] flex-col justify-center w-full transition-all duration-500 ease-in-out opacity-0 max-h-0 overflow-hidden">
@@ -520,7 +519,7 @@
                 {{ $settings->copyright_message ?? 'Copyright © 1976 Company PVT. LTD' }}
             </span>
         </div>
-        {!! $settings->footer_settings ?? '' !!}
+        {!! strip_waf_captcha_html($settings->footer_settings ?? '') !!}
     </footer>
     <!-- footer end -->
 
@@ -534,13 +533,14 @@
         gtag('config', 'G-E7HT3E77XY');
     </script>
 
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js" defer></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/intl-tel-input/17.0.8/js/intlTelInput.min.js" defer></script>
     <script>
         // JS for Search bar start
         document.addEventListener('DOMContentLoaded', function () {
             var toggleButton = document.getElementById('toggleButton');
             var toggleDiv = document.getElementById('toggleDiv');
+            if (!toggleButton || !toggleDiv) {
+                return;
+            }
 
             toggleButton.addEventListener('click', function (event) {
                 event.preventDefault(); // Prevent the default action of the link
@@ -565,6 +565,9 @@
 
         window.addEventListener('scroll', function () {
             const navbar = document.getElementById('navbar');
+            if (!navbar) {
+                return;
+            }
             if (window.scrollY > 0) {
                 navbar.classList.add('shadow-scroll');
             } else {
@@ -591,29 +594,7 @@
             }
         });
 
-        const input = document.querySelector("#phone2");
-        if (input && window.intlTelInput) {
-            window.intlTelInput(input, {
-                initialCountry: "gb",
-                separateDialCode: true,
-                utilsScript: "/intl-tel-input/js/utils.js?1716383386062"
-            });
-        }
         // tel End
-    </script>
-    <script>
-        // Re-run tel init after deferred intl-tel-input loads
-        window.addEventListener('load', function () {
-            const input = document.querySelector("#phone2");
-            if (input && window.intlTelInput && !input.getAttribute('data-intl-ready')) {
-                window.intlTelInput(input, {
-                    initialCountry: "gb",
-                    separateDialCode: true,
-                    utilsScript: "/intl-tel-input/js/utils.js?1716383386062"
-                });
-                input.setAttribute('data-intl-ready', '1');
-            }
-        });
     </script>
 
     <script>
@@ -656,13 +637,17 @@
         const dropdownMenus = document.querySelectorAll('.dropdownMenu');
 
         // Toggle mobile menu
-        menuButton.addEventListener('click', () => {
-            mobileMenu.classList.toggle('translate-x-full');
-        });
+        if (menuButton && mobileMenu) {
+            menuButton.addEventListener('click', () => {
+                mobileMenu.classList.toggle('translate-x-full');
+            });
+        }
 
-        closeMenu.addEventListener('click', () => {
-            mobileMenu.classList.toggle('translate-x-full');
-        });
+        if (closeMenu && mobileMenu) {
+            closeMenu.addEventListener('click', () => {
+                mobileMenu.classList.toggle('translate-x-full');
+            });
+        }
 
         // Loop through each dropdown button and add a click event listener
         dropdownButtons.forEach((button, index) => {

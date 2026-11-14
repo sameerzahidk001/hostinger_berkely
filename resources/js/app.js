@@ -1,4 +1,5 @@
-import './bootstrap';
+// Public pages do not need Bootstrap JS or axios (those live in admin).
+// Keep this bundle to layout-only helpers so PageSpeed unused-JS stays low.
 
 // Make all tables horizontally scrollable on mobile
 document.addEventListener('DOMContentLoaded', () => {

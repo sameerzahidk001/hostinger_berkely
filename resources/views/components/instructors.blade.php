@@ -3,6 +3,16 @@
         background-color: {{ section_bg_color($background) }};
     }
 
+    section.page-section.instructor-section {
+        padding-top: 1.25rem;
+        padding-bottom: 2.5rem;
+        min-height: 0;
+    }
+
+    .cms-banner-section + section.page-section.instructor-section {
+        padding-top: 1.25rem;
+    }
+
     .instructor-section h2 {
         font-family: 'Poppins', sans-serif;
         font-weight: 700;
@@ -270,12 +280,16 @@
     }
 </style>
 
-<section class="page-section min-h-[174px] lg:px-[120px] px-4 md:px-8 w-full instructor-section">
-    @if (isset($title))
+@php
+    $instructorTitle = trim(strip_tags((string) ($title ?? '')));
+    $instructorDescription = trim(strip_tags((string) ($description ?? '')));
+@endphp
+<section class="page-section lg:px-[120px] px-4 md:px-8 w-full instructor-section">
+    @if ($instructorTitle !== '')
         <h2>{{ $title }}</h2>
     @endif
 
-    @if (isset($description))
+    @if ($instructorDescription !== '')
         <div class="description cms-html">{!! render_cms_html($description) !!}</div>
     @endif
     <h3 class="text-lg font-semibold text-[#000435] mb-3">Filter by:</h3>
@@ -504,6 +518,7 @@
 @endpush
 
 @push('script')
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
 (function ($) {

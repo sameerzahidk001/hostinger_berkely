@@ -179,20 +179,4 @@
 
 @endsection
 
-@push('script')
-
-    <script>
-        const input = document.querySelector("#phone");
-        window.intlTelInput(input, {
-            initialCountry: "ae",
-            separateDialCode: true,
-            utilsScript: "/intl-tel-input/js/utils.js?1716383386062" // just for formatting/placeholders etc
-        });
-
-        // Js for Captchaue
-
-    </script>
-
-
-
-@endpush
+@include('partials.intl-tel-input')
