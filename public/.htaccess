@@ -10,12 +10,17 @@
         SecRule REQUEST_URI "@rx ^/admin/pages" "id:1999,phase:1,nolog,pass,ctl:ruleEngine=Off"
         SecRule REQUEST_URI "@rx ^/admin/course/[0-9]+/update" "id:2000,phase:1,nolog,pass,ctl:ruleEngine=Off"
         SecRule REQUEST_URI "@rx ^/admin/assessments" "id:2001,phase:1,nolog,pass,ctl:ruleEngine=Off"
+        SecRule REQUEST_URI "@rx ^/user" "id:2002,phase:1,nolog,pass,ctl:ruleEngine=Off"
     </IfModule>
     <IfModule security2_module>
         SecRule REQUEST_URI "@rx ^/admin/pages" "id:1999,phase:1,nolog,pass,ctl:ruleEngine=Off"
         SecRule REQUEST_URI "@rx ^/admin/course/[0-9]+/update" "id:2000,phase:1,nolog,pass,ctl:ruleEngine=Off"
         SecRule REQUEST_URI "@rx ^/admin/assessments" "id:2001,phase:1,nolog,pass,ctl:ruleEngine=Off"
+        SecRule REQUEST_URI "@rx ^/user" "id:2002,phase:1,nolog,pass,ctl:ruleEngine=Off"
     </IfModule>
+
+    # Student portal is a Laravel route, not a static folder.
+    RewriteRule ^user(/.*)?$ index.php [L]
 
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
