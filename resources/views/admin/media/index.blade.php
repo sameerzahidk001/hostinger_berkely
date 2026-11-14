@@ -64,6 +64,9 @@
         </ol>
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
+        <a href="{{ route('admin.media.download-course-images-zip') }}" class="btn btn-white">
+            <i class="fa fa-download"></i> Download course images zip
+        </a>
         <a href="{{ route('admin.media.download-images-zip') }}" class="btn btn-white">
             <i class="fa fa-download"></i> Download images zip
         </a>
@@ -153,6 +156,9 @@
                 <strong>Public image:</strong> website files at <code>/images/…</code> (pages and courses).<br>
                 <strong>Admin:</strong> staff-only files at <code>/admin/…</code> and profile photos. Public is listed first.
                 Click <strong>SHOW LINKS</strong> on Admin photos to see which user they are connected to.
+                @if(($mediaSource ?? '') === 'courses')
+                    <br>To replace course photos without breaking the site: download the course zip, compress each file to under 200 KB, then upload it back to the <strong>same folder with the same filename</strong>. Do not use Upload image (that creates a new file).
+                @endif
             </p>
             @if(!empty($unusedSkipped))
                 <div class="alert alert-warning">{{ $unusedSkipped }}</div>
