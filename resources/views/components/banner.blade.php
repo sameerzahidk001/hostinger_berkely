@@ -36,17 +36,22 @@
             </div>
         @endif
 
-        @if (isset($subtitle) || isset($title))
+        @php
+            $bannerTitleText = trim(strip_tags((string) ($fixedTitle ?? '')));
+            $bannerSubtitleText = trim(strip_tags((string) ($fixedSubtitle ?? '')));
+            $bannerDescriptionText = trim(strip_tags((string) ($description ?? '')));
+        @endphp
+        @if ($bannerTitleText !== '' || $bannerSubtitleText !== '')
             <div class="flex flex-col gap-1 mt-4 md:mt-10 mb-4 md:mb-10">
-                @if (isset($subtitle))
+                @if ($bannerSubtitleText !== '')
                     <h2 class="text-[20px] leading-8 text-primary_orange">{{ $fixedSubtitle }}</h2>
                 @endif
-                @if (isset($title))
+                @if ($bannerTitleText !== '')
                     <h1 class="text-[42px] md:text-[48px] leading-tight md:leading-[52px] font-canela break-words" style="color: {{ $color ?: '#ffffff' }}">{{ $fixedTitle }}</h1>
                 @endif
             </div>
         @endif
-        @if (isset($description))
+        @if ($bannerDescriptionText !== '')
             <div class="cms-html" style="color: {{ $color }}">{!! render_cms_html($description) !!}</div>
         @endif
         

@@ -1089,9 +1089,9 @@ if (!function_exists('strip_waf_captcha_html')) {
             return $value;
         }
 
-        $html = preg_replace('/<script[^>]*(recaptcha|hcaptcha|turnstile|captcha)[^>]*>.*?<\/script>/is', '', $value) ?? $value;
-        $html = preg_replace('/<iframe[^>]*(recaptcha|hcaptcha|turnstile|google\.com\/recaptcha)[^>]*>.*?<\/iframe>/is', '', $html) ?? $html;
-        $html = preg_replace('/https?:\/\/www\.google\.com\/recaptcha[^"\'\s]*/i', '', $html) ?? $html;
+        $html = preg_replace('/<script[^>]*(recaptcha|grecaptcha|hcaptcha|turnstile|captcha)[^>]*>.*?<\/script>/is', '', $value) ?? $value;
+        $html = preg_replace('/<iframe[^>]*(recaptcha|grecaptcha|hcaptcha|turnstile|google\.com\/recaptcha)[^>]*>.*?<\/iframe>/is', '', $html) ?? $html;
+        $html = preg_replace('/https?:\/\/[^"\'\s>]*(recaptchaenterprise\.googleapis\.com|www\.google\.com\/recaptcha|www\.recaptcha\.net|www\.gstatic\.com\/recaptcha)[^"\'\s>]*/i', '', $html) ?? $html;
         $html = preg_replace('/\bg-recaptcha\b/i', '', $html) ?? $html;
 
         return $html;

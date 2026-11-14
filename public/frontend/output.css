@@ -3157,6 +3157,15 @@ section.page-section {
   padding-top: calc(3.5rem + 30px);
 }
 
+section.page-section.instructor-section {
+  padding-top: 1.25rem;
+  padding-bottom: 2.5rem;
+}
+
+.cms-banner-section + section.page-section.instructor-section {
+  padding-top: 1.25rem;
+}
+
 .page-section > .grid {
   gap: 1.75rem;
 }

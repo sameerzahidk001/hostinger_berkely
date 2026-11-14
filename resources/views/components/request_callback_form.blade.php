@@ -1,3 +1,4 @@
+@include('partials.intl-tel-input')
 <section
     class="page-section card-hidden flex flex-col gap-10 min-[1200px]:px-[72px] md:px-12 px-6 justify-center items-center relative py-12 md:min-h-[530px] bg-navy"
     id="contact-form">
