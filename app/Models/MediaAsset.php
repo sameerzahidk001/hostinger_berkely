@@ -85,6 +85,9 @@ class MediaAsset extends Model
         if ($rel === '') {
             return 'public';
         }
+        if (str_starts_with($rel, 'images/courses/') || str_starts_with($rel, 'admin/courses/')) {
+            return 'public';
+        }
         if (str_starts_with($rel, 'admin/') || str_contains('/' . $rel . '/', '/profiles/')) {
             return 'admin';
         }
@@ -95,11 +98,11 @@ class MediaAsset extends Model
     public static function contentSource(?string $path): string
     {
         $rel = strtolower(str_replace('\\', '/', static::normalizePath($path)));
-        if (static::visibility($rel) === 'admin') {
-            return 'admin';
-        }
         if (str_starts_with($rel, 'images/courses/') || str_starts_with($rel, 'admin/courses/')) {
             return 'courses';
+        }
+        if (static::visibility($rel) === 'admin') {
+            return 'admin';
         }
 
         return 'pages';

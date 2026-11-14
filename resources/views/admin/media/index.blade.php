@@ -145,7 +145,7 @@
                 @elseif($mediaSource === 'courses') Course images
                 @else All images
                 @endif
-                <small class="text-muted">({{ (int) ($rowsTotal ?? $rows->total()) }} shown · {{ $publicImageCount }} public · {{ $adminImageCount }} admin · {{ $pageImageCount }} page · {{ $courseImageCount }} course · 30 per page)</small>
+                <small class="text-muted">({{ (int) ($rowsTotal ?? $rows->total()) }} shown · {{ $publicImageCount }} public ({{ $pageImageCount }} page + {{ $courseImageCount }} course) · {{ $adminImageCount }} admin · 30 per page)</small>
             </h5>
         </div>
         <div class="ibox-content">

@@ -56,9 +56,13 @@ class MediaController extends Controller
                 $pageCount++;
             }
         }
-        if ($source === 'public' || $source === 'admin') {
-            $files = array_values(array_filter($files, function ($file) use ($source) {
-                return MediaAsset::visibility($file['rel'] ?? '') === $source;
+        if ($source === 'public') {
+            $files = array_values(array_filter($files, function ($file) {
+                return MediaAsset::visibility($file['rel'] ?? '') === 'public';
+            }));
+        } elseif ($source === 'admin') {
+            $files = array_values(array_filter($files, function ($file) {
+                return MediaAsset::visibility($file['rel'] ?? '') === 'admin';
             }));
         } elseif ($source === 'pages' || $source === 'courses') {
             $files = array_values(array_filter($files, function ($file) use ($source) {
@@ -425,15 +429,11 @@ class MediaController extends Controller
             return back()->with('fail', 'File not found.');
         }
 
-        // Block delete when still linked
-        $usages = $this->usageIndex([['rel' => $rel, 'name' => basename($rel)]]);
-        $key = strtolower($rel);
-        $links = array_values(array_unique(array_merge(
-            $usages['by_path'][$key] ?? [],
-            $usages['by_name'][strtolower(basename($rel))] ?? []
-        )));
+        $links = $this->exactUsageTokens($rel);
         if ($links !== []) {
-            return back()->with('fail', 'This image is still linked. Remove it from pages/courses first, or filter Unused to find safe deletes.');
+            $first = explode('|', $links[0], 2);
+
+            return back()->with('fail', 'This image is still linked to ' . trim($first[0] ?: 'a page/course/user') . '. Remove that link first, then delete.');
         }
 
         File::delete($full);
@@ -1500,7 +1500,7 @@ class MediaController extends Controller
             if ($name === '' || in_array($name, $generics, true) || in_array($stem, ['user', 'logo', 'default', 'placeholder'], true)) {
                 continue;
             }
-            $needles[] = $stem !== '' ? $stem : $name;
+            $needles[] = $name;
         }
         $needles = array_values(array_unique(array_filter($needles)));
         if ($needles === []) {
@@ -1541,6 +1541,34 @@ class MediaController extends Controller
         $label = $kind . ': ' . $name . ($email !== '' ? ' (' . $email . ')' : '');
 
         return $label . '|' . $this->mediaNamedUrl('users.edit', $id, url('/admin/user/' . $id . '/edit'));
+    }
+
+    /**
+     * Block delete only when the full path or filename is stored on a page, course, or user.
+     *
+     * @return array<int, string>
+     */
+    private function exactUsageTokens(string $rel): array
+    {
+        $rel = strtolower(str_replace('\\', '/', ltrim($rel, '/')));
+        $name = strtolower(basename($rel));
+        if ($rel === '' || $name === '') {
+            return [];
+        }
+
+        $usages = $this->usageIndex([['rel' => $rel, 'name' => $name]], true);
+        $keys = [$rel, $name];
+        if (str_starts_with($rel, 'images/courses/')) {
+            $keys[] = 'admin/courses/' . substr($rel, strlen('images/courses/'));
+        }
+        $links = [];
+        foreach ($keys as $key) {
+            foreach (array_merge($usages['by_path'][$key] ?? [], $usages['by_name'][$key] ?? []) as $token) {
+                $links[] = $token;
+            }
+        }
+
+        return array_values(array_unique($links));
     }
 
     private function mediaNamedUrl(string $name, mixed $params, string $fallback): string
@@ -1601,12 +1629,10 @@ class MediaController extends Controller
         $groups = [];
         foreach ($files as $file) {
             $name = strtolower((string) ($file['name'] ?? basename((string) ($file['rel'] ?? ''))));
-            $stem = strtolower((string) pathinfo($name, PATHINFO_FILENAME));
-            $key = strlen($stem) >= 8 ? $stem : $name;
-            if ($key === '') {
+            if ($name === '') {
                 continue;
             }
-            $groups[$key][] = $file;
+            $groups[$name][] = $file;
         }
 
         if (Schema::hasTable('page_sections') && Schema::hasTable('pages')) {
@@ -1706,8 +1732,7 @@ class MediaController extends Controller
                 $relKey = str_replace('\\', '', $rel);
                 $nameKey = str_replace('\\', '', $name);
                 $matched = ($relKey !== '' && str_contains($hay, $relKey))
-                    || ($nameKey !== '' && str_contains($hay, $nameKey))
-                    || (strlen($stem) >= 8 && str_contains($hay, $stem));
+                    || ($nameKey !== '' && str_contains($hay, $nameKey));
                 if (! $matched) {
                     continue;
                 }
@@ -1727,16 +1752,14 @@ class MediaController extends Controller
         foreach ($files as $file) {
             $rel = str_replace('\\', '/', (string) ($file['rel'] ?? ''));
             $base = (string) ($file['name'] ?? basename($rel));
-            if ($matchBasename) {
-                if ($base !== '') {
-                    $terms[$base] = true;
-                    $stem = (string) pathinfo($base, PATHINFO_FILENAME);
-                    if (strlen($stem) >= 8) {
-                        $terms[$stem] = true;
-                    }
-                }
-            } elseif ($rel !== '') {
+            if ($rel !== '') {
                 $terms[$rel] = true;
+                if (str_starts_with($rel, 'images/courses/')) {
+                    $terms['admin/courses/' . substr($rel, strlen('images/courses/'))] = true;
+                }
+            }
+            if ($matchBasename && $base !== '') {
+                $terms[$base] = true;
             }
         }
         $terms = array_keys($terms);

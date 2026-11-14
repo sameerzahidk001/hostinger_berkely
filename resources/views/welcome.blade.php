@@ -385,9 +385,6 @@
                 :columns="$section->data['columns'] ?? '4'"
                 :courses="$results" />
         @elseif($section->section_type === 'instructors')
-            @if(should_show_global_women_card($page ?? null))
-                @include('partials.global-women-card')
-            @endif
             <x-instructors 
                 :id="$section->order + 1"
                 :background="$section->data['background'] ?? 'transparent'"
