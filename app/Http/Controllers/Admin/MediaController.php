@@ -492,7 +492,15 @@ class MediaController extends Controller
             return back()->with('fail', 'This image is still linked to ' . trim($first[0] ?: 'a page/course/user') . '. Remove that link first, then delete.');
         }
 
-        File::delete($full);
+        $gone = function_exists('forget_public_upload')
+            ? forget_public_upload($rel)
+            : File::delete($full);
+        if (! $gone && File::exists($full)) {
+            File::delete($full);
+        }
+        if (function_exists('forget_public_upload') && File::exists($full)) {
+            return back()->with('fail', 'The Media list was updated but the file could not be removed from disk.');
+        }
         $this->forgetImageCache();
 
         if (MediaAsset::ensureTable()) {
