@@ -412,6 +412,62 @@ class MediaController extends Controller
         return response()->download($zipPath, 'eduberkeley-images.zip')->deleteFileAfterSend(true);
     }
 
+    public function downloadCourseImagesZip()
+    {
+        $tmp = storage_path('app/tmp');
+        if (! File::isDirectory($tmp)) {
+            File::makeDirectory($tmp, 0755, true);
+        }
+
+        $zipPath = $tmp . DIRECTORY_SEPARATOR . 'eduberkeley-course-images-' . date('Ymd-His') . '.zip';
+        if (File::exists($zipPath)) {
+            File::delete($zipPath);
+        }
+
+        $zip = new \ZipArchive();
+        if ($zip->open($zipPath, \ZipArchive::CREATE | \ZipArchive::OVERWRITE) !== true) {
+            return back()->with('fail', 'Could not create zip file.');
+        }
+
+        $added = 0;
+        $seen = [];
+        foreach ([
+            public_path('images/courses') => 'images/courses',
+            public_path('admin/courses') => 'admin/courses',
+        ] as $dir => $prefix) {
+            if (! File::isDirectory($dir)) {
+                continue;
+            }
+            $rootNorm = rtrim(str_replace('\\', '/', $dir), '/');
+            foreach (File::allFiles($dir) as $file) {
+                $ext = strtolower((string) $file->getExtension());
+                if (! in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'], true)) {
+                    continue;
+                }
+                $full = str_replace('\\', '/', $file->getPathname());
+                $local = ltrim(substr($full, strlen($rootNorm)), '/');
+                if ($local === '') {
+                    continue;
+                }
+                $entry = $prefix . '/' . $local;
+                $key = strtolower($entry);
+                if (isset($seen[$key])) {
+                    continue;
+                }
+                $seen[$key] = true;
+                $zip->addFile($file->getPathname(), $entry);
+                $added++;
+            }
+        }
+        $zip->close();
+
+        if ($added < 1 || ! File::exists($zipPath) || File::size($zipPath) < 32) {
+            return back()->with('fail', 'No course images were found to download.');
+        }
+
+        return response()->download($zipPath, 'eduberkeley-course-images.zip')->deleteFileAfterSend(true);
+    }
+
     public function destroy(Request $request)
     {
         $rel = str_replace('\\', '/', ltrim((string) $request->input('path'), '/'));

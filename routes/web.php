@@ -239,6 +239,7 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
         Route::get('/media', [MediaController::class, 'index'])->name('admin.media.index');
         Route::match(['GET', 'POST'], '/media/links', [MediaController::class, 'links'])->name('admin.media.links');
         Route::get('/media/download-images-zip', [MediaController::class, 'downloadImagesZip'])->name('admin.media.download-images-zip');
+        Route::get('/media/download-course-images-zip', [MediaController::class, 'downloadCourseImagesZip'])->name('admin.media.download-course-images-zip');
         Route::post('/media/upload', [MediaController::class, 'upload'])->name('admin.media.upload');
         Route::put('/media/meta', [MediaController::class, 'updateMeta'])->name('admin.media.meta');
         Route::delete('/media', [MediaController::class, 'destroy'])->name('admin.media.destroy');
