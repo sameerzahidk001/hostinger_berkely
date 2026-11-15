@@ -511,6 +511,7 @@ class MediaController extends Controller
             ->route('admin.media.index')
             ->with($failed && ! $compressed ? 'fail' : 'success', $msg)
             ->with('media_compress_continue', $remaining > 0 && ! $complete);
+    }
 
     public function destroy(Request $request)
     {
