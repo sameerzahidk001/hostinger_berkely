@@ -527,6 +527,12 @@ if (!function_exists('copy_directory_contents')) {
 
             if (is_file($target)) {
                 if (! $overwrite) {
+                    // Never let a larger backup resurrect over a smaller optimized file.
+                    $srcSize = (int) $item->getSize();
+                    $dstSize = (int) (@filesize($target) ?: 0);
+                    if ($dstSize > 0 && $srcSize > $dstSize) {
+                        continue;
+                    }
                     continue;
                 }
                 if ((int) $item->getSize() === (int) @filesize($target)) {
