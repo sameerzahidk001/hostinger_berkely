@@ -134,7 +134,8 @@ class OversizedImageCompressService
      */
     private function oversizedQueue(string $afterRel, array $skipped): array
     {
-        $dirs = ['images/library', 'images/courses', 'admin/courses'];
+        // Mirror courses -> admin/courses after compress; do not double-queue both trees.
+        $dirs = ['images/library', 'images/courses'];
         $out = [];
         foreach ($dirs as $dir) {
             $abs = public_path($dir);
