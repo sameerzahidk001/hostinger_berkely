@@ -26,6 +26,12 @@ class MediaController extends Controller
         } catch (\Throwable $e) {
             // Media list still loads if a replace pass is incomplete.
         }
+        try {
+            // Keep chewing oversized library/course files on each Media visit.
+            app(\App\Services\OversizedImageCompressService::class)->run(12, 25);
+        } catch (\Throwable $e) {
+            // Listing still works if GD/compress is unavailable.
+        }
         MediaAsset::ensureTable();
 
         $search = trim((string) $request->input('search', ''));
@@ -275,6 +281,12 @@ class MediaController extends Controller
             }
         }
 
+        try {
+            app(\App\Services\ImageOptimizationService::class)->optimizeExistingPath($destDir . DIRECTORY_SEPARATOR . $fileName);
+        } catch (\Throwable $e) {
+            // Upload still succeeds if optimize fails.
+        }
+
         $rel = 'images/library/' . $fileName;
         $this->forgetImageCache();
         MediaAsset::upsertForPath($rel, [
@@ -466,6 +478,43 @@ class MediaController extends Controller
         }
 
         return response()->download($zipPath, 'eduberkeley-course-images.zip')->deleteFileAfterSend(true);
+    }
+
+    public function compressOversized(Request $request)
+    {
+        @set_time_limit(120);
+        $passes = max(1, min(8, (int) $request->input('passes', 4)));
+        $compressed = 0;
+        $failed = 0;
+        $remaining = 0;
+        $complete = false;
+        for ($i = 0; $i < $passes; $i++) {
+            $result = app(\App\Services\OversizedImageCompressService::class)->run(25, 50);
+            $compressed += (int) ($result['compressed'] ?? 0);
+            $failed += (int) ($result['failed'] ?? 0);
+            $remaining = (int) ($result['remaining'] ?? 0);
+            $complete = ! empty($result['complete']);
+            if ($complete || $compressed === 0 && $remaining === 0) {
+                break;
+            }
+        }
+        $this->forgetImageCache();
+
+        if ($complete && $compressed === 0 && $failed === 0) {
+            return back()->with('success', 'All library and course images are already under 200 KB.');
+        }
+
+        $msg = 'Compressed ' . $compressed . ' oversized image' . ($compressed === 1 ? '' : 's') . ' on the server.';
+        if ($remaining > 0) {
+            $msg .= ' ' . $remaining . ' still over 200 KB — click Compress again to continue.';
+        } elseif ($complete) {
+            $msg .= ' Done — none left over 200 KB.';
+        }
+        if ($failed > 0) {
+            $msg .= ' ' . $failed . ' could not be compressed further.';
+        }
+
+        return back()->with($failed && ! $compressed ? 'fail' : 'success', $msg);
     }
 
     public function destroy(Request $request)
