@@ -195,11 +195,12 @@ class OversizedImageCompressService
 
         $w = imagesx($img);
         $h = imagesy($img);
-        $scales = [1.0, 0.85, 0.7, 0.55, 0.45, 0.35, 0.28, 0.22, 0.16, 0.12];
-        $qualities = [80, 70, 60, 50, 40, 32, 24];
+        // Fast path: fewer scales, flatten everything onto white, emit JPEG for jpg/webp
+        // and compact palette PNG for .png URLs.
+        $scales = [0.7, 0.5, 0.35, 0.25, 0.18, 0.12];
         $ok = false;
-        $bestTmp = null;
-        $bestSize = $this->maxBytes + 1;
+        $best = null;
+        $bestSize = PHP_INT_MAX;
 
         foreach ($scales as $scale) {
             $nw = max(1, (int) round($w * $scale));
@@ -209,106 +210,49 @@ class OversizedImageCompressService
             imagefilledrectangle($canvas, 0, 0, $nw, $nh, $white);
             imagecopyresampled($canvas, $img, 0, 0, 0, 0, $nw, $nh, $w, $h);
 
-            // Prefer JPEG bytes for photos even when the public filename is .png/.webp —
-            // then re-wrap as PNG only if needed. First try real JPEG/WebP outputs.
+            $tmp = $path . '.tmp';
             if (in_array($ext, ['jpg', 'jpeg'], true)) {
-                foreach ($qualities as $q) {
-                    $tmp = $path . '.tmp';
-                    @imagejpeg($canvas, $tmp, $q);
-                    $sz = (int) (@filesize($tmp) ?: 0);
-                    if ($sz > 0 && $sz <= $this->maxBytes) {
-                        @unlink($path);
-                        @rename($tmp, $path);
-                        $ok = true;
-                        break 2;
-                    }
-                    if ($sz > 0 && $sz < $bestSize) {
-                        if ($bestTmp && is_file($bestTmp)) {
-                            @unlink($bestTmp);
-                        }
-                        $bestTmp = $path . '.best';
-                        @rename($tmp, $bestTmp);
-                        $bestSize = $sz;
-                    } else {
-                        @unlink($tmp);
-                    }
-                }
+                @imagejpeg($canvas, $tmp, 55);
             } elseif ($ext === 'webp' && function_exists('imagewebp')) {
-                foreach ($qualities as $q) {
-                    $tmp = $path . '.tmp';
-                    @imagewebp($canvas, $tmp, $q);
-                    $sz = (int) (@filesize($tmp) ?: 0);
-                    if ($sz > 0 && $sz <= $this->maxBytes) {
-                        @unlink($path);
-                        @rename($tmp, $path);
-                        $ok = true;
-                        break 2;
-                    }
-                    @unlink($tmp);
-                }
+                @imagewebp($canvas, $tmp, 55);
             } else {
-                // PNG: try JPEG-sized output then palette PNG.
-                foreach ($qualities as $q) {
-                    $jpgTmp = $path . '.jpgtry';
-                    @imagejpeg($canvas, $jpgTmp, $q);
-                    $sz = (int) (@filesize($jpgTmp) ?: 0);
-                    if ($sz > 0 && $sz <= $this->maxBytes) {
-                        // Convert winning JPEG frame back into a compact PNG (lossy but valid).
-                        $jpg = @imagecreatefromjpeg($jpgTmp);
-                        @unlink($jpgTmp);
-                        if ($jpg) {
-                            $pal = imagecreatetruecolor($nw, $nh);
-                            imagecopy($pal, $jpg, 0, 0, 0, 0, $nw, $nh);
-                            imagetruecolortopalette($pal, false, 216);
-                            @imagepng($pal, $path, 9);
-                            imagedestroy($pal);
-                            imagedestroy($jpg);
-                            if ((@filesize($path) ?: 0) <= $this->maxBytes) {
-                                $ok = true;
-                                imagedestroy($canvas);
-                                break 2;
-                            }
-                            // If palette PNG still huge, keep the JPEG bytes under a .jpg sidecar
-                            // and overwrite PNG with the smallest palette we can (best effort).
-                        }
-                    } else {
-                        @unlink($jpgTmp);
-                    }
-                }
                 $pal = imagecreatetruecolor($nw, $nh);
                 imagecopy($pal, $canvas, 0, 0, 0, 0, $nw, $nh);
                 imagetruecolortopalette($pal, false, 128);
-                $tmp = $path . '.tmp';
                 @imagepng($pal, $tmp, 9);
                 imagedestroy($pal);
-                $sz = (int) (@filesize($tmp) ?: 0);
-                if ($sz > 0 && $sz <= $this->maxBytes) {
-                    @unlink($path);
-                    @rename($tmp, $path);
-                    $ok = true;
-                    imagedestroy($canvas);
-                    break;
-                }
-                if ($sz > 0 && $sz < $bestSize) {
-                    if ($bestTmp && is_file($bestTmp)) {
-                        @unlink($bestTmp);
-                    }
-                    $bestTmp = $path . '.best';
-                    @rename($tmp, $bestTmp);
-                    $bestSize = $sz;
-                } else {
-                    @unlink($tmp);
-                }
             }
             imagedestroy($canvas);
+
+            $sz = (int) (@filesize($tmp) ?: 0);
+            if ($sz <= 0) {
+                @unlink($tmp);
+                continue;
+            }
+            if ($sz <= $this->maxBytes) {
+                @unlink($path);
+                @rename($tmp, $path);
+                $ok = true;
+                break;
+            }
+            if ($sz < $bestSize) {
+                if ($best) {
+                    @unlink($best);
+                }
+                $best = $path . '.best';
+                @rename($tmp, $best);
+                $bestSize = $sz;
+            } else {
+                @unlink($tmp);
+            }
         }
 
-        if (! $ok && $bestTmp && is_file($bestTmp)) {
+        if (! $ok && $best && is_file($best)) {
             @unlink($path);
-            @rename($bestTmp, $path);
+            @rename($best, $path);
             $ok = ((@filesize($path) ?: 0) <= $this->maxBytes);
-        } elseif ($bestTmp && is_file($bestTmp)) {
-            @unlink($bestTmp);
+        } elseif ($best && is_file($best)) {
+            @unlink($best);
         }
 
         imagedestroy($img);
