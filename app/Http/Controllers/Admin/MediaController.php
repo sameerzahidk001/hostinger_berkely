@@ -1243,15 +1243,54 @@ class MediaController extends Controller
     private function cachedImageFiles(): array
     {
         $path = $this->imageCachePath();
-        if (is_file($path)) {
-            $decoded = json_decode((string) @file_get_contents($path), true);
-            if (is_array($decoded)) {
-                return $decoded;
+        $metaPath = $path . '.meta';
+        $cacheTtlSeconds = 30;
+        if (is_file($path) && is_file($metaPath)) {
+            $builtAt = (int) trim((string) @file_get_contents($metaPath));
+            if ($builtAt > 0 && (time() - $builtAt) <= $cacheTtlSeconds) {
+                $decoded = json_decode((string) @file_get_contents($path), true);
+                if (is_array($decoded) && $decoded !== []) {
+                    // File Manager overwrites do not clear this cache — refresh size/mtime from disk.
+                    return $this->refreshCachedImageStats($decoded);
+                }
             }
         }
 
         $files = $this->imageFiles();
         $this->writeImageCache($files);
+
+        return $files;
+    }
+
+    /**
+     * Keep the Media list honest after Hostinger File Manager replaces files in place.
+     *
+     * @param  array<int, array{rel:string,name:string,mtime:int,size:int}>  $files
+     * @return array<int, array{rel:string,name:string,mtime:int,size:int}>
+     */
+    private function refreshCachedImageStats(array $files): array
+    {
+        $changed = false;
+        foreach ($files as $i => $file) {
+            $rel = (string) ($file['rel'] ?? '');
+            if ($rel === '') {
+                continue;
+            }
+            $full = $this->mediaDiskPath($rel);
+            if (! is_file($full)) {
+                continue;
+            }
+            $size = (int) (@filesize($full) ?: 0);
+            $mtime = (int) (@filemtime($full) ?: 0);
+            if ((int) ($file['size'] ?? 0) !== $size || (int) ($file['mtime'] ?? 0) !== $mtime) {
+                $files[$i]['size'] = $size;
+                $files[$i]['mtime'] = $mtime;
+                $changed = true;
+            }
+        }
+        if ($changed) {
+            $this->writeImageCache($files);
+        }
 
         return $files;
     }
@@ -1269,6 +1308,7 @@ class MediaController extends Controller
             return;
         }
         @rename($tmp, $path);
+        @file_put_contents($path . '.meta', (string) time());
     }
 
     private function forgetImageCache(): void
@@ -1276,6 +1316,9 @@ class MediaController extends Controller
         $path = $this->imageCachePath();
         if (is_file($path)) {
             @unlink($path);
+        }
+        if (is_file($path . '.meta')) {
+            @unlink($path . '.meta');
         }
         try {
             app(\App\Services\MediaLinkIndexService::class)->forget();
