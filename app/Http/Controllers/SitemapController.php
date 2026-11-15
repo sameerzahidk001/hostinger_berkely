@@ -25,8 +25,15 @@ class SitemapController extends Controller
         }
 
         $xml = view('sitemap.xml', compact('urls'))->render();
+        $response = response($xml, 200)
+            ->header('Content-Type', 'application/xml; charset=UTF-8')
+            ->header('Cache-Control', 'public, max-age=0, must-revalidate');
+        $lastmod = $urls[0]['lastmod'] ?? null;
+        if ($lastmod) {
+            $response->header('Last-Modified', \Illuminate\Support\Carbon::parse($lastmod)->toRfc7231String());
+        }
 
-        return response($xml, 200)->header('Content-Type', 'application/xml; charset=UTF-8');
+        return $response;
     }
 
     public function robots(): Response
@@ -69,20 +76,27 @@ class SitemapController extends Controller
     {
         $urls = [];
         $homeId = SiteSettings::value('home');
-        $homeUpdatedAt = null;
-        if ($homeId) {
-            $homeUpdatedAt = Page::query()->where('id', $homeId)->value('updated_at');
-        }
+        $homeUpdatedAt = $this->latestTimestamp(array_merge(
+            [
+                Page::query()->where('id', $homeId)->value('updated_at'),
+                Schema::hasTable('site_settings')
+                    ? \Illuminate\Support\Facades\DB::table('site_settings')->max('updated_at')
+                    : null,
+            ],
+            $this->pageRelatedTimestamps($homeId)
+        ));
 
         $urls[] = [
             'loc' => $this->siteUrl('/'),
-            'lastmod' => $homeUpdatedAt ? \Illuminate\Support\Carbon::parse($homeUpdatedAt)->toAtomString() : null,
+            'lastmod' => $homeUpdatedAt,
             'changefreq' => 'daily',
             'priority' => '1.0',
         ];
         $urls[] = [
             'loc' => $this->siteUrl('courses'),
-            'lastmod' => null,
+            'lastmod' => $this->latestTimestamp([
+                Schema::hasTable('courses') ? \Illuminate\Support\Facades\DB::table('courses')->max('updated_at') : null,
+            ]),
             'changefreq' => 'weekly',
             'priority' => '0.6',
         ];
@@ -108,7 +122,7 @@ class SitemapController extends Controller
                         continue;
                     }
 
-                    if ($this->isNoIndex($page->seo)) {
+                    if ($this->isNoIndex($page->seo) || $this->publicWouldNoindex($page)) {
                         continue;
                     }
 
@@ -124,7 +138,10 @@ class SitemapController extends Controller
 
                     $urls[] = [
                         'loc' => $this->siteUrl($path),
-                        'lastmod' => optional($page->updated_at)?->toAtomString(),
+                        'lastmod' => $this->latestTimestamp(array_merge(
+                            [optional($page->updated_at)?->toDateTimeString()],
+                            $this->pageRelatedTimestamps($page->id)
+                        )),
                         'changefreq' => 'weekly',
                         'priority' => '0.8',
                         'images' => $this->imagesForSeo($page->seo, $page->page_name ?? null),
@@ -142,6 +159,11 @@ class SitemapController extends Controller
             }
         }
         $courseQuery = Course::query()->select($courseCols)->with('seo');
+        if (Schema::hasColumn('courses', 'status')) {
+            $courseQuery->where(function ($q) {
+                $q->where('status', 1)->orWhereNull('status');
+            });
+        }
         $courseQuery->orderBy('id')->chunkById(100, function ($courses) use (&$urls) {
             foreach ($courses as $course) {
                 try {
@@ -173,8 +195,54 @@ class SitemapController extends Controller
         if (! $seo) {
             return false;
         }
+        $raw = strtolower(preg_replace('/[^a-z]/', '', (string) ($seo->robots_index ?? 'index')) ?? 'index');
 
-        return strtolower((string) ($seo->robots_index ?? 'index')) === 'noindex';
+        return str_contains($raw, 'noindex');
+    }
+
+    private function publicWouldNoindex(Page $page): bool
+    {
+        return function_exists('seo_page_is_empty') && seo_page_is_empty($page);
+    }
+
+    /**
+     * @return array<int, mixed>
+     */
+    private function pageRelatedTimestamps(mixed $pageId): array
+    {
+        if (! $pageId) {
+            return [];
+        }
+
+        $out = [];
+        if (Schema::hasTable('page_sections')) {
+            $out[] = \Illuminate\Support\Facades\DB::table('page_sections')->where('page_id', $pageId)->max('updated_at');
+        }
+        if (Schema::hasTable('pages_s_e_o_s')) {
+            $out[] = \Illuminate\Support\Facades\DB::table('pages_s_e_o_s')->where('page_id', $pageId)->max('updated_at');
+        }
+
+        return $out;
+    }
+
+    private function latestTimestamp(array $values): ?string
+    {
+        $max = null;
+        foreach ($values as $value) {
+            if ($value === null || $value === '') {
+                continue;
+            }
+            try {
+                $ts = \Illuminate\Support\Carbon::parse($value)->getTimestamp();
+            } catch (\Throwable $e) {
+                continue;
+            }
+            if ($max === null || $ts > $max) {
+                $max = $ts;
+            }
+        }
+
+        return $max ? \Illuminate\Support\Carbon::createFromTimestamp($max)->toAtomString() : null;
     }
 
     private function imagesForCourse(Course $course): array
