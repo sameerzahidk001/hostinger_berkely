@@ -88,45 +88,41 @@
         }
         .header-quick-icon {
             display: flex;
-            flex-direction: column;
+            flex-direction: row;
             align-items: center;
             justify-content: center;
             text-decoration: none;
             color: #000435;
             line-height: 1;
-            min-width: 44px;
+            min-width: 0;
         }
         .header-quick-icon-box {
             position: relative;
-            width: 34px;
-            height: 34px;
-            border-radius: 8px;
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
             background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
             display: flex;
             align-items: center;
             justify-content: center;
             color: #fff;
-            font-size: 16px;
+            font-size: 14px;
             box-shadow: 0 1px 2px rgba(0,0,0,.18);
         }
         .header-quick-icon-label {
-            font-size: 9px;
-            font-weight: 600;
-            margin-top: 3px;
-            white-space: nowrap;
-            color: #000435;
+            display: none;
         }
         .header-quick-icon-badge {
             position: absolute;
             top: -5px;
             right: -6px;
-            min-width: 16px;
-            height: 16px;
-            padding: 0 4px;
+            min-width: 15px;
+            height: 15px;
+            padding: 0 3px;
             border-radius: 999px;
             background: #f8961f;
             color: #111;
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 700;
             display: flex;
             align-items: center;
@@ -135,8 +131,19 @@
         .header-quick-icons {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 6px;
             flex-shrink: 0;
+        }
+        #navbar {
+            min-height: 56px;
+            height: 56px;
+            align-items: center;
+        }
+        #navbar > a img {
+            max-height: 40px;
+            min-height: 0 !important;
+            width: auto;
+            height: auto;
         }
         .header-quick-icons-desktop { display: none; }
         .header-quick-icons-mobile { display: flex; }
@@ -198,11 +205,11 @@
         </div> --}}
         <!-- Main Navigation Start -->
         <div id="navbar"
-            class="flex fixed bg min-h-[70px] bg-white  z-[999] w-full top-0 justify-between  px-4 md:px-8 lg:px-[30px] my-0 py-0 ">
-            <a href="{{ url('/') }}" class="self-center">
+            class="flex fixed bg bg-white z-[999] w-full top-0 justify-between items-center px-4 md:px-8 lg:px-[30px] my-0 py-0 ">
+            <a href="{{ url('/') }}" class="self-center shrink-0">
                 <img src="{{ asset('images/' . ($settings->header_logo == 'logo' ? $settings->logo : $settings->white_logo)) }}"
-                    class="max-w-[220px] self-center object-contain min-h-[48px] sm:min-w-[200px] lg:min-w-[240px] lg:min-h-[48px]"
-                    width="240" height="48" decoding="async" fetchpriority="high"
+                    class="max-w-[180px] lg:max-w-[210px] self-center object-contain"
+                    width="210" height="40" decoding="async" fetchpriority="high"
                     alt="{{ config('app.name') }}">
             </a>
             <ul class="hidden list-none min-[980px]:flex font-ghothic text-[19px] gap-4">
