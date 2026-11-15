@@ -78,7 +78,7 @@
     
     @if (!empty($resolvedImage))
         <div class="flex xl:px-0 md:top-0 md:absolute md:right-0 z-10 md:w-[50%] m-0 flex-1 flex-col gap-4 md:h-full pointer-events-none">
-            <img src="{{ $resolvedImage }}" alt="{{ image_alt($altText ?? null, $fixedTitle ?? 'Banner image') }}" width="1200" height="800" decoding="async" fetchpriority="high" class="object-cover h-full md:max-h-full md:w-full md:h-full">
+            {!! optimized_image_tag($resolvedImage, image_alt($altText ?? null, $fixedTitle ?? 'Banner image'), ['width' => 1200, 'height' => 800, 'loading' => 'eager', 'class' => 'object-cover h-full md:max-h-full md:w-full md:h-full']) !!}
         </div>
     @endif
 </section>

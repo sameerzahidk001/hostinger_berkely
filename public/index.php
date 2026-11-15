@@ -8,6 +8,16 @@ define('LARAVEL_START', microtime(true));
 @ini_set('max_execution_time', '300');
 @set_time_limit(300);
 
+// Apex-host redirect before Laravel boots (covers CDN cases that still pass www Host).
+$__seoHost = strtolower((string) ($_SERVER['HTTP_X_FORWARDED_HOST'] ?? $_SERVER['HTTP_HOST'] ?? ''));
+$__seoHost = trim(explode(',', $__seoHost)[0]);
+$__seoHost = preg_replace('/:\d+$/', '', $__seoHost) ?: $__seoHost;
+if (preg_match('/^www\.(eduberkeley\.com|berkeleyschool\.org)$/i', $__seoHost, $__m)) {
+    $__target = 'https://' . $__m[1] . ($_SERVER['REQUEST_URI'] ?? '/');
+    header('Location: ' . $__target, true, 301);
+    exit;
+}
+
 /*
 |--------------------------------------------------------------------------
 | Check If The Application Is Under Maintenance

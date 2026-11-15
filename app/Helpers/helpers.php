@@ -747,22 +747,26 @@ if (!function_exists('optimized_image_tag')) {
             return '';
         }
 
-        $url = str_starts_with($src, 'http') ? $src : asset(ltrim($src, '/'));
-        $webp = app(\App\Services\ImageOptimizationService::class)->webpUrl(
-            str_starts_with($src, 'http') ? null : ltrim($src, '/')
-        );
+        $rel = str_starts_with($src, 'http') ? null : ltrim(str_replace('\\', '/', (string) parse_url($src, PHP_URL_PATH) ?: $src), '/');
+        if (is_string($rel) && function_exists('prefer_compressed_library_relative')) {
+            $rel = prefer_compressed_library_relative($rel);
+        }
+        $webp = $rel ? app(\App\Services\ImageOptimizationService::class)->webpUrl($rel) : null;
+        // Keep a raster fallback URL (compressed original), WebP only in <picture>.
+        $url = str_starts_with($src, 'http') && ! $rel ? $src : asset($rel ?: ltrim($src, '/'));
 
         $lazy = ($attrs['loading'] ?? 'lazy') !== 'eager';
         $loading = $lazy ? 'lazy' : 'eager';
         $class = e($attrs['class'] ?? '');
-        $width = isset($attrs['width']) ? ' width="' . (int) $attrs['width'] . '"' : '';
-        $height = isset($attrs['height']) ? ' height="' . (int) $attrs['height'] . '"' : '';
+        $width = isset($attrs['width']) ? ' width="' . (int) $attrs['width'] . '"' : ' width="1200"';
+        $height = isset($attrs['height']) ? ' height="' . (int) $attrs['height'] . '"' : ' height="800"';
         $style = isset($attrs['style']) ? ' style="' . e($attrs['style']) . '"' : '';
         $decoding = ' decoding="async"';
 
-        $srcset = app(\App\Services\ImageOptimizationService::class)->srcsetForPublicPath(
-            str_starts_with($src, 'http') ? null : ltrim($src, '/')
-        );
+        $srcset = $rel ? app(\App\Services\ImageOptimizationService::class)->srcsetForPublicPath($rel) : null;
+        if (! $srcset && $rel) {
+            $srcset = asset($rel) . ' 1200w';
+        }
         $sizes = $attrs['sizes'] ?? '(max-width: 768px) 100vw, 1200px';
 
         $img = '<img src="' . e($url) . '" alt="' . e($alt) . '" loading="' . $loading . '"'
@@ -772,7 +776,9 @@ if (!function_exists('optimized_image_tag')) {
             . '>';
 
         if ($webp) {
-            return '<picture><source srcset="' . e($webp) . '" type="image/webp">' . $img . '</picture>';
+            $pictureClass = trim(($attrs['class'] ?? '') . ' contents');
+            // "contents" keeps layout when parent expects the img to fill (absolute/flex).
+            return '<picture class="' . e($pictureClass) . '"><source srcset="' . e($webp) . '" type="image/webp">' . $img . '</picture>';
         }
 
         return $img;
@@ -2086,12 +2092,10 @@ if (!function_exists('seo_robots_content')) {
         $follow = 'follow';
 
         if ($seo) {
-            $index = in_array((string) ($seo->robots_index ?? 'index'), ['index', 'noindex'], true)
-                ? (string) $seo->robots_index
-                : 'index';
-            $follow = in_array((string) ($seo->robots_follow ?? 'follow'), ['follow', 'nofollow'], true)
-                ? (string) $seo->robots_follow
-                : 'follow';
+            $indexRaw = strtolower(preg_replace('/[^a-z]/', '', (string) ($seo->robots_index ?? 'index')) ?? 'index');
+            $followRaw = strtolower(preg_replace('/[^a-z]/', '', (string) ($seo->robots_follow ?? 'follow')) ?? 'follow');
+            $index = str_contains($indexRaw, 'noindex') ? 'noindex' : 'index';
+            $follow = str_contains($followRaw, 'nofollow') ? 'nofollow' : 'follow';
         }
 
         return $index . ', ' . $follow;
@@ -2551,25 +2555,55 @@ if (! function_exists('seo_add_responsive_srcset')) {
     {
         return preg_replace_callback('/<img\b([^>]*?)>/i', static function (array $m) {
             $attrs = $m[1];
-            if (stripos($attrs, 'srcset=') !== false) {
-                return $m[0];
-            }
             if (! preg_match('/\ssrc=["\']([^"\']+)["\']/i', $attrs, $srcMatch)) {
                 return $m[0];
             }
-            $src = $srcMatch[1];
+            $src = html_entity_decode($srcMatch[1], ENT_QUOTES | ENT_HTML5, 'UTF-8');
             $path = parse_url($src, PHP_URL_PATH) ?: $src;
             $path = ltrim((string) $path, '/');
             if (str_starts_with($path, 'public/')) {
                 $path = substr($path, 7);
             }
-            $srcset = app(\App\Services\ImageOptimizationService::class)->srcsetForPublicPath($path);
-            if (! $srcset) {
-                return $m[0];
-            }
-            $extra = ' srcset="' . e($srcset) . '" sizes="(max-width: 768px) 100vw, 1200px"';
 
-            return '<img' . rtrim($attrs) . $extra . '>';
+            $rel = function_exists('normalize_public_media_relative_path')
+                ? (normalize_public_media_relative_path($path) ?: $path)
+                : $path;
+            if (function_exists('prefer_compressed_library_relative')) {
+                $rel = prefer_compressed_library_relative($rel);
+            }
+            $compressedUrl = asset($rel);
+            if ($compressedUrl !== $src) {
+                $attrs = preg_replace('/\ssrc=["\'][^"\']+["\']/i', ' src="' . e($compressedUrl) . '"', $attrs, 1) ?? $attrs;
+            }
+
+            if (! preg_match('/\bwidth\s*=/i', $attrs)) {
+                $attrs .= ' width="800"';
+            }
+            if (! preg_match('/\bheight\s*=/i', $attrs)) {
+                $attrs .= ' height="500"';
+            }
+            if (! preg_match('/\bstyle\s*=/i', $attrs) && ! preg_match('/aspect-ratio/i', $attrs)) {
+                $attrs .= ' style="aspect-ratio:8/5;height:auto"';
+            }
+
+            $srcset = '';
+            if (stripos($attrs, 'srcset=') === false) {
+                $srcset = app(\App\Services\ImageOptimizationService::class)->srcsetForPublicPath($rel) ?: '';
+                if ($srcset === '' && preg_match('/\.(jpe?g|png|webp)$/i', $rel)) {
+                    $srcset = $compressedUrl . ' 800w';
+                }
+                if ($srcset !== '') {
+                    $attrs .= ' srcset="' . e($srcset) . '" sizes="(max-width: 768px) 100vw, 1200px"';
+                }
+            }
+
+            $img = '<img' . rtrim($attrs) . '>';
+            $webp = app(\App\Services\ImageOptimizationService::class)->webpUrl($rel);
+            if ($webp && stripos($m[0], 'image/webp') === false && ! str_ends_with(strtolower($rel), '.webp')) {
+                return '<picture><source srcset="' . e($webp) . '" type="image/webp">' . $img . '</picture>';
+            }
+
+            return $img;
         }, $html) ?? $html;
     }
 }

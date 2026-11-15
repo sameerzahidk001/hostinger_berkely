@@ -18,16 +18,20 @@
                 <div class="bg-white border border-gray-300 shadow-md rounded-lg overflow-hidden">
                     @if(isset($card['image']))
                         <div class="overflow-hidden max-h-[300px] sm:max-h-[480px]">
-                            <img src="{{ $card['image'] }}" alt="{{ image_alt($card['image_alt'] ?? null, $card['title'] ?? 'Card image') }}"
-                                class="h-full w-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-105"
-                                loading="lazy" decoding="async" width="800" height="480">
+                            {!! optimized_image_tag($card['image'], image_alt($card['image_alt'] ?? null, $card['title'] ?? 'Card image'), [
+                                'class' => 'h-full w-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-105',
+                                'loading' => 'lazy',
+                                'width' => 800,
+                                'height' => 480,
+                                'sizes' => '(max-width: 768px) 100vw, 400px',
+                            ]) !!}
                         </div>
                     @endif
                     <div class="p-4">
                         @if(isset($card['title']) || (isset($card['icon']) && $card['icon'] != ''))
                             <div class="flex items-center justify-start mt-2 gap-2">
                                 @if(isset($card['icon']) && $card['icon'] != '')
-                                    <img src="{{ $card['icon'] }}" alt="{{ image_alt($card['icon_alt'] ?? null, ($card['title'] ?? 'Card') . ' icon') }}" class="w-20 h-20 object-contain mb-2 lg:mb-0">
+                                    <img src="{{ $card['icon'] }}" alt="{{ image_alt($card['icon_alt'] ?? null, ($card['title'] ?? 'Card') . ' icon') }}" class="w-20 h-20 object-contain mb-2 lg:mb-0" width="80" height="80" loading="lazy" decoding="async">
                                 @endif
                                 @if(isset($card['title']))
                                     <h3 class="font-canela text-[28px] leading-[41px] lg:leading-[40px] {{ $card['icon'] == '' ? 'w-full ' . $textAlignment : '' }}">
@@ -56,11 +60,13 @@
                 @endphp
                 <div class="relative overflow-hidden group h-[500px]" data-cms-card style="background-color: {{ $hasImage ? 'transparent' : '#ffffff' }};">
                     @if($hasImage)
-                        <img src="{{ $card['image'] }}"
-                            alt="{{ image_alt($card['image_alt'] ?? null, $card['title'] ?? 'Card image') }}"
-                            class="h-full transition-all delay-300 duration-400 ease-in w-full absolute group-hover:scale-105 object-cover"
-                            loading="lazy" decoding="async" width="800" height="500"
-                            onerror="window.cmsCardImageError&&window.cmsCardImageError(this)">
+                        {!! optimized_image_tag($card['image'], image_alt($card['image_alt'] ?? null, $card['title'] ?? 'Card image'), [
+                            'class' => 'h-full transition-all delay-300 duration-400 ease-in w-full absolute group-hover:scale-105 object-cover',
+                            'loading' => 'lazy',
+                            'width' => 800,
+                            'height' => 500,
+                            'sizes' => '(max-width: 768px) 100vw, 400px',
+                        ]) !!}
                     @endif
                     @if($hasImage)
                     <div class="card-image-gradient absolute bottom-0 w-full z-30 pointer-events-none" style="height: 100%; background: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.25) 45%, rgba(0, 0, 0, 0.85) 100%);"></div>
@@ -69,7 +75,7 @@
                         @if(isset($card['title']) || (isset($card['icon']) && $card['icon'] != ''))
                             <div class="flex items-center justify-start mt-2 gap-2">
                                 @if(isset($card['icon']) && $card['icon'] != '')
-                                    <img src="{{ $card['icon'] }}" alt="{{ image_alt($card['icon_alt'] ?? null, ($card['title'] ?? 'Card') . ' icon') }}" class="w-20 h-20 object-contain mb-2 lg:mb-0">
+                                    <img src="{{ $card['icon'] }}" alt="{{ image_alt($card['icon_alt'] ?? null, ($card['title'] ?? 'Card') . ' icon') }}" class="w-20 h-20 object-contain mb-2 lg:mb-0" width="80" height="80" loading="lazy" decoding="async">
                                 @endif
                                 @if(isset($card['title']))
                                     <h3 class="text-[20px] sm:text-[24px] md:text-[32px] font-canela {{ $card['icon'] == '' ? 'w-full ' . $textAlignment : '' }}" style="color: {{ $color ?? 'inherit' }}">
@@ -97,7 +103,13 @@
                 <div>
                     @if(isset($card['image']))
                         <div class="overflow-hidden h-[500px]">
-                            <img src="{{ $card['image'] }}" alt="{{ image_alt($card['image_alt'] ?? null, $card['title'] ?? 'Card image') }}" class="h-full w-full transition-all delay-300 duration-400 ease-in group-hover:scale-105 object-cover" loading="lazy" decoding="async" width="800" height="500">
+                            {!! optimized_image_tag($card['image'], image_alt($card['image_alt'] ?? null, $card['title'] ?? 'Card image'), [
+                                'class' => 'h-full w-full transition-all delay-300 duration-400 ease-in group-hover:scale-105 object-cover',
+                                'loading' => 'lazy',
+                                'width' => 800,
+                                'height' => 500,
+                                'sizes' => '(max-width: 768px) 100vw, 400px',
+                            ]) !!}
                         </div>
                     @endif
                     @if(isset($card['title']) || isset($card['description']) || cms_card_has_url($card))
@@ -105,7 +117,7 @@
                         @if(isset($card['title']) || (isset($card['icon']) && $card['icon'] != ''))
                             <div class="flex items-center justify-start mt-2 gap-2">
                                 @if(isset($card['icon']) && $card['icon'] != '')
-                                    <img src="{{ $card['icon'] }}" alt="{{ image_alt($card['icon_alt'] ?? null, ($card['title'] ?? 'Card') . ' icon') }}" class="w-20 h-20 object-contain mb-2 lg:mb-0">
+                                    <img src="{{ $card['icon'] }}" alt="{{ image_alt($card['icon_alt'] ?? null, ($card['title'] ?? 'Card') . ' icon') }}" class="w-20 h-20 object-contain mb-2 lg:mb-0" width="80" height="80" loading="lazy" decoding="async">
                                 @endif
                                 @if(isset($card['title']))
                                     <h3 class="font-canela text-[32px] leading-[41px] lg:leading-[40px] text-dark  {{ $card['icon'] == '' ? 'w-full ' . $textAlignment : '' }}" style="color: {{ $color ?? 'inherit' }}">
@@ -135,14 +147,20 @@
                 <div class="flex flex-col lg:flex-row items-start gap-6 border border-gray-200 rounded-lg shadow-md bg-white">
                     @if(isset($card['image']))
                         <div class="max-w-[125px] h-full">
-                            <img src="{{ $card['image'] }}" alt="{{ image_alt($card['image_alt'] ?? null, $card['title'] ?? 'Card image') }}" class="h-full w-full object-cover rounded-md" loading="lazy" decoding="async" width="800" height="500">
+                            {!! optimized_image_tag($card['image'], image_alt($card['image_alt'] ?? null, $card['title'] ?? 'Card image'), [
+                                'class' => 'h-full w-full object-cover rounded-md',
+                                'loading' => 'lazy',
+                                'width' => 125,
+                                'height' => 125,
+                                'sizes' => '125px',
+                            ]) !!}
                         </div>
                     @endif
                     <div class="flex-1 py-4 pr-3">
                         @if(isset($card['title']) || (isset($card['icon']) && $card['icon'] != ''))
                             <div class="flex items-center justify-start mt-2 gap-2">
                                 @if(isset($card['icon']) && $card['icon'] != '')
-                                    <img src="{{ $card['icon'] }}" alt="{{ image_alt($card['icon_alt'] ?? null, ($card['title'] ?? 'Card') . ' icon') }}" class="w-20 h-20 object-contain mb-2 lg:mb-0">
+                                    <img src="{{ $card['icon'] }}" alt="{{ image_alt($card['icon_alt'] ?? null, ($card['title'] ?? 'Card') . ' icon') }}" class="w-20 h-20 object-contain mb-2 lg:mb-0" width="80" height="80" loading="lazy" decoding="async">
                                 @endif
                                 @if(isset($card['title']))
                                     <h3 class="text-[24px] font-semibold text-dark {{ $card['icon'] == '' ? 'w-full ' . $textAlignment : '' }}" style="color: {{ $color ?? 'inherit' }}">

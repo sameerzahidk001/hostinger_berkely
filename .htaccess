@@ -22,6 +22,11 @@
 
     RewriteEngine On
 
+    # Prefer apex host. Check Host and CDN/proxy forwarded host (Hostinger may normalize Host).
+    RewriteCond %{HTTP:X-Forwarded-Host} ^www\.(eduberkeley\.com|berkeleyschool\.org)$ [NC,OR]
+    RewriteCond %{HTTP_HOST} ^www\.(eduberkeley\.com|berkeleyschool\.org)$ [NC]
+    RewriteRule ^ https://%1%{REQUEST_URI} [L,R=301]
+
     # Student portal is a Laravel route. A leftover public/user folder would 403
     # because directory indexes are off — send /user to the app first.
     RewriteRule ^user(/.*)?$ public/index.php [L]
@@ -49,6 +54,12 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
+</IfModule>
+<IfModule mod_headers.c>
+    <FilesMatch "\.(avif|webp|jpe?g|png|gif)$">
+        Header always set Vary "Accept"
+        Header set Cache-Control "public, max-age=604800, immutable"
+    </FilesMatch>
 </IfModule>
 AddHandler application/x-httpd-php82 .php .php5 .php4 .php3
 AddHandler application/x-httpd-php82 .php .php5 .php4 .php3
