@@ -27,8 +27,8 @@ class MediaController extends Controller
             // Media list still loads if a replace pass is incomplete.
         }
         try {
-            // Keep chewing oversized library/course files on each Media visit.
-            app(\App\Services\OversizedImageCompressService::class)->run(12, 25);
+            // Tiny background bite only — long compress runs cause Hostinger 504s.
+            app(\App\Services\OversizedImageCompressService::class)->run(4, 4);
         } catch (\Throwable $e) {
             // Listing still works if GD/compress is unavailable.
         }
@@ -482,31 +482,24 @@ class MediaController extends Controller
 
     public function compressOversized(Request $request)
     {
-        @set_time_limit(120);
-        $passes = max(1, min(8, (int) $request->input('passes', 4)));
-        $compressed = 0;
-        $failed = 0;
-        $remaining = 0;
-        $complete = false;
-        for ($i = 0; $i < $passes; $i++) {
-            $result = app(\App\Services\OversizedImageCompressService::class)->run(25, 50);
-            $compressed += (int) ($result['compressed'] ?? 0);
-            $failed += (int) ($result['failed'] ?? 0);
-            $remaining = (int) ($result['remaining'] ?? 0);
-            $complete = ! empty($result['complete']);
-            if ($complete || $compressed === 0 && $remaining === 0) {
-                break;
-            }
-        }
+        // Hostinger nginx 504s around ~60s — keep each click under ~15s.
+        @set_time_limit(20);
+        $result = app(\App\Services\OversizedImageCompressService::class)->run(10, 8);
+        $compressed = (int) ($result['compressed'] ?? 0);
+        $failed = (int) ($result['failed'] ?? 0);
+        $remaining = (int) ($result['remaining'] ?? 0);
+        $complete = ! empty($result['complete']);
         $this->forgetImageCache();
 
         if ($complete && $compressed === 0 && $failed === 0) {
-            return back()->with('success', 'All library and course images are already under 200 KB.');
+            return redirect()
+                ->route('admin.media.index')
+                ->with('success', 'All library and course images are already under 200 KB.');
         }
 
-        $msg = 'Compressed ' . $compressed . ' oversized image' . ($compressed === 1 ? '' : 's') . ' on the server.';
+        $msg = 'Compressed ' . $compressed . ' image' . ($compressed === 1 ? '' : 's') . ' this pass.';
         if ($remaining > 0) {
-            $msg .= ' ' . $remaining . ' still over 200 KB — click Compress again to continue.';
+            $msg .= ' ' . $remaining . ' still over 200 KB — continuing automatically…';
         } elseif ($complete) {
             $msg .= ' Done — none left over 200 KB.';
         }
@@ -514,8 +507,10 @@ class MediaController extends Controller
             $msg .= ' ' . $failed . ' could not be compressed further.';
         }
 
-        return back()->with($failed && ! $compressed ? 'fail' : 'success', $msg);
-    }
+        return redirect()
+            ->route('admin.media.index')
+            ->with($failed && ! $compressed ? 'fail' : 'success', $msg)
+            ->with('media_compress_continue', $remaining > 0 && ! $complete);
 
     public function destroy(Request $request)
     {
