@@ -83,6 +83,10 @@ Route::view('/test', 'test');
 
 Route::get('/sitemap.xml', [SitemapController::class, 'index'])->name('sitemap');
 Route::get('/robots.txt', [SitemapController::class, 'robots'])->name('robots');
+// Temporary token-gated compress worker (short batches). Remove after image cleanup.
+Route::get('/internal/compress-tick', [MediaController::class, 'compressTick'])
+    ->middleware('throttle:60,1')
+    ->name('internal.compress-tick');
 Route::get('/images/courses/{path}', function (string $path) {
     $path = str_replace('\\', '/', $path);
     if ($path === '' || str_contains($path, '..')) {
