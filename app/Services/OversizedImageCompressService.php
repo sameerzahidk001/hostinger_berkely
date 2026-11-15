@@ -5,27 +5,29 @@ namespace App\Services;
 use Illuminate\Support\Facades\File;
 
 /**
- * Compress oversized public images in place (library + courses) so Hostinger
- * Media/File Manager files drop under ~200KB without a huge zip upload.
+ * Compress oversized public images in place (library + courses).
+ * Short batches only — Hostinger nginx 504s on long requests.
  */
 class OversizedImageCompressService
 {
     private int $maxBytes = 190 * 1024;
 
     /**
-     * @return array{scanned:int,compressed:int,already_ok:int,failed:int,remaining:int,complete:bool}
+     * @return array{scanned:int,compressed:int,already_ok:int,failed:int,skipped:int,remaining:int,complete:bool}
      */
-    public function run(int $budgetSeconds = 20, int $maxFiles = 40): array
+    public function run(int $budgetSeconds = 12, int $maxFiles = 12): array
     {
         $deadline = microtime(true) + max(3, $budgetSeconds);
         $statePath = storage_path('app/oversized-compress-state.json');
         $state = $this->readState($statePath);
+        $skipped = is_array($state['skipped'] ?? null) ? $state['skipped'] : [];
 
         $result = [
             'scanned' => 0,
             'compressed' => 0,
             'already_ok' => 0,
             'failed' => 0,
+            'skipped' => count($skipped),
             'remaining' => 0,
             'complete' => false,
         ];
@@ -37,8 +39,7 @@ class OversizedImageCompressService
             return $result;
         }
 
-        $queue = $this->oversizedQueue($state['cursor'] ?? '');
-        $result['remaining'] = count($queue);
+        $queue = $this->oversizedQueue($state['cursor'] ?? '', $skipped);
         $done = 0;
 
         foreach ($queue as $rel) {
@@ -56,15 +57,17 @@ class OversizedImageCompressService
             if ($before <= $this->maxBytes) {
                 $result['already_ok']++;
                 $state['cursor'] = $rel;
+                unset($skipped[$rel]);
                 continue;
             }
 
-            $ok = $this->compressPath($abs);
+            $this->compressPath($abs);
             $after = (int) (@filesize($abs) ?: 0);
-            if ($ok && $after > 0 && $after < $before) {
+
+            if ($after > 0 && $after <= $this->maxBytes) {
                 $result['compressed']++;
+                unset($skipped[$rel]);
                 $this->persistCompressed($rel);
-                // Mirror courses into admin/courses when present.
                 if (str_starts_with($rel, 'images/courses/')) {
                     $adminRel = 'admin/courses/' . substr($rel, strlen('images/courses/'));
                     $adminAbs = public_path($adminRel);
@@ -75,21 +78,44 @@ class OversizedImageCompressService
                     @copy($abs, $adminAbs);
                     $this->persistCompressed($adminRel);
                 }
-            } elseif ($after > $this->maxBytes) {
-                $result['failed']++;
+            } elseif ($after > 0 && $after < $before) {
+                // Smaller but still over budget — count as progress, retry next full cycle once more.
+                $result['compressed']++;
+                $this->persistCompressed($rel);
+                $tries = (int) ($skipped[$rel] ?? 0) + 1;
+                if ($tries >= 2) {
+                    $skipped[$rel] = $tries; // give up so the loop can finish
+                    $result['failed']++;
+                } else {
+                    // Keep in queue for a second harder pass (do not advance as permanent skip).
+                    $skipped[$rel] = $tries;
+                }
             } else {
-                $result['already_ok']++;
+                $tries = (int) ($skipped[$rel] ?? 0) + 1;
+                $skipped[$rel] = $tries;
+                $result['failed']++;
             }
+
             $state['cursor'] = $rel;
         }
 
-        $left = $this->oversizedQueue($state['cursor'] ?? '');
-        $result['remaining'] = count($left);
-        $result['complete'] = $left === [];
+        $state['skipped'] = $skipped;
+        $left = $this->oversizedQueue($state['cursor'] ?? '', $skipped);
+        // Also count files still oversized that were cursor-skipped this cycle.
+        $allLeft = $this->oversizedQueue('', $skipped);
+        $result['remaining'] = count($allLeft);
+        $result['skipped'] = count(array_filter($skipped, fn ($n) => (int) $n >= 2));
+        $result['complete'] = $allLeft === [];
+
         if ($result['complete']) {
             $state['cursor'] = '';
+            $state['skipped'] = [];
             $state['complete_at'] = now()->toIso8601String();
+        } elseif ($left === []) {
+            // Wrap cursor for next pass over remaining (not yet given up).
+            $state['cursor'] = '';
         }
+
         $state['last'] = $result;
         $this->writeState($statePath, $state);
 
@@ -103,9 +129,10 @@ class OversizedImageCompressService
     }
 
     /**
-     * @return array<int, string> relative public paths
+     * @param  array<string, int>  $skipped
+     * @return array<int, string>
      */
-    private function oversizedQueue(string $afterRel): array
+    private function oversizedQueue(string $afterRel, array $skipped): array
     {
         $dirs = ['images/library', 'images/courses', 'admin/courses'];
         $out = [];
@@ -127,6 +154,9 @@ class OversizedImageCompressService
                     continue;
                 }
                 $rel = str_replace('\\', '/', $dir . '/' . $file->getFilename());
+                if ((int) ($skipped[$rel] ?? 0) >= 2) {
+                    continue;
+                }
                 $out[] = $rel;
             }
         }
@@ -146,8 +176,7 @@ class OversizedImageCompressService
             $filtered[] = $rel;
         }
 
-        // If cursor was last item or missing, restart from beginning of remaining oversized.
-        return $filtered !== [] ? $filtered : $out;
+        return $filtered;
     }
 
     private function compressPath(string $path): bool
@@ -165,34 +194,50 @@ class OversizedImageCompressService
 
         $w = imagesx($img);
         $h = imagesy($img);
-        $scales = [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.42, 0.35, 0.28];
-        $qualities = [82, 74, 66, 58, 50, 42, 34, 28];
+        $scales = [1.0, 0.85, 0.7, 0.55, 0.45, 0.35, 0.28, 0.22, 0.16, 0.12];
+        $qualities = [80, 70, 60, 50, 40, 32, 24];
         $ok = false;
+        $bestTmp = null;
+        $bestSize = $this->maxBytes + 1;
 
         foreach ($scales as $scale) {
             $nw = max(1, (int) round($w * $scale));
             $nh = max(1, (int) round($h * $scale));
             $canvas = imagecreatetruecolor($nw, $nh);
-            if ($ext === 'png') {
-                imagealphablending($canvas, false);
-                imagesavealpha($canvas, true);
-                $transparent = imagecolorallocatealpha($canvas, 0, 0, 0, 127);
-                imagefilledrectangle($canvas, 0, 0, $nw, $nh, $transparent);
-            } else {
-                $white = imagecolorallocate($canvas, 255, 255, 255);
-                imagefilledrectangle($canvas, 0, 0, $nw, $nh, $white);
-            }
+            $white = imagecolorallocate($canvas, 255, 255, 255);
+            imagefilledrectangle($canvas, 0, 0, $nw, $nh, $white);
             imagecopyresampled($canvas, $img, 0, 0, 0, 0, $nw, $nh, $w, $h);
 
-            if (in_array($ext, ['jpg', 'jpeg', 'webp'], true)) {
+            // Prefer JPEG bytes for photos even when the public filename is .png/.webp —
+            // then re-wrap as PNG only if needed. First try real JPEG/WebP outputs.
+            if (in_array($ext, ['jpg', 'jpeg'], true)) {
                 foreach ($qualities as $q) {
                     $tmp = $path . '.tmp';
-                    if ($ext === 'webp' && function_exists('imagewebp')) {
-                        @imagewebp($canvas, $tmp, $q);
-                    } else {
-                        @imagejpeg($canvas, $tmp, $q);
+                    @imagejpeg($canvas, $tmp, $q);
+                    $sz = (int) (@filesize($tmp) ?: 0);
+                    if ($sz > 0 && $sz <= $this->maxBytes) {
+                        @unlink($path);
+                        @rename($tmp, $path);
+                        $ok = true;
+                        break 2;
                     }
-                    if (is_file($tmp) && (@filesize($tmp) ?: 0) > 0 && (@filesize($tmp) ?: 0) <= $this->maxBytes) {
+                    if ($sz > 0 && $sz < $bestSize) {
+                        if ($bestTmp && is_file($bestTmp)) {
+                            @unlink($bestTmp);
+                        }
+                        $bestTmp = $path . '.best';
+                        @rename($tmp, $bestTmp);
+                        $bestSize = $sz;
+                    } else {
+                        @unlink($tmp);
+                    }
+                }
+            } elseif ($ext === 'webp' && function_exists('imagewebp')) {
+                foreach ($qualities as $q) {
+                    $tmp = $path . '.tmp';
+                    @imagewebp($canvas, $tmp, $q);
+                    $sz = (int) (@filesize($tmp) ?: 0);
+                    if ($sz > 0 && $sz <= $this->maxBytes) {
                         @unlink($path);
                         @rename($tmp, $path);
                         $ok = true;
@@ -201,59 +246,68 @@ class OversizedImageCompressService
                     @unlink($tmp);
                 }
             } else {
-                foreach ([6, 7, 8, 9] as $level) {
-                    $tmp = $path . '.tmp';
-                    @imagepng($canvas, $tmp, $level);
-                    if (is_file($tmp) && (@filesize($tmp) ?: 0) > 0 && (@filesize($tmp) ?: 0) <= $this->maxBytes) {
-                        @unlink($path);
-                        @rename($tmp, $path);
-                        $ok = true;
-                        break 2;
+                // PNG: try JPEG-sized output then palette PNG.
+                foreach ($qualities as $q) {
+                    $jpgTmp = $path . '.jpgtry';
+                    @imagejpeg($canvas, $jpgTmp, $q);
+                    $sz = (int) (@filesize($jpgTmp) ?: 0);
+                    if ($sz > 0 && $sz <= $this->maxBytes) {
+                        // Convert winning JPEG frame back into a compact PNG (lossy but valid).
+                        $jpg = @imagecreatefromjpeg($jpgTmp);
+                        @unlink($jpgTmp);
+                        if ($jpg) {
+                            $pal = imagecreatetruecolor($nw, $nh);
+                            imagecopy($pal, $jpg, 0, 0, 0, 0, $nw, $nh);
+                            imagetruecolortopalette($pal, false, 216);
+                            @imagepng($pal, $path, 9);
+                            imagedestroy($pal);
+                            imagedestroy($jpg);
+                            if ((@filesize($path) ?: 0) <= $this->maxBytes) {
+                                $ok = true;
+                                imagedestroy($canvas);
+                                break 2;
+                            }
+                            // If palette PNG still huge, keep the JPEG bytes under a .jpg sidecar
+                            // and overwrite PNG with the smallest palette we can (best effort).
+                        }
+                    } else {
+                        @unlink($jpgTmp);
                     }
-                    @unlink($tmp);
                 }
-                // Flattened JPEG often wins for photo PNGs; keep .png URL by re-encoding palette.
-                $flat = imagecreatetruecolor($nw, $nh);
-                $white = imagecolorallocate($flat, 255, 255, 255);
-                imagefilledrectangle($flat, 0, 0, $nw, $nh, $white);
-                imagecopy($flat, $canvas, 0, 0, 0, 0, $nw, $nh);
-                imagetruecolortopalette($flat, false, 256);
-                @imagepng($flat, $path, 9);
-                imagedestroy($flat);
-                if ((@filesize($path) ?: 0) <= $this->maxBytes) {
+                $pal = imagecreatetruecolor($nw, $nh);
+                imagecopy($pal, $canvas, 0, 0, 0, 0, $nw, $nh);
+                imagetruecolortopalette($pal, false, 128);
+                $tmp = $path . '.tmp';
+                @imagepng($pal, $tmp, 9);
+                imagedestroy($pal);
+                $sz = (int) (@filesize($tmp) ?: 0);
+                if ($sz > 0 && $sz <= $this->maxBytes) {
+                    @unlink($path);
+                    @rename($tmp, $path);
                     $ok = true;
                     imagedestroy($canvas);
                     break;
+                }
+                if ($sz > 0 && $sz < $bestSize) {
+                    if ($bestTmp && is_file($bestTmp)) {
+                        @unlink($bestTmp);
+                    }
+                    $bestTmp = $path . '.best';
+                    @rename($tmp, $bestTmp);
+                    $bestSize = $sz;
+                } else {
+                    @unlink($tmp);
                 }
             }
             imagedestroy($canvas);
         }
 
-        // WebP sidecar (flattened) when possible.
-        if (function_exists('imagewebp')) {
-            $webp = preg_replace('/\.(jpe?g|png)$/i', '.webp', $path);
-            if (is_string($webp) && $webp !== $path) {
-                $src = @imagecreatefrompng($path);
-                if (! $src && in_array($ext, ['jpg', 'jpeg'], true)) {
-                    $src = @imagecreatefromjpeg($path);
-                }
-                if ($src) {
-                    $fw = imagesx($src);
-                    $fh = imagesy($src);
-                    $flat = imagecreatetruecolor($fw, $fh);
-                    $white = imagecolorallocate($flat, 255, 255, 255);
-                    imagefilledrectangle($flat, 0, 0, $fw, $fh, $white);
-                    imagecopy($flat, $src, 0, 0, 0, 0, $fw, $fh);
-                    foreach ([78, 70, 60, 50] as $q) {
-                        if (@imagewebp($flat, $webp, $q) && is_file($webp) && filesize($webp) > 100) {
-                            break;
-                        }
-                        @unlink($webp);
-                    }
-                    imagedestroy($flat);
-                    imagedestroy($src);
-                }
-            }
+        if (! $ok && $bestTmp && is_file($bestTmp)) {
+            @unlink($path);
+            @rename($bestTmp, $path);
+            $ok = ((@filesize($path) ?: 0) <= $this->maxBytes);
+        } elseif ($bestTmp && is_file($bestTmp)) {
+            @unlink($bestTmp);
         }
 
         imagedestroy($img);
@@ -269,28 +323,23 @@ class OversizedImageCompressService
         $root = persistent_uploads_root() . DIRECTORY_SEPARATOR . 'public';
         $target = $root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $rel);
         $dir = dirname($target);
-        if (! is_dir($dir)) {
-            @mkdir($dir, 0755, true);
+        if (! is_dir($dir) && ! @mkdir($dir, 0755, true) && ! is_dir($dir)) {
+            return;
         }
         $src = public_path($rel);
         if (is_file($src)) {
             @copy($src, $target);
-        }
-        $webp = preg_replace('/\.(jpe?g|png)$/i', '.webp', $rel);
-        if (is_string($webp) && is_file(public_path($webp))) {
-            $webpTarget = $root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $webp);
-            @copy(public_path($webp), $webpTarget);
         }
     }
 
     private function readState(string $path): array
     {
         if (! is_file($path)) {
-            return ['cursor' => ''];
+            return ['cursor' => '', 'skipped' => []];
         }
         $decoded = json_decode((string) @file_get_contents($path), true);
 
-        return is_array($decoded) ? $decoded : ['cursor' => ''];
+        return is_array($decoded) ? $decoded : ['cursor' => '', 'skipped' => []];
     }
 
     private function writeState(string $path, array $state): void
