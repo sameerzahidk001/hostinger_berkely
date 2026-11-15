@@ -1,7 +1,7 @@
 @extends('layouts.app')
 
 @section('content')
-    <div class="h-[72px]"></div>
+    <div class="h-[56px]"></div>
     @php $seenCardFingerprints = []; $seenSearchBar = false; @endphp
     @foreach ($page->sections as $section)
         @php

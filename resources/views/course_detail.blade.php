@@ -220,7 +220,7 @@
 @endpush
 
 @section('content')
-    <div class="h-[72px]"></div>
+    <div class="h-[56px]"></div>
     @if ($course->banner_section === 1)
         <!-- Add Slider Here start -->
         @php
