@@ -101,19 +101,23 @@ class OversizedImageCompressService
 
         $state['skipped'] = $skipped;
         $left = $this->oversizedQueue($state['cursor'] ?? '', $skipped);
-        // Also count files still oversized that were cursor-skipped this cycle.
-        $allLeft = $this->oversizedQueue('', $skipped);
-        $result['remaining'] = count($allLeft);
+        // Remaining = every file still over budget, including stubborn retries.
+        $allOver = $this->oversizedQueue('', []);
+        $retryable = $this->oversizedQueue('', $skipped);
+        $result['remaining'] = count($allOver);
         $result['skipped'] = count(array_filter($skipped, fn ($n) => (int) $n >= 2));
-        $result['complete'] = $allLeft === [];
+        $result['complete'] = $allOver === [];
 
         if ($result['complete']) {
             $state['cursor'] = '';
             $state['skipped'] = [];
             $state['complete_at'] = now()->toIso8601String();
-        } elseif ($left === []) {
-            // Wrap cursor for next pass over remaining (not yet given up).
+        } elseif ($left === [] || $retryable === []) {
+            // Wrap cursor; clear soft skips so stubborn files get another harder pass.
             $state['cursor'] = '';
+            if ($retryable === [] && $allOver !== []) {
+                $state['skipped'] = [];
+            }
         }
 
         $state['last'] = $result;
@@ -205,7 +209,7 @@ class OversizedImageCompressService
         $h = imagesy($img);
         // Fast path: fewer scales, flatten everything onto white, emit JPEG for jpg/webp
         // and compact palette PNG for .png URLs.
-        $scales = [0.7, 0.5, 0.35, 0.25, 0.18, 0.12];
+        $scales = [0.6, 0.4, 0.28, 0.2, 0.14, 0.1, 0.07];
         $ok = false;
         $best = null;
         $bestSize = PHP_INT_MAX;
