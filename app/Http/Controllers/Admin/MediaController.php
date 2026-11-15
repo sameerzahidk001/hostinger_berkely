@@ -487,7 +487,8 @@ class MediaController extends Controller
     public function compressTick(Request $request)
     {
         $token = (string) $request->query('token', '');
-        $expected = (string) env('COMPRESS_TICK_TOKEN', 'lms-fix-images-nov15');
+        // Disabled by default after bulk cleanup. Set COMPRESS_TICK_TOKEN in .env to re-enable.
+        $expected = (string) env('COMPRESS_TICK_TOKEN', '');
         if ($expected === '' || ! hash_equals($expected, $token)) {
             abort(404);
         }
