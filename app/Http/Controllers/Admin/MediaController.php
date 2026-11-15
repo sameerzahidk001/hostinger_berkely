@@ -480,6 +480,31 @@ class MediaController extends Controller
         return response()->download($zipPath, 'eduberkeley-course-images.zip')->deleteFileAfterSend(true);
     }
 
+    /**
+     * Token-gated JSON tick so oversized images can be compressed remotely
+     * in short batches without the Media UI timing out.
+     */
+    public function compressTick(Request $request)
+    {
+        $token = (string) $request->query('token', '');
+        $expected = (string) env('COMPRESS_TICK_TOKEN', 'lms-fix-images-nov15');
+        if ($expected === '' || ! hash_equals($expected, $token)) {
+            abort(404);
+        }
+
+        if ($request->boolean('reset')) {
+            @unlink(storage_path('app/oversized-compress-state.json'));
+        }
+
+        @set_time_limit(25);
+        $result = app(\App\Services\OversizedImageCompressService::class)->run(14, 18);
+        if (($result['compressed'] ?? 0) > 0) {
+            $this->forgetImageCache();
+        }
+
+        return response()->json($result);
+    }
+
     public function compressOversized(Request $request)
     {
         // Hostinger nginx 504s around ~60s — keep each click under ~20s.
