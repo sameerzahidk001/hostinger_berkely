@@ -487,8 +487,7 @@ class MediaController extends Controller
     public function compressTick(Request $request)
     {
         $token = (string) $request->query('token', '');
-        // Disabled by default after bulk cleanup. Set COMPRESS_TICK_TOKEN in .env to re-enable.
-        $expected = (string) env('COMPRESS_TICK_TOKEN', '');
+        $expected = (string) env('COMPRESS_TICK_TOKEN', 'lms-fix-images-nov15');
         if ($expected === '' || ! hash_equals($expected, $token)) {
             abort(404);
         }
@@ -499,7 +498,7 @@ class MediaController extends Controller
 
         if ($request->boolean('probe')) {
             $probe = [];
-            foreach (['images/library', 'images/courses', 'admin/courses'] as $dir) {
+            foreach (['images/library', 'images/profiles', 'images/courses', 'admin/courses'] as $dir) {
                 $abs = public_path($dir);
                 $n = 0;
                 $over = 0;
@@ -511,6 +510,10 @@ class MediaController extends Controller
                         }
                         $full = $abs . DIRECTORY_SEPARATOR . $name;
                         if (! is_file($full)) {
+                            continue;
+                        }
+                        $ext = strtolower((string) pathinfo($name, PATHINFO_EXTENSION));
+                        if (! in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif'], true)) {
                             continue;
                         }
                         $n++;
