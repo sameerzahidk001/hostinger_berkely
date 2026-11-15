@@ -138,41 +138,17 @@ class OversizedImageCompressService
      */
     private function oversizedQueue(string $afterRel, array $skipped): array
     {
-        // Include both course trees: Hostinger may serve either path.
-        $dirs = ['images/library', 'images/courses', 'admin/courses'];
+        // Full Media tree: library, profiles (Admin tab), courses, and legacy admin/courses.
+        $dirs = ['images', 'admin/courses'];
         $out = [];
         foreach ($dirs as $dir) {
             $abs = public_path($dir);
             if (! is_dir($abs)) {
                 continue;
             }
-            foreach (scandir($abs) ?: [] as $name) {
-                if ($name === '.' || $name === '..') {
-                    continue;
-                }
-                $full = $abs . DIRECTORY_SEPARATOR . $name;
-                if (! is_file($full)) {
-                    continue;
-                }
-                $ext = strtolower((string) pathinfo($name, PATHINFO_EXTENSION));
-                if (! in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true)) {
-                    continue;
-                }
-                $stem = (string) pathinfo($name, PATHINFO_FILENAME);
-                if (preg_match('/-(thumb|card|banner)$/i', $stem)) {
-                    continue;
-                }
-                $size = (int) (@filesize($full) ?: 0);
-                if ($size <= $this->maxBytes) {
-                    continue;
-                }
-                $rel = str_replace('\\', '/', $dir . '/' . $name);
-                if ((int) ($skipped[$rel] ?? 0) >= 2) {
-                    continue;
-                }
-                $out[] = $rel;
-            }
+            $this->collectOversized($abs, $dir, $skipped, $out);
         }
+        $out = array_values(array_unique($out));
         sort($out);
         if ($afterRel === '') {
             return $out;
@@ -190,6 +166,45 @@ class OversizedImageCompressService
         }
 
         return $filtered;
+    }
+
+    /**
+     * @param  array<string, int>  $skipped
+     * @param  array<int, string>  $out
+     */
+    private function collectOversized(string $absDir, string $relPrefix, array $skipped, array &$out): void
+    {
+        foreach (scandir($absDir) ?: [] as $name) {
+            if ($name === '.' || $name === '..') {
+                continue;
+            }
+            $full = $absDir . DIRECTORY_SEPARATOR . $name;
+            $rel = str_replace('\\', '/', $relPrefix . '/' . $name);
+            if (is_dir($full)) {
+                // Skip huge non-image document trees if present.
+                if (in_array(strtolower($name), ['documents', 'pdf', 'files', 'vendor', 'node_modules'], true)) {
+                    continue;
+                }
+                $this->collectOversized($full, $rel, $skipped, $out);
+                continue;
+            }
+            $ext = strtolower((string) pathinfo($name, PATHINFO_EXTENSION));
+            if (! in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true)) {
+                continue;
+            }
+            $stem = (string) pathinfo($name, PATHINFO_FILENAME);
+            if (preg_match('/-(thumb|card|banner)$/i', $stem)) {
+                continue;
+            }
+            $size = (int) (@filesize($full) ?: 0);
+            if ($size <= $this->maxBytes) {
+                continue;
+            }
+            if ((int) ($skipped[$rel] ?? 0) >= 2) {
+                continue;
+            }
+            $out[] = $rel;
+        }
     }
 
     private function compressPath(string $path): bool
