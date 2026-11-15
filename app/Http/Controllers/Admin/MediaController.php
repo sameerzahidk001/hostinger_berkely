@@ -496,8 +496,8 @@ class MediaController extends Controller
             @unlink(storage_path('app/oversized-compress-state.json'));
         }
 
-        @set_time_limit(25);
-        $result = app(\App\Services\OversizedImageCompressService::class)->run(14, 18);
+        @set_time_limit(35);
+        $result = app(\App\Services\OversizedImageCompressService::class)->run(22, 40);
         if (($result['compressed'] ?? 0) > 0) {
             $this->forgetImageCache();
         }
