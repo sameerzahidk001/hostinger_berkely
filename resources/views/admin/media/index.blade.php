@@ -66,6 +66,7 @@
     <div class="col-lg-4 text-right" style="padding-top:20px;">
         <form id="lms-media-compress-form" method="POST" action="{{ route('admin.media.compress-oversized') }}" style="display:inline;">
             @csrf
+            <input type="hidden" name="pass" id="lms-media-compress-pass" value="{{ (int) session('media_compress_pass', 1) }}">
             <button type="submit" id="lms-media-compress-btn" class="btn btn-warning" onclick="this.disabled=true;this.innerHTML='Compressing…';">
                 <i class="fa fa-compress"></i> Compress oversized (≤200KB)
             </button>
@@ -578,10 +579,12 @@
     setTimeout(function () {
         var form = document.getElementById('lms-media-compress-form');
         var btn = document.getElementById('lms-media-compress-btn');
+        var pass = document.getElementById('lms-media-compress-pass');
         if (!form) return;
-        if (btn) { btn.disabled = true; btn.innerHTML = 'Compressing next batch…'; }
+        if (pass) pass.value = @json((int) session('media_compress_pass', 2));
+        if (btn) { btn.disabled = true; btn.innerHTML = 'Compressing pass ' + (pass ? pass.value : '') + '…'; }
         form.submit();
-    }, 900);
+    }, 700);
     @endif
 })();
 </script>

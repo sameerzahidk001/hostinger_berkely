@@ -482,9 +482,10 @@ class MediaController extends Controller
 
     public function compressOversized(Request $request)
     {
-        // Hostinger nginx 504s around ~60s — keep each click under ~15s.
-        @set_time_limit(20);
-        $result = app(\App\Services\OversizedImageCompressService::class)->run(10, 8);
+        // Hostinger nginx 504s around ~60s — keep each click under ~20s.
+        @set_time_limit(25);
+        $pass = max(1, (int) $request->input('pass', 1));
+        $result = app(\App\Services\OversizedImageCompressService::class)->run(12, 12);
         $compressed = (int) ($result['compressed'] ?? 0);
         $failed = (int) ($result['failed'] ?? 0);
         $remaining = (int) ($result['remaining'] ?? 0);
@@ -497,20 +498,29 @@ class MediaController extends Controller
                 ->with('success', 'All library and course images are already under 200 KB.');
         }
 
-        $msg = 'Compressed ' . $compressed . ' image' . ($compressed === 1 ? '' : 's') . ' this pass.';
+        $msg = 'Pass ' . $pass . ': compressed ' . $compressed . ' image' . ($compressed === 1 ? '' : 's') . '.';
         if ($remaining > 0) {
-            $msg .= ' ' . $remaining . ' still over 200 KB — continuing automatically…';
+            $msg .= ' ' . $remaining . ' left over 200 KB.';
         } elseif ($complete) {
             $msg .= ' Done — none left over 200 KB.';
         }
         if ($failed > 0) {
-            $msg .= ' ' . $failed . ' could not be compressed further.';
+            $msg .= ' ' . $failed . ' skipped after retries.';
+        }
+
+        // Auto-continue for a while, then pause so the browser/tab stays stable.
+        $autoContinue = $remaining > 0 && ! $complete && $pass < 40;
+        if ($autoContinue) {
+            $msg .= ' Continuing automatically…';
+        } elseif ($remaining > 0) {
+            $msg .= ' Click Compress again to continue.';
         }
 
         return redirect()
             ->route('admin.media.index')
-            ->with($failed && ! $compressed ? 'fail' : 'success', $msg)
-            ->with('media_compress_continue', $remaining > 0 && ! $complete);
+            ->with('success', $msg)
+            ->with('media_compress_continue', $autoContinue)
+            ->with('media_compress_pass', $pass + 1);
     }
 
     public function destroy(Request $request)
