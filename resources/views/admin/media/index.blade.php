@@ -64,10 +64,9 @@
         </ol>
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
-        <form method="POST" action="{{ route('admin.media.compress-oversized') }}" style="display:inline;">
+        <form id="lms-media-compress-form" method="POST" action="{{ route('admin.media.compress-oversized') }}" style="display:inline;">
             @csrf
-            <input type="hidden" name="passes" value="6">
-            <button type="submit" class="btn btn-warning" onclick="this.disabled=true;this.innerHTML='Compressing…';this.form.submit();">
+            <button type="submit" id="lms-media-compress-btn" class="btn btn-warning" onclick="this.disabled=true;this.innerHTML='Compressing…';">
                 <i class="fa fa-compress"></i> Compress oversized (≤200KB)
             </button>
         </form>
@@ -573,6 +572,17 @@
         }
         return String(attr || cell.textContent || '').toLowerCase().trim();
     }
+
+    // Auto-continue compress in short passes so Hostinger does not 504.
+    @if(session('media_compress_continue'))
+    setTimeout(function () {
+        var form = document.getElementById('lms-media-compress-form');
+        var btn = document.getElementById('lms-media-compress-btn');
+        if (!form) return;
+        if (btn) { btn.disabled = true; btn.innerHTML = 'Compressing next batch…'; }
+        form.submit();
+    }, 900);
+    @endif
 })();
 </script>
 @endpush
