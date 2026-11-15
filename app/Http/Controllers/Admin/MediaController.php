@@ -543,14 +543,13 @@ class MediaController extends Controller
             $result = app(\App\Services\OversizedImageCompressService::class)->run(20, 25);
             if (($result['compressed'] ?? 0) > 0) {
                 $this->forgetImageCache();
-                // Keep Hostinger persistent backup in sync so the next Git deploy
-                // does not restore old multi‑MB originals over optimized files.
-                if (function_exists('persist_public_uploads_tree')) {
-                    try {
-                        persist_public_uploads_tree();
-                    } catch (\Throwable $e) {
-                        // Compression result still valid if backup sync fails.
-                    }
+            }
+            // Full backup sync once at the end so deploys keep optimized bytes.
+            if (! empty($result['complete']) && function_exists('persist_public_uploads_tree')) {
+                try {
+                    persist_public_uploads_tree();
+                } catch (\Throwable $e) {
+                    // Compression result still valid if backup sync fails.
                 }
             }
         } catch (\Throwable $e) {
