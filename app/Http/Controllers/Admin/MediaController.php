@@ -488,8 +488,13 @@ class MediaController extends Controller
         $links = $this->exactUsageTokens($rel);
         if ($links !== []) {
             $first = explode('|', $links[0], 2);
+            $where = trim($first[0] ?: 'a page/course/user');
+            // Course banner/section images are stored on Course Labels, not the main Course thumbnail field.
+            if (str_starts_with($where, 'Course labels')) {
+                return back()->with('fail', 'This image is still linked to ' . $where . ' (banner/section image). Open that course, clear the image there, then delete.');
+            }
 
-            return back()->with('fail', 'This image is still linked to ' . trim($first[0] ?: 'a page/course/user') . '. Remove that link first, then delete.');
+            return back()->with('fail', 'This image is still linked to ' . $where . '. Remove that link first, then delete.');
         }
 
         $gone = function_exists('forget_public_upload')
@@ -1801,6 +1806,50 @@ class MediaController extends Controller
             // Pages still show if course columns differ.
         }
 
+        // Must match destroy()/usageIndex: course banner & section images live on dynamic labels.
+        try {
+            if (class_exists(DynamicLabels::class) && Schema::hasTable('course_dynamic_labels')) {
+                $labelCols = [
+                    'banner_image', 'who_can_do_img', 'lectures_img', 'practice_session_img',
+                    'mock_examination_img', 'career_path_section_img', 'exam_information_section_img',
+                    'learner_stories_img', 'what_you_earn_img',
+                ];
+                $existing = array_values(array_filter(
+                    $labelCols,
+                    fn ($col) => Schema::hasColumn('course_dynamic_labels', $col)
+                ));
+                if ($existing !== []) {
+                    foreach ($groups as $stem => $group) {
+                        $like = '%' . addcslashes((string) $stem, '%_\\') . '%';
+                        $q = DynamicLabels::query()->select(array_merge(['id', 'course_id'], $existing));
+                        $q->where(function ($outer) use ($like, $existing) {
+                            foreach ($existing as $col) {
+                                $outer->orWhere($col, 'like', $like);
+                            }
+                        });
+                        $tokens = [];
+                        foreach ($q->limit(20)->get() as $labelRow) {
+                            $courseId = (int) $labelRow->course_id;
+                            $courseTitle = '';
+                            if ($courseId > 0 && class_exists(Course::class)) {
+                                $courseTitle = trim((string) (Course::query()->where('id', $courseId)->value('title') ?? ''));
+                            }
+                            $label = $courseTitle !== ''
+                                ? ('Course labels: ' . $courseTitle)
+                                : ($courseId > 0 ? ('Course labels #' . $courseId) : 'Course labels');
+                            $url = $courseId > 0
+                                ? $this->mediaNamedUrl('course.edit', $courseId, url('/admin/course/' . $courseId . '/edit'))
+                                : '#';
+                            $tokens[] = $label . '|' . $url;
+                        }
+                        $put($group, $tokens);
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // Courses/pages still show if labels table differs.
+        }
+
         try {
             $userTokens = $this->userImageTokensByGroup($groups);
             foreach ($groups as $stem => $group) {
@@ -1967,7 +2016,13 @@ class MediaController extends Controller
                     }
                     foreach ($q->limit(400)->get() as $labelRow) {
                         $courseId = (int) $labelRow->course_id;
-                        $label = $courseId > 0 ? ('Course labels #' . $courseId) : 'Course labels';
+                        $courseTitle = '';
+                        if ($courseId > 0 && class_exists(Course::class)) {
+                            $courseTitle = trim((string) (Course::query()->where('id', $courseId)->value('title') ?? ''));
+                        }
+                        $label = $courseTitle !== ''
+                            ? ('Course labels: ' . $courseTitle)
+                            : ($courseId > 0 ? ('Course labels #' . $courseId) : 'Course labels');
                         $url = $courseId > 0
                             ? $this->mediaNamedUrl('course.edit', $courseId, url('/admin/course/' . $courseId . '/edit'))
                             : '#';
