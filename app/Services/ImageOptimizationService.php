@@ -79,13 +79,16 @@ class ImageOptimizationService
 
         $parts = [];
         foreach ($this->variantWidths as $name => $width) {
-            $rel = $dir . $slug . '-' . $name . '.' . $ext;
-            if (is_file(public_path($rel))) {
-                $parts[] = asset($rel) . ' ' . $width . 'w';
+            foreach ([$ext, 'jpg', 'jpeg', 'webp'] as $tryExt) {
+                $rel = $dir . $slug . '-' . $name . '.' . $tryExt;
+                if (is_file(public_path($rel)) && (@filesize(public_path($rel)) ?: 0) > 0) {
+                    $parts[] = asset($rel) . ' ' . $width . 'w';
+                    break;
+                }
             }
         }
 
-        if (is_file(public_path($publicPath))) {
+        if (is_file(public_path($publicPath)) && (@filesize(public_path($publicPath)) ?: 0) > 0) {
             $parts[] = asset($publicPath) . ' 1920w';
         }
 
@@ -109,7 +112,7 @@ class ImageOptimizationService
         }
 
         $abs = public_path($webpRel);
-        if (! is_file($abs)) {
+        if (! is_file($abs) || (@filesize($abs) ?: 0) <= 0) {
             return null;
         }
 
@@ -124,10 +127,55 @@ class ImageOptimizationService
                 return;
             }
 
-            $this->saveImage($image, $path, $ext, 82);
+            $maxBytes = 190 * 1024;
+            $w = imagesx($image);
+            $h = imagesy($image);
+            $qualities = [82, 74, 66, 58, 50, 42, 34];
+            $scales = [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4];
+            $done = false;
+
+            foreach ($scales as $scale) {
+                $nw = max(1, (int) round($w * $scale));
+                $nh = max(1, (int) round($h * $scale));
+                $canvas = $image;
+                if ($scale < 1.0) {
+                    $canvas = imagecreatetruecolor($nw, $nh);
+                    if ($ext === 'png') {
+                        imagealphablending($canvas, false);
+                        imagesavealpha($canvas, true);
+                    }
+                    imagecopyresampled($canvas, $image, 0, 0, 0, 0, $nw, $nh, $w, $h);
+                }
+
+                foreach ($qualities as $q) {
+                    $this->saveImage($canvas, $path, $ext, $q);
+                    if ((@filesize($path) ?: 0) <= $maxBytes) {
+                        $done = true;
+                        break 2;
+                    }
+                }
+
+                if ($canvas !== $image) {
+                    imagedestroy($canvas);
+                }
+            }
+
+            if (! $done) {
+                $this->saveImage($image, $path, $ext, 40);
+            }
+
             $webpPath = preg_replace('/\.(jpe?g|png)$/i', '.webp', $path);
             if ($webpPath && function_exists('imagewebp')) {
-                @imagewebp($image, $webpPath, 80);
+                $fw = imagesx($image);
+                $fh = imagesy($image);
+                $flat = imagecreatetruecolor($fw, $fh);
+                $white = imagecolorallocate($flat, 255, 255, 255);
+                imagefilledrectangle($flat, 0, 0, $fw, $fh, $white);
+                imagecopy($flat, $image, 0, 0, 0, 0, $fw, $fh);
+                if (! @imagewebp($flat, $webpPath, 78) || (@filesize($webpPath) ?: 0) <= 0) {
+                    @unlink($webpPath);
+                }
+                imagedestroy($flat);
             }
             imagedestroy($image);
         } catch (\Throwable $e) {

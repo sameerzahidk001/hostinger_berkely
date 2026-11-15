@@ -5,6 +5,11 @@
 
     RewriteEngine On
 
+    # Prefer apex host. Check Host and CDN/proxy forwarded host (Hostinger may normalize Host).
+    RewriteCond %{HTTP:X-Forwarded-Host} ^www\.(eduberkeley\.com|berkeleyschool\.org)$ [NC,OR]
+    RewriteCond %{HTTP_HOST} ^www\.(eduberkeley\.com|berkeleyschool\.org)$ [NC]
+    RewriteRule ^ https://%1%{REQUEST_URI} [L,R=301]
+
     # Hostinger/ModSecurity can block large CMS page POST bodies (shows plain "Forbidden")
     <IfModule mod_security2.c>
         SecRule REQUEST_URI "@rx ^/admin/pages" "id:1999,phase:1,nolog,pass,ctl:ruleEngine=Off"
@@ -35,4 +40,10 @@
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
+</IfModule>
+<IfModule mod_headers.c>
+    <FilesMatch "\.(avif|webp|jpe?g|png|gif)$">
+        Header always set Vary "Accept"
+        Header set Cache-Control "public, max-age=604800, immutable"
+    </FilesMatch>
 </IfModule>

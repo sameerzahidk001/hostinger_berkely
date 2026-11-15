@@ -17,13 +17,6 @@ class SetSEO
 
     public function handle($request, Closure $next)
     {
-        if (app()->isProduction()) {
-            $preferredHost = parse_url((string) config('app.url'), PHP_URL_HOST);
-            if ($preferredHost && strcasecmp((string) $request->getHost(), $preferredHost) !== 0) {
-                return redirect()->away(rtrim((string) config('app.url'), '/') . $request->getRequestUri(), 301);
-            }
-        }
-
         if ($request->is('admin', 'admin/*') || $request->is('user', 'user/*') || $request->is('instructor', 'instructor/*') || $request->is('livewire', 'livewire/*') || $request->is('sitemap.xml') || $request->is('robots.txt')) {
             return $next($request);
         }

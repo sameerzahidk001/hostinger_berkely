@@ -92,14 +92,26 @@ class SitemapController extends Controller
             'changefreq' => 'daily',
             'priority' => '1.0',
         ];
-        $urls[] = [
-            'loc' => $this->siteUrl('courses'),
-            'lastmod' => $this->latestTimestamp([
-                Schema::hasTable('courses') ? \Illuminate\Support\Facades\DB::table('courses')->max('updated_at') : null,
-            ]),
-            'changefreq' => 'weekly',
-            'priority' => '0.6',
-        ];
+        $coursesHub = Page::query()->with('seo')->where('url', 'courses')->first()
+            ?: (SiteSettings::value('categories') ? Page::query()->with('seo')->find(SiteSettings::value('categories')) : null);
+        $coursesPath = 'courses';
+        if ($coursesHub) {
+            $hubPath = trim((string) $coursesHub->full_url, '/');
+            if ($hubPath !== '') {
+                $coursesPath = $hubPath;
+            }
+        }
+        if (! ($coursesHub && ($this->isNoIndex($coursesHub->seo) || $this->publicWouldNoindex($coursesHub)))) {
+            $urls[] = [
+                'loc' => $this->siteUrl($coursesPath),
+                'lastmod' => $this->latestTimestamp([
+                    Schema::hasTable('courses') ? \Illuminate\Support\Facades\DB::table('courses')->max('updated_at') : null,
+                    optional($coursesHub?->updated_at)?->toDateTimeString(),
+                ]),
+                'changefreq' => 'weekly',
+                'priority' => '0.6',
+            ];
+        }
 
         $pageQuery = Page::query()
             ->select(['id', 'url', 'parent_id', 'category_id', 'updated_at'])
@@ -122,17 +134,13 @@ class SitemapController extends Controller
                         continue;
                     }
 
-                    if ($this->isNoIndex($page->seo) || $this->publicWouldNoindex($page)) {
-                        continue;
-                    }
-
                     $path = trim((string) $page->full_url, '/');
                     if ($path === '' || seo_is_utility_path($path) || in_array($path, ['home', 'page-not-found', 'course-index', 'courses'], true)) {
                         continue;
                     }
 
-                    // Match public robots: empty/thin pages are noindex, so keep them out of the sitemap.
-                    if (seo_page_is_empty($page)) {
+                    // Keep sitemap aligned with public robots (SEO form + thin/empty pages).
+                    if ($this->isNoIndex($page->seo) || $this->publicWouldNoindex($page)) {
                         continue;
                     }
 
@@ -167,10 +175,11 @@ class SitemapController extends Controller
         $courseQuery->orderBy('id')->chunkById(100, function ($courses) use (&$urls) {
             foreach ($courses as $course) {
                 try {
-                    if ($this->isNoIndex($course->seo)) {
+                    if (empty($course->slug)) {
                         continue;
                     }
-                    if (empty($course->slug)) {
+                    // Match public robots: explicit noindex courses stay out of the sitemap.
+                    if ($this->isNoIndex($course->seo)) {
                         continue;
                     }
 

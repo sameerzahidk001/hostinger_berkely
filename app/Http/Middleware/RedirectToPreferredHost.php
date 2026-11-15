@@ -23,17 +23,28 @@ class RedirectToPreferredHost
         foreach ([
             $request->headers->get('X-Forwarded-Host'),
             $request->server->get('HTTP_X_FORWARDED_HOST'),
+            $request->headers->get('X-Original-Host'),
+            $request->server->get('HTTP_X_ORIGINAL_HOST'),
+            $request->headers->get('CF-Visitor'),
             $request->server->get('HTTP_HOST'),
             $request->getHost(),
+            $request->server->get('SERVER_NAME'),
         ] as $raw) {
             if (! is_string($raw) || trim($raw) === '') {
                 continue;
             }
+            // CF-Visitor is JSON; skip non-host values later via bare-host compare.
             $host = strtolower(trim(explode(',', $raw)[0]));
             $host = preg_replace('/:\d+$/', '', $host) ?: $host;
-            if ($host !== '') {
+            if ($host !== '' && ! str_starts_with($host, '{')) {
                 $candidates[$host] = true;
             }
+        }
+
+        // Also honor an explicit www request URI when proxies strip Host to apex.
+        $requestUrl = strtolower((string) $request->fullUrl());
+        if (str_contains($requestUrl, '://www.' . $barePreferred . '/') || str_contains($requestUrl, '://www.' . $barePreferred . '?')) {
+            $candidates['www.' . $barePreferred] = true;
         }
 
         $seenWww = false;

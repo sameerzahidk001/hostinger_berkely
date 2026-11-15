@@ -277,9 +277,13 @@
             <div class="flex xl:px-0 md:top-0 md:absolute md:right-0 z-10 md:w-[50%] m-0 flex-1 flex-col gap-4 md:h-full pointer-events-none">
                 @php $bannerUrl = displayable_media_url($course->dynamicLabel->banner_image); @endphp
                 @if($bannerUrl)
-                <img src="{{ $bannerUrl }}" alt="{{ course_image_alt($course, 'banner_image', $course->dynamicLabel?->banner_title ?? $course->title) }}"
-                    width="1200" height="800" decoding="async" fetchpriority="high"
-                    class="object-cover h-full md:max-h-full md:w-full md:h-full">
+                {!! optimized_image_tag($bannerUrl, course_image_alt($course, 'banner_image', $course->dynamicLabel?->banner_title ?? $course->title), [
+                    'width' => 1200,
+                    'height' => 800,
+                    'loading' => 'eager',
+                    'class' => 'object-cover h-full md:max-h-full md:w-full md:h-full',
+                    'sizes' => '(max-width: 768px) 100vw, 50vw',
+                ]) !!}
                 @endif
             </div>
         </section>
@@ -379,13 +383,21 @@
                                 <p>Invalid YouTube URL</p>
                             @endif
                         @elseif($course->overview_img && displayable_media_url($course->overview_img))
-                            <img src="{{ displayable_media_url($course->overview_img) }}" alt="{{ course_image_alt($course, 'overview_img') }}"
-                                loading="lazy" width="1200" height="800"
-                                class="w-full max-w-full min-h-[300px] xl:min-h-[500px] object-cover">
+                            {!! optimized_image_tag(displayable_media_url($course->overview_img), course_image_alt($course, 'overview_img'), [
+                                'loading' => 'lazy',
+                                'width' => 1200,
+                                'height' => 800,
+                                'class' => 'w-full max-w-full min-h-[300px] xl:min-h-[500px] object-cover',
+                                'sizes' => '(max-width: 1024px) 100vw, 50vw',
+                            ]) !!}
                         @else
-                            <img src="{{ media_url('images/courses/course.png') ?: media_url('admin/courses/course.png') }}" alt="{{ course_image_alt($course, 'overview_img', $course->title . ' overview') }}"
-                                loading="lazy" width="1200" height="800"
-                                class="w-full max-w-full min-h-[300px] xl:min-h-[500px] object-cover">
+                            {!! optimized_image_tag(media_url('images/courses/course.png') ?: media_url('admin/courses/course.png'), course_image_alt($course, 'overview_img', $course->title . ' overview'), [
+                                'loading' => 'lazy',
+                                'width' => 1200,
+                                'height' => 800,
+                                'class' => 'w-full max-w-full min-h-[300px] xl:min-h-[500px] object-cover',
+                                'sizes' => '(max-width: 1024px) 100vw, 50vw',
+                            ]) !!}
                         @endif
                         <!-- <img src="{{ asset($course->overview_img ? $course->overview_img : 'admin/courses/course.png') }}" alt=""
                             class="w-full max-w-full min-h-[300px] xl:min-h-[500px] object-cover"> -->
