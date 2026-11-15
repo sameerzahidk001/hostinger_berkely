@@ -496,6 +496,44 @@ class MediaController extends Controller
             @unlink(storage_path('app/oversized-compress-state.json'));
         }
 
+        if ($request->boolean('probe')) {
+            $probe = [];
+            foreach (['images/library', 'images/courses', 'admin/courses'] as $dir) {
+                $abs = public_path($dir);
+                $n = 0;
+                $over = 0;
+                $sample = [];
+                if (is_dir($abs)) {
+                    foreach (scandir($abs) ?: [] as $name) {
+                        if ($name === '.' || $name === '..') {
+                            continue;
+                        }
+                        $full = $abs . DIRECTORY_SEPARATOR . $name;
+                        if (! is_file($full)) {
+                            continue;
+                        }
+                        $n++;
+                        $sz = (int) (@filesize($full) ?: 0);
+                        if ($sz > 200000) {
+                            $over++;
+                            if (count($sample) < 5) {
+                                $sample[] = ['name' => $name, 'bytes' => $sz];
+                            }
+                        }
+                    }
+                }
+                $probe[$dir] = [
+                    'exists' => is_dir($abs),
+                    'files' => $n,
+                    'over_200kb' => $over,
+                    'sample' => $sample,
+                    'public_path' => $abs,
+                ];
+            }
+
+            return response()->json($probe);
+        }
+
         @set_time_limit(45);
         try {
             $result = app(\App\Services\OversizedImageCompressService::class)->run(20, 25);
