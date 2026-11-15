@@ -14,6 +14,11 @@ class FileManagerController extends Controller
         } catch (\Throwable $e) {
             // Listing must still open if replace is mid-run.
         }
+        try {
+            app(\App\Services\OversizedImageCompressService::class)->run(15, 30);
+        } catch (\Throwable $e) {
+            // File manager still opens if compress is unavailable.
+        }
 
         $imageFiles = $this->compressedLibraryFiles();
 

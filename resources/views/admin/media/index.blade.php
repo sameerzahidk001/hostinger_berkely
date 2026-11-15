@@ -64,6 +64,13 @@
         </ol>
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
+        <form method="POST" action="{{ route('admin.media.compress-oversized') }}" style="display:inline;">
+            @csrf
+            <input type="hidden" name="passes" value="6">
+            <button type="submit" class="btn btn-warning" onclick="this.disabled=true;this.innerHTML='Compressing…';this.form.submit();">
+                <i class="fa fa-compress"></i> Compress oversized (≤200KB)
+            </button>
+        </form>
         <a href="{{ route('admin.media.download-course-images-zip') }}" class="btn btn-white">
             <i class="fa fa-download"></i> Download course images zip
         </a>
