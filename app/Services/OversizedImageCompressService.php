@@ -134,27 +134,35 @@ class OversizedImageCompressService
      */
     private function oversizedQueue(string $afterRel, array $skipped): array
     {
-        // Mirror courses -> admin/courses after compress; do not double-queue both trees.
-        $dirs = ['images/library', 'images/courses'];
+        // Include both course trees: Hostinger may serve either path.
+        $dirs = ['images/library', 'images/courses', 'admin/courses'];
         $out = [];
         foreach ($dirs as $dir) {
             $abs = public_path($dir);
             if (! is_dir($abs)) {
                 continue;
             }
-            foreach (File::files($abs) as $file) {
-                $ext = strtolower($file->getExtension());
+            foreach (scandir($abs) ?: [] as $name) {
+                if ($name === '.' || $name === '..') {
+                    continue;
+                }
+                $full = $abs . DIRECTORY_SEPARATOR . $name;
+                if (! is_file($full)) {
+                    continue;
+                }
+                $ext = strtolower((string) pathinfo($name, PATHINFO_EXTENSION));
                 if (! in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true)) {
                     continue;
                 }
-                $stem = $file->getFilenameWithoutExtension();
+                $stem = (string) pathinfo($name, PATHINFO_FILENAME);
                 if (preg_match('/-(thumb|card|banner)$/i', $stem)) {
                     continue;
                 }
-                if ($file->getSize() <= $this->maxBytes) {
+                $size = (int) (@filesize($full) ?: 0);
+                if ($size <= $this->maxBytes) {
                     continue;
                 }
-                $rel = str_replace('\\', '/', $dir . '/' . $file->getFilename());
+                $rel = str_replace('\\', '/', $dir . '/' . $name);
                 if ((int) ($skipped[$rel] ?? 0) >= 2) {
                     continue;
                 }
