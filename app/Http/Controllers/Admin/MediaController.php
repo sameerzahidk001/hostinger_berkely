@@ -550,13 +550,20 @@ class MediaController extends Controller
             if (($result['compressed'] ?? 0) > 0) {
                 $this->forgetImageCache();
             }
-            // Full-tree persist only when done — per-batch tree sync timed out and
-            // left stale multi‑MB copies in persistent-uploads (re-inflating on deploy).
+            // Flush only smaller/optimized bytes into persistent-uploads each batch
+            // so the next Hostinger deploy cannot restore multi‑MB originals.
+            if (($result['compressed'] ?? 0) > 0 && function_exists('persist_smaller_public_uploads')) {
+                try {
+                    persist_smaller_public_uploads();
+                } catch (\Throwable $e) {
+                    // ignore
+                }
+            }
             if (! empty($result['complete']) && function_exists('persist_public_uploads_tree')) {
                 try {
                     persist_public_uploads_tree();
                 } catch (\Throwable $e) {
-                    // Compression result still valid if backup sync fails.
+                    // ignore
                 }
             }
         } catch (\Throwable $e) {
