@@ -235,6 +235,11 @@ class OversizedImageCompressService
             if (preg_match('/-(thumb|card|banner)$/i', $stem)) {
                 continue;
             }
+            // Never recompress logos / WhatsApp / favicons — pixel shrink breaks the header.
+            if (preg_match('/^(logo|white_logo|favicon|whatsapp|icon)/i', $stem)
+                || preg_match('/(logo|whatsapp|favicon)/i', $stem)) {
+                continue;
+            }
             $size = (int) (@filesize($full) ?: 0);
             if ($size <= $this->maxBytes) {
                 continue;

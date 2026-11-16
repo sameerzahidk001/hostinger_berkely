@@ -2615,6 +2615,29 @@ if (! function_exists('seo_ensure_image_alts')) {
     }
 }
 
+if (! function_exists('seo_is_ui_chrome_image')) {
+    /** Logos, icons, SVGs, and other UI chrome — never force content-photo aspect ratios. */
+    function seo_is_ui_chrome_image(string $rel, string $attrs = ''): bool
+    {
+        $rel = strtolower(str_replace('\\', '/', $rel));
+        $attrs = strtolower($attrs);
+        if (str_ends_with($rel, '.svg')) {
+            return true;
+        }
+        if (preg_match('/(?:^|\/)(?:logo|white_logo|favicon|whatsapp|icon|sprite|badge)[^\/]*$/i', basename($rel))) {
+            return true;
+        }
+        if (preg_match('/(?:logo|whatsapp|favicon|icon|wa-float|navbar|header-logo|footer-logo)/i', $rel . ' ' . $attrs)) {
+            return true;
+        }
+        if (str_contains($rel, 'frontend/images/svgs/') || str_contains($rel, 'frontend/images/pngs/header-logo')) {
+            return true;
+        }
+
+        return false;
+    }
+}
+
 if (! function_exists('seo_add_responsive_srcset')) {
     function seo_add_responsive_srcset(string $html): string
     {
@@ -2636,19 +2659,48 @@ if (! function_exists('seo_add_responsive_srcset')) {
             if (function_exists('prefer_compressed_library_relative')) {
                 $rel = prefer_compressed_library_relative($rel);
             }
+
+            // Strip previously injected generic photo aspect-ratio (shrinks logos,
+            // distorts WhatsApp icons, and opens white gaps under banners).
+            if (preg_match('/\sstyle=(["\'])(.*?)\1/i', $attrs, $styleMatch)) {
+                $style = $styleMatch[2];
+                $hadFakeRatio = (bool) preg_match('/aspect-ratio\s*:\s*8\s*\/\s*5/i', $style);
+                $cleaned = trim((string) preg_replace('/(?:^|;)\s*aspect-ratio\s*:\s*8\s*\/\s*5\s*/i', ';', $style), '; ');
+                if ($hadFakeRatio) {
+                    $cleaned = trim((string) preg_replace('/(?:^|;)\s*height\s*:\s*auto\s*/i', ';', $cleaned), '; ');
+                }
+                $cleaned = trim((string) preg_replace('/;;+/', ';', $cleaned), '; ');
+                if ($cleaned === '') {
+                    $attrs = preg_replace('/\sstyle=(["\']).*?\1/i', '', $attrs, 1) ?? $attrs;
+                } elseif ($cleaned !== $style) {
+                    $attrs = preg_replace('/\sstyle=(["\']).*?\1/i', ' style="' . e($cleaned) . '"', $attrs, 1) ?? $attrs;
+                }
+            }
+
+            if (seo_is_ui_chrome_image($rel, $attrs)) {
+                // Keep authoring width/height/CSS intact for logos & icons.
+                $compressedUrl = asset($rel);
+                if ($compressedUrl !== $src) {
+                    $attrs = preg_replace('/\ssrc=["\'][^"\']+["\']/i', ' src="' . e($compressedUrl) . '"', $attrs, 1) ?? $attrs;
+                }
+                // Drop bogus content srcset/sizes left from older sanitizer passes.
+                $attrs = preg_replace('/\ssrcset=["\'][^"\']*["\']/i', '', $attrs) ?? $attrs;
+                $attrs = preg_replace('/\ssizes=["\'][^"\']*["\']/i', '', $attrs) ?? $attrs;
+
+                return '<img' . rtrim($attrs) . '>';
+            }
+
             $compressedUrl = asset($rel);
             if ($compressedUrl !== $src) {
                 $attrs = preg_replace('/\ssrc=["\'][^"\']+["\']/i', ' src="' . e($compressedUrl) . '"', $attrs, 1) ?? $attrs;
             }
 
+            // Only add missing dimensions for content photos — never invent 8/5 on UI chrome.
             if (! preg_match('/\bwidth\s*=/i', $attrs)) {
                 $attrs .= ' width="800"';
             }
             if (! preg_match('/\bheight\s*=/i', $attrs)) {
                 $attrs .= ' height="500"';
-            }
-            if (! preg_match('/\bstyle\s*=/i', $attrs) && ! preg_match('/aspect-ratio/i', $attrs)) {
-                $attrs .= ' style="aspect-ratio:8/5;height:auto"';
             }
 
             $srcset = '';
