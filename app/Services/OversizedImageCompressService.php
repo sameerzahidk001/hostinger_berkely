@@ -83,12 +83,9 @@ class OversizedImageCompressService
                 $result['compressed']++;
                 $this->persistCompressed($rel);
                 $tries = (int) ($skipped[$rel] ?? 0) + 1;
-                if ($tries >= 2) {
-                    $skipped[$rel] = $tries; // give up so the loop can finish
+                $skipped[$rel] = $tries;
+                if ($tries >= 6) {
                     $result['failed']++;
-                } else {
-                    // Keep in queue for a second harder pass (do not advance as permanent skip).
-                    $skipped[$rel] = $tries;
                 }
             } else {
                 $tries = (int) ($skipped[$rel] ?? 0) + 1;
