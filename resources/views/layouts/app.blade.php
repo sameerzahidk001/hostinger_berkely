@@ -140,10 +140,13 @@
             align-items: center;
         }
         #navbar > a img {
-            max-height: 40px;
+            max-height: 52px;
+            max-width: 210px;
+            width: auto !important;
+            height: auto !important;
+            aspect-ratio: auto !important;
             min-height: 0 !important;
-            width: auto;
-            height: auto;
+            object-fit: contain;
         }
         .header-quick-icons-desktop { display: none; }
         .header-quick-icons-mobile { display: flex; }
@@ -208,9 +211,10 @@
             class="flex fixed bg bg-white z-[999] w-full top-0 justify-between items-center px-4 md:px-8 lg:px-[30px] my-0 py-0 ">
             <a href="{{ url('/') }}" class="self-center shrink-0">
                 <img src="{{ asset('images/' . ($settings->header_logo == 'logo' ? $settings->logo : $settings->white_logo)) }}"
-                    class="max-w-[180px] lg:max-w-[210px] self-center object-contain"
-                    width="210" height="40" decoding="async" fetchpriority="high"
-                    alt="{{ config('app.name') }}">
+                    class="header-brand-logo max-w-[180px] lg:max-w-[210px] self-center object-contain"
+                    width="210" height="63" decoding="async" fetchpriority="high"
+                    alt="{{ config('app.name') }}"
+                    style="aspect-ratio:auto">
             </a>
             <ul class="hidden list-none min-[980px]:flex font-ghothic text-[19px] gap-4">
                 @php
@@ -405,12 +409,12 @@
             .wa-float { position:fixed;bottom:5rem;right:8px;z-index:50;display:flex;flex-direction:column;align-items:flex-end;gap:12px; }
             .wa-float a { display:flex;align-items:center;gap:8px;text-decoration:none; }
             .wa-float-label { display:inline-block;white-space:nowrap;background:#FFD60A;color:#000435;font-size:13px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;line-height:1.2;padding:7px 12px;border-radius:9999px;box-shadow:0 2px 8px rgba(0,0,0,.28); }
-            .wa-float-icon { width:64px;height:64px;border-radius:9999px;object-fit:cover;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.25); }
+            .wa-float-icon { width:64px !important;height:64px !important;max-width:64px !important;aspect-ratio:1/1 !important;border-radius:9999px;object-fit:cover;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.25); }
             @media (max-width: 767px) {
                 .wa-float { bottom:4.25rem;right:6px;gap:6px; }
                 .wa-float a { gap:5px; }
                 .wa-float-label { font-size:9px;padding:4px 7px;letter-spacing:.02em; }
-                .wa-float-icon { width:34px;height:34px; }
+                .wa-float-icon { width:34px !important;height:34px !important;max-width:34px !important; }
             }
         </style>
         <div class="wa-float">
@@ -515,8 +519,9 @@
                     @endphp
                     <a href="{{ url('/') }}" class=" self-center">
                         <img src="{{ asset('images/' . $settings->$logo) }}"
-                            class="max-w-[220px] self-center  object-fill min-h-[48px] sm:min-h-[48px] sm:min-w-[200px] lg:min-w-[240px] lg:min-h-[48px] "
-                            width="240" height="48" alt="{{ config('app.name') }}">
+                            class="footer-brand-logo max-w-[220px] self-center object-contain min-h-[48px] sm:min-h-[48px] sm:min-w-[200px] lg:min-w-[240px] lg:min-h-[48px]"
+                            width="240" height="72" alt="{{ config('app.name') }}"
+                            style="aspect-ratio:auto;height:auto;width:auto;max-width:240px">
                     </a>
                 @endif
             </div>
