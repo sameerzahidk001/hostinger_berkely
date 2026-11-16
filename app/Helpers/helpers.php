@@ -377,6 +377,13 @@ if (!function_exists('restore_public_upload_if_missing')) {
             return false;
         }
 
+        // Do not resurrect multi‑MB originals into the live tree.
+        $ext = strtolower((string) pathinfo($src, PATHINFO_EXTENSION));
+        if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif'], true)
+            && (int) (@filesize($src) ?: 0) > 200000) {
+            return false;
+        }
+
         $parent = dirname($dest);
 
         if (! is_dir($parent) && ! @mkdir($parent, 0755, true) && ! is_dir($parent)) {
@@ -527,15 +534,25 @@ if (!function_exists('copy_directory_contents')) {
 
             if (is_file($target)) {
                 if (! $overwrite) {
-                    // Never let a larger backup resurrect over a smaller optimized file.
                     $srcSize = (int) $item->getSize();
                     $dstSize = (int) (@filesize($target) ?: 0);
-                    if ($dstSize > 0 && $srcSize > $dstSize) {
-                        continue;
+                    // If the backup is smaller, re-apply it (undo a bad re-inflate).
+                    if ($srcSize > 0 && $dstSize > 0 && $srcSize < $dstSize) {
+                        @copy($item->getPathname(), $target);
                     }
+                    // Never let a larger backup resurrect over a smaller live file.
                     continue;
                 }
                 if ((int) $item->getSize() === (int) @filesize($target)) {
+                    continue;
+                }
+            } else {
+                // Missing on public: do not restore multi‑MB image originals — that is what
+                // undoes Media compress after every Hostinger deploy. Small persisted
+                // copies (≤200KB) still restore normally.
+                $ext = strtolower((string) pathinfo($item->getFilename(), PATHINFO_EXTENSION));
+                if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp', 'gif'], true)
+                    && (int) $item->getSize() > 200000) {
                     continue;
                 }
             }
@@ -823,6 +840,51 @@ if (!function_exists('persist_public_uploads_tree')) {
                 $root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $dir),
                 true
             );
+        }
+    }
+}
+
+if (!function_exists('persist_smaller_public_uploads')) {
+    /**
+     * Copy public → persistent only when the live file is smaller (or backup missing).
+     * Safe to run after every compress batch without re-locking multi‑MB originals.
+     */
+    function persist_smaller_public_uploads(): void
+    {
+        $root = persistent_uploads_root() . DIRECTORY_SEPARATOR . 'public';
+
+        foreach (persistent_upload_dirs() as $dir) {
+            $from = public_path($dir);
+            $to = $root . DIRECTORY_SEPARATOR . str_replace('/', DIRECTORY_SEPARATOR, $dir);
+            if (! is_dir($from)) {
+                continue;
+            }
+            if (! is_dir($to) && ! @mkdir($to, 0755, true) && ! is_dir($to)) {
+                continue;
+            }
+            $iterator = new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator($from, \FilesystemIterator::SKIP_DOTS),
+                \RecursiveIteratorIterator::SELF_FIRST
+            );
+            foreach ($iterator as $item) {
+                $target = $to . DIRECTORY_SEPARATOR . $iterator->getSubPathName();
+                if ($item->isDir()) {
+                    if (! is_dir($target)) {
+                        @mkdir($target, 0755, true);
+                    }
+                    continue;
+                }
+                $parent = dirname($target);
+                if (! is_dir($parent)) {
+                    @mkdir($parent, 0755, true);
+                }
+                $srcSize = (int) $item->getSize();
+                $dstSize = is_file($target) ? (int) (@filesize($target) ?: 0) : 0;
+                if ($dstSize > 0 && $srcSize >= $dstSize) {
+                    continue;
+                }
+                @copy($item->getPathname(), $target);
+            }
         }
     }
 }
