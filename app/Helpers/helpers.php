@@ -872,13 +872,10 @@ if (!function_exists('restore_persistent_uploads_if_needed')) {
             }
         }
 
-        $publicCoursesAfter = count_flat_files(public_path('admin/courses'));
-        $backupCoursesNow = count_flat_files($publicMirror . DIRECTORY_SEPARATOR . 'admin' . DIRECTORY_SEPARATOR . 'courses');
-
-        // Never copy a wiped public tree over a fuller backup.
-        if ($backupCoursesNow === 0 || $publicCoursesAfter >= (int) floor($backupCoursesNow * 0.8)) {
-            persist_public_uploads_tree();
-        }
+        // Do NOT persist_public_uploads_tree() here. After a deploy restore, public often
+        // contains the old large backups again — persisting them would lock multi‑MB
+        // originals back into persistent-uploads and undo Media compress work.
+        // Persist only on upload/compress (see MediaController / upload helpers).
 
         @file_put_contents($marker, $deployId);
         } catch (\Throwable $e) {
