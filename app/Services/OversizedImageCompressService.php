@@ -200,7 +200,8 @@ class OversizedImageCompressService
             if ($size <= $this->maxBytes) {
                 continue;
             }
-            if ((int) ($skipped[$rel] ?? 0) >= 2) {
+            // Never permanently skip library/profile/course stills — keep forcing under 200KB.
+            if ((int) ($skipped[$rel] ?? 0) >= 6) {
                 continue;
             }
             $out[] = $rel;
@@ -210,28 +211,41 @@ class OversizedImageCompressService
     private function compressPath(string $path): bool
     {
         $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
-        $img = match ($ext) {
-            'jpg', 'jpeg' => @imagecreatefromjpeg($path),
-            'png' => @imagecreatefrompng($path),
-            'webp' => function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($path) : false,
-            default => false,
-        };
+
+        // Prefer an existing small WebP sibling as the source (File Manager still shows PNG/JPG).
+        $webpSibling = preg_replace('/\.(jpe?g|png)$/i', '.webp', $path);
+        $img = false;
+        if (is_string($webpSibling) && is_file($webpSibling) && (@filesize($webpSibling) ?: 0) > 100
+            && function_exists('imagecreatefromwebp')) {
+            $img = @imagecreatefromwebp($webpSibling);
+        }
+        if (! $img) {
+            $img = match ($ext) {
+                'jpg', 'jpeg' => @imagecreatefromjpeg($path),
+                'png' => @imagecreatefrompng($path),
+                'webp' => function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($path) : false,
+                default => false,
+            };
+        }
         if (! $img) {
             return false;
         }
 
         $w = imagesx($img);
         $h = imagesy($img);
-        // Fast path: fewer scales, flatten everything onto white, emit JPEG for jpg/webp
-        // and compact palette PNG for .png URLs.
-        $scales = [0.6, 0.4, 0.28, 0.2, 0.14, 0.1, 0.07];
         $ok = false;
         $best = null;
         $bestSize = PHP_INT_MAX;
 
-        foreach ($scales as $scale) {
-            $nw = max(1, (int) round($w * $scale));
-            $nh = max(1, (int) round($h * $scale));
+        // Keep shrinking until the ORIGINAL extension file is under budget (not only WebP).
+        $widths = [];
+        foreach ([1.0, 0.75, 0.55, 0.4, 0.3, 0.22, 0.16, 0.12, 0.08, 0.05] as $scale) {
+            $widths[] = max(32, (int) round($w * $scale));
+        }
+        $widths = array_values(array_unique($widths));
+
+        foreach ($widths as $nw) {
+            $nh = max(1, (int) round($h * ($nw / max(1, $w))));
             $canvas = imagecreatetruecolor($nw, $nh);
             $white = imagecolorallocate($canvas, 255, 255, 255);
             imagefilledrectangle($canvas, 0, 0, $nw, $nh, $white);
@@ -239,38 +253,66 @@ class OversizedImageCompressService
 
             $tmp = $path . '.tmp';
             if (in_array($ext, ['jpg', 'jpeg'], true)) {
-                @imagejpeg($canvas, $tmp, 55);
+                foreach ([70, 55, 40, 28] as $q) {
+                    @imagejpeg($canvas, $tmp, $q);
+                    $sz = (int) (@filesize($tmp) ?: 0);
+                    if ($sz > 0 && $sz <= $this->maxBytes) {
+                        @unlink($path);
+                        @rename($tmp, $path);
+                        $ok = true;
+                        break 2;
+                    }
+                    if ($sz > 0 && $sz < $bestSize) {
+                        if ($best) {
+                            @unlink($best);
+                        }
+                        $best = $path . '.best';
+                        @copy($tmp, $best);
+                        $bestSize = $sz;
+                    }
+                }
+                @unlink($tmp);
             } elseif ($ext === 'webp' && function_exists('imagewebp')) {
                 @imagewebp($canvas, $tmp, 55);
+                $sz = (int) (@filesize($tmp) ?: 0);
+                if ($sz > 0 && $sz <= $this->maxBytes) {
+                    @unlink($path);
+                    @rename($tmp, $path);
+                    $ok = true;
+                    imagedestroy($canvas);
+                    break;
+                }
+                @unlink($tmp);
             } else {
-                $pal = imagecreatetruecolor($nw, $nh);
-                imagecopy($pal, $canvas, 0, 0, 0, 0, $nw, $nh);
-                imagetruecolortopalette($pal, false, 128);
-                @imagepng($pal, $tmp, 9);
-                imagedestroy($pal);
+                // PNG photo files stay huge unless heavily paletted + tiny.
+                foreach ([64, 32] as $colors) {
+                    $pal = imagecreatetruecolor($nw, $nh);
+                    imagecopy($pal, $canvas, 0, 0, 0, 0, $nw, $nh);
+                    imagetruecolortopalette($pal, false, $colors);
+                    @imagepng($pal, $tmp, 9);
+                    imagedestroy($pal);
+                    $sz = (int) (@filesize($tmp) ?: 0);
+                    if ($sz > 0 && $sz <= $this->maxBytes) {
+                        @unlink($path);
+                        @rename($tmp, $path);
+                        $ok = true;
+                        imagedestroy($canvas);
+                        break 2;
+                    }
+                    if ($sz > 0 && $sz < $bestSize) {
+                        if ($best) {
+                            @unlink($best);
+                        }
+                        $best = $path . '.best';
+                        @copy($tmp, $best);
+                        $bestSize = $sz;
+                    }
+                    @unlink($tmp);
+                }
             }
             imagedestroy($canvas);
-
-            $sz = (int) (@filesize($tmp) ?: 0);
-            if ($sz <= 0) {
-                @unlink($tmp);
-                continue;
-            }
-            if ($sz <= $this->maxBytes) {
-                @unlink($path);
-                @rename($tmp, $path);
-                $ok = true;
+            if ($ok) {
                 break;
-            }
-            if ($sz < $bestSize) {
-                if ($best) {
-                    @unlink($best);
-                }
-                $best = $path . '.best';
-                @rename($tmp, $best);
-                $bestSize = $sz;
-            } else {
-                @unlink($tmp);
             }
         }
 
