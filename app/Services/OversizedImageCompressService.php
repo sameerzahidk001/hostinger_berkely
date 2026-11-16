@@ -249,6 +249,8 @@ class OversizedImageCompressService
 
     private function compressPath(string $path): bool
     {
+        @ini_set('memory_limit', '512M');
+        clearstatcache(true, $path);
         $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
 
         // Prefer an existing small WebP sibling as the source (File Manager still shows PNG/JPG).
@@ -257,6 +259,13 @@ class OversizedImageCompressService
         if (is_string($webpSibling) && is_file($webpSibling) && (@filesize($webpSibling) ?: 0) > 100
             && function_exists('imagecreatefromwebp')) {
             $img = @imagecreatefromwebp($webpSibling);
+        }
+        // imagecreatefromstring handles JPEG-bytes-saved-as-.png from prior nuclear passes.
+        if (! $img) {
+            $raw = @file_get_contents($path);
+            if (is_string($raw) && $raw !== '') {
+                $img = @imagecreatefromstring($raw);
+            }
         }
         if (! $img) {
             $img = match ($ext) {
@@ -389,9 +398,16 @@ class OversizedImageCompressService
             }
         }
 
+        // Only keep a "best" candidate when it actually beats the current file size.
         if (! $ok && $best && is_file($best)) {
-            @unlink($path);
-            @rename($best, $path);
+            $bestSz = (int) (@filesize($best) ?: 0);
+            $curSz = (int) (@filesize($path) ?: 0);
+            if ($bestSz > 0 && ($curSz === 0 || $bestSz < $curSz)) {
+                @unlink($path);
+                @rename($best, $path);
+            } else {
+                @unlink($best);
+            }
             $ok = ((@filesize($path) ?: 0) <= $this->maxBytes);
         } elseif ($best && is_file($best)) {
             @unlink($best);

@@ -538,10 +538,15 @@ class MediaController extends Controller
             return response()->json($probe);
         }
 
-        @set_time_limit(45);
+        @set_time_limit(60);
+        @ini_set('memory_limit', '512M');
         try {
             $only = (string) $request->query('only', '');
-            $result = app(\App\Services\OversizedImageCompressService::class)->run(20, 25, $only);
+            // Clear soft-skips so JPEG-as-PNG leftovers get another pass.
+            if ($request->boolean('retry') || $only !== '') {
+                @unlink(storage_path('app/oversized-compress-state.json'));
+            }
+            $result = app(\App\Services\OversizedImageCompressService::class)->run(25, 15, $only);
             if (($result['compressed'] ?? 0) > 0) {
                 $this->forgetImageCache();
             }
