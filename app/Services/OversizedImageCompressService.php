@@ -198,6 +198,11 @@ class OversizedImageCompressService
             }
             $filtered[] = $rel;
         }
+        // Cursor file already under budget (removed from queue) — restart from top
+        // instead of returning an empty list forever.
+        if ($filtered === [] && $out !== [] && ! in_array($afterRel, $out, true)) {
+            return $out;
+        }
 
         return $filtered;
     }
