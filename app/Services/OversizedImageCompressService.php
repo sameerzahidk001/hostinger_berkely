@@ -146,7 +146,29 @@ class OversizedImageCompressService
             $this->collectOversized($abs, $dir, $skipped, $out);
         }
         $out = array_values(array_unique($out));
-        sort($out);
+        // Library first (File Manager / SEO), then profiles, then course art.
+        usort($out, static function (string $a, string $b): int {
+            $prio = static function (string $r): int {
+                if (str_starts_with($r, 'images/library/')) {
+                    return 0;
+                }
+                if (str_starts_with($r, 'images/profiles/')) {
+                    return 1;
+                }
+                if (str_starts_with($r, 'admin/courses/') || str_starts_with($r, 'images/courses/')) {
+                    return 2;
+                }
+
+                return 3;
+            };
+            $pa = $prio($a);
+            $pb = $prio($b);
+            if ($pa !== $pb) {
+                return $pa <=> $pb;
+            }
+
+            return $a <=> $b;
+        });
         if ($afterRel === '') {
             return $out;
         }
