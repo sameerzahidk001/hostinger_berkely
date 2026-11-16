@@ -15,12 +15,13 @@ class OversizedImageCompressService
     /**
      * @return array{scanned:int,compressed:int,already_ok:int,failed:int,skipped:int,remaining:int,complete:bool}
      */
-    public function run(int $budgetSeconds = 12, int $maxFiles = 12): array
+    public function run(int $budgetSeconds = 12, int $maxFiles = 12, string $onlyPrefix = ''): array
     {
         $deadline = microtime(true) + max(3, $budgetSeconds);
         $statePath = storage_path('app/oversized-compress-state.json');
         $state = $this->readState($statePath);
         $skipped = is_array($state['skipped'] ?? null) ? $state['skipped'] : [];
+        $onlyPrefix = trim(str_replace('\\', '/', $onlyPrefix), '/');
 
         $result = [
             'scanned' => 0,
@@ -39,7 +40,9 @@ class OversizedImageCompressService
             return $result;
         }
 
-        $queue = $this->oversizedQueue($state['cursor'] ?? '', $skipped);
+        // Prefix-only runs always start from the top of that folder.
+        $cursor = $onlyPrefix !== '' ? '' : ($state['cursor'] ?? '');
+        $queue = $this->oversizedQueue($cursor, $skipped, $onlyPrefix);
         $done = 0;
 
         foreach ($queue as $rel) {
@@ -97,18 +100,20 @@ class OversizedImageCompressService
         }
 
         $state['skipped'] = $skipped;
-        $left = $this->oversizedQueue($state['cursor'] ?? '', $skipped);
+        $left = $this->oversizedQueue($state['cursor'] ?? '', $skipped, $onlyPrefix);
         // Remaining = every file still over budget, including stubborn retries.
-        $allOver = $this->oversizedQueue('', []);
-        $retryable = $this->oversizedQueue('', $skipped);
+        $allOver = $this->oversizedQueue('', [], $onlyPrefix);
+        $retryable = $this->oversizedQueue('', $skipped, $onlyPrefix);
         $result['remaining'] = count($allOver);
         $result['skipped'] = count(array_filter($skipped, fn ($n) => (int) $n >= 2));
         $result['complete'] = $allOver === [];
 
         if ($result['complete']) {
-            $state['cursor'] = '';
-            $state['skipped'] = [];
-            $state['complete_at'] = now()->toIso8601String();
+            if ($onlyPrefix === '') {
+                $state['cursor'] = '';
+                $state['skipped'] = [];
+                $state['complete_at'] = now()->toIso8601String();
+            }
         } elseif ($left === [] || $retryable === []) {
             // Wrap cursor; clear soft skips so stubborn files get another harder pass.
             $state['cursor'] = '';
@@ -133,10 +138,13 @@ class OversizedImageCompressService
      * @param  array<string, int>  $skipped
      * @return array<int, string>
      */
-    private function oversizedQueue(string $afterRel, array $skipped): array
+    private function oversizedQueue(string $afterRel, array $skipped, string $onlyPrefix = ''): array
     {
         // Full Media tree: library, profiles (Admin tab), courses, and legacy admin/courses.
         $dirs = ['images', 'admin/courses'];
+        if ($onlyPrefix !== '') {
+            $dirs = [$onlyPrefix];
+        }
         $out = [];
         foreach ($dirs as $dir) {
             $abs = public_path($dir);
@@ -149,17 +157,24 @@ class OversizedImageCompressService
         // Library first (File Manager / SEO), then profiles, then course art.
         usort($out, static function (string $a, string $b): int {
             $prio = static function (string $r): int {
-                if (str_starts_with($r, 'images/library/')) {
+                // Banners / small public folders first (what File Manager users open).
+                if (str_starts_with($r, 'images/banners/')) {
                     return 0;
                 }
-                if (str_starts_with($r, 'images/profiles/')) {
+                if (str_starts_with($r, 'images/clients/')) {
                     return 1;
                 }
-                if (str_starts_with($r, 'admin/courses/') || str_starts_with($r, 'images/courses/')) {
+                if (str_starts_with($r, 'images/library/')) {
                     return 2;
                 }
+                if (str_starts_with($r, 'images/profiles/')) {
+                    return 3;
+                }
+                if (str_starts_with($r, 'admin/courses/') || str_starts_with($r, 'images/courses/')) {
+                    return 4;
+                }
 
-                return 3;
+                return 5;
             };
             $pa = $prio($a);
             $pb = $prio($b);

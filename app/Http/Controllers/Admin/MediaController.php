@@ -498,7 +498,7 @@ class MediaController extends Controller
 
         if ($request->boolean('probe')) {
             $probe = [];
-            foreach (['images/library', 'images/profiles', 'images/courses', 'admin/courses'] as $dir) {
+            foreach (['images/banners', 'images/library', 'images/profiles', 'images/courses', 'admin/courses'] as $dir) {
                 $abs = public_path($dir);
                 $n = 0;
                 $over = 0;
@@ -540,23 +540,18 @@ class MediaController extends Controller
 
         @set_time_limit(45);
         try {
-            $result = app(\App\Services\OversizedImageCompressService::class)->run(20, 25);
+            $only = (string) $request->query('only', '');
+            $result = app(\App\Services\OversizedImageCompressService::class)->run(20, 25, $only);
             if (($result['compressed'] ?? 0) > 0) {
                 $this->forgetImageCache();
-                // Persist every successful batch so the next Hostinger deploy
-                // cannot restore multi‑MB originals from stale backups.
-                if (function_exists('persist_public_uploads_tree')) {
-                    try {
-                        persist_public_uploads_tree();
-                    } catch (\Throwable $e) {
-                        // Compression result still valid if backup sync fails.
-                    }
-                }
-            } elseif (! empty($result['complete']) && function_exists('persist_public_uploads_tree')) {
+            }
+            // Full-tree persist only when done — per-batch tree sync timed out and
+            // left stale multi‑MB copies in persistent-uploads (re-inflating on deploy).
+            if (! empty($result['complete']) && function_exists('persist_public_uploads_tree')) {
                 try {
                     persist_public_uploads_tree();
                 } catch (\Throwable $e) {
-                    // ignore
+                    // Compression result still valid if backup sync fails.
                 }
             }
         } catch (\Throwable $e) {
