@@ -281,8 +281,8 @@ class OversizedImageCompressService
                 }
                 @unlink($tmp);
             } else {
-                // PNG photo files stay huge unless heavily paletted + tiny.
-                foreach ([64, 32] as $colors) {
+                // PNG photos stay huge as PNG — try palette, then JPEG-into-.png (browsers sniff).
+                foreach ([64, 32, 16] as $colors) {
                     $pal = imagecreatetruecolor($nw, $nh);
                     imagecopy($pal, $canvas, 0, 0, 0, 0, $nw, $nh);
                     imagetruecolortopalette($pal, false, $colors);
@@ -306,10 +306,44 @@ class OversizedImageCompressService
                     }
                     @unlink($tmp);
                 }
+                foreach ([60, 45, 30, 20] as $q) {
+                    @imagejpeg($canvas, $tmp, $q);
+                    $sz = (int) (@filesize($tmp) ?: 0);
+                    if ($sz > 0 && $sz <= $this->maxBytes) {
+                        @unlink($path);
+                        @rename($tmp, $path);
+                        $ok = true;
+                        imagedestroy($canvas);
+                        break 2;
+                    }
+                    if ($sz > 0 && $sz < $bestSize) {
+                        if ($best) {
+                            @unlink($best);
+                        }
+                        $best = $path . '.best';
+                        @copy($tmp, $best);
+                        $bestSize = $sz;
+                    }
+                    @unlink($tmp);
+                }
             }
             imagedestroy($canvas);
             if ($ok) {
                 break;
+            }
+        }
+
+        // Last resort: if a small WebP sibling exists, copy it over the original path
+        // so File Manager size drops (site already prefers .webp via optimized tags).
+        if (! $ok) {
+            $webpSibling = preg_replace('/\.(jpe?g|png)$/i', '.webp', $path);
+            if (is_string($webpSibling) && is_file($webpSibling)) {
+                $wsz = (int) (@filesize($webpSibling) ?: 0);
+                if ($wsz > 0 && $wsz <= $this->maxBytes) {
+                    if (@copy($webpSibling, $path)) {
+                        $ok = true;
+                    }
+                }
             }
         }
 
