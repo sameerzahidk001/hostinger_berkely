@@ -219,8 +219,8 @@ class OversizedImageCompressService
             if ($size <= $this->maxBytes) {
                 continue;
             }
-            // Never permanently skip library/profile/course stills — keep forcing under 200KB.
-            if ((int) ($skipped[$rel] ?? 0) >= 6) {
+            // Soft-skip only briefly so nuclear retries still run.
+            if ((int) ($skipped[$rel] ?? 0) >= 12) {
                 continue;
             }
             $out[] = $rel;
@@ -375,6 +375,33 @@ class OversizedImageCompressService
             $ok = ((@filesize($path) ?: 0) <= $this->maxBytes);
         } elseif ($best && is_file($best)) {
             @unlink($best);
+        }
+
+        // Nuclear: force a tiny JPEG into the original path (MIME sniffing still displays).
+        if (! $ok && $img) {
+            foreach ([800, 600, 400, 280, 160] as $nw) {
+                $nh = max(1, (int) round($h * ($nw / max(1, $w))));
+                $canvas = imagecreatetruecolor($nw, $nh);
+                $white = imagecolorallocate($canvas, 255, 255, 255);
+                imagefilledrectangle($canvas, 0, 0, $nw, $nh, $white);
+                imagecopyresampled($canvas, $img, 0, 0, 0, 0, $nw, $nh, $w, $h);
+                $tmp = $path . '.nuke';
+                foreach ([50, 35, 22] as $q) {
+                    @imagejpeg($canvas, $tmp, $q);
+                    $sz = (int) (@filesize($tmp) ?: 0);
+                    if ($sz > 0 && $sz <= $this->maxBytes) {
+                        @unlink($path);
+                        @rename($tmp, $path);
+                        $ok = true;
+                        break 2;
+                    }
+                }
+                @unlink($tmp);
+                imagedestroy($canvas);
+                if ($ok) {
+                    break;
+                }
+            }
         }
 
         imagedestroy($img);
