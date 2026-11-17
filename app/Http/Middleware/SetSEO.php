@@ -374,6 +374,13 @@ class SetSEO
             return null;
         }
 
+        if (function_exists('resolve_public_page_by_path')) {
+            $resolved = resolve_public_page_by_path($path);
+            if ($resolved) {
+                return $resolved;
+            }
+        }
+
         $categoryPerma = SiteSettings::value('category_perma') ?? 'category';
 
         if (str_contains($path, '/')) {

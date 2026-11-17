@@ -2366,6 +2366,50 @@ if (! function_exists('seo_is_utility_path')) {
     }
 }
 
+if (! function_exists('resolve_public_page_by_path')) {
+    /**
+     * Resolve a public CMS page the same way WelcomeController does (leaf slug + full_url match).
+     * Nested paths like research/digital-mental-health must not fall through as "missing"
+     * or SetSEO will force noindex while the sitemap still lists them.
+     */
+    function resolve_public_page_by_path(string $path): ?\App\Models\Page
+    {
+        $path = trim(str_replace('\\', '/', $path), '/');
+        if ($path === '') {
+            return null;
+        }
+
+        $parts = explode('/', $path);
+        $leaf = (string) end($parts);
+
+        $query = \App\Models\Page::query()->where('url', $leaf);
+        if (\Illuminate\Support\Facades\Schema::hasColumn('pages', 'status')) {
+            $query->where('status', 1);
+        }
+
+        $candidates = $query
+            ->with(['parent', 'seo', 'faqs'])
+            ->withCount('sections')
+            ->orderByDesc('sections_count')
+            ->orderByDesc('id')
+            ->get();
+
+        if ($candidates->isEmpty()) {
+            return null;
+        }
+
+        if (count($parts) > 1) {
+            $match = $candidates->first(function ($page) use ($path) {
+                return strcasecmp(trim((string) $page->full_url, '/'), $path) === 0;
+            });
+
+            return $match ?: null;
+        }
+
+        return $candidates->first();
+    }
+}
+
 if (! function_exists('seo_preferred_canonical')) {
     function seo_preferred_canonical(?\Illuminate\Http\Request $request = null): string
     {

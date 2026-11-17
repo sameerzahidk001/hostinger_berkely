@@ -108,6 +108,10 @@ class WelcomeController extends Controller
 
     private function resolvePageBySlug(string $slug): ?Page
     {
+        if (function_exists('resolve_public_page_by_path')) {
+            return resolve_public_page_by_path($slug);
+        }
+
         $path = trim(str_replace('\\', '/', $slug), '/');
         $parts = $path === '' ? [] : explode('/', $path);
         $leaf = $parts === [] ? $path : (string) end($parts);
