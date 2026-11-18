@@ -93,6 +93,11 @@ class StudyMaterialController extends Controller
             403,
             'This folder is disabled or you no longer have access.'
         );
+        abort_unless(
+            $this->lms->isAdminActor() || $item->isEnabled(),
+            403,
+            'This file is inactive and cannot be opened.'
+        );
 
         $asDownload = $request->boolean('download');
         if ($asDownload) {
