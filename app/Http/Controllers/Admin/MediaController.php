@@ -89,6 +89,9 @@ class MediaController extends Controller
             }));
         }
 
+        // Prefer stable DB upload times (filemtime changes when compress/deploy restores files).
+        $files = $this->attachStableUploadTimes($files);
+
         usort($files, function ($a, $b) {
             $va = MediaAsset::visibility($a['rel'] ?? '') === 'public' ? 0 : 1;
             $vb = MediaAsset::visibility($b['rel'] ?? '') === 'public' ? 0 : 1;
@@ -96,7 +99,7 @@ class MediaController extends Controller
                 return $va <=> $vb;
             }
 
-            return ($b['mtime'] ?? 0) <=> ($a['mtime'] ?? 0);
+            return ((int) ($b['uploaded_at'] ?? $b['mtime'] ?? 0)) <=> ((int) ($a['uploaded_at'] ?? $a['mtime'] ?? 0));
         });
 
         // Full-library unused scans time out (2000+ files × content LIKE). Only run
@@ -188,12 +191,14 @@ class MediaController extends Controller
                 }
             }
             $bytes = (int) ($file['size'] ?? 0);
-            // Prefer oldest variant mtime (closest to original upload; compress must not rewrite the date).
-            $mtime = (int) ($file['mtime'] ?? 0);
-            foreach ($variants as $variant) {
-                $vm = (int) ($variant['mtime'] ?? 0);
-                if ($vm > 0 && ($mtime <= 0 || $vm < $mtime)) {
-                    $mtime = $vm;
+            $mtime = (int) ($file['uploaded_at'] ?? 0);
+            if ($mtime <= 0) {
+                $mtime = (int) ($file['mtime'] ?? 0);
+                foreach ($variants as $variant) {
+                    $vm = (int) ($variant['mtime'] ?? 0);
+                    if ($vm > 0 && ($mtime <= 0 || $vm < $mtime)) {
+                        $mtime = $vm;
+                    }
                 }
             }
             $uploaded = $mtime > 0 ? Carbon::createFromTimestamp($mtime, config('app.timezone')) : null;
@@ -339,6 +344,7 @@ class MediaController extends Controller
             'title' => $request->input('title'),
             'caption' => $request->input('caption'),
             'description' => $request->input('description'),
+            'uploaded_at' => now(),
         ]);
 
         $url = asset($rel);
@@ -1128,6 +1134,77 @@ class MediaController extends Controller
         }
 
         return $out;
+    }
+
+    /**
+     * Attach a stable uploaded_at (unix) per image group and persist it once in media_assets.
+     *
+     * @param  array<int, array{rel:string,name:string,mtime?:int,size?:int,variants?:array}>  $files
+     * @return array<int, array{rel:string,name:string,mtime?:int,size?:int,variants?:array,uploaded_at?:int}>
+     */
+    private function attachStableUploadTimes(array $files): array
+    {
+        if ($files === [] || ! MediaAsset::ensureTable() || ! Schema::hasColumn('media_assets', 'uploaded_at')) {
+            return $files;
+        }
+
+        $paths = [];
+        foreach ($files as $file) {
+            foreach (($file['variants'] ?? [$file]) as $variant) {
+                $n = MediaAsset::normalizePath((string) ($variant['rel'] ?? ''));
+                if ($n !== '') {
+                    $paths[] = $n;
+                }
+            }
+        }
+        $paths = array_values(array_unique($paths));
+        if ($paths === []) {
+            return $files;
+        }
+
+        $stored = [];
+        foreach (array_chunk($paths, 500) as $chunk) {
+            foreach (MediaAsset::query()->whereIn('path', $chunk)->whereNotNull('uploaded_at')->get(['path', 'uploaded_at']) as $row) {
+                $key = strtolower((string) $row->path);
+                $ts = $row->uploaded_at ? $row->uploaded_at->getTimestamp() : 0;
+                if ($ts > 0) {
+                    $stored[$key] = $ts;
+                }
+            }
+        }
+
+        foreach ($files as $i => $file) {
+            $variants = $file['variants'] ?? [$file];
+            $known = [];
+            $diskOldest = 0;
+            foreach ($variants as $variant) {
+                $rel = MediaAsset::normalizePath((string) ($variant['rel'] ?? ''));
+                $key = strtolower($rel);
+                if ($rel !== '' && isset($stored[$key])) {
+                    $known[] = $stored[$key];
+                }
+                $vm = (int) ($variant['mtime'] ?? 0);
+                if ($vm > 0 && ($diskOldest <= 0 || $vm < $diskOldest)) {
+                    $diskOldest = $vm;
+                }
+            }
+
+            $uploadTs = $known !== [] ? min($known) : $diskOldest;
+            $files[$i]['uploaded_at'] = $uploadTs;
+
+            // Seed once so later compress/deploy cannot rewrite this date.
+            if ($known === [] && $uploadTs > 0) {
+                $when = Carbon::createFromTimestamp($uploadTs, config('app.timezone'));
+                foreach ($variants as $variant) {
+                    $rel = MediaAsset::normalizePath((string) ($variant['rel'] ?? ''));
+                    if ($rel !== '') {
+                        MediaAsset::rememberUploadedAt($rel, $when);
+                    }
+                }
+            }
+        }
+
+        return $files;
     }
 
     /**

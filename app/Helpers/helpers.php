@@ -539,6 +539,10 @@ if (!function_exists('copy_directory_contents')) {
                     // If the backup is smaller, re-apply it (undo a bad re-inflate).
                     if ($srcSize > 0 && $dstSize > 0 && $srcSize < $dstSize) {
                         @copy($item->getPathname(), $target);
+                        $srcMtime = (int) (@filemtime($item->getPathname()) ?: 0);
+                        if ($srcMtime > 0) {
+                            @touch($target, $srcMtime, $srcMtime);
+                        }
                     }
                     // Never let a larger backup resurrect over a smaller live file.
                     continue;
@@ -558,6 +562,10 @@ if (!function_exists('copy_directory_contents')) {
             }
 
             @copy($item->getPathname(), $target);
+            $srcMtime = (int) (@filemtime($item->getPathname()) ?: 0);
+            if ($srcMtime > 0 && is_file($target)) {
+                @touch($target, $srcMtime, $srcMtime);
+            }
         }
     }
 }
