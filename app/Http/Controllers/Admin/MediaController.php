@@ -42,6 +42,11 @@ class MediaController extends Controller
         $unusedOnly = $request->boolean('unused');
         $perPage = 30;
         $page = max(1, (int) $request->input('page', 1));
+        $sort = strtolower(trim((string) $request->input('sort', 'uploaded')));
+        if (! in_array($sort, ['uploaded', 'name'], true)) {
+            $sort = 'uploaded';
+        }
+        $dir = strtolower(trim((string) $request->input('dir', 'desc'))) === 'asc' ? 'asc' : 'desc';
 
         $files = $this->collapseDuplicateImages($this->cachedImageFiles());
         $publicCount = 0;
@@ -92,14 +97,23 @@ class MediaController extends Controller
         // Prefer stable DB upload times (filemtime changes when compress/deploy restores files).
         $files = $this->attachStableUploadTimes($files);
 
-        usort($files, function ($a, $b) {
-            $va = MediaAsset::visibility($a['rel'] ?? '') === 'public' ? 0 : 1;
-            $vb = MediaAsset::visibility($b['rel'] ?? '') === 'public' ? 0 : 1;
-            if ($va !== $vb) {
-                return $va <=> $vb;
+        // Same date order on every tab (All / Pages / Courses). Do not force public-first —
+        // that made All and Pages disagree when sorting by uploaded date.
+        usort($files, function ($a, $b) use ($sort, $dir) {
+            $ta = (int) ($a['uploaded_at'] ?? $a['mtime'] ?? 0);
+            $tb = (int) ($b['uploaded_at'] ?? $b['mtime'] ?? 0);
+            $na = mb_strtolower((string) ($a['name'] ?? ''));
+            $nb = mb_strtolower((string) ($b['name'] ?? ''));
+
+            $cmp = $sort === 'name' ? ($na <=> $nb) : ($ta <=> $tb);
+            if ($cmp === 0) {
+                $cmp = $ta <=> $tb;
+            }
+            if ($cmp === 0) {
+                $cmp = $na <=> $nb;
             }
 
-            return ((int) ($b['uploaded_at'] ?? $b['mtime'] ?? 0)) <=> ((int) ($a['uploaded_at'] ?? $a['mtime'] ?? 0));
+            return $dir === 'asc' ? $cmp : -$cmp;
         });
 
         // Full-library unused scans time out (2000+ files × content LIKE). Only run
@@ -243,6 +257,9 @@ class MediaController extends Controller
             'rows' => $pager,
             'search' => $search,
             'source' => $source,
+            'mediaSource' => $source,
+            'sort' => $sort,
+            'dir' => $dir,
             'rowsTotal' => $total,
             'publicImageCount' => $publicCount,
             'adminImageCount' => $adminCount,
