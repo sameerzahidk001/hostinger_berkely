@@ -14,6 +14,11 @@ class MediaAsset extends Model
         'title',
         'caption',
         'description',
+        'uploaded_at',
+    ];
+
+    protected $casts = [
+        'uploaded_at' => 'datetime',
     ];
 
     public static function ensureTable(): bool
@@ -26,6 +31,7 @@ class MediaAsset extends Model
                 $table->string('title', 255)->nullable();
                 $table->text('caption')->nullable();
                 $table->text('description')->nullable();
+                $table->timestamp('uploaded_at')->nullable()->index();
                 $table->timestamps();
             });
         }
@@ -38,6 +44,13 @@ class MediaAsset extends Model
         if (! Schema::hasColumn('media_assets', 'description')) {
             Schema::table('media_assets', function (Blueprint $table) {
                 $table->text('description')->nullable()->after('caption');
+            });
+        }
+
+        // Stable upload time — filesystem mtime changes on compress/deploy restore.
+        if (! Schema::hasColumn('media_assets', 'uploaded_at')) {
+            Schema::table('media_assets', function (Blueprint $table) {
+                $table->timestamp('uploaded_at')->nullable()->after('description')->index();
             });
         }
 
@@ -134,9 +147,36 @@ class MediaAsset extends Model
                 $row->{$key} = is_string($val) ? (trim($val) !== '' ? trim($val) : null) : $val;
             }
         }
+        // uploaded_at is write-once: never overwrite with compress/meta saves.
+        if (Schema::hasColumn('media_assets', 'uploaded_at')
+            && array_key_exists('uploaded_at', $attrs)
+            && ! empty($attrs['uploaded_at'])
+            && empty($row->uploaded_at)) {
+            $row->uploaded_at = $attrs['uploaded_at'];
+        }
         $row->save();
 
         return $row;
+    }
+
+    /**
+     * Record upload time once. Later compress/restore must not move this clock.
+     */
+    public static function rememberUploadedAt(string $path, $uploadedAt): void
+    {
+        if (! static::ensureTable() || ! Schema::hasColumn('media_assets', 'uploaded_at')) {
+            return;
+        }
+        $rel = static::normalizePath($path);
+        if ($rel === '' || empty($uploadedAt)) {
+            return;
+        }
+        $row = static::query()->firstOrNew(['path' => $rel]);
+        if (! empty($row->uploaded_at)) {
+            return;
+        }
+        $row->uploaded_at = $uploadedAt;
+        $row->save();
     }
 
     /**
