@@ -179,7 +179,6 @@
     @if(session('fail'))
         <div class="alert alert-danger">{{ session('fail') }}</div>
     @endif
-    <div class="alert alert-info">Files open inside this page. A <strong>Download</strong> button appears only when download is allowed for that file.</div>
     @php $folderTests = $folderTests ?? []; @endphp
     @if($folderTests !== [])
     <div class="ibox">
