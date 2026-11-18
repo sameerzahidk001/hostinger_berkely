@@ -47,9 +47,9 @@
     #lms-media-upload textarea.form-control { min-height:36px; height:36px; resize:vertical; }
     #lms-media-upload .row { margin-bottom:0; }
     #lms-media-table thead th.lms-sort { cursor:pointer; user-select:none; white-space:nowrap; }
-    #lms-media-table thead th.lms-sort:after { content:' \2195'; color:#bbb; font-size:11px; }
-    #lms-media-table thead th.lms-sort.is-asc:after { content:' \25B2'; color:#333; }
-    #lms-media-table thead th.lms-sort.is-desc:after { content:' \25BC'; color:#333; }
+    #lms-media-table thead th.lms-sort:after { content:''; }
+    #lms-media-table thead th.lms-sort.is-asc:after { content:' \25B2'; color:#333; font-size:11px; }
+    #lms-media-table thead th.lms-sort.is-desc:after { content:' \25BC'; color:#333; font-size:11px; }
     .lms-media-links ol { margin:0; padding-left:0; list-style:none; }
     .lms-media-links li { margin:0 0 4px; line-height:1.35; }
     .lms-media-links a { display:inline; }
