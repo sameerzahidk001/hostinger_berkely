@@ -49,6 +49,23 @@ class MediaController extends Controller
         $dir = strtolower(trim((string) $request->input('dir', 'desc'))) === 'asc' ? 'asc' : 'desc';
 
         $files = $this->collapseDuplicateImages($this->cachedImageFiles());
+        // Drop files Media already deleted (deploy/persistent restore must not resurrect them).
+        $files = array_values(array_filter($files, function ($file) {
+            foreach (($file['variants'] ?? [$file]) as $variant) {
+                $rel = MediaAsset::normalizePath((string) ($variant['rel'] ?? ''));
+                if ($rel === '') {
+                    continue;
+                }
+                if (function_exists('is_media_deleted_path') && is_media_deleted_path($rel)) {
+                    if (function_exists('forget_public_upload')) {
+                        forget_public_upload($rel);
+                    }
+                    return false;
+                }
+            }
+
+            return true;
+        }));
         $publicCount = 0;
         $adminCount = 0;
         $pageCount = 0;
@@ -724,20 +741,34 @@ class MediaController extends Controller
             return back()->with('fail', 'This image is still linked to ' . $where . '. Remove that link first, then delete.');
         }
 
-        $gone = function_exists('forget_public_upload')
-            ? forget_public_upload($rel)
-            : File::delete($full);
+        $variantRels = $request->input('variant_rels', []);
+        if (! is_array($variantRels)) {
+            $variantRels = [];
+        }
+        $toForget = array_values(array_unique(array_filter(array_merge([$rel], $variantRels))));
+
+        $gone = false;
+        foreach ($toForget as $forgetRel) {
+            $forgetRel = MediaAsset::normalizePath((string) $forgetRel);
+            if ($forgetRel === '') {
+                continue;
+            }
+            if (function_exists('forget_public_upload')) {
+                $gone = forget_public_upload($forgetRel) || $gone;
+            } else {
+                $gone = File::delete($this->mediaDiskPath($forgetRel)) || $gone;
+            }
+            if (MediaAsset::ensureTable()) {
+                MediaAsset::query()->where('path', $forgetRel)->delete();
+            }
+        }
         if (! $gone && File::exists($full)) {
             File::delete($full);
         }
-        if (function_exists('forget_public_upload') && File::exists($full)) {
+        if (File::exists($full)) {
             return back()->with('fail', 'The Media list was updated but the file could not be removed from disk.');
         }
         $this->forgetImageCache();
-
-        if (MediaAsset::ensureTable()) {
-            MediaAsset::query()->where('path', MediaAsset::normalizePath($rel))->delete();
-        }
 
         return back()->with('success', 'Unused image deleted.');
     }
@@ -1194,6 +1225,7 @@ class MediaController extends Controller
             $variants = $file['variants'] ?? [$file];
             $known = [];
             $diskOldest = 0;
+            $nameTs = 0;
             foreach ($variants as $variant) {
                 $rel = MediaAsset::normalizePath((string) ($variant['rel'] ?? ''));
                 $key = strtolower($rel);
@@ -1204,9 +1236,24 @@ class MediaController extends Controller
                 if ($vm > 0 && ($diskOldest <= 0 || $vm < $diskOldest)) {
                     $diskOldest = $vm;
                 }
+                // favicon_1739636918.jpg → original upload unix time in the filename
+                $base = (string) pathinfo((string) ($variant['name'] ?? basename($rel)), PATHINFO_FILENAME);
+                if (preg_match('/(?:^|[_-])(1[5-9]\d{8}|20\d{8})(?:$|[_-])/', $base, $m)) {
+                    $ts = (int) $m[1];
+                    if ($ts > 946684800 && $ts < time() + 86400 && ($nameTs <= 0 || $ts < $nameTs)) {
+                        $nameTs = $ts;
+                    }
+                }
             }
 
-            $uploadTs = $known !== [] ? min($known) : $diskOldest;
+            // Prefer DB, then filename timestamp, then disk mtime (mtime often equals restore/delete time).
+            if ($known !== []) {
+                $uploadTs = min($known);
+            } elseif ($nameTs > 0) {
+                $uploadTs = $nameTs;
+            } else {
+                $uploadTs = $diskOldest;
+            }
             $files[$i]['uploaded_at'] = $uploadTs;
 
             // Seed once so later compress/deploy cannot rewrite this date.

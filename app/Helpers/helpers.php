@@ -365,6 +365,10 @@ if (!function_exists('restore_public_upload_if_missing')) {
             return false;
         }
 
+        if (function_exists('is_media_deleted_path') && is_media_deleted_path($relative)) {
+            return false;
+        }
+
         $dest = public_path($relative);
 
         if (is_file($dest)) {
@@ -532,6 +536,19 @@ if (!function_exists('copy_directory_contents')) {
                 @mkdir($parent, 0755, true);
             }
 
+            $relTarget = ltrim(str_replace('\\', '/', (string) $iterator->getSubPathName()), '/');
+            // Prefix with the destination folder name under public when possible.
+            if (function_exists('is_media_deleted_path')) {
+                $publicRoot = rtrim(str_replace('\\', '/', public_path()), '/');
+                $targetNorm = str_replace('\\', '/', $target);
+                if (str_starts_with($targetNorm, $publicRoot . '/')) {
+                    $relTarget = ltrim(substr($targetNorm, strlen($publicRoot)), '/');
+                }
+                if (is_media_deleted_path($relTarget)) {
+                    continue;
+                }
+            }
+
             if (is_file($target)) {
                 if (! $overwrite) {
                     $srcSize = (int) $item->getSize();
@@ -570,6 +587,84 @@ if (!function_exists('copy_directory_contents')) {
     }
 }
 
+if (!function_exists('media_deleted_paths_file')) {
+    function media_deleted_paths_file(): string
+    {
+        return storage_path('app/media-deleted-paths.json');
+    }
+}
+
+if (!function_exists('media_deleted_path_set')) {
+    /**
+     * @param  array<string, true>|null  $replace  Pass a map to replace the in-request cache after writes.
+     * @return array<string, true> lowercase relative path => true
+     */
+    function media_deleted_path_set(?array $replace = null): array
+    {
+        static $cache = null;
+        if (is_array($replace)) {
+            $cache = $replace;
+
+            return $cache;
+        }
+        if (is_array($cache)) {
+            return $cache;
+        }
+        $path = media_deleted_paths_file();
+        $decoded = is_file($path) ? json_decode((string) @file_get_contents($path), true) : null;
+        $cache = [];
+        if (is_array($decoded)) {
+            foreach ($decoded as $rel) {
+                $rel = strtolower(ltrim(str_replace('\\', '/', (string) $rel), '/'));
+                if ($rel !== '') {
+                    $cache[$rel] = true;
+                }
+            }
+        }
+
+        return $cache;
+    }
+}
+
+if (!function_exists('is_media_deleted_path')) {
+    function is_media_deleted_path(?string $relativePath): bool
+    {
+        $rel = ltrim(str_replace('\\', '/', (string) $relativePath), '/');
+        if ($rel === '') {
+            return false;
+        }
+
+        return isset(media_deleted_path_set()[strtolower($rel)]);
+    }
+}
+
+if (!function_exists('remember_media_deleted_paths')) {
+    /** @param  array<int, string>  $rels */
+    function remember_media_deleted_paths(array $rels): void
+    {
+        $set = media_deleted_path_set();
+        $changed = false;
+        foreach ($rels as $rel) {
+            $rel = strtolower(ltrim(str_replace('\\', '/', (string) $rel), '/'));
+            if ($rel === '' || isset($set[$rel])) {
+                continue;
+            }
+            $set[$rel] = true;
+            $changed = true;
+        }
+        if (! $changed) {
+            return;
+        }
+        $path = media_deleted_paths_file();
+        $dir = dirname($path);
+        if (! is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+        @file_put_contents($path, json_encode(array_keys($set)));
+        media_deleted_path_set($set);
+    }
+}
+
 if (!function_exists('forget_public_upload')) {
     /** Hard-delete a public image and its persistent backup so Media delete and Git deploys cannot resurrect it. */
     function forget_public_upload(?string $relativePath): bool
@@ -601,11 +696,20 @@ if (!function_exists('forget_public_upload')) {
         }
         if (in_array($ext, ['jpg', 'jpeg', 'png'], true)) {
             $rels[] = $dir . $stem . '.webp';
+            foreach (['jpg', 'jpeg', 'png', 'webp'] as $altExt) {
+                $rels[] = $dir . $stem . '.' . $altExt;
+            }
+        }
+
+        $rels = array_values(array_unique($rels));
+        // Tombstone first so any concurrent restore cannot bring the file back.
+        if (function_exists('remember_media_deleted_paths')) {
+            remember_media_deleted_paths($rels);
         }
 
         $deleted = false;
         $persistentRoot = persistent_uploads_root() . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR;
-        foreach (array_unique($rels) as $rel) {
+        foreach ($rels as $rel) {
             $public = public_path($rel);
             if (is_file($public) && @unlink($public)) {
                 $deleted = true;
