@@ -207,9 +207,45 @@ class PagesController extends Controller
                 if (empty($section->data['section_type']) && ! empty($section->section_type)) {
                     $section->data['section_type'] = $section->section_type;
                 }
+                $type = normalize_section_type_key((string) ($section->data['section_type'] ?? $section->section_type ?? ''))
+                    ?? (string) ($section->data['section_type'] ?? $section->section_type ?? '');
+                $section->section_type = $type;
+                if (is_array($section->data)) {
+                    $section->data['section_type'] = $type;
+                }
 
                 return $section;
             });
+
+        // Same dedupe as the public homepage — editor was still loading duplicate Clients cards.
+        if (function_exists('dedupe_cms_page_sections')) {
+            $beforeIds = $page->sections->pluck('id')->filter()->all();
+            $page->sections = dedupe_cms_page_sections($page->sections);
+            $keepIds = $page->sections->pluck('id')->filter()->all();
+            $dropIds = array_values(array_diff($beforeIds, $keepIds));
+            // Drop only extra Clients / client-logo duplicates so one save does not leave ghosts.
+            if ($dropIds !== []) {
+                $extraClients = PageSection::query()
+                    ->whereIn('id', $dropIds)
+                    ->get()
+                    ->filter(function ($section) {
+                        $type = normalize_section_type_key((string) ($section->section_type ?? ''))
+                            ?? (string) ($section->section_type ?? '');
+                        if ($type === 'clients') {
+                            return true;
+                        }
+                        $section->data = is_string($section->data)
+                            ? (json_decode($section->data, true) ?? [])
+                            : ($section->data ?? []);
+                        $section->section_type = $type;
+
+                        return cms_section_looks_like_client_logos($section);
+                    });
+                if ($extraClients->isNotEmpty()) {
+                    PageSection::whereIn('id', $extraClients->pluck('id')->all())->delete();
+                }
+            }
+        }
 
         $meta = PagesSEO::where('page_id', $id)->first();
 
@@ -262,7 +298,7 @@ class PagesController extends Controller
             $page->parent_id = null;
         }
         $page->save();
-        save_editor_robots_for($page, $request);
+        save_editor_robots_for($page, $request, true);
 
         if (! pages_status_enabled()) {
             session()->flash('error', 'Page content saved, but Active/Disabled status is not saved until database/sql/add-pages-status-column.sql is run on the server.');

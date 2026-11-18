@@ -26,11 +26,17 @@
                     <button type="button" class="btn btn-xs btn-primary" onclick="var f=document.getElementById('rename-item-{{ $item->id }}'); if(f){ f.style.display = f.style.display==='none' ? 'block' : 'none'; }">Edit</button>
                     @if($item->type === 'file')
                         <form action="{{ route('admin.study-materials.items.download', $item->id) }}" method="POST" style="display:inline;">
-                            @csrf @method('PUT')
+                            @csrf
                             <input type="hidden" name="allow_download" value="{{ $item->allowsDownload() ? 0 : 1 }}">
-                            <button type="submit" class="btn btn-xs {{ $item->allowsDownload() ? 'btn-success' : 'btn-default' }}" title="Students {{ $item->allowsDownload() ? 'can' : 'cannot' }} download this file">
-                                Download: {{ $item->allowsDownload() ? 'Yes' : 'No' }}
-                            </button>
+                            @if($item->allowsDownload())
+                                <button type="submit" class="btn btn-xs btn-info" title="Students can download this file. Click to make Inactive.">
+                                    Download: Yes
+                                </button>
+                            @else
+                                <button type="submit" class="btn btn-xs btn-default" style="opacity:.75;" title="Download is inactive — file stays visible; students can open but not download. Click to enable.">
+                                    Inactive
+                                </button>
+                            @endif
                         </form>
                     @endif
                     <form action="{{ route('admin.study-materials.items.destroy', $item->id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Remove?');">
