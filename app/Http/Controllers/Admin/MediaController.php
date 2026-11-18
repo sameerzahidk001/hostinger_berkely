@@ -134,6 +134,17 @@ class MediaController extends Controller
             }
         }
         $metaByPath = $this->metaIndex(array_column($lookup, 'rel'));
+        // Page/course alt text lives on the CMS record; restore into Media when media_assets is empty.
+        $linkedMeta = [];
+        if ($lookup !== [] && $this->capDbStatement(8)) {
+            try {
+                $linkedMeta = $this->linkedMetaIndex($lookup);
+            } catch (\Throwable $e) {
+                $linkedMeta = [];
+            } finally {
+                $this->clearDbStatementCap();
+            }
+        }
 
         $rows = [];
         foreach ($slice as $file) {
@@ -144,9 +155,36 @@ class MediaController extends Controller
             foreach ($variants as $variant) {
                 $vRel = strtolower(str_replace('\\', '/', (string) ($variant['rel'] ?? '')));
                 $stored = $metaByPath[$vRel] ?? [];
+                $linked = $linkedMeta[$vRel] ?? [];
                 $meta = MediaAsset::mergeDisplayMeta($meta === [] ? $stored : $meta, $stored);
+                $meta = MediaAsset::mergeDisplayMeta($meta, $linked);
                 if (strcasecmp((string) ($variant['name'] ?? ''), (string) ($file['name'] ?? '')) !== 0) {
                     $also[] = $variant['name'];
+                }
+            }
+            // Soft-backfill empty Media library fields from the linked page/course alt.
+            if ($meta !== [] && MediaAsset::ensureTable()) {
+                $fill = [];
+                foreach (['alt', 'title', 'caption', 'description'] as $field) {
+                    $have = false;
+                    foreach ($variants as $variant) {
+                        $vRel = strtolower(str_replace('\\', '/', (string) ($variant['rel'] ?? '')));
+                        if (trim((string) (($metaByPath[$vRel] ?? [])[$field] ?? '')) !== '') {
+                            $have = true;
+                            break;
+                        }
+                    }
+                    if (! $have && trim((string) ($meta[$field] ?? '')) !== '') {
+                        $fill[$field] = $meta[$field];
+                    }
+                }
+                if ($fill !== []) {
+                    foreach ($variants as $variant) {
+                        $vRel = MediaAsset::normalizePath((string) ($variant['rel'] ?? ''));
+                        if ($vRel !== '') {
+                            MediaAsset::upsertForPath($vRel, $fill);
+                        }
+                    }
                 }
             }
             $bytes = (int) ($file['size'] ?? 0);
@@ -1230,6 +1268,19 @@ class MediaController extends Controller
             return str_contains(strtolower($norm), 'images/library/')
                 || str_contains(strtolower($storedNorm), 'images/library/')
                 || ! str_contains($storedNorm, '/');
+        }
+
+        // Treat compress variants as the same asset: foo.webp ↔ foo-card.webp ↔ foo-thumb.webp
+        $storedStem = (string) pathinfo(basename($storedNorm), PATHINFO_FILENAME);
+        $normStem = (string) pathinfo($base, PATHINFO_FILENAME);
+        $canon = static function (string $stem): string {
+            return strtolower((string) preg_replace('/-(card|thumb|sm|md|lg|xl)$/i', '', $stem));
+        };
+        if ($canon($storedStem) !== '' && $canon($storedStem) === $canon($normStem)) {
+            $storedDir = strtolower(trim(str_replace('\\', '/', dirname($storedNorm)), '/.'));
+            $normDir = strtolower(trim(str_replace('\\', '/', dirname($norm)), '/.'));
+
+            return $storedDir === $normDir;
         }
 
         return false;
