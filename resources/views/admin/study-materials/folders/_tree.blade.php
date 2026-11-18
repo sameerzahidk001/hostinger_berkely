@@ -3,6 +3,7 @@
 @else
 @php
     \App\Models\StudyMaterialItem::ensureIconTypeColumn();
+    \App\Models\StudyMaterialItem::ensureIsEnabledColumn();
     $items = \App\Models\StudyMaterialItem::naturalSort($items);
 @endphp
 <ul class="list-unstyled" style="padding-left: {{ isset($depth) ? ($depth * 18) : 0 }}px;">
@@ -28,12 +29,19 @@
                         <form action="{{ route('admin.study-materials.items.download', $item->id) }}" method="POST" style="display:inline;">
                             @csrf
                             <input type="hidden" name="allow_download" value="{{ $item->allowsDownload() ? 0 : 1 }}">
-                            @if($item->allowsDownload())
-                                <button type="submit" class="btn btn-xs btn-info" title="Students can download this file. Click to make Inactive.">
-                                    Download: Yes
+                            <button type="submit" class="btn btn-xs {{ $item->allowsDownload() ? 'btn-info' : 'btn-default' }}" title="Controls the Download button when the file is opened. Does not block opening the file.">
+                                Download: {{ $item->allowsDownload() ? 'Yes' : 'No' }}
+                            </button>
+                        </form>
+                        <form action="{{ route('admin.study-materials.items.enable', $item->id) }}" method="POST" style="display:inline;">
+                            @csrf
+                            <input type="hidden" name="is_enabled" value="{{ $item->isEnabled() ? 0 : 1 }}">
+                            @if($item->isEnabled())
+                                <button type="submit" class="btn btn-xs btn-success" title="File can be opened by students. Click to disable opening.">
+                                    Active
                                 </button>
                             @else
-                                <button type="submit" class="btn btn-xs btn-default" style="opacity:.75;" title="Download is inactive — file stays visible; students can open but not download. Click to enable.">
+                                <button type="submit" class="btn btn-xs btn-warning" style="opacity:.9;" title="File is visible but cannot be opened. Click to enable opening.">
                                     Inactive
                                 </button>
                             @endif

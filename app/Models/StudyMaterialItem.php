@@ -25,10 +25,12 @@ class StudyMaterialItem extends Model
         'external_url',
         'sort_order',
         'allow_download',
+        'is_enabled',
     ];
 
     protected $casts = [
         'allow_download' => 'boolean',
+        'is_enabled' => 'boolean',
     ];
 
     public static function ensureIconTypeColumn(): bool
@@ -45,6 +47,27 @@ class StudyMaterialItem extends Model
         });
 
         return Schema::hasColumn('study_material_items', 'icon_type');
+    }
+
+    /** Additive column: file open enable/disable (separate from allow_download). */
+    public static function ensureIsEnabledColumn(): bool
+    {
+        if (! Schema::hasTable('study_material_items')) {
+            return false;
+        }
+        if (Schema::hasColumn('study_material_items', 'is_enabled')) {
+            return true;
+        }
+
+        try {
+            Schema::table('study_material_items', function (Blueprint $table) {
+                $table->boolean('is_enabled')->default(true)->nullable()->after('allow_download');
+            });
+        } catch (\Throwable $e) {
+            return Schema::hasColumn('study_material_items', 'is_enabled');
+        }
+
+        return Schema::hasColumn('study_material_items', 'is_enabled');
     }
 
     public static function iconTypeOptions(): array
@@ -216,6 +239,19 @@ class StudyMaterialItem extends Model
     public function allowsDownload(): bool
     {
         return $this->type === 'file' && $this->allow_download !== false;
+    }
+
+    /** Whether students may open/preview this file (independent of download). */
+    public function isEnabled(): bool
+    {
+        if ($this->type !== 'file') {
+            return true;
+        }
+        if (! Schema::hasColumn($this->getTable(), 'is_enabled')) {
+            return true;
+        }
+
+        return $this->is_enabled !== false;
     }
 
     public function portalFileUrl(array $query = []): string

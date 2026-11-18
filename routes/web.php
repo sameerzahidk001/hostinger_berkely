@@ -316,6 +316,7 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
             Route::get('/students-by-folder/{folderId}', [StudyMaterialAccessController::class, 'studentsByFolder'])->name('students-by-folder');
             Route::put('/items/{id}', [StudyMaterialFolderController::class, 'renameItem'])->name('items.rename');
             Route::match(['post', 'put'], '/items/{id}/download', [StudyMaterialFolderController::class, 'toggleDownload'])->name('items.download');
+            Route::match(['post', 'put'], '/items/{id}/enable', [StudyMaterialFolderController::class, 'toggleEnabled'])->name('items.enable');
             Route::delete('/items/{id}', [StudyMaterialFolderController::class, 'destroyItem'])->name('items.destroy');
 
             Route::get('/access/students', [StudyMaterialAccessController::class, 'students'])->name('access.students');

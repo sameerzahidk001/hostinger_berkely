@@ -280,7 +280,7 @@
     <div class="ibox">
         <div class="ibox-title"><h5>Current structure</h5></div>
         <div class="ibox-content">
-            <p class="help-block">Use <strong>Download: Yes</strong> / <strong>Inactive</strong> on each file. Yes = students can download. Inactive = file stays visible; students can open it but cannot download.</p>
+            <p class="help-block"><strong>Download: Yes/No</strong> controls the Download button when a file is opened. <strong>Active/Inactive</strong> controls whether students can open the file at all (Inactive files stay listed but cannot be opened).</p>
             @include('admin.study-materials.folders._tree', ['items' => $folder->rootItems])
         </div>
     </div>

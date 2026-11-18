@@ -594,8 +594,31 @@ class StudyMaterialFolderController extends Controller
         return redirect()->back()->with(
             'success',
             $item->allow_download
-                ? 'Students can download this file.'
-                : 'Download set to Inactive — file stays visible; students can open it but not download.'
+                ? 'Download: Yes — students see a Download button when the file is opened.'
+                : 'Download: No — students can open the file but cannot download it.'
+        );
+    }
+
+    public function toggleEnabled(Request $request, $id)
+    {
+        StudyMaterialItem::ensureIsEnabledColumn();
+
+        $item = StudyMaterialItem::with('folder')->findOrFail($id);
+        abort_unless($this->lms->canEditFolder($item->folder), 403);
+        abort_if($item->type !== 'file', 404);
+
+        if (! Schema::hasColumn('study_material_items', 'is_enabled')) {
+            return redirect()->back()->with('fail', 'File enable/disable is not available on this database yet.');
+        }
+
+        $item->is_enabled = $request->boolean('is_enabled');
+        $item->save();
+
+        return redirect()->back()->with(
+            'success',
+            $item->is_enabled
+                ? 'File is Active — students can open it.'
+                : 'File is Inactive — it stays visible but cannot be opened.'
         );
     }
 

@@ -9,7 +9,6 @@
         .bar { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:10px 14px; background:#000435; color:#fff; }
         .bar strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
         .bar a { background:#f8961f; color:#1e1e1e; text-decoration:none; font-weight:700; padding:6px 12px; border-radius:4px; white-space:nowrap; }
-        .bar .inactive { background:#6b7280; color:#fff; opacity:.85; cursor:not-allowed; padding:6px 12px; border-radius:4px; font-weight:700; white-space:nowrap; }
         .wrap { height:calc(100% - 48px); display:flex; align-items:center; justify-content:center; background:#000; }
         iframe, embed, object, img, video, audio { width:100%; height:100%; border:0; background:#000; }
         img { object-fit:contain; }
@@ -20,8 +19,6 @@
         <strong>{{ $item->name }}</strong>
         @if($item->allowsDownload())
             <a href="{{ $downloadUrl }}">Download</a>
-        @else
-            <span class="inactive" title="Download is inactive for this file">Inactive</span>
         @endif
     </div>
     @php $kind = $item->portalKind(); @endphp

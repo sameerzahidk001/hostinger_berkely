@@ -11,8 +11,10 @@
 #smViewerHeader strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 #smViewerActions{display:flex;align-items:center;gap:10px;flex-shrink:0;}
 #smViewerDownload{background:#f8961f;color:#1e1e1e;text-decoration:none;font-weight:700;padding:6px 12px;border-radius:4px;}
-#smViewerDownload.is-inactive{background:#6b7280;color:#fff;cursor:not-allowed;opacity:.85;pointer-events:none;}
 #smViewerMax{background:transparent;border:1px solid #fff;color:#fff;font-weight:700;padding:5px 10px;border-radius:4px;cursor:pointer;}
+.sm-file-card.is-inactive{opacity:.72;}
+.sm-file-inactive{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px dashed #c5c9d1;border-radius:6px;background:#f3f4f6;color:#6b7280;cursor:not-allowed;}
+.sm-file-inactive-badge{margin-left:auto;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;background:#e5e7eb;color:#4b5563;padding:3px 8px;border-radius:999px;}
 #smViewerBody{background:#fff;min-height:420px;flex:1;position:relative;}
 #smViewerBody.video{background:#000;}
 #smViewerBody iframe,#smViewerBody video,#smViewerBody img,#smViewerBody audio{width:100%;height:72vh;border:0;background:#000;}
@@ -288,16 +290,12 @@
                 downloadBtn.href = download;
                 downloadBtn.setAttribute('download', name);
                 downloadBtn.textContent = 'Download';
-                downloadBtn.classList.remove('is-inactive');
-                downloadBtn.removeAttribute('aria-disabled');
                 downloadBtn.style.display = '';
             } else {
                 downloadBtn.removeAttribute('href');
                 downloadBtn.removeAttribute('download');
-                downloadBtn.textContent = 'Inactive';
-                downloadBtn.classList.add('is-inactive');
-                downloadBtn.setAttribute('aria-disabled', 'true');
-                downloadBtn.style.display = '';
+                downloadBtn.textContent = 'Download';
+                downloadBtn.style.display = 'none';
             }
             body.classList.toggle('video', kind === 'video');
             const safeUrl = url.replace(/"/g, '&quot;');
