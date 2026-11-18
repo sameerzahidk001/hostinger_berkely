@@ -170,16 +170,35 @@
             @if(!empty($unusedSkipped))
                 <div class="alert alert-warning">{{ $unusedSkipped }}</div>
             @endif
+            @php
+                $mediaSort = $sort ?? 'uploaded';
+                $mediaDir = ($dir ?? 'desc') === 'asc' ? 'asc' : 'desc';
+                $mediaQuery = function (array $extra = []) use ($search, $unusedOnly, $mediaSource, $mediaSort, $mediaDir) {
+                    return array_filter(array_merge([
+                        'source' => (($mediaSource ?? 'all') !== 'all') ? $mediaSource : null,
+                        'search' => ($search ?? '') !== '' ? $search : null,
+                        'unused' => ! empty($unusedOnly) ? 1 : null,
+                        'sort' => $mediaSort !== 'uploaded' ? $mediaSort : null,
+                        'dir' => ($mediaSort === 'uploaded' && $mediaDir === 'desc') ? null : $mediaDir,
+                    ], $extra), static fn ($v) => $v !== null && $v !== '');
+                };
+            @endphp
             <p class="m-b-sm">
-                <a href="{{ route('admin.media.index', array_filter(['search' => $search ?? null, 'unused' => !empty($unusedOnly) ? 1 : null])) }}" class="btn btn-{{ ($mediaSource ?? 'all') === 'all' ? 'primary' : 'white' }} btn-sm">All</a>
-                <a href="{{ route('admin.media.index', array_filter(['source' => 'public', 'search' => $search ?? null, 'unused' => !empty($unusedOnly) ? 1 : null])) }}" class="btn btn-{{ ($mediaSource ?? '') === 'public' ? 'primary' : 'white' }} btn-sm">Public</a>
-                <a href="{{ route('admin.media.index', array_filter(['source' => 'admin', 'search' => $search ?? null, 'unused' => !empty($unusedOnly) ? 1 : null])) }}" class="btn btn-{{ ($mediaSource ?? '') === 'admin' ? 'primary' : 'white' }} btn-sm">Admin</a>
-                <a href="{{ route('admin.media.index', array_filter(['source' => 'pages', 'search' => $search ?? null, 'unused' => !empty($unusedOnly) ? 1 : null])) }}" class="btn btn-{{ ($mediaSource ?? '') === 'pages' ? 'primary' : 'white' }} btn-sm">Pages</a>
-                <a href="{{ route('admin.media.index', array_filter(['source' => 'courses', 'search' => $search ?? null, 'unused' => !empty($unusedOnly) ? 1 : null])) }}" class="btn btn-{{ ($mediaSource ?? '') === 'courses' ? 'primary' : 'white' }} btn-sm">Courses</a>
+                <a href="{{ route('admin.media.index', $mediaQuery(['source' => null])) }}" class="btn btn-{{ ($mediaSource ?? 'all') === 'all' ? 'primary' : 'white' }} btn-sm">All</a>
+                <a href="{{ route('admin.media.index', $mediaQuery(['source' => 'public'])) }}" class="btn btn-{{ ($mediaSource ?? '') === 'public' ? 'primary' : 'white' }} btn-sm">Public</a>
+                <a href="{{ route('admin.media.index', $mediaQuery(['source' => 'admin'])) }}" class="btn btn-{{ ($mediaSource ?? '') === 'admin' ? 'primary' : 'white' }} btn-sm">Admin</a>
+                <a href="{{ route('admin.media.index', $mediaQuery(['source' => 'pages'])) }}" class="btn btn-{{ ($mediaSource ?? '') === 'pages' ? 'primary' : 'white' }} btn-sm">Pages</a>
+                <a href="{{ route('admin.media.index', $mediaQuery(['source' => 'courses'])) }}" class="btn btn-{{ ($mediaSource ?? '') === 'courses' ? 'primary' : 'white' }} btn-sm">Courses</a>
             </p>
             <form method="GET" class="form-group" action="{{ route('admin.media.index') }}">
                 @if(($mediaSource ?? 'all') !== 'all')
                     <input type="hidden" name="source" value="{{ $mediaSource }}">
+                @endif
+                @if(($mediaSort ?? 'uploaded') !== 'uploaded')
+                    <input type="hidden" name="sort" value="{{ $mediaSort }}">
+                @endif
+                @if(!(($mediaSort ?? 'uploaded') === 'uploaded' && ($mediaDir ?? 'desc') === 'desc'))
+                    <input type="hidden" name="dir" value="{{ $mediaDir ?? 'desc' }}">
                 @endif
                 <div class="row">
                     <div class="col-sm-7">
@@ -196,7 +215,7 @@
                             Unused only (not linked to a page/course)
                         </label>
                         @if(!empty($unusedOnly) || ($search ?? '') !== '')
-                            <a href="{{ route('admin.media.index') }}" class="btn btn-default btn-xs" style="margin-left:8px;">Clear</a>
+                            <a href="{{ route('admin.media.index', $mediaQuery(['search' => null, 'unused' => null])) }}" class="btn btn-default btn-xs" style="margin-left:8px;">Clear</a>
                         @endif
                     </div>
                 </div>
@@ -205,13 +224,13 @@
                 <table class="table table-striped table-bordered" id="lms-media-table">
                     <thead>
                         <tr>
-                            <th class="lms-sort" data-sort="num" style="width:110px;">Uploaded date</th>
-                            <th class="lms-sort" data-sort="text" style="width:90px;">Image</th>
-                            <th class="lms-sort" data-sort="text" style="min-width:160px;">File</th>
-                            <th class="lms-sort lms-meta-col" data-sort="input">Alternative Text</th>
-                            <th class="lms-sort lms-meta-col" data-sort="input">Title</th>
-                            <th class="lms-sort lms-meta-col" data-sort="input">Image Caption</th>
-                            <th class="lms-sort lms-meta-col" data-sort="input">Description</th>
+                            <th class="lms-sort {{ ($mediaSort ?? '') === 'uploaded' ? 'is-'.($mediaDir ?? 'desc') : '' }}" data-sort-key="uploaded" data-sort="num" style="width:110px;">Uploaded date</th>
+                            <th style="width:90px;">Image</th>
+                            <th class="lms-sort {{ ($mediaSort ?? '') === 'name' ? 'is-'.($mediaDir ?? 'desc') : '' }}" data-sort-key="name" data-sort="text" style="min-width:160px;">File</th>
+                            <th class="lms-meta-col">Alternative Text</th>
+                            <th class="lms-meta-col">Title</th>
+                            <th class="lms-meta-col">Image Caption</th>
+                            <th class="lms-meta-col">Description</th>
                             <th data-col="links">
                                 Linked to
                                 <button type="button" class="btn btn-primary btn-xs lms-load-links-btn" id="lms-load-page-links">
@@ -542,37 +561,31 @@
         }, true);
     }
 
-    $('#lms-media-table thead').on('click', 'th.lms-sort', function () {
-        var $th = $(this);
-        var $table = $('#lms-media-table');
-        var index = $th.index();
-        var col = $th.attr('data-col');
-        var type = $th.data('sort') || 'text';
-        var asc = !$th.hasClass('is-asc');
-        $table.find('thead th').removeClass('is-asc is-desc');
-        $th.addClass(asc ? 'is-asc' : 'is-desc');
-        var rows = $table.find('tbody tr').get();
-        rows.sort(function (a, b) {
-            var ac = col ? a.querySelector('[data-col="' + col + '"]') : a.cells[index];
-            var bc = col ? b.querySelector('[data-col="' + col + '"]') : b.cells[index];
-            var av = sortValue(ac, type);
-            var bv = sortValue(bc, type);
-            if (av < bv) return asc ? -1 : 1;
-            if (av > bv) return asc ? 1 : -1;
-            return 0;
-        });
-        $table.find('tbody').append(rows);
-    });
-    function sortValue(cell, type) {
-        if (!cell) return '';
-        var attr = cell.getAttribute('data-sort-value');
-        if (type === 'num') return parseFloat(attr || '0') || 0;
-        if (type === 'input') {
-            var field = cell.querySelector('input, textarea');
-            return ((field && field.value) || '').toLowerCase();
+    // Full-library sort across tabs/pages (client-only sort was limited to 30 rows and broke Pages vs All).
+    $('#lms-media-table thead').on('click', 'th.lms-sort[data-sort-key]', function () {
+        var key = $(this).attr('data-sort-key');
+        if (!key) return;
+        var url = new URL(window.location.href);
+        var cur = url.searchParams.get('sort') || 'uploaded';
+        var dir = (url.searchParams.get('dir') || 'desc').toLowerCase();
+        if (cur === key) {
+            dir = dir === 'asc' ? 'desc' : 'asc';
+        } else {
+            dir = key === 'uploaded' ? 'desc' : 'asc';
         }
-        return String(attr || cell.textContent || '').toLowerCase().trim();
-    }
+        if (key === 'uploaded') {
+            url.searchParams.delete('sort');
+        } else {
+            url.searchParams.set('sort', key);
+        }
+        if (key === 'uploaded' && dir === 'desc') {
+            url.searchParams.delete('dir');
+        } else {
+            url.searchParams.set('dir', dir);
+        }
+        url.searchParams.delete('page');
+        window.location = url.toString();
+    });
 
     // Auto-continue compress in short passes so Hostinger does not 504.
     @if(session('media_compress_continue'))
