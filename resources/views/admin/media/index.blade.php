@@ -341,6 +341,9 @@
                                                 @csrf
                                                 @method('DELETE')
                                                 <input type="hidden" name="path" value="{{ $row['rel'] }}">
+                                                @foreach(($row['variant_rels'] ?? []) as $vRel)
+                                                    <input type="hidden" name="variant_rels[]" value="{{ $vRel }}">
+                                                @endforeach
                                                 <button type="submit" class="btn btn-danger btn-xs lms-media-delete" @if($hasLinks) disabled @endif title="{{ $deleteTitle }}">
                                                     <i class="fa fa-trash"></i> Delete
                                                 </button>
