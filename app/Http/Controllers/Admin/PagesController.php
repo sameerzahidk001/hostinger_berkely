@@ -202,17 +202,23 @@ class PagesController extends Controller
             ->sortBy('order')
             ->values()
             ->map(function ($section) {
-                $section->data = strip_waf_captcha_html(json_decode($section->data, true) ?? []);
+                $raw = $section->data;
+                $data = is_string($raw)
+                    ? (json_decode($raw, true) ?? [])
+                    : (is_array($raw) ? $raw : []);
+                $data = strip_waf_captcha_html($data);
+                if (! is_array($data)) {
+                    $data = [];
+                }
 
-                if (empty($section->data['section_type']) && ! empty($section->section_type)) {
-                    $section->data['section_type'] = $section->section_type;
+                if (empty($data['section_type']) && ! empty($section->section_type)) {
+                    $data['section_type'] = $section->section_type;
                 }
-                $type = normalize_section_type_key((string) ($section->data['section_type'] ?? $section->section_type ?? ''))
-                    ?? (string) ($section->data['section_type'] ?? $section->section_type ?? '');
+                $type = normalize_section_type_key((string) ($data['section_type'] ?? $section->section_type ?? ''))
+                    ?? (string) ($data['section_type'] ?? $section->section_type ?? '');
                 $section->section_type = $type;
-                if (is_array($section->data)) {
-                    $section->data['section_type'] = $type;
-                }
+                $data['section_type'] = $type;
+                $section->data = $data;
 
                 return $section;
             });
@@ -234,9 +240,11 @@ class PagesController extends Controller
                         if ($type === 'clients') {
                             return true;
                         }
-                        $section->data = is_string($section->data)
-                            ? (json_decode($section->data, true) ?? [])
-                            : ($section->data ?? []);
+                        $raw = $section->data;
+                        $data = is_string($raw)
+                            ? (json_decode($raw, true) ?? [])
+                            : (is_array($raw) ? $raw : []);
+                        $section->data = $data;
                         $section->section_type = $type;
 
                         return cms_section_looks_like_client_logos($section);
