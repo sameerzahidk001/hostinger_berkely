@@ -14,7 +14,9 @@
 #smViewerMax{background:transparent;border:1px solid #fff;color:#fff;font-weight:700;padding:5px 10px;border-radius:4px;cursor:pointer;}
 .sm-file-card.is-inactive{opacity:.72;}
 .sm-file-inactive{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px dashed #c5c9d1;border-radius:6px;background:#f3f4f6;color:#6b7280;cursor:not-allowed;}
-.sm-file-inactive-badge{margin-left:auto;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;background:#e5e7eb;color:#4b5563;padding:3px 8px;border-radius:999px;}
+.sm-file-inactive-badge{margin-left:auto;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;background:#e5e7eb;color:#4b5563;padding:3px 8px;border-radius:999px;flex-shrink:0;}
+.sm-file-open-btn{margin-left:auto;flex-shrink:0;align-self:center;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;background:linear-gradient(180deg,#3b82f6 0%,#1d4ed8 100%);color:#fff;padding:5px 12px;border-radius:999px;box-shadow:0 1px 2px rgba(0,0,0,.18);}
+.sm-file-link:hover .sm-file-open-btn{filter:brightness(1.05);}
 #smViewerBody{background:#fff;min-height:420px;flex:1;position:relative;}
 #smViewerBody.video{background:#000;}
 #smViewerBody iframe,#smViewerBody video,#smViewerBody img,#smViewerBody audio{width:100%;height:72vh;border:0;background:#000;}
@@ -131,6 +133,8 @@
 .sm-file-name{
     word-break:break-word;
     line-height:1.35;
+    flex:1;
+    min-width:0;
 }
 </style>
 @endpush
