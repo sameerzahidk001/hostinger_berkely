@@ -595,7 +595,7 @@ class StudyMaterialFolderController extends Controller
             'success',
             $item->allow_download
                 ? 'Students can download this file.'
-                : 'Download is hidden for students on this file.'
+                : 'Download set to Inactive — file stays visible; students can open it but not download.'
         );
     }
 

@@ -1098,6 +1098,85 @@ if (! function_exists('cms_section_looks_like_client_logos')) {
     }
 }
 
+if (! function_exists('dedupe_cms_page_sections')) {
+    /**
+     * Keep one Clients block (and one search bar) for both public render and the page editor.
+     *
+     * @param  iterable<int, mixed>  $sections
+     * @return \Illuminate\Support\Collection<int, mixed>
+     */
+    function dedupe_cms_page_sections(iterable $sections): \Illuminate\Support\Collection
+    {
+        $collection = collect($sections)->values()->map(function ($section) {
+            if (is_object($section)) {
+                $data = $section->data ?? [];
+                if (is_string($data)) {
+                    $decoded = json_decode($data, true);
+                    $data = is_array($decoded) ? $decoded : [];
+                }
+                if (! is_array($data)) {
+                    $data = [];
+                }
+                $type = (string) ($section->section_type ?? ($data['section_type'] ?? ''));
+                $type = normalize_section_type_key($type) ?? $type;
+                $section->section_type = $type;
+                $data['section_type'] = $type;
+                $section->data = $data;
+            }
+
+            return $section;
+        });
+
+        $hasClients = $collection->contains(function ($section) {
+            $type = is_object($section)
+                ? (string) ($section->section_type ?? '')
+                : (string) (is_array($section) ? ($section['section_type'] ?? '') : '');
+
+            return $type === 'clients';
+        });
+
+        $seenClients = false;
+        $seenSearch = false;
+        $seenFingerprints = [];
+
+        return $collection->filter(function ($section) use ($hasClients, &$seenClients, &$seenSearch, &$seenFingerprints) {
+            if (cms_section_is_course_search($section)) {
+                if ($seenSearch) {
+                    return false;
+                }
+                $seenSearch = true;
+            }
+
+            $type = is_object($section)
+                ? (string) ($section->section_type ?? '')
+                : (string) (is_array($section) ? ($section['section_type'] ?? '') : '');
+
+            if ($type === 'clients') {
+                if ($seenClients) {
+                    return false;
+                }
+                $seenClients = true;
+
+                return true;
+            }
+
+            if ($hasClients && cms_section_looks_like_client_logos($section)) {
+                return false;
+            }
+
+            $fingerprint = cms_card_titles_fingerprint($section);
+            if ($fingerprint) {
+                if (in_array($fingerprint, $seenFingerprints, true)) {
+                    return false;
+                }
+                $seenFingerprints[] = $fingerprint;
+            }
+
+            return true;
+        })->values();
+    }
+}
+
 if (! function_exists('cms_section_is_course_search')) {
     /** Homepage search bar (CMS search-bar, or the same form pasted into a content block). */
     function cms_section_is_course_search($section): bool
