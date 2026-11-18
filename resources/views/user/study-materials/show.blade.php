@@ -37,8 +37,8 @@
 .sm-tree-folder{margin:0 0 14px;}
 .sm-tree-folder-head{
     padding:10px 12px;
-    background:#F1F5FB;
-    border:1px solid #D6E0ED;
+    background:#F5F3F1;
+    border:1px solid #E5E1DC;
     border-radius:10px;
     margin-bottom:10px;
     color:#0F2348;
