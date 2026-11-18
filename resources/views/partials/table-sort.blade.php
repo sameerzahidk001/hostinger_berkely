@@ -21,7 +21,14 @@
         if (!table) {
             return true;
         }
+        if (table.id === 'lms-media-table') {
+            return true;
+        }
         if (table.classList.contains('dataTables-example') || table.classList.contains('dataTable')) {
+            return true;
+        }
+        // Tables with their own column-sort UI (e.g. Media) must not get a second arrow set.
+        if (table.querySelector('thead th.lms-sort')) {
             return true;
         }
         if (window.jQuery && window.jQuery.fn && window.jQuery.fn.dataTable && window.jQuery.fn.dataTable.isDataTable(table)) {

@@ -256,6 +256,8 @@ class OversizedImageCompressService
     {
         @ini_set('memory_limit', '512M');
         clearstatcache(true, $path);
+        // Keep original upload time so Media does not show "just compressed" on every row.
+        $originalMtime = (int) (@filemtime($path) ?: 0);
         $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
 
         // Prefer an existing small WebP sibling as the source (File Manager still shows PNG/JPG).
@@ -446,6 +448,11 @@ class OversizedImageCompressService
         }
 
         imagedestroy($img);
+
+        if ($originalMtime > 0 && is_file($path)) {
+            @touch($path, $originalMtime, $originalMtime);
+            clearstatcache(true, $path);
+        }
 
         return $ok || ((@filesize($path) ?: 0) <= $this->maxBytes);
     }

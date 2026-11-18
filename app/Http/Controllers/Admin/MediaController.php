@@ -188,7 +188,14 @@ class MediaController extends Controller
                 }
             }
             $bytes = (int) ($file['size'] ?? 0);
+            // Prefer oldest variant mtime (closest to original upload; compress must not rewrite the date).
             $mtime = (int) ($file['mtime'] ?? 0);
+            foreach ($variants as $variant) {
+                $vm = (int) ($variant['mtime'] ?? 0);
+                if ($vm > 0 && ($mtime <= 0 || $vm < $mtime)) {
+                    $mtime = $vm;
+                }
+            }
             $uploaded = $mtime > 0 ? Carbon::createFromTimestamp($mtime, config('app.timezone')) : null;
             $rows[] = [
                 'rel' => $rel,
