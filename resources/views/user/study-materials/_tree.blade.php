@@ -50,7 +50,7 @@
                                @if($item->portalPosterUrl()) data-sm-poster="{{ $item->portalPosterUrl() }}" @endif>
                                 <i class="fa {{ $kind === 'video' ? 'fa-file-video-o text-info' : $iconClass }} sm-file-icon"></i>
                                 <span class="sm-file-name">{{ $item->name }}</span>
-                                <span class="sm-file-open-btn">Open</span>
+                                <span class="sm-file-open-btn">OPEN</span>
                             </a>
                         @else
                             <div class="sm-file-link sm-file-inactive" title="This file is inactive and cannot be opened">
