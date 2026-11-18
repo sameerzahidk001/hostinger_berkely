@@ -17,7 +17,7 @@
                         <i class="fa {{ $item->iconFaClass() }}"></i> {{ $item->name }}
                         @if($item->isExternal())
                             <span class="label label-info">Zoho WorkDrive</span>
-                            <a href="{{ $item->external_url }}" target="_blank" rel="noopener" class="btn btn-xs btn-default">Open</a>
+                            <a href="{{ $item->external_url }}" target="_blank" rel="noopener" class="btn btn-xs btn-primary" style="background:#455a64;border-color:#37474f;">Open</a>
                         @else
                             <small class="text-muted">({{ number_format(($item->size ?? 0) / 1024, 1) }} KB)</small>
                         @endif
@@ -29,7 +29,10 @@
                         <form action="{{ route('admin.study-materials.items.download', $item->id) }}" method="POST" style="display:inline;">
                             @csrf
                             <input type="hidden" name="allow_download" value="{{ $item->allowsDownload() ? 0 : 1 }}">
-                            <button type="submit" class="btn btn-xs {{ $item->allowsDownload() ? 'btn-info' : 'btn-default' }}" title="Controls the Download button when the file is opened. Does not block opening the file.">
+                            <button type="submit"
+                                class="btn btn-xs {{ $item->allowsDownload() ? 'btn-info' : 'btn-warning' }}"
+                                @if(! $item->allowsDownload()) style="background:#6d4c41;border-color:#5d4037;color:#fff;" @endif
+                                title="Controls the Download button when the file is opened. Does not block opening the file.">
                                 Download: {{ $item->allowsDownload() ? 'Yes' : 'No' }}
                             </button>
                         </form>
