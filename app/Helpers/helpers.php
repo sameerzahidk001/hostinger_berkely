@@ -2088,6 +2088,59 @@ if (!function_exists('media_asset_meta')) {
     }
 }
 
+if (!function_exists('media_asset_related_paths')) {
+    /**
+     * Same image family: original + compress variants (-card / -thumb) across common extensions.
+     *
+     * @return array<int, string>
+     */
+    function media_asset_related_paths(?string $path): array
+    {
+        if (! class_exists(\App\Models\MediaAsset::class)) {
+            return [];
+        }
+
+        $rel = \App\Models\MediaAsset::normalizePath($path);
+        if ($rel === '') {
+            return [];
+        }
+
+        $dir = trim(str_replace('\\', '/', dirname($rel)), '/.');
+        $stem = (string) pathinfo(basename($rel), PATHINFO_FILENAME);
+        $ext = strtolower((string) pathinfo(basename($rel), PATHINFO_EXTENSION));
+        $baseStem = (string) preg_replace('/-(card|thumb|sm|md|lg|xl)$/i', '', $stem);
+        $stems = array_values(array_unique(array_filter([
+            $stem,
+            $baseStem,
+            $baseStem . '-card',
+            $baseStem . '-thumb',
+        ])));
+        $exts = array_values(array_unique(array_filter([
+            $ext,
+            'webp',
+            'jpg',
+            'jpeg',
+            'png',
+            'avif',
+        ])));
+
+        $out = [$rel];
+        foreach ($stems as $candidateStem) {
+            foreach ($exts as $candidateExt) {
+                $candidate = ($dir === '' ? '' : $dir . '/') . $candidateStem . '.' . $candidateExt;
+                if ($candidate === $rel) {
+                    continue;
+                }
+                if (is_file(public_path($candidate))) {
+                    $out[] = $candidate;
+                }
+            }
+        }
+
+        return array_values(array_unique($out));
+    }
+}
+
 if (!function_exists('sync_media_asset_from_path')) {
     /**
      * Reverse-sync: when a page/course saves Alternative Text (etc.), update Media library.
@@ -2101,19 +2154,24 @@ if (!function_exists('sync_media_asset_from_path')) {
             return;
         }
 
-        $hasValue = false;
+        $clean = [];
         foreach (['alt', 'title', 'caption', 'description'] as $key) {
-            if (array_key_exists($key, $attrs) && trim((string) $attrs[$key]) !== '') {
-                $hasValue = true;
-                break;
+            if (! array_key_exists($key, $attrs)) {
+                continue;
+            }
+            $value = trim((string) $attrs[$key]);
+            if ($value !== '') {
+                $clean[$key] = $value;
             }
         }
-        if (! $hasValue) {
+        if ($clean === []) {
             return;
         }
 
         try {
-            \App\Models\MediaAsset::upsertForPath($path, $attrs);
+            foreach (media_asset_related_paths($path) as $related) {
+                \App\Models\MediaAsset::upsertForPath($related, $clean);
+            }
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::warning('sync_media_asset_from_path failed: ' . $e->getMessage());
         }
