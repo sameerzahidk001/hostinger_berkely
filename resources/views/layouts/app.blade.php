@@ -88,37 +88,41 @@
         }
         .header-quick-icon {
             display: flex;
-            flex-direction: row;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             text-decoration: none;
             color: #000435;
             line-height: 1;
-            min-width: 0;
+            min-width: 44px;
         }
         .header-quick-icon-box {
             position: relative;
-            width: 28px;
-            height: 28px;
-            border-radius: 6px;
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
             background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
             display: flex;
             align-items: center;
             justify-content: center;
             color: #fff;
-            font-size: 14px;
+            font-size: 15px;
             box-shadow: 0 1px 2px rgba(0,0,0,.18);
         }
         .header-quick-icon-label {
-            display: none;
+            font-size: 9px;
+            font-weight: 600;
+            margin-top: 3px;
+            white-space: nowrap;
+            color: #000435;
         }
         .header-quick-icon-badge {
             position: absolute;
             top: -5px;
             right: -6px;
-            min-width: 15px;
-            height: 15px;
-            padding: 0 3px;
+            min-width: 16px;
+            height: 16px;
+            padding: 0 4px;
             border-radius: 999px;
             background: #f8961f;
             color: #111;
@@ -131,7 +135,7 @@
         .header-quick-icons {
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
             flex-shrink: 0;
         }
         #navbar {
