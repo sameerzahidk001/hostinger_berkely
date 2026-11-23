@@ -177,9 +177,12 @@ class LogAdminPanelActivity
     {
         foreach ([
             'page_name', 'title', 'name', 'package_name', 'subject', 'email',
-            'username', 'label', 'heading', 'course_title',
+            'username', 'heading', 'course_title',
+            // Course edit posts nested label[...] arrays — read scalar keys only first.
+            'label.who_can_do', 'label.overview', 'label.eligibility',
+            'label',
         ] as $key) {
-            $value = trim((string) $request->input($key, ''));
+            $value = $this->scalarInput($request, $key);
             if ($value !== '') {
                 return \Illuminate\Support\Str::limit($value, 180, '…');
             }
@@ -191,6 +194,26 @@ class LogAdminPanelActivity
         }
 
         return \Illuminate\Support\Str::limit($request->path(), 180, '…');
+    }
+
+    /** Never cast arrays/files to string (course image uploads send nested label arrays). */
+    private function scalarInput(Request $request, string $key): string
+    {
+        $raw = $request->input($key, null);
+        if (is_array($raw)) {
+            foreach (['title', 'name', 'label', 'heading', 'who_can_do', 'text', 'value'] as $nested) {
+                if (isset($raw[$nested]) && is_scalar($raw[$nested])) {
+                    return trim((string) $raw[$nested]);
+                }
+            }
+
+            return '';
+        }
+        if ($raw === null || is_object($raw)) {
+            return '';
+        }
+
+        return trim((string) $raw);
     }
 
     private function routeParts(string $routeName): array
