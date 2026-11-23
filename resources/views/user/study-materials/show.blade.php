@@ -65,22 +65,25 @@
 .sm-file-player,
 .sm-video-thumb{
     position:relative;
-    display:flex;
-    align-items:center;
-    justify-content:center;
+    display:block;
     background:#000435;
-    margin:0 12px 12px;
-    border-radius:4px;
+    margin:0 auto 12px;
+    border-radius:6px;
     overflow:hidden;
-    width:calc(100% - 24px);
-    height:170px;
-    min-height:170px;
+    width:100%;
+    max-width:360px;
+    aspect-ratio:16 / 9;
+    height:auto;
+    min-height:0;
 }
 .sm-video-thumb .sm-video-mark{
     position:absolute;
     font-size:46px;
     color:#7dd3fc;
     z-index:1;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
 }
 .sm-file-player video,
 .sm-file-player iframe,
@@ -92,6 +95,8 @@
     border:0;
     background:#000435;
     object-fit:cover;
+    position:absolute;
+    inset:0;
 }
 .sm-video-play{
     position:absolute;
