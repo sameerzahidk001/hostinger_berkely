@@ -113,6 +113,9 @@
     width: 100%;
     padding: 18px 0;
 }
+.search-section + section.page-section {
+    padding-top: 1.25rem !important;
+}
 @media (max-width: 768px) {
     .search-section {
         padding: 14px 0;
