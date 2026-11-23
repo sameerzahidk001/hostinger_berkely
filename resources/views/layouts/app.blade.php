@@ -510,7 +510,7 @@
             .site-bottom-social {
                 order: 2;
                 width: 100%;
-                justify-content: flex-start;
+                justify-content: center;
                 padding: 5px 6px;
             }
             .site-bottom-social a { padding: 6px; }
