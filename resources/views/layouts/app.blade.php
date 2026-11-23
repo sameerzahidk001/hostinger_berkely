@@ -408,11 +408,6 @@
         ])->filter(fn ($row) => filled($row['url']))->values();
         $socialMedia = ['facebook', 'twitter', 'instagram', 'linkedin', 'youtube', 'tiktok'];
     @endphp
-    @php
-        $cartCount = Auth::check()
-            ? (int) \App\Models\CartItem::where('user_id', Auth::id())->sum('quantity')
-            : (int) cart_item_count();
-    @endphp
     <style>
         .site-bottom-bar {
             position: fixed;
@@ -428,14 +423,8 @@
             gap: 0;
             background: rgba(70, 70, 70, 0.92);
         }
-        .site-bottom-social-row {
-            display: flex;
-            align-items: stretch;
-            justify-content: space-between;
-            flex: 1 1 auto;
-            min-width: 0;
-        }
         .site-bottom-social {
+            order: 1;
             display: flex;
             flex-wrap: wrap;
             align-items: center;
@@ -456,24 +445,8 @@
             object-fit: contain;
             display: block;
         }
-        .site-bottom-cart {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            background: #bc1904;
-            color: #fff;
-            text-decoration: none;
-            font-weight: 700;
-            font-size: 14px;
-            padding: 8px 12px;
-            white-space: nowrap;
-        }
-        .site-bottom-cart img {
-            width: 28px;
-            height: 28px;
-            object-fit: contain;
-        }
         .site-bottom-wa {
+            order: 2;
             display: flex;
             flex-wrap: nowrap;
             align-items: stretch;
@@ -508,7 +481,7 @@
         }
         @media (max-width: 767px) {
             .site-bottom-bar {
-                flex-direction: column-reverse;
+                flex-direction: column;
             }
             .site-bottom-wa {
                 order: 1;
@@ -534,43 +507,17 @@
                 width: 22px;
                 height: 22px;
             }
-            .site-bottom-social-row {
+            .site-bottom-social {
                 order: 2;
                 width: 100%;
-            }
-            .site-bottom-social {
+                justify-content: flex-start;
                 padding: 5px 6px;
             }
             .site-bottom-social a { padding: 6px; }
             .site-bottom-social img { width: 22px; height: 22px; }
-            .site-bottom-cart {
-                font-size: 13px;
-                padding: 8px 10px;
-            }
-            .site-bottom-cart img {
-                width: 22px;
-                height: 22px;
-            }
         }
     </style>
     <div class="site-bottom-bar">
-        <div class="site-bottom-social-row">
-            <div class="site-bottom-social">
-                @foreach ($socialMedia as $platform)
-                    @php
-                        $smUrl = data_get($settings, $platform . '_url') ?: '#';
-                        $smIcon = data_get($settings, $platform . '_icon') ?: 'default.jpeg';
-                    @endphp
-                    <a href="{{ $smUrl }}" target="_blank" rel="noopener" title="{{ ucfirst($platform) }}">
-                        <img src="{{ asset('images/' . $smIcon) }}" alt="{{ ucfirst($platform) }}">
-                    </a>
-                @endforeach
-            </div>
-            <a href="{{ route('cart.index') }}" class="site-bottom-cart" title="Cart">
-                <img src="{{ asset('frontend/images/svgs/shopping-cart.svg') }}" alt="Cart">
-                <span>Cart ({{ $cartCount }})</span>
-            </a>
-        </div>
         @if($whatsappLinks->isNotEmpty())
             <div class="site-bottom-wa">
                 @foreach($whatsappLinks as $wa)
@@ -581,6 +528,17 @@
                 @endforeach
             </div>
         @endif
+        <div class="site-bottom-social">
+            @foreach ($socialMedia as $platform)
+                @php
+                    $smUrl = data_get($settings, $platform . '_url') ?: '#';
+                    $smIcon = data_get($settings, $platform . '_icon') ?: 'default.jpeg';
+                @endphp
+                <a href="{{ $smUrl }}" target="_blank" rel="noopener" title="{{ ucfirst($platform) }}">
+                    <img src="{{ asset('images/' . $smIcon) }}" alt="{{ ucfirst($platform) }}">
+                </a>
+            @endforeach
+        </div>
     </div>
 
     <!-- Footer Section -->
@@ -591,10 +549,10 @@
     @endphp
     <footer
         class="card-hidden px-6 min-[1200px]:px-[72px] min-h-[465px] flex items-center flex-col justify-center w-full py-8 mt-auto"
-        style="background-color: {{ $footerBg }}; color: {{ $footerText }}; margin-bottom: 64px !important;">
+        style="background-color: {{ $footerBg }}; color: {{ $footerText }}; margin-bottom: 56px !important;">
         <style>
             @media (max-width: 767px) {
-                footer { margin-bottom: 118px !important; }
+                footer { margin-bottom: 108px !important; }
             }
         </style>
         @php
