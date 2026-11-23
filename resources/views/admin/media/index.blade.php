@@ -47,7 +47,7 @@
     #lms-media-upload textarea.form-control { min-height:36px; height:36px; resize:vertical; }
     #lms-media-upload .row { margin-bottom:0; }
     #lms-media-table thead th.lms-sort { cursor:pointer; user-select:none; white-space:nowrap; }
-    #lms-media-table thead th.lms-sort:after { content:''; }
+    #lms-media-table thead th.lms-sort:after { content:' \2195'; color:#bbb; font-size:11px; }
     #lms-media-table thead th.lms-sort.is-asc:after { content:' \25B2'; color:#333; font-size:11px; }
     #lms-media-table thead th.lms-sort.is-desc:after { content:' \25BC'; color:#333; font-size:11px; }
     .lms-media-links ol { margin:0; padding-left:0; list-style:none; }
@@ -224,13 +224,13 @@
                 <table class="table table-striped table-bordered" id="lms-media-table">
                     <thead>
                         <tr>
-                            <th class="lms-sort {{ ($mediaSort ?? '') === 'uploaded' ? 'is-'.($mediaDir ?? 'desc') : '' }}" data-sort-key="uploaded" data-sort="num" style="width:110px;">Uploaded date</th>
-                            <th style="width:90px;">Image</th>
-                            <th class="lms-sort {{ ($mediaSort ?? '') === 'name' ? 'is-'.($mediaDir ?? 'desc') : '' }}" data-sort-key="name" data-sort="text" style="min-width:160px;">File</th>
-                            <th class="lms-meta-col">Alternative Text</th>
-                            <th class="lms-meta-col">Title</th>
-                            <th class="lms-meta-col">Image Caption</th>
-                            <th class="lms-meta-col">Description</th>
+                            <th class="lms-sort {{ ($mediaSort ?? 'uploaded') === 'uploaded' ? 'is-'.($mediaDir ?? 'desc') : '' }}" data-sort-key="uploaded" title="Sort by uploaded date" style="width:110px;">Uploaded date</th>
+                            <th class="lms-sort {{ ($mediaSort ?? '') === 'size' ? 'is-'.($mediaDir ?? 'desc') : '' }}" data-sort-key="size" title="Sort by file size" style="width:90px;">Image</th>
+                            <th class="lms-sort {{ ($mediaSort ?? '') === 'name' ? 'is-'.($mediaDir ?? 'desc') : '' }}" data-sort-key="name" title="Sort by filename" style="min-width:160px;">File</th>
+                            <th class="lms-sort lms-meta-col {{ ($mediaSort ?? '') === 'alt' ? 'is-'.($mediaDir ?? 'desc') : '' }}" data-sort-key="alt" title="Sort by alternative text">Alternative Text</th>
+                            <th class="lms-sort lms-meta-col {{ ($mediaSort ?? '') === 'title' ? 'is-'.($mediaDir ?? 'desc') : '' }}" data-sort-key="title" title="Sort by title">Title</th>
+                            <th class="lms-sort lms-meta-col {{ ($mediaSort ?? '') === 'caption' ? 'is-'.($mediaDir ?? 'desc') : '' }}" data-sort-key="caption" title="Sort by caption">Image Caption</th>
+                            <th class="lms-sort lms-meta-col {{ ($mediaSort ?? '') === 'description' ? 'is-'.($mediaDir ?? 'desc') : '' }}" data-sort-key="description" title="Sort by description">Description</th>
                             <th data-col="links">
                                 Linked to
                                 <button type="button" class="btn btn-primary btn-xs lms-load-links-btn" id="lms-load-page-links">
@@ -564,7 +564,7 @@
         }, true);
     }
 
-    // Full-library sort across tabs/pages (client-only sort was limited to 30 rows and broke Pages vs All).
+    // Full-library sort across tabs/pages for every sortable column.
     $('#lms-media-table thead').on('click', 'th.lms-sort[data-sort-key]', function () {
         var key = $(this).attr('data-sort-key');
         if (!key) return;
@@ -574,7 +574,7 @@
         if (cur === key) {
             dir = dir === 'asc' ? 'desc' : 'asc';
         } else {
-            dir = key === 'uploaded' ? 'desc' : 'asc';
+            dir = key === 'uploaded' || key === 'size' ? 'desc' : 'asc';
         }
         if (key === 'uploaded') {
             url.searchParams.delete('sort');

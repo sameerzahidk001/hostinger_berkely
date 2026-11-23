@@ -43,7 +43,7 @@ class MediaController extends Controller
         $perPage = 30;
         $page = max(1, (int) $request->input('page', 1));
         $sort = strtolower(trim((string) $request->input('sort', 'uploaded')));
-        if (! in_array($sort, ['uploaded', 'name'], true)) {
+        if (! in_array($sort, ['uploaded', 'name', 'size', 'alt', 'title', 'caption', 'description'], true)) {
             $sort = 'uploaded';
         }
         $dir = strtolower(trim((string) $request->input('dir', 'desc'))) === 'asc' ? 'asc' : 'desc';
@@ -114,15 +114,74 @@ class MediaController extends Controller
         // Prefer stable DB upload times (filemtime changes when compress/deploy restores files).
         $files = $this->attachStableUploadTimes($files);
 
-        // Same date order on every tab (All / Pages / Courses). Do not force public-first —
-        // that made All and Pages disagree when sorting by uploaded date.
-        usort($files, function ($a, $b) use ($sort, $dir) {
+        // Same order on every tab. Meta sorts use media_assets so Alt/Title/etc work library-wide.
+        $metaSortMap = [];
+        if (in_array($sort, ['alt', 'title', 'caption', 'description'], true) && MediaAsset::ensureTable()) {
+            $paths = [];
+            foreach ($files as $file) {
+                foreach (($file['variants'] ?? [$file]) as $variant) {
+                    $n = MediaAsset::normalizePath((string) ($variant['rel'] ?? ''));
+                    if ($n !== '') {
+                        $paths[] = $n;
+                    }
+                }
+            }
+            $paths = array_values(array_unique($paths));
+            foreach (array_chunk($paths, 500) as $chunk) {
+                foreach (MediaAsset::query()->whereIn('path', $chunk)->get(['path', 'alt', 'title', 'caption', 'description']) as $row) {
+                    $metaSortMap[strtolower((string) $row->path)] = [
+                        'alt' => trim((string) ($row->alt ?? '')),
+                        'title' => trim((string) ($row->title ?? '')),
+                        'caption' => trim((string) ($row->caption ?? '')),
+                        'description' => trim((string) ($row->description ?? '')),
+                    ];
+                }
+            }
+        }
+
+        usort($files, function ($a, $b) use ($sort, $dir, $metaSortMap) {
             $ta = (int) ($a['uploaded_at'] ?? $a['mtime'] ?? 0);
             $tb = (int) ($b['uploaded_at'] ?? $b['mtime'] ?? 0);
             $na = mb_strtolower((string) ($a['name'] ?? ''));
             $nb = mb_strtolower((string) ($b['name'] ?? ''));
+            $sa = (int) ($a['size'] ?? 0);
+            $sb = (int) ($b['size'] ?? 0);
 
-            $cmp = $sort === 'name' ? ($na <=> $nb) : ($ta <=> $tb);
+            if ($sort === 'name') {
+                $cmp = $na <=> $nb;
+            } elseif ($sort === 'size') {
+                $cmp = $sa <=> $sb;
+            } elseif (in_array($sort, ['alt', 'title', 'caption', 'description'], true)) {
+                $va = '';
+                $vb = '';
+                foreach (($a['variants'] ?? [$a]) as $variant) {
+                    $key = strtolower(MediaAsset::normalizePath((string) ($variant['rel'] ?? '')));
+                    $candidate = (string) (($metaSortMap[$key] ?? [])[$sort] ?? '');
+                    if ($candidate !== '') {
+                        $va = mb_strtolower($candidate);
+                        break;
+                    }
+                }
+                foreach (($b['variants'] ?? [$b]) as $variant) {
+                    $key = strtolower(MediaAsset::normalizePath((string) ($variant['rel'] ?? '')));
+                    $candidate = (string) (($metaSortMap[$key] ?? [])[$sort] ?? '');
+                    if ($candidate !== '') {
+                        $vb = mb_strtolower($candidate);
+                        break;
+                    }
+                }
+                // Empty meta sorts last in both directions so filled rows stay useful.
+                if ($va === '' && $vb !== '') {
+                    $cmp = 1;
+                } elseif ($va !== '' && $vb === '') {
+                    $cmp = -1;
+                } else {
+                    $cmp = $va <=> $vb;
+                }
+            } else {
+                $cmp = $ta <=> $tb;
+            }
+
             if ($cmp === 0) {
                 $cmp = $ta <=> $tb;
             }
