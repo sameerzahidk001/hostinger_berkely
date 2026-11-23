@@ -15,7 +15,7 @@
     <div class="sm-tree-level" style="padding-left: {{ $pad }}px;">
         @foreach($folders as $item)
             <div class="sm-tree-folder">
-                <div class="sm-tree-folder-head">
+                <div class="sm-tree-folder-head {{ ((int) ($depth ?? 0)) === 0 ? 'is-root' : 'is-nested' }}">
                     <i class="fa fa-folder text-warning"></i>
                     <strong>{{ $item->name }}</strong>
                 </div>

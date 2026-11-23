@@ -43,6 +43,19 @@
     margin-bottom:10px;
     color:#0F2348;
     font-weight:700;
+    font-size:14px;
+}
+.sm-tree-folder-head.is-root{
+    font-size:18px;
+    color:#0284C7;
+}
+.sm-tree-folder-head.is-root strong{
+    color:#0284C7;
+    font-size:inherit;
+}
+.sm-tree-folder-head.is-nested{
+    font-size:14px;
+    color:#0F2348;
 }
 .sm-tree-folder-head .fa{margin-right:6px;color:#f8961f;}
 .sm-files-grid{
