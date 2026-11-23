@@ -157,6 +157,15 @@ section.page-section {
   padding-top: calc(3.5rem + 30px);
 }
 
+/* Keep the homepage search bar from sitting in a tall white band. */
+.search-section + section.page-section {
+  padding-top: 1.25rem;
+}
+.cms-banner-section + .search-section,
+section + .search-section {
+  margin-top: 0;
+}
+
 section.page-section.instructor-section {
   padding-top: 1.25rem;
   padding-bottom: 2.5rem;

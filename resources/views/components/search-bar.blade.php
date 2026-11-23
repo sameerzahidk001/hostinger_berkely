@@ -111,7 +111,12 @@
 
 .search-section {
     width: 100%;
-    padding: 60px 0;
+    padding: 18px 0;
+}
+@media (max-width: 768px) {
+    .search-section {
+        padding: 14px 0;
+    }
 }
 
 /* ===== Title ===== */
