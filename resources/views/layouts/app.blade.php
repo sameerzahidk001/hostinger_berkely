@@ -408,6 +408,11 @@
         ])->filter(fn ($row) => filled($row['url']))->values();
         $socialMedia = ['facebook', 'twitter', 'instagram', 'linkedin', 'youtube', 'tiktok'];
     @endphp
+    @php
+        $cartCount = Auth::check()
+            ? (int) \App\Models\CartItem::where('user_id', Auth::id())->sum('quantity')
+            : (int) cart_item_count();
+    @endphp
     <style>
         .site-bottom-bar {
             position: fixed;
@@ -422,6 +427,13 @@
             justify-content: space-between;
             gap: 0;
             background: rgba(70, 70, 70, 0.92);
+        }
+        .site-bottom-social-row {
+            display: flex;
+            align-items: stretch;
+            justify-content: space-between;
+            flex: 1 1 auto;
+            min-width: 0;
         }
         .site-bottom-social {
             display: flex;
@@ -444,12 +456,32 @@
             object-fit: contain;
             display: block;
         }
+        .site-bottom-cart {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #bc1904;
+            color: #fff;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 14px;
+            padding: 8px 12px;
+            white-space: nowrap;
+        }
+        .site-bottom-cart img {
+            width: 28px;
+            height: 28px;
+            object-fit: contain;
+        }
         .site-bottom-wa {
             display: flex;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             align-items: stretch;
             justify-content: flex-end;
             margin-left: auto;
+            gap: 4px;
+            padding: 4px;
+            background: transparent;
         }
         .site-bottom-wa a {
             display: inline-flex;
@@ -465,51 +497,79 @@
             line-height: 1.15;
             padding: 10px 14px;
             white-space: nowrap;
-            border-left: 1px solid rgba(255,255,255,.18);
+            border: 1px solid rgba(255,255,255,.35);
+            box-shadow: inset 0 0 0 1px rgba(0,0,0,.12);
         }
         .site-bottom-wa img {
-            width: 22px;
-            height: 22px;
+            width: 24px;
+            height: 24px;
             object-fit: contain;
             flex-shrink: 0;
         }
         @media (max-width: 767px) {
-            .site-bottom-social {
+            .site-bottom-bar {
+                flex-direction: column-reverse;
+            }
+            .site-bottom-wa {
+                order: 1;
                 width: 100%;
+                margin-left: 0;
+                gap: 5px;
+                padding: 6px;
+                background: #8f1203;
+            }
+            .site-bottom-wa a {
+                flex: 1 1 0;
                 justify-content: center;
-                padding: 4px 6px;
+                gap: 6px;
+                font-size: 11px;
+                padding: 10px 6px;
+                white-space: normal;
+                text-align: center;
+                border: 1px solid rgba(255,255,255,.45);
+                border-radius: 2px;
+                min-height: 44px;
+            }
+            .site-bottom-wa img {
+                width: 22px;
+                height: 22px;
+            }
+            .site-bottom-social-row {
+                order: 2;
+                width: 100%;
+            }
+            .site-bottom-social {
+                padding: 5px 6px;
             }
             .site-bottom-social a { padding: 6px; }
             .site-bottom-social img { width: 22px; height: 22px; }
-            .site-bottom-wa {
-                width: 100%;
-                margin-left: 0;
+            .site-bottom-cart {
+                font-size: 13px;
+                padding: 8px 10px;
             }
-            .site-bottom-wa a {
-                flex: 1 1 33%;
-                justify-content: center;
-                gap: 5px;
-                font-size: 10px;
-                padding: 8px 6px;
-                white-space: normal;
-                text-align: center;
-                border-left: 0;
-                border-top: 1px solid rgba(255,255,255,.18);
+            .site-bottom-cart img {
+                width: 22px;
+                height: 22px;
             }
-            .site-bottom-wa img { width: 16px; height: 16px; }
         }
     </style>
     <div class="site-bottom-bar">
-        <div class="site-bottom-social">
-            @foreach ($socialMedia as $platform)
-                @php
-                    $smUrl = data_get($settings, $platform . '_url') ?: '#';
-                    $smIcon = data_get($settings, $platform . '_icon') ?: 'default.jpeg';
-                @endphp
-                <a href="{{ $smUrl }}" target="_blank" rel="noopener" title="{{ ucfirst($platform) }}">
-                    <img src="{{ asset('images/' . $smIcon) }}" alt="{{ ucfirst($platform) }}">
-                </a>
-            @endforeach
+        <div class="site-bottom-social-row">
+            <div class="site-bottom-social">
+                @foreach ($socialMedia as $platform)
+                    @php
+                        $smUrl = data_get($settings, $platform . '_url') ?: '#';
+                        $smIcon = data_get($settings, $platform . '_icon') ?: 'default.jpeg';
+                    @endphp
+                    <a href="{{ $smUrl }}" target="_blank" rel="noopener" title="{{ ucfirst($platform) }}">
+                        <img src="{{ asset('images/' . $smIcon) }}" alt="{{ ucfirst($platform) }}">
+                    </a>
+                @endforeach
+            </div>
+            <a href="{{ route('cart.index') }}" class="site-bottom-cart" title="Cart">
+                <img src="{{ asset('frontend/images/svgs/shopping-cart.svg') }}" alt="Cart">
+                <span>Cart ({{ $cartCount }})</span>
+            </a>
         </div>
         @if($whatsappLinks->isNotEmpty())
             <div class="site-bottom-wa">
@@ -531,10 +591,10 @@
     @endphp
     <footer
         class="card-hidden px-6 min-[1200px]:px-[72px] min-h-[465px] flex items-center flex-col justify-center w-full py-8 mt-auto"
-        style="background-color: {{ $footerBg }}; color: {{ $footerText }}; margin-bottom: 56px !important;">
+        style="background-color: {{ $footerBg }}; color: {{ $footerText }}; margin-bottom: 64px !important;">
         <style>
             @media (max-width: 767px) {
-                footer { margin-bottom: 96px !important; }
+                footer { margin-bottom: 118px !important; }
             }
         </style>
         @php
