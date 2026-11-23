@@ -398,67 +398,129 @@
         </section>
     @endif
 
-    <!-- Floating WhatsApp (3 regional links) -->
     @php
         $whatsappIcon = data_get($settings, 'whatsapp_icon') ?: 'default.jpeg';
         $fallbackWa = data_get($settings, 'whatsapp_url');
         $whatsappLinks = collect([
-            ['label' => 'USA & Canada', 'url' => data_get($settings, 'whatsapp_usa_url') ?: $fallbackWa],
-            ['label' => 'UK & Europe', 'url' => data_get($settings, 'whatsapp_uk_url') ?: $fallbackWa],
-            ['label' => 'Middle East & Africa', 'url' => data_get($settings, 'whatsapp_middle_east_url') ?: $fallbackWa],
-        ])->filter(fn ($row) => filled($row['url']))->unique('url')->values();
+            ['label' => 'USA & CANADA', 'url' => data_get($settings, 'whatsapp_usa_url') ?: $fallbackWa],
+            ['label' => 'UK & EUROPE', 'url' => data_get($settings, 'whatsapp_uk_url') ?: $fallbackWa],
+            ['label' => 'MIDDLE EAST & AFRICA', 'url' => data_get($settings, 'whatsapp_middle_east_url') ?: $fallbackWa],
+        ])->filter(fn ($row) => filled($row['url']))->values();
+        $socialMedia = ['facebook', 'twitter', 'instagram', 'linkedin', 'youtube', 'tiktok'];
     @endphp
-    @if($whatsappLinks->isNotEmpty())
-        <style>
-            .wa-float { position:fixed;bottom:5rem;right:8px;z-index:50;display:flex;flex-direction:column;align-items:flex-end;gap:12px; }
-            .wa-float a { display:flex;align-items:center;gap:8px;text-decoration:none; }
-            .wa-float-label { display:inline-block;white-space:nowrap;background:#FFD60A;color:#000435;font-size:13px;font-weight:800;letter-spacing:.03em;text-transform:uppercase;line-height:1.2;padding:7px 12px;border-radius:9999px;box-shadow:0 2px 8px rgba(0,0,0,.28); }
-            .wa-float-icon { width:64px !important;height:64px !important;max-width:64px !important;aspect-ratio:1/1 !important;border-radius:9999px;object-fit:cover;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.25); }
-            @media (max-width: 767px) {
-                .wa-float { bottom:4.25rem;right:6px;gap:6px; }
-                .wa-float a { gap:5px; }
-                .wa-float-label { font-size:9px;padding:4px 7px;letter-spacing:.02em; }
-                .wa-float-icon { width:34px !important;height:34px !important;max-width:34px !important; }
+    <style>
+        .site-bottom-bar {
+            position: fixed;
+            z-index: 50;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: stretch;
+            justify-content: space-between;
+            gap: 0;
+            background: rgba(70, 70, 70, 0.92);
+        }
+        .site-bottom-social {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 2px;
+            padding: 6px 8px;
+        }
+        .site-bottom-social a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: #000435;
+            padding: 8px;
+            text-decoration: none;
+        }
+        .site-bottom-social img {
+            width: 28px;
+            height: 28px;
+            object-fit: contain;
+            display: block;
+        }
+        .site-bottom-wa {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: stretch;
+            justify-content: flex-end;
+            margin-left: auto;
+        }
+        .site-bottom-wa a {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #bc1904;
+            color: #fff;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 13px;
+            letter-spacing: .02em;
+            text-transform: uppercase;
+            line-height: 1.15;
+            padding: 10px 14px;
+            white-space: nowrap;
+            border-left: 1px solid rgba(255,255,255,.18);
+        }
+        .site-bottom-wa img {
+            width: 22px;
+            height: 22px;
+            object-fit: contain;
+            flex-shrink: 0;
+        }
+        @media (max-width: 767px) {
+            .site-bottom-social {
+                width: 100%;
+                justify-content: center;
+                padding: 4px 6px;
             }
-        </style>
-        <div class="wa-float">
-            @foreach($whatsappLinks as $wa)
-                <a href="{{ $wa['url'] }}" target="_blank" rel="noopener" title="WhatsApp {{ $wa['label'] }}">
-                    <span class="wa-float-label">{{ $wa['label'] }}</span>
-                    <img src="{{ asset('images/' . $whatsappIcon) }}" alt="WhatsApp {{ $wa['label'] }}" class="wa-float-icon">
-                </a>
-            @endforeach
-        </div>
-    @endif
-
-    <!-- Fixed Social Section -->
-    <div class="fixed z-50 bottom-0 w-full flex justify-end space-x-0 bg-black bg-opacity-50">
-        <div class="flex gap-1 items-center py-2 px-2">
-            {{-- <p class="text-white hidden sm:block">Follow Us:</p> --}}
-            @php
-                $socialMedia = ['facebook', 'twitter', 'instagram', 'linkedin', 'youtube', 'tiktok'];
-            @endphp
+            .site-bottom-social a { padding: 6px; }
+            .site-bottom-social img { width: 22px; height: 22px; }
+            .site-bottom-wa {
+                width: 100%;
+                margin-left: 0;
+            }
+            .site-bottom-wa a {
+                flex: 1 1 33%;
+                justify-content: center;
+                gap: 5px;
+                font-size: 10px;
+                padding: 8px 6px;
+                white-space: normal;
+                text-align: center;
+                border-left: 0;
+                border-top: 1px solid rgba(255,255,255,.18);
+            }
+            .site-bottom-wa img { width: 16px; height: 16px; }
+        }
+    </style>
+    <div class="site-bottom-bar">
+        <div class="site-bottom-social">
             @foreach ($socialMedia as $platform)
                 @php
                     $smUrl = data_get($settings, $platform . '_url') ?: '#';
                     $smIcon = data_get($settings, $platform . '_icon') ?: 'default.jpeg';
                 @endphp
-                <a href="{{ $smUrl }}" target="_blank" rel="noopener" class="bg-[#000435] p-2"><img
-                        src="{{ asset('images/' . $smIcon) }}" class="w-8 h-8" alt="{{ ucfirst($platform) }}"></a>
+                <a href="{{ $smUrl }}" target="_blank" rel="noopener" title="{{ ucfirst($platform) }}">
+                    <img src="{{ asset('images/' . $smIcon) }}" alt="{{ ucfirst($platform) }}">
+                </a>
             @endforeach
         </div>
-        @php
-            $cartCount = 0;
-
-            if (Auth::check()) {
-                $cartCount = \App\Models\CartItem::where('user_id', Auth::id())->sum('quantity');
-            }
-        @endphp
-
-        <a href="{{ route('cart.index') }}" class="flex items-center gap-2 bg-[#bc1904] px-2 py-1">
-            <img src="{{ asset('frontend/images/svgs/shopping-cart.svg') }}" class="w-8 h-8" alt="Cart">
-            <p class="text-white">Cart ({{ $cartCount }})</p>
-        </a>
+        @if($whatsappLinks->isNotEmpty())
+            <div class="site-bottom-wa">
+                @foreach($whatsappLinks as $wa)
+                    <a href="{{ $wa['url'] }}" target="_blank" rel="noopener" title="WhatsApp {{ $wa['label'] }}">
+                        <img src="{{ asset('images/' . $whatsappIcon) }}" alt="WhatsApp">
+                        <span>{{ $wa['label'] }}</span>
+                    </a>
+                @endforeach
+            </div>
+        @endif
     </div>
 
     <!-- Footer Section -->
@@ -469,7 +531,12 @@
     @endphp
     <footer
         class="card-hidden px-6 min-[1200px]:px-[72px] min-h-[465px] flex items-center flex-col justify-center w-full py-8 mt-auto"
-        style="background-color: {{ $footerBg }}; color: {{ $footerText }}; margin-bottom: 0px !important;">
+        style="background-color: {{ $footerBg }}; color: {{ $footerText }}; margin-bottom: 56px !important;">
+        <style>
+            @media (max-width: 767px) {
+                footer { margin-bottom: 96px !important; }
+            }
+        </style>
         @php
             $columns = $settings->footer_columns == null ? 4 : $settings->footer_columns;
 
