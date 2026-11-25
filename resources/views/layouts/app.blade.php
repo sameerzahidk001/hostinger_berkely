@@ -10,6 +10,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="format-detection" content="telephone=no">
     <link rel="icon" type="image/png" href="{{ asset('images/' . $settings->favicon ?? 'default.jpeg') }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
@@ -151,6 +152,20 @@
             aspect-ratio: auto !important;
             min-height: 0 !important;
             object-fit: contain;
+        }
+        .footer-copyright {
+            display: block;
+            width: 100%;
+            text-align: left;
+            font-weight: 700;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        .footer-copyright .ukprn-lock {
+            white-space: nowrap;
+        }
+        @media (min-width: 768px) {
+            .footer-copyright { text-align: center; }
         }
         .header-quick-icons-desktop { display: none; }
         .header-quick-icons-mobile { display: flex; }
@@ -614,10 +629,16 @@
                     </a>
                 @endif
             </div>
-            <span
-                class="flex flex-0 bg justify-center basis-100 flex-grow w-full no-underline font-bold text-base items-center text-[16px]"
-                style="color: {{ $footerTitle }}">
-                {{ $settings->copyright_message ?? 'Copyright © 1976 Company PVT. LTD' }}
+            @php
+                $copyrightRaw = $settings->copyright_message ?? 'Copyright © 1976 Company PVT. LTD';
+                $copyrightHtml = preg_replace(
+                    '/(UKPRN:\s*\d+)/u',
+                    '<span class="ukprn-lock">$1</span>',
+                    e($copyrightRaw)
+                );
+            @endphp
+            <span class="footer-copyright" style="color: {{ $footerTitle }}">
+                {!! $copyrightHtml !!}
             </span>
         </div>
         {!! strip_waf_captcha_html($settings->footer_settings ?? '') !!}
