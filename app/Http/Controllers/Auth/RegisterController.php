@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use App\Models\Role;
 use App\Models\User;
 use App\Mail\UserMail;
+use App\Services\JournalRoleService;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Auth;
 
@@ -29,13 +30,22 @@ class RegisterController extends Controller
 
     protected function validator(array $data)
     {
+        $pathPrefix = normalize_path_auth_prefix((string) ($data['path_prefix'] ?? path_auth_prefix()));
+        $allowedNames = $pathPrefix === 'academic-journal'
+            ? ['journal_author']
+            : ['student', 'instructor'];
+
+        if ($pathPrefix === 'academic-journal') {
+            JournalRoleService::ensureRoles();
+        }
+
         return Validator::make($data, [
             'role' => [
                 'required',
                 'exists:roles,id',
-                function ($attribute, $value, $fail) {
-                    $allowedRoles = Role::whereIn('name', ['student', 'instructor'])->pluck('id')->toArray();
-                    if (!in_array($value, $allowedRoles)) {
+                function ($attribute, $value, $fail) use ($allowedNames) {
+                    $allowedRoles = Role::whereIn('name', $allowedNames)->pluck('id')->toArray();
+                    if (! in_array((int) $value, array_map('intval', $allowedRoles), true)) {
                         $fail('The selected role is invalid.');
                     }
                 }
@@ -149,6 +159,11 @@ class RegisterController extends Controller
             return redirect()->route('cart.index')->with('success', 'Item automatically added to cart after login.');
         }
 
+        if ($pathPrefix === 'academic-journal' && is_journal_user($user)) {
+            return redirect()->route('journal.dashboard')
+                ->with('status', 'Account created. Welcome to the Academic Journal.');
+        }
+
         if ($pathPrefix !== '') {
             return redirect()->to(path_auth_home_url($pathPrefix))
                 ->with('status', 'Account created. Welcome.');
@@ -160,7 +175,12 @@ class RegisterController extends Controller
     public function showRegistrationForm(?string $pathPrefix = null)
     {
         $pathPrefix = remember_path_auth_prefix($pathPrefix ?: request()->route('pathPrefix'));
-        $roles = Role::whereIn('name', ['student', 'instructor'])->get();
+        if ($pathPrefix === 'academic-journal') {
+            JournalRoleService::ensureRoles();
+            $roles = Role::whereIn('name', ['journal_author'])->get();
+        } else {
+            $roles = Role::whereIn('name', ['student', 'instructor'])->get();
+        }
         $authBrand = site_header_branding(null, $pathPrefix ?: null);
 
         return view('auth.register', [
@@ -170,6 +190,7 @@ class RegisterController extends Controller
             'registerAction' => $pathPrefix !== '' ? path_register_url($pathPrefix) : route('register'),
             'loginUrl' => $pathPrefix !== '' ? path_login_url($pathPrefix) : route('login'),
             'homeUrl' => $pathPrefix !== '' ? path_auth_home_url($pathPrefix) : route('welcome'),
+            'isJournalRegister' => $pathPrefix === 'academic-journal',
         ]);
     }
 }

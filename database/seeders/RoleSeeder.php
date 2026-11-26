@@ -29,5 +29,10 @@ class RoleSeeder extends Seeder
                 ]
             );
         }
+
+        // Additive journal roles only — never renames LMS roles above.
+        if (class_exists(\App\Services\JournalRoleService::class)) {
+            \App\Services\JournalRoleService::ensureRoles();
+        }
     }
 }

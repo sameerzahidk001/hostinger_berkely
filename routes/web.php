@@ -485,6 +485,28 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
         Route::put('/path-branding/{id}', [\App\Http\Controllers\Admin\SitePathBrandingController::class, 'update'])->name('admin.path-branding.update');
         Route::delete('/path-branding/{id}', [\App\Http\Controllers\Admin\SitePathBrandingController::class, 'destroy'])->name('admin.path-branding.destroy');
 
+        // Academic Journal admin (Superadmin) — additive, does not alter LMS menus elsewhere
+        Route::prefix('journal')->name('admin.journal.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\Journal\OverviewController::class, 'index'])->name('overview');
+            Route::get('/subjects', [\App\Http\Controllers\Admin\Journal\SubjectController::class, 'index'])->name('subjects.index');
+            Route::post('/subjects', [\App\Http\Controllers\Admin\Journal\SubjectController::class, 'store'])->name('subjects.store');
+            Route::put('/subjects/{id}', [\App\Http\Controllers\Admin\Journal\SubjectController::class, 'update'])->name('subjects.update');
+            Route::delete('/subjects/{id}', [\App\Http\Controllers\Admin\Journal\SubjectController::class, 'destroy'])->name('subjects.destroy');
+            Route::get('/policies', [\App\Http\Controllers\Admin\Journal\PolicyController::class, 'index'])->name('policies.index');
+            Route::put('/policies/{id}', [\App\Http\Controllers\Admin\Journal\PolicyController::class, 'update'])->name('policies.update');
+            Route::get('/issues', [\App\Http\Controllers\Admin\Journal\IssueController::class, 'index'])->name('issues.index');
+            Route::post('/issues', [\App\Http\Controllers\Admin\Journal\IssueController::class, 'store'])->name('issues.store');
+            Route::put('/issues/{id}', [\App\Http\Controllers\Admin\Journal\IssueController::class, 'update'])->name('issues.update');
+            Route::delete('/issues/{id}', [\App\Http\Controllers\Admin\Journal\IssueController::class, 'destroy'])->name('issues.destroy');
+            Route::get('/board', [\App\Http\Controllers\Admin\Journal\BoardController::class, 'index'])->name('board.index');
+            Route::post('/board', [\App\Http\Controllers\Admin\Journal\BoardController::class, 'store'])->name('board.store');
+            Route::put('/board/{id}', [\App\Http\Controllers\Admin\Journal\BoardController::class, 'update'])->name('board.update');
+            Route::delete('/board/{id}', [\App\Http\Controllers\Admin\Journal\BoardController::class, 'destroy'])->name('board.destroy');
+            Route::get('/manuscripts', [\App\Http\Controllers\Admin\Journal\ManuscriptAdminController::class, 'index'])->name('manuscripts.index');
+        });
+
+        Route::get('/events-hub', [\App\Http\Controllers\Admin\EventsHubController::class, 'index'])->name('admin.events.hub');
+
         Route::get('/payments/receipts', [AdminPaymentController::class, 'receipt'])->name('admin.payments.receipts');
         Route::prefix('instructor-payments')->name('admin.instructor-payments.')->group(function () {
             Route::get('/', [AdminInstructorBatchPaymentController::class, 'index'])->name('index');
@@ -779,6 +801,31 @@ Route::get('/{pathPrefix}/register', [\App\Http\Controllers\Auth\RegisterControl
 Route::post('/{pathPrefix}/register', [\App\Http\Controllers\Auth\RegisterController::class, 'register'])
     ->where('pathPrefix', 'academic-journal|events')
     ->name('path.register.submit');
+
+// Academic Journal portal (before category + catch-all)
+Route::prefix('academic-journal')->group(function () {
+    Route::get('/articles', [\App\Http\Controllers\Journal\PublicArticleController::class, 'search'])->name('journal.articles.search');
+    Route::get('/articles/{slug}', [\App\Http\Controllers\Journal\PublicArticleController::class, 'show'])->name('journal.articles.show');
+
+    Route::middleware(['auth', 'journal.user'])->group(function () {
+        Route::get('/dashboard', [\App\Http\Controllers\Journal\DashboardController::class, 'index'])->name('journal.dashboard');
+
+        Route::get('/manuscripts', [\App\Http\Controllers\Journal\ManuscriptController::class, 'index'])->name('journal.manuscripts.index');
+        Route::get('/manuscripts/create', [\App\Http\Controllers\Journal\ManuscriptController::class, 'create'])->name('journal.manuscripts.create');
+        Route::post('/manuscripts', [\App\Http\Controllers\Journal\ManuscriptController::class, 'store'])->name('journal.manuscripts.store');
+        Route::get('/manuscripts/{id}', [\App\Http\Controllers\Journal\ManuscriptController::class, 'show'])->name('journal.manuscripts.show');
+        Route::get('/manuscripts/{id}/edit', [\App\Http\Controllers\Journal\ManuscriptController::class, 'edit'])->name('journal.manuscripts.edit');
+        Route::put('/manuscripts/{id}', [\App\Http\Controllers\Journal\ManuscriptController::class, 'update'])->name('journal.manuscripts.update');
+
+        Route::get('/reviews', [\App\Http\Controllers\Journal\ReviewController::class, 'index'])->name('journal.reviews.index');
+        Route::get('/reviews/{id}', [\App\Http\Controllers\Journal\ReviewController::class, 'show'])->name('journal.reviews.show');
+        Route::put('/reviews/{id}', [\App\Http\Controllers\Journal\ReviewController::class, 'update'])->name('journal.reviews.update');
+
+        Route::get('/editorial', [\App\Http\Controllers\Journal\EditorialController::class, 'index'])->name('journal.editorial.index');
+        Route::get('/editorial/{id}', [\App\Http\Controllers\Journal\EditorialController::class, 'show'])->name('journal.editorial.show');
+        Route::put('/editorial/{id}', [\App\Http\Controllers\Journal\EditorialController::class, 'update'])->name('journal.editorial.update');
+    });
+});
 
 Route::post('/noon/webhook', [NoonWebhookController::class, 'handle'])->name('noon.webhook');
 Route::post('/stripe/webhook', [StripeWebhookController::class, 'handle'])->name('stripe.webhook');
