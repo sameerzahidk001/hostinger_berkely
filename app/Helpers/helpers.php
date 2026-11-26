@@ -1742,7 +1742,145 @@ if (!function_exists('is_admin_login_role')) {
 if (!function_exists('public_login_url')) {
     function public_login_url(): string
     {
+        $prefix = path_auth_prefix();
+        if ($prefix !== '') {
+            return url('/' . $prefix . '/login');
+        }
+
         return url('/login');
+    }
+}
+
+if (!function_exists('path_auth_allowed_prefixes')) {
+    /**
+     * @return list<string>
+     */
+    function path_auth_allowed_prefixes(): array
+    {
+        $defaults = ['academic-journal', 'events'];
+        if (! class_exists(\App\Models\SitePathBranding::class) || ! \App\Models\SitePathBranding::ensureTable()) {
+            return $defaults;
+        }
+
+        try {
+            $fromDb = \App\Models\SitePathBranding::query()
+                ->where('is_active', true)
+                ->pluck('path_prefix')
+                ->map(fn ($p) => \App\Models\SitePathBranding::normalizePrefix((string) $p))
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+
+            return array_values(array_unique(array_merge($defaults, $fromDb)));
+        } catch (\Throwable $e) {
+            return $defaults;
+        }
+    }
+}
+
+if (!function_exists('path_auth_prefix_pattern')) {
+    function path_auth_prefix_pattern(): string
+    {
+        $parts = array_map(static function ($p) {
+            return preg_quote($p, '/');
+        }, path_auth_allowed_prefixes());
+
+        return $parts ? ('^(?:' . implode('|', $parts) . ')$') : '^(?:academic-journal|events)$';
+    }
+}
+
+if (!function_exists('normalize_path_auth_prefix')) {
+    function normalize_path_auth_prefix(?string $prefix): string
+    {
+        if (! class_exists(\App\Models\SitePathBranding::class)) {
+            $prefix = strtolower(trim((string) $prefix, '/'));
+        } else {
+            $prefix = \App\Models\SitePathBranding::normalizePrefix($prefix);
+        }
+
+        if ($prefix === '' || ! in_array($prefix, path_auth_allowed_prefixes(), true)) {
+            return '';
+        }
+
+        return $prefix;
+    }
+}
+
+if (!function_exists('remember_path_auth_prefix')) {
+    function remember_path_auth_prefix(?string $prefix): string
+    {
+        $prefix = normalize_path_auth_prefix($prefix);
+        if ($prefix === '') {
+            return '';
+        }
+
+        session(['auth_path_prefix' => $prefix]);
+
+        return $prefix;
+    }
+}
+
+if (!function_exists('path_auth_prefix')) {
+    function path_auth_prefix(?string $fallback = null): string
+    {
+        $fromRoute = '';
+        try {
+            $fromRoute = normalize_path_auth_prefix((string) request()->route('pathPrefix'));
+        } catch (\Throwable $e) {
+            $fromRoute = '';
+        }
+
+        if ($fromRoute !== '') {
+            return $fromRoute;
+        }
+
+        $fromSession = normalize_path_auth_prefix((string) session('auth_path_prefix', ''));
+        if ($fromSession !== '') {
+            return $fromSession;
+        }
+
+        if ($fallback !== null) {
+            return normalize_path_auth_prefix($fallback);
+        }
+
+        $branding = function_exists('resolve_site_path_branding') ? resolve_site_path_branding() : null;
+
+        return $branding ? normalize_path_auth_prefix($branding->path_prefix) : '';
+    }
+}
+
+if (!function_exists('path_login_url')) {
+    function path_login_url(?string $prefix = null): string
+    {
+        $prefix = normalize_path_auth_prefix($prefix ?: path_auth_prefix());
+
+        return $prefix !== '' ? url('/' . $prefix . '/login') : url('/login');
+    }
+}
+
+if (!function_exists('path_register_url')) {
+    function path_register_url(?string $prefix = null): string
+    {
+        $prefix = normalize_path_auth_prefix($prefix ?: path_auth_prefix());
+
+        return $prefix !== '' ? url('/' . $prefix . '/register') : url('/register');
+    }
+}
+
+if (!function_exists('path_auth_home_url')) {
+    function path_auth_home_url(?string $prefix = null): string
+    {
+        $prefix = normalize_path_auth_prefix($prefix ?: path_auth_prefix());
+        if ($prefix === '') {
+            return url('/');
+        }
+
+        $branding = function_exists('resolve_site_path_branding')
+            ? resolve_site_path_branding($prefix)
+            : null;
+
+        return $branding ? $branding->resolvedHomeUrl() : url('/' . $prefix);
     }
 }
 

@@ -249,12 +249,15 @@
           </div>
         </div>
         <div class="col-lg-6 order-2" style="background-color:white;">
-          <form method="POST" action="{{ route('register') }}">
+          <form method="POST" action="{{ $registerAction ?? route('register') }}">
             @csrf
+            @if(!empty($pathPrefix))
+              <input type="hidden" name="path_prefix" value="{{ $pathPrefix }}">
+            @endif
             <div class="card2 card border-0 d-flex flex-column justify-content-center px-4 py-5">
               <div class="row mb-2 px-3">
-                <a href="{{ route('welcome') }}" class="login-logo">
-                  <img src="{{ asset('frontend/images/pngs/header-logo.png') }}" alt="Berkeley School of Business, Arts &amp; Sciences">
+                <a href="{{ $homeUrl ?? route('welcome') }}" class="login-logo">
+                  <img src="{{ ($authBrand['logo_url'] ?? null) ?: asset('frontend/images/pngs/header-logo.png') }}" alt="{{ optional($authBrand['branding'] ?? null)->name ?: 'Berkeley School of Business, Arts &amp; Sciences' }}">
                 </a>
               </div>
               <div class="row px-3">
@@ -344,7 +347,7 @@
                 <button type="submit" class="btn btn-blue text-center">Sign up</button>
               </div>
               <div class="row mb-4 px-3">
-                <small class="font-weight-bold">Already have an account ? <a href="{{ route('login') }}"
+                <small class="font-weight-bold">Already have an account ? <a href="{{ $loginUrl ?? route('login') }}"
                     class="text-danger">Sign In</a></small>
               </div>
             </div>

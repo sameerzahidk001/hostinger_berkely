@@ -267,12 +267,15 @@ a {
         <div class="card card0 border-0">
             <div class="row d-flex">
                 <div class="col-lg-6 order-2 order-lg-1" style="background-color:white;">
-                    <form method="POST" action="{{ route('login') }}">
+                    <form method="POST" action="{{ $loginAction ?? route('login') }}">
                         @csrf
+                        @if(!empty($pathPrefix))
+                            <input type="hidden" name="path_prefix" value="{{ $pathPrefix }}">
+                        @endif
                         <div class="card2 card border-0 d-flex flex-column justify-content-center px-4 py-5">
                             <div class="row mb-2 px-3">
-                                <a href="{{ route('welcome') }}" class="login-logo">
-                                    <img src="{{ asset('frontend/images/pngs/header-logo.png') }}" alt="Berkeley School of Business, Arts &amp; Sciences">
+                                <a href="{{ $homeUrl ?? route('welcome') }}" class="login-logo">
+                                    <img src="{{ ($authBrand['logo_url'] ?? null) ?: asset('frontend/images/pngs/header-logo.png') }}" alt="{{ optional($authBrand['branding'] ?? null)->name ?: 'Berkeley School of Business, Arts &amp; Sciences' }}">
                                 </a>
                             </div>
                             <div class="row px-3">
@@ -318,7 +321,7 @@ a {
                                 <button type="submit" class="btn btn-blue text-center">Sign in</button>
                             </div>
                             <div class="row px-3 login-after-btn">
-                                <small class="font-weight-bold">Don't have an account ? <a href="{{ route('register') }}" class="text-danger">Register</a></small>
+                                <small class="font-weight-bold">Don't have an account ? <a href="{{ $registerUrl ?? route('register') }}" class="text-danger">Register</a></small>
                             </div>
                         </div>
                     </form>

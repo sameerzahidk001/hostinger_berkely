@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Menu;
 use App\Models\SitePathBranding;
+use App\Services\PathSectionSetupService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -16,6 +17,14 @@ class SitePathBrandingController extends Controller
         $rows = SitePathBranding::query()->orderBy('path_prefix')->orderBy('id')->get();
 
         return view('admin.settings.path-branding.index', compact('rows'));
+    }
+
+    public function ensureDefaults(PathSectionSetupService $setup)
+    {
+        $setup->ensureDefaults();
+
+        return redirect()->route('admin.path-branding.index')
+            ->with('success', 'Journal + Events hubs ready (blank pages, menus, logos, path branding). Edit anytime under Pages / Menu / Path Branding.');
     }
 
     public function create()

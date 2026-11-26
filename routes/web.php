@@ -478,6 +478,7 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
 
         // Logo + menu by URL path group (e.g. /academic-journal/*)
         Route::get('/path-branding', [\App\Http\Controllers\Admin\SitePathBrandingController::class, 'index'])->name('admin.path-branding.index');
+        Route::post('/path-branding/ensure-defaults', [\App\Http\Controllers\Admin\SitePathBrandingController::class, 'ensureDefaults'])->name('admin.path-branding.ensure');
         Route::get('/path-branding/create', [\App\Http\Controllers\Admin\SitePathBrandingController::class, 'create'])->name('admin.path-branding.create');
         Route::post('/path-branding', [\App\Http\Controllers\Admin\SitePathBrandingController::class, 'store'])->name('admin.path-branding.store');
         Route::get('/path-branding/{id}/edit', [\App\Http\Controllers\Admin\SitePathBrandingController::class, 'edit'])->name('admin.path-branding.edit');
@@ -764,6 +765,20 @@ Route::get('/delete-temp-files', function (Illuminate\Http\Request $request) {
 Auth::routes(['verify' => true]);
 Route::get('/login/captcha', [\App\Http\Controllers\Auth\LoginController::class, 'captchaImage'])
     ->name('login.captcha');
+
+// Path-scoped signup/login for Journal / Events (must stay above category + catch-all routes)
+Route::get('/{pathPrefix}/login', [\App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])
+    ->where('pathPrefix', 'academic-journal|events')
+    ->name('path.login');
+Route::post('/{pathPrefix}/login', [\App\Http\Controllers\Auth\LoginController::class, 'login'])
+    ->where('pathPrefix', 'academic-journal|events')
+    ->name('path.login.submit');
+Route::get('/{pathPrefix}/register', [\App\Http\Controllers\Auth\RegisterController::class, 'showRegistrationForm'])
+    ->where('pathPrefix', 'academic-journal|events')
+    ->name('path.register');
+Route::post('/{pathPrefix}/register', [\App\Http\Controllers\Auth\RegisterController::class, 'register'])
+    ->where('pathPrefix', 'academic-journal|events')
+    ->name('path.register.submit');
 
 Route::post('/noon/webhook', [NoonWebhookController::class, 'handle'])->name('noon.webhook');
 Route::post('/stripe/webhook', [StripeWebhookController::class, 'handle'])->name('stripe.webhook');
