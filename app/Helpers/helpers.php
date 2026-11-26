@@ -2861,12 +2861,18 @@ if (! function_exists('resolve_public_page_by_path')) {
             return null;
         }
 
-        if (count($parts) > 1) {
-            $match = $candidates->first(function ($page) use ($path) {
-                return strcasecmp(trim((string) $page->full_url, '/'), $path) === 0;
-            });
+        // Prefer the page whose full nested URL matches the request
+        // (e.g. /events → root hub, not /research/events).
+        $exact = $candidates->first(function ($page) use ($path) {
+            return strcasecmp(trim((string) $page->full_url, '/'), $path) === 0;
+        });
 
-            return $match ?: null;
+        if ($exact) {
+            return $exact;
+        }
+
+        if (count($parts) > 1) {
+            return null;
         }
 
         return $candidates->first();

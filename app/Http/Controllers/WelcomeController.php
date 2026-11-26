@@ -42,10 +42,12 @@ class WelcomeController extends Controller
             }
             $page = Page::findOrFail($homepageId);
         } else {
+            $slug = trim(str_replace('\\', '/', (string) $slug), '/');
             $slugParts = explode('/', $slug);
-            $pageSlug = end($slugParts);
+            $pageSlug = (string) end($slugParts);
 
-            $page = $this->resolvePageBySlug($pageSlug);
+            // Resolve by full path so /events does not pick research/events.
+            $page = $this->resolvePageBySlug($slug);
             if (!$page) {
                 $course = Course::where('slug', $pageSlug)->first();
                 if ($course) {
@@ -133,10 +135,15 @@ class WelcomeController extends Controller
             return null;
         }
 
+        $exact = $candidates->first(function ($page) use ($path) {
+            return strcasecmp(trim((string) $page->full_url, '/'), $path) === 0;
+        });
+        if ($exact) {
+            return $exact;
+        }
+
         if (count($parts) > 1) {
-            return $candidates->first(function ($page) use ($path) {
-                return strcasecmp(trim((string) $page->full_url, '/'), $path) === 0;
-            });
+            return null;
         }
 
         return $candidates->first();
