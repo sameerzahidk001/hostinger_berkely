@@ -199,6 +199,17 @@
 </head>
 @php
     $settings = DB::table('site_settings')->first();
+    $headerBrand = function_exists('site_header_branding')
+        ? site_header_branding($settings)
+        : [
+            'logo_url' => asset('images/' . (($settings->header_logo ?? 'logo') == 'logo' ? ($settings->logo ?? '') : ($settings->white_logo ?? ''))),
+            'menu_group' => (string) ($settings->header_menu ?? ''),
+            'home_url' => url('/'),
+            'branding' => null,
+        ];
+    $headerLogoUrl = $headerBrand['logo_url'] ?: asset('images/' . (($settings->header_logo ?? 'logo') == 'logo' ? ($settings->logo ?? '') : ($settings->white_logo ?? '')));
+    $headerMenuGroup = $headerBrand['menu_group'] ?: (string) ($settings->header_menu ?? '');
+    $headerHomeUrl = $headerBrand['home_url'] ?: url('/');
 @endphp
 
 <body class="min-h-screen flex flex-col">
@@ -228,16 +239,16 @@
         <!-- Main Navigation Start -->
         <div id="navbar"
             class="flex fixed bg bg-white z-[999] w-full top-0 justify-between items-center px-4 md:px-8 lg:px-[30px] my-0 py-0 ">
-            <a href="{{ url('/') }}" class="self-center shrink-0">
-                <img src="{{ asset('images/' . ($settings->header_logo == 'logo' ? $settings->logo : $settings->white_logo)) }}"
+            <a href="{{ $headerHomeUrl }}" class="self-center shrink-0">
+                <img src="{{ $headerLogoUrl }}"
                     class="header-brand-logo max-w-[180px] lg:max-w-[210px] self-center object-contain"
                     width="210" height="63" decoding="async" fetchpriority="high"
-                    alt="{{ config('app.name') }}"
+                    alt="{{ optional($headerBrand['branding'])->name ?: config('app.name') }}"
                     style="aspect-ratio:auto">
             </a>
             <ul class="hidden list-none min-[980px]:flex font-ghothic text-[19px] gap-4">
                 @php
-                    $filteredMenus = collect($menus)->where('menu_group', $settings->header_menu)->values();
+                    $filteredMenus = collect($menus)->where('menu_group', $headerMenuGroup)->values();
                 @endphp
                 @foreach($filteredMenus as $menu)
                     <li class="relative group flex items-center justify-center">
@@ -333,7 +344,7 @@
             </div>
             <div class="flex flex-col px-5 mb-20 text-[16px] leading-snug">
                 @php
-                    $filteredMenus = collect($menus)->where('menu_group', $settings->header_menu)->values();
+                    $filteredMenus = collect($menus)->where('menu_group', $headerMenuGroup)->values();
                 @endphp
                 @foreach($filteredMenus as $key => $menu)
 

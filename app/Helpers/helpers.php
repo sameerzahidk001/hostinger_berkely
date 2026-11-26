@@ -1317,6 +1317,82 @@ if (! function_exists('cms_section_is_course_search')) {
     }
 }
 
+if (! function_exists('resolve_site_path_branding')) {
+    /**
+     * Active logo/menu branding for a URL path group (e.g. academic-journal).
+     */
+    function resolve_site_path_branding(?string $path = null): ?\App\Models\SitePathBranding
+    {
+        if (! class_exists(\App\Models\SitePathBranding::class)) {
+            return null;
+        }
+        if (! \App\Models\SitePathBranding::ensureTable()) {
+            return null;
+        }
+
+        $path = trim(str_replace('\\', '/', (string) ($path ?? request()->path())), '/');
+        $path = strtolower($path);
+        if ($path === '') {
+            return null;
+        }
+
+        static $cache = [];
+        if (array_key_exists($path, $cache)) {
+            return $cache[$path];
+        }
+
+        $rows = \App\Models\SitePathBranding::query()
+            ->where('is_active', true)
+            ->orderByDesc('id')
+            ->get();
+
+        $match = null;
+        $matchLen = -1;
+        foreach ($rows as $row) {
+            if (! $row->matchesPath($path)) {
+                continue;
+            }
+            $len = strlen(\App\Models\SitePathBranding::normalizePrefix($row->path_prefix));
+            if ($len > $matchLen) {
+                $match = $row;
+                $matchLen = $len;
+            }
+        }
+
+        return $cache[$path] = $match;
+    }
+}
+
+if (! function_exists('site_header_branding')) {
+    /**
+     * @return array{logo_url:?string,menu_group:?string,home_url:string,branding:?\App\Models\SitePathBranding}
+     */
+    function site_header_branding($settings = null, ?string $path = null): array
+    {
+        $settings = $settings ?: (class_exists(\App\Models\SiteSettings::class)
+            ? \App\Models\SiteSettings::query()->first()
+            : null);
+        $branding = resolve_site_path_branding($path);
+
+        $defaultLogo = null;
+        if ($settings) {
+            $pick = ($settings->header_logo ?? 'logo') === 'white_logo'
+                ? ($settings->white_logo ?? null)
+                : ($settings->logo ?? null);
+            $defaultLogo = $pick ? asset('images/' . ltrim((string) $pick, '/')) : null;
+        }
+
+        return [
+            'logo_url' => $branding?->logoUrl() ?: $defaultLogo,
+            'menu_group' => $branding && filled($branding->menu_group)
+                ? (string) $branding->menu_group
+                : (string) ($settings->header_menu ?? ''),
+            'home_url' => $branding ? $branding->resolvedHomeUrl() : url('/'),
+            'branding' => $branding,
+        ];
+    }
+}
+
 if (!function_exists('demote_page_headings')) {
     /**
      * CMS/editor HTML often contains extra H1 tags. Keep a single page H1 in the template only.

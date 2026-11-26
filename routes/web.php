@@ -476,6 +476,14 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
         Route::get('/stripe-configure', [SettingController::class, 'stripe'])->name('stripe-configure.index');
         Route::post('/stripe-configure/store', [SettingController::class, 'stripeStore'])->name('stripe-configure.store');
 
+        // Logo + menu by URL path group (e.g. /academic-journal/*)
+        Route::get('/path-branding', [\App\Http\Controllers\Admin\SitePathBrandingController::class, 'index'])->name('admin.path-branding.index');
+        Route::get('/path-branding/create', [\App\Http\Controllers\Admin\SitePathBrandingController::class, 'create'])->name('admin.path-branding.create');
+        Route::post('/path-branding', [\App\Http\Controllers\Admin\SitePathBrandingController::class, 'store'])->name('admin.path-branding.store');
+        Route::get('/path-branding/{id}/edit', [\App\Http\Controllers\Admin\SitePathBrandingController::class, 'edit'])->name('admin.path-branding.edit');
+        Route::put('/path-branding/{id}', [\App\Http\Controllers\Admin\SitePathBrandingController::class, 'update'])->name('admin.path-branding.update');
+        Route::delete('/path-branding/{id}', [\App\Http\Controllers\Admin\SitePathBrandingController::class, 'destroy'])->name('admin.path-branding.destroy');
+
         Route::get('/payments/receipts', [AdminPaymentController::class, 'receipt'])->name('admin.payments.receipts');
         Route::prefix('instructor-payments')->name('admin.instructor-payments.')->group(function () {
             Route::get('/', [AdminInstructorBatchPaymentController::class, 'index'])->name('index');
