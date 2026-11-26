@@ -13,12 +13,6 @@
         </ol>
     </div>
     <div class="col-lg-4 text-right" style="padding-top:20px;">
-        <form action="{{ route('admin.path-branding.ensure') }}" method="POST" style="display:inline-block;margin-right:8px;">
-            @csrf
-            <button type="submit" class="btn btn-success">
-                <i class="fa fa-magic"></i> Create Journal + Events hubs
-            </button>
-        </form>
         <a href="{{ route('admin.path-branding.create') }}" class="btn btn-primary">
             <i class="fa fa-plus"></i> Add Path Branding
         </a>
@@ -42,7 +36,6 @@
                 Use this for standalone sections such as <code>/academic-journal</code> and
                 <code>/events</code>. Matching pages show this logo and menu instead of the main site header.
                 Signup/login for a section: <code>/academic-journal/login</code>, <code>/events/register</code>, etc.
-                Use <strong>Create Journal + Events hubs</strong> to add blank CMS pages, dummy menus/logos, and branding rows (all editable in Pages / Menu / Path Branding).
             </p>
             <div class="table-responsive">
                 <table class="table table-striped table-bordered">
