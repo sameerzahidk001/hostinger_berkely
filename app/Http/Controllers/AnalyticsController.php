@@ -86,7 +86,7 @@ class AnalyticsController extends Controller
         if ($url === '' || analytics_hidden_url($url)) {
             return response()->json(['ok' => true]);
         }
-        $seconds = min(30, max(1, (int) $request->input('seconds', 15)));
+        $seconds = min(90, max(1, (int) $request->input('seconds', 60)));
         $sessionId = $request->session()->getId();
         $rowId = DB::table('page_views')
             ->where('session_id', $sessionId)
