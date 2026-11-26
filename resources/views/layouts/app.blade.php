@@ -174,7 +174,7 @@
             .header-quick-icons-mobile { display: none !important; }
         }
     </style>
-    <script src="{{ asset('frontend/analytics.js') }}" defer></script>
+    <script src="{{ asset('frontend/analytics.js') }}?v=20261126a" defer></script>
     <style>
         .accordion button {
             color: black;
