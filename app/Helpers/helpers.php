@@ -2155,6 +2155,68 @@ if (!function_exists('user_list_role_names')) {
     }
 }
 
+if (!function_exists('journal_role_names')) {
+    /**
+     * @return list<string>
+     */
+    function journal_role_names(): array
+    {
+        if (class_exists(\App\Services\JournalRoleService::class)) {
+            return \App\Services\JournalRoleService::names();
+        }
+
+        return [
+            'journal_management', 'journal_administration', 'journal_finance', 'journal_it',
+            'journal_editorial', 'journal_quality', 'journal_author', 'journal_reviewer', 'journal_editor',
+        ];
+    }
+}
+
+if (!function_exists('is_journal_role_name')) {
+    function is_journal_role_name(?string $role): bool
+    {
+        $key = normalize_role_key($role);
+        if ($key === '' || ! str_starts_with($key, 'journal_')) {
+            return false;
+        }
+
+        return in_array($key, journal_role_names(), true);
+    }
+}
+
+if (!function_exists('is_journal_user')) {
+    function is_journal_user($user = null): bool
+    {
+        $user = $user ?: auth()->user();
+        if (! $user) {
+            return false;
+        }
+
+        try {
+            $names = $user->roles()->pluck('name')->all();
+        } catch (\Throwable $e) {
+            return false;
+        }
+
+        foreach ($names as $name) {
+            if (is_journal_role_name($name)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+}
+
+if (!function_exists('ensure_journal_roles')) {
+    function ensure_journal_roles(): void
+    {
+        if (class_exists(\App\Services\JournalRoleService::class)) {
+            \App\Services\JournalRoleService::ensureRoles();
+        }
+    }
+}
+
 if (!function_exists('user_list_label')) {
     function user_list_label(string $type): string
     {
@@ -2162,6 +2224,21 @@ if (!function_exists('user_list_label')) {
 
         if (in_array($normalized, ['librarian', 'content_writer'], true)) {
             return 'Content Writers';
+        }
+
+        $journalLabels = [
+            'journal_management' => 'Journal Management',
+            'journal_administration' => 'Journal Administration',
+            'journal_finance' => 'Journal Finance',
+            'journal_it' => 'Journal IT',
+            'journal_editorial' => 'Journal Editorial Team',
+            'journal_quality' => 'Journal Quality Leads',
+            'journal_author' => 'Journal Authors',
+            'journal_reviewer' => 'Journal Reviewers',
+            'journal_editor' => 'Journal Editors',
+        ];
+        if (isset($journalLabels[$normalized])) {
+            return $journalLabels[$normalized];
         }
 
         return ucfirst(Str::plural($type));

@@ -374,6 +374,23 @@
                      <a href="{{ route('admin.analytics') }}"><i class="fa fa-star"></i> <span class="nav-label">Analytics</span></a>
                   </li>
                   @endif
+                  @if(Auth::guard('admin')->check())
+                  <li class="{{ request()->is('admin/journal*') ? 'active show' : '' }}">
+                     <a href="javascript:void(0)"><i class="fa fa-book"></i> <span class="nav-label">Academic Journal</span> <span class="fa arrow"></span></a>
+                     <ul class="nav nav-second-level">
+                        <li><a href="{{ route('admin.journal.overview') }}">Overview</a></li>
+                        <li><a href="{{ route('admin.journal.subjects.index') }}">Subjects</a></li>
+                        <li><a href="{{ route('admin.journal.policies.index') }}">Policies</a></li>
+                        <li><a href="{{ route('admin.journal.issues.index') }}">Issues</a></li>
+                        <li><a href="{{ route('admin.journal.board.index') }}">Editorial Board</a></li>
+                        <li><a href="{{ route('admin.journal.manuscripts.index') }}">Manuscripts</a></li>
+                        <li><a href="{{ url('/academic-journal') }}" target="_blank">Public site</a></li>
+                     </ul>
+                  </li>
+                  <li class="{{ request()->is('admin/events-hub*') ? 'active' : '' }}">
+                     <a href="{{ route('admin.events.hub') }}"><i class="fa fa-calendar"></i> <span class="nav-label">Events Hub</span></a>
+                  </li>
+                  @endif
                   @if(admin_menu_allowed('users'))
                   <li class="{{ request()->is('admin/user*') ? 'active show' : '' }}">
                      <a href="javascript:void(0)"><i class="fa fa-address-card"></i> <span class="nav-label">Users</span> <span class="fa arrow"></span></a>
@@ -382,6 +399,16 @@
                         <li><a href="{{ route('users', ['type' => 'instructor']) }}">Instructors</a></li>
                         <li><a href="{{ route('users', ['type' => 'accountant']) }}">Accountants</a></li>
                         <li><a href="{{ route('users', ['type' => 'content-writer']) }}">Content Writers</a></li>
+                        <li class="divider"></li>
+                        <li><a href="{{ route('users', ['type' => 'journal_author']) }}">Journal Authors</a></li>
+                        <li><a href="{{ route('users', ['type' => 'journal_reviewer']) }}">Journal Reviewers</a></li>
+                        <li><a href="{{ route('users', ['type' => 'journal_editor']) }}">Journal Editors</a></li>
+                        <li><a href="{{ route('users', ['type' => 'journal_editorial']) }}">Journal Editorial Team</a></li>
+                        <li><a href="{{ route('users', ['type' => 'journal_management']) }}">Journal Management</a></li>
+                        <li><a href="{{ route('users', ['type' => 'journal_administration']) }}">Journal Administration</a></li>
+                        <li><a href="{{ route('users', ['type' => 'journal_finance']) }}">Journal Finance</a></li>
+                        <li><a href="{{ route('users', ['type' => 'journal_it']) }}">Journal IT</a></li>
+                        <li><a href="{{ route('users', ['type' => 'journal_quality']) }}">Journal Quality</a></li>
                         <li><a href="{{ route('users.create') }}">Add User</a></li>
                      </ul>
                   </li>

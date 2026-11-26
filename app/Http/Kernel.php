@@ -77,5 +77,6 @@ class Kernel extends HttpKernel
         'redirect.panel.from.student' => \App\Http\Middleware\RedirectPanelRolesFromStudentPortal::class,
         'log.admin.activity' => \App\Http\Middleware\LogAdminPanelActivity::class,
         'lms.exam.lock' => \App\Http\Middleware\LockInProgressExam::class,
+        'journal.user' => \App\Http\Middleware\EnsureJournalUser::class,
     ];
 }

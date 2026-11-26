@@ -25,6 +25,10 @@ class UserController extends Controller
     public function index(Request $request)
     {
         try {
+            if (function_exists('ensure_journal_roles')) {
+                ensure_journal_roles();
+            }
+
             if ($request->query('type') === 'librarian') {
                 return redirect()->route('users', ['type' => 'content-writer']);
             }
@@ -60,6 +64,10 @@ class UserController extends Controller
     public function create()
     {
         try {
+            if (function_exists('ensure_journal_roles')) {
+                ensure_journal_roles();
+            }
+
             $contentWriterIds = content_writer_role_ids();
             $roles = Role::all()->reject(function ($role) use ($contentWriterIds) {
                 if (! is_content_writer_role_key($role->name)) {
