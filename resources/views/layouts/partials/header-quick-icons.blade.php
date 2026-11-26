@@ -1,5 +1,7 @@
 @php
-    $accountUrl = auth()->check() ? route('user.home') : route('login');
+    $accountUrl = auth()->check()
+        ? route('user.home')
+        : (function_exists('path_login_url') ? path_login_url() : route('login'));
     $cartCount = cart_item_count();
 @endphp
 <a href="{{ $accountUrl }}" class="header-quick-icon" title="My Account" aria-label="My Account">

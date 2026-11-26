@@ -308,7 +308,7 @@
 
                     @guest
                         @if($settings && $settings->register == '1')
-                            <a href="{{ route('register') }}"
+                            <a href="{{ function_exists('path_register_url') ? path_register_url() : route('register') }}"
                                 class="hidden min-[980px]:inline-flex items-center py-2 active:underline decoration-crimson underline-offset-4">
                                 {{ $settings->register_text ?? 'Register' }}
                             </a>
@@ -373,10 +373,10 @@
                 @endif
                 @guest
                     @if($settings && $settings->login == '1')
-                        <a href="{{ route('login') }}" class="text-white py-1.5">My Account</a>
+                        <a href="{{ function_exists('path_login_url') ? path_login_url() : route('login') }}" class="text-white py-1.5">My Account</a>
                     @endif
                     @if($settings && $settings->register == '1')
-                        <a href="{{ route('register') }}" class="text-white py-1.5">{{ $settings->register_text ?? 'Register' }}</a>
+                        <a href="{{ function_exists('path_register_url') ? path_register_url() : route('register') }}" class="text-white py-1.5">{{ $settings->register_text ?? 'Register' }}</a>
                     @endif
                 @else
                     <a href="{{ route('user.home') }}" class="text-white py-1.5">My Account</a>

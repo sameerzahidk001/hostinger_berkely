@@ -17,11 +17,13 @@ class LoginController extends Controller
      *
      * @return \Illuminate\View\View
      */
-    public function showLoginForm()
+    public function showLoginForm(?string $pathPrefix = null)
     {
         if (request()->boolean('redirect_to_cart')) {
             session(['redirect_to_cart' => true]);
         }
+
+        $pathPrefix = remember_path_auth_prefix($pathPrefix ?: request()->route('pathPrefix'));
 
         if (Auth::guard('admin')->check()) {
             return redirect()->route('admin.home');
@@ -33,7 +35,15 @@ class LoginController extends Controller
 
         $this->issueLoginCaptcha();
 
-        return view('auth.login');
+        $authBrand = site_header_branding(null, $pathPrefix ?: null);
+
+        return view('auth.login', [
+            'pathPrefix' => $pathPrefix,
+            'authBrand' => $authBrand,
+            'loginAction' => $pathPrefix !== '' ? path_login_url($pathPrefix) : route('login'),
+            'registerUrl' => $pathPrefix !== '' ? path_register_url($pathPrefix) : route('register'),
+            'homeUrl' => $pathPrefix !== '' ? path_auth_home_url($pathPrefix) : route('welcome'),
+        ]);
     }
 
     /**
@@ -119,8 +129,10 @@ class LoginController extends Controller
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function login(Request $request)
-    {       
+    public function login(Request $request, ?string $pathPrefix = null)
+    {
+        $pathPrefix = remember_path_auth_prefix($pathPrefix ?: $request->route('pathPrefix') ?: $request->input('path_prefix'));
+
         // Validate user input
         $request->validate([
             'email' => 'required|email',
@@ -217,6 +229,10 @@ class LoginController extends Controller
                 return redirect()->route('cart.index');
             }
 
+            if ($pathPrefix !== '') {
+                return redirect()->to(path_auth_home_url($pathPrefix));
+            }
+
             // Redirect based on role
             return redirect()->intended($this->redirectTo());
         }
@@ -256,11 +272,13 @@ class LoginController extends Controller
             );
         }
 
+        $logoutTo = path_login_url(path_auth_prefix());
+
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect('/login')->with('status', 'You have been logged out.');
+        return redirect($logoutTo)->with('status', 'You have been logged out.');
     }
 
     /**

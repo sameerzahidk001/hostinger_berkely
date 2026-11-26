@@ -93,8 +93,10 @@ class RegisterController extends Controller
         return $user;
     }
 
-    public function register(Request $request)
+    public function register(Request $request, ?string $pathPrefix = null)
     {
+        $pathPrefix = remember_path_auth_prefix($pathPrefix ?: $request->route('pathPrefix') ?: $request->input('path_prefix'));
+
         $this->validator($request->all())->validate();
         $user = $this->create($request);
 
@@ -147,12 +149,27 @@ class RegisterController extends Controller
             return redirect()->route('cart.index')->with('success', 'Item automatically added to cart after login.');
         }
 
+        if ($pathPrefix !== '') {
+            return redirect()->to(path_auth_home_url($pathPrefix))
+                ->with('status', 'Account created. Welcome.');
+        }
+
         return redirect()->route('verification.notice');
     }
 
-    public function showRegistrationForm()
+    public function showRegistrationForm(?string $pathPrefix = null)
     {
+        $pathPrefix = remember_path_auth_prefix($pathPrefix ?: request()->route('pathPrefix'));
         $roles = Role::whereIn('name', ['student', 'instructor'])->get();
-        return view('auth.register', compact('roles'));
+        $authBrand = site_header_branding(null, $pathPrefix ?: null);
+
+        return view('auth.register', [
+            'roles' => $roles,
+            'pathPrefix' => $pathPrefix,
+            'authBrand' => $authBrand,
+            'registerAction' => $pathPrefix !== '' ? path_register_url($pathPrefix) : route('register'),
+            'loginUrl' => $pathPrefix !== '' ? path_login_url($pathPrefix) : route('login'),
+            'homeUrl' => $pathPrefix !== '' ? path_auth_home_url($pathPrefix) : route('welcome'),
+        ]);
     }
 }
