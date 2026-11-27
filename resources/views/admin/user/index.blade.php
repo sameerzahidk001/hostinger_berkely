@@ -46,7 +46,7 @@
                                 <thead>
                                     <tr>
                                         <th>#</th>
-                                        <th>Student ID</th>
+                                        <th>User ID</th>
                                         <th>Name</th>
                                         <th>Image</th>
                                         <th>Email</th>
