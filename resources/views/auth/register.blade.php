@@ -402,13 +402,15 @@
                       @endforeach
                     </select>
                     @error('work_setting')<p class="text-danger text-xs italic">{{ $message }}</p>@enderror
-
+                  </div>
+                  <div class="col-md-6 px-2">
                     <label class="mb-1 form-group-label"><h6 class="mb-0 text-sm">Password *</h6></label>
                     <input class="mb-2 @error('password') border-danger @enderror" id="password" type="password" placeholder="Enter password" name="password" required autocomplete="new-password">
                     @error('password')<p class="text-danger text-xs italic">{{ $message }}</p>@enderror
-
+                  </div>
+                  <div class="col-md-6 px-2">
                     <label class="mb-1 form-group-label"><h6 class="mb-0 text-sm">Confirm Password *</h6></label>
-                    <input id="password_confirmation" type="password" placeholder="Confirm password" name="password_confirmation" required autocomplete="new-password">
+                    <input class="mb-2 @error('password_confirmation') border-danger @enderror" id="password_confirmation" type="password" placeholder="Confirm password" name="password_confirmation" required autocomplete="new-password">
                     @error('password_confirmation')<p class="text-danger text-xs italic">{{ $message }}</p>@enderror
                   </div>
                 </div>
