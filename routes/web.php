@@ -813,6 +813,7 @@ Route::post('/{pathPrefix}/register', [\App\Http\Controllers\Auth\RegisterContro
 // Academic Journal portal (before category + catch-all)
 Route::prefix('journal')->group(function () {
     Route::get('/articles', [\App\Http\Controllers\Journal\PublicArticleController::class, 'search'])->name('journal.articles.search');
+    Route::get('/articles/{slug}/pdf', [\App\Http\Controllers\Journal\PublicArticleController::class, 'downloadPdf'])->name('journal.articles.pdf');
     Route::get('/articles/{slug}', [\App\Http\Controllers\Journal\PublicArticleController::class, 'show'])->name('journal.articles.show');
 
     Route::middleware(['auth', 'journal.user'])->group(function () {

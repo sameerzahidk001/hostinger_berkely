@@ -210,6 +210,9 @@
     $headerLogoUrl = $headerBrand['logo_url'] ?: asset('images/' . (($settings->header_logo ?? 'logo') == 'logo' ? ($settings->logo ?? '') : ($settings->white_logo ?? '')));
     $headerMenuGroup = $headerBrand['menu_group'] ?: (string) ($settings->header_menu ?? '');
     $headerHomeUrl = $headerBrand['home_url'] ?: url('/');
+    $isPathSite = ! empty($headerBrand['branding']);
+    // Enquire / contact CTA is school-site only — hide on Journal / Events path sites.
+    $showHeaderEnquire = ! $isPathSite && $settings && (string) ($settings->header_button ?? '') === '1';
 @endphp
 
 <body class="min-h-screen flex flex-col">
@@ -249,6 +252,12 @@
             <ul class="hidden list-none min-[980px]:flex font-ghothic text-[19px] gap-4">
                 @php
                     $filteredMenus = collect($menus)->where('menu_group', $headerMenuGroup)->values();
+                    if ($isPathSite) {
+                        $filteredMenus = $filteredMenus->reject(function ($menu) {
+                            return strcasecmp(trim((string) $menu->name), 'Enquire') === 0
+                                || strcasecmp(trim((string) $menu->name), 'Enquirer') === 0;
+                        })->values();
+                    }
                 @endphp
                 @foreach($filteredMenus as $menu)
                     <li class="relative group flex items-center justify-center">
@@ -279,7 +288,7 @@
                 @endforeach
 
                 <li class="list-none relative flex items-center justify-center gap-3">
-                    @if($settings && $settings->header_button == '1')
+                    @if($showHeaderEnquire)
                         <a href="{{ $settings->header_button_url }}"
                             class="border px-4 py-1 w-full border-[{{ $settings->header_button_bg }}] bg-[{{ $settings->header_button_bg }}] transition-all delay-300 duration-300 content-center rounded uppercase"
                             style="color: {{ $settings->header_button_color }}">
@@ -345,6 +354,12 @@
             <div class="flex flex-col px-5 mb-20 text-[16px] leading-snug">
                 @php
                     $filteredMenus = collect($menus)->where('menu_group', $headerMenuGroup)->values();
+                    if ($isPathSite) {
+                        $filteredMenus = $filteredMenus->reject(function ($menu) {
+                            return strcasecmp(trim((string) $menu->name), 'Enquire') === 0
+                                || strcasecmp(trim((string) $menu->name), 'Enquirer') === 0;
+                        })->values();
+                    }
                 @endphp
                 @foreach($filteredMenus as $key => $menu)
 
@@ -367,20 +382,23 @@
                         <a href="{{ public_menu_href($menu->link) }}" class="text-white py-1.5">{{ $menu->name }}</a>
                     @endif
                 @endforeach
-                @if($settings && $settings->header_button)
+                @if($showHeaderEnquire)
                     <a href="{{ $settings->header_button_url }}"
                         class="text-white py-1.5">{{ $settings->header_button_text }}</a>
                 @endif
                 @guest
                     @if($settings && $settings->login == '1')
-                        <a href="{{ function_exists('path_login_url') ? path_login_url() : route('login') }}" class="text-white py-1.5">My Account</a>
+                        <a href="{{ function_exists('path_login_url') ? path_login_url() : route('login') }}" class="text-white py-1.5">Login</a>
                     @endif
                     @if($settings && $settings->register == '1')
                         <a href="{{ function_exists('path_register_url') ? path_register_url() : route('register') }}" class="text-white py-1.5">{{ $settings->register_text ?? 'Register' }}</a>
                     @endif
+                    <a href="{{ function_exists('path_login_url') ? path_login_url() : route('login') }}" class="text-white py-1.5">My Account</a>
                 @else
                     <a href="{{ route('user.home') }}" class="text-white py-1.5">My Account</a>
+                    @unless($isPathSite)
                     <a href="{{ route('cart.index') }}" class="text-white py-1.5">Cart ({{ cart_item_count() }})</a>
+                    @endunless
                 @endguest
             </div>
         </div>

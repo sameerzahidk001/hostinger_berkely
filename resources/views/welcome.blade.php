@@ -400,6 +400,23 @@
     @endforeach
 
     @php
+        $injectJournalHub = false;
+        try {
+            $reqPath = trim(request()->path(), '/');
+            $isJournalHome = $reqPath === 'journal' || $reqPath === 'academic-journal';
+            $pageSlug = strtolower(trim((string) ($page->slug ?? ''), '/'));
+            $isJournalPage = $pageSlug === 'journal' || $pageSlug === 'academic-journal'
+                || str_starts_with($pageSlug, 'journal/') || str_starts_with($pageSlug, 'academic-journal/');
+            $injectJournalHub = $isJournalHome || ($isJournalPage && ($reqPath === $pageSlug || str_starts_with($reqPath, 'journal')));
+        } catch (\Throwable $e) {
+            $injectJournalHub = false;
+        }
+    @endphp
+    @if($injectJournalHub)
+        <x-journal-press-hub />
+    @endif
+
+    @php
         $pageFeeServices = $page->pageFeeServices ?? $page->feeServices ?? collect();
         $pageFeeHeading = $page->pageFeeHeading ?? $page->fee_heading ?? 'Fee Update in Page';
     @endphp
