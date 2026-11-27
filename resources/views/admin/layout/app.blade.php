@@ -384,7 +384,7 @@
                         <li><a href="{{ route('admin.journal.issues.index') }}">Issues</a></li>
                         <li><a href="{{ route('admin.journal.board.index') }}">Editorial Board</a></li>
                         <li><a href="{{ route('admin.journal.manuscripts.index') }}">Manuscripts</a></li>
-                        <li><a href="{{ url('/academic-journal') }}" target="_blank">Public site</a></li>
+                        <li><a href="{{ url('/journal') }}" target="_blank">Public site</a></li>
                      </ul>
                   </li>
                   <li class="{{ request()->is('admin/events-hub*') ? 'active' : '' }}">

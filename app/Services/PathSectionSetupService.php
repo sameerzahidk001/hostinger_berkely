@@ -17,11 +17,13 @@ class PathSectionSetupService
      */
     public function ensureDefaults(): array
     {
+        $this->migrateJournalPathToShortUrl();
+
         return [
             'journal' => $this->ensureSection([
                 'name' => 'Academic Journal',
-                'prefix' => 'academic-journal',
-                'menu_group' => 'academic-journal',
+                'prefix' => 'journal',
+                'menu_group' => 'journal',
                 'logo_file' => 'path-brand-journal.svg',
                 'logo_label' => 'Academic Journal',
                 'logo_color' => '#0B3A6E',
@@ -45,6 +47,55 @@ class PathSectionSetupService
                 ],
             ]),
         ];
+    }
+
+    /**
+     * Rename legacy /academic-journal hub + branding to /journal (idempotent).
+     */
+    public function migrateJournalPathToShortUrl(): void
+    {
+        try {
+            if (Schema::hasTable('pages')) {
+                $oldHub = Page::query()->whereNull('parent_id')->where('url', 'academic-journal')->first();
+                $newHub = Page::query()->whereNull('parent_id')->where('url', 'journal')->first();
+                if ($oldHub && ! $newHub) {
+                    $oldHub->url = 'journal';
+                    $oldHub->save();
+                }
+            }
+
+            if (SitePathBranding::ensureTable()) {
+                $oldBrand = SitePathBranding::query()->where('path_prefix', 'academic-journal')->first();
+                $newBrand = SitePathBranding::query()->where('path_prefix', 'journal')->first();
+                if ($oldBrand && ! $newBrand) {
+                    $oldBrand->path_prefix = 'journal';
+                    $oldBrand->home_url = '/journal';
+                    if (($oldBrand->menu_group ?? '') === 'academic-journal') {
+                        $oldBrand->menu_group = 'journal';
+                    }
+                    $oldBrand->save();
+                } elseif ($oldBrand && $newBrand && (int) $oldBrand->id !== (int) $newBrand->id) {
+                    $oldBrand->is_active = false;
+                    $oldBrand->save();
+                }
+            }
+
+            if (Schema::hasTable('menus')) {
+                Menu::query()
+                    ->where('menu_group', 'academic-journal')
+                    ->update(['menu_group' => 'journal']);
+
+                Menu::query()
+                    ->where('link', 'like', '%/academic-journal%')
+                    ->get()
+                    ->each(function (Menu $menu) {
+                        $menu->link = str_replace('/academic-journal', '/journal', (string) $menu->link);
+                        $menu->save();
+                    });
+            }
+        } catch (\Throwable $e) {
+            // Keep setup resilient on partial schemas.
+        }
     }
 
     /**

@@ -31,11 +31,11 @@ class RegisterController extends Controller
     protected function validator(array $data)
     {
         $pathPrefix = normalize_path_auth_prefix((string) ($data['path_prefix'] ?? path_auth_prefix()));
-        $allowedNames = $pathPrefix === 'academic-journal'
+        $allowedNames = $pathPrefix === 'journal'
             ? ['journal_author']
             : ['student', 'instructor'];
 
-        if ($pathPrefix === 'academic-journal') {
+        if ($pathPrefix === 'journal') {
             JournalRoleService::ensureRoles();
         }
 
@@ -159,7 +159,7 @@ class RegisterController extends Controller
             return redirect()->route('cart.index')->with('success', 'Item automatically added to cart after login.');
         }
 
-        if ($pathPrefix === 'academic-journal' && is_journal_user($user)) {
+        if ($pathPrefix === 'journal' && is_journal_user($user)) {
             return redirect()->route('journal.dashboard')
                 ->with('status', 'Account created. Welcome to the Academic Journal.');
         }
@@ -175,7 +175,7 @@ class RegisterController extends Controller
     public function showRegistrationForm(?string $pathPrefix = null)
     {
         $pathPrefix = remember_path_auth_prefix($pathPrefix ?: request()->route('pathPrefix'));
-        if ($pathPrefix === 'academic-journal') {
+        if ($pathPrefix === 'journal') {
             JournalRoleService::ensureRoles();
             $roles = Role::whereIn('name', ['journal_author'])->get();
         } else {
@@ -190,7 +190,7 @@ class RegisterController extends Controller
             'registerAction' => $pathPrefix !== '' ? path_register_url($pathPrefix) : route('register'),
             'loginUrl' => $pathPrefix !== '' ? path_login_url($pathPrefix) : route('login'),
             'homeUrl' => $pathPrefix !== '' ? path_auth_home_url($pathPrefix) : route('welcome'),
-            'isJournalRegister' => $pathPrefix === 'academic-journal',
+            'isJournalRegister' => $pathPrefix === 'journal',
         ]);
     }
 }

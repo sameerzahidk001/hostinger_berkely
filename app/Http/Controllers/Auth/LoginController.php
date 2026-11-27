@@ -229,7 +229,7 @@ class LoginController extends Controller
                 return redirect()->route('cart.index');
             }
 
-            if ($pathPrefix === 'academic-journal' && is_journal_user(Auth::user())) {
+            if ($pathPrefix === 'journal' && is_journal_user(Auth::user())) {
                 return redirect()->route('journal.dashboard');
             }
 

@@ -476,7 +476,7 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
         Route::get('/stripe-configure', [SettingController::class, 'stripe'])->name('stripe-configure.index');
         Route::post('/stripe-configure/store', [SettingController::class, 'stripeStore'])->name('stripe-configure.store');
 
-        // Logo + menu by URL path group (e.g. /academic-journal/*)
+        // Logo + menu by URL path group (e.g. /journal/*)
         Route::get('/path-branding', [\App\Http\Controllers\Admin\SitePathBrandingController::class, 'index'])->name('admin.path-branding.index');
         Route::post('/path-branding/ensure-defaults', [\App\Http\Controllers\Admin\SitePathBrandingController::class, 'ensureDefaults'])->name('admin.path-branding.ensure');
         Route::get('/path-branding/create', [\App\Http\Controllers\Admin\SitePathBrandingController::class, 'create'])->name('admin.path-branding.create');
@@ -788,22 +788,30 @@ Auth::routes(['verify' => true]);
 Route::get('/login/captcha', [\App\Http\Controllers\Auth\LoginController::class, 'captchaImage'])
     ->name('login.captcha');
 
+// Old journal URL → short /journal (301)
+Route::get('/academic-journal/{any?}', function (?string $any = null) {
+    $target = '/journal' . ($any !== null && $any !== '' ? '/' . ltrim($any, '/') : '');
+    $qs = request()->getQueryString();
+
+    return redirect($target . ($qs ? '?' . $qs : ''), 301);
+})->where('any', '.*');
+
 // Path-scoped signup/login for Journal / Events (must stay above category + catch-all routes)
 Route::get('/{pathPrefix}/login', [\App\Http\Controllers\Auth\LoginController::class, 'showLoginForm'])
-    ->where('pathPrefix', 'academic-journal|events')
+    ->where('pathPrefix', 'journal|events')
     ->name('path.login');
 Route::post('/{pathPrefix}/login', [\App\Http\Controllers\Auth\LoginController::class, 'login'])
-    ->where('pathPrefix', 'academic-journal|events')
+    ->where('pathPrefix', 'journal|events')
     ->name('path.login.submit');
 Route::get('/{pathPrefix}/register', [\App\Http\Controllers\Auth\RegisterController::class, 'showRegistrationForm'])
-    ->where('pathPrefix', 'academic-journal|events')
+    ->where('pathPrefix', 'journal|events')
     ->name('path.register');
 Route::post('/{pathPrefix}/register', [\App\Http\Controllers\Auth\RegisterController::class, 'register'])
-    ->where('pathPrefix', 'academic-journal|events')
+    ->where('pathPrefix', 'journal|events')
     ->name('path.register.submit');
 
 // Academic Journal portal (before category + catch-all)
-Route::prefix('academic-journal')->group(function () {
+Route::prefix('journal')->group(function () {
     Route::get('/articles', [\App\Http\Controllers\Journal\PublicArticleController::class, 'search'])->name('journal.articles.search');
     Route::get('/articles/{slug}', [\App\Http\Controllers\Journal\PublicArticleController::class, 'show'])->name('journal.articles.show');
 

@@ -49,10 +49,10 @@
                         <label>Path prefix</label>
                         <input type="text" name="path_prefix" class="form-control"
                                value="{{ old('path_prefix', $row->path_prefix) }}"
-                               placeholder="academic-journal" required>
+                               placeholder="journal" required>
                         <span class="help-block">
-                            Applies to <code>/academic-journal</code> and every page under
-                            <code>/academic-journal/...</code>
+                            Applies to <code>/journal</code> and every page under
+                            <code>/journal/...</code>
                         </span>
                     </div>
                 </div>
@@ -74,7 +74,7 @@
                         <label>Home URL for logo click</label>
                         <input type="text" name="home_url" class="form-control"
                                value="{{ old('home_url', $row->home_url) }}"
-                               placeholder="/academic-journal">
+                               placeholder="/journal">
                     </div>
                 </div>
 

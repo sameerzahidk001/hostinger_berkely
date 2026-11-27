@@ -30,6 +30,16 @@ class WelcomeController extends Controller
 
     public function pages($slug = null)
     {
+        $slugNorm = trim(str_replace('\\', '/', (string) $slug), '/');
+        if ($slugNorm === 'journal' || str_starts_with($slugNorm, 'journal/')
+            || $slugNorm === 'academic-journal' || str_starts_with($slugNorm, 'academic-journal/')) {
+            try {
+                app(\App\Services\PathSectionSetupService::class)->migrateJournalPathToShortUrl();
+            } catch (\Throwable $e) {
+                // continue — page resolve still attempted
+            }
+        }
+
         $siteSetting = SiteSettings::first();
         $homepageId = $siteSetting ? $siteSetting->home : null;
         $category_perma = $siteSetting->category_perma ?? 'category';

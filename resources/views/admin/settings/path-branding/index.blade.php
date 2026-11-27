@@ -33,9 +33,9 @@
         </div>
         <div class="ibox-content">
             <p class="text-muted" style="margin-bottom:16px;">
-                Use this for standalone sections such as <code>/academic-journal</code> and
+                Use this for standalone sections such as <code>/journal</code> and
                 <code>/events</code>. Matching pages show this logo and menu instead of the main site header.
-                Signup/login for a section: <code>/academic-journal/login</code>, <code>/events/register</code>, etc.
+                Signup/login for a section: <code>/journal/login</code>, <code>/events/register</code>, etc.
             </p>
             <div class="table-responsive">
                 <table class="table table-striped table-bordered">
@@ -85,7 +85,7 @@
                         @empty
                             <tr>
                                 <td colspan="7" class="text-center text-muted">
-                                    No path branding yet. Add one for <code>academic-journal</code>.
+                                    No path branding yet. Add one for <code>journal</code>.
                                 </td>
                             </tr>
                         @endforelse
