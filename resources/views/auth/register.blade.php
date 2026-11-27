@@ -170,6 +170,37 @@
       padding: 0;
     }
 
+    .journal-register-wrap {
+      min-height: 100vh;
+      background: #fff;
+    }
+
+    .journal-register-hero {
+      width: 100%;
+      max-height: 220px;
+      overflow: hidden;
+      background: #000435;
+    }
+
+    .journal-register-hero img {
+      width: 100%;
+      height: 220px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .journal-register-body {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 24px 20px 40px;
+    }
+
+    @media (max-width: 767px) {
+      .journal-register-hero img {
+        height: 140px;
+      }
+    }
+
     button:focus {
       -moz-box-shadow: none !important;
       -webkit-box-shadow: none !important;
@@ -279,52 +310,40 @@
 </head>
 
 <body>
-  <div class="container-fluid px-0" style="min-height: 100vh;">
-    <div class="card card0 border-0" style="height: 100%;">
-      <div class="row d-flex">
-        <div class="col-lg-6 order-1 order-lg-1 login-hero">
-          <div class="card1" style="height: 100vh;">
-            <div class="row px-0" style="height: 100%; margin: 0;">
-              <img src="{{ asset('student/images/pngs/login.jpg') }}?v=20260927" class="image"
-                style="width: 100%; height: 100%; object-fit: cover;" alt="EduBerkeley">
-            </div>
-          </div>
+  @if(!empty($isJournalRegister))
+  <div class="journal-register-wrap">
+    <div class="journal-register-hero">
+      <img src="{{ asset('student/images/pngs/login.jpg') }}?v=20261127j" alt="Berkeley Journal">
+    </div>
+    <div class="journal-register-body">
+      <form method="POST" action="{{ $registerAction ?? route('register') }}">
+        @csrf
+        @if(!empty($pathPrefix))
+          <input type="hidden" name="path_prefix" value="{{ $pathPrefix }}">
+        @endif
+        <div class="mb-3">
+          <a href="{{ $homeUrl ?? route('welcome') }}" class="login-logo">
+            <img src="{{ ($authBrand['logo_url'] ?? null) ?: asset('frontend/images/pngs/header-logo.png') }}" alt="{{ optional($authBrand['branding'] ?? null)->name ?: 'Berkeley Journal' }}">
+          </a>
         </div>
-        <div class="col-lg-6 order-2" style="background-color:white;">
-          <form method="POST" action="{{ $registerAction ?? route('register') }}">
-            @csrf
-            @if(!empty($pathPrefix))
-              <input type="hidden" name="path_prefix" value="{{ $pathPrefix }}">
-            @endif
-            <div class="card2 card border-0 d-flex flex-column justify-content-center px-4 py-5">
-              <div class="row mb-2 px-3">
-                <a href="{{ $homeUrl ?? route('welcome') }}" class="login-logo">
-                  <img src="{{ ($authBrand['logo_url'] ?? null) ?: asset('frontend/images/pngs/header-logo.png') }}" alt="{{ optional($authBrand['branding'] ?? null)->name ?: 'Berkeley School of Business, Arts &amp; Sciences' }}">
-                </a>
-              </div>
-              <div class="row px-3">
-                <h1 class="auth-heading">Sign up</h1>
-              </div>
-              <div class="row px-3">
-                @foreach ($roles as $key => $role)
-                  <div class="col">
-                    <label class="card rounded shadow radio-checked" for="{{ $role->name }}-radio">
-                    <div class="card-body">
-                      <input type="radio" name="role" value="{{ $role->id }}" id="{{ $role->name }}-radio" hidden
-                      {{ $key == 0 ? 'checked' : '' }}>
-                      <h5 class="card-title">{{ ucfirst($role->name) }}</h5>
-                      <p class="text-muted">{{ $role->description }}</p>
-                    </div>
-                    </label>
-                  </div>
-                @endforeach
-              </div>
-              @error('role')
-                <p class="text-danger text-xs italic">{{ $message }}</p>
-              @enderror
-
-              @if(!empty($isJournalRegister))
-                <div class="row px-3 journal-grid">
+        <h1 class="auth-heading">Sign up</h1>
+        <div class="row mb-3">
+          @foreach ($roles as $key => $role)
+            <div class="col-md-6">
+              <label class="card rounded shadow radio-checked" for="{{ $role->name }}-radio" style="display:block;">
+                <div class="card-body">
+                  <input type="radio" name="role" value="{{ $role->id }}" id="{{ $role->name }}-radio" hidden {{ $key == 0 ? 'checked' : '' }}>
+                  <h5 class="card-title">{{ role_display_name($role->name) }}</h5>
+                  <p class="text-muted mb-0">{{ $role->description }}</p>
+                </div>
+              </label>
+            </div>
+          @endforeach
+        </div>
+        @error('role')
+          <p class="text-danger text-xs italic">{{ $message }}</p>
+        @enderror
+                <div class="row journal-grid">
                   <div class="col-md-6 px-2">
                     <label class="mb-1 form-group-label"><h6 class="mb-0 text-sm">Your Fullname *</h6></label>
                     <input id="name" type="text" class="mb-2 @error('name') border-danger @enderror" name="name"
@@ -427,10 +446,63 @@
                   </div>
                 </div>
 
-                <div class="row mb-3 px-3 mt-3">
-                  <button type="submit" class="btn btn-blue text-center">Complete Registration</button>
+                <div class="row mb-3 mt-3">
+                  <div class="col-12">
+                    <button type="submit" class="btn btn-blue text-center">Complete Registration</button>
+                  </div>
                 </div>
-              @else
+                <div class="row mb-2">
+                  <div class="col-12">
+                    <small class="font-weight-bold">Already have an account? <a href="{{ $loginUrl ?? route('login') }}" class="text-danger">Sign In</a></small>
+                  </div>
+                </div>
+      </form>
+    </div>
+  </div>
+  @else
+  <div class="container-fluid px-0" style="min-height: 100vh;">
+    <div class="card card0 border-0" style="height: 100%;">
+      <div class="row d-flex">
+        <div class="col-lg-6 order-1 order-lg-1 login-hero">
+          <div class="card1" style="height: 100vh;">
+            <div class="row px-0" style="height: 100%; margin: 0;">
+              <img src="{{ asset('student/images/pngs/login.jpg') }}?v=20260927" class="image"
+                style="width: 100%; height: 100%; object-fit: cover;" alt="EduBerkeley">
+            </div>
+          </div>
+        </div>
+        <div class="col-lg-6 order-2" style="background-color:white;">
+          <form method="POST" action="{{ $registerAction ?? route('register') }}">
+            @csrf
+            @if(!empty($pathPrefix))
+              <input type="hidden" name="path_prefix" value="{{ $pathPrefix }}">
+            @endif
+            <div class="card2 card border-0 d-flex flex-column justify-content-center px-4 py-5">
+              <div class="row mb-2 px-3">
+                <a href="{{ $homeUrl ?? route('welcome') }}" class="login-logo">
+                  <img src="{{ ($authBrand['logo_url'] ?? null) ?: asset('frontend/images/pngs/header-logo.png') }}" alt="{{ optional($authBrand['branding'] ?? null)->name ?: 'Berkeley School of Business, Arts &amp; Sciences' }}">
+                </a>
+              </div>
+              <div class="row px-3">
+                <h1 class="auth-heading">Sign up</h1>
+              </div>
+              <div class="row px-3">
+                @foreach ($roles as $key => $role)
+                  <div class="col">
+                    <label class="card rounded shadow radio-checked" for="{{ $role->name }}-radio">
+                    <div class="card-body">
+                      <input type="radio" name="role" value="{{ $role->id }}" id="{{ $role->name }}-radio" hidden
+                      {{ $key == 0 ? 'checked' : '' }}>
+                      <h5 class="card-title">{{ ucfirst($role->name) }}</h5>
+                      <p class="text-muted">{{ $role->description }}</p>
+                    </div>
+                    </label>
+                  </div>
+                @endforeach
+              </div>
+              @error('role')
+                <p class="text-danger text-xs italic">{{ $message }}</p>
+              @enderror
               <div class="row px-3">
                 <label class="mb-1">
                   <h6 class="mb-0 text-sm">Your Fullname</h6>
@@ -476,7 +548,6 @@
                 @enderror
               </div>
               <div class="row px-3">
-                <!-- Confirm Password Field -->
                 <label class="mb-1">
                   <h6 class="mb-0 text-sm">Confirm Password</h6>
                 </label>
@@ -497,7 +568,6 @@
               <div class="row mb-3 px-3">
                 <button type="submit" class="btn btn-blue text-center">Sign up</button>
               </div>
-              @endif
               <div class="row mb-4 px-3">
                 <small class="font-weight-bold">Already have an account ? <a href="{{ $loginUrl ?? route('login') }}"
                     class="text-danger">Sign In</a></small>
@@ -508,6 +578,7 @@
       </div>
     </div>
   </div>
+  @endif
 </body>
 
 </html>

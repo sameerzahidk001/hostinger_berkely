@@ -92,6 +92,22 @@
             padding: 0 !important;
             margin: 0 !important;
          }
+         #side-menu > li.nav-section-label {
+            pointer-events: none;
+            margin: 12px 0 4px;
+            padding: 8px 18px 4px;
+            list-style: none;
+         }
+         #side-menu > li.nav-section-label span {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: rgba(255,255,255,.55);
+            border-bottom: 1px solid rgba(255,255,255,.12);
+            padding-bottom: 6px;
+         }
          #side-menu > li.lms-nav-dashboards.dashboards-open > ul,
          #side-menu > li.lms-nav-dashboards.dashboards-open > ul.collapse,
          #side-menu > li.lms-nav-dashboards.dashboards-open > ul.collapse.in,
@@ -196,6 +212,7 @@
                   </li>
                   @endif
                   @endif
+                  <li class="nav-section-label"><span>School</span></li>
                   @if(admin_menu_allowed('school'))
                   <li class="{{ request()->is('school/*') ? 'active' : '' }}">
                      <a href="{{ route('school.index') }}"><i class="fa fa-cogs"></i> <span class="nav-label">Schools</span></a>
@@ -374,7 +391,20 @@
                      <a href="{{ route('admin.analytics') }}"><i class="fa fa-star"></i> <span class="nav-label">Analytics</span></a>
                   </li>
                   @endif
+                  @if(admin_menu_allowed('users'))
+                  <li class="{{ request()->is('admin/user*') && ! str_starts_with((string) request('type'), 'journal_') && request('section') !== 'journal' ? 'active show' : '' }}">
+                     <a href="javascript:void(0)"><i class="fa fa-address-card"></i> <span class="nav-label">School Users</span> <span class="fa arrow"></span></a>
+                     <ul class="nav nav-second-level">
+                        <li><a href="{{ route('users', ['type' => 'student']) }}">Student List</a></li>
+                        <li><a href="{{ route('users', ['type' => 'instructor']) }}">Instructors</a></li>
+                        <li><a href="{{ route('users', ['type' => 'accountant']) }}">Accountants</a></li>
+                        <li><a href="{{ route('users', ['type' => 'content-writer']) }}">Content Writers</a></li>
+                        <li><a href="{{ route('users.create', ['section' => 'school']) }}">Add School User</a></li>
+                     </ul>
+                  </li>
+                  @endif
                   @if(Auth::guard('admin')->check())
+                  <li class="nav-section-label"><span>Journal</span></li>
                   <li class="{{ request()->is('admin/journal*') ? 'active show' : '' }}">
                      <a href="javascript:void(0)"><i class="fa fa-book"></i> <span class="nav-label">Academic Journal</span> <span class="fa arrow"></span></a>
                      <ul class="nav nav-second-level">
@@ -387,30 +417,28 @@
                         <li><a href="{{ url('/journal') }}" target="_blank">Public site</a></li>
                      </ul>
                   </li>
-                  <li class="{{ request()->is('admin/events-hub*') ? 'active' : '' }}">
-                     <a href="{{ route('admin.events.hub') }}"><i class="fa fa-calendar"></i> <span class="nav-label">Events Hub</span></a>
-                  </li>
                   @endif
                   @if(admin_menu_allowed('users'))
-                  <li class="{{ request()->is('admin/user*') ? 'active show' : '' }}">
-                     <a href="javascript:void(0)"><i class="fa fa-address-card"></i> <span class="nav-label">Users</span> <span class="fa arrow"></span></a>
+                  <li class="{{ request()->is('admin/user*') && (str_starts_with((string) request('type'), 'journal_') || request('section') === 'journal') ? 'active show' : '' }}">
+                     <a href="javascript:void(0)"><i class="fa fa-users"></i> <span class="nav-label">Journal Users</span> <span class="fa arrow"></span></a>
                      <ul class="nav nav-second-level">
-                        <li><a href="{{ route('users', ['type' => 'student']) }}">Student List</a></li>
-                        <li><a href="{{ route('users', ['type' => 'instructor']) }}">Instructors</a></li>
-                        <li><a href="{{ route('users', ['type' => 'accountant']) }}">Accountants</a></li>
-                        <li><a href="{{ route('users', ['type' => 'content-writer']) }}">Content Writers</a></li>
-                        <li class="divider"></li>
-                        <li><a href="{{ route('users', ['type' => 'journal_author']) }}">Journal Authors</a></li>
-                        <li><a href="{{ route('users', ['type' => 'journal_reviewer']) }}">Journal Reviewers</a></li>
-                        <li><a href="{{ route('users', ['type' => 'journal_editor']) }}">Journal Editors</a></li>
-                        <li><a href="{{ route('users', ['type' => 'journal_editorial']) }}">Journal Editorial Team</a></li>
-                        <li><a href="{{ route('users', ['type' => 'journal_management']) }}">Journal Management</a></li>
-                        <li><a href="{{ route('users', ['type' => 'journal_administration']) }}">Journal Administration</a></li>
-                        <li><a href="{{ route('users', ['type' => 'journal_finance']) }}">Journal Finance</a></li>
-                        <li><a href="{{ route('users', ['type' => 'journal_it']) }}">Journal IT</a></li>
-                        <li><a href="{{ route('users', ['type' => 'journal_quality']) }}">Journal Quality</a></li>
-                        <li><a href="{{ route('users.create') }}">Add User</a></li>
+                        <li><a href="{{ route('users', ['type' => 'journal_author']) }}">Authors</a></li>
+                        <li><a href="{{ route('users', ['type' => 'journal_reviewer']) }}">Reviewers</a></li>
+                        <li><a href="{{ route('users', ['type' => 'journal_editor']) }}">Editors</a></li>
+                        <li><a href="{{ route('users', ['type' => 'journal_editorial']) }}">Editorial Team</a></li>
+                        <li><a href="{{ route('users', ['type' => 'journal_management']) }}">Management</a></li>
+                        <li><a href="{{ route('users', ['type' => 'journal_administration']) }}">Administration</a></li>
+                        <li><a href="{{ route('users', ['type' => 'journal_finance']) }}">Finance</a></li>
+                        <li><a href="{{ route('users', ['type' => 'journal_it']) }}">IT</a></li>
+                        <li><a href="{{ route('users', ['type' => 'journal_quality']) }}">Quality</a></li>
+                        <li><a href="{{ route('users.create', ['section' => 'journal']) }}">Add Journal User</a></li>
                      </ul>
+                  </li>
+                  @endif
+                  @if(Auth::guard('admin')->check())
+                  <li class="nav-section-label"><span>Events</span></li>
+                  <li class="{{ request()->is('admin/events-hub*') ? 'active' : '' }}">
+                     <a href="{{ route('admin.events.hub') }}"><i class="fa fa-calendar"></i> <span class="nav-label">Events Hub</span></a>
                   </li>
                   @endif
                   @if(admin_menu_allowed('payments'))

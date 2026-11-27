@@ -31,19 +31,41 @@
     .radio-checked:has(input[type="radio"]:checked) {
         border-color: #304FFE !important;
     }
+    .role-section-title {
+        width: 100%;
+        margin: 0 0 10px;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+        color: #1ab394;
+    }
+    .role-cards-wrap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 8px;
+    }
+    .role-cards-wrap .role-card-col {
+        flex: 1 1 220px;
+        max-width: 280px;
+    }
 </style>
 @endpush
 @section('content')
+@php $section = $section ?? request('section', 'school'); @endphp
 
 <div class="row wrapper border-bottom white-bg page-heading">
     <div class="col">
-        <h2>Roles & Permissions</h2>
+        <h2>{{ ($section ?? '') === 'journal' ? 'Add Journal User' : 'Add School User' }}</h2>
         <ol class="breadcrumb">
             <li>
                 <a href="{{ route('admin.home') }}">Home</a>
             </li>
             <li>
-                <a href="{{ route('users') }}">User</a>
+                <a href="{{ ($section ?? '') === 'journal' ? route('users', ['type' => 'journal_author']) : route('users', ['type' => 'student']) }}">
+                    {{ ($section ?? '') === 'journal' ? 'Journal Users' : 'School Users' }}
+                </a>
             </li>
             <li class="active">
                 <strong>Create</strong>
@@ -57,28 +79,38 @@
         <div class="col-lg-12">
             <div class="ibox float-e-margins" style="margin-bottom: 0;">
                 <div class="ibox-title">
-                    <h5>Create</h5>
+                    <h5>{{ ($section ?? '') === 'journal' ? 'Journal roles only' : 'School roles only' }}</h5>
+                    <div class="ibox-tools">
+                        @if(($section ?? '') === 'journal')
+                            <a href="{{ route('users.create', ['section' => 'school']) }}" class="btn btn-xs btn-white">Switch to School user</a>
+                        @else
+                            <a href="{{ route('users.create', ['section' => 'journal']) }}" class="btn btn-xs btn-white">Switch to Journal user</a>
+                        @endif
+                    </div>
                 </div>
                 <div class="ibox-content">
                     <form role="form" action="{{ route('users.store') }}" method="POST">
                         @csrf
+                        <input type="hidden" name="section" value="{{ $section }}">
                         <div class="row">
                             <div class="col-md-12">
-                                <div class="row display-flex">
-                                    @foreach ($roles as $key => $role)
-                                        <div class="col">
-                                            <label class="card rounded shadow radio-checked" for="{{ $role->name }}-radio">
+                                <div class="role-section-title">{{ ($section ?? '') === 'journal' ? 'Journal' : 'School' }} — select one role</div>
+                                <div class="role-cards-wrap">
+                                    @forelse ($roles as $key => $role)
+                                        <div class="role-card-col">
+                                            <label class="card rounded shadow radio-checked" for="{{ $role->name }}-radio" style="display:block;height:100%;">
                                                 <div class="card-body">
                                                     <input type="radio" name="role" value="{{ $role->id }}"
-                                                        id="{{ $role->name }}-radio" hidden 
+                                                        id="{{ $role->name }}-radio" hidden
                                                         {{ old('role', $key == 0 ? $role->id : '') == $role->id ? 'checked' : '' }}>
-                                                    
                                                     <h5 class="card-title">{{ role_display_name($role->name) }}</h5>
-                                                    <p class="text-muted">{{ $role->description }}</p>
+                                                    <p class="text-muted" style="margin:0;">{{ $role->description }}</p>
                                                 </div>
                                             </label>
                                         </div>
-                                    @endforeach
+                                    @empty
+                                        <p class="text-muted">No roles available for this section.</p>
+                                    @endforelse
                                 </div>
                                 @error('role')
                                     <p class="text-danger text-xs italic">{{ $message }}</p>

@@ -61,11 +61,16 @@ class UserController extends Controller
         }
     }
 
-    public function create()
+    public function create(Request $request)
     {
         try {
             if (function_exists('ensure_journal_roles')) {
                 ensure_journal_roles();
+            }
+
+            $section = strtolower(trim((string) $request->query('section', 'school')));
+            if (! in_array($section, ['school', 'journal'], true)) {
+                $section = 'school';
             }
 
             $contentWriterIds = content_writer_role_ids();
@@ -76,8 +81,18 @@ class UserController extends Controller
 
                 return count($contentWriterIds) > 1 && $role->id !== ($contentWriterIds[0] ?? $role->id);
             })->values();
+
+            $roles = $roles->filter(function ($role) use ($section) {
+                $isJournal = function_exists('is_journal_role_name')
+                    ? is_journal_role_name($role->name)
+                    : str_starts_with(strtolower((string) $role->name), 'journal_');
+
+                return $section === 'journal' ? $isJournal : ! $isJournal;
+            })->values();
+
             $countries = Country::all();
-            return view('admin.user.create', compact('roles', 'countries'));
+
+            return view('admin.user.create', compact('roles', 'countries', 'section'));
         } catch (Exception $e) {
             return redirect()->back()->with('error', 'Something went wrong: ' . $e->getMessage());
         }
