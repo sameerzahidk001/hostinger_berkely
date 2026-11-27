@@ -822,7 +822,7 @@ class MediaController extends Controller
             }
         }
         if (! $gone && File::exists($full)) {
-            File::delete($full);
+        File::delete($full);
         }
         if (File::exists($full)) {
             return back()->with('fail', 'The Media list was updated but the file could not be removed from disk.');
@@ -1095,22 +1095,45 @@ class MediaController extends Controller
         $newBase = basename($newRel);
 
         $replaceIn = function ($value) use ($oldRel, $newRel, $oldBase, $newBase) {
-            if (! is_string($value) || $value === '') {
+            if ($value === null || $value === '') {
                 return [$value, false];
             }
+
+            $wasArray = is_array($value);
+            if ($wasArray || is_object($value)) {
+                $blob = json_encode($value, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+                if (! is_string($blob) || $blob === '') {
+                    return [$value, false];
+                }
+            } elseif (is_string($value)) {
+                $blob = $value;
+            } else {
+                return [$value, false];
+            }
+
             $changed = false;
-            $next = $value;
+            $next = $blob;
             if (stripos($next, $oldRel) !== false) {
                 $next = str_ireplace($oldRel, $newRel, $next);
                 $changed = true;
             }
             // Replace basename only when it appears as a path segment / filename token.
-            if (preg_match('/(^|[\\/])' . preg_quote($oldBase, '/') . '($|[?"\'\\s])/i', $next)) {
+            if (preg_match('/(^|[\\/])' . preg_quote($oldBase, '/') . '($|[?"\'\\s\\]\\},])/i', $next)) {
                 $next = preg_replace('/' . preg_quote($oldBase, '/') . '/i', $newBase, $next);
                 $changed = true;
             }
 
-            return [$next, $changed];
+            if (! $changed) {
+                return [$value, false];
+            }
+
+            if ($wasArray || is_object($value)) {
+                $decoded = json_decode($next, true);
+
+                return [is_array($decoded) ? $decoded : $value, is_array($decoded)];
+            }
+
+            return [$next, true];
         };
 
         if (class_exists(PageSection::class) && Schema::hasTable('page_sections')) {
@@ -1151,7 +1174,7 @@ class MediaController extends Controller
                 foreach ($q->limit(200)->get() as $course) {
                     $dirty = false;
                     foreach ($imgCols as $col) {
-                        [$next, $changed] = $replaceIn((string) ($course->{$col} ?? ''));
+                        [$next, $changed] = $replaceIn($course->{$col} ?? null);
                         if ($changed) {
                             $course->{$col} = $next;
                             $dirty = true;
@@ -1188,7 +1211,7 @@ class MediaController extends Controller
                 foreach ($q->limit(200)->get() as $label) {
                     $dirty = false;
                     foreach ($existing as $col) {
-                        [$next, $changed] = $replaceIn((string) ($label->{$col} ?? ''));
+                        [$next, $changed] = $replaceIn($label->{$col} ?? null);
                         if ($changed) {
                             $label->{$col} = $next;
                             $dirty = true;
@@ -1807,8 +1830,8 @@ class MediaController extends Controller
                 }
                 $key = strtolower($file['rel']);
                 if (isset($seen[$key])) {
-                    continue;
-                }
+                continue;
+            }
                 $seen[$key] = true;
                 $out[] = $file;
             }
@@ -1873,7 +1896,7 @@ class MediaController extends Controller
             if (! isset($exts[$ext])) {
                 continue;
             }
-            $out[] = [
+                    $out[] = [
                 'rel' => str_replace('\\', '/', $rel),
                 'name' => $name,
                 'mtime' => (int) (@filemtime($full) ?: 0),
@@ -1950,8 +1973,8 @@ class MediaController extends Controller
             fn ($col) => Schema::hasColumn('users', $col)
         ));
         if ($cols === []) {
-            return $out;
-        }
+        return $out;
+    }
 
         $generics = $this->genericProfileNames();
         $select = array_merge(['id', 'name', 'email'], $cols);
@@ -2354,12 +2377,12 @@ class MediaController extends Controller
                     }
                 });
                 foreach ($q->orderByDesc('id')->limit(400)->get() as $section) {
-                    $page = $section->page;
-                    if (! $page) {
-                        continue;
-                    }
-                    $label = $page->page_name ?: ('Page #' . $page->id);
-                    $data = $section->data;
+                $page = $section->page;
+                if (! $page) {
+                    continue;
+                }
+                $label = $page->page_name ?: ('Page #' . $page->id);
+                $data = $section->data;
                     $blob = is_string($data) ? $data : (string) json_encode($data, JSON_UNESCAPED_SLASHES);
                     $add($blob, $label, $this->mediaNamedUrl(
                         'pages.edit',
@@ -2373,27 +2396,27 @@ class MediaController extends Controller
         }
 
         try {
-            if (class_exists(Course::class) && Schema::hasTable('courses')) {
-                $imgCols = [];
-                foreach (['thumbnail', 'post_image', 'overview_img', 'banner_section', 'image_text_2col_card'] as $col) {
-                    if (Schema::hasColumn('courses', $col)) {
-                        $imgCols[] = $col;
-                    }
+        if (class_exists(Course::class) && Schema::hasTable('courses')) {
+            $imgCols = [];
+            foreach (['thumbnail', 'post_image', 'overview_img', 'banner_section', 'image_text_2col_card'] as $col) {
+                if (Schema::hasColumn('courses', $col)) {
+                    $imgCols[] = $col;
                 }
-                if ($imgCols !== []) {
-                    $q = Course::query()->select(array_merge(['id', 'title'], $imgCols));
+            }
+            if ($imgCols !== []) {
+                $q = Course::query()->select(array_merge(['id', 'title'], $imgCols));
                     if ($terms !== []) {
                         $q->where(function ($outer) use ($terms, $imgCols) {
                             foreach ($terms as $term) {
                                 $like = '%' . addcslashes((string) $term, '%_\\') . '%';
-                                foreach ($imgCols as $col) {
-                                    $outer->orWhere($col, 'like', $like);
-                                }
-                            }
-                        });
+                        foreach ($imgCols as $col) {
+                            $outer->orWhere($col, 'like', $like);
+                        }
+                    }
+                });
                     }
                     foreach ($q->limit(400)->get() as $course) {
-                        $label = 'Course: ' . ($course->title ?: ('#' . $course->id));
+                    $label = 'Course: ' . ($course->title ?: ('#' . $course->id));
                         $add(json_encode($course->getAttributes()), $label, $this->mediaNamedUrl(
                             'course.edit',
                             $course->id,
@@ -2452,9 +2475,9 @@ class MediaController extends Controller
         }
 
         try {
-            if (class_exists(SiteSettings::class) && Schema::hasTable('site_settings')) {
-                $settings = SiteSettings::query()->first();
-                if ($settings) {
+        if (class_exists(SiteSettings::class) && Schema::hasTable('site_settings')) {
+            $settings = SiteSettings::query()->first();
+            if ($settings) {
                     $add(
                         json_encode($settings->toArray()),
                         'Site Settings',
