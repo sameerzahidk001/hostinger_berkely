@@ -57,6 +57,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'is_on_web',
         'student_id',
         'student_number',
+        'journal_profile',
     ];
 
     /**
@@ -83,7 +84,27 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'journal_profile' => 'array',
     ];
+
+    public static function ensureJournalProfileColumn(): bool
+    {
+        try {
+            if (! Schema::hasTable('users')) {
+                return false;
+            }
+            if (Schema::hasColumn('users', 'journal_profile')) {
+                return true;
+            }
+            Schema::table('users', function (Blueprint $table) {
+                $table->json('journal_profile')->nullable();
+            });
+
+            return Schema::hasColumn('users', 'journal_profile');
+        } catch (\Throwable $e) {
+            return Schema::hasColumn('users', 'journal_profile');
+        }
+    }
 
     public function roles()
     {

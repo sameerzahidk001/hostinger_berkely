@@ -425,13 +425,19 @@
     @endif
 
     @php
+        $pathBrand = function_exists('resolve_site_path_branding') ? resolve_site_path_branding() : null;
+        $usePathFooter = $pathBrand && method_exists($pathBrand, 'usesCustomFooter') && $pathBrand->usesCustomFooter();
         $whatsappIcon = data_get($settings, 'whatsapp_icon') ?: 'default.jpeg';
         $fallbackWa = data_get($settings, 'whatsapp_url');
-        $whatsappLinks = collect([
-            ['label' => 'USA & CANADA', 'url' => data_get($settings, 'whatsapp_usa_url') ?: $fallbackWa],
-            ['label' => 'UK & EUROPE', 'url' => data_get($settings, 'whatsapp_uk_url') ?: $fallbackWa],
-            ['label' => 'MIDDLE EAST & AFRICA', 'url' => data_get($settings, 'whatsapp_middle_east_url') ?: $fallbackWa],
-        ])->filter(fn ($row) => filled($row['url']))->values();
+        if ($usePathFooter) {
+            $whatsappLinks = collect($pathBrand->footerWhatsappLinks());
+        } else {
+            $whatsappLinks = collect([
+                ['label' => 'USA & CANADA', 'url' => data_get($settings, 'whatsapp_usa_url') ?: $fallbackWa],
+                ['label' => 'UK & EUROPE', 'url' => data_get($settings, 'whatsapp_uk_url') ?: $fallbackWa],
+                ['label' => 'MIDDLE EAST & AFRICA', 'url' => data_get($settings, 'whatsapp_middle_east_url') ?: $fallbackWa],
+            ])->filter(fn ($row) => filled($row['url']))->values();
+        }
         $socialMedia = ['facebook', 'twitter', 'instagram', 'linkedin', 'youtube', 'tiktok'];
     @endphp
     <style>
@@ -557,21 +563,31 @@
         <div class="site-bottom-social">
             @foreach ($socialMedia as $platform)
                 @php
-                    $smUrl = data_get($settings, $platform . '_url') ?: '#';
-                    $smIcon = data_get($settings, $platform . '_icon') ?: 'default.jpeg';
+                    if ($usePathFooter) {
+                        $smUrl = $pathBrand->footerSocialUrl($platform);
+                        $smIcon = data_get($settings, $platform . '_icon') ?: 'default.jpeg';
+                    } else {
+                        $smUrl = data_get($settings, $platform . '_url') ?: '#';
+                        $smIcon = data_get($settings, $platform . '_icon') ?: 'default.jpeg';
+                    }
                 @endphp
-                <a href="{{ $smUrl }}" target="_blank" rel="noopener" title="{{ ucfirst($platform) }}">
+                @if(! $usePathFooter || filled($smUrl))
+                <a href="{{ $smUrl ?: '#' }}" target="_blank" rel="noopener" title="{{ ucfirst($platform) }}">
                     <img src="{{ asset('images/' . $smIcon) }}" alt="{{ ucfirst($platform) }}">
                 </a>
+                @endif
             @endforeach
         </div>
     </div>
 
     <!-- Footer Section -->
     @php
-        $footerBg = $settings->footer_bg ?: '#0e0e0e';
-        $footerText = $settings->footer_text_color ?: '#8996a0';
-        $footerTitle = $settings->footer_title_bg ?: '#ffffff';
+        $footerBg = ($usePathFooter && filled($pathBrand->footer_bg)) ? $pathBrand->footer_bg : ($settings->footer_bg ?: '#0e0e0e');
+        $footerText = ($usePathFooter && filled($pathBrand->footer_text_color)) ? $pathBrand->footer_text_color : ($settings->footer_text_color ?: '#8996a0');
+        $footerTitle = ($usePathFooter && filled($pathBrand->footer_title_color)) ? $pathBrand->footer_title_color : ($settings->footer_title_bg ?: '#ffffff');
+        $pathFooterMenuGroup = $usePathFooter
+            ? (filled($pathBrand->footer_menu_group) ? $pathBrand->footer_menu_group : $pathBrand->menu_group)
+            : null;
     @endphp
     <footer
         class="card-hidden px-6 min-[1200px]:px-[72px] min-h-[465px] flex items-center flex-col justify-center w-full py-8 mt-auto"
@@ -581,6 +597,28 @@
                 footer { margin-bottom: 108px !important; }
             }
         </style>
+        @if($usePathFooter && filled($pathFooterMenuGroup))
+            @php
+                $pathFooterMenus = collect($menus)->where('menu_group', $pathFooterMenuGroup)->whereNull('parent_id')->values();
+            @endphp
+            <div class="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-4 place-items-start">
+                <div class="flex flex-1 w-full flex-col justify-start items-start gap-2 text-left">
+                    <span class="font-bold text-[18px] leading-[27px]" style="color: {{ $footerTitle }}">{{ $pathBrand->name ?: 'Links' }}</span>
+                    <ul class="list-none m-0 p-0 w-full flex flex-col gap-1.5 items-start text-left">
+                        @foreach ($pathFooterMenus as $menu)
+                            <li class="w-full">
+                                <a href="{{ public_menu_href($menu->link) }}"
+                                    class="inline-flex items-start gap-2 font-bold text-[16px] leading-[24px] hover:underline transition-all ease-in duration-200 delay-100 underline-offset-4 text-left"
+                                    style="color: {{ $footerText }}">
+                                    <span aria-hidden="true" class="shrink-0 leading-[24px]">•</span>
+                                    <span>{{ $menu->name }}</span>
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            </div>
+        @else
         @php
             $columns = $settings->footer_columns == null ? 4 : $settings->footer_columns;
 
@@ -622,13 +660,23 @@
                 </div>
             @endforeach
         </div>
+        @unless($usePathFooter)
         <p class="w-full text-left mt-6">
             <a href="{{ seo_courses_hub_url() }}" class="underline font-bold" style="color: {{ $footerText }}">All programmes</a>
         </p>
+        @endunless
+        @endif
         <div class="flex flex-col md:flex-row  w-full justify-between gap-4 items-center my-8">
             <div
                 class="flex flex-1 justify-center basis-100 flex-grow w-full text-white no-underline font-normal text-base items-center">
-                @if($settings && $settings->footer_logo)
+                @if($usePathFooter && $pathBrand->logoUrl())
+                    <a href="{{ $pathBrand->resolvedHomeUrl() }}" class=" self-center">
+                        <img src="{{ $pathBrand->logoUrl() }}"
+                            class="footer-brand-logo max-w-[220px] self-center object-contain min-h-[48px]"
+                            width="240" height="72" alt="{{ $pathBrand->name ?: config('app.name') }}"
+                            style="aspect-ratio:auto;height:auto;width:auto;max-width:240px">
+                    </a>
+                @elseif($settings && $settings->footer_logo)
                     @php
                         $logo = $settings->footer_logo == 'logo' ? 'logo' : 'white_logo';
                     @endphp
@@ -641,7 +689,9 @@
                 @endif
             </div>
             @php
-                $copyrightRaw = $settings->copyright_message ?? 'Copyright © 1976 Company PVT. LTD';
+                $copyrightRaw = ($usePathFooter && filled($pathBrand->footer_copyright))
+                    ? $pathBrand->footer_copyright
+                    : ($settings->copyright_message ?? 'Copyright © 1976 Company PVT. LTD');
                 $copyrightHtml = preg_replace(
                     '/(UKPRN:\s*\d+)/u',
                     '<span class="ukprn-lock">$1</span>',
@@ -652,7 +702,9 @@
                 {!! $copyrightHtml !!}
             </span>
         </div>
+        @unless($usePathFooter)
         {!! strip_waf_captcha_html($settings->footer_settings ?? '') !!}
+        @endunless
     </footer>
     <!-- footer end -->
 
