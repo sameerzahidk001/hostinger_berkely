@@ -7,6 +7,7 @@ use App\Models\JournalManuscript;
 use App\Models\JournalSubject;
 use App\Services\JournalSetupService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class PublicArticleController extends Controller
 {
@@ -65,5 +66,33 @@ class PublicArticleController extends Controller
         $row->increment('view_count');
 
         return view('journal.public.article', compact('row'));
+    }
+
+    public function downloadPdf(string $slug)
+    {
+        remember_path_auth_prefix('journal');
+
+        if (! Auth::check()) {
+            return redirect()
+                ->guest(path_login_url('journal'))
+                ->with('status', 'Journals are free to browse. Sign in or register to download PDFs.');
+        }
+
+        $row = JournalManuscript::query()
+            ->where('slug', $slug)
+            ->where('status', 'published')
+            ->firstOrFail();
+
+        $rel = ltrim(str_replace('\\', '/', (string) $row->pdf_path), '/');
+        if ($rel === '') {
+            abort(404, 'PDF not available.');
+        }
+
+        $full = public_path($rel);
+        if (! is_file($full)) {
+            abort(404, 'PDF file missing.');
+        }
+
+        return response()->download($full, basename($full));
     }
 }

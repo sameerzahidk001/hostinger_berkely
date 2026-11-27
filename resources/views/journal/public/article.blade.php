@@ -20,7 +20,18 @@
         <pre class="whitespace-pre-wrap text-sm bg-gray-50 p-4 border mb-6">{{ $row->references_text }}</pre>
     @endif
     @if($row->pdf_path)
-        <a href="{{ asset($row->pdf_path) }}" class="inline-block bg-[#000435] text-white px-4 py-2 no-underline" target="_blank" rel="noopener">Download PDF</a>
+        @auth
+            <a href="{{ route('journal.articles.pdf', $row->slug) }}"
+               class="inline-block bg-[#000435] text-white px-4 py-2 no-underline">Download PDF</a>
+        @else
+            <div class="rounded border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+                <p class="mb-3 font-medium">This journal is visible to everyone. PDF download requires sign up.</p>
+                <div class="flex flex-wrap gap-3">
+                    <a href="{{ path_login_url('journal') }}" class="inline-block bg-[#000435] text-white px-4 py-2 no-underline">Sign in to download</a>
+                    <a href="{{ path_register_url('journal') }}" class="inline-block border border-[#000435] text-[#000435] px-4 py-2 no-underline">Register</a>
+                </div>
+            </div>
+        @endauth
     @endif
     <p class="mt-8 text-sm text-gray-500"><a href="{{ route('journal.articles.search') }}">← Search</a></p>
 </div>

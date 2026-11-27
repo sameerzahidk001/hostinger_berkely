@@ -34,7 +34,8 @@ class WelcomeController extends Controller
         if ($slugNorm === 'journal' || str_starts_with($slugNorm, 'journal/')
             || $slugNorm === 'academic-journal' || str_starts_with($slugNorm, 'academic-journal/')) {
             try {
-                app(\App\Services\PathSectionSetupService::class)->migrateJournalPathToShortUrl();
+                // Idempotent: short URL migrate + CellPress-style menus/pages (no Enquire).
+                app(\App\Services\PathSectionSetupService::class)->ensureDefaults();
             } catch (\Throwable $e) {
                 // continue — page resolve still attempted
             }

@@ -27,7 +27,11 @@ class PathSectionSetupService
                 'logo_file' => 'path-brand-journal.svg',
                 'logo_label' => 'Academic Journal',
                 'logo_color' => '#0B3A6E',
+                // CellPress-style public nav: Journals / Publish / News & events / About (+ Contact)
                 'children' => [
+                    ['name' => 'Journals', 'url' => 'journals'],
+                    ['name' => 'Publish', 'url' => 'publish'],
+                    ['name' => 'News & events', 'url' => 'news-events'],
                     ['name' => 'About', 'url' => 'about'],
                     ['name' => 'For Authors', 'url' => 'for-authors'],
                     ['name' => 'Contact', 'url' => 'contact'],
@@ -304,6 +308,17 @@ class PathSectionSetupService
                 $item->menu_order = $authItem['order'];
                 $item->save();
             }
+        }
+
+        // Enquire / Enquirer is school-site only — never show on journal/events path menus.
+        if (in_array($group, ['journal', 'events', 'academic-journal'], true)) {
+            Menu::query()
+                ->where('menu_group', $group)
+                ->where(function ($q) {
+                    $q->whereRaw('LOWER(name) = ?', ['enquire'])
+                        ->orWhereRaw('LOWER(name) = ?', ['enquirer']);
+                })
+                ->update(['is_active' => 0]);
         }
 
         unset($hubName);
