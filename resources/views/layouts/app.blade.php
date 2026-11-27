@@ -444,11 +444,14 @@
 
     @php
         $pathBrand = function_exists('resolve_site_path_branding') ? resolve_site_path_branding() : null;
-        $usePathFooter = $pathBrand && method_exists($pathBrand, 'usesCustomFooter') && $pathBrand->usesCustomFooter();
+        // Path sites (journal/events) never inherit the school footer widgets / WhatsApp bar.
+        $usePathFooter = (bool) $pathBrand;
         $whatsappIcon = data_get($settings, 'whatsapp_icon') ?: 'default.jpeg';
         $fallbackWa = data_get($settings, 'whatsapp_url');
         if ($usePathFooter) {
-            $whatsappLinks = collect($pathBrand->footerWhatsappLinks());
+            $whatsappLinks = collect(
+                method_exists($pathBrand, 'footerWhatsappLinks') ? $pathBrand->footerWhatsappLinks() : []
+            );
         } else {
             $whatsappLinks = collect([
                 ['label' => 'USA & CANADA', 'url' => data_get($settings, 'whatsapp_usa_url') ?: $fallbackWa],
@@ -457,6 +460,16 @@
             ])->filter(fn ($row) => filled($row['url']))->values();
         }
         $socialMedia = ['facebook', 'twitter', 'instagram', 'linkedin', 'youtube', 'tiktok'];
+        $pathSocialUrls = [];
+        if ($usePathFooter) {
+            foreach ($socialMedia as $platform) {
+                $u = method_exists($pathBrand, 'footerSocialUrl') ? $pathBrand->footerSocialUrl($platform) : '';
+                if (filled($u)) {
+                    $pathSocialUrls[$platform] = $u;
+                }
+            }
+        }
+        $showBottomBar = ! $usePathFooter || $whatsappLinks->isNotEmpty() || ! empty($pathSocialUrls);
     @endphp
     <style>
         .site-bottom-bar {
@@ -567,6 +580,7 @@
             .site-bottom-social img { width: 22px; height: 22px; }
         }
     </style>
+    @if($showBottomBar)
     <div class="site-bottom-bar">
         @if($whatsappLinks->isNotEmpty())
             <div class="site-bottom-wa">
@@ -578,11 +592,12 @@
                 @endforeach
             </div>
         @endif
+        @if(! $usePathFooter || ! empty($pathSocialUrls))
         <div class="site-bottom-social">
             @foreach ($socialMedia as $platform)
                 @php
                     if ($usePathFooter) {
-                        $smUrl = $pathBrand->footerSocialUrl($platform);
+                        $smUrl = $pathSocialUrls[$platform] ?? '';
                         $smIcon = data_get($settings, $platform . '_icon') ?: 'default.jpeg';
                     } else {
                         $smUrl = data_get($settings, $platform . '_url') ?: '#';
@@ -596,7 +611,9 @@
                 @endif
             @endforeach
         </div>
+        @endif
     </div>
+    @endif
 
     <!-- Footer Section -->
     @php
@@ -609,15 +626,22 @@
     @endphp
     <footer
         class="card-hidden px-6 min-[1200px]:px-[72px] min-h-[465px] flex items-center flex-col justify-center w-full py-8 mt-auto"
-        style="background-color: {{ $footerBg }}; color: {{ $footerText }}; margin-bottom: 56px !important;">
+        style="background-color: {{ $footerBg }}; color: {{ $footerText }}; margin-bottom: {{ $showBottomBar ? '56px' : '0' }} !important;">
         <style>
             @media (max-width: 767px) {
-                footer { margin-bottom: 108px !important; }
+                footer { margin-bottom: {{ $showBottomBar ? '108px' : '0' }} !important; }
             }
         </style>
         @if($usePathFooter && filled($pathFooterMenuGroup))
             @php
-                $pathFooterMenus = collect($menus)->where('menu_group', $pathFooterMenuGroup)->whereNull('parent_id')->values();
+                $pathFooterMenus = collect($menus)
+                    ->where('menu_group', $pathFooterMenuGroup)
+                    ->whereNull('parent_id')
+                    ->reject(function ($menu) {
+                        $n = strtolower(trim((string) ($menu->name ?? '')));
+                        return in_array($n, ['enquire', 'enquirer', 'login', 'register', 'my account', 'cart'], true);
+                    })
+                    ->values();
             @endphp
             <div class="grid w-full gap-4 md:grid-cols-2 lg:grid-cols-4 place-items-start">
                 <div class="flex flex-1 w-full flex-col justify-start items-start gap-2 text-left">

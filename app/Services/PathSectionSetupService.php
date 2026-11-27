@@ -341,6 +341,10 @@ class PathSectionSetupService
         $prefix = SitePathBranding::normalizePrefix($config['prefix']);
         $row = SitePathBranding::query()->where('path_prefix', $prefix)->first();
 
+        $defaultCopyright = $prefix === 'journal'
+            ? 'Copyright © ' . date('Y') . ' Berkeley Press | Academic Journal'
+            : ('Copyright © ' . date('Y') . ' ' . ($config['name'] ?? 'EduBerkeley'));
+
         if (! $row) {
             $row = SitePathBranding::create([
                 'name' => $config['name'],
@@ -349,6 +353,9 @@ class PathSectionSetupService
                 'menu_group' => $config['menu_group'],
                 'home_url' => '/' . $prefix,
                 'is_active' => true,
+                'custom_footer' => true,
+                'footer_menu_group' => $config['menu_group'],
+                'footer_copyright' => $defaultCopyright,
             ]);
 
             return $row;
@@ -363,6 +370,16 @@ class PathSectionSetupService
         }
         if (! filled($row->name)) {
             $row->name = $config['name'];
+        }
+        // Path sites must not fall back to the school footer widgets / WhatsApp strip.
+        if (Schema::hasColumn('site_path_brandings', 'custom_footer')) {
+            $row->custom_footer = true;
+        }
+        if (Schema::hasColumn('site_path_brandings', 'footer_menu_group') && ! filled($row->footer_menu_group)) {
+            $row->footer_menu_group = $config['menu_group'];
+        }
+        if (Schema::hasColumn('site_path_brandings', 'footer_copyright') && ! filled($row->footer_copyright)) {
+            $row->footer_copyright = $defaultCopyright;
         }
         $row->save();
 
