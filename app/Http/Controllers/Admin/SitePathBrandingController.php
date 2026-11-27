@@ -33,9 +33,9 @@ class SitePathBrandingController extends Controller
         $menuGroups = Menu::query()->whereNotNull('menu_group')->pluck('menu_group')->unique()->filter()->values();
         $row = new SitePathBranding([
             'is_active' => true,
-            'path_prefix' => 'academic-journal',
+            'path_prefix' => 'journal',
             'name' => 'Academic Journal',
-            'home_url' => '/academic-journal',
+            'home_url' => '/journal',
         ]);
 
         return view('admin.settings.path-branding.form', compact('row', 'menuGroups'));
@@ -48,7 +48,7 @@ class SitePathBrandingController extends Controller
         $data['path_prefix'] = SitePathBranding::normalizePrefix($data['path_prefix'] ?? '');
 
         if ($data['path_prefix'] === '') {
-            return back()->withInput()->with('fail', 'Path prefix is required (example: academic-journal).');
+            return back()->withInput()->with('fail', 'Path prefix is required (example: journal).');
         }
 
         if (SitePathBranding::query()->where('path_prefix', $data['path_prefix'])->exists()) {
@@ -82,7 +82,7 @@ class SitePathBrandingController extends Controller
         $data['path_prefix'] = SitePathBranding::normalizePrefix($data['path_prefix'] ?? '');
 
         if ($data['path_prefix'] === '') {
-            return back()->withInput()->with('fail', 'Path prefix is required (example: academic-journal).');
+            return back()->withInput()->with('fail', 'Path prefix is required (example: journal).');
         }
 
         $duplicate = SitePathBranding::query()

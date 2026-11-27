@@ -15,14 +15,14 @@ class EnsureJournalUser
         }
 
         if (! Auth::check()) {
-            return redirect()->guest(path_login_url('academic-journal'));
+            return redirect()->guest(path_login_url('journal'));
         }
 
         if (! is_journal_user(Auth::user())) {
             abort(403, 'Journal access only.');
         }
 
-        remember_path_auth_prefix('academic-journal');
+        remember_path_auth_prefix('journal');
 
         return $next($request);
     }

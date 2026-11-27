@@ -55,7 +55,7 @@ class DashboardController extends Controller
             'roleNames' => $roleNames,
             'stats' => $stats,
             'cards' => $cards,
-            'headerBrand' => site_header_branding(null, 'academic-journal'),
+            'headerBrand' => site_header_branding(null, 'journal'),
         ]);
     }
 
@@ -107,7 +107,7 @@ class DashboardController extends Controller
             $cards[] = [
                 'title' => 'Journal public site',
                 'body' => 'Open the branded journal hub. Superadmin manages subjects/policies/issues under Admin → Academic Journal.',
-                'href' => url('/academic-journal'),
+                'href' => url('/journal'),
                 'cta' => 'Open journal',
             ];
         }
@@ -116,7 +116,7 @@ class DashboardController extends Controller
             $cards[] = [
                 'title' => 'Journal home',
                 'body' => 'Browse the public Academic Journal site.',
-                'href' => url('/academic-journal'),
+                'href' => url('/journal'),
                 'cta' => 'Visit journal',
             ];
         }

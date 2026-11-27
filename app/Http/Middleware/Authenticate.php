@@ -17,8 +17,8 @@ class Authenticate extends Middleware
         }
 
         $path = trim($request->path(), '/');
-        if (str_starts_with($path, 'academic-journal')) {
-            return url('/academic-journal/login');
+        if (str_starts_with($path, 'journal') || str_starts_with($path, 'academic-journal')) {
+            return url('/journal/login');
         }
         if (str_starts_with($path, 'events')) {
             return url('/events/login');

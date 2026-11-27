@@ -1319,7 +1319,7 @@ if (! function_exists('cms_section_is_course_search')) {
 
 if (! function_exists('resolve_site_path_branding')) {
     /**
-     * Active logo/menu branding for a URL path group (e.g. academic-journal).
+     * Active logo/menu branding for a URL path group (e.g. journal).
      */
     function resolve_site_path_branding(?string $path = null): ?\App\Models\SitePathBranding
     {
@@ -1334,6 +1334,19 @@ if (! function_exists('resolve_site_path_branding')) {
         $path = strtolower($path);
         if ($path === '') {
             return null;
+        }
+
+        static $journalPathMigrated = false;
+        if (! $journalPathMigrated
+            && class_exists(\App\Services\PathSectionSetupService::class)
+            && (str_starts_with($path, 'journal') || str_starts_with($path, 'academic-journal'))
+        ) {
+            $journalPathMigrated = true;
+            try {
+                app(\App\Services\PathSectionSetupService::class)->migrateJournalPathToShortUrl();
+            } catch (\Throwable $e) {
+                // ignore — branding still resolves from current rows
+            }
         }
 
         static $cache = [];
@@ -1757,7 +1770,7 @@ if (!function_exists('path_auth_allowed_prefixes')) {
      */
     function path_auth_allowed_prefixes(): array
     {
-        $defaults = ['academic-journal', 'events'];
+        $defaults = ['journal', 'events'];
         if (! class_exists(\App\Models\SitePathBranding::class) || ! \App\Models\SitePathBranding::ensureTable()) {
             return $defaults;
         }
@@ -1786,7 +1799,7 @@ if (!function_exists('path_auth_prefix_pattern')) {
             return preg_quote($p, '/');
         }, path_auth_allowed_prefixes());
 
-        return $parts ? ('^(?:' . implode('|', $parts) . ')$') : '^(?:academic-journal|events)$';
+        return $parts ? ('^(?:' . implode('|', $parts) . ')$') : '^(?:journal|events)$';
     }
 }
 
@@ -1797,6 +1810,11 @@ if (!function_exists('normalize_path_auth_prefix')) {
             $prefix = strtolower(trim((string) $prefix, '/'));
         } else {
             $prefix = \App\Models\SitePathBranding::normalizePrefix($prefix);
+        }
+
+        // Legacy public path
+        if ($prefix === 'academic-journal') {
+            $prefix = 'journal';
         }
 
         if ($prefix === '' || ! in_array($prefix, path_auth_allowed_prefixes(), true)) {

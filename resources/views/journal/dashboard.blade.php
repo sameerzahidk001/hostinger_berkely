@@ -49,7 +49,7 @@
 
     <p class="mt-10 text-sm text-gray-500">
         No indexing claims, ISSNs, or citation metrics are shown until officially registered.
-        <a href="{{ url('/academic-journal') }}" class="underline">Public journal home</a>
+        <a href="{{ url('/journal') }}" class="underline">Public journal home</a>
     </p>
 </div>
 @endsection
