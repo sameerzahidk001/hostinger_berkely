@@ -118,6 +118,8 @@ class SitePathBrandingController extends Controller
      */
     private function validated(Request $request): array
     {
+        SitePathBranding::ensureFooterColumns();
+
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:120',
             'path_prefix' => 'required|string|max:120',
@@ -125,12 +127,58 @@ class SitePathBrandingController extends Controller
             'home_url' => 'nullable|string|max:255',
             'is_active' => 'nullable|boolean',
             'logo_file' => 'nullable|image|mimes:jpeg,png,jpg,webp,svg|max:300',
+            'custom_footer' => 'nullable|boolean',
+            'footer_menu_group' => 'nullable|string|max:120',
+            'footer_copyright' => 'nullable|string|max:255',
+            'footer_bg' => 'nullable|string|max:32',
+            'footer_text_color' => 'nullable|string|max:32',
+            'footer_title_color' => 'nullable|string|max:32',
+            'footer_social' => 'nullable|array',
+            'footer_social.*' => 'nullable|string|max:500',
+            'wa_label' => 'nullable|array',
+            'wa_label.*' => 'nullable|string|max:80',
+            'wa_url' => 'nullable|array',
+            'wa_url.*' => 'nullable|string|max:500',
         ]);
 
         $data = $validator->validate();
         $data['is_active'] = $request->boolean('is_active');
+        $data['custom_footer'] = $request->boolean('custom_footer');
         $data['menu_group'] = trim((string) ($data['menu_group'] ?? '')) ?: null;
         $data['home_url'] = trim((string) ($data['home_url'] ?? '')) ?: null;
+        $data['footer_menu_group'] = trim((string) ($data['footer_menu_group'] ?? '')) ?: null;
+        $data['footer_copyright'] = trim((string) ($data['footer_copyright'] ?? '')) ?: null;
+        $data['footer_bg'] = trim((string) ($data['footer_bg'] ?? '')) ?: null;
+        $data['footer_text_color'] = trim((string) ($data['footer_text_color'] ?? '')) ?: null;
+        $data['footer_title_color'] = trim((string) ($data['footer_title_color'] ?? '')) ?: null;
+
+        $socialIn = (array) $request->input('footer_social', []);
+        $social = [];
+        foreach (['facebook', 'twitter', 'instagram', 'linkedin', 'youtube', 'tiktok'] as $platform) {
+            $url = trim((string) ($socialIn[$platform . '_url'] ?? ''));
+            if ($url !== '') {
+                $social[$platform . '_url'] = $url;
+            }
+        }
+        $data['footer_social'] = $social !== [] ? $social : null;
+
+        $wa = [];
+        $labels = (array) $request->input('wa_label', []);
+        $urls = (array) $request->input('wa_url', []);
+        $max = max(count($labels), count($urls), 3);
+        for ($i = 0; $i < $max; $i++) {
+            $url = trim((string) ($urls[$i] ?? ''));
+            if ($url === '') {
+                continue;
+            }
+            $wa[] = [
+                'label' => trim((string) ($labels[$i] ?? '')) ?: ('WhatsApp ' . ($i + 1)),
+                'url' => $url,
+            ];
+        }
+        $data['footer_whatsapp'] = $wa !== [] ? $wa : null;
+
+        unset($data['wa_label'], $data['wa_url']);
 
         return $data;
     }

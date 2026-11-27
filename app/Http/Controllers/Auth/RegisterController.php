@@ -14,8 +14,11 @@ use App\Models\Role;
 use App\Models\User;
 use App\Mail\UserMail;
 use App\Services\JournalRoleService;
+use App\Support\JournalRegistrationOptions;
+use App\Models\Country;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class RegisterController extends Controller
 {
@@ -39,7 +42,7 @@ class RegisterController extends Controller
             JournalRoleService::ensureRoles();
         }
 
-        return Validator::make($data, [
+        $rules = [
             'role' => [
                 'required',
                 'exists:roles,id',
@@ -50,10 +53,27 @@ class RegisterController extends Controller
                     }
                 }
             ],
+            'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'mobile_number' => ['required', 'regex:/^\+?[1-9]\d{0,2}\d{6,14}$/'],
             'password' => ['required', 'string', 'min:4', 'confirmed'],
-        ]);
+        ];
+
+        if ($pathPrefix === 'journal') {
+            $rules = array_merge($rules, [
+                'country' => ['required', 'string', 'max:10'],
+                'profession' => ['required', 'string', Rule::in(JournalRegistrationOptions::professions())],
+                'specialization' => ['required', 'string', Rule::in(JournalRegistrationOptions::specializations())],
+                'work_setting' => ['required', 'string', Rule::in(JournalRegistrationOptions::workSettings())],
+                'alert_prefs' => ['nullable', 'array'],
+                'alert_prefs.*' => ['string', Rule::in(array_keys(JournalRegistrationOptions::alertOptions()))],
+                'marketing_prefs' => ['nullable', 'array'],
+                'marketing_prefs.*' => ['string', Rule::in(array_keys(JournalRegistrationOptions::marketingOptions()))],
+                'terms' => ['accepted'],
+            ]);
+        }
+
+        return Validator::make($data, $rules);
     }
 
     protected function create(Request $request)
@@ -69,15 +89,36 @@ class RegisterController extends Controller
             // Local/dev fallback when geolocation API is unavailable.
         }
 
-        $user = User::create([
+        $pathPrefix = normalize_path_auth_prefix((string) ($request->input('path_prefix') ?? path_auth_prefix()));
+        $country = trim((string) $request->input('country', ''));
+        if ($country === '') {
+            $country = (string) ($location_details['country'] ?? '');
+        }
+
+        $payload = [
             'name' => $request->name,
             'email' => $request->email,
             'mobile_number' => $request->mobile_number,
             'password' => Hash::make($request->password),
-            'country' => $location_details['country'] ?? '',
+            'country' => $country,
             'approved' => 1,
             'ip_address' => $location_details['ip'] ?? $userIp,
-        ]);
+        ];
+
+        if ($pathPrefix === 'journal') {
+            User::ensureJournalProfileColumn();
+            if (\Illuminate\Support\Facades\Schema::hasColumn('users', 'journal_profile')) {
+                $payload['journal_profile'] = [
+                    'profession' => (string) $request->input('profession'),
+                    'specialization' => (string) $request->input('specialization'),
+                    'work_setting' => (string) $request->input('work_setting'),
+                    'alert_prefs' => array_values(array_unique(array_map('strval', (array) $request->input('alert_prefs', [])))),
+                    'marketing_prefs' => array_values(array_unique(array_map('strval', (array) $request->input('marketing_prefs', [])))),
+                ];
+            }
+        }
+
+        $user = User::create($payload);
 
         $user->roles()->sync([$request->role]);
 
@@ -183,6 +224,15 @@ class RegisterController extends Controller
         }
         $authBrand = site_header_branding(null, $pathPrefix ?: null);
 
+        $countries = collect();
+        if ($pathPrefix === 'journal') {
+            try {
+                $countries = Country::query()->orderBy('name')->get(['iso_code', 'name']);
+            } catch (\Throwable $e) {
+                $countries = collect();
+            }
+        }
+
         return view('auth.register', [
             'roles' => $roles,
             'pathPrefix' => $pathPrefix,
@@ -191,6 +241,12 @@ class RegisterController extends Controller
             'loginUrl' => $pathPrefix !== '' ? path_login_url($pathPrefix) : route('login'),
             'homeUrl' => $pathPrefix !== '' ? path_auth_home_url($pathPrefix) : route('welcome'),
             'isJournalRegister' => $pathPrefix === 'journal',
+            'countries' => $countries,
+            'professions' => JournalRegistrationOptions::professions(),
+            'specializations' => JournalRegistrationOptions::specializations(),
+            'workSettings' => JournalRegistrationOptions::workSettings(),
+            'alertOptions' => JournalRegistrationOptions::alertOptions(),
+            'marketingOptions' => JournalRegistrationOptions::marketingOptions(),
         ]);
     }
 }
