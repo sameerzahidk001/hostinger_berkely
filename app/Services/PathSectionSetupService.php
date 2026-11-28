@@ -36,6 +36,11 @@ class PathSectionSetupService
                     ['name' => 'For Authors', 'url' => 'for-authors'],
                     ['name' => 'Contact', 'url' => 'contact'],
                 ],
+                // Legal pages for signup links — created under /journal/, not shown in header nav.
+                'legal_pages' => [
+                    ['name' => 'Terms of Use', 'url' => 'terms-of-use'],
+                    ['name' => 'Privacy policy', 'url' => 'privacy-policy'],
+                ],
             ]),
             'events' => $this->ensureSection([
                 'name' => 'Events',
@@ -110,7 +115,8 @@ class PathSectionSetupService
      *   logo_file: string,
      *   logo_label: string,
      *   logo_color: string,
-     *   children: list<array{name: string, url: string}>
+     *   children: list<array{name: string, url: string}>,
+     *   legal_pages?: list<array{name: string, url: string}>
      * }  $config
      * @return array<string, mixed>
      */
@@ -120,6 +126,9 @@ class PathSectionSetupService
         $childPages = [];
         foreach ($config['children'] as $child) {
             $childPages[$child['url']] = $this->ensureChildPage($hub, $child['name'], $child['url']);
+        }
+        foreach ($config['legal_pages'] ?? [] as $legal) {
+            $childPages[$legal['url']] = $this->ensureChildPage($hub, $legal['name'], $legal['url']);
         }
 
         $this->ensureDummyLogo($config['logo_file'], $config['logo_label'], $config['logo_color']);

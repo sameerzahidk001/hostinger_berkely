@@ -408,7 +408,6 @@
 
                 <div class="row px-3 journal-complete">
                   <div class="col-12 px-2">
-                    <h2>Complete registration</h2>
                     <p class="text-muted mb-2" style="font-size:13px;">Receive Berkeley Press journal email alerts</p>
                     <ul class="mb-2 pl-3" style="font-size:13px;color:#555;">
                       @foreach(($alertOptions ?? []) as $alertKey => $alertLabel)
@@ -433,7 +432,7 @@
                     @endforeach
                     <label class="journal-check mt-3">
                       <input type="checkbox" name="terms" value="1" required @checked(old('terms'))>
-                      <span>By clicking Register, I agree to the <a href="{{ url('/terms-and-conditions') }}" target="_blank" rel="noopener">Terms of Use</a> and <a href="{{ url('/privacy-policy') }}" target="_blank" rel="noopener">Privacy policy</a>.</span>
+                      <span>By clicking Register, I agree to the <a href="{{ url('/journal/terms-of-use') }}" target="_blank" rel="noopener">Terms of Use</a> and <a href="{{ url('/journal/privacy-policy') }}" target="_blank" rel="noopener">Privacy policy</a>.</span>
                     </label>
                     @error('terms')<p class="text-danger text-xs italic">{{ $message }}</p>@enderror
                   </div>
