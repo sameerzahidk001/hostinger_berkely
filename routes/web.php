@@ -836,6 +836,7 @@ Route::prefix('journal')->group(function () {
         Route::get('/manuscripts/{id}', [\App\Http\Controllers\Journal\ManuscriptController::class, 'show'])->name('journal.manuscripts.show');
         Route::get('/manuscripts/{id}/edit', [\App\Http\Controllers\Journal\ManuscriptController::class, 'edit'])->name('journal.manuscripts.edit');
         Route::put('/manuscripts/{id}', [\App\Http\Controllers\Journal\ManuscriptController::class, 'update'])->name('journal.manuscripts.update');
+        Route::post('/manuscripts/{id}/withdraw', [\App\Http\Controllers\Journal\ManuscriptController::class, 'withdraw'])->name('journal.manuscripts.withdraw');
 
         Route::get('/reviews', [\App\Http\Controllers\Journal\ReviewController::class, 'index'])->name('journal.reviews.index');
         Route::get('/reviews/{id}', [\App\Http\Controllers\Journal\ReviewController::class, 'show'])->name('journal.reviews.show');

@@ -4,123 +4,123 @@ namespace App\Http\Controllers\Journal;
 
 use App\Http\Controllers\Controller;
 use App\Models\JournalManuscript;
+use App\Models\JournalNewsItem;
 use App\Models\JournalPeerReview;
+use App\Models\JournalPolicy;
+use App\Services\JournalSetupService;
+use App\Services\JournalWorkflow;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Schema;
 
 class DashboardController extends Controller
 {
+    public function __construct()
+    {
+        app(JournalSetupService::class)->ensureAll();
+    }
+
     public function index()
     {
         $user = Auth::user();
-        $roleNames = $user ? $user->roles()->pluck('name')->map(fn ($n) => normalize_role_key($n))->all() : [];
+        $roleNames = JournalWorkflow::roleNames($user);
 
-        $stats = [
-            'my_manuscripts' => 0,
-            'pending_reviews' => 0,
-            'assigned_editorial' => 0,
-            'published' => 0,
-        ];
+        $isAuthor = JournalWorkflow::isAuthor($user);
+        $isReviewer = JournalWorkflow::isReviewer($user);
+        $isEditor = JournalWorkflow::isEditor($user);
+        $isStaff = JournalWorkflow::isStaff($user);
+
+        $pipeline = [];
+        foreach (JournalWorkflow::PIPELINE as $status) {
+            $pipeline[$status] = 0;
+        }
+        $pipeline['rejected'] = 0;
+
+        $myManuscripts = collect();
+        $pendingReviews = collect();
+        $editorialQueue = collect();
+        $recentPublished = collect();
 
         try {
-            if (class_exists(JournalManuscript::class) && JournalManuscript::ensureTable()) {
-                $stats['my_manuscripts'] = JournalManuscript::query()
-                    ->where('author_user_id', $user->id)
-                    ->count();
-                $stats['assigned_editorial'] = JournalManuscript::query()
-                    ->where('editor_user_id', $user->id)
-                    ->whereNotIn('status', ['published', 'rejected', 'withdrawn'])
-                    ->count();
-                $stats['published'] = JournalManuscript::query()
+            if (JournalManuscript::ensureTable()) {
+                foreach (array_keys($pipeline) as $status) {
+                    $pipeline[$status] = JournalManuscript::query()->where('status', $status)->count();
+                }
+
+                if ($isAuthor) {
+                    $myManuscripts = JournalManuscript::query()
+                        ->where('author_user_id', $user->id)
+                        ->orderByDesc('id')
+                        ->limit(8)
+                        ->get();
+                }
+
+                if ($isEditor || $isStaff) {
+                    $editorialQueue = JournalManuscript::query()
+                        ->with(['author', 'subject'])
+                        ->whereIn('status', ['submitted', 'under_review', 'revision', 'accepted'])
+                        ->orderByRaw("CASE status WHEN 'submitted' THEN 1 WHEN 'under_review' THEN 2 WHEN 'revision' THEN 3 WHEN 'accepted' THEN 4 ELSE 5 END")
+                        ->orderByDesc('id')
+                        ->limit(12)
+                        ->get();
+                }
+
+                $recentPublished = JournalManuscript::query()
                     ->where('status', 'published')
-                    ->where(function ($q) use ($user) {
-                        $q->where('author_user_id', $user->id)->orWhere('editor_user_id', $user->id);
-                    })
-                    ->count();
+                    ->orderByDesc('published_at')
+                    ->orderByDesc('id')
+                    ->limit(6)
+                    ->get();
             }
-            if (class_exists(JournalPeerReview::class) && JournalPeerReview::ensureTable()) {
-                $stats['pending_reviews'] = JournalPeerReview::query()
+
+            if ($isReviewer && JournalPeerReview::ensureTable()) {
+                $pendingReviews = JournalPeerReview::query()
+                    ->with('manuscript')
                     ->where('reviewer_user_id', $user->id)
                     ->whereIn('status', ['invited', 'accepted', 'in_progress'])
-                    ->count();
+                    ->orderByDesc('id')
+                    ->limit(8)
+                    ->get();
             }
         } catch (\Throwable $e) {
-            // Keep dashboard up even if journal tables are not ready yet.
+            // Keep dashboard resilient if tables are mid-create.
         }
 
-        $cards = $this->cardsForRoles($roleNames);
+        $stats = [
+            'my_manuscripts' => $isAuthor
+                ? JournalManuscript::query()->where('author_user_id', $user->id)->count()
+                : 0,
+            'pending_reviews' => $isReviewer
+                ? JournalPeerReview::query()
+                    ->where('reviewer_user_id', $user->id)
+                    ->whereIn('status', ['invited', 'accepted', 'in_progress'])
+                    ->count()
+                : 0,
+            'editorial_queue' => ($isEditor || $isStaff)
+                ? JournalManuscript::query()
+                    ->whereIn('status', ['submitted', 'under_review', 'revision', 'accepted'])
+                    ->count()
+                : 0,
+            'published' => $pipeline['published'] ?? 0,
+            'policies_published' => class_exists(JournalPolicy::class)
+                ? JournalPolicy::query()->where('is_published', true)->count()
+                : 0,
+            'news_published' => class_exists(JournalNewsItem::class)
+                ? JournalNewsItem::query()->where('is_published', true)->count()
+                : 0,
+        ];
 
         return view('journal.dashboard', [
             'user' => $user,
             'roleNames' => $roleNames,
+            'isAuthor' => $isAuthor,
+            'isReviewer' => $isReviewer,
+            'isEditor' => $isEditor,
+            'isStaff' => $isStaff,
             'stats' => $stats,
-            'cards' => $cards,
-            'headerBrand' => site_header_branding(null, 'journal'),
+            'pipeline' => $pipeline,
+            'myManuscripts' => $myManuscripts,
+            'pendingReviews' => $pendingReviews,
+            'editorialQueue' => $editorialQueue,
+            'recentPublished' => $recentPublished,
         ]);
-    }
-
-    /**
-     * @param  list<string>  $roleNames
-     * @return list<array{title: string, body: string, href: string, cta: string}>
-     */
-    private function cardsForRoles(array $roleNames): array
-    {
-        $cards = [];
-
-        if (array_intersect($roleNames, ['journal_author'])) {
-            $cards[] = [
-                'title' => 'My manuscripts',
-                'body' => 'Submit a new manuscript and track peer-review status.',
-                'href' => route('journal.manuscripts.index'),
-                'cta' => 'Open submissions',
-            ];
-            $cards[] = [
-                'title' => 'Submit manuscript',
-                'body' => 'Start a new submission to the Academic Journal.',
-                'href' => route('journal.manuscripts.create'),
-                'cta' => 'Submit',
-            ];
-        }
-
-        if (array_intersect($roleNames, ['journal_reviewer'])) {
-            $cards[] = [
-                'title' => 'Review assignments',
-                'body' => 'Accept invitations and submit peer-review reports.',
-                'href' => route('journal.reviews.index'),
-                'cta' => 'Open reviews',
-            ];
-        }
-
-        if (array_intersect($roleNames, ['journal_editor', 'journal_editorial'])) {
-            $cards[] = [
-                'title' => 'Editorial queue',
-                'body' => 'Assign reviewers and record editorial decisions.',
-                'href' => route('journal.editorial.index'),
-                'cta' => 'Open queue',
-            ];
-        }
-
-        if (array_intersect($roleNames, [
-            'journal_management', 'journal_administration', 'journal_finance',
-            'journal_it', 'journal_quality', 'journal_editorial',
-        ])) {
-            $cards[] = [
-                'title' => 'Journal public site',
-                'body' => 'Open the branded journal hub. Superadmin manages subjects/policies/issues under Admin → Academic Journal.',
-                'href' => url('/journal'),
-                'cta' => 'Open journal',
-            ];
-        }
-
-        if ($cards === []) {
-            $cards[] = [
-                'title' => 'Journal home',
-                'body' => 'Browse the public Academic Journal site.',
-                'href' => url('/journal'),
-                'cta' => 'Visit journal',
-            ];
-        }
-
-        return $cards;
     }
 }
