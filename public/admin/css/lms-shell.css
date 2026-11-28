@@ -13,6 +13,48 @@
    background-color: #000435;
 }
 
+/* Compact sidebar menu gaps (admin + user panels) */
+.navbar-static-side .nav-header {
+   padding: 10px 12px 8px !important;
+}
+.navbar-static-side .nav-header .profile-element {
+   margin: 0 !important;
+}
+.navbar-static-side .nav-header .profile-element img.img-circle,
+.navbar-static-side .nav-header .profile-element img {
+   max-width: 48px;
+   max-height: 48px;
+}
+.navbar-static-side #side-menu {
+   padding-bottom: 12px;
+}
+.navbar-static-side #side-menu > li > a {
+   padding: 6px 14px 6px 16px !important;
+   line-height: 1.2 !important;
+   min-height: 0 !important;
+}
+.navbar-static-side #side-menu > li > a .nav-label {
+   font-size: 13px;
+}
+.navbar-static-side #side-menu > li > a i {
+   margin-right: 6px !important;
+   width: 16px;
+   text-align: center;
+}
+.navbar-static-side #side-menu .nav-second-level > li > a {
+   padding: 4px 12px 4px 38px !important;
+   line-height: 1.2 !important;
+   font-size: 12.5px;
+}
+.navbar-static-side #side-menu > li.nav-section-label {
+   margin: 8px 0 2px !important;
+   padding: 4px 14px 2px !important;
+}
+.navbar-static-side #side-menu > li.nav-section-label span {
+   padding-bottom: 4px !important;
+   font-size: 10px !important;
+}
+
 @media (min-width: 769px) {
    #page-wrapper {
       margin-left: 220px !important;
