@@ -233,13 +233,23 @@
         @endphp
         <section class="flex flex-col-reverse justify-between relative min-h-[500px] md:max-h-[500px] bg-[#000435] overflow-hidden">
             <div class="relative z-20 flex text-white min-[1200px]:pl-[72px] md:pr-12 py-[30px] px-6 md:w-[50%] m-0 flex-1 flex-col{{ $bannerIsArabic ? ' arabic-copy' : '' }}">
-                @if ($course->dynamicLabel->banner_breadcrumb === 1)
-                    <nav aria-label="Breadcrumb" class="items-center gap-1 flex flex-wrap">
-                        <a href="{{ url('/') }}">Home</a>
-                        <img src="{{ asset('frontend/images/svgs/caret-r-o.svg') }}" class="w-4 h-4" alt="">
-                        <a href="{{ seo_courses_hub_url() }}">Courses</a>
-                        <img src="{{ asset('frontend/images/svgs/caret-r-o.svg') }}" class="w-4 h-4" alt="">
-                        <span class="font-bold">{{ $course->title }}</span>
+                @if (($course->dynamicLabel->banner_breadcrumb ?? 0) == 1)
+                    @php
+                        $crumbCurrent = trim((string) ($course->dynamicLabel->banner_title ?? ''));
+                        if ($crumbCurrent === '') {
+                            $crumbCurrent = trim((string) ($course->title ?? ''));
+                        }
+                        // Keep breadcrumb compact — full legal title belongs in meta/H1 area, not the trail.
+                        if (mb_strlen($crumbCurrent) > 48) {
+                            $crumbCurrent = rtrim(mb_substr($crumbCurrent, 0, 45)) . '…';
+                        }
+                    @endphp
+                    <nav aria-label="Breadcrumb" class="items-center gap-1.5 flex flex-wrap text-[13px] md:text-sm text-white/80 font-normal leading-snug">
+                        <a href="{{ url('/') }}" class="hover:text-white hover:underline">Home</a>
+                        <span aria-hidden="true" class="text-primary_orange opacity-90">›</span>
+                        <a href="{{ seo_courses_hub_url() }}" class="hover:text-white hover:underline">Courses</a>
+                        <span aria-hidden="true" class="text-primary_orange opacity-90">›</span>
+                        <span class="text-white/95 font-medium">{{ $crumbCurrent }}</span>
                     </nav>
                 @endif
 
