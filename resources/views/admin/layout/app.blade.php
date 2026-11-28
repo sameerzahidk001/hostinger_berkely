@@ -442,6 +442,9 @@
                      <a href="{{ route('admin.events.hub') }}"><i class="fa fa-calendar"></i> <span class="nav-label">Events Hub</span></a>
                   </li>
                   @endif
+                  @if(admin_menu_allowed('payments') || admin_menu_allowed('profile') || admin_menu_allowed('history') || admin_menu_allowed('settings') || admin_menu_allowed('logout'))
+                  <li class="nav-section-label"><span>Admin</span></li>
+                  @endif
                   @if(admin_menu_allowed('payments'))
                   <li class="{{ request()->is('admin/payments*') || request()->is('admin/instructor-payments*') || request()->is('admin/invoice-terms-templates*') || request()->is('admin/currency-rate-setup') || request()->is('admin/payment-gateways*') ? 'active show' : '' }}">
                      <a href="javascript:void(0)"><i class="fa fa-address-card"></i> <span class="nav-label">Payments</span> <span class="fa arrow"></span></a>
