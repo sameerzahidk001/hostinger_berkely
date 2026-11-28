@@ -193,16 +193,24 @@ class PaymentController extends Controller
             }
 
             $displayCurrency = package_currency_code($package->currency);
-            $totalSettling = package_settling_amount($request->total_amount, $displayCurrency);
+            $totalSettling = round(package_settling_amount($request->total_amount, $displayCurrency), 2);
 
+            // Convert each installment to settling currency, then absorb FX rounding
+            // pennies into the last row (350+350 USD can disagree by 0.01 AED after round()).
             $installmentAmounts = collect($request->amount)->map(function ($val) use ($displayCurrency) {
-                return package_settling_amount($val, $displayCurrency);
-            });
+                return round(package_settling_amount($val, $displayCurrency), 2);
+            })->values();
 
-            if (round($installmentAmounts->sum(), 2) !== round($totalSettling, 2)) {
+            $settlingSum = round($installmentAmounts->sum(), 2);
+            $settlingDiff = round($totalSettling - $settlingSum, 2);
+            if (abs($settlingDiff) > 0.05) {
                 return redirect()->back()
                     ->withErrors(['amount' => 'Installment amounts must equal the total amount.'])
                     ->withInput();
+            }
+            if (abs($settlingDiff) >= 0.01 && $installmentAmounts->isNotEmpty()) {
+                $last = $installmentAmounts->count() - 1;
+                $installmentAmounts[$last] = round($installmentAmounts[$last] + $settlingDiff, 2);
             }
 
             $payment = new Payment();
