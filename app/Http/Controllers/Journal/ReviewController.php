@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Journal;
 use App\Http\Controllers\Controller;
 use App\Models\JournalPeerReview;
 use App\Services\JournalSetupService;
+use App\Services\JournalWorkflow;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -17,6 +18,8 @@ class ReviewController extends Controller
 
     public function index()
     {
+        $this->requireReviewer();
+
         $rows = JournalPeerReview::query()
             ->with('manuscript')
             ->where('reviewer_user_id', Auth::id())
@@ -28,16 +31,25 @@ class ReviewController extends Controller
 
     public function show(string $id)
     {
+        $this->requireReviewer();
+
         $row = JournalPeerReview::query()
-            ->with('manuscript')
+            ->with('manuscript.subject')
             ->where('reviewer_user_id', Auth::id())
             ->findOrFail($id);
+
+        if ($row->status === 'accepted') {
+            $row->status = 'in_progress';
+            $row->save();
+        }
 
         return view('journal.reviews.show', compact('row'));
     }
 
     public function update(Request $request, string $id)
     {
+        $this->requireReviewer();
+
         $row = JournalPeerReview::query()
             ->where('reviewer_user_id', Auth::id())
             ->findOrFail($id);
@@ -48,13 +60,17 @@ class ReviewController extends Controller
             $row->accepted_at = now();
             $row->save();
 
-            return back()->with('status', 'Review invitation accepted.');
+            return back()->with('status', 'Invitation accepted. Open the assignment to write your review.');
         }
-        if ($action === 'decline' && in_array($row->status, ['invited', 'accepted'], true)) {
+        if ($action === 'decline' && in_array($row->status, ['invited', 'accepted', 'in_progress'], true)) {
             $row->status = 'declined';
             $row->save();
 
             return back()->with('status', 'Review declined.');
+        }
+
+        if (! in_array($row->status, ['accepted', 'in_progress'], true)) {
+            return back()->with('fail', 'This review can no longer be edited.');
         }
 
         $data = $request->validate([
@@ -68,6 +84,13 @@ class ReviewController extends Controller
         $row->completed_at = now();
         $row->save();
 
-        return redirect()->route('journal.reviews.index')->with('status', 'Review submitted.');
+        return redirect()->route('journal.reviews.index')->with('status', 'Peer review submitted to the editor.');
+    }
+
+    private function requireReviewer(): void
+    {
+        if (! JournalWorkflow::isReviewer(Auth::user())) {
+            abort(403, 'Reviewer role required.');
+        }
     }
 }

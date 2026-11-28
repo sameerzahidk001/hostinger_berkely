@@ -2152,10 +2152,21 @@ if (!function_exists('user_list_type_param')) {
 if (!function_exists('role_display_name')) {
     function role_display_name(?string $role): string
     {
-        return match ($role) {
+        $key = normalize_role_key($role);
+
+        return match ($key) {
             'librarian', 'content_writer', 'content-writer' => 'Content Writer',
             'accountant' => 'Accountant',
-            default => ucfirst($role ?? ''),
+            'journal_author' => 'Author',
+            'journal_reviewer' => 'Reviewer',
+            'journal_editor' => 'Editor',
+            'journal_editorial' => 'Editorial team',
+            'journal_management' => 'Journal management',
+            'journal_administration' => 'Journal administration',
+            'journal_finance' => 'Journal finance',
+            'journal_it' => 'Journal IT',
+            'journal_quality' => 'Journal quality',
+            default => ucfirst(str_replace('_', ' ', $key ?: (string) $role)),
         };
     }
 }
