@@ -101,20 +101,20 @@
 
 <body class="{{ request()->routeIs('user.assessments.take') ? 'lms-take-mode lms-exam-lock' : '' }}" data-viewer-tz="{{ function_exists('viewer_timezone') ? viewer_timezone() : config('app.timezone') }}">
    <style>
-      /* Compact student/instructor sidebar so menus fit without scrolling */
+      /* Compact student/instructor sidebar (shared tighter rules also in lms-shell.css) */
       .navbar-static-side .nav-header {
-         padding: 12px 16px 10px;
+         padding: 10px 12px 8px;
       }
       .navbar-static-side .nav-header .profile-element {
          margin: 0;
       }
       .navbar-static-side #side-menu > li > a {
-         padding: 8px 16px 8px 18px;
-         line-height: 1.25;
+         padding: 6px 14px 6px 16px;
+         line-height: 1.2;
       }
       .navbar-static-side #side-menu .nav-second-level > li > a {
-         padding: 6px 15px 6px 42px;
-         line-height: 1.25;
+         padding: 4px 12px 4px 38px;
+         line-height: 1.2;
       }
       .navbar-static-side #side-menu > li > a .fa {
          margin-right: 6px;

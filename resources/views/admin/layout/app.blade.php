@@ -94,19 +94,19 @@
          }
          #side-menu > li.nav-section-label {
             pointer-events: none;
-            margin: 12px 0 4px;
-            padding: 8px 18px 4px;
+            margin: 8px 0 2px;
+            padding: 4px 14px 2px;
             list-style: none;
          }
          #side-menu > li.nav-section-label span {
             display: block;
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 700;
             letter-spacing: .08em;
             text-transform: uppercase;
             color: rgba(255,255,255,.55);
             border-bottom: 1px solid rgba(255,255,255,.12);
-            padding-bottom: 6px;
+            padding-bottom: 4px;
          }
          #side-menu > li.lms-nav-dashboards.dashboards-open > ul,
          #side-menu > li.lms-nav-dashboards.dashboards-open > ul.collapse,
