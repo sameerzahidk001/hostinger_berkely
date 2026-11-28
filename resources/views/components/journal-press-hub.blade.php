@@ -46,9 +46,10 @@
 
     $journalNav = [
         ['label' => 'Journal Home', 'href' => url('/journal')],
+        ['label' => 'Journals', 'href' => route('journal.journals')],
+        ['label' => 'Publish', 'href' => route('journal.publish')],
+        ['label' => 'News & events', 'href' => route('journal.news.index')],
         ['label' => 'Table of Contents', 'href' => route('journal.articles.search')],
-        ['label' => 'Online Now', 'href' => route('journal.articles.search', ['q' => ''])],
-        ['label' => 'Archive', 'href' => route('journal.articles.search')],
         ['label' => 'Submit', 'href' => auth()->check() ? route('journal.manuscripts.create') : path_register_url('journal')],
     ];
 @endphp

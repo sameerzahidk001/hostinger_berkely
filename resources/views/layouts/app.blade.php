@@ -387,15 +387,20 @@
                         class="text-white py-1.5">{{ $settings->header_button_text }}</a>
                 @endif
                 @guest
-                    @if($settings && $settings->login == '1')
+                    @php
+                        $mobileMenuNames = $filteredMenus->map(fn ($m) => strtolower(trim((string) ($m->name ?? ''))))->all();
+                        $mobileHasLogin = in_array('login', $mobileMenuNames, true);
+                        $mobileHasRegister = in_array('register', $mobileMenuNames, true);
+                    @endphp
+                    @if($settings && $settings->login == '1' && ! $mobileHasLogin)
                         <a href="{{ function_exists('path_login_url') ? path_login_url() : route('login') }}" class="text-white py-1.5">Login</a>
                     @endif
-                    @if($settings && $settings->register == '1')
+                    @if($settings && $settings->register == '1' && ! $mobileHasRegister)
                         <a href="{{ function_exists('path_register_url') ? path_register_url() : route('register') }}" class="text-white py-1.5">{{ $settings->register_text ?? 'Register' }}</a>
                     @endif
                     <a href="{{ function_exists('path_login_url') ? path_login_url() : route('login') }}" class="text-white py-1.5">My Account</a>
                 @else
-                    <a href="{{ route('user.home') }}" class="text-white py-1.5">My Account</a>
+                    <a href="{{ $isPathSite && str_starts_with(trim(request()->path(), '/'), 'journal') ? route('journal.dashboard') : route('user.home') }}" class="text-white py-1.5">My Account</a>
                     @unless($isPathSite)
                     <a href="{{ route('cart.index') }}" class="text-white py-1.5">Cart ({{ cart_item_count() }})</a>
                     @endunless

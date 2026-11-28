@@ -493,7 +493,13 @@ Route::group(['middleware' => ['admin', 'restrict.delete', 'log.admin.activity']
             Route::put('/subjects/{id}', [\App\Http\Controllers\Admin\Journal\SubjectController::class, 'update'])->name('subjects.update');
             Route::delete('/subjects/{id}', [\App\Http\Controllers\Admin\Journal\SubjectController::class, 'destroy'])->name('subjects.destroy');
             Route::get('/policies', [\App\Http\Controllers\Admin\Journal\PolicyController::class, 'index'])->name('policies.index');
+            Route::post('/policies', [\App\Http\Controllers\Admin\Journal\PolicyController::class, 'store'])->name('policies.store');
             Route::put('/policies/{id}', [\App\Http\Controllers\Admin\Journal\PolicyController::class, 'update'])->name('policies.update');
+            Route::delete('/policies/{id}', [\App\Http\Controllers\Admin\Journal\PolicyController::class, 'destroy'])->name('policies.destroy');
+            Route::get('/news', [\App\Http\Controllers\Admin\Journal\NewsController::class, 'index'])->name('news.index');
+            Route::post('/news', [\App\Http\Controllers\Admin\Journal\NewsController::class, 'store'])->name('news.store');
+            Route::put('/news/{id}', [\App\Http\Controllers\Admin\Journal\NewsController::class, 'update'])->name('news.update');
+            Route::delete('/news/{id}', [\App\Http\Controllers\Admin\Journal\NewsController::class, 'destroy'])->name('news.destroy');
             Route::get('/issues', [\App\Http\Controllers\Admin\Journal\IssueController::class, 'index'])->name('issues.index');
             Route::post('/issues', [\App\Http\Controllers\Admin\Journal\IssueController::class, 'store'])->name('issues.store');
             Route::put('/issues/{id}', [\App\Http\Controllers\Admin\Journal\IssueController::class, 'update'])->name('issues.update');
@@ -815,6 +821,11 @@ Route::prefix('journal')->group(function () {
     Route::get('/articles', [\App\Http\Controllers\Journal\PublicArticleController::class, 'search'])->name('journal.articles.search');
     Route::get('/articles/{slug}/pdf', [\App\Http\Controllers\Journal\PublicArticleController::class, 'downloadPdf'])->name('journal.articles.pdf');
     Route::get('/articles/{slug}', [\App\Http\Controllers\Journal\PublicArticleController::class, 'show'])->name('journal.articles.show');
+    Route::get('/journals', [\App\Http\Controllers\Journal\PublicHubController::class, 'journals'])->name('journal.journals');
+    Route::get('/publish', [\App\Http\Controllers\Journal\PublicHubController::class, 'publish'])->name('journal.publish');
+    Route::get('/news-events', [\App\Http\Controllers\Journal\PublicHubController::class, 'newsIndex'])->name('journal.news.index');
+    Route::get('/news-events/{slug}', [\App\Http\Controllers\Journal\PublicHubController::class, 'newsShow'])->name('journal.news.show');
+    Route::get('/policies', [\App\Http\Controllers\Journal\PublicHubController::class, 'policies'])->name('journal.policies');
 
     Route::middleware(['auth', 'journal.user'])->group(function () {
         Route::get('/dashboard', [\App\Http\Controllers\Journal\DashboardController::class, 'index'])->name('journal.dashboard');
