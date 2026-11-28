@@ -327,19 +327,10 @@
           </a>
         </div>
         <h1 class="auth-heading">Sign up</h1>
-        <div class="row mb-3">
-          @foreach ($roles as $key => $role)
-            <div class="col-md-6">
-              <label class="card rounded shadow radio-checked" for="{{ $role->name }}-radio" style="display:block;">
-                <div class="card-body">
-                  <input type="radio" name="role" value="{{ $role->id }}" id="{{ $role->name }}-radio" hidden {{ $key == 0 ? 'checked' : '' }}>
-                  <h5 class="card-title">{{ role_display_name($role->name) }}</h5>
-                  <p class="text-muted mb-0">{{ $role->description }}</p>
-                </div>
-              </label>
-            </div>
-          @endforeach
-        </div>
+        {{-- Journal author role is assigned automatically — no role picker on public signup. --}}
+        @if(($roles ?? collect())->isNotEmpty())
+          <input type="hidden" name="role" value="{{ $roles->first()->id }}">
+        @endif
         @error('role')
           <p class="text-danger text-xs italic">{{ $message }}</p>
         @enderror

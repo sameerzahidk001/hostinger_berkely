@@ -411,6 +411,7 @@
                         <li><a href="{{ route('admin.journal.overview') }}">Overview</a></li>
                         <li><a href="{{ route('admin.journal.subjects.index') }}">Subjects</a></li>
                         <li><a href="{{ route('admin.journal.policies.index') }}">Policies</a></li>
+                        <li><a href="{{ route('admin.journal.news.index') }}">News &amp; events</a></li>
                         <li><a href="{{ route('admin.journal.issues.index') }}">Issues</a></li>
                         <li><a href="{{ route('admin.journal.board.index') }}">Editorial Board</a></li>
                         <li><a href="{{ route('admin.journal.manuscripts.index') }}">Manuscripts</a></li>
